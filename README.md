@@ -1,5 +1,6 @@
 # Dodeclusters
 Create vector images using only intersections of circles  
+[Deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
 
 This is a Kotlin Multiplatform project targeting Android, Web, Desktop.
 
@@ -19,7 +20,7 @@ To run web app:
 To package for web browser:  
 `./gradlew wasmJsBrowserDistribution`  
 output goes into: `./composeApp/build/dist/wasmJs/productionExecutable/`  
-can be deployed thru Github Pages  
+and can be deployed thru Github Pages  
 
 To package for Windows/MacOs/Linux run thru Github Actions using corresponding OSs:  
 `./gradlew packageReleaseMsi`  
