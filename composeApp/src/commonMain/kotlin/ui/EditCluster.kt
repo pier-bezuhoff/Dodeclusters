@@ -16,10 +16,8 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,7 +38,7 @@ fun EditCluster() {
             TopBar({}, {})
         },
         bottomBar = {
-            BottomBar({}, {}, {})
+            BottomBar({}, {}, {}, {})
         },
     ) { inPaddings ->
         Text(
@@ -80,6 +78,7 @@ private fun BottomBar(
     onNewCircle: () -> Unit,
     onCopyCircles: () -> Unit,
     onDeleteCircles: () -> Unit,
+    onReverseCircles: () -> Unit,
 ) {
     var selectionMode by remember { mutableStateOf(SelectionMode.DRAG) }
     BottomAppBar {
@@ -91,6 +90,9 @@ private fun BottomBar(
         }
         IconButton(onClick = onDeleteCircles) {
             Icon(Icons.Default.Delete, contentDescription = "delete circle(s)")
+        }
+        IconButton(onClick = onReverseCircles) {
+            Icon(painterResource("icons/reverse_direction.xml"), contentDescription = "reverse circle direction")
         }
         Divider(
             modifier = Modifier
@@ -112,7 +114,7 @@ private fun BottomBar(
                 )
         ) {
             Icon(
-                painterResource("icons/drag_mode.xml"),
+                painterResource("icons/drag_mode_1_circle.xml"),
                 contentDescription = "drag mode",
             )
         }
@@ -130,7 +132,7 @@ private fun BottomBar(
                 )
         ) {
             Icon(
-                painterResource("icons/multiselect_mode.xml"),
+                painterResource("icons/multiselect_mode_3_intersecting_circles.xml"),
                 contentDescription = "multiselect mode",
             )
         }

@@ -1,5 +1,5 @@
 [versions]
-agp = "8.1.4"
+agp = "8.2.1"
 android-compileSdk = "34"
 android-minSdk = "24"
 android-targetSdk = "34"
@@ -8,12 +8,13 @@ androidx-appcompat = "1.6.1"
 androidx-constraintlayout = "2.1.4"
 androidx-core-ktx = "1.12.0"
 androidx-espresso-core = "3.5.1"
-androidx-material = "1.10.0"
+androidx-material = "1.11.0"
 androidx-test-junit = "1.1.5"
 compose = "1.5.4"
 compose-compiler = "1.5.6"
 compose-plugin = "1.6.0-alpha01"
 junit = "4.13.2"
+#noinspection GradleDependency
 kotlin = "1.9.21"
 
 [libraries]

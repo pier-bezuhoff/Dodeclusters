@@ -6,7 +6,6 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsCompose)
-//    id("org.jetbrains.kotlin.android")
 }
 
 kotlin {
@@ -88,6 +87,7 @@ android {
 
 compose.desktop {
     application {
+        javaHome = "/usr/lib/jvm/java-17-openjdk/" // cannot find jpackage in the normal jbr-17
         mainClass = "MainKt"
 
         nativeDistributions {

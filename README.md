@@ -1,3 +1,6 @@
+# Dodeclusters
+Create vector images using only intersections of circles
+
 This is a Kotlin Multiplatform project targeting Android, Web, Desktop.
 
 * `/composeApp` is for code that will be shared across your Compose Multiplatform applications.
@@ -11,3 +14,15 @@ To run desktop:
 `./gradlew :composeApp:run`
 To run web app:
 `./gradlew :composeApp:wasmJsBrowserDevelopmentRun`
+
+
+To package for web browser:
+`./gradlew wasmJsBrowserDistribution`
+output goes into: `./composeApp/build/dist/wasmJs/productionExecutable/`
+can be deployed thru Github Pages
+
+To package for Windows/MacOs/Linux run thru Github Actions using corresponding OSs:
+`./gradlew packageReleaseMsi`
+`./gradlew packageReleaseDmg` + notarize/register
+`./gradlew packageReleaseDeb`
+output goes into: `./composeApp/build/compose/binaries/main-release/app/com.pierbezuhoff.dodeclusters/bin/`

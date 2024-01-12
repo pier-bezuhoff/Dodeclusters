@@ -21,18 +21,23 @@ import ui.EditCluster
 fun App() {
     MaterialTheme {
         EditCluster()
-//        var showContent by remember { mutableStateOf(false) }
-//        val greeting = remember { Greeting().greet() }
-//        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-//            Button(onClick = { showContent = !showContent }) {
-//                Text("Click me!")
-//            }
-//            AnimatedVisibility(showContent) {
-//                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-//                    Image(painterResource("compose-multiplatform.xml"), null)
-//                    Text("Compose: $greeting")
-//                }
-//            }
-//        }
+    }
+}
+
+@OptIn(ExperimentalResourceApi::class)
+@Composable
+fun TestScreen() {
+    var showContent by remember { mutableStateOf(false) }
+    val greeting = remember { Greeting().greet() }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Button(onClick = { showContent = !showContent }) {
+            Text("Click me!")
+        }
+        AnimatedVisibility(showContent) {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Image(painterResource("compose-multiplatform.xml"), null)
+                Text("Compose: $greeting")
+            }
+        }
     }
 }
