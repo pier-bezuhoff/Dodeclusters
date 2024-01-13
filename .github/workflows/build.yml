@@ -53,14 +53,14 @@ jobs:
             README.md
             .gitignore
 
-# absolute jdk path is bad
-# 'org.jetbrains.compose.desktop.application.tasks.AbstractCheckNativeDistributionRuntime' property 'jdkHome' specifies directory '/usr/lib/jvm/java-17-openjdk' which doesn't exist.
+# absolute jdk path is bad in
+# compose.desktop { application { javaHome } }
 
   build-dektop:
     name: "Build for Desktop ${{ matrix.os }}"
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest] #, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
@@ -83,11 +83,11 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
 
-      - name: Gradle build for web
+      - name: Gradle build for desktop
         run: ./gradlew composeApp:createDistributable
 
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
           name: Desktop distribution
-          path: './composeApp/build/compose/binaries/**/app/com.pierbezuhoff.dodeclusters/bin/'
+          path: 'composeApp/build/compose/binaries/main/app'
