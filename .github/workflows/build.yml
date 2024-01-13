@@ -51,6 +51,7 @@ jobs:
           clean-exclude: |
             LICENSE
             README.md
+            .gitignore
 
 # absolute jdk path is bad
 # 'org.jetbrains.compose.desktop.application.tasks.AbstractCheckNativeDistributionRuntime' property 'jdkHome' specifies directory '/usr/lib/jvm/java-17-openjdk' which doesn't exist.
