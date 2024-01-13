@@ -48,6 +48,9 @@ jobs:
         with:
           folder: './composeApp/build/dist/wasmJs/productionExecutable/'
           branch: github-pages
+          clean-exclude: |
+            LICENSE
+            README.md
 
 # absolute jdk path is bad
 # 'org.jetbrains.compose.desktop.application.tasks.AbstractCheckNativeDistributionRuntime' property 'jdkHome' specifies directory '/usr/lib/jvm/java-17-openjdk' which doesn't exist.
