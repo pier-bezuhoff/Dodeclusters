@@ -1,6 +1,7 @@
 # Dodeclusters
 Create vector images using only intersections of circles  
 [Deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
+![example event parameter](https://github.com/pier-bezuhoff/Dodeclusters/actions/workflows/build.yml/badge.svg?event=push)
 
 ## Project structure
 This is a Kotlin Multiplatform project targeting Android, Web, Desktop.
