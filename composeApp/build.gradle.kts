@@ -87,7 +87,7 @@ android {
 
 compose.desktop {
     application {
-        javaHome = "/usr/lib/jvm/java-17-openjdk/" // cannot find jpackage in the normal jbr-17
+//        javaHome = "/usr/lib/jvm/java-17-openjdk/" // cannot find jpackage in the normal jbr-17
         mainClass = "MainKt"
 
         nativeDistributions {
