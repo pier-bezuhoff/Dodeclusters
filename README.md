@@ -1,38 +1,13 @@
 # Dodeclusters
-Create vector images using only intersections of circles  
+Vector image editor using only circles (WIP)  
+Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform)
+
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)
 [Deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
-![example event parameter](https://github.com/pier-bezuhoff/Dodeclusters/actions/workflows/build.yml/badge.svg?event=push)
 
-## Project structure
-This is a Kotlin Multiplatform project targeting Android, Web, Desktop.
-
-* `/composeApp` is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - `commonMain` is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    `iosMain` would be the right folder for such calls.  
-
-## Common run/build commands
-To run desktop:  
-`./gradlew :composeApp:run`  
-To run web app:  
-`./gradlew :composeApp:wasmJsBrowserDevelopmentRun`  
-
-
-To package for web browser:  
-`./gradlew wasmJsBrowserDistribution`  
-output goes into: `./composeApp/build/dist/wasmJs/productionExecutable/`  
-and can be deployed thru Github Pages  
-
-To package for Windows/MacOs/Linux run thru Github Actions using corresponding OSs:  
-`./gradlew packageReleaseMsi`  
-`./gradlew packageReleaseDmg` + notarize/register  
-`./gradlew packageReleaseDeb`  
-output goes into: `./composeApp/build/compose/binaries/main-release/app/com.pierbezuhoff.dodeclusters/bin/`  
-
-## TODO
+## TODO:
 * Cluster editor
+  - cluster = circles + union of intersections of some of the circles
   - drag, select, copy, create & delete circles
   - move & scale circles
   - select/deselect intersection regions
@@ -49,4 +24,22 @@ output goes into: `./composeApp/build/compose/binaries/main-release/app/com.pier
   - cluster numbering & separate circle numbering
 * other actions
   - read `.ddu`
-  - maybe save as `.svg`
+  - maybe export as `.svg`
+
+## Common run/build commands
+To run desktop:  
+`./gradlew :composeApp:run`  
+To run web app:  
+`./gradlew :composeApp:wasmJsBrowserDevelopmentRun`  
+
+To package for web browser:  
+`./gradlew wasmJsBrowserDistribution`  
+output goes into: `./composeApp/build/dist/wasmJs/productionExecutable/`  
+and can be deployed thru Github Pages  
+
+To package for Windows/MacOs/Linux run thru Github Actions using corresponding OSs:  
+`./gradlew packageReleaseMsi`  
+`./gradlew packageReleaseDmg` + notarize/register  
+`./gradlew packageReleaseDeb`  
+output goes into: `./composeApp/build/compose/binaries/main-release/app/com.pierbezuhoff.dodeclusters/bin/`  
+
