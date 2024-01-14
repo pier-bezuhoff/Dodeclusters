@@ -178,6 +178,7 @@ fun EditClusterContent(
     modifier: Modifier = Modifier
 ) {
     // adding viewModel impl is pain in the ass
+    // waiting for decompose 3.0-stable
     val circles = remember { mutableStateListOf<Circle>() }
     circles.addAll(listOf(
         Circle(100.0, 0.0, 50.0),
@@ -203,9 +204,12 @@ fun EditClusterContent(
                         circles[ix] = Circle(newCenter, zoom*circle.radius)
                     }
                 }
+                // NOTE: first detect prevents all others from exec
                 detectDragGestures(
                     onDragStart = { position ->
                         1 // grab smth
+                        println("drag start")
+                        // maybe list of all grabables
                     },
                 ) { change, dragAmount ->
                     // if grabbed smth, do things
@@ -249,3 +253,10 @@ fun EditClusterContent(
 enum class Handle {
     NONE, RADIUS, SCALE, ROTATION
 }
+
+enum class Command {
+    MOVE, CHANGE_RADIUS, SCALE
+}
+// save latest cmd
+// and history of Cluster snapshots
+// if new cmd != last cmd => push new Cluster state
