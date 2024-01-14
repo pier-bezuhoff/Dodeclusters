@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animatePanBy
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -38,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.painter.Painter
@@ -184,6 +186,7 @@ fun EditClusterContent(
     val parts = remember { mutableStateListOf<Cluster.Part>() }
     val selection = remember { mutableStateListOf<Int>() }
     selection.add(0)
+    var handle by remember { mutableStateOf(Handle.NONE) }
 
     var scale by remember { mutableStateOf(1f) }
     var rotation by remember { mutableStateOf(0f) }
@@ -192,41 +195,57 @@ fun EditClusterContent(
     Canvas(
         modifier
             .pointerInput(selection) {
-                awaitEachGesture {
-                    awaitPointerEvent().also { event ->
-                        if (event.type == PointerEventType.Scroll) {
-                            val verticalScroll = event.changes.map { it.scrollDelta.y }.sum()
-                            val zoom = 1.05f.pow(verticalScroll)
-                            event.changes.forEach { it.consume() }
-                            for (ix in selection) {
-                                val circle = circles[ix]
-                                circles[ix] = circle.copy(radius = zoom*circle.radius)
-                            }
-                        }
+                // add zoom handle for desktop
+                detectTransformGestures { centroid, pan, zoom, rotation ->
+                    for (ix in selection) {
+                        val circle = circles[ix]
+                        val newCenter = circle.offset + pan
+                        circles[ix] = Circle(newCenter, zoom*circle.radius)
                     }
                 }
-//                detectTransformGestures { centroid, pan, zoom, rotation ->
-////                    println("$centroid, $pan, $zoom")
-//                    for (ix in selection) {
-//                        val circle = circles[ix]
-//                        val newCenter = circle.offset + pan
-//                        circles[ix] = Circle(newCenter, zoom*circle.radius)
-//                    }
-//                }
+                detectDragGestures(
+                    onDragStart = { position ->
+                        1 // grab smth
+                    },
+                ) { change, dragAmount ->
+                    // if grabbed smth, do things
+                }
             }
             .fillMaxSize()
     ) {
+        val canvasCenter = Offset(size.width/2f, size.height/2f)
         for (circle in circles) {
             drawCircle(
                 color = Color.Black,
                 radius = circle.radius.toFloat(),
-                center = Offset(
-                    size.width/2 + circle.x.toFloat(),
-                    size.height/2 + circle.y.toFloat()
-                ),
+                center = canvasCenter + circle.offset,
                 style = Stroke(width = 2f)
             )
-
+        }
+        // handles
+        if (selection.isEmpty()) {
+            handle = Handle.NONE
+        } else if (selection.size == 1) {
+            handle = Handle.RADIUS
+            val selectedCircle = circles[selection[0]]
+            val right = canvasCenter + selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
+            drawLine(
+                color = Color.DarkGray,
+                canvasCenter + selectedCircle.offset,
+                right,
+            )
+            drawCircle(
+                color = Color.Gray,
+                radius = 7f,
+                center = right
+            )
+        } else if (selection.size > 1) {
+            handle = Handle.SCALE
+            // todo
         }
     }
+}
+
+enum class Handle {
+    NONE, RADIUS, SCALE, ROTATION
 }
