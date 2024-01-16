@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -43,7 +44,7 @@ import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun EditClusterScreen() {
-    var selectionMode by remember { mutableStateOf(SelectionMode.DRAG) }
+    val selectionMode = remember { mutableStateOf(SelectionMode.DRAG) }
     val scaffoldState = rememberScaffoldState()
     Scaffold(
         scaffoldState = scaffoldState,
@@ -51,10 +52,10 @@ fun EditClusterScreen() {
             EditClusterTopBar({}, {})
         },
         bottomBar = {
-            EditClusterBottomBar(selectionMode, { selectionMode = it }, {}, {}, {})
+            EditClusterBottomBar(selectionMode, {}, {}, {})
         },
     ) { inPaddings ->
-        EditClusterContent(selectionMode, Modifier.padding(inPaddings))
+        EditClusterContent(selectionMode.value, Modifier.padding(inPaddings))
     }
 }
 
@@ -85,8 +86,7 @@ enum class SelectionMode {
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterBottomBar(
-    selectionMode: SelectionMode,
-    onChooseMode: (SelectionMode) -> Unit,
+    selectionMode: MutableState<SelectionMode>,
     onNewCircle: () -> Unit,
     onCopyCircles: () -> Unit,
     onDeleteCircles: () -> Unit,
@@ -110,24 +110,21 @@ fun EditClusterBottomBar(
         // MAYBE: select regions within multiselect
         ModeToggle(
             SelectionMode.DRAG,
-            currentMode = selectionMode,
+            selectionMode,
             painterResource("icons/drag_mode_1_circle.xml"),
             contentDescription = "drag mode",
-            onChooseMode
         )
         ModeToggle(
             SelectionMode.MULTISELECT,
-            currentMode = selectionMode,
+            selectionMode,
             painterResource("icons/multiselect_mode_3_intersecting_circles.xml"),
             contentDescription = "multiselect mode",
-            onChooseMode
         )
         ModeToggle(
             SelectionMode.SELECT_REGION,
-            currentMode = selectionMode,
+            selectionMode,
             painterResource("icons/select_region_mode.xml"),
             contentDescription = "select region mode",
-            onChooseMode,
         )
     }
 }
@@ -135,19 +132,18 @@ fun EditClusterBottomBar(
 @Composable
 fun ModeToggle(
     mode: SelectionMode,
-    currentMode: SelectionMode,
+    currentMode: MutableState<SelectionMode>,
     painter: Painter,
     contentDescription: String,
-    onChooseMode: (SelectionMode) -> Unit
 ) {
     IconToggleButton(
-        checked = currentMode == mode,
+        checked = currentMode.value == mode,
         onCheckedChange = {
-            onChooseMode(mode)
+            currentMode.value = mode
         },
         modifier = Modifier
             .background(
-                if (currentMode == mode)
+                if (currentMode.value == mode)
                     MaterialTheme.colors.primaryVariant
                 else
                     MaterialTheme.colors.primary,
