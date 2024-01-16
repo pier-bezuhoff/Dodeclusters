@@ -5,7 +5,7 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 [Deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
 
-## TODO:
+## Roadmap:
 * Cluster editor
   - cluster = circles + union of intersections of some of the circles
   - drag, select, copy, create & delete circles
@@ -25,6 +25,7 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
 * other actions
   - read `.ddu`
   - maybe export as `.svg`
+  - history: undo + maybe redo
 
 ## Common run/build commands
 To run desktop:  

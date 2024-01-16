@@ -2,13 +2,6 @@ package ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.animatePanBy
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,7 +23,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,18 +31,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PointMode
-import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import data.Circle
 import data.Cluster
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import kotlin.math.pow
 
 @Composable
 fun EditClusterScreen() {
@@ -120,13 +109,6 @@ fun EditClusterBottomBar(
         )
         // MAYBE: select regions within multiselect
         ModeToggle(
-            SelectionMode.SELECT_REGION,
-            currentMode = selectionMode,
-            painterResource("icons/select_region_mode.xml"),
-            contentDescription = "select region mode",
-            onChooseMode,
-        )
-        ModeToggle(
             SelectionMode.DRAG,
             currentMode = selectionMode,
             painterResource("icons/drag_mode_1_circle.xml"),
@@ -139,6 +121,13 @@ fun EditClusterBottomBar(
             painterResource("icons/multiselect_mode_3_intersecting_circles.xml"),
             contentDescription = "multiselect mode",
             onChooseMode
+        )
+        ModeToggle(
+            SelectionMode.SELECT_REGION,
+            currentMode = selectionMode,
+            painterResource("icons/select_region_mode.xml"),
+            contentDescription = "select region mode",
+            onChooseMode,
         )
     }
 }
@@ -181,40 +170,84 @@ fun EditClusterContent(
     // waiting for decompose 3.0-stable
     val circles = remember { mutableStateListOf<Circle>() }
     circles.addAll(listOf(
-        Circle(100.0, 0.0, 50.0),
-        Circle(0.0, 30.0, 10.0),
+        Circle(150.0, 50.0, 50.0),
+        Circle(50.0, 30.0, 10.0),
     ))
     val parts = remember { mutableStateListOf<Cluster.Part>() }
+    // TODO: history of Cluster snapshots for undo
+    // indices of selected circles
     val selection = remember { mutableStateListOf<Int>() }
     selection.add(0)
-    var handle by remember { mutableStateOf(Handle.NONE) }
+    var handle: Handle? by remember { mutableStateOf(null) }
+    var handleIsDown: Boolean by remember { mutableStateOf(false) }
+    var grabbed: GrabTarget? by remember { mutableStateOf(null) }
 
+    var offset by remember { mutableStateOf(Offset.Zero) } // pre-scale offset
     var scale by remember { mutableStateOf(1f) }
-    var rotation by remember { mutableStateOf(0f) }
-    // context menu for selection: scale/rot
-    var offset by remember { mutableStateOf(Offset.Zero) }
     Canvas(
         modifier
-            .pointerInput(selection) {
-                // add zoom handle for desktop
-                detectTransformGestures { centroid, pan, zoom, rotation ->
-                    for (ix in selection) {
-                        val circle = circles[ix]
-                        val newCenter = circle.offset + pan
-                        circles[ix] = Circle(newCenter, zoom*circle.radius)
+            .reactiveCanvas(
+                onTap = { position ->
+                    // select circle(s)/region
+                    when (mode) {
+                        SelectionMode.DRAG -> {}
+                        SelectionMode.MULTISELECT -> 2
+                        SelectionMode.SELECT_REGION -> 3
                     }
-                }
-                // NOTE: first detect prevents all others from exec
-                detectDragGestures(
-                    onDragStart = { position ->
-                        1 // grab smth
-                        println("drag start")
-                        // maybe list of all grabables
-                    },
-                ) { change, dragAmount ->
+
+                },
+                onDown = { position ->
+                    // no need for onUp since all actions occur after onDown
+                    // if on handle, select handle; otherwise empty d
+//                    handleIsDown = true // or false
+
+                },
+                onPanZoom = { pan, centroid, zoom ->
+                    if (handleIsDown) {
+                        // drag handle
+                        when (val h = handle) {
+                            is Handle.Radius -> {
+                                val center = circles[h.ix].offset
+                                val r = (centroid - center).getDistance()
+                                circles[h.ix] = circles[h.ix].copy(radius = r.toDouble())
+                            }
+                            else -> Unit
+                        }
+                    } else {
+                        if (mode == SelectionMode.MULTISELECT && selection.isNotEmpty()) {
+                            // transform em
+                            for (ix in selection) {
+                                val circle = circles[ix]
+                                val newCenter = circle.offset + pan
+                                circles[ix] = Circle(newCenter, zoom * circle.radius)
+                            }
+                        }
+                        else { // only long-press drag in other modes
+                            // navigate canvas
+//                            offset = offset + pan // ought to be something more sophisticated
+                            offset = (offset + centroid/scale) - (centroid/(scale*zoom) + pan/scale)
+                            scale *= zoom
+                        }
+                    }
+
+                },
+                onDragStart = {
+                    // draggables = circles
+                    // grab circle or handle
+                },
+                onDrag = {
                     // if grabbed smth, do things
+                },
+                onDragEnd = {
+                    // select what grabbed
                 }
-            }
+            )
+            .graphicsLayer(
+                scaleX = scale, scaleY = scale,
+//                translationX = offset.x, translationY = offset.y,
+                translationX = -scale*offset.x, translationY = -scale*offset.y,
+                transformOrigin = TransformOrigin(0f, 0f)
+            )
             .fillMaxSize()
     ) {
         val canvasCenter = Offset(size.width/2f, size.height/2f)
@@ -222,20 +255,20 @@ fun EditClusterContent(
             drawCircle(
                 color = Color.Black,
                 radius = circle.radius.toFloat(),
-                center = canvasCenter + circle.offset,
+                center = circle.offset,
                 style = Stroke(width = 2f)
             )
         }
         // handles
         if (selection.isEmpty()) {
-            handle = Handle.NONE
+            handle = null
         } else if (selection.size == 1) {
-            handle = Handle.RADIUS
+            handle = Handle.Radius(selection.single())
             val selectedCircle = circles[selection[0]]
-            val right = canvasCenter + selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
+            val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
             drawLine(
                 color = Color.DarkGray,
-                canvasCenter + selectedCircle.offset,
+                selectedCircle.offset,
                 right,
             )
             drawCircle(
@@ -244,18 +277,25 @@ fun EditClusterContent(
                 center = right
             )
         } else if (selection.size > 1) {
-            handle = Handle.SCALE
+            handle = Handle.Scale(selection)
             // todo
         }
     }
 }
 
-enum class Handle {
-    NONE, RADIUS, SCALE, ROTATION
+sealed class Handle : GrabTarget() {
+    // ixs = indices of circles to which the handle is attached
+    data class Radius(val ix: Int): Handle()
+    data class Scale(val ixs: List<Int>): Handle()
+    data class Rotation(val ixs: List<Int>): Handle()
+}
+
+sealed class GrabTarget {
+    data class CircleN(val ix: Int) : GrabTarget()
 }
 
 enum class Command {
-    MOVE, CHANGE_RADIUS, SCALE
+    MOVE, CHANGE_RADIUS, SCALE, COPY, DELTE, CREATE
 }
 // save latest cmd
 // and history of Cluster snapshots
