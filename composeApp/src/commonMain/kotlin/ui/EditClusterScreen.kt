@@ -224,12 +224,14 @@ fun EditClusterContent(
                         }
                         else { // only long-press drag in other modes
                             // navigate canvas
-//                            offset = offset + pan // ought to be something more sophisticated
                             offset = (offset + centroid/scale) - (centroid/(scale*zoom) + pan/scale)
-                            scale *= zoom
+                            scale *= zoom // MAYBE: add zoom slider for non-mobile
                         }
                     }
 
+                },
+                onVerticalScroll = { yDelta ->
+                    1 // maybe scale as onPanZoom
                 },
                 onDragStart = {
                     // draggables = circles
@@ -244,7 +246,6 @@ fun EditClusterContent(
             )
             .graphicsLayer(
                 scaleX = scale, scaleY = scale,
-//                translationX = offset.x, translationY = offset.y,
                 translationX = -scale*offset.x, translationY = -scale*offset.y,
                 transformOrigin = TransformOrigin(0f, 0f)
             )
