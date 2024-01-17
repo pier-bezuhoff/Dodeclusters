@@ -34,16 +34,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import data.Circle
 import data.Cluster
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
@@ -301,7 +297,7 @@ fun EditClusterContent(
                         }
                     }
                 },
-                onDragStart = { position ->
+                onLongDragStart = { position ->
                     // draggables = circles
                     if (mode.value.isSelectingCircles()) {
                         selectCircle(circles, position)?.let { ix ->
@@ -313,17 +309,17 @@ fun EditClusterContent(
                         }
                     }
                 },
-                onDrag = { delta ->
+                onLongDrag = { delta ->
                     // if grabbed smth, do things (regardless of selection)
                     grabbedCircleIx?.let {
                         val circle = circles[it]
                         circles[it] = Circle(circle.offset + delta, circle.radius)
                     }
                 },
-                onDragCancel = {
+                onLongDragCancel = {
                     grabbedCircleIx = null
                 },
-                onDragEnd = {
+                onLongDragEnd = {
                     // MAYBE: select what grabbed
                     grabbedCircleIx = null
                 }

@@ -11,18 +11,21 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 
+// NOTE: panning doesnt work on mobile browsers https://github.com/JetBrains/compose-multiplatform/issues/3491
 inline fun Modifier.reactiveCanvas(
     vararg keys: Any?,
     crossinline onPanZoom: (pan: Offset, centroid: Offset, zoom: Float) -> Unit,
     crossinline onVerticalScroll: (yDelta: Float) -> Unit = { },
+    // down triggers before tap/long press
     crossinline onDown: (position: Offset) -> Unit = { },
     crossinline onTap: (position: Offset) -> Unit = { },
-    crossinline onDragStart: (position: Offset) -> Unit = { },
-    crossinline onDrag: (delta: Offset) -> Unit,
-    crossinline onDragCancel: () -> Unit = { },
-    crossinline onDragEnd: () -> Unit = { },
+    crossinline onLongDragStart: (position: Offset) -> Unit = { },
+    crossinline onLongDrag: (delta: Offset) -> Unit,
+    crossinline onLongDragCancel: () -> Unit = { },
+    crossinline onLongDragEnd: () -> Unit = { },
 ): Modifier =
     this
+        // alternative to panning for desktop
         .pointerInput(*keys) {
             awaitEachGesture {
                 val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -57,15 +60,15 @@ inline fun Modifier.reactiveCanvas(
             detectDragGesturesAfterLongPress(
                 onDragStart = { position ->
 //                println("long drag start")
-                    onDragStart(position)
+                    onLongDragStart(position)
                 },
                 onDrag = { change, dragAmount ->
-                    onDrag(dragAmount)
+                    onLongDrag(dragAmount)
                 },
-                onDragCancel = { onDragCancel() },
+                onDragCancel = { onLongDragCancel() },
                 onDragEnd = {
 //                println("long drag end")
-                    onDragEnd()
+                    onLongDragEnd()
                 }
             )
         }
