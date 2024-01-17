@@ -24,10 +24,12 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -39,12 +41,24 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import data.Circle
 import data.Cluster
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import kotlin.math.absoluteValue
+import kotlin.math.pow
 
 @Composable
 fun EditClusterScreen() {
     val selectionMode = remember { mutableStateOf(SelectionMode.DRAG) }
+
+    val actionsScope = rememberCoroutineScope()
+    val newCircles = MutableSharedFlow<Unit>()
+    val copyCircles = MutableSharedFlow<Unit>()
+    val deleteCircles = MutableSharedFlow<Unit>()
+
     val scaffoldState = rememberScaffoldState()
     Scaffold(
         scaffoldState = scaffoldState,
@@ -52,10 +66,16 @@ fun EditClusterScreen() {
             EditClusterTopBar({}, {})
         },
         bottomBar = {
-            EditClusterBottomBar(selectionMode, {}, {}, {})
+            EditClusterBottomBar(
+                selectionMode,
+                { actionsScope.launch { newCircles.emit(Unit) } },
+                { actionsScope.launch { copyCircles.emit(Unit) } },
+                { actionsScope.launch { deleteCircles.emit(Unit) } },
+            )
         },
     ) { inPaddings ->
-        EditClusterContent(selectionMode.value, Modifier.padding(inPaddings))
+        // collect the 3 action flows inside
+        EditClusterContent(selectionMode, Modifier.padding(inPaddings))
     }
 }
 
@@ -80,7 +100,10 @@ fun EditClusterTopBar(
 }
 
 enum class SelectionMode {
-    SELECT_REGION, DRAG, MULTISELECT
+    SELECT_REGION, DRAG, MULTISELECT;
+
+    fun isSelectingCircles(): Boolean =
+        this in setOf(DRAG, MULTISELECT)
 }
 
 @OptIn(ExperimentalResourceApi::class)
@@ -92,6 +115,7 @@ fun EditClusterBottomBar(
     onDeleteCircles: () -> Unit,
 ) {
     BottomAppBar {
+        // flows for each action
         IconButton(onClick = onNewCircle) {
             Icon(Icons.Default.AddCircle, contentDescription = "new circle")
         }
@@ -159,7 +183,7 @@ fun ModeToggle(
 
 @Composable
 fun EditClusterContent(
-    mode: SelectionMode,
+    mode: State<SelectionMode>,
     modifier: Modifier = Modifier
 ) {
     // adding viewModel impl is pain in the ass
@@ -176,26 +200,65 @@ fun EditClusterContent(
     selection.add(0)
     var handle: Handle? by remember { mutableStateOf(null) }
     var handleIsDown: Boolean by remember { mutableStateOf(false) }
-    var grabbed: GrabTarget? by remember { mutableStateOf(null) }
+    var grabbedCircleIx: Int? by remember { mutableStateOf(null) }
 
     var offset by remember { mutableStateOf(Offset.Zero) } // pre-scale offset
     var scale by remember { mutableStateOf(1f) }
+
+    val epsilon = 20f
+    fun selectPoint(targets: List<Offset>, position: Offset): Int? =
+        targets.mapIndexed { ix, offset -> ix to (offset - position).getDistance() }
+            .filter { (_, distance) -> distance <= epsilon }
+            .minByOrNull { (_, distance) -> distance }
+            ?.let { (ix, _) ->
+//                println("selected point")
+                ix
+            }
+    fun selectCircle(targets: List<Circle>, position: Offset): Int? =
+        targets.mapIndexed { ix, circle ->
+            ix to ((circle.offset - position).getDistance() - circle.radius).absoluteValue
+        }
+            .filter { (_, distance) -> distance <= epsilon }
+            .minByOrNull { (_, distance) -> distance }
+            ?.let { (ix, _) ->
+//                println("selected circle")
+                ix
+            }
+
     Canvas(
         modifier
             .reactiveCanvas(
                 onTap = { position ->
                     // select circle(s)/region
-                    when (mode) {
-                        SelectionMode.DRAG -> {}
-                        SelectionMode.MULTISELECT -> 2
+                    when (mode.value) {
+                        SelectionMode.DRAG -> {
+                            selectCircle(circles, position)?.let { ix ->
+                                selection.clear()
+                                selection.add(ix)
+                            } ?: selection.clear()
+                        }
+                        SelectionMode.MULTISELECT -> {
+                            selectCircle(circles, position)?.let { ix ->
+                                if (ix in selection)
+                                    selection.remove(ix)
+                                else
+                                    selection.add(ix)
+                            }
+                        }
                         SelectionMode.SELECT_REGION -> 3
                     }
-
                 },
                 onDown = { position ->
                     // no need for onUp since all actions occur after onDown
                     // if on handle, select handle; otherwise empty d
-//                    handleIsDown = true // or false
+                    handleIsDown = when (val h = handle) {
+                        is Handle.Radius -> {
+                            val circle = circles[h.ix]
+                            val right = circle.offset + Offset(circle.radius.toFloat(), 0f)
+                            selectPoint(listOf(right), position) != null
+                        }
+                        else -> false // other handles are multiselect's scale & rotate
+                    }
 
                 },
                 onPanZoom = { pan, centroid, zoom ->
@@ -207,10 +270,10 @@ fun EditClusterContent(
                                 val r = (centroid - center).getDistance()
                                 circles[h.ix] = circles[h.ix].copy(radius = r.toDouble())
                             }
-                            else -> Unit
+                            else -> Unit // other handles are multiselect's scale & rotate
                         }
                     } else {
-                        if (mode == SelectionMode.MULTISELECT && selection.isNotEmpty()) {
+                        if (mode.value.isSelectingCircles() && selection.isNotEmpty()) {
                             // transform em
                             for (ix in selection) {
                                 val circle = circles[ix]
@@ -227,27 +290,45 @@ fun EditClusterContent(
 
                 },
                 onVerticalScroll = { yDelta ->
-                    1 // maybe scale as onPanZoom
+                    // maybe scale as onPanZoom
+                    if (mode.value.isSelectingCircles() && selection.isNotEmpty()) {
+                        for (ix in selection) {
+                            val circle = circles[ix]
+                            val r = circle.radius * (1.01f).pow(yDelta)
+                            circles[ix] = circle.copy(radius = r)
+                        }
+                    }
                 },
-                onDragStart = {
+                onDragStart = { position ->
                     // draggables = circles
-                    // grab circle or handle
+                    if (mode.value.isSelectingCircles()) {
+                        selectCircle(circles, position)?.let { ix ->
+                            grabbedCircleIx = ix
+                        }
+                    }
                 },
-                onDrag = {
-                    // if grabbed smth, do things
+                onDrag = { delta ->
+                    // if grabbed smth, do things (regardless of selection)
+                    grabbedCircleIx?.let {
+                        val circle = circles[it]
+                        circles[it] = Circle(circle.offset + delta, circle.radius)
+                    }
+                },
+                onDragCancel = {
+                    grabbedCircleIx = null
                 },
                 onDragEnd = {
-                    // select what grabbed
+                    // MAYBE: select what grabbed
+                    grabbedCircleIx = null
                 }
             )
-            .graphicsLayer(
-                scaleX = scale, scaleY = scale,
-                translationX = -scale*offset.x, translationY = -scale*offset.y,
-                transformOrigin = TransformOrigin(0f, 0f)
-            )
+//            .graphicsLayer(
+//                scaleX = scale, scaleY = scale,
+//                translationX = -scale*offset.x, translationY = -scale*offset.y,
+//                transformOrigin = TransformOrigin(0f, 0f)
+//            )
             .fillMaxSize()
     ) {
-        val canvasCenter = Offset(size.width/2f, size.height/2f)
         for (circle in circles) {
             drawCircle(
                 color = Color.Black,
@@ -257,7 +338,7 @@ fun EditClusterContent(
             )
         }
         // handles
-        if (selection.isEmpty()) {
+        if (selection.isEmpty() || !mode.value.isSelectingCircles()) {
             handle = null
         } else if (selection.size == 1) {
             handle = Handle.Radius(selection.single())
@@ -280,11 +361,11 @@ fun EditClusterContent(
     }
 }
 
-sealed class Handle : GrabTarget() {
+sealed class Handle(open val ixs: List<Int>) : GrabTarget() {
     // ixs = indices of circles to which the handle is attached
-    data class Radius(val ix: Int): Handle()
-    data class Scale(val ixs: List<Int>): Handle()
-    data class Rotation(val ixs: List<Int>): Handle()
+    data class Radius(val ix: Int): Handle(listOf(ix))
+    data class Scale(override val ixs: List<Int>): Handle(ixs)
+    data class Rotation(override val ixs: List<Int>): Handle(ixs)
 }
 
 sealed class GrabTarget {

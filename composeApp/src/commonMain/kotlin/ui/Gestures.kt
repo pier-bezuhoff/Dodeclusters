@@ -19,6 +19,7 @@ inline fun Modifier.reactiveCanvas(
     crossinline onTap: (position: Offset) -> Unit = { },
     crossinline onDragStart: (position: Offset) -> Unit = { },
     crossinline onDrag: (delta: Offset) -> Unit,
+    crossinline onDragCancel: () -> Unit = { },
     crossinline onDragEnd: () -> Unit = { },
 ): Modifier =
     this
@@ -61,6 +62,7 @@ inline fun Modifier.reactiveCanvas(
                 onDrag = { change, dragAmount ->
                     onDrag(dragAmount)
                 },
+                onDragCancel = { onDragCancel() },
                 onDragEnd = {
 //                println("long drag end")
                     onDragEnd()
