@@ -44,7 +44,7 @@ jobs:
           name: Browser distribution
           path: './composeApp/build/dist/wasmJs/productionExecutable/'
 
-      - name: Deploy to GithubPages
+      - name: Deploy to Github Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: './composeApp/build/dist/wasmJs/productionExecutable/'
@@ -93,3 +93,38 @@ jobs:
         with:
           name: "Desktop distribution for ${{ matrix.os }}"
           path: 'composeApp/build/compose/binaries/main/app'
+
+  build-android:
+    name: "Build for Android"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: Copy CI gradle.properties (idk about this)
+        run: mkdir -p ~/.gradle ; cp .github/ci-gradle.properties ~/.gradle/gradle.properties
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Gradle build debug .apk for Android
+        run: ./gradlew assembleDebug
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: "Android debug .apk"
+          path: 'composeApp/build/outputs/apk/debug'
+

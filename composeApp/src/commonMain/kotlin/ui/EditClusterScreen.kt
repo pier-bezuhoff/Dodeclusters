@@ -181,13 +181,15 @@ fun ModeToggle(
     Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
 }
 
+
 @Composable
 fun EditClusterContent(
     mode: State<SelectionMode>,
     modifier: Modifier = Modifier
 ) {
-    // adding viewModel impl is pain in the ass
+    // NOTE: adding viewModel impl is pain in the ass
     // waiting for decompose 3.0-stable
+    // (use state flows in vM + in ui convert to state with .collectAsStateWithLc)
     val circles = remember { mutableStateListOf<Circle>() }
     circles.addAll(listOf(
         Circle(150.0, 50.0, 50.0),
@@ -304,6 +306,10 @@ fun EditClusterContent(
                     if (mode.value.isSelectingCircles()) {
                         selectCircle(circles, position)?.let { ix ->
                             grabbedCircleIx = ix
+                            if (mode.value == SelectionMode.DRAG) {
+                                selection.clear()
+                                selection.add(ix)
+                            }
                         }
                     }
                 },
@@ -356,7 +362,7 @@ fun EditClusterContent(
             )
         } else if (selection.size > 1) {
             handle = Handle.Scale(selection)
-            // todo
+            // TODO: show rect + handle in a corner
         }
     }
 }
