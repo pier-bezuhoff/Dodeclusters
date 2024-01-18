@@ -30,6 +30,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -41,6 +43,9 @@ import data.Circle
 import data.Cluster
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNames
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.absoluteValue
@@ -48,6 +53,20 @@ import kotlin.math.pow
 
 @Composable
 fun EditClusterScreen() {
+    val s = Json.encodeToString(Cluster.SAMPLE)
+    Json.decodeFromString<Cluster>(s)
+
+    val viewModel = remember { FakeEditClusterViewModel() }
+    Saver<Int, String>(
+        save = { x ->
+            ""
+
+        },
+        restore = { v ->
+            1
+        }
+    )
+
     val selectionMode = remember { mutableStateOf(SelectionMode.DRAG) }
 
     val actionsScope = rememberCoroutineScope()
@@ -183,9 +202,6 @@ fun EditClusterContent(
     mode: State<SelectionMode>,
     modifier: Modifier = Modifier
 ) {
-    // NOTE: adding viewModel impl is pain in the ass
-    // waiting for decompose 3.0-stable
-    // (use state flows in vM + in ui convert to state with .collectAsStateWithLc)
     val circles = remember { mutableStateListOf<Circle>() }
     circles.addAll(listOf(
         Circle(150.0, 50.0, 50.0),

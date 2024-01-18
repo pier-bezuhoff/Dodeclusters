@@ -1,7 +1,9 @@
 # Dodeclusters
 Vector image editor using only circles (WIP)  
-Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform) 
-targeting Desktop (Windows, Linux, MacOS), Android and Web (non-mobile because of [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
+Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform) targeting
+- Desktop (Windows, Linux, MacOS)
+- Android
+- Web (via WASM; doesn't work on mobile because of the [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 [Deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  

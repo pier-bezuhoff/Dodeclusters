@@ -25,7 +25,7 @@ inline fun Modifier.reactiveCanvas(
     crossinline onLongDragEnd: () -> Unit = { },
 ): Modifier =
     this
-        // alternative to panning for desktop
+        // alternative to zooming for desktop
         .pointerInput(*keys) {
             awaitEachGesture {
                 val event = awaitPointerEvent(PointerEventPass.Initial)
