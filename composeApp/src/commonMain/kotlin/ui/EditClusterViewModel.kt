@@ -51,6 +51,10 @@ class EditClusterViewModel(
     val offset = mutableStateOf(Offset.Zero) // pre-scale offset
     val scale = mutableStateOf(1f)
 
+    init {
+        recordCommand(Command.CREATE)
+    }
+
     // navigation
     fun saveAndGoBack() {}
     fun cancelAndGoBack() {}
