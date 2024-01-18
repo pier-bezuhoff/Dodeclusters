@@ -61,6 +61,7 @@ fun EditClusterScreen() {
     }
 }
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterTopBar(
     viewModel: EditClusterViewModel
@@ -73,6 +74,9 @@ fun EditClusterTopBar(
             }
         },
         actions = {
+            IconButton(onClick = viewModel::undo) {
+                Icon(painterResource("icons/undo.xml"), contentDescription = "Undo")
+            }
             IconButton(onClick = viewModel::cancelAndGoBack) {
                 Icon(Icons.Default.Close, contentDescription = "Cancel")
             }
@@ -118,15 +122,15 @@ fun EditClusterBottomBar(
         ModeToggle(
             SelectionMode.MULTISELECT,
             viewModel,
-            painterResource("icons/multiselect_mode_3_intersecting_circles.xml"),
+            painterResource("icons/multiselect_mode_3_scattered_circles.xml"),
             contentDescription = "multiselect mode",
         )
-        ModeToggle(
-            SelectionMode.SELECT_REGION,
-            viewModel,
-            painterResource("icons/select_region_mode.xml"),
-            contentDescription = "select region mode",
-        )
+//        ModeToggle(
+//            SelectionMode.SELECT_REGION,
+//            viewModel,
+//            painterResource("icons/select_region_mode.xml"),
+//            contentDescription = "select region mode",
+//        )
     }
 }
 
