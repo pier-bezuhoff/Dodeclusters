@@ -115,6 +115,8 @@ class EditClusterViewModel(
     fun switchSelectionMode(newMode: SelectionMode) {
         if (selection.size > 1 && newMode == SelectionMode.DRAG)
             selection.clear()
+        if (selectionMode.value == SelectionMode.MULTISELECT && newMode == SelectionMode.MULTISELECT)
+            selection.clear()
         selectionMode.value = newMode
     }
 
@@ -181,7 +183,7 @@ class EditClusterViewModel(
                 val topRight = getSelectionRect().topRight
                 selectPoint(listOf(topRight), position) != null
             }
-            else -> false // other handles are multiselect's scale & rotate
+            else -> false // other handles are multiselect's rotate
         }
     }
 
@@ -209,7 +211,7 @@ class EditClusterViewModel(
                         circles[ix] = Circle(newOffset, handleScale * circle.radius)
                     }
                 }
-                else -> Unit // other handles are multiselect's scale & rotate
+                else -> Unit // other handles are multiselect's rotate potentially
             }
         } else {
             when (selectionMode.value) {
@@ -354,6 +356,13 @@ class EditClusterViewModel(
     }
 }
 
+enum class SelectionMode {
+    SELECT_REGION, DRAG, MULTISELECT;
+
+    fun isSelectingCircles(): Boolean =
+        this in setOf(DRAG, MULTISELECT)
+}
+
 sealed class Handle(open val ixs: List<Int>) {
     // ixs = indices of circles to which the handle is attached
     data class Radius(val ix: Int): Handle(listOf(ix))
@@ -361,9 +370,7 @@ sealed class Handle(open val ixs: List<Int>) {
     data class Rotation(override val ixs: List<Int>): Handle(ixs)
 }
 
+/** used for grouping UiState changes into batches for history keeping */
 enum class Command {
     MOVE, CHANGE_RADIUS, SCALE, COPY, DELETE, CREATE
 }
-// save latest cmd
-// and history of Cluster snapshots
-// if new cmd != last cmd => push new Cluster state

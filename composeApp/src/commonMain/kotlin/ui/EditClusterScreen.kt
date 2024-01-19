@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -75,26 +76,19 @@ fun EditClusterTopBar(
     TopAppBar(
         title = { Text("Edit cluster") },
         navigationIcon = {
-            IconButton(onClick = viewModel::saveAndGoBack) {
-                Icon(Icons.Default.Done, contentDescription = "Done")
-            }
+//            IconButton(onClick = viewModel::saveAndGoBack) {
+//                Icon(Icons.Default.Done, contentDescription = "Done")
+//            }
         },
         actions = {
             IconButton(onClick = viewModel::undo) {
                 Icon(painterResource("icons/undo.xml"), contentDescription = "Undo")
             }
-            IconButton(onClick = viewModel::cancelAndGoBack) {
-                Icon(Icons.Default.Close, contentDescription = "Cancel")
-            }
+//            IconButton(onClick = viewModel::cancelAndGoBack) {
+//                Icon(Icons.Default.Close, contentDescription = "Cancel")
+//            }
         }
     )
-}
-
-enum class SelectionMode {
-    SELECT_REGION, DRAG, MULTISELECT;
-
-    fun isSelectingCircles(): Boolean =
-        this in setOf(DRAG, MULTISELECT)
 }
 
 @OptIn(ExperimentalResourceApi::class)
@@ -182,6 +176,9 @@ fun EditClusterContent(
     ) }
     val backgroundColor = Color.White
     val selectionLinesColor = Color.Gray
+    val selectionMarkingsColor = Color.DarkGray // center-radius line / bounding rect of selection
+    val handleColor = Color.Gray
+    val handleRadius = 8f
     Canvas(
         modifier.fillMaxSize()
             .drawBehind {
@@ -197,7 +194,7 @@ fun EditClusterContent(
                     drawLine(selectionLinesColor, start = Offset(x, maxDimension), end = Offset(maxDimension, y))
                 }
             }
-            .graphicsLayer(alpha = 0.99f)
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
     ) {
         drawRect(backgroundColor)
         // overlay w/ selected circles
@@ -208,7 +205,7 @@ fun EditClusterContent(
                 radius = circle.radius.toFloat(),
                 center = circle.offset,
                 style = circleFill,
-                blendMode = BlendMode.DstOut,
+                blendMode = BlendMode.DstOut, // dst out = weaze the BG rectangle => show hatching thats drawn behind it
             )
         }
     }
@@ -245,27 +242,27 @@ fun EditClusterContent(
                 val selectedCircle = viewModel.circles[viewModel.selection.single()]
                 val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
                 drawLine(
-                    color = Color.DarkGray,
+                    color = selectionMarkingsColor,
                     selectedCircle.offset,
                     right,
                 )
                 drawCircle(
-                    color = Color.Gray,
-                    radius = 7f,
+                    color = handleColor,
+                    radius = handleRadius,
                     center = right
                 )
             }
             is Handle.Scale -> {
                 val selectionRect = viewModel.getSelectionRect()
                 drawRect(
-                    color = Color.Gray,
+                    color = selectionMarkingsColor,
                     topLeft = selectionRect.topLeft,
                     size = selectionRect.size,
                     style = dottedStroke,
                 )
                 drawCircle(
-                    color = Color.Gray,
-                    radius = 7f,
+                    color = handleColor,
+                    radius = handleRadius,
                     center = selectionRect.topRight,
                 )
             }
