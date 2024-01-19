@@ -11,8 +11,8 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
 ## Roadmap:
 * Cluster editor
   - cluster = circles + union of intersections of some of the circles
-  - drag, select, copy, create & delete circles
-  - move & scale circles
+  - [x] drag, select, copy, create & delete circles
+  - [x] move & scale circles
   - select/deselect intersection regions
   - bezier-like pathing tool
   - maybe finer control over angles/distances
