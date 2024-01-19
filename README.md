@@ -10,12 +10,12 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
 
 ## Roadmap:
 * Cluster editor
-  - cluster = circles + union of intersections of some of the circles
+  - [ ] cluster = circles + union of intersections of some of the circles
   - [x] drag, select, copy, create & delete circles
   - [x] move & scale circles
-  - select/deselect intersection regions
-  - bezier-like pathing tool
-  - maybe finer control over angles/distances
+  - [ ] select/deselect intersection regions
+  - [ ] bezier-like pathing tool
+  - [ ] maybe finer control over angles/distances
 * Multi-cluster editor
   - drag, select, copy, create & delete clusters
   - move, scale & rotate clusters
@@ -26,9 +26,9 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
   - centered to (0,0)
   - cluster numbering & separate circle numbering
 * other actions
-  - read `.ddu`
-  - maybe export as `.svg`
-  - history: undo + maybe redo
+  - [x] history: undo + maybe redo
+  - [ ] read `.ddu`
+  - [ ] maybe export as `.svg`
 
 ## Common run/build commands
 To run desktop:  
