@@ -26,7 +26,13 @@ data class Cluster(
         val insides: Set<Int>,
         /** indices of bounding complementary circles */
         val outsides: Set<Int>
-    )
+    ) {
+        /** ruff semiorder ⊆ on delimited regions; only goes off indices */
+        infix fun isObviouslyInside(otherPart: Part): Boolean =
+            // the more intersections the smaller the delimited region is
+            insides.containsAll(otherPart.insides) &&
+            outsides.containsAll(otherPart.outsides)
+    }
 
     companion object {
         val SAMPLE = Cluster(listOf(Circle(200.0, 100.0, 50.0)), emptyList(), true, Color.Black, Color.Black)

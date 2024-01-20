@@ -6,10 +6,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.math.absoluteValue
@@ -18,39 +23,43 @@ import kotlin.math.pow
 // NOTE: waiting for decompose 3.0-stable for a real VM impl
 // MAYBE: use state flows in vM + in ui convert to state with .collectAsStateWithLifecycle
 // TODO: history of Cluster snapshots for undo
+// i'm using external coroutineScope for invoking suspend's
 class EditClusterViewModel(
     cluster: Cluster = Cluster.SAMPLE
 ) {
-    val selectionMode = mutableStateOf(SelectionMode.DRAG)
+    val selectionMode = mutableStateOf<SelectionMode>(SelectionMode.Drag)
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
     val selection = mutableStateListOf<Int>()
 
-    val handle = derivedStateOf {
+    val handle = derivedStateOf { // depends on selectionMode & selection
         when (selectionMode.value) {
-            SelectionMode.DRAG ->
+            is SelectionMode.Drag ->
                 if (selection.isEmpty()) null
                 else Handle.Radius(selection.single())
-            SelectionMode.MULTISELECT -> when {
+            is SelectionMode.Multiselect -> when {
                 selection.isEmpty() -> null
                 selection.size == 1 -> Handle.Radius(selection.single())
                 selection.size > 1 -> Handle.Scale(selection)
                 else -> Unit // never
             }
-            SelectionMode.SELECT_REGION -> null
+            is SelectionMode.SelectRegion -> null
         }
     }
     val handleIsDown = mutableStateOf(false)
     val grabbedCircleIx = mutableStateOf<Int?>(null)
 
-    // TODO: test fixed size dequeue
     private val commands = ArrayDeque<Command>(HISTORY_SIZE)
     // we group history by commands and record it only when the new command differs from the previous one
+    // NOTE: history doesn't survive background app kill
     private val history = ArrayDeque<UiState>(HISTORY_SIZE)
 
-    val offset = mutableStateOf(Offset.Zero) // pre-scale offset
-    val scale = mutableStateOf(1f)
+    private val _decayingCircles = MutableSharedFlow<DecayingCircles>()
+    val decayingCircles = _decayingCircles.asSharedFlow()
+
+//    val offset = mutableStateOf(Offset.Zero) // pre-scale offset
+//    val scale = mutableStateOf(1f)
 
     init {
         recordCommand(Command.CREATE)
@@ -85,28 +94,37 @@ class EditClusterViewModel(
         }
     }
 
-    fun newCircle() {
+    suspend fun createNewCircle() {
         recordCommand(Command.CREATE)
         val newOne = Circle(200.0, 200.0, 50.0)
+        _decayingCircles.emit(
+            DecayingCircles(listOf(newOne), Color.Green)
+        )
         circles.add(newOne)
         selection.clear()
         selection.add(circles.size - 1)
     }
 
-    fun copyCircles() {
+    suspend fun copyCircles() {
         recordCommand(Command.COPY)
         val newOnes = circles.filterIndexed { ix, _ -> ix in selection }
         val oldSize = circles.size
+        _decayingCircles.emit(
+            DecayingCircles(selection.map { circles[it] }, Color.Blue)
+        )
         circles.addAll(newOnes)
         selection.clear()
         selection.addAll(oldSize until (oldSize + newOnes.size))
         // copy parts that consist only of selected circles
     }
 
-    fun deleteCircles() {
+    suspend fun deleteCircles() {
         recordCommand(Command.DELETE)
         val targetIxs = selection.toSet()
         val whatsLeft = circles.filterIndexed { ix, _ -> ix !in targetIxs }
+        _decayingCircles.emit(
+            DecayingCircles(selection.map { circles[it] }, Color.Red)
+        )
         selection.clear()
         circles.clear()
         circles.addAll(whatsLeft)
@@ -114,9 +132,9 @@ class EditClusterViewModel(
     }
 
     fun switchSelectionMode(newMode: SelectionMode) {
-        if (selection.size > 1 && newMode == SelectionMode.DRAG)
+        if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
-        if (selectionMode.value == SelectionMode.MULTISELECT && newMode == SelectionMode.MULTISELECT)
+        if (selectionMode.value == SelectionMode.Multiselect && newMode == SelectionMode.Multiselect)
             selection.clear()
         selectionMode.value = newMode
     }
@@ -151,7 +169,15 @@ class EditClusterViewModel(
         }
     }
 
+    fun reselectRegionAt(position: Offset) {
+        // for every/selected circle
+        // see if the position is inside or outside
+        // and create a Cluster.Part based on that
+    }
+
     fun getSelectionRect(): Rect {
+        if (selection.isEmpty()) // pls dont use when empty selection
+            return Rect(0f, 0f, 0f, 0f)
         val selectedCircles = selection.map { circles[it] }
         val left = selectedCircles.minOf { (it.x - it.radius).toFloat() }
         val right = selectedCircles.maxOf { (it.x + it.radius).toFloat() }
@@ -165,9 +191,9 @@ class EditClusterViewModel(
     fun onTap(position: Offset) {
         // select circle(s)/region
         when (selectionMode.value) {
-            SelectionMode.DRAG -> reselectCircleAt(position)
-            SelectionMode.MULTISELECT -> reselectCirclesAt(position)
-            SelectionMode.SELECT_REGION -> 3
+            SelectionMode.Drag -> reselectCircleAt(position)
+            SelectionMode.Multiselect -> reselectCirclesAt(position)
+            SelectionMode.SelectRegion -> reselectRegionAt(position)
         }
     }
 
@@ -217,14 +243,14 @@ class EditClusterViewModel(
             }
         } else {
             when (selectionMode.value) {
-                SelectionMode.DRAG -> if (selection.isNotEmpty()) { // move + scale radius
+                SelectionMode.Drag -> if (selection.isNotEmpty()) { // move + scale radius
                     recordCommand(Command.MOVE)
                     val ix = selection.single()
                     val circle = circles[ix]
                     val newCenter = circle.offset + pan
                     circles[ix] = Circle(newCenter, zoom * circle.radius)
                 }
-                SelectionMode.MULTISELECT -> {
+                SelectionMode.Multiselect -> {
                     if (selection.size == 1) { // move + scale radius
                         recordCommand(Command.MOVE)
                         val ix = selection.single()
@@ -253,14 +279,14 @@ class EditClusterViewModel(
     fun onVerticalScroll(yDelta: Float) {
         val zoom = (1.01f).pow(yDelta)
         when (selectionMode.value) {
-            SelectionMode.DRAG -> if (selection.isNotEmpty()) { // move + scale radius
+            SelectionMode.Drag -> if (selection.isNotEmpty()) { // move + scale radius
                 recordCommand(Command.CHANGE_RADIUS)
                 val ix = selection.single()
                 val circle = circles[ix]
                 circles[ix] = circle.copy(radius = zoom * circle.radius)
             }
 
-            SelectionMode.MULTISELECT -> {
+            SelectionMode.Multiselect -> {
                 if (selection.size == 1) { // move + scale radius
                     recordCommand(Command.CHANGE_RADIUS)
                     val ix = selection.single()
@@ -285,7 +311,7 @@ class EditClusterViewModel(
         if (selectionMode.value.isSelectingCircles()) {
             selectCircle(circles, position)?.let { ix ->
                 grabbedCircleIx.value = ix
-                if (selectionMode.value == SelectionMode.DRAG) {
+                if (selectionMode.value == SelectionMode.Drag) {
                     selection.clear()
                     selection.add(ix)
                 }
@@ -319,7 +345,7 @@ class EditClusterViewModel(
     ) {
         companion object {
             val DEFAULT = UiState(
-                SelectionMode.DRAG,
+                SelectionMode.Drag,
                 circles = listOf(
                     Circle(150.0, 50.0, 50.0),
                     Circle(50.0, 30.0, 10.0),
@@ -358,19 +384,33 @@ class EditClusterViewModel(
     }
 }
 
-enum class SelectionMode {
-    SELECT_REGION, DRAG, MULTISELECT;
-
+// TODO: 2-phase mode: circle by center and radius
+// and 2-phase mode: line by 2 points
+@Serializable
+sealed class SelectionMode {
     fun isSelectingCircles(): Boolean =
-        this in setOf(DRAG, MULTISELECT)
+        this in setOf(Drag, Multiselect)
+
+    @Serializable
+    data object Drag : SelectionMode()
+    @Serializable
+    data object Multiselect : SelectionMode()
+    @Serializable
+    data object SelectRegion : SelectionMode()
 }
 
+/** ixs = indices of circles to which the handle is attached */
 sealed class Handle(open val ixs: List<Int>) {
-    // ixs = indices of circles to which the handle is attached
     data class Radius(val ix: Int): Handle(listOf(ix))
     data class Scale(override val ixs: List<Int>): Handle(ixs)
-    data class Rotation(override val ixs: List<Int>): Handle(ixs)
+//    data class Rotation(override val ixs: List<Int>): Handle(ixs)
 }
+
+/** params for copy/delete animations */
+data class DecayingCircles(
+    val circles: List<Circle>,
+    val color: Color
+)
 
 /** used for grouping UiState changes into batches for history keeping */
 enum class Command {

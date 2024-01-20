@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -14,8 +15,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 // NOTE: panning doesnt work on mobile browsers https://github.com/JetBrains/compose-multiplatform/issues/3491
 inline fun Modifier.reactiveCanvas(
     vararg keys: Any?,
-    crossinline onPanZoom: (pan: Offset, centroid: Offset, zoom: Float) -> Unit,
     crossinline onVerticalScroll: (yDelta: Float) -> Unit = { },
+    crossinline onPanZoom: (pan: Offset, centroid: Offset, zoom: Float) -> Unit,
     // down triggers before tap/long press
     crossinline onDown: (position: Offset) -> Unit = { },
     crossinline onTap: (position: Offset) -> Unit = { },
@@ -33,6 +34,8 @@ inline fun Modifier.reactiveCanvas(
                     val yDelta = event.changes.map { it.scrollDelta.y }.sum()
 //                    println("scroll")
                     onVerticalScroll(yDelta)
+                } else if (event.type == PointerEventType.Move) {
+                    // unconsumed by long drag & transform, free hovering moves
                 }
             }
         }

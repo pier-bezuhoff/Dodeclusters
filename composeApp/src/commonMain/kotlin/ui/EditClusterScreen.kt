@@ -1,27 +1,19 @@
 package ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material.BottomAppBar
 import androidx.compose.material.Divider
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ExposedDropdownMenuBox
-import androidx.compose.material.ExposedDropdownMenuDefaults
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.IconToggleButton
@@ -31,24 +23,16 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -59,19 +43,16 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.PopupPositionProvider
-import androidx.compose.ui.window.PopupProperties
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.max
 
 @Composable
 fun EditClusterScreen() {
-    val coroutineScope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope() // NOTE: potentially pass coroutineScope into VMSaver
     val viewModel = rememberSaveable(saver = EditClusterViewModel.VMSaver) {
         EditClusterViewModel.UiState.restore(EditClusterViewModel.UiState.DEFAULT)
     }
@@ -83,12 +64,12 @@ fun EditClusterScreen() {
             EditClusterTopBar(viewModel)
         },
         bottomBar = {
-            EditClusterBottomBar(viewModel)
+            EditClusterBottomBar(coroutineScope, viewModel)
         },
     ) { inPaddings ->
         // collect the 3 action flows inside
         Surface {
-            EditClusterContent(viewModel, Modifier.padding(inPaddings))
+            EditClusterContent(coroutineScope, viewModel, Modifier.padding(inPaddings))
         }
     }
 }
@@ -116,97 +97,48 @@ fun EditClusterTopBar(
     )
 }
 
-enum class CreateAction {
-    CIRCLE_BY_CENTER_AND_RADIUS,
-//    CIRCLE_BY_3_POINTS,
-    LINE_BY_2_POINTS
-}
-
-data class CreateActionParams(
-    val icon: ImageVector,
-    val contentDescription: String,
-    val callback: () -> Unit,
-)
-
-@OptIn(ExperimentalResourceApi::class, ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterBottomBar(
+    coroutineScope: CoroutineScope,
     viewModel: EditClusterViewModel,
 ) {
-    // create x = a new mode
-    var createMenuIsExpanded by remember { mutableStateOf(false) }
-    var createAction by remember { mutableStateOf(CreateAction.CIRCLE_BY_CENTER_AND_RADIUS) }
-    val createActionParams = remember { mapOf(
-        CreateAction.CIRCLE_BY_CENTER_AND_RADIUS to CreateActionParams(Icons.Default.AddCircle, "Circle by center and radius") { println("c1"); viewModel.newCircle() },
-//        CreateAction.CIRCLE_BY_3_POINTS to CreateActionParams(Icons.Default.AccountCircle, "Circle by 3 points") { println("c2") },
-        CreateAction.LINE_BY_2_POINTS to CreateActionParams(Icons.Default.ArrowForward, "Line by 2 points") { println("l1") },
-    ) }
     BottomAppBar {
-        Box {
-            IconButton(
-                onClick = {
-//                        createActionParams[createAction]!!.callback
-                    createMenuIsExpanded = true
-                }
-            ) {
-                Icon(createActionParams[createAction]!!.icon, contentDescription = createActionParams[createAction]!!.contentDescription)
-            }
-            DropdownMenu(
-                expanded = createMenuIsExpanded,
-                onDismissRequest = {
-                    createMenuIsExpanded = false
-                },
-            ) {
-                CreateAction.entries.forEach { action ->
-                    val (icon, contentDescription, callback) = createActionParams[action]!!
-                    DropdownMenuItem(
-                        onClick = {
-                            createAction = action
-                            createMenuIsExpanded = false
-                            callback()
-                        },
-//                        Modifier.wrapContentWidth(),
-                    ) {
-                        Row() {
-                            Icon(icon, contentDescription = contentDescription)
-                            Text(contentDescription, Modifier.padding(4.dp), overflow = TextOverflow.Visible, softWrap = false, maxLines = 1)
-                        }
-                    }
-                }
-            }
-        }
-
-        IconButton(onClick = viewModel::copyCircles) {
-            Icon(painterResource("icons/copy.xml"), contentDescription = "copy circle(s)")
-        }
-        IconButton(onClick = viewModel::deleteCircles) {
-            Icon(Icons.Default.Delete, contentDescription = "delete circle(s)")
-        }
+        // MAYBE: select regions within multiselect
+        ModeToggle(
+            SelectionMode.Drag,
+            viewModel,
+            painterResource("icons/drag_mode_1_circle.xml"),
+            contentDescription = "drag mode",
+        )
+        ModeToggle(
+            SelectionMode.Multiselect,
+            viewModel,
+            painterResource("icons/multiselect_mode_3_scattered_circles.xml"),
+            contentDescription = "multiselect mode",
+        )
+        ModeToggle(
+            SelectionMode.SelectRegion,
+            viewModel,
+            painterResource("icons/select_region_mode.xml"),
+            contentDescription = "select region mode",
+        )
         Divider(
             Modifier
                 .padding(8.dp)
                 .fillMaxHeight()
                 .width(4.dp)
         )
-        // MAYBE: select regions within multiselect
-        ModeToggle(
-            SelectionMode.DRAG,
-            viewModel,
-            painterResource("icons/drag_mode_1_circle.xml"),
-            contentDescription = "drag mode",
-        )
-        ModeToggle(
-            SelectionMode.MULTISELECT,
-            viewModel,
-            painterResource("icons/multiselect_mode_3_scattered_circles.xml"),
-            contentDescription = "multiselect mode",
-        )
-        ModeToggle(
-            SelectionMode.SELECT_REGION,
-            viewModel,
-            painterResource("icons/select_region_mode.xml"),
-            contentDescription = "select region mode",
-        )
+        // TODO: make it into new mode: circle by center and radius + add line by 2 points
+        IconButton(onClick = { coroutineScope.launch { viewModel.createNewCircle() } }) {
+            Icon(Icons.Default.AddCircle, contentDescription = "create new circle")
+        }
+        IconButton(onClick = { coroutineScope.launch { viewModel.copyCircles() } }) {
+            Icon(painterResource("icons/copy.xml"), contentDescription = "copy circle(s)")
+        }
+        IconButton(onClick = { coroutineScope.launch { viewModel.deleteCircles() } }) {
+            Icon(Icons.Default.Delete, contentDescription = "delete circle(s)")
+        }
     }
 }
 
@@ -241,23 +173,40 @@ fun ModeToggle(
 
 @Composable
 fun EditClusterContent(
+    coroutineScope: CoroutineScope,
     viewModel: EditClusterViewModel,
     modifier: Modifier = Modifier
 ) {
     val circleStroke = remember { Stroke(width = 2f) }
+    val circleThiccStroke = remember { Stroke(width = 4f) }
     val circleFill = remember { Fill }
     val dottedStroke = remember { Stroke(
         width = 2f,
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
     ) }
     val backgroundColor = Color.White
+    val circleColor = Color.Black
     val selectionLinesColor = Color.Gray
     val selectionMarkingsColor = Color.DarkGray // center-radius line / bounding rect of selection
     val handleColor = Color.Gray
     val handleRadius = 8f
+    val maxDecayAlpha = 0.5f
+    val decayDuration = 1_500
+    val decayAlpha = remember { Animatable(0f) }
+    val decayingCircles by viewModel.decayingCircles.collectAsState(DecayingCircles(emptyList(), Color.White))
+    coroutineScope.launch {
+        viewModel.decayingCircles.collect { event ->
+            decayAlpha.snapTo(maxDecayAlpha)
+            decayAlpha.animateTo(
+                targetValue = 0f,
+//                animationSpec = tween(decayDuration, easing = LinearEasing),
+                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
+            )
+        }
+    }
     Canvas(
         modifier.fillMaxSize()
-            // selection hatching lines, 45deg
+            // selection hatching lines, 45° SE
             .drawBehind {
                 val (w, h) = size
                 val maxDimension = max(w, h)
@@ -270,7 +219,7 @@ fun EditClusterContent(
                     drawLine(selectionLinesColor, start = Offset(x, maxDimension), end = Offset(maxDimension, y))
                 }
             }
-            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // crucial for proper blending
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // crucial for proper alpha blending
     ) {
         drawRect(backgroundColor)
         // overlay w/ selected circles
@@ -282,6 +231,22 @@ fun EditClusterContent(
                 center = circle.offset,
                 style = circleFill,
                 blendMode = BlendMode.DstOut, // dst out = erasze the BG rectangle => show hatching thats drawn behind it
+            )
+            drawCircle( // thiccer lines
+                color = circleColor,
+                alpha = 0.7f,
+                radius = circle.radius.toFloat(),
+                center = circle.offset,
+                style = circleThiccStroke,
+            )
+        }
+        // animations
+        for (circle in decayingCircles.circles) {
+            drawCircle(
+                color = decayingCircles.color,
+                alpha = decayAlpha.value,
+                radius = circle.radius.toFloat(),
+                center = circle.offset
             )
         }
     }
@@ -297,7 +262,7 @@ fun EditClusterContent(
                 onLongDragCancel = viewModel::onLongDragCancel,
                 onLongDragEnd = viewModel::onLongDragEnd,
             )
-            // this VVV aint good
+            // this VVV aint good, who needs navigating around anyway
 //            .graphicsLayer(
 //                scaleX = scale, scaleY = scale,
 //                translationX = -scale*offset.x, translationY = -scale*offset.y,
@@ -307,7 +272,7 @@ fun EditClusterContent(
     ) {
         for (circle in viewModel.circles) {
             drawCircle(
-                color = Color.Black,
+                color = circleColor,
                 radius = circle.radius.toFloat(),
                 center = circle.offset,
                 style = circleStroke,
