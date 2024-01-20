@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
@@ -187,6 +188,7 @@ class EditClusterViewModel(
         }
     }
 
+    // MAYBE: handle key arrows as panning
     fun onPanZoom(pan: Offset, centroid: Offset, zoom: Float) {
         if (handleIsDown.value) {
             // drag handle

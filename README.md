@@ -1,16 +1,17 @@
 # Dodeclusters
 Vector image editor using only circles (WIP)  
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform) targeting
-- Desktop (Windows, Linux, MacOS)
-- Android
-- Web (via WASM; doesn't work on mobile because of the [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
+- [x] Desktop (Windows, Linux)
+- [x] Android
+- [x] Web (via WASM; doesn't work on mobile because of the [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
+- [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries)
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 [Deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
 
 ## Roadmap:
 * Cluster editor
-  - [ ] cluster = circles + union of intersections of some of the circles
+  - [ ] cluster = circles + union of intersections of some of the circles (their insides or outsides)
   - [x] drag, select, copy, create & delete circles
   - [x] move & scale circles
   - [ ] select/deselect intersection regions
@@ -29,6 +30,7 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
   - [x] history: undo + maybe redo
   - [ ] read `.ddu`
   - [ ] maybe export as `.svg`
+  - [ ] maybe add up/down/left/right arrow controls to temporarily fix the mobile browser issue
 
 ## Common run/build commands
 To run desktop:  
