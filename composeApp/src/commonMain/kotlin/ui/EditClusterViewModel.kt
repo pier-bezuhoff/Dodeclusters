@@ -7,14 +7,12 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import data.Circle
 import data.Cluster
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.math.absoluteValue
@@ -120,22 +118,34 @@ class EditClusterViewModel(
 
     suspend fun deleteCircles() {
         recordCommand(Command.DELETE)
-        val targetIxs = selection.toSet()
-        val whatsLeft = circles.filterIndexed { ix, _ -> ix !in targetIxs }
+        val whatsGone = selection.toSet()
+        val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
         _decayingCircles.emit(
             DecayingCircles(selection.map { circles[it] }, Color.Red)
         )
+        val oldParts = parts.toList()
         selection.clear()
+        parts.clear()
         circles.clear()
         circles.addAll(whatsLeft)
-        // also delete them from parts
+        parts.addAll(
+            oldParts
+                .map { (ins, outs) ->
+                    Cluster.Part(ins.minus(whatsGone), outs.minus(whatsGone))
+                }
+                .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
+        )
     }
 
     fun switchSelectionMode(newMode: SelectionMode) {
         if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
-        if (selectionMode.value == SelectionMode.Multiselect && newMode == SelectionMode.Multiselect)
-            selection.clear()
+        if (selectionMode.value == SelectionMode.Multiselect && newMode == SelectionMode.Multiselect) {
+            if (selection.isEmpty())
+                selection.addAll(circles.indices)
+            else
+                selection.clear()
+        }
         selectionMode.value = newMode
     }
 
@@ -177,7 +187,7 @@ class EditClusterViewModel(
         if (!parts.any { part isObviouslyInside it }) {
             recordCommand(Command.SELECT_PART)
             parts.add(part)
-            println("in: " + part.insides.joinToString() + "; out: " + part.outsides.joinToString())
+//            println("in: " + part.insides.joinToString() + "; out: " + part.outsides.joinToString())
         } else if (part in parts) {
             recordCommand(Command.SELECT_PART)
             parts.remove(part)
@@ -193,6 +203,38 @@ class EditClusterViewModel(
         val top = selectedCircles.minOf { (it.y - it.radius) }.toFloat()
         val bottom = selectedCircles.maxOf { (it.y + it.radius) }.toFloat()
         return Rect(left, top, right, bottom)
+    }
+
+    fun part2path(part: Cluster.Part): Path {
+        fun circle2path(circle: Circle): Path =
+            Path().apply {
+                addOval(
+                    Rect(
+                        center = circle.offset,
+                        radius = circle.radius.toFloat()
+                    )
+                )
+            }
+
+        val circleInsides = part.insides.map { circles[it] }
+        val insidePath: Path? = circleInsides
+            .map { circle2path(it) }
+            .reduceOrNull { acc: Path, anotherPath: Path ->
+                Path.combine(PathOperation.Intersect, path1 = acc, path2 = anotherPath)
+            }
+        val circleOutsides = part.outsides.map { circles[it] }
+        return if (insidePath == null) {
+            circleOutsides.map { circle2path(it) }
+                // NOTE: reduce(xor) on outsides = makes binary interlacing pattern
+                .reduceOrNull { acc: Path, anotherPath: Path ->
+                    Path.combine(PathOperation.Xor, acc, anotherPath)
+                } ?: Path()
+        } else if (part.outsides.isEmpty())
+            insidePath
+        else
+            circleOutsides.fold(insidePath) { acc: Path, circleOutside: Circle ->
+                Path.combine(PathOperation.Difference, acc, circle2path(circleOutside))
+            }
     }
 
 
@@ -317,7 +359,7 @@ class EditClusterViewModel(
 
     fun onLongDragStart(position: Offset) {
         // draggables = circles
-        if (selectionMode.value.isSelectingCircles()) {
+        if (true || selectionMode.value.isSelectingCircles()) { // thats what im feeling now
             selectCircle(circles, position)?.let { ix ->
                 grabbedCircleIx.value = ix
                 if (selectionMode.value == SelectionMode.Drag) {
@@ -356,8 +398,10 @@ class EditClusterViewModel(
             val DEFAULT = UiState(
                 SelectionMode.Drag,
                 circles = listOf(
-                    Circle(150.0, 50.0, 50.0),
-                    Circle(50.0, 30.0, 10.0),
+                    Circle(200.0, 200.0, 100.0),
+                    Circle(250.0, 200.0, 100.0),
+                    Circle(200.0, 250.0, 100.0),
+                    Circle(250.0, 250.0, 100.0),
                 ),
                 parts = emptyList(),
                 selection = listOf(0)

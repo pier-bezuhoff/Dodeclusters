@@ -16,12 +16,14 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import ui.DstInTest
 import ui.EditClusterScreen
+import ui.IntersectionTest
 
 @Composable
 fun App() {
     MaterialTheme {
-//        EditClusterScreen()
-        DstInTest()
+        EditClusterScreen()
+//        IntersectionTest()
+//        DstInTest()
     }
 }
 

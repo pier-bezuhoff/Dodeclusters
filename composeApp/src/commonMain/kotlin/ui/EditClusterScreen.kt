@@ -39,13 +39,17 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.withSaveLayer
 import androidx.compose.ui.unit.dp
@@ -53,6 +57,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.skia.Bitmap
 import kotlin.math.max
 
 @Composable
@@ -193,6 +198,7 @@ fun EditClusterContent(
     val backgroundColor = Color.White
     val circleColor = Color.Black
     val clusterPartColor = Color.Cyan
+    val clusterPathAlpha = 0.7f
     val selectionLinesColor = Color.Gray
     val selectionMarkingsColor = Color.DarkGray // center-radius line / bounding rect of selection
     val handleColor = Color.Gray
@@ -230,23 +236,24 @@ fun EditClusterContent(
     ) {
         drawRect(backgroundColor)
         // overlay w/ selected circles
-        for (ix in viewModel.selection) {
-            val circle = viewModel.circles[ix]
-            drawCircle( // alpha = where selection lines are shown
-                color = Color.Black,
-                radius = circle.radius.toFloat(),
-                center = circle.offset,
-                style = circleFill,
-                blendMode = BlendMode.DstOut, // dst out = eraze the BG rectangle => show hatching thats drawn behind it
-            )
-            drawCircle( // thiccer lines
-                color = circleColor,
-                alpha = 0.7f,
-                radius = circle.radius.toFloat(),
-                center = circle.offset,
-                style = circleThiccStroke,
-            )
-        }
+        if (viewModel.selectionMode.value.isSelectingCircles())
+            for (ix in viewModel.selection) {
+                val circle = viewModel.circles[ix]
+                drawCircle( // alpha = where selection lines are shown
+                    color = Color.Black,
+                    radius = circle.radius.toFloat(),
+                    center = circle.offset,
+                    style = circleFill,
+                    blendMode = BlendMode.DstOut, // dst out = eraze the BG rectangle => show hatching thats drawn behind it
+                )
+                drawCircle( // thiccer lines
+                    color = circleColor,
+                    alpha = 0.7f,
+                    radius = circle.radius.toFloat(),
+                    center = circle.offset,
+                    style = circleThiccStroke,
+                )
+            }
         // animations
         for (circle in decayingCircles.circles) {
             drawCircle(
@@ -277,27 +284,7 @@ fun EditClusterContent(
 //            )
             .fillMaxSize()
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // crucial for proper alpha blending
-//            .graphicsLayer(alpha = 0.99f)
     ) {
-        drawIntoCanvas { canvas ->
-//            canvas.withSaveLayer(Rect(0f, 0f, 200f, 200f), emptyPaint) {
-                drawCircle(clusterPartColor, 30f, Offset(50f, 50f))
-                drawCircle(Color.Black, 30f, Offset(70f, 50f), blendMode = BlendMode.DstOut)
-//            }
-            for (part in viewModel.parts) {
-                canvas.withSaveLayer(Rect(0f, 0f, size.width, size.height), emptyPaint) {
-                    if (part.insides.isNotEmpty()) {
-                        val circle = viewModel.circles[part.insides.first()]
-                        drawCircle(clusterPartColor, alpha = 0.7f, radius = circle.radius.toFloat(), center = circle.offset, style = circleFill)
-                    } else
-                        drawRect(clusterPartColor, alpha = 0.7f)
-                    for (ix in part.insides) // BUG: some are not rendered properly
-                        drawCircle(Color.Black, viewModel.circles[ix].radius.toFloat(), viewModel.circles[ix].offset, blendMode = BlendMode.DstIn)
-                    for (ix in part.outsides)
-                        drawCircle(Color.Black, viewModel.circles[ix].radius.toFloat(), viewModel.circles[ix].offset, blendMode = BlendMode.DstOut)
-                }
-            }
-        }
         for (circle in viewModel.circles) {
             drawCircle(
                 color = circleColor,
@@ -337,32 +324,16 @@ fun EditClusterContent(
                 )
             }
         }
-        drawIntoCanvas { canvas ->
-//            canvas.withSaveLayer(Rect(0f, 0f, 200f, 200f), emptyPaint) {
-            canvas.drawCircle(Offset(50f, 50f), radius = 30f, Paint().apply { color = Color.Cyan })
-            canvas.drawCircle(Offset(70f, 50f), radius = 30f, Paint().apply { blendMode = BlendMode.DstIn })
-//            drawCircle(clusterPartColor, 30f, Offset(50f, 50f))
-//            drawCircle(Color.Black, 30f, Offset(70f, 50f), blendMode = BlendMode.DstOut)
-//            }
-            for (part in viewModel.parts) {
-                canvas.withSaveLayer(Rect(0f, 0f, size.width, size.height), emptyPaint) {
-                    if (part.insides.isNotEmpty()) {
-                        val circle = viewModel.circles[part.insides.first()]
-                        drawCircle(clusterPartColor, alpha = 0.7f, radius = circle.radius.toFloat(), center = circle.offset, style = circleFill)
-                    } else
-                        drawRect(clusterPartColor, alpha = 0.7f)
-                    for (ix in part.insides) // BUG: some are not rendered properly
-                        drawCircle(Color.Black, viewModel.circles[ix].radius.toFloat(), viewModel.circles[ix].offset, blendMode = BlendMode.DstIn)
-                    for (ix in part.outsides)
-                        drawCircle(Color.Black, viewModel.circles[ix].radius.toFloat(), viewModel.circles[ix].offset, blendMode = BlendMode.DstOut)
-                }
-            }
+        for (part in viewModel.parts) {
+            drawPath(viewModel.part2path(part), color = clusterPartColor, alpha = clusterPathAlpha)
         }
     }
 }
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun DstInTest() {
+    val left = painterResource("leftc.png")
     Canvas(Modifier
         .fillMaxSize()
         .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen, alpha = 0.99f)
@@ -372,12 +343,45 @@ fun DstInTest() {
         val center2 = Offset(700f, 500f)
         drawCircle(Color.Cyan, radius, center1, alpha = 1f, style = Fill)
         drawCircle(Color.White, radius, center2, alpha = 1f, style = Fill, blendMode = BlendMode.DstIn)
+        with(left) {
+            draw(left.intrinsicSize)
+        }
+        val bitmap = ImageBitmap(100, 100)
+        val canvas = androidx.compose.ui.graphics.Canvas(bitmap)
     }
 }
 
-//        drawCircle(Color.Cyan, radius, center1, style = Stroke(2f))
-//        drawCircle(Color.Red, radius, center2, style = Stroke(2f))
-
-//        val canvas = drawContext.canvas.nativeCanvas
-//        canvas.drawCircle(center1.x, center1.y, radius, org.jetbrains.skia.Paint())
-//        canvas.drawCircle(center2.x, center2.y, radius, org.jetbrains.skia.Paint().apply { blendMode = org.jetbrains.skia.BlendMode.DST_IN })
+@Composable
+fun IntersectionTest() {
+    val path = remember { Path() }
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        if (path.isEmpty) {
+            val tempPath1 = Path().apply {
+                addOval(
+                    Rect(
+                        radius = 300f,
+                        center = Offset(500f, 500f)
+                    )
+                )
+            }
+            val tempPath2 = Path().apply {
+                addOval(
+                    Rect(
+                        radius = 300f,
+                        center = Offset(700f, 500f)
+                    )
+                )
+            }
+            val diffPath = Path.combine(
+                operation = PathOperation.Intersect,
+                path1 = tempPath1,
+                path2 = tempPath2
+            )
+            path.addPath(diffPath)
+        }
+        drawPath(path, color = Color.Cyan)
+    }
+}
