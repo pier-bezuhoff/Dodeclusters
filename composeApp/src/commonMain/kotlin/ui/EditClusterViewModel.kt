@@ -170,9 +170,18 @@ class EditClusterViewModel(
     }
 
     fun reselectRegionAt(position: Offset) {
-        // for every/selected circle
-        // see if the position is inside or outside
-        // and create a Cluster.Part based on that
+        val delimiters = circles.indices //selection.ifEmpty { circles.indices }
+        val ins = delimiters.filter { ix -> circles[ix].checkPosition(position) < 0 }
+        val outs = delimiters.filter { ix -> circles[ix].checkPosition(position) > 0 }
+        val part = Cluster.Part(ins.toSet(), outs.toSet())
+        if (!parts.any { part isObviouslyInside it }) {
+            recordCommand(Command.SELECT_PART)
+            parts.add(part)
+            println("in: " + part.insides.joinToString() + "; out: " + part.outsides.joinToString())
+        } else if (part in parts) {
+            recordCommand(Command.SELECT_PART)
+            parts.remove(part)
+        }
     }
 
     fun getSelectionRect(): Rect {
@@ -414,5 +423,5 @@ data class DecayingCircles(
 
 /** used for grouping UiState changes into batches for history keeping */
 enum class Command {
-    MOVE, CHANGE_RADIUS, SCALE, COPY, DELETE, CREATE
+    MOVE, CHANGE_RADIUS, SCALE, COPY, DELETE, CREATE, SELECT_PART
 }

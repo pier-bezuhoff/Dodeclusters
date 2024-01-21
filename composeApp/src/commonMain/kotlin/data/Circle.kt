@@ -19,6 +19,10 @@ data class Circle(
     /** semiorder ⊆ on circles' insides */
     infix fun isInside(otherCircle: Circle): Boolean =
         (offset - otherCircle.offset).getDistance() + radius <= otherCircle.radius
+
+    /** -1 = inside, 0 on the circle, +1 = outside */
+    fun checkPosition(point: Offset): Int =
+        (offset - point).getDistance().compareTo(radius)
 }
 
 @Serializable
