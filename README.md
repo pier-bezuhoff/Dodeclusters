@@ -1,4 +1,5 @@
 # Dodeclusters
+
 Vector image editor using only circles (WIP)  
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform) targeting
 - [x] Desktop (Windows, Linux)
@@ -9,7 +10,9 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 [Deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
 
+
 ## Roadmap:
+
 * Cluster editor
   - [ ] cluster = circles + union of intersections of some of the circles (their insides or outsides)
   - [x] drag, select, copy, create & delete circles
@@ -33,20 +36,41 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
   - [ ] maybe export as `.svg`
   - [ ] maybe add up/down/left/right arrow controls to temporarily fix the mobile browser issue
 
-## Common run/build commands
-To run desktop:  
+
+## Build and run via Gradle
+
+### Run desktop app
 `./gradlew :composeApp:run`  
-To run web app:  
+### Run web app (dev)
 `./gradlew :composeApp:wasmJsBrowserDevelopmentRun`  
 
-To package for web browser:  
+### Package for Windows/macOS/Linux
+Build platform-dependent package (run thru Github Actions using corresponding OS)  
+`./gradlew composeApp:createDistributable`  
+output directory: `./composeApp/build/compose/binaries/main/app/`  
+
+Individually:  
+- `./gradlew packageReleaseMsi`  
+- `./gradlew packageReleaseDmg` + notarize/register (requires Apple dev acc)  
+- `./gradlew packageReleaseDeb`  
+output directory: `./composeApp/build/compose/binaries/main-release/app/`  
+
+### Package for web browser 
 `./gradlew wasmJsBrowserDistribution`  
-output goes into: `./composeApp/build/dist/wasmJs/productionExecutable/`  
-and can be deployed thru Github Pages  
+output directory: `./composeApp/build/dist/wasmJs/productionExecutable/`  
 
-To package for Windows/MacOs/Linux run thru Github Actions using corresponding OSs:  
-`./gradlew packageReleaseMsi`  
-`./gradlew packageReleaseDmg` + notarize/register  
-`./gradlew packageReleaseDeb`  
-output goes into: `./composeApp/build/compose/binaries/main-release/app/com.pierbezuhoff.dodeclusters/bin/`  
+### Generate debug .apk for Android
+`./gradlew assembleDebug`
 
+
+## Web (Wasm) compatibility
+
+To run applications built with Kotlin/Wasm in a browser, you need a browser supporting [wasm garbage collection feature](https://github.com/WebAssembly/gc):  
+- For **Chrome** and **Chromium-based** browsers (Edge, Brave etc.), it **should just work** since version 119.
+- For **Firefox** 120+ it **should just work**.
+- For **Firefox** 119:
+  1. Open `about:config` in the browser.
+  2. Enable **javascript.options.wasm_gc**.
+  3. Refresh the page.  
+
+For more information see https://kotl.in/wasm_help/.

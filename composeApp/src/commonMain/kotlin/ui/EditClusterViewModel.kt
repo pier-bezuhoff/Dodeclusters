@@ -104,45 +104,49 @@ class EditClusterViewModel(
     }
 
     suspend fun copyCircles() {
-        recordCommand(Command.COPY)
-        val newOnes = circles.filterIndexed { ix, _ -> ix in selection }
-        val oldSize = circles.size
-        _decayingCircles.emit(
-            DecayingCircles(selection.map { circles[it] }, Color.Blue)
-        )
-        circles.addAll(newOnes)
-        val newParts = parts.filter {
-            selection.containsAll(it.insides) && selection.containsAll(it.outsides)
-        }.map { part ->
-            Cluster.Part(
-                insides = part.insides.map { it + newOnes.size }.toSet(),
-                outsides = part.outsides.map { it + newOnes.size }.toSet()
+        if (selectionMode.value.isSelectingCircles()) {
+            recordCommand(Command.COPY)
+            val newOnes = circles.filterIndexed { ix, _ -> ix in selection }
+            val oldSize = circles.size
+            _decayingCircles.emit(
+                DecayingCircles(selection.map { circles[it] }, Color.Blue)
             )
+            circles.addAll(newOnes)
+            val newParts = parts.filter {
+                selection.containsAll(it.insides) && selection.containsAll(it.outsides)
+            }.map { part ->
+                Cluster.Part(
+                    insides = part.insides.map { it + newOnes.size }.toSet(),
+                    outsides = part.outsides.map { it + newOnes.size }.toSet()
+                )
+            }
+            parts.addAll(newParts)
+            selection.clear()
+            selection.addAll(oldSize until (oldSize + newOnes.size))
         }
-        parts.addAll(newParts)
-        selection.clear()
-        selection.addAll(oldSize until (oldSize + newOnes.size))
     }
 
     suspend fun deleteCircles() {
-        recordCommand(Command.DELETE)
-        val whatsGone = selection.toSet()
-        val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
-        _decayingCircles.emit(
-            DecayingCircles(selection.map { circles[it] }, Color.Red)
-        )
-        val oldParts = parts.toList()
-        selection.clear()
-        parts.clear()
-        circles.clear()
-        circles.addAll(whatsLeft)
-        parts.addAll(
-            oldParts
-                .map { (ins, outs) ->
-                    Cluster.Part(ins.minus(whatsGone), outs.minus(whatsGone))
-                }
-                .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
-        )
+        if (selectionMode.value.isSelectingCircles()) {
+            recordCommand(Command.DELETE)
+            val whatsGone = selection.toSet()
+            val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
+            _decayingCircles.emit(
+                DecayingCircles(selection.map { circles[it] }, Color.Red)
+            )
+            val oldParts = parts.toList()
+            selection.clear()
+            parts.clear()
+            circles.clear()
+            circles.addAll(whatsLeft)
+            parts.addAll(
+                oldParts
+                    .map { (ins, outs) ->
+                        Cluster.Part(ins.minus(whatsGone), outs.minus(whatsGone))
+                    }
+                    .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
+            )
+        }
     }
 
     fun switchSelectionMode(newMode: SelectionMode) {
@@ -188,10 +192,28 @@ class EditClusterViewModel(
     }
 
     fun reselectRegionAt(position: Offset) {
-        val delimiters = circles.indices //selection.ifEmpty { circles.indices }
-        val ins = delimiters.filter { ix -> circles[ix].checkPosition(position) < 0 }
-        val outs = delimiters.filter { ix -> circles[ix].checkPosition(position) > 0 }
-        val part = Cluster.Part(ins.toSet(), outs.toSet())
+        val delimiters = circles.indices
+        val ins = delimiters
+            .filter { ix -> circles[ix].checkPosition(position) < 0 }
+            .sortedBy { ix -> circles[ix].radius }
+        val excessiveIns = ins.indices.filter { ix ->
+            (0 until ix).any { smallerRIx -> // being inside imposes constraint on radii
+                circles[smallerRIx] isInside circles[ix]
+            }
+            // TODO: do the same on create/copy
+        } // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
+        val outs = delimiters
+            .filter { ix -> circles[ix].checkPosition(position) > 0 }
+            .sortedByDescending { ix -> circles[ix].radius }
+        val excessiveOuts = outs.indices.filter { ix ->
+            (0 until ix).any { largerRIx ->
+                circles[ix] isInside circles[largerRIx]
+            }
+        }
+        val part = Cluster.Part(
+            insides = ins.toSet().minus(excessiveIns.toSet()),
+            outsides = outs.toSet().minus(excessiveOuts.toSet())
+        )
         // TODO: if the part isObviouslyInside, subtract it
         if (!parts.any { part isObviouslyInside it }) {
             recordCommand(Command.SELECT_PART)
@@ -214,6 +236,9 @@ class EditClusterViewModel(
         return Rect(left, top, right, bottom)
     }
 
+    // NOTE: to create proper reduce(xor):
+    // 2^(# circles) -> binary -> filter even number of 1 -> to parts
+    // MAYBE: move to Cluster methods
     fun part2path(part: Cluster.Part): Path {
         fun circle2path(circle: Circle): Path =
             Path().apply {
@@ -370,6 +395,11 @@ class EditClusterViewModel(
             if (selectionMode.value == SelectionMode.Drag) {
                 selection.clear()
                 selection.add(ix)
+            }
+        } ?: run {
+            if (true || selectionMode.value == SelectionMode.SelectRegion) {
+                // TODO: select part
+                // drag bounding circles
             }
         }
     }
