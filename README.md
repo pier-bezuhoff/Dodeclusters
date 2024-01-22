@@ -14,7 +14,8 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
   - [ ] cluster = circles + union of intersections of some of the circles (their insides or outsides)
   - [x] drag, select, copy, create & delete circles
   - [x] move & scale circles
-  - [ ] select/deselect intersection regions
+  - [x] select/deselect intersection regions
+  - [x] select binary interlacing even/odd regions (like chessboard coloring)
   - [ ] bezier-like pathing tool
   - [ ] maybe finer control over angles/distances
 * Multi-cluster editor
