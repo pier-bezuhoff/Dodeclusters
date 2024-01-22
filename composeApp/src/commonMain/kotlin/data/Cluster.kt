@@ -27,6 +27,9 @@ data class Cluster(
         /** indices of bounding complementary circles */
         val outsides: Set<Int>
     ) {
+        override fun toString(): String =
+            "Cluster.Part(in: [${insides.joinToString()}], out: [${outsides.joinToString()}])"
+
         /** ruff semiorder ⊆ on delimited regions; only goes off indices */
         infix fun isObviouslyInside(otherPart: Part): Boolean =
             // the more intersections the smaller the delimited region is

@@ -309,6 +309,7 @@ fun EditClusterContent(
         }
         for (part in viewModel.parts) {
             drawPath(viewModel.part2path(part), color = clusterPartColor, alpha = clusterPathAlpha)
+//            println("draw parts")
         }
     }
 }

@@ -127,6 +127,17 @@ class EditClusterViewModel(
     }
 
     suspend fun deleteCircles() {
+        fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Int>): Map<Int, Int> {
+            val re = mutableMapOf<Int, Int>()
+            var shift = 0
+            for (ix in originalIndices) {
+                if (ix in deletedIndices)
+                    shift += 1
+                else
+                    re[ix] = ix - shift
+            }
+            return re
+        }
         if (selectionMode.value.isSelectingCircles()) {
             recordCommand(Command.DELETE)
             val whatsGone = selection.toSet()
@@ -135,6 +146,7 @@ class EditClusterViewModel(
                 DecayingCircles(selection.map { circles[it] }, Color.Red)
             )
             val oldParts = parts.toList()
+            val reindexing = reindexingMap(circles.indices, whatsGone)
             selection.clear()
             parts.clear()
             circles.clear()
@@ -142,7 +154,10 @@ class EditClusterViewModel(
             parts.addAll(
                 oldParts
                     .map { (ins, outs) ->
-                        Cluster.Part(ins.minus(whatsGone), outs.minus(whatsGone))
+                        Cluster.Part(
+                            insides = ins.minus(whatsGone).map { reindexing[it]!! }.toSet(),
+                            outsides = outs.minus(whatsGone).map { reindexing[it]!! }.toSet()
+                        )
                     }
                     .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
             )
@@ -157,6 +172,15 @@ class EditClusterViewModel(
                 selection.addAll(circles.indices)
             else
                 selection.clear()
+        } else if (selectionMode.value == SelectionMode.SelectRegion && newMode == SelectionMode.SelectRegion) {
+            if (parts.isEmpty()) {
+                recordCommand(Command.SELECT_PART)
+                // select interlacing, todo: proper 2^n -> even # of 1's -> {0101001} -> parts
+                parts.add(Cluster.Part(emptySet(), circles.indices.toSet()))
+            } else {
+                recordCommand(Command.SELECT_PART)
+                parts.clear()
+            }
         }
         selectionMode.value = newMode
     }
@@ -200,7 +224,6 @@ class EditClusterViewModel(
             (0 until ix).any { smallerRIx -> // being inside imposes constraint on radii
                 circles[smallerRIx] isInside circles[ix]
             }
-            // TODO: do the same on create/copy
         } // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
         val outs = delimiters
             .filter { ix -> circles[ix].checkPosition(position) > 0 }
@@ -210,18 +233,27 @@ class EditClusterViewModel(
                 circles[ix] isInside circles[largerRIx]
             }
         }
+        val part0 = Cluster.Part(ins.toSet(), outs.toSet())
         val part = Cluster.Part(
             insides = ins.toSet().minus(excessiveIns.toSet()),
             outsides = outs.toSet().minus(excessiveOuts.toSet())
         )
-        // TODO: if the part isObviouslyInside, subtract it
-        if (!parts.any { part isObviouslyInside it }) {
+        // BUG: still breaks (doesnt remove proper parts) after several additions & deletions
+        val outerParts = parts.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
+        if (outerParts.isEmpty()) {
             recordCommand(Command.SELECT_PART)
             parts.add(part)
-//            println("in: " + part.insides.joinToString() + "; out: " + part.outsides.joinToString())
-        } else if (part in parts) {
-            recordCommand(Command.SELECT_PART)
-            parts.remove(part)
+            println("added $part")
+        } else {
+            if (part in parts) {
+                recordCommand(Command.SELECT_PART)
+                parts.remove(part)
+                println("removed $part")
+            } else {
+                recordCommand(Command.SELECT_PART)
+                parts.removeAll(outerParts)
+                println("removed parts [${outerParts.joinToString(prefix = "\n", separator = ";\n")}]")
+            }
         }
     }
 
