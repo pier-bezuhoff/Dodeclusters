@@ -111,9 +111,17 @@ class EditClusterViewModel(
             DecayingCircles(selection.map { circles[it] }, Color.Blue)
         )
         circles.addAll(newOnes)
+        val newParts = parts.filter {
+            selection.containsAll(it.insides) && selection.containsAll(it.outsides)
+        }.map { part ->
+            Cluster.Part(
+                insides = part.insides.map { it + newOnes.size }.toSet(),
+                outsides = part.outsides.map { it + newOnes.size }.toSet()
+            )
+        }
+        parts.addAll(newParts)
         selection.clear()
         selection.addAll(oldSize until (oldSize + newOnes.size))
-        // copy parts that consist only of selected circles
     }
 
     suspend fun deleteCircles() {
@@ -184,6 +192,7 @@ class EditClusterViewModel(
         val ins = delimiters.filter { ix -> circles[ix].checkPosition(position) < 0 }
         val outs = delimiters.filter { ix -> circles[ix].checkPosition(position) > 0 }
         val part = Cluster.Part(ins.toSet(), outs.toSet())
+        // TODO: if the part isObviouslyInside, subtract it
         if (!parts.any { part isObviouslyInside it }) {
             recordCommand(Command.SELECT_PART)
             parts.add(part)
@@ -225,7 +234,9 @@ class EditClusterViewModel(
         val circleOutsides = part.outsides.map { circles[it] }
         return if (insidePath == null) {
             circleOutsides.map { circle2path(it) }
+                // TODO: encapsulate as a separate tool, otherwise it's not deselectable after new circles are added
                 // NOTE: reduce(xor) on outsides = makes binary interlacing pattern
+                // not what one would expect
                 .reduceOrNull { acc: Path, anotherPath: Path ->
                     Path.combine(PathOperation.Xor, acc, anotherPath)
                 } ?: Path()
@@ -250,7 +261,6 @@ class EditClusterViewModel(
 
     fun onDown(position: Offset) {
         // no need for onUp since all actions occur after onDown
-        // if on handle, select handle; otherwise empty d
         handleIsDown.value = when (val h = handle.value) {
             is Handle.Radius -> {
                 val circle = circles[h.ix]
@@ -317,11 +327,7 @@ class EditClusterViewModel(
                         }
                     }
                 }
-                else -> {
-                    // navigate canvas
-//                    offset.value = (offset.value + centroid/scale.value) - (centroid/(scale.value*zoom) + pan/scale.value)
-//                    scale.value *= zoom // MAYBE: add zoom slider for non-mobile
-                }
+                else -> {}
             }
         }
 
@@ -359,13 +365,11 @@ class EditClusterViewModel(
 
     fun onLongDragStart(position: Offset) {
         // draggables = circles
-        if (true || selectionMode.value.isSelectingCircles()) { // thats what im feeling now
-            selectCircle(circles, position)?.let { ix ->
-                grabbedCircleIx.value = ix
-                if (selectionMode.value == SelectionMode.Drag) {
-                    selection.clear()
-                    selection.add(ix)
-                }
+        selectCircle(circles, position)?.let { ix ->
+            grabbedCircleIx.value = ix
+            if (selectionMode.value == SelectionMode.Drag) {
+                selection.clear()
+                selection.add(ix)
             }
         }
     }

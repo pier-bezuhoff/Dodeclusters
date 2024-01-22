@@ -276,12 +276,6 @@ fun EditClusterContent(
                 onLongDragCancel = viewModel::onLongDragCancel,
                 onLongDragEnd = viewModel::onLongDragEnd,
             )
-            // this VVV aint good, who needs navigating around anyway
-//            .graphicsLayer(
-//                scaleX = scale, scaleY = scale,
-//                translationX = -scale*offset.x, translationY = -scale*offset.y,
-//                transformOrigin = TransformOrigin(0f, 0f)
-//            )
             .fillMaxSize()
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // crucial for proper alpha blending
     ) {
@@ -327,61 +321,5 @@ fun EditClusterContent(
         for (part in viewModel.parts) {
             drawPath(viewModel.part2path(part), color = clusterPartColor, alpha = clusterPathAlpha)
         }
-    }
-}
-
-@OptIn(ExperimentalResourceApi::class)
-@Composable
-fun DstInTest() {
-    val left = painterResource("leftc.png")
-    Canvas(Modifier
-        .fillMaxSize()
-        .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen, alpha = 0.99f)
-    ) {
-        val radius = 300f
-        val center1 = Offset(500f, 500f)
-        val center2 = Offset(700f, 500f)
-        drawCircle(Color.Cyan, radius, center1, alpha = 1f, style = Fill)
-        drawCircle(Color.White, radius, center2, alpha = 1f, style = Fill, blendMode = BlendMode.DstIn)
-        with(left) {
-            draw(left.intrinsicSize)
-        }
-        val bitmap = ImageBitmap(100, 100)
-        val canvas = androidx.compose.ui.graphics.Canvas(bitmap)
-    }
-}
-
-@Composable
-fun IntersectionTest() {
-    val path = remember { Path() }
-    Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        if (path.isEmpty) {
-            val tempPath1 = Path().apply {
-                addOval(
-                    Rect(
-                        radius = 300f,
-                        center = Offset(500f, 500f)
-                    )
-                )
-            }
-            val tempPath2 = Path().apply {
-                addOval(
-                    Rect(
-                        radius = 300f,
-                        center = Offset(700f, 500f)
-                    )
-                )
-            }
-            val diffPath = Path.combine(
-                operation = PathOperation.Intersect,
-                path1 = tempPath1,
-                path2 = tempPath2
-            )
-            path.addPath(diffPath)
-        }
-        drawPath(path, color = Color.Cyan)
     }
 }
