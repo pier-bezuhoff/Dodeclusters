@@ -51,6 +51,7 @@ class EditClusterViewModel(
     private val commands = ArrayDeque<Command>(HISTORY_SIZE)
     // we group history by commands and record it only when the new command differs from the previous one
     // NOTE: history doesn't survive background app kill
+    // TODO: redo stack
     private val history = ArrayDeque<UiState>(HISTORY_SIZE)
 
     private val _decayingCircles = MutableSharedFlow<DecayingCircles>()
