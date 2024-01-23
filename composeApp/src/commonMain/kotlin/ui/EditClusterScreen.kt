@@ -43,9 +43,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
-import data.io.saveTextFile
+import data.io.OpenFileButton
+import data.io.SaveData
+import data.io.SaveFileButton
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
@@ -89,12 +90,13 @@ fun EditClusterTopBar(
 //            }
         },
         actions = {
-            IconButton(onClick = {
-                coroutineScope.launch(Dispatchers.Default) {
-                    saveTextFile("abcd hi!", "test.txt")
-                }
-            }) {
-                Icon(painterResource("icons/save.xml"), contentDescription = "Save")
+            SaveFileButton(painterResource("icons/save.xml"), "Save",
+                saveDataProvider = { SaveData("test", "txt", "hello hi!") }
+            ) {
+                println(if (it) "saved" else "not saved")
+            }
+            OpenFileButton(painterResource("icons/open_file.xml"), "Open file") { content ->
+                println(content)
             }
             IconButton(onClick = viewModel::undo) {
                 Icon(painterResource("icons/undo.xml"), contentDescription = "Undo")

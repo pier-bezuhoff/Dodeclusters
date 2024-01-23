@@ -1,8 +1,16 @@
 package data.io
 
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.painter.Painter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.File
+import java.io.IOException
 
-actual suspend fun saveTextFile(content: String, filename: String) {
+fun saveTextFile(content: String, filename: String) {
     val originalFile = File(filename)
     val name = originalFile.nameWithoutExtension
     val extension = if (originalFile.extension.isNotBlank()) "." + originalFile.extension else ""
@@ -22,5 +30,28 @@ actual suspend fun saveTextFile(content: String, filename: String) {
             out.write(line)
             out.newLine()
         }
+    }
+}
+
+@Composable
+actual fun SaveFileButton(
+    iconPainter: Painter,
+    contentDescription: String,
+    saveDataProvider: () -> SaveData,
+    onSaved: (successful: Boolean) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    IconButton(onClick = {
+        coroutineScope.launch(Dispatchers.IO) {
+            val saveData = saveDataProvider()
+            try {
+                saveTextFile(saveData.content, saveData.filename)
+                onSaved(true)
+            } catch (e: IOException) {
+                onSaved(false)
+            }
+        }
+    }) {
+        Icon(iconPainter, contentDescription)
     }
 }
