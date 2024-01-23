@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import java.io.FileNotFoundException
+import java.io.FileOutputStream
 import java.io.IOException
 
 @Composable
@@ -23,20 +24,25 @@ actual fun SaveFileButton(
     val context = LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("text/plain")
+//        contract = ActivityResultContracts.CreateDocument("text/plain") // forces .txt extension; when used with filename ending in .txt creates empty file
+        contract = ActivityResultContracts.CreateDocument("*/*")
     ) { uri ->
         try {
-            // BUG: only creates empty file it seems
             uri?.let {
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    val saveData = saveDataProvider()
-                    outputStream.bufferedWriter().write(saveData.content)
-                    onSaved(true)
+                context.contentResolver.openFileDescriptor(uri, "w")?.use { parcelFileDescriptor ->
+                    FileOutputStream(parcelFileDescriptor.fileDescriptor).use { outputStream ->
+                        val saveData = saveDataProvider()
+                        outputStream.write(saveData.content.toByteArray())
+                        onSaved(true)
+                    }
                 } ?: onSaved(false)
             } ?: onSaved(false)
         } catch (e: IOException) {
+            e.printStackTrace()
             onSaved(false)
+
         } catch (e: FileNotFoundException) {
+            e.printStackTrace()
             onSaved(false)
         }
     }
