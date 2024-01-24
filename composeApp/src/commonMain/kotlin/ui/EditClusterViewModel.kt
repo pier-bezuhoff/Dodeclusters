@@ -61,7 +61,7 @@ class EditClusterViewModel(
     private val _decayingCircles = MutableSharedFlow<DecayingCircles>()
     val decayingCircles = _decayingCircles.asSharedFlow()
 
-//    val offset = mutableStateOf(Offset.Zero) // pre-scale offset
+    val translation = mutableStateOf(Offset.Zero) // pre-scale offset
 //    val scale = mutableStateOf(1f)
 
     init {
@@ -234,29 +234,39 @@ class EditClusterViewModel(
         selectionMode.value = newMode
     }
 
-    fun selectPoint(targets: List<Offset>, position: Offset): Int? =
-        targets.mapIndexed { ix, offset -> ix to (offset - position).getDistance() }
+    fun absolute(visiblePosition: Offset): Offset =
+        visiblePosition - translation.value
+
+    fun visible(position: Offset): Offset =
+        position + translation.value
+
+    fun selectPoint(targets: List<Offset>, visiblePosition: Offset): Int? {
+        val position = absolute(visiblePosition)
+        return targets.mapIndexed { ix, offset -> ix to (offset - position).getDistance() }
             .filter { (_, distance) -> distance <= SELECTION_EPSILON }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
+    }
 
-    fun selectCircle(targets: List<Circle>, position: Offset): Int? =
-        targets.mapIndexed { ix, circle ->
+    fun selectCircle(targets: List<Circle>, visiblePosition: Offset): Int? {
+        val position = absolute(visiblePosition)
+        return targets.mapIndexed { ix, circle ->
             ix to ((circle.offset - position).getDistance() - circle.radius).absoluteValue
         }
             .filter { (_, distance) -> distance <= SELECTION_EPSILON }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
+    }
 
-    fun reselectCircleAt(position: Offset) {
-        selectCircle(circles, position)?.let { ix ->
+    fun reselectCircleAt(visiblePosition: Offset) {
+        selectCircle(circles, visiblePosition)?.let { ix ->
             selection.clear()
             selection.add(ix)
         } ?: selection.clear()
     }
 
-    fun reselectCirclesAt(position: Offset) {
-        selectCircle(circles, position)?.let { ix ->
+    fun reselectCirclesAt(visiblePosition: Offset) {
+        selectCircle(circles, visiblePosition)?.let { ix ->
             if (ix in selection)
                 selection.remove(ix)
             else
@@ -264,7 +274,8 @@ class EditClusterViewModel(
         }
     }
 
-    fun reselectRegionAt(position: Offset) {
+    fun reselectRegionAt(visiblePosition: Offset) {
+        val position = absolute(visiblePosition)
         val delimiters = circles.indices
         val ins = delimiters
             .filter { ix -> circles[ix].checkPosition(position) < 0 }
@@ -408,35 +419,32 @@ class EditClusterViewModel(
                 }
                 else -> Unit // other handles are multiselect's rotate potentially
             }
-        } else {
-            when (selectionMode.value) {
-                SelectionMode.Drag -> if (selection.isNotEmpty()) { // move + scale radius
-                    recordCommand(Command.MOVE)
-                    val ix = selection.single()
+        } else if (selectionMode.value == SelectionMode.Drag && selection.isNotEmpty()) {
+            // move + scale radius
+            recordCommand(Command.MOVE)
+            val ix = selection.single()
+            val circle = circles[ix]
+            val newCenter = circle.offset + pan
+            circles[ix] = Circle(newCenter, zoom * circle.radius)
+        } else if (selectionMode.value == SelectionMode.Multiselect && selection.isNotEmpty()) {
+            if (selection.size == 1) { // move + scale radius
+                recordCommand(Command.MOVE)
+                val ix = selection.single()
+                val circle = circles[ix]
+                val newCenter = circle.offset + pan
+                circles[ix] = Circle(newCenter, zoom * circle.radius)
+            } else if (selection.size > 1) { // scale radius & position
+                recordCommand(Command.MOVE)
+                for (ix in selection) {
                     val circle = circles[ix]
-                    val newCenter = circle.offset + pan
-                    circles[ix] = Circle(newCenter, zoom * circle.radius)
+                    val newOffset = (circle.offset - centroid) * zoom + centroid + pan
+                    circles[ix] = Circle(newOffset, zoom * circle.radius)
                 }
-                SelectionMode.Multiselect -> {
-                    if (selection.size == 1) { // move + scale radius
-                        recordCommand(Command.MOVE)
-                        val ix = selection.single()
-                        val circle = circles[ix]
-                        val newCenter = circle.offset + pan
-                        circles[ix] = Circle(newCenter, zoom * circle.radius)
-                    } else if (selection.size > 1) { // scale radius & position
-                        recordCommand(Command.MOVE)
-                        for (ix in selection) {
-                            val circle = circles[ix]
-                            val newOffset = (circle.offset - centroid) * zoom + centroid + pan
-                            circles[ix] = Circle(newOffset, zoom * circle.radius)
-                        }
-                    }
-                }
-                else -> {}
             }
+        } else {
+            // navigate canvas
+            translation.value = translation.value + pan
         }
-
     }
 
     fun onVerticalScroll(yDelta: Float) {
@@ -471,18 +479,19 @@ class EditClusterViewModel(
 
     fun onLongDragStart(position: Offset) {
         // draggables = circles
-        selectCircle(circles, position)?.let { ix ->
-            grabbedCircleIx.value = ix
-            if (selectionMode.value == SelectionMode.Drag) {
-                selection.clear()
-                selection.add(ix)
+        if (showCircles.value)
+            selectCircle(circles, position)?.let { ix ->
+                grabbedCircleIx.value = ix
+                if (selectionMode.value == SelectionMode.Drag) {
+                    selection.clear()
+                    selection.add(ix)
+                }
+            } ?: run {
+                if (true || selectionMode.value == SelectionMode.SelectRegion) {
+                    // TODO: select part
+                    // drag bounding circles
+                }
             }
-        } ?: run {
-            if (true || selectionMode.value == SelectionMode.SelectRegion) {
-                // TODO: select part
-                // drag bounding circles
-            }
-        }
     }
 
     fun onLongDrag(delta: Offset) {

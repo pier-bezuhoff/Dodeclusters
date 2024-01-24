@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
@@ -256,32 +257,34 @@ fun EditClusterContent(
     ) {
         drawRect(backgroundColor)
         // overlay w/ selected circles
-        if (viewModel.selectionMode.value.isSelectingCircles() && viewModel.showCircles.value)
-            for (ix in viewModel.selection) {
-                val circle = viewModel.circles[ix]
-                drawCircle( // alpha = where selection lines are shown
-                    color = Color.Black,
+        translate(viewModel.translation.value.x, viewModel.translation.value.y) {
+            if (viewModel.selectionMode.value.isSelectingCircles() && viewModel.showCircles.value)
+                for (ix in viewModel.selection) {
+                    val circle = viewModel.circles[ix]
+                    drawCircle( // alpha = where selection lines are shown
+                        color = Color.Black,
+                        radius = circle.radius.toFloat(),
+                        center = circle.offset,
+                        style = circleFill,
+                        blendMode = BlendMode.DstOut, // dst out = eraze the BG rectangle => show hatching thats drawn behind it
+                    )
+                    drawCircle( // thiccer lines
+                        color = circleColor,
+                        alpha = 0.7f,
+                        radius = circle.radius.toFloat(),
+                        center = circle.offset,
+                        style = circleThiccStroke,
+                    )
+                }
+            // animations
+            for (circle in decayingCircles.circles) {
+                drawCircle(
+                    color = decayingCircles.color,
+                    alpha = decayAlpha.value,
                     radius = circle.radius.toFloat(),
-                    center = circle.offset,
-                    style = circleFill,
-                    blendMode = BlendMode.DstOut, // dst out = eraze the BG rectangle => show hatching thats drawn behind it
-                )
-                drawCircle( // thiccer lines
-                    color = circleColor,
-                    alpha = 0.7f,
-                    radius = circle.radius.toFloat(),
-                    center = circle.offset,
-                    style = circleThiccStroke,
+                    center = circle.offset
                 )
             }
-        // animations
-        for (circle in decayingCircles.circles) {
-            drawCircle(
-                color = decayingCircles.color,
-                alpha = decayAlpha.value,
-                radius = circle.radius.toFloat(),
-                center = circle.offset
-            )
         }
     }
     Canvas(
@@ -299,50 +302,58 @@ fun EditClusterContent(
             .fillMaxSize()
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // crucial for proper alpha blending
     ) {
-        if (viewModel.showCircles.value)
-            for (circle in viewModel.circles) {
-                drawCircle(
-                    color = circleColor,
-                    radius = circle.radius.toFloat(),
-                    center = circle.offset,
-                    style = circleStroke,
+        translate(viewModel.translation.value.x, viewModel.translation.value.y) {
+            if (viewModel.showCircles.value)
+                for (circle in viewModel.circles) {
+                    drawCircle(
+                        color = circleColor,
+                        radius = circle.radius.toFloat(),
+                        center = circle.offset,
+                        style = circleStroke,
+                    )
+                }
+            // handles
+            if (viewModel.showCircles.value)
+                when (viewModel.handle.value) {
+                    is Handle.Radius -> {
+                        val selectedCircle = viewModel.circles[viewModel.selection.single()]
+                        val right =
+                            selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
+                        drawLine(
+                            color = selectionMarkingsColor,
+                            selectedCircle.offset,
+                            right,
+                        )
+                        drawCircle(
+                            color = handleColor,
+                            radius = handleRadius,
+                            center = right
+                        )
+                    }
+
+                    is Handle.Scale -> {
+                        val selectionRect = viewModel.getSelectionRect()
+                        drawRect(
+                            color = selectionMarkingsColor,
+                            topLeft = selectionRect.topLeft,
+                            size = selectionRect.size,
+                            style = dottedStroke,
+                        )
+                        drawCircle(
+                            color = handleColor,
+                            radius = handleRadius,
+                            center = selectionRect.topRight,
+                        )
+                    }
+                }
+            for (part in viewModel.parts) {
+                drawPath(
+                    viewModel.part2path(part),
+                    color = clusterPartColor,
+                    alpha = clusterPathAlpha
                 )
-            }
-        // handles
-        if (viewModel.showCircles.value)
-            when (viewModel.handle.value) {
-                is Handle.Radius -> {
-                    val selectedCircle = viewModel.circles[viewModel.selection.single()]
-                    val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
-                    drawLine(
-                        color = selectionMarkingsColor,
-                        selectedCircle.offset,
-                        right,
-                    )
-                    drawCircle(
-                        color = handleColor,
-                        radius = handleRadius,
-                        center = right
-                    )
-                }
-                is Handle.Scale -> {
-                    val selectionRect = viewModel.getSelectionRect()
-                    drawRect(
-                        color = selectionMarkingsColor,
-                        topLeft = selectionRect.topLeft,
-                        size = selectionRect.size,
-                        style = dottedStroke,
-                    )
-                    drawCircle(
-                        color = handleColor,
-                        radius = handleRadius,
-                        center = selectionRect.topRight,
-                    )
-                }
-            }
-        for (part in viewModel.parts) {
-            drawPath(viewModel.part2path(part), color = clusterPartColor, alpha = clusterPathAlpha)
 //            println("draw parts")
+            }
         }
     }
 }
