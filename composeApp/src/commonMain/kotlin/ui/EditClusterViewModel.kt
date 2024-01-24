@@ -49,11 +49,13 @@ class EditClusterViewModel(
     val handleIsDown = mutableStateOf(false)
     val grabbedCircleIx = mutableStateOf<Int?>(null)
 
+    // tagged & grouped gap buffer
     private val commands = ArrayDeque<Command>(HISTORY_SIZE)
+    private val redoCommands = ArrayDeque<Command>(HISTORY_SIZE)
     // we group history by commands and record it only when the new command differs from the previous one
     // NOTE: history doesn't survive background app kill
-    // TODO: redo stack
     private val history = ArrayDeque<UiState>(HISTORY_SIZE)
+    private val redoHistory = ArrayDeque<UiState>(HISTORY_SIZE)
 
     private val _decayingCircles = MutableSharedFlow<DecayingCircles>()
     val decayingCircles = _decayingCircles.asSharedFlow()
@@ -94,6 +96,7 @@ class EditClusterViewModel(
     fun undo() {
         if (history.size > 1) {
             val previousState = history.removeLast()
+            val previousCommand = commands.removeLast()
             selection.clear()
             parts.clear()
             circles.clear()
@@ -101,7 +104,24 @@ class EditClusterViewModel(
             parts.addAll(previousState.parts)
             switchSelectionMode(previousState.selectionMode)
             selection.addAll(previousState.selection)
-            commands.removeLast()
+            redoCommands.addFirst(previousCommand)
+            redoHistory.addFirst(previousState)
+        }
+    }
+
+    fun redo() {
+        if (redoHistory.isNotEmpty()) {
+            val nextState = redoHistory.removeFirst()
+            val nextCommand = redoCommands.removeFirst()
+            selection.clear()
+            parts.clear()
+            circles.clear()
+            circles.addAll(nextState.circles)
+            parts.addAll(nextState.parts)
+            switchSelectionMode(nextState.selectionMode)
+            selection.addAll(nextState.selection)
+            commands.addLast(nextCommand)
+            history.addLast(nextState)
         }
     }
 
@@ -111,9 +131,11 @@ class EditClusterViewModel(
                 history.removeFirst()
                 commands.removeFirst()
             }
-            history.add(UiState.save(this))
-            commands.add(command)
+            history.addLast(UiState.save(this))
+            commands.addLast(command)
         }
+        redoCommands.clear()
+        redoHistory.clear()
     }
 
     suspend fun createNewCircle() {
@@ -198,11 +220,11 @@ class EditClusterViewModel(
                 selection.clear()
         } else if (selectionMode.value == SelectionMode.SelectRegion && newMode == SelectionMode.SelectRegion) {
             if (parts.isEmpty()) {
-                recordCommand(Command.SELECT_PART)
+//                recordCommand(Command.SELECT_PART)
                 // select interlacing, todo: proper 2^n -> even # of 1's -> {0101001} -> parts
                 parts.add(Cluster.Part(emptySet(), circles.indices.toSet()))
             } else {
-                recordCommand(Command.SELECT_PART)
+//                recordCommand(Command.SELECT_PART)
                 parts.clear()
             }
         }

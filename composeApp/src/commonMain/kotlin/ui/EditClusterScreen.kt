@@ -104,6 +104,9 @@ fun EditClusterTopBar(
             IconButton(onClick = viewModel::undo) {
                 Icon(painterResource("icons/undo.xml"), contentDescription = "Undo")
             }
+            IconButton(onClick = viewModel::redo) {
+                Icon(painterResource("icons/redo.xml"), contentDescription = "Redo")
+            }
 //            IconButton(onClick = viewModel::cancelAndGoBack) {
 //                Icon(Icons.Default.Close, contentDescription = "Cancel")
 //            }

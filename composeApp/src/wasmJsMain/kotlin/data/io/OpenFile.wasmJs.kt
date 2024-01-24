@@ -36,7 +36,8 @@ actual fun OpenFileButton(
 fun queryFile(callback: (file: File?) -> Unit) {
     val input = document.createElement("input") as HTMLInputElement
     input.type = "file"
-    input.accept = "text/plain"
+//    input.accept = "text/plain" // doesnt detect custom formats
+//    input.accept = "*/*"
     input.onchange = { event ->
         val file = input.files?.get(0)
 //        val file = extractFileFromEvent(event)
