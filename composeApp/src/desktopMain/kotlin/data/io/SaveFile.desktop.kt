@@ -3,27 +3,72 @@ package data.io
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.window.AwtWindow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.awt.FileDialog
+import java.awt.Frame
 import java.io.File
 import java.io.IOException
 
-fun saveTextFile(content: String, filename: String) {
-    val originalFile = File(filename)
+@Composable
+actual fun SaveFileButton(
+    iconPainter: Painter,
+    contentDescription: String,
+    saveDataProvider: () -> SaveData,
+    onSaved: (successful: Boolean) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    var fileDialogIsOpen by remember { mutableStateOf(false) }
+    var lastDir by remember { mutableStateOf<String?>(null) }
+    IconButton(onClick = {
+        fileDialogIsOpen = true
+    }) {
+        Icon(iconPainter, contentDescription)
+    }
+    if (fileDialogIsOpen) {
+        val saveData = saveDataProvider()
+        SaveFileDialog(
+            defaultDir = lastDir,
+            defaultFilename = saveData.filename,
+        ) { directory, filename ->
+            fileDialogIsOpen = false
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    if (filename != null) {
+                        if (directory != null)
+                            lastDir = directory
+                        saveTextFile(saveData.content, File(directory, filename))
+                        onSaved(true)
+                    } else
+                        onSaved(false)
+                } catch (e: IOException) {
+                    onSaved(false)
+                }
+            }
+        }
+    }
+}
+
+fun saveTextFile(content: String, originalFile: File) {
     val name = originalFile.nameWithoutExtension
     val extension = if (originalFile.extension.isNotBlank()) "." + originalFile.extension else ""
     var suffix: Int? = null
     fun newFilename(): String =
         name + (suffix ?: "") + extension
-    while (File(newFilename()).exists()) {
+    while (File(originalFile.parent, newFilename()).exists()) {
         if (suffix == null)
             suffix = 1
         else
             suffix += 1
     }
-    val file = File(newFilename())
+    val file = File(originalFile.parent, newFilename())
     file.createNewFile()
     file.bufferedWriter().use { out ->
         content.lines().forEach { line ->
@@ -34,24 +79,26 @@ fun saveTextFile(content: String, filename: String) {
 }
 
 @Composable
-actual fun SaveFileButton(
-    iconPainter: Painter,
-    contentDescription: String,
-    saveDataProvider: () -> SaveData,
-    onSaved: (successful: Boolean) -> Unit
-) {
-    val coroutineScope = rememberCoroutineScope()
-    IconButton(onClick = {
-        coroutineScope.launch(Dispatchers.IO) {
-            val saveData = saveDataProvider()
-            try {
-                saveTextFile(saveData.content, saveData.filename)
-                onSaved(true)
-            } catch (e: IOException) {
-                onSaved(false)
+private fun SaveFileDialog(
+    parent: Frame? = null,
+    defaultDir: String? = null,
+    defaultFilename: String,
+    onCloseRequest: (directory: String?, filename: String?) -> Unit
+) = AwtWindow(
+    create = {
+        object : FileDialog(parent, "Save this cluster", SAVE) {
+            init {
+                directory = defaultDir
+                file = defaultFilename
+            }
+
+            override fun setVisible(value: Boolean) {
+                super.setVisible(value)
+                if (value) {
+                    onCloseRequest(directory, file)
+                }
             }
         }
-    }) {
-        Icon(iconPainter, contentDescription)
-    }
-}
+    },
+    dispose = FileDialog::dispose
+)

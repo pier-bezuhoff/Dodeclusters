@@ -91,12 +91,15 @@ fun EditClusterTopBar(
         },
         actions = {
             SaveFileButton(painterResource("icons/save.xml"), "Save",
-                saveDataProvider = { SaveData("test", "ddj", "hello hi!") }
+                saveDataProvider = { SaveData(
+                    "cluster", "ddc", viewModel.saveAsJSON()) }
             ) {
                 println(if (it) "saved" else "not saved")
             }
             OpenFileButton(painterResource("icons/open_file.xml"), "Open file") { content ->
-                println("opened: $content")
+                content?.let {
+                    viewModel.loadFromJSON(content)
+                }
             }
             IconButton(onClick = viewModel::undo) {
                 Icon(painterResource("icons/undo.xml"), contentDescription = "Undo")

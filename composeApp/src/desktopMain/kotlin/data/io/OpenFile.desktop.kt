@@ -32,7 +32,7 @@ actual fun OpenFileButton(
         Icon(iconPainter, contentDescription)
     }
     if (fileDialogIsOpen) {
-        FileDialog { directory, filename ->
+        LoadFileDialog { directory, filename ->
             fileDialogIsOpen = false
             coroutineScope.launch(Dispatchers.IO) {
                 try {
@@ -55,7 +55,7 @@ actual fun OpenFileButton(
 }
 
 @Composable
-private fun FileDialog(
+private fun LoadFileDialog(
     parent: Frame? = null,
     onCloseRequest: (directory: String?, filename: String?) -> Unit
 ) = AwtWindow(

@@ -14,6 +14,7 @@ import data.Cluster
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlin.math.absoluteValue
 import kotlin.math.pow
@@ -67,6 +68,28 @@ class EditClusterViewModel(
     // navigation
     fun saveAndGoBack() {}
     fun cancelAndGoBack() {}
+
+    fun saveAsJSON(): String {
+        val cluster = Cluster(
+            circles, parts, true, Color.Cyan, Color.Cyan
+        )
+        return Json.encodeToString(Cluster.serializer(), cluster)
+    }
+
+    fun loadFromJSON(json: String) {
+        try {
+            val cluster = Json.decodeFromString(Cluster.serializer(), json)
+            selection.clear()
+            parts.clear()
+            circles.clear()
+            circles.addAll(cluster.circles)
+            parts.addAll(cluster.parts)
+        } catch (e: SerializationException) {
+            e.printStackTrace()
+        } catch (e: IllegalArgumentException) {
+            e.printStackTrace()
+        }
+    }
 
     fun undo() {
         if (history.size > 1) {

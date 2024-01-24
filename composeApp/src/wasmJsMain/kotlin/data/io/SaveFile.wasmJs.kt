@@ -55,7 +55,7 @@ fun downloadTextFile2(content: String) {
 }
 
 // saves properly with given filename
-fun downloadTextFile3(content: String, filename: String) {
+fun downloadTextFile3(filename: String, content: String) {
     val blobContent = JsArray<JsAny?>()
     blobContent[0] = content.toJsString()
     val file = Blob(blobContent, BlobPropertyBag("text/plain"))
@@ -71,7 +71,7 @@ fun downloadTextFile3(content: String, filename: String) {
 }
 
 // saves properly with given filename
-fun downloadTextFile4(content: String, filename: String) {
+fun downloadTextFile4(filename: String, content: String) {
     val contentType = "data:application/octet-stream"
     val uriContent = contentType + ";charset=utf-8," + encodeURIComponent(content)
     val a = document.createElement("a") as HTMLAnchorElement
