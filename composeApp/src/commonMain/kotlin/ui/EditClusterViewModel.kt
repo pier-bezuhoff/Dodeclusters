@@ -400,7 +400,7 @@ class EditClusterViewModel(
                 is Handle.Radius -> {
                     recordCommand(Command.CHANGE_RADIUS)
                     val center = circles[h.ix].offset
-                    val r = (centroid - center).getDistance()
+                    val r = (absolute(centroid) - center).getDistance()
                     circles[h.ix] = circles[h.ix].copy(radius = r.toDouble())
                 }
                 is Handle.Scale -> {
