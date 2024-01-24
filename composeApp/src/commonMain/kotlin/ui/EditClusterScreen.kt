@@ -140,6 +140,19 @@ fun EditClusterBottomBar(
             painterResource("icons/select_region_mode.xml"),
             contentDescription = "select region mode",
         )
+        IconToggleButton(
+            checked = viewModel.showCircles.value,
+            onCheckedChange = {
+                viewModel.showCircles.value = !viewModel.showCircles.value
+            },
+        ) {
+            Icon(
+                if (viewModel.showCircles.value) painterResource("icons/visible.xml")
+                else painterResource("icons/invisible.xml"),
+                "Make circles invisible"
+            )
+        }
+        Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
         Divider(
             Modifier
                 .padding(8.dp)
@@ -243,7 +256,7 @@ fun EditClusterContent(
     ) {
         drawRect(backgroundColor)
         // overlay w/ selected circles
-        if (viewModel.selectionMode.value.isSelectingCircles())
+        if (viewModel.selectionMode.value.isSelectingCircles() && viewModel.showCircles.value)
             for (ix in viewModel.selection) {
                 val circle = viewModel.circles[ix]
                 drawCircle( // alpha = where selection lines are shown
@@ -286,45 +299,47 @@ fun EditClusterContent(
             .fillMaxSize()
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // crucial for proper alpha blending
     ) {
-        for (circle in viewModel.circles) {
-            drawCircle(
-                color = circleColor,
-                radius = circle.radius.toFloat(),
-                center = circle.offset,
-                style = circleStroke,
-            )
-        }
+        if (viewModel.showCircles.value)
+            for (circle in viewModel.circles) {
+                drawCircle(
+                    color = circleColor,
+                    radius = circle.radius.toFloat(),
+                    center = circle.offset,
+                    style = circleStroke,
+                )
+            }
         // handles
-        when (viewModel.handle.value) {
-            is Handle.Radius -> {
-                val selectedCircle = viewModel.circles[viewModel.selection.single()]
-                val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
-                drawLine(
-                    color = selectionMarkingsColor,
-                    selectedCircle.offset,
-                    right,
-                )
-                drawCircle(
-                    color = handleColor,
-                    radius = handleRadius,
-                    center = right
-                )
+        if (viewModel.showCircles.value)
+            when (viewModel.handle.value) {
+                is Handle.Radius -> {
+                    val selectedCircle = viewModel.circles[viewModel.selection.single()]
+                    val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
+                    drawLine(
+                        color = selectionMarkingsColor,
+                        selectedCircle.offset,
+                        right,
+                    )
+                    drawCircle(
+                        color = handleColor,
+                        radius = handleRadius,
+                        center = right
+                    )
+                }
+                is Handle.Scale -> {
+                    val selectionRect = viewModel.getSelectionRect()
+                    drawRect(
+                        color = selectionMarkingsColor,
+                        topLeft = selectionRect.topLeft,
+                        size = selectionRect.size,
+                        style = dottedStroke,
+                    )
+                    drawCircle(
+                        color = handleColor,
+                        radius = handleRadius,
+                        center = selectionRect.topRight,
+                    )
+                }
             }
-            is Handle.Scale -> {
-                val selectionRect = viewModel.getSelectionRect()
-                drawRect(
-                    color = selectionMarkingsColor,
-                    topLeft = selectionRect.topLeft,
-                    size = selectionRect.size,
-                    style = dottedStroke,
-                )
-                drawCircle(
-                    color = handleColor,
-                    radius = handleRadius,
-                    center = selectionRect.topRight,
-                )
-            }
-        }
         for (part in viewModel.parts) {
             drawPath(viewModel.part2path(part), color = clusterPartColor, alpha = clusterPathAlpha)
 //            println("draw parts")

@@ -48,6 +48,7 @@ class EditClusterViewModel(
     }
     val handleIsDown = mutableStateOf(false)
     val grabbedCircleIx = mutableStateOf<Int?>(null)
+    val showCircles = mutableStateOf(true)
 
     // tagged & grouped gap buffer
     private val commands = ArrayDeque<Command>(HISTORY_SIZE)
