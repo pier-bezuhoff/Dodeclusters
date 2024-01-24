@@ -102,7 +102,7 @@ class EditClusterViewModel(
             circles.clear()
             circles.addAll(previousState.circles)
             parts.addAll(previousState.parts)
-            switchSelectionMode(previousState.selectionMode)
+            switchSelectionMode(previousState.selectionMode, noAlteringShortcuts = true)
             selection.addAll(previousState.selection)
             redoCommands.addFirst(previousCommand)
             redoHistory.addFirst(previousState)
@@ -118,7 +118,7 @@ class EditClusterViewModel(
             circles.clear()
             circles.addAll(nextState.circles)
             parts.addAll(nextState.parts)
-            switchSelectionMode(nextState.selectionMode)
+            switchSelectionMode(nextState.selectionMode, noAlteringShortcuts = true)
             selection.addAll(nextState.selection)
             commands.addLast(nextCommand)
             history.addLast(nextState)
@@ -210,7 +210,7 @@ class EditClusterViewModel(
         }
     }
 
-    fun switchSelectionMode(newMode: SelectionMode) {
+    fun switchSelectionMode(newMode: SelectionMode, noAlteringShortcuts: Boolean = false) {
         if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
         if (selectionMode.value == SelectionMode.Multiselect && newMode == SelectionMode.Multiselect) {
@@ -218,13 +218,15 @@ class EditClusterViewModel(
                 selection.addAll(circles.indices)
             else
                 selection.clear()
-        } else if (selectionMode.value == SelectionMode.SelectRegion && newMode == SelectionMode.SelectRegion) {
+        } else if (selectionMode.value == SelectionMode.SelectRegion && newMode == SelectionMode.SelectRegion &&
+            !noAlteringShortcuts
+        ) {
             if (parts.isEmpty()) {
-//                recordCommand(Command.SELECT_PART)
+                recordCommand(Command.SELECT_PART)
                 // select interlacing, todo: proper 2^n -> even # of 1's -> {0101001} -> parts
                 parts.add(Cluster.Part(emptySet(), circles.indices.toSet()))
             } else {
-//                recordCommand(Command.SELECT_PART)
+                recordCommand(Command.SELECT_PART)
                 parts.clear()
             }
         }
