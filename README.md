@@ -3,8 +3,8 @@
 Vector image editor using only circles (WIP)  
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform) targeting
 - [x] Desktop (Windows, Linux)
-- [x] Android
-- [x] Web (via WASM; doesn't work on mobile because of the [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
+- [x] Android 7.0+ (SDK 24+)
+- [x] Web (via WASM; doesn't work on mobile yet because of the [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
 - [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries)
 
 ## Installation
@@ -15,12 +15,15 @@ Binaries for Linux, Window and Android are stored [here](https://drive.google.co
 
 ## Roadmap:
 
+Cluster = circles + union of intersections of some of these circles (their insides or outsides)  
+
 * Cluster editor
-  - [ ] cluster = circles + union of intersections of some of the circles (their insides or outsides)
   - [x] drag, select, copy, create & delete circles
   - [x] move & scale circles
   - [x] select/deselect intersection regions
   - [x] select binary interlacing even/odd regions (like chessboard coloring)
+  - [x] load/save individual clusters as .ddc (actually json inside, temporary solution)
+  - [ ] additional context-dependent toolbar to group categories of tools (a-la bucket fill + gradient)
   - [ ] bezier-like pathing tool
   - [ ] maybe finer control over angles/distances
 * Multi-cluster editor
@@ -28,12 +31,12 @@ Binaries for Linux, Window and Android are stored [here](https://drive.google.co
   - move, scale & rotate clusters
   - change color, border color, fill/wireframe
   - re-order / sidebar layer-like interface
-* New cluster-based format to inherit from `.ddu` (e.g. `.ddo`)
-  - probs `.yaml` based
+* New cluster-based format to supersede `.ddu` (e.g. `.ddc`)
+  - JSON or YAML based
   - centered to (0,0)
-  - cluster numbering & separate circle numbering
+  - cluster indexing & separate circle indexing
 * other actions
-  - [x] history: undo + maybe redo
+  - [x] history: undo + redo
   - [ ] read `.ddu`
   - [ ] maybe export as `.svg`
   - [ ] maybe add up/down/left/right arrow controls to temporarily fix the mobile browser issue

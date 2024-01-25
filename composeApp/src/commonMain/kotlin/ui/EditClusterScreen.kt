@@ -350,7 +350,8 @@ fun EditClusterContent(
                 drawPath(
                     viewModel.part2path(part),
                     color = clusterPartColor,
-                    alpha = clusterPathAlpha
+                    alpha = clusterPathAlpha,
+                    style = if (viewModel.showWireframes.value) circleStroke else circleFill,
                 )
             }
         }

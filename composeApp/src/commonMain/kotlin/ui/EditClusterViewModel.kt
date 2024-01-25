@@ -48,7 +48,10 @@ class EditClusterViewModel(
     }
     val handleIsDown = mutableStateOf(false)
     val grabbedCircleIx = mutableStateOf<Int?>(null)
+
     val showCircles = mutableStateOf(true)
+    /** which style to use when drawing parts: true = stroke, false = fill */
+    val showWireframes = mutableStateOf(false)
 
     // tagged & grouped gap buffer
     private val commands = ArrayDeque<Command>(HISTORY_SIZE)
