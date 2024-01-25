@@ -7,8 +7,10 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
 - [x] Web (via WASM; doesn't work on mobile because of the [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
 - [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries)
 
+## Installation
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
-[Deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
+[Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
+Binaries for Linux, Window and Android are stored [here](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=drive_link).
 
 
 ## Roadmap:

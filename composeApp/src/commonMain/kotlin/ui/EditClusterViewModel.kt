@@ -82,6 +82,7 @@ class EditClusterViewModel(
     fun loadFromJSON(json: String) {
         try {
             val cluster = Json.decodeFromString(Cluster.serializer(), json)
+            translation.value = Offset.Zero
             selection.clear()
             parts.clear()
             circles.clear()
@@ -376,20 +377,23 @@ class EditClusterViewModel(
         }
     }
 
-    fun onDown(position: Offset) {
+    fun onDown(visiblePosition: Offset) {
         // no need for onUp since all actions occur after onDown
         handleIsDown.value = when (val h = handle.value) {
             is Handle.Radius -> {
                 val circle = circles[h.ix]
                 val right = circle.offset + Offset(circle.radius.toFloat(), 0f)
-                selectPoint(listOf(right), position) != null
+                selectPoint(listOf(right), visiblePosition) != null
             }
             is Handle.Scale -> {
                 val topRight = getSelectionRect().topRight
-                selectPoint(listOf(topRight), position) != null
+                selectPoint(listOf(topRight), visiblePosition) != null
             }
             else -> false // other handles are multiselect's rotate
         }
+        // NOTE: this enables drag-only behavior, disallows moving circles without grabbing them
+        if (DRAG_ONLY && !handleIsDown.value && selectionMode.value == SelectionMode.Drag)
+            reselectCircleAt(visiblePosition)
     }
 
     // MAYBE: handle key arrows as panning
@@ -547,6 +551,9 @@ class EditClusterViewModel(
     }
 
     companion object {
+        /** In drag mode: disallows moving around things that are selected but not grabbed,
+         * but enables simple drag&drop behavior that is other only available after long press */
+        const val DRAG_ONLY = true
         const val SELECTION_EPSILON = 20f
         const val HISTORY_SIZE = 100
 
@@ -581,6 +588,7 @@ sealed class Handle(open val ixs: List<Int>) {
     data class Radius(val ix: Int): Handle(listOf(ix))
     data class Scale(override val ixs: List<Int>): Handle(ixs)
 //    data class Rotation(override val ixs: List<Int>): Handle(ixs)
+    // 'delete' handle in m-select
 }
 
 /** params for copy/delete animations */

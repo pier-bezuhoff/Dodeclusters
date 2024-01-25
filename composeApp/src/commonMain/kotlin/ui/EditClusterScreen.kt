@@ -352,7 +352,6 @@ fun EditClusterContent(
                     color = clusterPartColor,
                     alpha = clusterPathAlpha
                 )
-//            println("draw parts")
             }
         }
     }
