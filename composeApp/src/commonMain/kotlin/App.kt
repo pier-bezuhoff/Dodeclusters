@@ -25,7 +25,7 @@ fun App(
     MaterialTheme {
         if (usingMobileBrowser) {
             Column(Modifier.fillMaxHeight()) {
-                Text("Dodeclusters is not compatible with mobile browsers yet, consider installing it from .apk on Android")
+                Text("Dodeclusters is not compatible with mobile browsers yet, consider installing it from an .apk for Android")
                 EditClusterScreen(sampleIndex)
             }
         } else EditClusterScreen(sampleIndex)

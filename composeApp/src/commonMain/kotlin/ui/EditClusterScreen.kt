@@ -54,10 +54,11 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.max
 
+// TODO: left & right toolbar for landscape orientation instead of top & bottom
 @Composable
 fun EditClusterScreen(sampleIndex: Int? = null) {
     val coroutineScope = rememberCoroutineScope() // NOTE: potentially pass coroutineScope into VMSaver
-    val clusterReopsitory = remember { ClusterRepository() }
+    val clusterRepository = remember { ClusterRepository() }
     val viewModel = rememberSaveable(saver = EditClusterViewModel.VMSaver) {
         EditClusterViewModel.UiState.restore(EditClusterViewModel.UiState.DEFAULT)
     }
@@ -80,7 +81,7 @@ fun EditClusterScreen(sampleIndex: Int? = null) {
 
     coroutineScope.launch {
         if (sampleIndex != null) {
-            clusterReopsitory.loadSampleClusterJson(sampleIndex) { json ->
+            clusterRepository.loadSampleClusterJson(sampleIndex) { json ->
                 if (json != null) {
                     viewModel.loadFromJSON(json)
                 }
@@ -114,10 +115,10 @@ fun EditClusterTopBar(
                     viewModel.loadFromJSON(content)
                 }
             }
-            IconButton(onClick = viewModel::undo) {
+            IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
                 Icon(painterResource("icons/undo.xml"), contentDescription = "Undo")
             }
-            IconButton(onClick = viewModel::redo) {
+            IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
                 Icon(painterResource("icons/redo.xml"), contentDescription = "Redo")
             }
 //            IconButton(onClick = viewModel::cancelAndGoBack) {
@@ -173,13 +174,21 @@ fun EditClusterBottomBar(
                 .width(4.dp)
         )
         // TODO: make it into new mode: circle by center and radius + add line by 2 points
-        IconButton(onClick = { coroutineScope.launch { viewModel.createNewCircle() } }) {
+        IconButton(
+            onClick = { coroutineScope.launch { viewModel.createNewCircle() } },
+        ) {
             Icon(Icons.Default.AddCircle, contentDescription = "create new circle")
         }
-        IconButton(onClick = { coroutineScope.launch { viewModel.copyCircles() } }) {
+        IconButton(
+            onClick = { coroutineScope.launch { viewModel.copyCircles() } },
+            enabled = viewModel.copyAndDeleteAreEnabled
+        ) {
             Icon(painterResource("icons/copy.xml"), contentDescription = "copy circle(s)")
         }
-        IconButton(onClick = { coroutineScope.launch { viewModel.deleteCircles() } }) {
+        IconButton(
+            onClick = { coroutineScope.launch { viewModel.deleteCircles() } },
+            enabled = viewModel.copyAndDeleteAreEnabled
+        ) {
             Icon(Icons.Default.Delete, contentDescription = "delete circle(s)")
         }
     }
@@ -193,13 +202,13 @@ fun ModeToggle(
     contentDescription: String,
 ) {
     IconToggleButton(
-        checked = viewModel.selectionMode.value == mode,
+        checked = viewModel.selectionMode == mode,
         onCheckedChange = {
             viewModel.switchSelectionMode(mode)
         },
         modifier = Modifier
             .background(
-                if (viewModel.selectionMode.value == mode)
+                if (viewModel.selectionMode == mode)
                     MaterialTheme.colors.primaryVariant
                 else
                     MaterialTheme.colors.primary,
@@ -270,7 +279,7 @@ fun EditClusterContent(
         drawRect(backgroundColor)
         // overlay w/ selected circles
         translate(viewModel.translation.value.x, viewModel.translation.value.y) {
-            if (viewModel.selectionMode.value.isSelectingCircles() && viewModel.showCircles.value)
+            if (viewModel.selectionMode.isSelectingCircles() && viewModel.showCircles.value)
                 for (ix in viewModel.selection) {
                     val circle = viewModel.circles[ix]
                     drawCircle( // alpha = where selection lines are shown
