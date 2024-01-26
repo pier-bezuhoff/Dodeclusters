@@ -1,6 +1,7 @@
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
@@ -17,9 +18,17 @@ import org.jetbrains.compose.resources.painterResource
 import ui.EditClusterScreen
 
 @Composable
-fun App() {
+fun App(
+    usingMobileBrowser: Boolean = false,
+    sampleIndex: Int? = null,
+) {
     MaterialTheme {
-        EditClusterScreen()
+        if (usingMobileBrowser) {
+            Column(Modifier.fillMaxHeight()) {
+                Text("Dodeclusters is not compatible with mobile browsers yet, consider installing it from .apk on Android")
+                EditClusterScreen(sampleIndex)
+            }
+        } else EditClusterScreen(sampleIndex)
     }
 }
 

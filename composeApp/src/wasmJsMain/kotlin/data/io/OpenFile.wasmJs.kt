@@ -5,6 +5,7 @@ import androidx.compose.material.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.painter.Painter
 import kotlinx.browser.document
+import kotlinx.browser.window
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.Event
 import org.w3c.files.File

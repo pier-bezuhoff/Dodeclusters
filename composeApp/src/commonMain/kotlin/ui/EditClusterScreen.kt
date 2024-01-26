@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
+import data.ClusterRepository
 import data.io.OpenFileButton
 import data.io.SaveData
 import data.io.SaveFileButton
@@ -54,8 +55,9 @@ import org.jetbrains.compose.resources.painterResource
 import kotlin.math.max
 
 @Composable
-fun EditClusterScreen() {
+fun EditClusterScreen(sampleIndex: Int? = null) {
     val coroutineScope = rememberCoroutineScope() // NOTE: potentially pass coroutineScope into VMSaver
+    val clusterReopsitory = remember { ClusterRepository() }
     val viewModel = rememberSaveable(saver = EditClusterViewModel.VMSaver) {
         EditClusterViewModel.UiState.restore(EditClusterViewModel.UiState.DEFAULT)
     }
@@ -73,6 +75,16 @@ fun EditClusterScreen() {
         // collect the 3 action flows inside
         Surface {
             EditClusterContent(coroutineScope, viewModel, Modifier.padding(inPaddings))
+        }
+    }
+
+    coroutineScope.launch {
+        if (sampleIndex != null) {
+            clusterReopsitory.loadSampleClusterJson(sampleIndex) { json ->
+                if (json != null) {
+                    viewModel.loadFromJSON(json)
+                }
+            }
         }
     }
 }
