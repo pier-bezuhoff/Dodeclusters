@@ -409,9 +409,13 @@ class EditClusterViewModel(
             }
             else -> false // other handles are multiselect's rotate
         }
-        // NOTE: this enables drag-only behavior, disallows moving circles without grabbing them
-        if (DRAG_ONLY && !handleIsDown && selectionMode == SelectionMode.Drag)
+        // NOTE: this enables drag-only behavior, you lose your selection when grabbing new circle
+        if (DRAG_ONLY && !handleIsDown && selectionMode == SelectionMode.Drag) {
+            val previouslySelected = selection.firstOrNull()
             reselectCircleAt(visiblePosition)
+            if (previouslySelected != null && selection.isEmpty()) // this line requires deselecting first to navigate around canvas
+                selection.add(previouslySelected)
+        }
     }
 
     // MAYBE: handle key arrows as panning
@@ -569,8 +573,7 @@ class EditClusterViewModel(
     }
 
     companion object {
-        /** In drag mode: disallows moving around things that are selected but not grabbed,
-         * but enables simple drag&drop behavior that is other only available after long press */
+        /** In drag mode:  enables simple drag&drop behavior that is otherwise only available after long press */
         const val DRAG_ONLY = true
         const val SELECTION_EPSILON = 20f
         const val HISTORY_SIZE = 100
@@ -599,6 +602,18 @@ sealed class SelectionMode {
     data object Multiselect : SelectionMode()
     @Serializable
     data object SelectRegion : SelectionMode()
+}
+
+sealed class CreationMode(open val phase: Int, val nPhases: Int) {
+    fun isTerminal(): Boolean =
+        phase == nPhases
+
+    sealed class CircleByCenterAndRadius(phase: Int) : CreationMode(phase, nPhases = 2) {
+        data object Circle : CircleByCenterAndRadius(1)
+        data object Radius : CircleByCenterAndRadius(2)
+    }
+    data class CircleBy3Points(override val phase: Int) : CreationMode(phase, nPhases = 3)
+    data class LineBy2Points(override val phase: Int) : CreationMode(phase, nPhases = 2)
 }
 
 /** ixs = indices of circles to which the handle is attached */
