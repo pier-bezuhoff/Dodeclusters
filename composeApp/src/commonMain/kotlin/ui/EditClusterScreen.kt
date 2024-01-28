@@ -58,6 +58,8 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
+import ui.colorpicker.harmony.ColorHarmonyMode
+import ui.colorpicker.harmony.HarmonyColorPicker
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
 @Composable
@@ -218,7 +220,7 @@ fun MultiselectPanel() {
         // actions:
         // select all circles
         // deselect all circles
-        // tbd: rectangular selection
+        // rectangular selection
     }
 }
 
@@ -280,7 +282,7 @@ fun ColorPickerDialog(
     onDismissRequest: () -> Unit,
     onConfirmation: (Color) -> Unit,
 ) {
-    var color by remember { mutableStateOf(HsvColor.from(Color.Gray)) }
+    var color by remember { mutableStateOf(HsvColor.from(Color.Cyan)) }
     Dialog(onDismissRequest = { onDismissRequest() }) {
         Surface(
             modifier = Modifier
@@ -290,8 +292,7 @@ fun ColorPickerDialog(
             shape = RoundedCornerShape(16.dp),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize(0.9f),
+                modifier = Modifier.fillMaxSize(0.9f),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -300,6 +301,13 @@ fun ColorPickerDialog(
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.h3,
                 )
+//                HarmonyColorPicker(
+//                    Modifier
+//                        .fillMaxHeight(0.7f)
+//                        .padding(16.dp),
+//                    harmonyMode = ColorHarmonyMode.ANALOGOUS,
+//                    color = color
+//                ) { color = it }
                 ClassicColorPicker(
                     Modifier
                         .fillMaxHeight(0.7f)
@@ -308,8 +316,7 @@ fun ColorPickerDialog(
                     showAlphaBar = false,
                 ) { color = it }
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceAround,
                 ) {
                     TextButton(
@@ -321,14 +328,8 @@ fun ColorPickerDialog(
                     OutlinedButton(
                         onClick = { onConfirmation(color.toColor()) },
                         modifier = Modifier.padding(8.dp),
-                        border = BorderStroke(2.dp, Color.Green),
+                        border = BorderStroke(2.dp, MaterialTheme.colors.primary),
                         shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
-//                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Green)
-//                    TextButton(
-//                        onClick = { onConfirmation(color.toColor()) },
-//                        modifier = Modifier
-//                            .padding(8.dp)
-//                            .background(Color.Green.copy(alpha = 0.5f), shape = RoundedCornerShape(16.dp)),
                     ) {
                         Text("Confirm", style = MaterialTheme.typography.h5)
                     }
