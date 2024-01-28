@@ -8,7 +8,8 @@ import androidx.compose.ui.window.rememberWindowState
 
 fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
-    val icon = painterResource("icon-128.png") // for w/e reason looks awful
+//    val icon = painterResource("icon-256.png") // for w/e reason looks awful
+    val icon = painterResource("icon-128.svg") // for w/e reason looks awful
     Window(
         state = windowState,
         onCloseRequest = ::exitApplication,

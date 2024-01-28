@@ -8,8 +8,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.BottomAppBar
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -151,7 +153,7 @@ fun EditClusterBottomBar(
         ModeToggle(
             SelectionMode.SelectRegion,
             viewModel,
-            painterResource("icons/select_region_mode.xml"),
+            painterResource("icons/select_region_mode_intersection.xml"),
             contentDescription = "select region mode",
         )
         IconToggleButton(
@@ -192,6 +194,41 @@ fun EditClusterBottomBar(
             Icon(Icons.Default.Delete, contentDescription = "delete circle(s)")
         }
     }
+}
+
+@Composable
+fun MultiselectPanel() {
+    LazyRow(Modifier.fillMaxWidth()) {
+        // actions:
+        // select all circles
+        // deselect all circles
+        // tbd: rectangular selection
+    }
+}
+
+@Composable
+fun RegionsPanel() {
+    // switch:
+    // binary chessboard selection
+    // actions:
+    // deselect all regions
+    // choose color via color picker
+    // <several most common colors to choose from>
+}
+
+@Composable
+fun VisibilityPanel() {
+    // switches:
+    // circle visibility
+    // regions are filled/wireframes
+}
+
+@Composable
+fun CreationPanel() {
+    // selectable creation mode:
+    // circle by center & radius
+    // circle by 3 points
+    // line by 2 points
 }
 
 @Composable
