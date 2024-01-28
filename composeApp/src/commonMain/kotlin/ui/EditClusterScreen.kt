@@ -299,7 +299,7 @@ fun ColorPickerDialog(
                 Text(
                     text = "Choose color",
                     modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.h3,
+                    style = MaterialTheme.typography.h4,
                 )
 //                HarmonyColorPicker(
 //                    Modifier
