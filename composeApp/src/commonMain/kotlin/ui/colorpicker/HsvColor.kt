@@ -8,6 +8,7 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.ui.graphics.Color
 import com.github.ajalt.colormath.model.HSV
 import com.github.ajalt.colormath.model.RGB
+import ui.colorpicker.harmony.ColorHarmonyMode
 
 /**
  * A representation of Color in Hue, Saturation and Value form.
@@ -96,18 +97,18 @@ data class HsvColor(
         )
     }
 
-//    fun getColors(colorHarmonyMode: ColorHarmonyMode): List<HsvColor> {
-//        return when (colorHarmonyMode) {
-//            ColorHarmonyMode.NONE -> emptyList()
-//            ColorHarmonyMode.COMPLEMENTARY -> getComplementaryColor()
-//            ColorHarmonyMode.ANALOGOUS -> getAnalagousColors()
-//            ColorHarmonyMode.SPLIT_COMPLEMENTARY -> getSplitComplementaryColors()
-//            ColorHarmonyMode.TRIADIC -> getTriadicColors()
-//            ColorHarmonyMode.TETRADIC -> getTetradicColors()
-//            ColorHarmonyMode.MONOCHROMATIC -> getMonochromaticColors()
-//            ColorHarmonyMode.SHADES -> getShadeColors()
-//        }
-//    }
+    fun getColors(colorHarmonyMode: ColorHarmonyMode): List<HsvColor> {
+        return when (colorHarmonyMode) {
+            ColorHarmonyMode.NONE -> emptyList()
+            ColorHarmonyMode.COMPLEMENTARY -> getComplementaryColor()
+            ColorHarmonyMode.ANALOGOUS -> getAnalagousColors()
+            ColorHarmonyMode.SPLIT_COMPLEMENTARY -> getSplitComplementaryColors()
+            ColorHarmonyMode.TRIADIC -> getTriadicColors()
+            ColorHarmonyMode.TETRADIC -> getTetradicColors()
+            ColorHarmonyMode.MONOCHROMATIC -> getMonochromaticColors()
+            ColorHarmonyMode.SHADES -> getShadeColors()
+        }
+    }
 
     companion object {
 

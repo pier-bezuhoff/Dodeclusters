@@ -1,6 +1,7 @@
 package ui.colorpicker
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.forEachGesture
@@ -55,18 +56,31 @@ internal fun SaturationValueArea(
         modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                forEachGesture {
-                    awaitPointerEventScope {
-                        val down = awaitFirstDown()
-                        val (s, v) = getSaturationPoint(down.position, size)
-                        onSaturationValueChanged(s, v)
-                        drag(down.id) { change ->
-                            change.consumePositionChange()
-                            val (newSaturation, newValue) = getSaturationPoint(change.position, size)
-                            onSaturationValueChanged(newSaturation, newValue)
-                        }
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    val (s, v) = getSaturationPoint(down.position, size)
+                    onSaturationValueChanged(s, v)
+                    drag(down.id) { change ->
+                        change.consume()
+                        val (newSaturation, newValue) = getSaturationPoint(
+                            change.position,
+                            size
+                        )
+                        onSaturationValueChanged(newSaturation, newValue)
                     }
                 }
+//                forEachGesture {
+//                    awaitPointerEventScope {
+//                        val down = awaitFirstDown()
+//                        val (s, v) = getSaturationPoint(down.position, size)
+//                        onSaturationValueChanged(s, v)
+//                        drag(down.id) { change ->
+//                            change.consumePositionChange()
+//                            val (newSaturation, newValue) = getSaturationPoint(change.position, size)
+//                            onSaturationValueChanged(newSaturation, newValue)
+//                        }
+//                    }
+//                }
             }
     ) {
         drawRect(blackGradientBrush)
