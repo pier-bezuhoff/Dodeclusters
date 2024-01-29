@@ -161,13 +161,13 @@ fun EditClusterBottomBar(
             contentDescription = "select region mode",
         )
         IconToggleButton(
-            checked = viewModel.showCircles.value,
+            checked = viewModel.showCircles,
             onCheckedChange = {
-                viewModel.showCircles.value = !viewModel.showCircles.value
+                viewModel.showCircles = !viewModel.showCircles
             },
         ) {
             Icon(
-                if (viewModel.showCircles.value) painterResource("icons/visible.xml")
+                if (viewModel.showCircles) painterResource("icons/visible.xml")
                 else painterResource("icons/invisible.xml"),
                 "Make circles invisible"
             )
@@ -188,10 +188,12 @@ fun EditClusterBottomBar(
         }
         if (showColorPickerDialog)
             ColorPickerDialog(
+                initialColor = viewModel.regionColor,
                 onDismissRequest = { showColorPickerDialog = false },
-                onConfirmation = {
+                onConfirmation = { newColor ->
                     showColorPickerDialog = false
-                    println(it)
+                    viewModel.regionColor = newColor
+                    viewModel.switchSelectionMode(SelectionMode.SelectRegion)
                 }
             )
         IconButton(
@@ -213,6 +215,8 @@ fun EditClusterBottomBar(
         }
     }
 }
+
+// also down button to hide a panel at the end
 
 @Composable
 fun MultiselectPanel() {
@@ -279,10 +283,11 @@ fun ModeToggle(
 
 @Composable
 fun ColorPickerDialog(
+    initialColor: Color,
     onDismissRequest: () -> Unit,
     onConfirmation: (Color) -> Unit,
 ) {
-    var color by remember { mutableStateOf(HsvColor.from(Color.Cyan)) }
+    var color by remember { mutableStateOf(HsvColor.from(initialColor)) }
     Dialog(onDismissRequest = { onDismissRequest() }) {
         Surface(
             modifier = Modifier

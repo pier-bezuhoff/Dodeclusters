@@ -14,10 +14,6 @@ data class Cluster(
     val parts: List<Part>,
     /** fill regions inside / wireframe */
     val fill: Boolean,
-    @Serializable(ColorSerializer::class)
-    val fillColor: Color,
-    @Serializable(ColorSerializer::class)
-    val borderColor: Color,
 ) {
     /** intersection of insides and outside of circles of a cluster */
     @Serializable
@@ -25,10 +21,14 @@ data class Cluster(
         /** indices of interior circles */
         val insides: Set<Int>,
         /** indices of bounding complementary circles */
-        val outsides: Set<Int>
+        val outsides: Set<Int>,
+        @Serializable(ColorSerializer::class)
+        val fillColor: Color = Color.Cyan,
+//        @Serializable(ColorSerializer::class)
+//        val borderColor: Color,
     ) {
         override fun toString(): String =
-            "Cluster.Part(in: [${insides.joinToString()}], out: [${outsides.joinToString()}])"
+            "Cluster.Part(in = [${insides.joinToString()}], out = [${outsides.joinToString()}], color = $fillColor)"
 
         /** ruff semiorder ⊆ on delimited regions; only goes off indices */
         infix fun isObviouslyInside(otherPart: Part): Boolean =
@@ -38,7 +38,11 @@ data class Cluster(
     }
 
     companion object {
-        val SAMPLE = Cluster(listOf(Circle(200.0, 100.0, 50.0)), emptyList(), true, Color.Black, Color.Black)
+        val SAMPLE = Cluster(
+            circles = listOf(Circle(200.0, 100.0, 50.0)),
+            parts = emptyList(),
+            fill = true
+        )
     }
 }
 

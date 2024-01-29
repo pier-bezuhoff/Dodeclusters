@@ -41,7 +41,6 @@ fun EditClusterCanvas(
     val emptyPaint = remember { Paint() }
     val backgroundColor = Color.White
     val circleColor = Color.Black
-    val clusterPartColor = Color.Cyan
     val clusterPathAlpha = 0.7f
     val selectionLinesColor = Color.Gray
     val selectionMarkingsColor = Color.DarkGray // center-radius line / bounding rect of selection
@@ -81,7 +80,7 @@ fun EditClusterCanvas(
         drawRect(backgroundColor)
         // overlay w/ selected circles
         translate(viewModel.translation.value.x, viewModel.translation.value.y) {
-            if (viewModel.selectionMode.isSelectingCircles() && viewModel.showCircles.value)
+            if (viewModel.selectionMode.isSelectingCircles() && viewModel.showCircles)
                 for (ix in viewModel.selection) {
                     val circle = viewModel.circles[ix]
                     drawCircle( // alpha = where selection lines are shown
@@ -126,7 +125,7 @@ fun EditClusterCanvas(
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // crucial for proper alpha blending
     ) {
         translate(viewModel.translation.value.x, viewModel.translation.value.y) {
-            if (viewModel.showCircles.value)
+            if (viewModel.showCircles)
                 for (circle in viewModel.circles) {
                     drawCircle(
                         color = circleColor,
@@ -136,7 +135,7 @@ fun EditClusterCanvas(
                     )
                 }
             // handles
-            if (viewModel.showCircles.value)
+            if (viewModel.showCircles)
                 when (viewModel.handle.value) {
                     is Handle.Radius -> {
                         val selectedCircle = viewModel.circles[viewModel.selection.single()]
@@ -172,9 +171,9 @@ fun EditClusterCanvas(
             for (part in viewModel.parts) {
                 drawPath(
                     viewModel.part2path(part),
-                    color = clusterPartColor,
+                    color = part.fillColor,
                     alpha = clusterPathAlpha,
-                    style = if (viewModel.showWireframes.value) circleStroke else circleFill,
+                    style = if (viewModel.showWireframes) circleStroke else circleFill,
                 )
             }
         }
