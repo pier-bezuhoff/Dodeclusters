@@ -250,10 +250,11 @@ class EditClusterViewModel(
             circles.addAll(whatsLeft)
             parts.addAll(
                 oldParts
-                    .map { (ins, outs) ->
+                    .map { (ins, outs, fillColor) ->
                         Cluster.Part(
                             insides = ins.minus(whatsGone).map { reindexing[it]!! }.toSet(),
-                            outsides = outs.minus(whatsGone).map { reindexing[it]!! }.toSet()
+                            outsides = outs.minus(whatsGone).map { reindexing[it]!! }.toSet(),
+                            fillColor = fillColor
                         )
                     }
                     .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
@@ -273,7 +274,7 @@ class EditClusterViewModel(
             if (parts.isEmpty()) {
                 recordCommand(Command.SELECT_REGION)
                 // select interlacing, todo: proper 2^n -> even # of 1's -> {0101001} -> parts
-                parts.add(Cluster.Part(emptySet(), circles.indices.toSet()))
+                parts.add(Cluster.Part(emptySet(), circles.indices.toSet(), regionColor))
             } else {
                 recordCommand(Command.SELECT_REGION)
                 parts.clear()
