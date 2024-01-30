@@ -296,7 +296,7 @@ class EditClusterViewModel(
 
     fun reselectCircleAt(visiblePosition: Offset) {
         selectCircle(circles, visiblePosition)?.let { ix ->
-            println("select circle #$ix")
+//            println("select circle #$ix")
             selection.clear()
             selection.add(ix)
         } ?: selection.clear()
@@ -315,10 +315,10 @@ class EditClusterViewModel(
         val position = absolute(visiblePosition)
         val delimiters = circles.indices
         val ins = delimiters
-            .filter { ix -> circles[ix].checkPosition(position) < 0 }
+            .filter { ix -> circles[ix].hasInside(position) }
             .sortedBy { ix -> circles[ix].radius }
         val outs = delimiters
-            .filter { ix -> circles[ix].checkPosition(position) > 0 }
+            .filter { ix -> circles[ix].hasOutside(position) }
             .sortedByDescending { ix -> circles[ix].radius }
         // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
         val excessiveIns = ins.indices.filter { j -> // NOTE: tbh idt these can occur naturally
