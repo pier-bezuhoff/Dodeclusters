@@ -193,7 +193,7 @@ fun EditClusterBottomBar(
                 onConfirmation = { newColor ->
                     showColorPickerDialog = false
                     viewModel.regionColor = newColor
-                    viewModel.switchSelectionMode(SelectionMode.SelectRegion)
+                    viewModel.switchSelectionMode(SelectionMode.SelectRegion, noAlteringShortcuts = true)
                 }
             )
         IconButton(
