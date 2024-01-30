@@ -57,8 +57,8 @@ class EditClusterViewModel(
     private var handleIsDown: Boolean = false
     private var grabbedCircleIx: Int? = null
 
-    var undoIsEnabled by mutableStateOf(false)
-    var redoIsEnabled by mutableStateOf(false)
+    var undoIsEnabled by mutableStateOf(false) // = history is not empty
+    var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
     val copyAndDeleteAreEnabled by derivedStateOf {
         selectionMode.isSelectingCircles() && selection.isNotEmpty()
     }
@@ -69,16 +69,17 @@ class EditClusterViewModel(
     // NOTE: history doesn't survive background app kill
     private val history = ArrayDeque<UiState>(HISTORY_SIZE)
     private val redoHistory = ArrayDeque<UiState>(HISTORY_SIZE)
+    // c_i := commands[i], s_i := history[i]
+    // command c_i modifies previous state s_i into a new state s_i+1
+    //   c0  c1  c2 ...  c_k |       | c_k+1     c_k+2     c_k+3
+    // s0  s1  s2 ... s_k    | s_k+1 |      s_k+2     s_k+3
+    // ^ history (past) ^    |  ^^^ current state \  ^ redo history (aka future)
 
     private val _decayingCircles = MutableSharedFlow<DecayingCircles>()
     val decayingCircles = _decayingCircles.asSharedFlow()
 
     val translation = mutableStateOf(Offset.Zero) // pre-scale offset
 //    val scale = mutableStateOf(1f)
-
-    init {
-        recordCommand(Command.CREATE)
-    }
 
     // navigation
     fun saveAndGoBack() {}
@@ -112,76 +113,53 @@ class EditClusterViewModel(
     }
 
     fun undo() {
-        if (history.size > 1) {
-            // BUG: bugged idk
+        if (history.isNotEmpty()) {
             val currentState = UiState.save(this)
-            val previousState = history.removeLast() // can be different
-            println("undo: current = $currentState")
-            println("undo: previousState = $previousState")
-            val previousCommand = commands.removeLast()
-            if (redoHistory.isEmpty()) {
-                if (currentState != previousState && currentState != history.last() && previousState != history.last()) {
-                    redoCommands.addLast(previousCommand)
-                    redoHistory.addLast(currentState)
-                }
-            }
-            selection.clear()
-            parts.clear()
-            circles.clear()
-            circles.addAll(previousState.circles)
-            parts.addAll(previousState.parts)
-            switchSelectionMode(previousState.selectionMode, noAlteringShortcuts = true)
-            selection.clear() // switch can populate it
-            selection.addAll(previousState.selection)
+            val previousState = history.removeLast()
+            val previousCommand = commands.removeLast() // previousState -> previousCommand ^n -> currentState
+            loadUiState(previousState)
             redoCommands.addFirst(previousCommand)
-            redoHistory.addFirst(previousState)
+            redoHistory.addFirst(currentState)
             redoIsEnabled = true
-            undoIsEnabled = history.size > 1
+            undoIsEnabled = history.isNotEmpty()
         }
     }
 
     fun redo() {
         if (redoHistory.isNotEmpty()) {
-            println("redo: current = ${UiState.save(this)}")
-            var nextState = redoHistory.removeFirst()
-            println("redo: nextState = $nextState")
-            var nextCommand = redoCommands.removeFirst()
-            // BUG: bad bad
-            if (UiState.save(this) == nextState) {
-                if (redoHistory.isEmpty()) { // spaghetti code incoming
-                    redoIsEnabled = redoHistory.isNotEmpty()
-                    return
-                }
-                nextState = redoHistory.removeFirst()
-                println("redo: ng")
-                nextCommand = redoCommands.removeFirst()
-                redoIsEnabled = redoHistory.isNotEmpty()
-            }
-            selection.clear()
-            parts.clear()
-            circles.clear()
-            circles.addAll(nextState.circles)
-            parts.addAll(nextState.parts)
-            switchSelectionMode(nextState.selectionMode, noAlteringShortcuts = true)
-            selection.clear() // switch can populate it
-            selection.addAll(nextState.selection)
+            val currentState = UiState.save(this)
+            val nextCommand = redoCommands.removeFirst()
+            val nextState = redoHistory.removeFirst()
+            loadUiState(nextState)
             commands.addLast(nextCommand)
-            history.addLast(nextState)
+            history.addLast(currentState)
             undoIsEnabled = true
             redoIsEnabled = redoHistory.isNotEmpty()
         }
     }
 
+    private fun loadUiState(state: UiState) {
+        selection.clear()
+        parts.clear()
+        circles.clear()
+        circles.addAll(state.circles)
+        parts.addAll(state.parts)
+        switchSelectionMode(state.selectionMode, noAlteringShortcuts = true)
+        selection.clear() // switch can populate it
+        selection.addAll(state.selection)
+    }
+
+    /** let s_i := history[i], c_i := commands[i]
+     * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ... */
     private fun recordCommand(command: Command) {
         if (commands.lastOrNull() != command) {
             if (history.size == HISTORY_SIZE) {
-                history.removeFirst()
+                history.removeAt(1) // save th original
                 commands.removeFirst()
             }
-            println("record")
-            history.addLast(UiState.save(this))
+            history.addLast(UiState.save(this)) // saving state before [command]
             commands.addLast(command)
-            undoIsEnabled = history.size > 1
+            undoIsEnabled = true
         }
         redoCommands.clear()
         redoHistory.clear()
@@ -611,7 +589,7 @@ class EditClusterViewModel(
     }
 
     companion object {
-        /** In drag mode:  enables simple drag&drop behavior that is otherwise only available after long press */
+        /** In drag mode: enables simple drag&drop behavior that is otherwise only available after long press */
         const val DRAG_ONLY = true
         const val SELECTION_EPSILON = 20f
         const val HISTORY_SIZE = 100
