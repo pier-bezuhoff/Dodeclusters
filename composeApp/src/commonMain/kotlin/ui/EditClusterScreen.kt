@@ -166,21 +166,13 @@ fun EditClusterBottomBar(
             painterResource("icons/select_region_mode_intersection.xml"),
             contentDescription = "select region mode",
         )
-        IconToggleButton(
-            checked = viewModel.showCircles,
-            onCheckedChange = {
-                viewModel.showCircles = !viewModel.showCircles
-            },
+        BinaryToggle(
+            viewModel.showCircles,
+            painterResource("icons/visible.xml"), painterResource("icons/invisible.xml"),
+            "make circles invisible"
         ) {
-            Crossfade(viewModel.showCircles) { show ->
-                Icon(
-                    if (show) painterResource("icons/visible.xml")
-                    else painterResource("icons/invisible.xml"),
-                    "make circles invisible"
-                )
-            }
+            viewModel.showCircles = !viewModel.showCircles
         }
-        Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
         Divider( // modes <-> tools divider
             Modifier
                 .padding(8.dp)
@@ -269,7 +261,7 @@ fun ModeToggle(
     painter: Painter,
     contentDescription: String,
 ) {
-    // Crossfade/AnimatedContent dont work for w/e reason
+    // Crossfade/AnimatedContent dont work for w/e reason (mb cuz VM is caught in the closure)
     IconToggleButton(
         checked = viewModel.selectionMode == mode,
         onCheckedChange = {
@@ -287,6 +279,29 @@ fun ModeToggle(
             painter,
             contentDescription = contentDescription,
         )
+    }
+    Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
+}
+
+@Composable
+fun BinaryToggle(
+    checked: Boolean,
+    checkedPainter: Painter,
+    uncheckedPainter: Painter,
+    contentDescription: String,
+    onCheckChange: (Boolean) -> Unit,
+) {
+    IconToggleButton(
+        checked = checked,
+        onCheckedChange = onCheckChange,
+    ) {
+        Crossfade(checked) { targetChecked ->
+            Icon(
+                if (targetChecked) checkedPainter
+                else uncheckedPainter,
+                contentDescription
+            )
+        }
     }
     Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
 }

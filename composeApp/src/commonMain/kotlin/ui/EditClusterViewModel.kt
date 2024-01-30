@@ -353,11 +353,24 @@ class EditClusterViewModel(
             if (sameExistingPart != null) {
                 recordCommand(Command.SELECT_REGION)
                 parts.remove(sameExistingPart)
-                println("removed $sameExistingPart")
+                if (part == sameExistingPart) {
+                    println("removed $sameExistingPart")
+                } else { // we are trying to change color im guessing
+                    parts.add(sameExistingPart.copy(fillColor = part.fillColor))
+                    println("recolored $sameExistingPart")
+                }
             } else {
                 recordCommand(Command.SELECT_REGION)
                 parts.removeAll(outerParts)
-                println("removed parts [${outerParts.joinToString(prefix = "\n", separator = ";\n")}]")
+                if (
+                    outerParts.all { it.fillColor == outerParts[0].fillColor } &&
+                    outerParts[0].fillColor != part.fillColor
+                ) {
+                    parts.addAll(outerParts.map { it.copy(fillColor = part.fillColor) })
+                    println("recolored parts [${outerParts.joinToString(prefix = "\n", separator = ";\n")}]")
+                } else {
+                    println("removed parts [${outerParts.joinToString(prefix = "\n", separator = ";\n")}]")
+                }
             }
         }
     }
