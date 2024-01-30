@@ -323,18 +323,16 @@ class EditClusterViewModel(
         // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
         val excessiveIns = ins.indices.filter { j -> // NOTE: tbh idt these can occur naturally
             val inJ = ins[j]
-            (0 until j).any { smallerRJ -> // being inside imposes constraint on radii
+            (0 until j).any { smallerRJ -> // being inside imposes constraint on radii, so we pre-sort by radius
                 circles[ins[smallerRJ]] isInside circles[inJ]
-            } or outs.any { ix -> circles[inJ] isInside circles[ix] } // if an 'in' isInside an 'out' it does nothing
+            } || outs.any { ix -> circles[inJ] isInside circles[ix] } // if an 'in' isInside an 'out' it does nothing
         }. map { ins[it] }
         val excessiveOuts = outs.indices.filter { j ->
             val outJ = outs[j]
             (0 until j).any { largerRJ ->
                 circles[outJ] isInside circles[outs[largerRJ]]
-            } or ins.any { ix -> circles[outJ] isOutside circles[ix] } // if an 'out' isOutside an 'in' it does nothing
+            } || ins.any { ix -> circles[outJ] isOutside circles[ix] } // if an 'out' isOutside an 'in' it does nothing
         }.map { outs[it] }
-//        println("excessiveIns: ${excessiveIns.joinToString()}")
-//        println("excessiveOuts: ${excessiveOuts.joinToString()}")
         val part0 = Cluster.Part(ins.toSet(), outs.toSet())
         val part = Cluster.Part(
             insides = ins.toSet().minus(excessiveIns.toSet()),
@@ -365,7 +363,7 @@ class EditClusterViewModel(
                 if (
                     outerParts.all { it.fillColor == outerParts[0].fillColor } &&
                     outerParts[0].fillColor != part.fillColor
-                ) {
+                ) { // we are trying to change color im guessing
                     parts.addAll(outerParts.map { it.copy(fillColor = part.fillColor) })
                     println("recolored parts [${outerParts.joinToString(prefix = "\n", separator = ";\n")}]")
                 } else {

@@ -134,9 +134,18 @@ fun EditClusterCanvas(
                         style = circleStroke,
                     )
                 }
+            for (part in viewModel.parts) {
+                drawPath(
+                    viewModel.part2path(part),
+                    color = part.fillColor,
+                    alpha = clusterPathAlpha,
+                    style = if (viewModel.showWireframes) circleStroke else circleFill,
+                )
+            }
             // handles
             if (viewModel.showCircles)
                 when (viewModel.handles.value) {
+                    // TODO: delete handle bottom left + for multi rotate bottom right
                     is Handles.SingleCircle -> {
                         val selectedCircle = viewModel.circles[viewModel.selection.single()]
                         val right =
@@ -152,7 +161,6 @@ fun EditClusterCanvas(
                             center = right
                         )
                     }
-
                     is Handles.SeveralCircles -> {
                         val selectionRect = viewModel.getSelectionRect()
                         drawRect(
@@ -168,14 +176,6 @@ fun EditClusterCanvas(
                         )
                     }
                 }
-            for (part in viewModel.parts) {
-                drawPath(
-                    viewModel.part2path(part),
-                    color = part.fillColor,
-                    alpha = clusterPathAlpha,
-                    style = if (viewModel.showWireframes) circleStroke else circleFill,
-                )
-            }
         }
     }
 }
