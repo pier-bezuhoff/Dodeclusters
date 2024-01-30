@@ -22,9 +22,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.pow
 
 // NOTE: waiting for decompose 3.0-stable for a real VM impl
-// MAYBE: use state flows in vM + in ui convert to state with .collectAsStateWithLifecycle
-// TODO: history of Cluster snapshots for undo
-// i'm using external coroutineScope for invoking suspend's
+// MAYBE: add coroutine scope in the constructor
 class EditClusterViewModel(
     cluster: Cluster = Cluster.SAMPLE
 ) {
@@ -40,15 +38,15 @@ class EditClusterViewModel(
     /** which style to use when drawing parts: true = stroke, false = fill */
     var showWireframes by mutableStateOf(false)
 
-    val handle = derivedStateOf { // depends on selectionMode & selection
+    val handles = derivedStateOf { // depends on selectionMode & selection
         when (selectionMode) {
             is SelectionMode.Drag ->
                 if (selection.isEmpty()) null
-                else Handle.Radius(selection.single())
+                else Handles.SingleCircle(selection.single())
             is SelectionMode.Multiselect -> when {
                 selection.isEmpty() -> null
-                selection.size == 1 -> Handle.Radius(selection.single())
-                selection.size > 1 -> Handle.Scale(selection)
+                selection.size == 1 -> Handles.SingleCircle(selection.single())
+                selection.size > 1 -> Handles.SeveralCircles(selection)
                 else -> Unit // never
             }
             is SelectionMode.SelectRegion -> null
@@ -69,11 +67,13 @@ class EditClusterViewModel(
     // NOTE: history doesn't survive background app kill
     private val history = ArrayDeque<UiState>(HISTORY_SIZE)
     private val redoHistory = ArrayDeque<UiState>(HISTORY_SIZE)
-    // c_i := commands[i], s_i := history[i]
+    // c_i := commands[i], s_i := history[i],
+    // s_k+1 := current state (UiState.save(this))
+    // c_k+i := redoCommands[i-1], s_k+i := redoHistory[i-2]
     // command c_i modifies previous state s_i into a new state s_i+1
     //   c0  c1  c2 ...  c_k |       | c_k+1     c_k+2     c_k+3
     // s0  s1  s2 ... s_k    | s_k+1 |      s_k+2     s_k+3
-    // ^ history (past) ^    |  ^^^ current state \  ^ redo history (aka future)
+    // ^ history (past) ^    |  ^^^current state  \  ^^ redo history (aka future)
 
     private val _decayingCircles = MutableSharedFlow<DecayingCircles>()
     val decayingCircles = _decayingCircles.asSharedFlow()
@@ -96,7 +96,7 @@ class EditClusterViewModel(
         try {
             val permissiveJson = Json {
                 isLenient = true
-                ignoreUnknownKeys = true
+                ignoreUnknownKeys = true // enables backward compatibility to a certain level
             }
             val cluster = permissiveJson.decodeFromString(Cluster.serializer(), json)
             translation.value = Offset.Zero
@@ -105,6 +105,13 @@ class EditClusterViewModel(
             circles.clear()
             circles.addAll(cluster.circles)
             parts.addAll(cluster.parts)
+            // reset history on load
+            undoIsEnabled = false
+            redoIsEnabled = false
+            redoHistory.clear()
+            redoCommands.clear()
+            history.clear()
+            commands.clear()
         } catch (e: SerializationException) {
             e.printStackTrace()
         } catch (e: IllegalArgumentException) {
@@ -173,6 +180,8 @@ class EditClusterViewModel(
             DecayingCircles(listOf(newOne), Color.Green)
         )
         circles.add(newOne)
+        if (!selectionMode.isSelectingCircles())
+            switchSelectionMode(SelectionMode.Drag)
         selection.clear()
         selection.add(circles.size - 1)
     }
@@ -287,6 +296,7 @@ class EditClusterViewModel(
 
     fun reselectCircleAt(visiblePosition: Offset) {
         selectCircle(circles, visiblePosition)?.let { ix ->
+            println("select circle #$ix")
             selection.clear()
             selection.add(ix)
         } ?: selection.clear()
@@ -307,26 +317,30 @@ class EditClusterViewModel(
         val ins = delimiters
             .filter { ix -> circles[ix].checkPosition(position) < 0 }
             .sortedBy { ix -> circles[ix].radius }
-        val excessiveIns = ins.indices.filter { ix ->
-            (0 until ix).any { smallerRIx -> // being inside imposes constraint on radii
-                circles[smallerRIx] isInside circles[ix]
-            }
-        } // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
         val outs = delimiters
             .filter { ix -> circles[ix].checkPosition(position) > 0 }
             .sortedByDescending { ix -> circles[ix].radius }
-        val excessiveOuts = outs.indices.filter { ix ->
-            (0 until ix).any { largerRIx ->
-                circles[ix] isInside circles[largerRIx]
-            }
-        }
+        // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
+        val excessiveIns = ins.indices.filter { j -> // NOTE: tbh idt these can occur naturally
+            val inJ = ins[j]
+            (0 until j).any { smallerRJ -> // being inside imposes constraint on radii
+                circles[ins[smallerRJ]] isInside circles[inJ]
+            } or outs.any { ix -> circles[inJ] isInside circles[ix] } // if an 'in' isInside an 'out' it does nothing
+        }. map { ins[it] }
+        val excessiveOuts = outs.indices.filter { j ->
+            val outJ = outs[j]
+            (0 until j).any { largerRJ ->
+                circles[outJ] isInside circles[outs[largerRJ]]
+            } or ins.any { ix -> circles[outJ] isOutside circles[ix] } // if an 'out' isOutside an 'in' it does nothing
+        }.map { outs[it] }
+//        println("excessiveIns: ${excessiveIns.joinToString()}")
+//        println("excessiveOuts: ${excessiveOuts.joinToString()}")
         val part0 = Cluster.Part(ins.toSet(), outs.toSet())
         val part = Cluster.Part(
             insides = ins.toSet().minus(excessiveIns.toSet()),
             outsides = outs.toSet().minus(excessiveOuts.toSet()),
             fillColor = regionColor
         )
-        // BUG: still breaks (doesnt remove proper parts) after several additions & deletions
         val outerParts = parts.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
         if (outerParts.isEmpty()) {
             recordCommand(Command.SELECT_REGION)
@@ -411,13 +425,13 @@ class EditClusterViewModel(
     fun onDown(visiblePosition: Offset) {
         // no need for onUp since all actions occur after onDown
         if (showCircles) {
-            handleIsDown = when (val h = handle.value) {
-                is Handle.Radius -> {
+            handleIsDown = when (val h = handles.value) {
+                is Handles.SingleCircle -> {
                     val circle = circles[h.ix]
                     val right = circle.offset + Offset(circle.radius.toFloat(), 0f)
                     selectPoint(listOf(right), visiblePosition) != null
                 }
-                is Handle.Scale -> {
+                is Handles.SeveralCircles -> {
                     val topRight = getSelectionRect().topRight
                     selectPoint(listOf(topRight), visiblePosition) != null
                 }
@@ -437,14 +451,14 @@ class EditClusterViewModel(
     fun onPanZoom(pan: Offset, centroid: Offset, zoom: Float) {
         if (handleIsDown) {
             // drag handle
-            when (val h = handle.value) {
-                is Handle.Radius -> {
+            when (val h = handles.value) {
+                is Handles.SingleCircle -> {
                     recordCommand(Command.CHANGE_RADIUS)
                     val center = circles[h.ix].offset
                     val r = (absolute(centroid) - center).getDistance()
                     circles[h.ix] = circles[h.ix].copy(radius = r.toDouble())
                 }
-                is Handle.Scale -> {
+                is Handles.SeveralCircles -> {
                     recordCommand(Command.SCALE)
                     val selectionRect = getSelectionRect()
                     val topRight = selectionRect.topRight
@@ -620,6 +634,7 @@ sealed class SelectionMode {
     data object SelectRegion : SelectionMode()
 }
 
+// TODO: circle constructors
 sealed class CreationMode(open val phase: Int, val nPhases: Int) {
     fun isTerminal(): Boolean =
         phase == nPhases
@@ -633,11 +648,9 @@ sealed class CreationMode(open val phase: Int, val nPhases: Int) {
 }
 
 /** ixs = indices of circles to which the handle is attached */
-sealed class Handle(open val ixs: List<Int>) {
-    data class Radius(val ix: Int): Handle(listOf(ix))
-    data class Scale(override val ixs: List<Int>): Handle(ixs)
-//    data class Rotation(override val ixs: List<Int>): Handle(ixs)
-    // 'delete' handle in m-select
+sealed class Handles(open val ixs: List<Int>) {
+    data class SingleCircle(val ix: Int): Handles(listOf(ix))
+    data class SeveralCircles(override val ixs: List<Int>): Handles(ixs)
 }
 
 /** params for copy/delete animations */
@@ -648,5 +661,8 @@ data class DecayingCircles(
 
 /** used for grouping UiState changes into batches for history keeping */
 enum class Command {
-    MOVE, CHANGE_RADIUS, SCALE, COPY, DELETE, CREATE, SELECT_REGION
+    MOVE,
+    CHANGE_RADIUS, SCALE,
+    COPY, DELETE, CREATE,
+    SELECT_REGION,
 }

@@ -1,5 +1,7 @@
 package ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -11,12 +13,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.BottomAppBar
+import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.Divider
@@ -47,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import data.ClusterRepository
 import data.io.OpenFileButton
@@ -134,6 +139,7 @@ fun EditClusterTopBar(
     )
 }
 
+// TODO: can overflow on mobile, make it scrollable LazyRow or smth
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterBottomBar(
@@ -141,13 +147,13 @@ fun EditClusterBottomBar(
     viewModel: EditClusterViewModel,
 ) {
     BottomAppBar {
-        // MAYBE: select regions within multiselect
         ModeToggle(
             SelectionMode.Drag,
             viewModel,
             painterResource("icons/drag_mode_1_circle.xml"),
             contentDescription = "drag mode",
         )
+        // MAYBE: select regions within multiselect
         ModeToggle(
             SelectionMode.Multiselect,
             viewModel,
@@ -166,11 +172,13 @@ fun EditClusterBottomBar(
                 viewModel.showCircles = !viewModel.showCircles
             },
         ) {
-            Icon(
-                if (viewModel.showCircles) painterResource("icons/visible.xml")
-                else painterResource("icons/invisible.xml"),
-                "Make circles invisible"
-            )
+            Crossfade(viewModel.showCircles) { show ->
+                Icon(
+                    if (show) painterResource("icons/visible.xml")
+                    else painterResource("icons/invisible.xml"),
+                    "make circles invisible"
+                )
+            }
         }
         Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
         Divider( // modes <-> tools divider
@@ -179,7 +187,6 @@ fun EditClusterBottomBar(
                 .fillMaxHeight()
                 .width(4.dp)
         )
-        // TODO: make it into new mode: circle by center and radius + add line by 2 points
         var showColorPickerDialog by remember { mutableStateOf(false) }
         IconButton(onClick = {
             showColorPickerDialog = true
@@ -216,8 +223,6 @@ fun EditClusterBottomBar(
     }
 }
 
-// also down button to hide a panel at the end
-
 @Composable
 fun MultiselectPanel() {
     LazyRow(Modifier.fillMaxWidth()) {
@@ -225,6 +230,7 @@ fun MultiselectPanel() {
         // select all circles
         // deselect all circles
         // rectangular selection
+        // <collapse panel>
     }
 }
 
@@ -236,6 +242,7 @@ fun RegionsPanel() {
     // deselect all regions
     // choose color via color picker
     // <several most common colors to choose from>
+    // <collapse panel>
 }
 
 @Composable
@@ -243,6 +250,7 @@ fun VisibilityPanel() {
     // switches:
     // circle visibility
     // regions are filled/wireframes
+    // <collapse panel>
 }
 
 @Composable
@@ -251,6 +259,7 @@ fun CreationPanel() {
     // circle by center & radius
     // circle by 3 points
     // line by 2 points
+    // <collapse panel>
 }
 
 @Composable
@@ -260,6 +269,7 @@ fun ModeToggle(
     painter: Painter,
     contentDescription: String,
 ) {
+    // Crossfade/AnimatedContent dont work for w/e reason
     IconToggleButton(
         checked = viewModel.selectionMode == mode,
         onCheckedChange = {
@@ -281,6 +291,7 @@ fun ModeToggle(
     Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
 }
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun ColorPickerDialog(
     initialColor: Color,
@@ -288,7 +299,10 @@ fun ColorPickerDialog(
     onConfirmation: (Color) -> Unit,
 ) {
     var color by remember { mutableStateOf(HsvColor.from(initialColor)) }
-    Dialog(onDismissRequest = { onDismissRequest() }) {
+    Dialog(onDismissRequest = {
+//        onDismissRequest()
+        onConfirmation(color.toColor()) // thats how it be
+    }) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -324,19 +338,25 @@ fun ColorPickerDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceAround,
                 ) {
-                    TextButton(
+                    OutlinedButton(
                         onClick = { onDismissRequest() },
                         modifier = Modifier.padding(8.dp),
+                        border = BorderStroke(2.dp, MaterialTheme.colors.primary),
+                        shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
                     ) {
-                        Text("Cancel", style = MaterialTheme.typography.h5)
+                        Icon(painterResource("icons/cancel.xml"), "cancel")
+                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                        Text("Cancel", fontSize = 24.sp)
                     }
-                    OutlinedButton(
+                    Button(
                         onClick = { onConfirmation(color.toColor()) },
                         modifier = Modifier.padding(8.dp),
                         border = BorderStroke(2.dp, MaterialTheme.colors.primary),
                         shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
                     ) {
-                        Text("Confirm", style = MaterialTheme.typography.h5)
+                        Icon(painterResource("icons/confirm.xml"), "confirm")
+                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                        Text("OK", fontSize = 24.sp)
                     }
                 }
             }

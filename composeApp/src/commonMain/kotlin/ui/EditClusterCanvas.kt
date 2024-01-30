@@ -136,8 +136,8 @@ fun EditClusterCanvas(
                 }
             // handles
             if (viewModel.showCircles)
-                when (viewModel.handle.value) {
-                    is Handle.Radius -> {
+                when (viewModel.handles.value) {
+                    is Handles.SingleCircle -> {
                         val selectedCircle = viewModel.circles[viewModel.selection.single()]
                         val right =
                             selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
@@ -153,7 +153,7 @@ fun EditClusterCanvas(
                         )
                     }
 
-                    is Handle.Scale -> {
+                    is Handles.SeveralCircles -> {
                         val selectionRect = viewModel.getSelectionRect()
                         drawRect(
                             color = selectionMarkingsColor,
