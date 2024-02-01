@@ -11,9 +11,9 @@ import kotlinx.serialization.encoding.Encoder
 data class Cluster(
     val circles: List<Circle>,
     /** union of parts comprised of circle intersections */
-    val parts: List<Part>,
+    val parts: List<Part> = emptyList(),
     /** fill regions inside / wireframe */
-    val fill: Boolean,
+    val fill: Boolean = true,
 ) {
     /** intersection of insides and outside of circles of a cluster */
     @Serializable

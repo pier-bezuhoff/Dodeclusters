@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -13,8 +14,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import data.Circle
 import data.Cluster
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -24,6 +27,8 @@ import kotlin.math.pow
 // NOTE: waiting for decompose 3.0-stable for a real VM impl
 // MAYBE: add coroutine scope in the constructor
 class EditClusterViewModel(
+    /** NOT a viewModelScope, just a rememberCS from the screen composable */
+    val coroutineScope: CoroutineScope,
     cluster: Cluster = Cluster.SAMPLE
 ) {
     private val _selectionMode = mutableStateOf<SelectionMode>(SelectionMode.Drag)
@@ -173,7 +178,7 @@ class EditClusterViewModel(
         redoIsEnabled = false
     }
 
-    suspend fun createNewCircle() {
+    fun createNewCircle() = coroutineScope.launch {
         recordCommand(Command.CREATE)
         val newOne = Circle(absolute(Offset(200f, 200f)), 50.0)
         _decayingCircles.emit(
@@ -186,7 +191,7 @@ class EditClusterViewModel(
         selection.add(circles.size - 1)
     }
 
-    suspend fun copyCircles() {
+    fun copyCircles() = coroutineScope.launch {
         if (selectionMode.isSelectingCircles()) {
             recordCommand(Command.COPY)
             val newOnes = circles.filterIndexed { ix, _ -> ix in selection }
@@ -210,7 +215,7 @@ class EditClusterViewModel(
         }
     }
 
-    suspend fun deleteCircles() {
+    fun deleteCircles() = coroutineScope.launch {
         fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Int>): Map<Int, Int> {
             val re = mutableMapOf<Int, Int>()
             var shift = 0
@@ -237,6 +242,8 @@ class EditClusterViewModel(
             circles.addAll(whatsLeft)
             parts.addAll(
                 oldParts
+                    // to avoid stray chessboard selections
+                    .filterNot { (ins, _, _) -> ins.isNotEmpty() && ins.minus(whatsGone).isEmpty() }
                     .map { (ins, outs, fillColor) ->
                         Cluster.Part(
                             insides = ins.minus(whatsGone).map { reindexing[it]!! }.toSet(),
@@ -406,10 +413,11 @@ class EditClusterViewModel(
             }
         val circleOutsides = part.outsides.map { circles[it] }
         return if (insidePath == null) {
-            circleOutsides.map { circle2path(it) }
-                // TODO: encapsulate as a separate tool, otherwise it's not deselectable after new circles are added
+            circles.map { circle2path(it) }
+                // TODO: encapsulate as a separate tool
                 // NOTE: reduce(xor) on outsides = makes binary interlacing pattern
                 // not what one would expect
+                // NOTE: soft limit is 500-1k circles for this to have bearable performance
                 .reduceOrNull { acc: Path, anotherPath: Path ->
                     Path.combine(PathOperation.Xor, acc, anotherPath)
                 } ?: Path()
@@ -425,12 +433,33 @@ class EditClusterViewModel(
     // pointer input callbacks
     fun onTap(position: Offset) {
         // select circle(s)/region
-        if (showCircles)
+        if (showCircles) {
             when (selectionMode) {
-                SelectionMode.Drag -> reselectCircleAt(position)
-                SelectionMode.Multiselect -> reselectCirclesAt(position)
+                SelectionMode.Drag -> {
+                    val clickedDeleteHandle = if (selection.isNotEmpty()) {
+                        val circle = circles[selection.single()]
+                        val bottom = circle.offset + Offset(0f, circle.radius.toFloat())
+                        selectPoint(listOf(bottom), position) != null
+                    } else false
+                    if (clickedDeleteHandle)
+                        deleteCircles()
+                    else
+                        reselectCircleAt(position)
+                }
+
+                SelectionMode.Multiselect -> {
+                    val clickedDeleteHandle = if (selection.isNotEmpty()) {
+                        val bottom = getSelectionRect().bottomCenter
+                        selectPoint(listOf(bottom), position) != null
+                    } else false
+                    if (clickedDeleteHandle)
+                        deleteCircles()
+                    else
+                        reselectCirclesAt(position)
+                }
                 SelectionMode.SelectRegion -> reselectRegionAt(position)
             }
+        }
     }
 
     fun onDown(visiblePosition: Offset) {
@@ -514,7 +543,7 @@ class EditClusterViewModel(
     }
 
     fun onVerticalScroll(yDelta: Float) {
-        val zoom = (1.01f).pow(yDelta)
+        val zoom = (1.01f).pow(-yDelta)
         if (showCircles) {
             when (selectionMode) {
                 SelectionMode.Drag -> if (selection.isNotEmpty()) { // move + scale radius
@@ -598,8 +627,9 @@ class EditClusterViewModel(
                 selection = listOf(0)
             )
 
-            fun restore(uiState: UiState): EditClusterViewModel =
+            fun restore(coroutineScope: CoroutineScope, uiState: UiState): EditClusterViewModel =
                 EditClusterViewModel(
+                    coroutineScope,
                     Cluster(uiState.circles.toList(), uiState.parts.toList(), fill = true)
                 ).apply {
                     _selectionMode.value = uiState.selectionMode
@@ -613,20 +643,21 @@ class EditClusterViewModel(
         }
     }
 
+    class Saver(
+        private val coroutineScope: CoroutineScope
+    ) : androidx.compose.runtime.saveable.Saver<EditClusterViewModel, String> {
+        override fun SaverScope.save(value: EditClusterViewModel): String =
+            Json.encodeToString(UiState.serializer(), UiState.save(value))
+        override fun restore(value: String): EditClusterViewModel {
+            return UiState.restore(coroutineScope, Json.decodeFromString(UiState.serializer(), value))
+        }
+    }
+
     companion object {
         /** In drag mode: enables simple drag&drop behavior that is otherwise only available after long press */
         const val DRAG_ONLY = true
         const val SELECTION_EPSILON = 20f
         const val HISTORY_SIZE = 100
-
-        val VMSaver = Saver<EditClusterViewModel, String>(
-            save = { viewModel ->
-                Json.encodeToString(UiState.serializer(), UiState.save(viewModel))
-            },
-            restore = { s ->
-                UiState.restore(Json.decodeFromString(UiState.serializer(), s))
-            }
-        )
     }
 }
 

@@ -5,6 +5,8 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -12,19 +14,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
 import kotlin.math.max
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterCanvas(
     coroutineScope: CoroutineScope,
@@ -39,6 +51,10 @@ fun EditClusterCanvas(
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
     ) }
     val emptyPaint = remember { Paint() }
+//    val deleteIcon = painterResource("icons/cancel.xml")
+    val deleteIcon = rememberVectorPainter(Icons.Default.Delete)
+    val deleteIconS = with (LocalDensity.current) { 18.dp.toPx() }
+    val deleteIconSize = Size(deleteIconS, deleteIconS)
     val backgroundColor = Color.White
     val circleColor = Color.Black
     val clusterPathAlpha = 0.7f
@@ -148,32 +164,44 @@ fun EditClusterCanvas(
                     // TODO: delete handle bottom left + for multi rotate bottom right
                     is Handles.SingleCircle -> {
                         val selectedCircle = viewModel.circles[viewModel.selection.single()]
-                        val right =
-                            selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
-                        drawLine(
+                        val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
+                        val bottom = selectedCircle.offset + Offset(0f, selectedCircle.radius.toFloat())
+                        drawLine( // radius marker
                             color = selectionMarkingsColor,
                             selectedCircle.offset,
                             right,
                         )
-                        drawCircle(
+                        drawCircle( // radius handle
                             color = handleColor,
                             radius = handleRadius,
                             center = right
                         )
+                        translate(bottom.x - deleteIconS/2, bottom.y - deleteIconS/2) {
+                            with (deleteIcon) {
+                                draw(deleteIconSize, colorFilter = ColorFilter.tint(Color.Red))
+                            }
+                        }
                     }
                     is Handles.SeveralCircles -> {
                         val selectionRect = viewModel.getSelectionRect()
-                        drawRect(
+                        val bottom = selectionRect.bottomCenter
+                        drawRect( // selection rect
                             color = selectionMarkingsColor,
                             topLeft = selectionRect.topLeft,
                             size = selectionRect.size,
                             style = dottedStroke,
                         )
-                        drawCircle(
+                        drawCircle( // scale handle
                             color = handleColor,
                             radius = handleRadius,
                             center = selectionRect.topRight,
                         )
+                        // rotate handle + centroid
+                        translate(bottom.x - deleteIconS/2, bottom.y - deleteIconS/2) {
+                            with (deleteIcon) {
+                                draw(deleteIconSize, colorFilter = ColorFilter.tint(Color.Red))
+                            }
+                        }
                     }
                 }
         }

@@ -69,20 +69,20 @@ import ui.colorpicker.harmony.HarmonyColorPicker
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
 @Composable
 fun EditClusterScreen(sampleIndex: Int? = null) {
-    val coroutineScope = rememberCoroutineScope() // NOTE: potentially pass coroutineScope into VMSaver
+    val coroutineScope = rememberCoroutineScope()
     val clusterRepository = remember { ClusterRepository() }
-    val viewModel = rememberSaveable(saver = EditClusterViewModel.VMSaver) {
-        EditClusterViewModel.UiState.restore(EditClusterViewModel.UiState.DEFAULT)
+    val viewModel = rememberSaveable(saver = EditClusterViewModel.Saver(coroutineScope)) {
+        EditClusterViewModel.UiState.restore(coroutineScope, EditClusterViewModel.UiState.DEFAULT)
     }
 
     val scaffoldState = rememberScaffoldState()
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = {
-            EditClusterTopBar(coroutineScope, viewModel)
+            EditClusterTopBar(viewModel)
         },
         bottomBar = {
-            EditClusterBottomBar(coroutineScope, viewModel)
+            EditClusterBottomBar(viewModel)
         },
     ) { inPaddings ->
         Surface {
@@ -103,10 +103,7 @@ fun EditClusterScreen(sampleIndex: Int? = null) {
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable
-fun EditClusterTopBar(
-    coroutineScope: CoroutineScope,
-    viewModel: EditClusterViewModel
-) {
+fun EditClusterTopBar(viewModel: EditClusterViewModel) {
     TopAppBar(
         title = { Text("Edit cluster") },
         navigationIcon = {
@@ -142,10 +139,7 @@ fun EditClusterTopBar(
 // TODO: can overflow on mobile, make it scrollable LazyRow or smth
 @OptIn(ExperimentalResourceApi::class)
 @Composable
-fun EditClusterBottomBar(
-    coroutineScope: CoroutineScope,
-    viewModel: EditClusterViewModel,
-) {
+fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
     BottomAppBar {
         ModeToggle(
             SelectionMode.Drag,
@@ -195,22 +189,20 @@ fun EditClusterBottomBar(
                     viewModel.switchSelectionMode(SelectionMode.SelectRegion, noAlteringShortcuts = true)
                 }
             )
-        IconButton(
-            onClick = { coroutineScope.launch { viewModel.createNewCircle() } },
-        ) {
+        IconButton(onClick = viewModel::createNewCircle) {
             Icon(Icons.Default.AddCircle, contentDescription = "create new circle")
         }
         IconButton(
-            onClick = { coroutineScope.launch { viewModel.copyCircles() } },
+            onClick = viewModel::copyCircles,
             enabled = viewModel.copyAndDeleteAreEnabled
         ) {
             Icon(painterResource("icons/copy.xml"), contentDescription = "copy circle(s)")
         }
         IconButton(
-            onClick = { coroutineScope.launch { viewModel.deleteCircles() } },
+            onClick = viewModel::deleteCircles,
             enabled = viewModel.copyAndDeleteAreEnabled
         ) {
-            Icon(Icons.Default.Delete, contentDescription = "delete circle(s)")
+            Icon(Icons.Default.Delete, tint = Color(1f, 0.5f, 0.5f), contentDescription = "delete circle(s)")
         }
     }
 }
