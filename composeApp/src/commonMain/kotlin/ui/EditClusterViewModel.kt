@@ -4,7 +4,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
@@ -435,7 +434,7 @@ class EditClusterViewModel(
         // select circle(s)/region
         if (showCircles) {
             when (selectionMode) {
-                SelectionMode.Drag, SelectionMode.Multiselect -> {
+                SelectionMode.Drag -> {
                     val clickedDeleteHandle = if (selection.isNotEmpty()) {
                         val circle = circles[selection.single()]
                         val bottom = circle.offset + Offset(0f, circle.radius.toFloat())
@@ -443,12 +442,19 @@ class EditClusterViewModel(
                     } else false
                     if (clickedDeleteHandle)
                         deleteCircles()
-                    else {
-                        if (selectionMode is SelectionMode.Drag)
-                            reselectCircleAt(position)
-                        else // multiselect
-                            reselectCirclesAt(position)
-                    }
+                    else
+                        reselectCircleAt(position)
+                }
+
+                SelectionMode.Multiselect -> {
+                    val clickedDeleteHandle = if (selection.isNotEmpty()) {
+                        val bottom = getSelectionRect().bottomCenter
+                        selectPoint(listOf(bottom), position) != null
+                    } else false
+                    if (clickedDeleteHandle)
+                        deleteCircles()
+                    else
+                        reselectCirclesAt(position)
                 }
                 SelectionMode.SelectRegion -> reselectRegionAt(position)
             }
