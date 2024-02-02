@@ -203,8 +203,8 @@ class EditClusterViewModel(
                 selection.containsAll(it.insides) && selection.containsAll(it.outsides)
             }.map { part ->
                 Cluster.Part(
-                    insides = part.insides.map { it + newOnes.size }.toSet(),
-                    outsides = part.outsides.map { it + newOnes.size }.toSet(),
+                    insides = part.insides.map { it + oldSize }.toSet(),
+                    outsides = part.outsides.map { it + oldSize }.toSet(),
                     fillColor = part.fillColor
                 )
             }
