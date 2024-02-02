@@ -27,6 +27,7 @@ import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.IconToggleButton
+import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Scaffold
@@ -61,6 +62,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.skiko.CursorManager
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.colorpicker.harmony.ColorHarmonyMode
@@ -86,7 +88,7 @@ fun EditClusterScreen(sampleIndex: Int? = null) {
         },
     ) { inPaddings ->
         Surface {
-            EditClusterCanvas(coroutineScope, viewModel, Modifier.padding(inPaddings))
+            EditClusterCanvas(viewModel, Modifier.padding(inPaddings))
         }
     }
 
@@ -174,6 +176,7 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
                 .width(4.dp)
         )
         var showColorPickerDialog by remember { mutableStateOf(false) }
+        // TODO: show the current color on the toolbar
         IconButton(onClick = {
             showColorPickerDialog = true
         }) {
@@ -200,22 +203,29 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
         }
         IconButton(
             onClick = viewModel::deleteCircles,
-            enabled = viewModel.copyAndDeleteAreEnabled
+            enabled = viewModel.copyAndDeleteAreEnabled,
         ) {
-            Icon(Icons.Default.Delete, tint = Color(1f, 0.5f, 0.5f), contentDescription = "delete circle(s)")
+            Icon(
+                Icons.Default.Delete,
+                tint = Color(1f, 0.5f, 0.5f).copy(alpha = LocalContentAlpha.current),
+                contentDescription = "delete circle(s)"
+            )
         }
     }
 }
 
 @Composable
+fun Panel() {
+    // shown on the top of the bottom toolbar
+}
+
+@Composable
 fun MultiselectPanel() {
-    LazyRow(Modifier.fillMaxWidth()) {
-        // actions:
-        // select all circles
-        // deselect all circles
-        // rectangular selection
-        // <collapse panel>
-    }
+    // actions:
+    // select all circles
+    // deselect all circles
+    // rectangular selection
+    // <collapse panel>
 }
 
 @Composable
@@ -244,6 +254,14 @@ fun CreationPanel() {
     // circle by 3 points
     // line by 2 points
     // <collapse panel>
+}
+
+@Composable
+fun TransformToolsPanel() {
+    // default: move/drag
+    // scale
+    // rotate
+    // inverse
 }
 
 @Composable

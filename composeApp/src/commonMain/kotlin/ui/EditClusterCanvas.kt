@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -23,23 +24,16 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.ExperimentalResourceApi
-import org.jetbrains.compose.resources.painterResource
 import kotlin.math.max
 
-@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterCanvas(
-    coroutineScope: CoroutineScope,
     viewModel: EditClusterViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -66,6 +60,7 @@ fun EditClusterCanvas(
     val decayDuration = 1_500
     val decayAlpha = remember { Animatable(0f) }
     val decayingCircles by viewModel.decayingCircles.collectAsState(DecayingCircles(emptyList(), Color.White))
+    val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch {
         viewModel.decayingCircles.collect { event ->
             decayAlpha.snapTo(maxDecayAlpha)
@@ -190,7 +185,8 @@ fun EditClusterCanvas(
                             topLeft = selectionRect.topLeft,
                             size = selectionRect.size,
                             style = dottedStroke,
-                        )
+                        ) // TODO: if minSize > screen maybe show a context menu with scale & rotate sliders
+                        // or group such tools into a transform panel
                         drawCircle( // scale handle
                             color = handleColor,
                             radius = handleRadius,

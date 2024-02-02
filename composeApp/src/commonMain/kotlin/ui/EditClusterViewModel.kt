@@ -435,7 +435,7 @@ class EditClusterViewModel(
         // select circle(s)/region
         if (showCircles) {
             when (selectionMode) {
-                SelectionMode.Drag -> {
+                SelectionMode.Drag, SelectionMode.Multiselect -> {
                     val clickedDeleteHandle = if (selection.isNotEmpty()) {
                         val circle = circles[selection.single()]
                         val bottom = circle.offset + Offset(0f, circle.radius.toFloat())
@@ -443,19 +443,12 @@ class EditClusterViewModel(
                     } else false
                     if (clickedDeleteHandle)
                         deleteCircles()
-                    else
-                        reselectCircleAt(position)
-                }
-
-                SelectionMode.Multiselect -> {
-                    val clickedDeleteHandle = if (selection.isNotEmpty()) {
-                        val bottom = getSelectionRect().bottomCenter
-                        selectPoint(listOf(bottom), position) != null
-                    } else false
-                    if (clickedDeleteHandle)
-                        deleteCircles()
-                    else
-                        reselectCirclesAt(position)
+                    else {
+                        if (selectionMode is SelectionMode.Drag)
+                            reselectCircleAt(position)
+                        else // multiselect
+                            reselectCirclesAt(position)
+                    }
                 }
                 SelectionMode.SelectRegion -> reselectRegionAt(position)
             }
@@ -686,7 +679,7 @@ sealed class CreationMode(open val phase: Int, val nPhases: Int) {
         data object Radius : CircleByCenterAndRadius(2)
     }
     data class CircleBy3Points(override val phase: Int) : CreationMode(phase, nPhases = 3)
-    data class LineBy2Points(override val phase: Int) : CreationMode(phase, nPhases = 2)
+//    data class LineBy2Points(override val phase: Int) : CreationMode(phase, nPhases = 2)
 }
 
 /** ixs = indices of circles to which the handle is attached */
