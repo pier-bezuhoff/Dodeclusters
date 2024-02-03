@@ -23,6 +23,9 @@ import kotlinx.serialization.json.Json
 import kotlin.math.absoluteValue
 import kotlin.math.pow
 
+/** circle index in vm.circles or cluster.circles */
+typealias Ix = Int
+
 // NOTE: waiting for decompose 3.0-stable for a real VM impl
 // MAYBE: add coroutine scope in the constructor
 class EditClusterViewModel(
