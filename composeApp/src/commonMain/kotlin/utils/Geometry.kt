@@ -2,6 +2,7 @@ package utils
 
 import androidx.compose.ui.geometry.Offset
 import kotlin.math.PI
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -27,6 +28,12 @@ fun Offset.rotateBy(angleCos: Double, angleSin: Double): Offset {
         (x * angleSin + y * angleCos).toFloat()
     )
 }
+
+fun Offset.angleDeg(other: Offset): Float =
+    (atan2(
+        x*other.y - y*other.x,
+        x*other.x + y*other.y
+    ) * 180/PI).toFloat()
 
 fun Offset.angleCos(other: Offset): Double {
     return (x.toDouble()*other.x + y*other.y)/getDistance()/other.getDistance()

@@ -30,8 +30,11 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
 import kotlin.math.max
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterCanvas(
     viewModel: EditClusterViewModel,
@@ -47,14 +50,16 @@ fun EditClusterCanvas(
     val emptyPaint = remember { Paint() }
 //    val deleteIcon = painterResource("icons/cancel.xml")
     val deleteIcon = rememberVectorPainter(Icons.Default.Delete)
-    val deleteIconS = with (LocalDensity.current) { 18.dp.toPx() }
-    val deleteIconSize = Size(deleteIconS, deleteIconS)
+    val iconDim = with (LocalDensity.current) { 18.dp.toPx() }
+    val iconSize = Size(iconDim, iconDim)
+    val rotateIcon = painterResource("icons/rotate_counterclockwise.xml")
     val backgroundColor = Color.White
     val circleColor = Color.Black
     val clusterPathAlpha = 0.7f
     val selectionLinesColor = Color.Gray
     val selectionMarkingsColor = Color.DarkGray // center-radius line / bounding rect of selection
-    val handleColor = Color.Gray
+    val scaleHandleColor = Color.Gray
+    val rotationIndicatorColor = Color.Green.copy(alpha = 0.5f)
     val handleRadius = 8f
     val maxDecayAlpha = 0.5f
     val decayDuration = 1_500
@@ -167,13 +172,13 @@ fun EditClusterCanvas(
                             right,
                         )
                         drawCircle( // radius handle
-                            color = handleColor,
+                            color = scaleHandleColor,
                             radius = handleRadius,
                             center = right
                         )
-                        translate(bottom.x - deleteIconS/2, bottom.y - deleteIconS/2) {
+                        translate(bottom.x - iconDim/2, bottom.y - iconDim/2) {
                             with (deleteIcon) {
-                                draw(deleteIconSize, colorFilter = ColorFilter.tint(Color.Red))
+                                draw(iconSize, colorFilter = ColorFilter.tint(Color.Red))
                             }
                         }
                     }
@@ -188,18 +193,26 @@ fun EditClusterCanvas(
                         ) // TODO: if minSize > screen maybe show a context menu with scale & rotate sliders
                         // or group such tools into a transform panel
                         drawCircle( // scale handle
-                            color = handleColor,
+                            color = scaleHandleColor,
                             radius = handleRadius,
                             center = selectionRect.topRight,
                         )
-                        drawCircle( // rotate handle
-                            color = handleColor,
-                            radius = handleRadius,
-                            center = selectionRect.bottomRight,
-                        )
-                        translate(bottom.x - deleteIconS/2, bottom.y - deleteIconS/2) {
+                        // rotate handle icon
+                        translate(selectionRect.right - iconDim/2, selectionRect.bottom - iconDim/2) {
+                            with (rotateIcon) {
+                                draw(iconSize, colorFilter = ColorFilter.tint(Color(0f, 0.5f, 0f)))
+                            }
+                        }
+                        viewModel.rotationHandlePosition?.let {
+                            drawCircle( // rotation indicator
+                                color = rotationIndicatorColor,
+                                radius = handleRadius*3/4,
+                                center = it,
+                            )
+                        }
+                        translate(bottom.x - iconDim/2, bottom.y - iconDim/2) {
                             with (deleteIcon) {
-                                draw(deleteIconSize, colorFilter = ColorFilter.tint(Color.Red))
+                                draw(iconSize, colorFilter = ColorFilter.tint(Color.Red))
                             }
                         }
                     }

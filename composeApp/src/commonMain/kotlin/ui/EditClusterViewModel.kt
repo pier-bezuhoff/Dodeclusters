@@ -21,6 +21,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import utils.angleCos
+import utils.angleDeg
 import utils.angleSin
 import utils.rotateBy
 import kotlin.math.PI
@@ -66,6 +67,7 @@ class EditClusterViewModel(
     private var grabbedHandle: Handle? = null
     private var grabbedCircleIx: Ix? = null
     private var rotationAnchor: Offset? = null
+    var rotationHandlePosition: Offset? by mutableStateOf(null)
 
     var undoIsEnabled by mutableStateOf(false) // = history is not empty
     var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
@@ -470,6 +472,8 @@ class EditClusterViewModel(
     }
 
     fun onDown(visiblePosition: Offset) {
+        rotationAnchor = null
+        rotationHandlePosition = null
         // no need for onUp since all actions occur after onDown
         if (showCircles) {
             grabbedHandle = when (val h = handleConfig.value) {
@@ -488,6 +492,7 @@ class EditClusterViewModel(
                             val rotateHandlePosition = rect.bottomRight
                             selectPoint(listOf(rotateHandlePosition), visiblePosition)?.let {
                                 rotationAnchor = rect.center
+                                rotationHandlePosition = rotateHandlePosition
                                 Handle.ROTATE
                             }
                         }
@@ -533,22 +538,14 @@ class EditClusterViewModel(
                         }
                         Handle.ROTATE -> {
                             recordCommand(Command.ROTATE)
-                            val rect = getSelectionRect()
-                            val rotateHandlePosition = rect.bottomRight
                             val center = rotationAnchor!!
-                            val centerToHandle = rotateHandlePosition - center
-                            // BUG: >90 angles are wrong, probs cuz of the following line
+                            val centerToHandle = rotationHandlePosition!! - center
                             val centerToCurrent = centerToHandle + pan
-                            val angleCos = centerToHandle.angleCos(centerToCurrent)
-                            val angleSin = centerToHandle.angleSin(centerToCurrent)
-                            val angle = (atan2(
-                                centerToHandle.x*centerToCurrent.y - centerToHandle.y*centerToCurrent.x,
-                                centerToHandle.x*centerToCurrent.x + centerToHandle.y*centerToCurrent.y
-                            ) * 180/ PI).toFloat()
-                            println(angle)
+                            val angle = centerToHandle.angleDeg(centerToCurrent)
+//                            println(angle)
+                            rotationHandlePosition = (rotationHandlePosition!! - center).rotateBy(angle) + center
                             for (ix in selection) {
                                 val circle = circles[ix]
-//                                val newOffset = (circle.offset - center).rotateBy(angleCos, angleSin) + center
                                 val newOffset = (circle.offset - center).rotateBy(angle) + center
                                 circles[ix] = Circle(newOffset, circle.radius)
                             }
