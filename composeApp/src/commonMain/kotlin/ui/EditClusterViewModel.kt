@@ -20,14 +20,18 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import utils.angleCos
+import utils.angleSin
+import utils.rotateBy
+import kotlin.math.PI
 import kotlin.math.absoluteValue
+import kotlin.math.atan2
 import kotlin.math.pow
 
 /** circle index in vm.circles or cluster.circles */
 typealias Ix = Int
 
 // NOTE: waiting for decompose 3.0-stable for a real VM impl
-// MAYBE: add coroutine scope in the constructor
 class EditClusterViewModel(
     /** NOT a viewModelScope, just a rememberCS from the screen composable */
     val coroutineScope: CoroutineScope,
@@ -38,29 +42,30 @@ class EditClusterViewModel(
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
-    val selection = mutableStateListOf<Int>()
+    val selection = mutableStateListOf<Ix>()
 
     var regionColor by mutableStateOf(Color.Cyan)
     var showCircles by mutableStateOf(true)
     /** which style to use when drawing parts: true = stroke, false = fill */
     var showWireframes by mutableStateOf(false)
 
-    val handles = derivedStateOf { // depends on selectionMode & selection
+    val handleConfig = derivedStateOf { // depends on selectionMode & selection
         when (selectionMode) {
             is SelectionMode.Drag ->
                 if (selection.isEmpty()) null
-                else Handles.SingleCircle(selection.single())
+                else HandleConfig.SingleCircle(selection.single())
             is SelectionMode.Multiselect -> when {
                 selection.isEmpty() -> null
-                selection.size == 1 -> Handles.SingleCircle(selection.single())
-                selection.size > 1 -> Handles.SeveralCircles(selection)
+                selection.size == 1 -> HandleConfig.SingleCircle(selection.single())
+                selection.size > 1 -> HandleConfig.SeveralCircles(selection)
                 else -> Unit // never
             }
             is SelectionMode.SelectRegion -> null
         }
     }
-    private var handleIsDown: Boolean = false
-    private var grabbedCircleIx: Int? = null
+    private var grabbedHandle: Handle? = null
+    private var grabbedCircleIx: Ix? = null
+    private var rotationAnchor: Offset? = null
 
     var undoIsEnabled by mutableStateOf(false) // = history is not empty
     var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
@@ -218,8 +223,8 @@ class EditClusterViewModel(
     }
 
     fun deleteCircles() = coroutineScope.launch {
-        fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Int>): Map<Int, Int> {
-            val re = mutableMapOf<Int, Int>()
+        fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Ix>): Map<Ix, Ix> {
+            val re = mutableMapOf<Ix, Ix>()
             var shift = 0
             for (ix in originalIndices) {
                 if (ix in deletedIndices)
@@ -285,7 +290,7 @@ class EditClusterViewModel(
     fun visible(position: Offset): Offset =
         position + translation.value
 
-    fun selectPoint(targets: List<Offset>, visiblePosition: Offset): Int? {
+    fun selectPoint(targets: List<Offset>, visiblePosition: Offset): Ix? {
         val position = absolute(visiblePosition)
         return targets.mapIndexed { ix, offset -> ix to (offset - position).getDistance() }
             .filter { (_, distance) -> distance <= SELECTION_EPSILON }
@@ -293,7 +298,7 @@ class EditClusterViewModel(
             ?.let { (ix, _) -> ix }
     }
 
-    fun selectCircle(targets: List<Circle>, visiblePosition: Offset): Int? {
+    fun selectCircle(targets: List<Circle>, visiblePosition: Offset): Ix? {
         val position = absolute(visiblePosition)
         return targets.mapIndexed { ix, circle ->
             ix to ((circle.offset - position).getDistance() - circle.radius).absoluteValue
@@ -418,7 +423,7 @@ class EditClusterViewModel(
             circles.map { circle2path(it) }
                 // TODO: encapsulate as a separate tool
                 // NOTE: reduce(xor) on outsides = makes binary interlacing pattern
-                // not what one would expect
+                // cuz it makes even # of layers = transparent, odd = filled
                 // NOTE: soft limit is 500-1k circles for this to have bearable performance
                 .reduceOrNull { acc: Path, anotherPath: Path ->
                     Path.combine(PathOperation.Xor, acc, anotherPath)
@@ -467,20 +472,30 @@ class EditClusterViewModel(
     fun onDown(visiblePosition: Offset) {
         // no need for onUp since all actions occur after onDown
         if (showCircles) {
-            handleIsDown = when (val h = handles.value) {
-                is Handles.SingleCircle -> {
+            grabbedHandle = when (val h = handleConfig.value) {
+                is HandleConfig.SingleCircle -> {
                     val circle = circles[h.ix]
-                    val right = circle.offset + Offset(circle.radius.toFloat(), 0f)
-                    selectPoint(listOf(right), visiblePosition) != null
+                    val radiusHandlePosition = circle.offset + Offset(circle.radius.toFloat(), 0f)
+                    selectPoint(listOf(radiusHandlePosition), visiblePosition)
+                        ?.let { Handle.SCALE }
                 }
-                is Handles.SeveralCircles -> {
-                    val topRight = getSelectionRect().topRight
-                    selectPoint(listOf(topRight), visiblePosition) != null
+                is HandleConfig.SeveralCircles -> {
+                    val rect = getSelectionRect()
+                    val scaleHandlePosition = rect.topRight
+                    selectPoint(listOf(scaleHandlePosition), visiblePosition)
+                        ?.let { Handle.SCALE }
+                        ?: run {
+                            val rotateHandlePosition = rect.bottomRight
+                            selectPoint(listOf(rotateHandlePosition), visiblePosition)?.let {
+                                rotationAnchor = rect.center
+                                Handle.ROTATE
+                            }
+                        }
                 }
-                else -> false // other handles are multiselect's rotate
+                else -> null
             }
             // NOTE: this enables drag-only behavior, you lose your selection when grabbing new circle
-            if (DRAG_ONLY && !handleIsDown && selectionMode == SelectionMode.Drag) {
+            if (DRAG_ONLY && grabbedHandle == null && selectionMode == SelectionMode.Drag) {
                 val previouslySelected = selection.firstOrNull()
                 reselectCircleAt(visiblePosition)
                 if (previouslySelected != null && selection.isEmpty()) // this line requires deselecting first to navigate around canvas
@@ -490,31 +505,58 @@ class EditClusterViewModel(
     }
 
     // MAYBE: handle key arrows as panning
-    fun onPanZoom(pan: Offset, centroid: Offset, zoom: Float) {
-        if (handleIsDown) {
+    fun onPanZoomRotate(pan: Offset, centroid: Offset, zoom: Float, rotationAngle: Float) {
+        if (grabbedHandle != null) {
             // drag handle
-            when (val h = handles.value) {
-                is Handles.SingleCircle -> {
+            when (val h = handleConfig.value) {
+                is HandleConfig.SingleCircle -> {
                     recordCommand(Command.CHANGE_RADIUS)
                     val center = circles[h.ix].offset
                     val r = (absolute(centroid) - center).getDistance()
                     circles[h.ix] = circles[h.ix].copy(radius = r.toDouble())
                 }
-                is Handles.SeveralCircles -> {
-                    recordCommand(Command.SCALE)
-                    val selectionRect = getSelectionRect()
-                    val topRight = selectionRect.topRight
-                    val center = selectionRect.center
-                    val centerToTopRight = topRight - center
-                    val centerToCurrent = centerToTopRight + pan
-                    val handleScale = centerToCurrent.getDistance()/centerToTopRight.getDistance()
-                    for (ix in selection) {
-                        val circle = circles[ix]
-                        val newOffset = (circle.offset - center) * handleScale + center
-                        circles[ix] = Circle(newOffset, handleScale * circle.radius)
+                is HandleConfig.SeveralCircles -> {
+                    when (grabbedHandle) {
+                        Handle.SCALE -> {
+                            recordCommand(Command.SCALE)
+                            val rect = getSelectionRect()
+                            val scaleHandlePosition = rect.topRight
+                            val center = rect.center
+                            val centerToHandle = scaleHandlePosition - center
+                            val centerToCurrent = centerToHandle + pan
+                            val handleScale = centerToCurrent.getDistance()/centerToHandle.getDistance()
+                            for (ix in selection) {
+                                val circle = circles[ix]
+                                val newOffset = (circle.offset - center) * handleScale + center
+                                circles[ix] = Circle(newOffset, handleScale * circle.radius)
+                            }
+                        }
+                        Handle.ROTATE -> {
+                            recordCommand(Command.ROTATE)
+                            val rect = getSelectionRect()
+                            val rotateHandlePosition = rect.bottomRight
+                            val center = rotationAnchor!!
+                            val centerToHandle = rotateHandlePosition - center
+                            // BUG: >90 angles are wrong, probs cuz of the following line
+                            val centerToCurrent = centerToHandle + pan
+                            val angleCos = centerToHandle.angleCos(centerToCurrent)
+                            val angleSin = centerToHandle.angleSin(centerToCurrent)
+                            val angle = (atan2(
+                                centerToHandle.x*centerToCurrent.y - centerToHandle.y*centerToCurrent.x,
+                                centerToHandle.x*centerToCurrent.x + centerToHandle.y*centerToCurrent.y
+                            ) * 180/ PI).toFloat()
+                            println(angle)
+                            for (ix in selection) {
+                                val circle = circles[ix]
+//                                val newOffset = (circle.offset - center).rotateBy(angleCos, angleSin) + center
+                                val newOffset = (circle.offset - center).rotateBy(angle) + center
+                                circles[ix] = Circle(newOffset, circle.radius)
+                            }
+                        }
+                        null -> {}
                     }
                 }
-                else -> Unit // other handles are multiselect's rotate potentially
+                else -> Unit
             }
         } else if (selectionMode == SelectionMode.Drag && selection.isNotEmpty() && showCircles) {
             // move + scale radius
@@ -534,7 +576,7 @@ class EditClusterViewModel(
                 recordCommand(Command.MOVE)
                 for (ix in selection) {
                     val circle = circles[ix]
-                    val newOffset = (circle.offset - centroid) * zoom + centroid + pan
+                    val newOffset = (circle.offset - centroid).rotateBy(rotationAngle) * zoom + centroid + pan
                     circles[ix] = Circle(newOffset, zoom * circle.radius)
                 }
             }
@@ -614,7 +656,7 @@ class EditClusterViewModel(
         val selectionMode: SelectionMode,
         val circles: List<Circle>,
         val parts: List<Cluster.Part>,
-        val selection: List<Int>, // circle indices
+        val selection: List<Ix>, // circle indices
     ) {
         companion object {
             val DEFAULT = UiState(
@@ -692,9 +734,13 @@ sealed class CreationMode(open val phase: Int, val nPhases: Int) {
 }
 
 /** ixs = indices of circles to which the handle is attached */
-sealed class Handles(open val ixs: List<Int>) {
-    data class SingleCircle(val ix: Int): Handles(listOf(ix))
-    data class SeveralCircles(override val ixs: List<Int>): Handles(ixs)
+sealed class HandleConfig(open val ixs: List<Ix>) {
+    data class SingleCircle(val ix: Ix): HandleConfig(listOf(ix))
+    data class SeveralCircles(override val ixs: List<Ix>): HandleConfig(ixs)
+}
+
+enum class Handle {
+    SCALE, ROTATE
 }
 
 /** params for copy/delete animations */
@@ -707,6 +753,7 @@ data class DecayingCircles(
 enum class Command {
     MOVE,
     CHANGE_RADIUS, SCALE,
+    ROTATE,
     COPY, DELETE, CREATE,
     SELECT_REGION,
 }

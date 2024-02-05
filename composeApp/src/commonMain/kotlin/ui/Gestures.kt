@@ -7,7 +7,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -16,7 +15,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 inline fun Modifier.reactiveCanvas(
     vararg keys: Any?,
     crossinline onVerticalScroll: (yDelta: Float) -> Unit = { },
-    crossinline onPanZoom: (pan: Offset, centroid: Offset, zoom: Float) -> Unit,
+    crossinline onPanZoomRotate: (pan: Offset, centroid: Offset, zoom: Float, rotationAngle: Float) -> Unit,
     // down triggers before tap/long press
     crossinline onDown: (position: Offset) -> Unit = { },
     crossinline onTap: (position: Offset) -> Unit = { },
@@ -42,7 +41,7 @@ inline fun Modifier.reactiveCanvas(
         .pointerInput(*keys) {
             detectTransformGestures { centroid, pan, zoom, rotation ->
 //        println("transform")
-                onPanZoom(pan, centroid, zoom)
+                onPanZoomRotate(pan, centroid, zoom, rotation)
             }
         }
         .pointerInput(*keys) {

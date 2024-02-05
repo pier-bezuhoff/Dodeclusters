@@ -125,7 +125,7 @@ fun EditClusterCanvas(
             .reactiveCanvas(
                 onTap = viewModel::onTap,
                 onDown = viewModel::onDown,
-                onPanZoom = viewModel::onPanZoom,
+                onPanZoomRotate = viewModel::onPanZoomRotate,
                 onVerticalScroll = viewModel::onVerticalScroll,
                 onLongDragStart = viewModel::onLongDragStart,
                 onLongDrag = viewModel::onLongDrag,
@@ -155,9 +155,9 @@ fun EditClusterCanvas(
             }
             // handles
             if (viewModel.showCircles)
-                when (viewModel.handles.value) {
+                when (viewModel.handleConfig.value) {
                     // TODO: delete handle bottom left + for multi rotate bottom right
-                    is Handles.SingleCircle -> {
+                    is HandleConfig.SingleCircle -> {
                         val selectedCircle = viewModel.circles[viewModel.selection.single()]
                         val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
                         val bottom = selectedCircle.offset + Offset(0f, selectedCircle.radius.toFloat())
@@ -177,7 +177,7 @@ fun EditClusterCanvas(
                             }
                         }
                     }
-                    is Handles.SeveralCircles -> {
+                    is HandleConfig.SeveralCircles -> {
                         val selectionRect = viewModel.getSelectionRect()
                         val bottom = selectionRect.bottomCenter
                         drawRect( // selection rect
@@ -192,7 +192,11 @@ fun EditClusterCanvas(
                             radius = handleRadius,
                             center = selectionRect.topRight,
                         )
-                        // rotate handle + centroid
+                        drawCircle( // rotate handle
+                            color = handleColor,
+                            radius = handleRadius,
+                            center = selectionRect.bottomRight,
+                        )
                         translate(bottom.x - deleteIconS/2, bottom.y - deleteIconS/2) {
                             with (deleteIcon) {
                                 draw(deleteIconSize, colorFilter = ColorFilter.tint(Color.Red))
