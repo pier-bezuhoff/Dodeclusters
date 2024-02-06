@@ -20,13 +20,9 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import utils.angleCos
 import utils.angleDeg
-import utils.angleSin
 import utils.rotateBy
-import kotlin.math.PI
 import kotlin.math.absoluteValue
-import kotlin.math.atan2
 import kotlin.math.pow
 
 /** circle index in vm.circles or cluster.circles */
@@ -65,9 +61,9 @@ class EditClusterViewModel(
         }
     }
     private var grabbedHandle: Handle? = null
-    private var grabbedCircleIx: Ix? = null
+    private var grabbedCircleIx: Ix? = null // only used for long-drag
     private var rotationAnchor: Offset? = null
-    var rotationHandlePosition: Offset? by mutableStateOf(null)
+    var rotationIndicatorPosition: Offset? by mutableStateOf(null)
 
     var undoIsEnabled by mutableStateOf(false) // = history is not empty
     var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
@@ -160,6 +156,7 @@ class EditClusterViewModel(
     }
 
     private fun loadUiState(state: UiState) {
+        rotationIndicatorPosition = null
         selection.clear()
         parts.clear()
         circles.clear()
@@ -185,6 +182,8 @@ class EditClusterViewModel(
         redoCommands.clear()
         redoHistory.clear()
         redoIsEnabled = false
+        if (command != Command.ROTATE)
+            rotationIndicatorPosition = null
     }
 
     fun createNewCircle() = coroutineScope.launch {
@@ -205,6 +204,7 @@ class EditClusterViewModel(
             recordCommand(Command.COPY)
             val newOnes = circles.filterIndexed { ix, _ -> ix in selection }
             val oldSize = circles.size
+            val reindexing = selection.mapIndexed { i, ix -> ix to (oldSize + i) }.toMap()
             _decayingCircles.emit(
                 DecayingCircles(selection.map { circles[it] }, Color.Blue)
             )
@@ -213,8 +213,8 @@ class EditClusterViewModel(
                 selection.containsAll(it.insides) && selection.containsAll(it.outsides)
             }.map { part ->
                 Cluster.Part(
-                    insides = part.insides.map { it + oldSize }.toSet(),
-                    outsides = part.outsides.map { it + oldSize }.toSet(),
+                    insides = part.insides.map { reindexing[it]!! }.toSet(),
+                    outsides = part.outsides.map { reindexing[it]!! }.toSet(),
                     fillColor = part.fillColor
                 )
             }
@@ -403,6 +403,7 @@ class EditClusterViewModel(
     // NOTE: to create proper reduce(xor):
     // 2^(# circles) -> binary -> filter even number of 1 -> to parts
     // MAYBE: move to Cluster methods
+    // MAYBE: add threading cuz it can be slow
     fun part2path(part: Cluster.Part): Path {
         fun circle2path(circle: Circle): Path =
             Path().apply {
@@ -473,7 +474,7 @@ class EditClusterViewModel(
 
     fun onDown(visiblePosition: Offset) {
         rotationAnchor = null
-        rotationHandlePosition = null
+        rotationIndicatorPosition = null
         // no need for onUp since all actions occur after onDown
         if (showCircles) {
             grabbedHandle = when (val h = handleConfig.value) {
@@ -492,7 +493,7 @@ class EditClusterViewModel(
                             val rotateHandlePosition = rect.bottomRight
                             selectPoint(listOf(rotateHandlePosition), visiblePosition)?.let {
                                 rotationAnchor = rect.center
-                                rotationHandlePosition = rotateHandlePosition
+                                rotationIndicatorPosition = rotateHandlePosition
                                 Handle.ROTATE
                             }
                         }
@@ -539,11 +540,11 @@ class EditClusterViewModel(
                         Handle.ROTATE -> {
                             recordCommand(Command.ROTATE)
                             val center = rotationAnchor!!
-                            val centerToHandle = rotationHandlePosition!! - center
+                            val centerToHandle = rotationIndicatorPosition!! - center
                             val centerToCurrent = centerToHandle + pan
                             val angle = centerToHandle.angleDeg(centerToCurrent)
 //                            println(angle)
-                            rotationHandlePosition = (rotationHandlePosition!! - center).rotateBy(angle) + center
+                            rotationIndicatorPosition = (rotationIndicatorPosition!! - center).rotateBy(angle) + center
                             for (ix in selection) {
                                 val circle = circles[ix]
                                 val newOffset = (circle.offset - center).rotateBy(angle) + center

@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -47,20 +46,24 @@ fun EditClusterCanvas(
         width = 2f,
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
     ) }
-    val emptyPaint = remember { Paint() }
-//    val deleteIcon = painterResource("icons/cancel.xml")
-    val deleteIcon = rememberVectorPainter(Icons.Default.Delete)
+    // handles stuff
+    val handleRadius = 8f
+    val scaleHandleColor = Color.Gray
     val iconDim = with (LocalDensity.current) { 18.dp.toPx() }
     val iconSize = Size(iconDim, iconDim)
+//    val deleteIcon = painterResource("icons/cancel.xml")
+    val deleteIcon = rememberVectorPainter(Icons.Default.Delete)
+    val deleteIconTint = Color.Red
     val rotateIcon = painterResource("icons/rotate_counterclockwise.xml")
+    val rotateIconTint = Color(0f, 0.5f, 0f)
+    val rotationIndicatorRaidus = handleRadius * 3/4
+    val rotationIndicatorColor = Color.Green.copy(alpha = 0.5f)
+
     val backgroundColor = Color.White
     val circleColor = Color.Black
     val clusterPathAlpha = 0.7f
     val selectionLinesColor = Color.Gray
     val selectionMarkingsColor = Color.DarkGray // center-radius line / bounding rect of selection
-    val scaleHandleColor = Color.Gray
-    val rotationIndicatorColor = Color.Green.copy(alpha = 0.5f)
-    val handleRadius = 8f
     val maxDecayAlpha = 0.5f
     val decayDuration = 1_500
     val decayAlpha = remember { Animatable(0f) }
@@ -200,19 +203,19 @@ fun EditClusterCanvas(
                         // rotate handle icon
                         translate(selectionRect.right - iconDim/2, selectionRect.bottom - iconDim/2) {
                             with (rotateIcon) {
-                                draw(iconSize, colorFilter = ColorFilter.tint(Color(0f, 0.5f, 0f)))
+                                draw(iconSize, colorFilter = ColorFilter.tint(rotateIconTint))
                             }
                         }
-                        viewModel.rotationHandlePosition?.let {
+                        viewModel.rotationIndicatorPosition?.let {
                             drawCircle( // rotation indicator
                                 color = rotationIndicatorColor,
-                                radius = handleRadius*3/4,
+                                radius = rotationIndicatorRaidus,
                                 center = it,
                             )
                         }
                         translate(bottom.x - iconDim/2, bottom.y - iconDim/2) {
                             with (deleteIcon) {
-                                draw(iconSize, colorFilter = ColorFilter.tint(Color.Red))
+                                draw(iconSize, colorFilter = ColorFilter.tint(deleteIconTint))
                             }
                         }
                     }
