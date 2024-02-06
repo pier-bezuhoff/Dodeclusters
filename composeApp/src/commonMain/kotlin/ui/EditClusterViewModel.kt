@@ -318,16 +318,17 @@ class EditClusterViewModel(
         } ?: selection.clear()
     }
 
-    fun reselectCirclesAt(visiblePosition: Offset) {
-        selectCircle(circles, visiblePosition)?.let { ix ->
+    fun reselectCirclesAt(visiblePosition: Offset): Ix? =
+        selectCircle(circles, visiblePosition)?.also { ix ->
+            println("reselect circle @ $ix")
             if (ix in selection)
                 selection.remove(ix)
             else
                 selection.add(ix)
         }
-    }
 
-    fun reselectRegionAt(visiblePosition: Offset) {
+    /** -> (compressed part, verbose part) surrounding clicked position */
+    private fun selectPartAt(visiblePosition: Offset): Pair<Cluster.Part, Cluster.Part> {
         val position = absolute(visiblePosition)
         val delimiters = circles.indices
         val ins = delimiters
@@ -349,16 +350,23 @@ class EditClusterViewModel(
                 circles[outJ] isInside circles[outs[largerRJ]]
             } || ins.any { ix -> circles[outJ] isOutside circles[ix] } // if an 'out' isOutside an 'in' it does nothing
         }.map { outs[it] }
-        val part0 = Cluster.Part(ins.toSet(), outs.toSet())
+        val part0 = Cluster.Part(ins.toSet(), outs.toSet(), regionColor)
         val part = Cluster.Part(
             insides = ins.toSet().minus(excessiveIns.toSet()),
             outsides = outs.toSet().minus(excessiveOuts.toSet()),
             fillColor = regionColor
         )
+        return Pair(part, part0)
+    }
+
+    fun reselectRegionAt(visiblePosition: Offset) {
+        val (part, part0) = selectPartAt(visiblePosition)
         val outerParts = parts.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
         if (outerParts.isEmpty()) {
             recordCommand(Command.SELECT_REGION)
             parts.add(part)
+            selection.clear()
+            selection.addAll(part.insides + part.outsides)
             println("added $part")
         } else {
             val sameExistingPart = parts.singleOrNull {
@@ -371,6 +379,8 @@ class EditClusterViewModel(
                     println("removed $sameExistingPart")
                 } else { // we are trying to change color im guessing
                     parts.add(sameExistingPart.copy(fillColor = part.fillColor))
+                    selection.clear()
+                    selection.addAll(part.insides + part.outsides)
                     println("recolored $sameExistingPart")
                 }
             } else {
@@ -464,8 +474,31 @@ class EditClusterViewModel(
                     } else false
                     if (clickedDeleteHandle)
                         deleteCircles()
-                    else
-                        reselectCirclesAt(position)
+                    else {
+                        val selectedCircleIx = reselectCirclesAt(position)
+                        if (selectedCircleIx == null) { // try to select bounding circles of the selected part
+                            val (part, part0) = selectPartAt(position)
+                            parts
+                                .withIndex()
+                                .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
+                                .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }
+                                ?.let { (i, existingPart) -> // not working!
+                                    println("existing bound of $existingPart")
+                                    val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
+                                    if (bounds != selection.toSet()) {
+                                        selection.clear()
+                                        selection.addAll(bounds)
+                                    } else selection.clear()
+                                } ?: run { // select bound of a non-existent part
+                                    println("bounds of $part")
+                                    val bounds: Set<Ix> = part.insides + part.outsides
+                                    if (bounds != selection.toSet()) {
+                                        selection.clear()
+                                        selection.addAll(bounds)
+                                    } else selection.clear()
+                                }
+                        }
+                    }
                 }
                 SelectionMode.SelectRegion -> reselectRegionAt(position)
             }
@@ -698,18 +731,19 @@ class EditClusterViewModel(
     companion object {
         /** In drag mode: enables simple drag&drop behavior that is otherwise only available after long press */
         const val DRAG_ONLY = true
-        const val SELECTION_EPSILON = 20f
+        const val SELECTION_EPSILON = 10f
         const val HISTORY_SIZE = 100
     }
 }
 
-// TODO: 2-phase mode: circle by center and radius
-// and 2-phase mode: line by 2 points
 @Serializable
-sealed class SelectionMode {
+sealed class Mode {
     fun isSelectingCircles(): Boolean =
-        this in setOf(Drag, Multiselect)
+        this in setOf(SelectionMode.Drag, SelectionMode.Multiselect)
+}
 
+@Serializable
+sealed class SelectionMode : Mode() {
     @Serializable
     data object Drag : SelectionMode()
     @Serializable
@@ -719,7 +753,7 @@ sealed class SelectionMode {
 }
 
 // TODO: circle constructors
-sealed class CreationMode(open val phase: Int, val nPhases: Int) {
+sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode() {
     fun isTerminal(): Boolean =
         phase == nPhases
 
