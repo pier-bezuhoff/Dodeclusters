@@ -31,7 +31,7 @@ typealias Ix = Int
 // NOTE: waiting for decompose 3.0-stable for a real VM impl
 class EditClusterViewModel(
     /** NOT a viewModelScope, just a rememberCS from the screen composable */
-    val coroutineScope: CoroutineScope,
+    private val coroutineScope: CoroutineScope,
     cluster: Cluster = Cluster.SAMPLE
 ) {
     private val _selectionMode = mutableStateOf<SelectionMode>(SelectionMode.Drag)
@@ -202,17 +202,17 @@ class EditClusterViewModel(
     fun copyCircles() = coroutineScope.launch {
         if (selectionMode.isSelectingCircles()) {
             recordCommand(Command.COPY)
-            val newOnes = circles.filterIndexed { ix, _ -> ix in selection }
+            val copiedCircles = selection.map { circles[it] } // preserves selection order
             val oldSize = circles.size
             val reindexing = selection.mapIndexed { i, ix -> ix to (oldSize + i) }.toMap()
             _decayingCircles.emit(
-                DecayingCircles(selection.map { circles[it] }, Color.Blue)
+                DecayingCircles(copiedCircles, Color.Blue)
             )
-            circles.addAll(newOnes)
+            circles.addAll(copiedCircles)
             val newParts = parts.filter {
                 selection.containsAll(it.insides) && selection.containsAll(it.outsides)
             }.map { part ->
-                Cluster.Part( // BUG: sometimes wrong in/out indices
+                Cluster.Part( // TODO: test part copying further
                     insides = part.insides.map { reindexing[it]!! }.toSet(),
                     outsides = part.outsides.map { reindexing[it]!! }.toSet(),
                     fillColor = part.fillColor
@@ -220,7 +220,7 @@ class EditClusterViewModel(
             }
             parts.addAll(newParts)
             selection.clear()
-            selection.addAll(oldSize until (oldSize + newOnes.size))
+            selection.addAll(oldSize until (oldSize + copiedCircles.size))
         }
     }
 
@@ -671,7 +671,7 @@ class EditClusterViewModel(
             recordCommand(Command.MOVE)
             val circle = circles[it]
             circles[it] = Circle(circle.offset + delta, circle.radius)
-        }
+        } ?: onPanZoomRotate(delta, Offset.Zero, 1f, 0f)
     }
 
     fun onLongDragCancel() {
