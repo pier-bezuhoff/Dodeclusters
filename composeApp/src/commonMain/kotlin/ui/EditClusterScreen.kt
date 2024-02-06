@@ -42,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
@@ -165,11 +166,14 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
                 .width(4.dp)
         )
         var showColorPickerDialog by remember { mutableStateOf(false) }
-        // TODO: show the current color on the toolbar
         IconButton(onClick = {
             showColorPickerDialog = true
         }) {
             Icon(painterResource("icons/palette.xml"), contentDescription = "choose color")
+            Icon(painterResource("icons/rounded_square.xml"), contentDescription = "current color",
+                Modifier.size(56.dp), // nantoka nare (icon size should be 48.dp)
+                tint = viewModel.regionColor
+            )
         }
         if (showColorPickerDialog)
             ColorPickerDialog(

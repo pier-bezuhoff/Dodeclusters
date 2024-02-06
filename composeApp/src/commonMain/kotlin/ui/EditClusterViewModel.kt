@@ -212,7 +212,7 @@ class EditClusterViewModel(
             val newParts = parts.filter {
                 selection.containsAll(it.insides) && selection.containsAll(it.outsides)
             }.map { part ->
-                Cluster.Part(
+                Cluster.Part( // BUG: sometimes wrong in/out indices
                     insides = part.insides.map { reindexing[it]!! }.toSet(),
                     outsides = part.outsides.map { reindexing[it]!! }.toSet(),
                     fillColor = part.fillColor
