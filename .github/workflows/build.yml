@@ -88,7 +88,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Gradle build for desktop
-        run: ./gradlew composeApp:createDistributable
+        run: ./gradlew composeApp:createReleaseDistributable
 
       - name: Upload build output
         uses: actions/upload-artifact@v4

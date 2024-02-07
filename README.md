@@ -4,7 +4,7 @@ Vector image editor using only circles (WIP)
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform) targeting
 - [x] Desktop (Windows, Linux)
 - [x] Android 7.0+ (SDK 24+)
-- [x] Web (via WASM; doesn't work on mobile yet because of the [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
+- [x] Web (via WASM; _doesn't work on mobile_ yet because of the [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
 - [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries)
 
 ## Installation
@@ -21,7 +21,7 @@ Cluster = circles + union of intersections of some of these circles (their insid
   - [x] drag, select, copy, create & delete circles
   - [x] move & scale circles
   - [x] select/deselect intersection regions
-  - [ ] fill regions with diff colors / only display borders
+  - [x] fill regions with diff colors
   - [x] select binary interlacing even/odd regions (like chessboard coloring)
   - [x] load/save individual clusters as .ddc (actually json inside, temporary solution)
   - [ ] additional context-dependent toolbar to group categories of tools (a-la bucket fill + gradient)
@@ -34,7 +34,7 @@ Cluster = circles + union of intersections of some of these circles (their insid
   - change color, border color, fill/wireframe
   - re-order / sidebar layer-like interface
 * New cluster-based format to supersede `.ddu` (e.g. `.ddc`)
-  - JSON or YAML based
+  - JSON or YAML based, human readable/editable to an extent
   - centered to (0,0)
   - cluster indexing & separate circle indexing
 * other actions
@@ -52,8 +52,10 @@ Cluster = circles + union of intersections of some of these circles (their insid
 `./gradlew :composeApp:wasmJsBrowserDevelopmentRun`  
 
 ### Package for Windows/macOS/Linux
-Build platform-dependent package (run thru Github Actions using corresponding OS)  
+Build platform-dependent package (run thru Github Actions using corresponding OS):  
 `./gradlew composeApp:createDistributable`  
+Same + use ProGuard to minify:  
+`./gradlew composeApp:createReleaseDistributable`  
 output directory: `./composeApp/build/compose/binaries/main/app/`  
 
 Individually:  
