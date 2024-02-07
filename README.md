@@ -54,9 +54,10 @@ Cluster = circles + union of intersections of some of these circles (their insid
 ### Package for Windows/macOS/Linux
 Build platform-dependent package (run thru Github Actions using corresponding OS):  
 `./gradlew composeApp:createDistributable`  
+output directory: `./composeApp/build/compose/binaries/main/app/`  
 Same + use ProGuard to minify:  
 `./gradlew composeApp:createReleaseDistributable`  
-output directory: `./composeApp/build/compose/binaries/main/app/`  
+output directory: `./composeApp/build/compose/binaries/main-release/app/`  
 
 Individually:  
 - `./gradlew packageReleaseMsi`  

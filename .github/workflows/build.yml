@@ -94,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "Desktop distribution for ${{ matrix.os }}"
-          path: 'composeApp/build/compose/binaries/main/app'
+          path: 'composeApp/build/compose/binaries/main-release/app'
 
   build-android:
     name: "Build for Android"
