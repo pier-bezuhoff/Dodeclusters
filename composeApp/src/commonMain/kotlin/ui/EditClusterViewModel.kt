@@ -11,6 +11,8 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import data.Circle
 import data.Cluster
 import kotlinx.coroutines.CoroutineScope
@@ -90,6 +92,15 @@ class EditClusterViewModel(
 
     val translation = mutableStateOf(Offset.Zero) // pre-scale offset
 //    val scale = mutableStateOf(1f)
+
+    /** min tap/grab distance to select an object */
+    private var epsilon = EPSILON
+
+    fun setEpsilon(density: Density) {
+        with (density) {
+            epsilon = EPSILON.dp.toPx()
+        }
+    }
 
     // navigation
     fun saveAndGoBack() {}
@@ -292,10 +303,15 @@ class EditClusterViewModel(
     fun visible(position: Offset): Offset =
         position + translation.value
 
+    fun isCloseEnoughToSelect(absolutePosition: Offset, visiblePosition: Offset): Boolean {
+        val position = absolute(visiblePosition)
+        return (absolutePosition - position).getDistance() <= epsilon
+    }
+
     fun selectPoint(targets: List<Offset>, visiblePosition: Offset): Ix? {
         val position = absolute(visiblePosition)
         return targets.mapIndexed { ix, offset -> ix to (offset - position).getDistance() }
-            .filter { (_, distance) -> distance <= SELECTION_EPSILON }
+            .filter { (_, distance) -> distance <= epsilon }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
     }
@@ -305,7 +321,7 @@ class EditClusterViewModel(
         return targets.mapIndexed { ix, circle ->
             ix to ((circle.offset - position).getDistance() - circle.radius).absoluteValue
         }
-            .filter { (_, distance) -> distance <= SELECTION_EPSILON }
+            .filter { (_, distance) -> distance <= epsilon }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
     }
@@ -459,7 +475,7 @@ class EditClusterViewModel(
                     val clickedDeleteHandle = if (selection.isNotEmpty()) {
                         val circle = circles[selection.single()]
                         val bottom = circle.offset + Offset(0f, circle.radius.toFloat())
-                        selectPoint(listOf(bottom), position) != null
+                        isCloseEnoughToSelect(bottom, position)
                     } else false
                     if (clickedDeleteHandle)
                         deleteCircles()
@@ -469,8 +485,8 @@ class EditClusterViewModel(
 
                 SelectionMode.Multiselect -> {
                     val clickedDeleteHandle = if (selection.isNotEmpty()) {
-                        val bottom = getSelectionRect().bottomCenter
-                        selectPoint(listOf(bottom), position) != null
+                        val deleteHandlePosition = getSelectionRect().bottomCenter
+                        isCloseEnoughToSelect(deleteHandlePosition, position)
                     } else false
                     if (clickedDeleteHandle)
                         deleteCircles()
@@ -514,22 +530,23 @@ class EditClusterViewModel(
                 is HandleConfig.SingleCircle -> {
                     val circle = circles[h.ix]
                     val radiusHandlePosition = circle.offset + Offset(circle.radius.toFloat(), 0f)
-                    selectPoint(listOf(radiusHandlePosition), visiblePosition)
-                        ?.let { Handle.SCALE }
+                    Handle.SCALE.takeIf {
+                        isCloseEnoughToSelect(radiusHandlePosition, visiblePosition)
+                    }
                 }
                 is HandleConfig.SeveralCircles -> {
                     val rect = getSelectionRect()
                     val scaleHandlePosition = rect.topRight
-                    selectPoint(listOf(scaleHandlePosition), visiblePosition)
-                        ?.let { Handle.SCALE }
-                        ?: run {
-                            val rotateHandlePosition = rect.bottomRight
-                            selectPoint(listOf(rotateHandlePosition), visiblePosition)?.let {
-                                rotationAnchor = rect.center
-                                rotationIndicatorPosition = rotateHandlePosition
-                                Handle.ROTATE
-                            }
-                        }
+                    if (isCloseEnoughToSelect(scaleHandlePosition, visiblePosition))
+                        Handle.SCALE
+                    else {
+                        val rotateHandlePosition = rect.bottomRight
+                        if (isCloseEnoughToSelect(rotateHandlePosition, visiblePosition)) {
+                            rotationAnchor = rect.center
+                            rotationIndicatorPosition = rotateHandlePosition
+                            Handle.ROTATE
+                        } else null
+                    }
                 }
                 else -> null
             }
@@ -731,7 +748,8 @@ class EditClusterViewModel(
     companion object {
         /** In drag mode: enables simple drag&drop behavior that is otherwise only available after long press */
         const val DRAG_ONLY = true
-        const val SELECTION_EPSILON = 10f
+        /** min tap/grab distance to select an object in dp */
+        const val EPSILON = 10f
         const val HISTORY_SIZE = 100
     }
 }

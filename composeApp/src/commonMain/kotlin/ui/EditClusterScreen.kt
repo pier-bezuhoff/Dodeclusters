@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -66,6 +67,7 @@ fun EditClusterScreen(sampleIndex: Int? = null) {
     val viewModel = rememberSaveable(saver = EditClusterViewModel.Saver(coroutineScope)) {
         EditClusterViewModel.UiState.restore(coroutineScope, EditClusterViewModel.UiState.DEFAULT)
     }
+    viewModel.setEpsilon(LocalDensity.current)
 
     val scaffoldState = rememberScaffoldState()
     Scaffold(

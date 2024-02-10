@@ -54,23 +54,24 @@ Cluster = circles + union of intersections of some of these circles (their insid
 ### Package for Windows/macOS/Linux
 Build platform-dependent package (run thru Github Actions using corresponding OS):  
 `./gradlew composeApp:createDistributable`  
-output directory: `./composeApp/build/compose/binaries/main/app/`  
+output directory: `composeApp/build/compose/binaries/main/app/`  
 Same + use ProGuard to minify:  
 `./gradlew composeApp:createReleaseDistributable`  
-output directory: `./composeApp/build/compose/binaries/main-release/app/`  
+output directory: `composeApp/build/compose/binaries/main-release/app/`  
 
 Individually:  
 - `./gradlew packageReleaseMsi`  
 - `./gradlew packageReleaseDmg` + notarize/register (requires Apple dev acc)  
 - `./gradlew packageReleaseDeb`  
-output directory: `./composeApp/build/compose/binaries/main-release/app/`  
+output directory: `composeApp/build/compose/binaries/main-release/app/`  
 
 ### Package for web browser 
 `./gradlew wasmJsBrowserDistribution`  
-output directory: `./composeApp/build/dist/wasmJs/productionExecutable/`  
+output directory: `composeApp/build/dist/wasmJs/productionExecutable/`  
 
 ### Generate debug .apk for Android
 `./gradlew assembleDebug`
+output directory: `composeApp/build/outputs/apk/debug/`
 
 
 ## Web (Wasm) compatibility
