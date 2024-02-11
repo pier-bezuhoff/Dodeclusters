@@ -36,8 +36,8 @@ class EditClusterViewModel(
     private val coroutineScope: CoroutineScope,
     cluster: Cluster = Cluster.SAMPLE
 ) {
-    private val _selectionMode = mutableStateOf<SelectionMode>(SelectionMode.Drag)
-    val selectionMode by _selectionMode
+    private val _mode = mutableStateOf<Mode>(SelectionMode.Drag)
+    val mode: Mode by _mode
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
@@ -49,7 +49,7 @@ class EditClusterViewModel(
     var showWireframes by mutableStateOf(false)
 
     val handleConfig = derivedStateOf { // depends on selectionMode & selection
-        when (selectionMode) {
+        when (mode) {
             is SelectionMode.Drag ->
                 if (selection.isEmpty()) null
                 else HandleConfig.SingleCircle(selection.single())
@@ -60,6 +60,7 @@ class EditClusterViewModel(
                 else -> Unit // never
             }
             is SelectionMode.SelectRegion -> null
+            else -> null
         }
     }
     private var grabbedHandle: Handle? = null
@@ -70,7 +71,7 @@ class EditClusterViewModel(
     var undoIsEnabled by mutableStateOf(false) // = history is not empty
     var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
     val copyAndDeleteAreEnabled by derivedStateOf {
-        selectionMode.isSelectingCircles() && selection.isNotEmpty()
+        mode.isSelectingCircles() && selection.isNotEmpty()
     }
     // tagged & grouped gap buffer
     private val commands = ArrayDeque<Command>(HISTORY_SIZE)
@@ -173,7 +174,7 @@ class EditClusterViewModel(
         circles.clear()
         circles.addAll(state.circles)
         parts.addAll(state.parts)
-        switchSelectionMode(state.selectionMode, noAlteringShortcuts = true)
+        switchSelectionMode(state.mode, noAlteringShortcuts = true)
         selection.clear() // switch can populate it
         selection.addAll(state.selection)
     }
@@ -199,19 +200,20 @@ class EditClusterViewModel(
 
     fun createNewCircle() = coroutineScope.launch {
         recordCommand(Command.CREATE)
+        showCircles = true
         val newOne = Circle(absolute(Offset(200f, 200f)), 50.0)
         _decayingCircles.emit(
             DecayingCircles(listOf(newOne), Color.Green)
         )
         circles.add(newOne)
-        if (!selectionMode.isSelectingCircles())
+        if (!mode.isSelectingCircles())
             switchSelectionMode(SelectionMode.Drag)
         selection.clear()
         selection.add(circles.size - 1)
     }
 
     fun copyCircles() = coroutineScope.launch {
-        if (selectionMode.isSelectingCircles()) {
+        if (mode.isSelectingCircles()) {
             recordCommand(Command.COPY)
             val copiedCircles = selection.map { circles[it] } // preserves selection order
             val oldSize = circles.size
@@ -247,7 +249,7 @@ class EditClusterViewModel(
             }
             return re
         }
-        if (selectionMode.isSelectingCircles()) {
+        if (mode.isSelectingCircles()) {
             recordCommand(Command.DELETE)
             val whatsGone = selection.toSet()
             val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
@@ -276,15 +278,15 @@ class EditClusterViewModel(
         }
     }
 
-    fun switchSelectionMode(newMode: SelectionMode, noAlteringShortcuts: Boolean = false) {
+    fun switchSelectionMode(newMode: Mode, noAlteringShortcuts: Boolean = false) {
         if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
-        if (selectionMode == SelectionMode.Multiselect && newMode == SelectionMode.Multiselect && !noAlteringShortcuts) {
+        if (mode == SelectionMode.Multiselect && newMode == SelectionMode.Multiselect && !noAlteringShortcuts) {
             if (selection.isEmpty())
                 selection.addAll(circles.indices)
             else
                 selection.clear()
-        } else if (selectionMode == SelectionMode.SelectRegion && newMode == SelectionMode.SelectRegion && !noAlteringShortcuts) {
+        } else if (mode == SelectionMode.SelectRegion && newMode == SelectionMode.SelectRegion && !noAlteringShortcuts) {
             if (parts.isEmpty()) {
                 recordCommand(Command.SELECT_REGION)
                 // select interlacing, todo: proper 2^n -> even # of 1's -> {0101001} -> parts
@@ -294,7 +296,11 @@ class EditClusterViewModel(
                 parts.clear()
             }
         }
-        _selectionMode.value = newMode
+        if (newMode is CreationMode) {
+            selection.clear()
+            showCircles = true
+        }
+        _mode.value = newMode
     }
 
     fun absolute(visiblePosition: Offset): Offset =
@@ -470,7 +476,7 @@ class EditClusterViewModel(
     fun onTap(position: Offset) {
         // select circle(s)/region
         if (showCircles) {
-            when (selectionMode) {
+            when (mode) {
                 SelectionMode.Drag -> {
                     val clickedDeleteHandle = if (selection.isNotEmpty()) {
                         val circle = circles[selection.single()]
@@ -498,7 +504,7 @@ class EditClusterViewModel(
                                 .withIndex()
                                 .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
                                 .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }
-                                ?.let { (i, existingPart) -> // not working!
+                                ?.let { (i, existingPart) ->
                                     println("existing bound of $existingPart")
                                     val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
                                     if (bounds != selection.toSet()) {
@@ -517,6 +523,7 @@ class EditClusterViewModel(
                     }
                 }
                 SelectionMode.SelectRegion -> reselectRegionAt(position)
+                else -> {}
             }
         }
     }
@@ -551,11 +558,26 @@ class EditClusterViewModel(
                 else -> null
             }
             // NOTE: this enables drag-only behavior, you lose your selection when grabbing new circle
-            if (DRAG_ONLY && grabbedHandle == null && selectionMode == SelectionMode.Drag) {
+            if (DRAG_ONLY && grabbedHandle == null && mode == SelectionMode.Drag) {
                 val previouslySelected = selection.firstOrNull()
                 reselectCircleAt(visiblePosition)
                 if (previouslySelected != null && selection.isEmpty()) // this line requires deselecting first to navigate around canvas
                     selection.add(previouslySelected)
+            } else when (val m = mode) {
+                is CreationMode.CircleByCenterAndRadius.Center ->
+                    if (m.center == null)
+                        _mode.value = m.copy(center = visiblePosition)
+                    else
+                        _mode.value = CreationMode.CircleByCenterAndRadius.Radius(center = m.center)
+                is CreationMode.CircleByCenterAndRadius.Radius ->
+                    if (m.radiusPoint == null)
+                        _mode.value = m.copy(radiusPoint = visiblePosition)
+                    else {
+                        2 // finish; add the circle; go into center again
+                    }
+
+                is CreationMode.CircleBy3Points -> 2
+                else -> {}
             }
         }
     }
@@ -606,14 +628,14 @@ class EditClusterViewModel(
                 }
                 else -> Unit
             }
-        } else if (selectionMode == SelectionMode.Drag && selection.isNotEmpty() && showCircles) {
+        } else if (mode == SelectionMode.Drag && selection.isNotEmpty() && showCircles) {
             // move + scale radius
             recordCommand(Command.MOVE)
             val ix = selection.single()
             val circle = circles[ix]
             val newCenter = circle.offset + pan
             circles[ix] = Circle(newCenter, zoom * circle.radius)
-        } else if (selectionMode == SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
+        } else if (mode == SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
             if (selection.size == 1) { // move + scale radius
                 recordCommand(Command.MOVE)
                 val ix = selection.single()
@@ -637,7 +659,7 @@ class EditClusterViewModel(
     fun onVerticalScroll(yDelta: Float) {
         val zoom = (1.01f).pow(-yDelta)
         if (showCircles) {
-            when (selectionMode) {
+            when (mode) {
                 SelectionMode.Drag -> if (selection.isNotEmpty()) { // move + scale radius
                     recordCommand(Command.CHANGE_RADIUS)
                     val ix = selection.single()
@@ -670,12 +692,12 @@ class EditClusterViewModel(
         if (showCircles)
             selectCircle(circles, position)?.let { ix ->
                 grabbedCircleIx = ix
-                if (selectionMode == SelectionMode.Drag) {
+                if (mode == SelectionMode.Drag) {
                     selection.clear()
                     selection.add(ix)
                 }
             } ?: run {
-                if (true || selectionMode == SelectionMode.SelectRegion) {
+                if (true || mode == SelectionMode.SelectRegion) {
                     // TODO: select part
                     // drag bounding circles
                 }
@@ -701,7 +723,7 @@ class EditClusterViewModel(
 
     @Serializable
     data class UiState(
-        val selectionMode: SelectionMode,
+        val mode: Mode,
         val circles: List<Circle>,
         val parts: List<Cluster.Part>,
         val selection: List<Ix>, // circle indices
@@ -724,13 +746,13 @@ class EditClusterViewModel(
                     coroutineScope,
                     Cluster(uiState.circles.toList(), uiState.parts.toList(), fill = true)
                 ).apply {
-                    _selectionMode.value = uiState.selectionMode
+                    _mode.value = uiState.mode
                     selection.addAll(uiState.selection)
                 }
 
             fun save(viewModel: EditClusterViewModel): UiState =
                 with (viewModel) {
-                    UiState(selectionMode, circles.toList(), parts.toList(), selection.toList())
+                    UiState(mode, circles.toList(), parts.toList(), selection.toList())
                 }
         }
     }
@@ -775,11 +797,13 @@ sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode() {
     fun isTerminal(): Boolean =
         phase == nPhases
 
-    sealed class CircleByCenterAndRadius(phase: Int) : CreationMode(phase, nPhases = 2) {
-        data object Circle : CircleByCenterAndRadius(1)
-        data object Radius : CircleByCenterAndRadius(2)
+    sealed class CircleByCenterAndRadius(
+        phase: Int,
+    ) : CreationMode(phase, nPhases = 2) {
+        data class Center(val center: Offset? = null) : CircleByCenterAndRadius(phase = 1)
+        data class Radius(val center: Offset, val radiusPoint: Offset? = null) : CircleByCenterAndRadius(phase = 2)
     }
-    data class CircleBy3Points(override val phase: Int) : CreationMode(phase, nPhases = 3)
+    data class CircleBy3Points(override val phase: Int = 0) : CreationMode(phase, nPhases = 3)
 //    data class LineBy2Points(override val phase: Int) : CreationMode(phase, nPhases = 2)
 }
 

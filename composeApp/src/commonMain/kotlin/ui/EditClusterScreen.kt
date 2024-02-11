@@ -42,7 +42,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalDensity
@@ -187,9 +186,6 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
                     viewModel.switchSelectionMode(SelectionMode.SelectRegion, noAlteringShortcuts = true)
                 }
             )
-        IconButton(onClick = viewModel::createNewCircle) {
-            Icon(Icons.Default.AddCircle, contentDescription = "create new circle")
-        }
         IconButton(
             onClick = viewModel::copyCircles,
             enabled = viewModel.copyAndDeleteAreEnabled
@@ -205,6 +201,17 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
                 tint = Color(1f, 0.5f, 0.5f).copy(alpha = LocalContentAlpha.current),
                 contentDescription = "delete circle(s)"
             )
+        }
+        ModeToggle<CreationMode.CircleByCenterAndRadius>(
+            CreationMode.CircleByCenterAndRadius.Center(), viewModel,
+            painterResource("icons/center.xml"), "circle by center & radius"
+        )
+        ModeToggle<CreationMode.CircleBy3Points>(
+            CreationMode.CircleBy3Points(), viewModel,
+            painterResource("icons/circle_3_points.xml"), "circle by 3 points"
+        )
+        IconButton(onClick = viewModel::createNewCircle) {
+            Icon(Icons.Default.AddCircle, contentDescription = "create new circle")
         }
     }
 }
@@ -262,21 +269,21 @@ fun TransformToolsPanel() {
 }
 
 @Composable
-fun ModeToggle(
-    mode: SelectionMode,
+inline fun <reified M: Mode> ModeToggle(
+    targetMode: M,
     viewModel: EditClusterViewModel,
     painter: Painter,
     contentDescription: String,
 ) {
     // Crossfade/AnimatedContent dont work for w/e reason (mb cuz VM is caught in the closure)
     IconToggleButton(
-        checked = viewModel.selectionMode == mode,
+        checked = viewModel.mode is M,
         onCheckedChange = {
-            viewModel.switchSelectionMode(mode)
+            viewModel.switchSelectionMode(targetMode)
         },
         modifier = Modifier
             .background(
-                if (viewModel.selectionMode == mode)
+                if (viewModel.mode == targetMode)
                     MaterialTheme.colors.primaryVariant
                 else
                     MaterialTheme.colors.primary,

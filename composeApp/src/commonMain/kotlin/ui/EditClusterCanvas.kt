@@ -4,6 +4,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -26,6 +29,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -39,15 +46,20 @@ fun EditClusterCanvas(
     viewModel: EditClusterViewModel,
     modifier: Modifier = Modifier
 ) {
-    val circleStroke = remember { Stroke(width = 2f) }
-    val circleThiccStroke = remember { Stroke(width = 4f) }
+    val strokeWidth = with (LocalDensity.current) { 2.dp.toPx() }
+    val circleStroke = remember { Stroke(
+        width = strokeWidth
+    ) }
+    val circleThiccStroke = remember { Stroke(
+        width = 2 * strokeWidth
+    ) }
     val circleFill = remember { Fill }
     val dottedStroke = remember { Stroke(
         width = 2f,
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
     ) }
     // handles stuff
-    val handleRadius = 8f
+    val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
     val scaleHandleColor = Color.Gray
     val iconDim = with (LocalDensity.current) { 18.dp.toPx() }
     val iconSize = Size(iconDim, iconDim)
@@ -99,7 +111,7 @@ fun EditClusterCanvas(
         drawRect(backgroundColor)
         // overlay w/ selected circles
         translate(viewModel.translation.value.x, viewModel.translation.value.y) {
-            if (viewModel.selectionMode.isSelectingCircles() && viewModel.showCircles)
+            if (viewModel.mode.isSelectingCircles() && viewModel.showCircles)
                 for (ix in viewModel.selection) {
                     val circle = viewModel.circles[ix]
                     drawCircle( // alpha = where selection lines are shown
@@ -107,11 +119,11 @@ fun EditClusterCanvas(
                         radius = circle.radius.toFloat(),
                         center = circle.offset,
                         style = circleFill,
-                        blendMode = BlendMode.DstOut, // dst out = eraze the BG rectangle => show hatching thats drawn behind it
+                        blendMode = BlendMode.DstOut, // dst out = erase the BG rectangle => show hatching thats drawn behind it
                     )
                     drawCircle( // thiccer lines
                         color = circleColor,
-                        alpha = 0.7f,
+                        alpha = 0.4f,
                         radius = circle.radius.toFloat(),
                         center = circle.offset,
                         style = circleThiccStroke,
@@ -132,6 +144,7 @@ fun EditClusterCanvas(
         modifier
             .reactiveCanvas(
                 onTap = viewModel::onTap,
+                onUp = { println(it) },
                 onDown = viewModel::onDown,
                 onPanZoomRotate = viewModel::onPanZoomRotate,
                 onVerticalScroll = viewModel::onVerticalScroll,
