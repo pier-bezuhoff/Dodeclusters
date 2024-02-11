@@ -47,7 +47,6 @@ kotlin {
             implementation(compose.components.resources)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.colormath)
-            implementation(libs.kmath.complex)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
