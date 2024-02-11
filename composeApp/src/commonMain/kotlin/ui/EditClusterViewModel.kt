@@ -198,15 +198,17 @@ class EditClusterViewModel(
             rotationIndicatorPosition = null
     }
 
-    fun createNewCircle() = coroutineScope.launch {
+    fun createNewCircle(
+        newCircle: Circle = Circle(absolute(Offset(200f, 200f)), 50.0),
+        switchToSelectionMode: Boolean = true
+    ) = coroutineScope.launch {
         recordCommand(Command.CREATE)
         showCircles = true
-        val newOne = Circle(absolute(Offset(200f, 200f)), 50.0)
         _decayingCircles.emit(
-            DecayingCircles(listOf(newOne), Color.Green)
+            DecayingCircles(listOf(newCircle), Color.Green)
         )
-        circles.add(newOne)
-        if (!mode.isSelectingCircles())
+        circles.add(newCircle)
+        if (switchToSelectionMode && !mode.isSelectingCircles())
             switchSelectionMode(SelectionMode.Drag)
         selection.clear()
         selection.add(circles.size - 1)
@@ -528,6 +530,24 @@ class EditClusterViewModel(
         }
     }
 
+    fun onUp(visiblePosition: Offset?) {
+        when (val m = mode) {
+            is CreationMode.CircleByCenterAndRadius.Center ->
+                (visiblePosition ?: m.center)?.let { c ->
+                    _mode.value = CreationMode.CircleByCenterAndRadius.Radius(center = c)
+                }
+            is CreationMode.CircleByCenterAndRadius.Radius ->
+                (visiblePosition ?: m.radiusPoint)?.let { rP ->
+                    createNewCircle(
+                        Circle(absolute(m.center), (absolute(rP) - absolute(m.center)).getDistance().toDouble()),
+                        switchToSelectionMode = false
+                    )
+                    _mode.value = CreationMode.CircleByCenterAndRadius.Center()
+                }
+            else -> {}
+        }
+    }
+
     fun onDown(visiblePosition: Offset) {
         rotationAnchor = null
         rotationIndicatorPosition = null
@@ -568,12 +588,12 @@ class EditClusterViewModel(
                     if (m.center == null)
                         _mode.value = m.copy(center = visiblePosition)
                     else
-                        _mode.value = CreationMode.CircleByCenterAndRadius.Radius(center = m.center)
+                        println("bad1") //_mode.value = CreationMode.CircleByCenterAndRadius.Radius(center = m.center)
                 is CreationMode.CircleByCenterAndRadius.Radius ->
                     if (m.radiusPoint == null)
                         _mode.value = m.copy(radiusPoint = visiblePosition)
                     else {
-                        2 // finish; add the circle; go into center again
+                        println("bad2")
                     }
 
                 is CreationMode.CircleBy3Points -> 2
@@ -651,8 +671,16 @@ class EditClusterViewModel(
                 }
             }
         } else {
-            // navigate canvas
-            translation.value = translation.value + pan
+            when (val m = mode) {
+                is CreationMode.CircleByCenterAndRadius.Center ->
+                    if (m.center == null)
+                        _mode.value = m.copy(center = centroid)
+                    else
+                        _mode.value = CreationMode.CircleByCenterAndRadius.Radius(m.center, centroid)
+                is CreationMode.CircleByCenterAndRadius.Radius ->
+                    _mode.value = m.copy(radiusPoint = centroid)
+                else -> translation.value = translation.value + pan // navigate canvas
+            }
         }
     }
 
@@ -792,7 +820,6 @@ sealed class SelectionMode : Mode() {
     data object SelectRegion : SelectionMode()
 }
 
-// TODO: circle constructors
 sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode() {
     fun isTerminal(): Boolean =
         phase == nPhases
@@ -800,10 +827,14 @@ sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode() {
     sealed class CircleByCenterAndRadius(
         phase: Int,
     ) : CreationMode(phase, nPhases = 2) {
+        // visible positions are used
         data class Center(val center: Offset? = null) : CircleByCenterAndRadius(phase = 1)
         data class Radius(val center: Offset, val radiusPoint: Offset? = null) : CircleByCenterAndRadius(phase = 2)
     }
-    data class CircleBy3Points(override val phase: Int = 0) : CreationMode(phase, nPhases = 3)
+    data class CircleBy3Points(
+        override val phase: Int = 1,
+        val points: List<Offset> = emptyList()
+    ) : CreationMode(phase, nPhases = 3)
 //    data class LineBy2Points(override val phase: Int) : CreationMode(phase, nPhases = 2)
 }
 

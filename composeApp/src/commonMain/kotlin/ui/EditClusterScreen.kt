@@ -204,15 +204,15 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
         }
         ModeToggle<CreationMode.CircleByCenterAndRadius>(
             CreationMode.CircleByCenterAndRadius.Center(), viewModel,
-            painterResource("icons/center.xml"), "circle by center & radius"
+            painterResource("icons/center.xml"), "circle by center & radius",
         )
         ModeToggle<CreationMode.CircleBy3Points>(
             CreationMode.CircleBy3Points(), viewModel,
             painterResource("icons/circle_3_points.xml"), "circle by 3 points"
         )
-        IconButton(onClick = viewModel::createNewCircle) {
-            Icon(Icons.Default.AddCircle, contentDescription = "create new circle")
-        }
+//        IconButton(onClick = viewModel::createNewCircle) {
+//            Icon(Icons.Default.AddCircle, contentDescription = "create new circle")
+//        }
     }
 }
 
@@ -274,16 +274,17 @@ inline fun <reified M: Mode> ModeToggle(
     viewModel: EditClusterViewModel,
     painter: Painter,
     contentDescription: String,
+    checkedPredicate: () -> Boolean = { viewModel.mode is M }
 ) {
     // Crossfade/AnimatedContent dont work for w/e reason (mb cuz VM is caught in the closure)
     IconToggleButton(
-        checked = viewModel.mode is M,
+        checked = checkedPredicate().also { println("@$targetMode: $it") },
         onCheckedChange = {
             viewModel.switchSelectionMode(targetMode)
         },
         modifier = Modifier
             .background(
-                if (viewModel.mode == targetMode)
+                if (checkedPredicate())
                     MaterialTheme.colors.primaryVariant
                 else
                     MaterialTheme.colors.primary,

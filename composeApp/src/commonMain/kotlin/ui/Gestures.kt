@@ -33,7 +33,7 @@ inline fun Modifier.reactiveCanvas(
     crossinline onDown: (position: Offset) -> Unit = { },
     crossinline onTap: (position: Offset) -> Unit = { },
     crossinline onLongDragStart: (position: Offset) -> Unit = { },
-    crossinline onLongDrag: (delta: Offset) -> Unit,
+    crossinline onLongDrag: (delta: Offset) -> Unit = { },
     crossinline onLongDragCancel: () -> Unit = { },
     crossinline onLongDragEnd: () -> Unit = { },
 ): Modifier =
@@ -68,24 +68,24 @@ inline fun Modifier.reactiveCanvas(
             }
         }
         // NOTE: the later pointInput-s *can* consume events before passing it higher
-        .pointerInput(*keys) {
-            detectDragGesturesAfterLongPress(
-                onDragStart = { position ->
-                    onLongDragStart(position)
-                },
-                onDrag = { change, dragAmount ->
-                    onLongDrag(dragAmount)
-                },
-                onDragCancel = {
-                    onLongDragCancel()
-                    onUp(null)
-                },
-                onDragEnd = {
-                    onLongDragEnd()
-                    onUp(null)
-                }
-            )
-        }
+//        .pointerInput(*keys) {
+//            detectDragGesturesAfterLongPress(
+//                onDragStart = { position ->
+//                    onLongDragStart(position)
+//                },
+//                onDrag = { change, dragAmount ->
+//                    onLongDrag(dragAmount)
+//                },
+//                onDragCancel = {
+//                    onLongDragCancel()
+//                    onUp(null)
+//                },
+//                onDragEnd = {
+//                    onLongDragEnd()
+//                    onUp(null)
+//                }
+//            )
+//        }
 
 // had to patch the built-in function a bit to handle onUp
 suspend fun PointerInputScope.detectTransformGestures(
@@ -106,7 +106,7 @@ suspend fun PointerInputScope.detectTransformGestures(
             val event = awaitPointerEvent()
             val canceled = event.changes.any { it.isConsumed }
             if (!canceled) {
-                if (event.changes.all { !it.pressed })
+                if (event.changes.all { !it.pressed }) // mine
                     onUp(event.changes.firstOrNull()?.position)
                 val zoomChange = event.calculateZoom()
                 val rotationChange = event.calculateRotation()

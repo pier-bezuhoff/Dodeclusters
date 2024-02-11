@@ -142,16 +142,17 @@ fun EditClusterCanvas(
     }
     Canvas(
         modifier
+            // NOTE: turned off long press for now (also inside of reactiveCanvas)
             .reactiveCanvas(
                 onTap = viewModel::onTap,
-                onUp = { println(it) },
+                onUp = viewModel::onUp,
                 onDown = viewModel::onDown,
                 onPanZoomRotate = viewModel::onPanZoomRotate,
                 onVerticalScroll = viewModel::onVerticalScroll,
-                onLongDragStart = viewModel::onLongDragStart,
-                onLongDrag = viewModel::onLongDrag,
-                onLongDragCancel = viewModel::onLongDragCancel,
-                onLongDragEnd = viewModel::onLongDragEnd,
+//                onLongDragStart = viewModel::onLongDragStart,
+//                onLongDrag = viewModel::onLongDrag,
+//                onLongDragCancel = viewModel::onLongDragCancel,
+//                onLongDragEnd = viewModel::onLongDragEnd,
             )
             .fillMaxSize()
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // crucial for proper alpha blending
@@ -173,6 +174,34 @@ fun EditClusterCanvas(
                     alpha = clusterPathAlpha,
                     style = if (viewModel.showWireframes) circleStroke else circleFill,
                 )
+            }
+            // creation prototypes
+            when (val m = viewModel.mode) {
+                is CreationMode.CircleByCenterAndRadius.Center ->
+                    m.center?.let {
+                        drawCircle(color = Color.Green, radius = handleRadius * 3/4, center = viewModel.absolute(it))
+                    }
+                is CreationMode.CircleByCenterAndRadius.Radius -> {
+                    drawCircle(color = Color.Green, radius = handleRadius * 3/4, center = viewModel.absolute(m.center))
+                    m.radiusPoint?.let {
+                        drawCircle(
+                            color = Color.Green,
+                            style = circleStroke,
+                            radius = (it - m.center).getDistance(),
+                            center = viewModel.absolute(m.center)
+                        )
+                    }
+                }
+                is CreationMode.CircleBy3Points -> {
+                    m.points.forEach {
+                        drawCircle(color = Color.Green, radius = handleRadius * 3/4, center = viewModel.absolute(it))
+                    }
+                    if (m.points.size == 2)
+                        drawLine(Color.Green, m.points.first(), m.points.last(), strokeWidth)
+                    else if (m.points.size == 3)
+                        3
+                }
+                else -> {}
             }
             // handles
             if (viewModel.showCircles)
