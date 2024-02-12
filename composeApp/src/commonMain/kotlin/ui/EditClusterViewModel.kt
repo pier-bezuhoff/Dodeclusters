@@ -202,17 +202,19 @@ class EditClusterViewModel(
         newCircle: Circle = Circle(absolute(Offset(200f, 200f)), 50.0),
         switchToSelectionMode: Boolean = true
     ) = coroutineScope.launch {
-        recordCommand(Command.CREATE)
-        showCircles = true
-        circles.add(newCircle)
-        if (switchToSelectionMode && !mode.isSelectingCircles())
-            switchSelectionMode(SelectionMode.Drag)
-        selection.clear()
-        selection.add(circles.size - 1)
-//        println("create new circle")
-        _decayingCircles.emit(
-            DecayingCircles(listOf(newCircle), Color.Green)
-        )
+        if (newCircle.radius > 0.0) {
+            recordCommand(Command.CREATE)
+            showCircles = true
+            circles.add(newCircle)
+            if (switchToSelectionMode && !mode.isSelectingCircles())
+                switchSelectionMode(SelectionMode.Drag)
+            selection.clear()
+            selection.add(circles.size - 1)
+            // BUG: when animations overlap the later one gets played twice
+            _decayingCircles.emit(
+                DecayingCircles(listOf(newCircle), Color.Green)
+            )
+        }
     }
 
     fun copyCircles() = coroutineScope.launch {
@@ -258,6 +260,9 @@ class EditClusterViewModel(
             val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
             val oldParts = parts.toList()
             val reindexing = reindexingMap(circles.indices, whatsGone)
+            _decayingCircles.emit(
+                DecayingCircles(selection.map { circles[it] }, Color.Red)
+            )
             selection.clear()
             parts.clear()
             circles.clear()
@@ -274,9 +279,6 @@ class EditClusterViewModel(
                         )
                     }
                     .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
-            )
-            _decayingCircles.emit( // BUG: not working on android
-                DecayingCircles(selection.map { circles[it] }, Color.Red)
             )
         }
     }
@@ -539,10 +541,12 @@ class EditClusterViewModel(
                 }
             is CreationMode.CircleByCenterAndRadius.Radius ->
                 (visiblePosition ?: m.radiusPoint)?.let { rP ->
-                    createNewCircle(
-                        Circle(absolute(m.center), (absolute(rP) - absolute(m.center)).getDistance().toDouble()),
-                        switchToSelectionMode = false
+                    val newCircle = Circle(
+                        absolute(m.center),
+                        radius = (absolute(rP) - absolute(m.center)).getDistance()
                     )
+                    createNewCircle(newCircle, switchToSelectionMode = false)
+//                    println("cr new c #${circles.size}")
                     _mode.value = CreationMode.CircleByCenterAndRadius.Center()
                 }
             is CreationMode.CircleBy3Points -> when (m.phase) {
@@ -603,16 +607,9 @@ class EditClusterViewModel(
                     selection.add(previouslySelected)
             } else when (val m = mode) {
                 is CreationMode.CircleByCenterAndRadius.Center ->
-                    if (m.center == null)
-                        _mode.value = m.copy(center = visiblePosition)
-                    else
-                        println("bad1") //_mode.value = CreationMode.CircleByCenterAndRadius.Radius(center = m.center)
+                    _mode.value = m.copy(center = visiblePosition)
                 is CreationMode.CircleByCenterAndRadius.Radius ->
-                    if (m.radiusPoint == null)
-                        _mode.value = m.copy(radiusPoint = visiblePosition)
-                    else {
-                        println("bad2")
-                    }
+                    _mode.value = m.copy(radiusPoint = visiblePosition)
 
                 is CreationMode.CircleBy3Points -> {
                     when (m.phase) {

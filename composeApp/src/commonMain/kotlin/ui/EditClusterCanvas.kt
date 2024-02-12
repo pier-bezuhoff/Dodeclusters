@@ -2,21 +2,20 @@ package ui
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.drag
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -34,10 +33,6 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerId
-import androidx.compose.ui.input.pointer.changedToUp
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import data.Circle
@@ -59,16 +54,14 @@ fun EditClusterCanvas(
     val circleThiccStroke = remember { Stroke(
         width = 2 * strokeWidth
     ) }
-    val circleFill = remember { Fill }
     val dottedStroke = remember { Stroke(
-        width = 2f,
+        width = strokeWidth,
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
     ) }
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
     val scaleHandleColor = Color.Gray
     val iconDim = with (LocalDensity.current) { 18.dp.toPx() }
-    val iconSize = Size(iconDim, iconDim)
 //    val deleteIcon = painterResource("icons/cancel.xml")
     val deleteIcon = rememberVectorPainter(Icons.Default.Delete)
     val deleteIconTint = Color.Red
@@ -85,19 +78,23 @@ fun EditClusterCanvas(
     val maxDecayAlpha = 0.5f
     val decayDuration = 1_500
     val decayAlpha = remember { Animatable(0f) }
-    val decayingCircles by viewModel.decayingCircles.collectAsState(DecayingCircles(emptyList(), Color.White))
+//    val decayingCircles by viewModel.decayingCircles.collectAsState(DecayingCircles(emptyList(), Color.White))
+    // NOTE: unfinished animations queue sequentially and do not overlap
+    var decayingCircles by mutableStateOf(DecayingCircles(emptyList(), Color.White))
     val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch {
         viewModel.decayingCircles.collect { event ->
             decayAlpha.snapTo(maxDecayAlpha)
+            decayingCircles = event
             decayAlpha.animateTo(
                 targetValue = 0f,
                 animationSpec = tween(decayDuration, easing = LinearEasing),
 //                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
             )
+
         }
     }
-    SelectionsCanvas(modifier, viewModel, selectionLinesColor, backgroundColor, circleColor, circleFill, circleThiccStroke)
+    SelectionsCanvas(modifier, viewModel, selectionLinesColor, backgroundColor, circleColor, circleThiccStroke)
     Canvas(
         modifier
             // NOTE: turned off long press for now (also inside of reactiveCanvas)
@@ -119,9 +116,9 @@ fun EditClusterCanvas(
             drawAnimation(decayingCircles, decayAlpha)
             if (viewModel.showCircles)
                 drawCircles(viewModel, circleColor, circleStroke)
-            drawParts(viewModel, clusterPathAlpha, circleStroke, circleFill)
+            drawParts(viewModel, clusterPathAlpha, circleStroke)
             drawCreationPrototypes(viewModel, handleRadius, circleStroke, strokeWidth)
-            drawHandles(viewModel, selectionMarkingsColor, scaleHandleColor, deleteIconTint, rotateIconTint, rotationIndicatorColor, rotationIndicatorRaidus, handleRadius, iconDim, iconSize, deleteIcon, rotateIcon, dottedStroke)
+            drawHandles(viewModel, selectionMarkingsColor, scaleHandleColor, deleteIconTint, rotateIconTint, rotationIndicatorColor, rotationIndicatorRaidus, handleRadius, iconDim, deleteIcon, rotateIcon, dottedStroke)
         }
     }
 }
@@ -133,8 +130,9 @@ private fun SelectionsCanvas(
     selectionLinesColor: Color,
     backgroundColor: Color,
     circleColor: Color,
-    circleFill: DrawStyle,
     circleThiccStroke: DrawStyle,
+    halfNLines: Int = 200, // not all of them are visible, since we are simplifying to a square
+    thiccSelectionCircleAlpha: Float = 0.4f,
 ) {
     Canvas(
         modifier.fillMaxSize()
@@ -142,7 +140,6 @@ private fun SelectionsCanvas(
             .drawBehind {
                 val (w, h) = size
                 val maxDimension = max(w, h)
-                val halfNLines = 200 // not all of them are visible, since we are simplifying to a square
                 val nLines = 2*halfNLines
                 for (i in 0 until halfNLines) {
                     val x = (i+1).toFloat()/halfNLines*maxDimension
@@ -163,12 +160,12 @@ private fun SelectionsCanvas(
                         color = Color.Black,
                         radius = circle.radius.toFloat(),
                         center = circle.offset,
-                        style = circleFill,
+                        style = Fill,
                         blendMode = BlendMode.DstOut, // dst out = erase the BG rectangle => show hatching thats drawn behind it
                     )
                     drawCircle( // thiccer lines
                         color = circleColor,
-                        alpha = 0.4f,
+                        alpha = thiccSelectionCircleAlpha,
                         radius = circle.radius.toFloat(),
                         center = circle.offset,
                         style = circleThiccStroke,
@@ -212,14 +209,13 @@ private fun DrawScope.drawParts(
     viewModel: EditClusterViewModel,
     clusterPathAlpha: Float,
     circleStroke: DrawStyle,
-    circleFill: DrawStyle,
 ) {
     for (part in viewModel.parts) {
         drawPath(
             viewModel.part2path(part),
             color = part.fillColor,
             alpha = clusterPathAlpha,
-            style = if (viewModel.showWireframes) circleStroke else circleFill,
+            style = if (viewModel.showWireframes) circleStroke else Fill,
         )
     }
 }
@@ -229,17 +225,19 @@ private fun DrawScope.drawCreationPrototypes(
     handleRadius: Float,
     circleStroke: DrawStyle,
     strokeWidth: Float,
+    creationPointRadius: Float = handleRadius * 3/4,
+    creationPrototypeColor: Color = Color.Green,
 ) {
     when (val m = viewModel.mode) {
         is CreationMode.CircleByCenterAndRadius.Center ->
             m.center?.let {
-                drawCircle(color = Color.Green, radius = handleRadius * 3/4, center = viewModel.absolute(it))
+                drawCircle(color = creationPrototypeColor, radius = creationPointRadius, center = viewModel.absolute(it))
             }
         is CreationMode.CircleByCenterAndRadius.Radius -> {
-            drawCircle(color = Color.Green, radius = handleRadius * 3/4, center = viewModel.absolute(m.center))
+            drawCircle(color = creationPrototypeColor, radius = creationPointRadius, center = viewModel.absolute(m.center))
             m.radiusPoint?.let {
                 drawCircle(
-                    color = Color.Green,
+                    color = creationPrototypeColor,
                     style = circleStroke,
                     radius = (it - m.center).getDistance(),
                     center = viewModel.absolute(m.center)
@@ -248,11 +246,11 @@ private fun DrawScope.drawCreationPrototypes(
         }
         is CreationMode.CircleBy3Points -> {
             m.points.forEach {
-                drawCircle(color = Color.Green, radius = handleRadius * 3/4, center = viewModel.absolute(it))
+                drawCircle(color = creationPrototypeColor, radius = creationPointRadius, center = viewModel.absolute(it))
             }
             if (m.points.size == 2)
                 drawLine(
-                    Color.Green,
+                    creationPrototypeColor,
                     start = viewModel.absolute(m.points.first()),
                     end = viewModel.absolute(m.points.last()),
                     strokeWidth
@@ -261,10 +259,10 @@ private fun DrawScope.drawCreationPrototypes(
                 try {
                     val c = Circle.by3Points(m.points[0], m.points[1], m.points[2])
                     drawCircle(
-                        color = Color.Green,
-                        style = circleStroke,
+                        color = creationPrototypeColor,
                         radius = c.radius.toFloat(),
-                        center = viewModel.absolute(c.offset)
+                        center = viewModel.absolute(c.offset),
+                        style = circleStroke,
                     )
                 } catch (e: NumberFormatException) {
                     e.printStackTrace()
@@ -277,8 +275,7 @@ private fun DrawScope.drawCreationPrototypes(
 
 private fun DrawScope.drawHandles(
     viewModel: EditClusterViewModel,
-//    selectionLinesColor: Color,
-    selectionMarkingsColor: Color,
+    selectionMarkingsColor: Color, // for selection rect
     scaleHandleColor: Color,
     deleteIconTint: Color,
     rotateIconTint: Color,
@@ -286,14 +283,13 @@ private fun DrawScope.drawHandles(
     rotationIndicatorRaidus: Float,
     handleRadius: Float,
     iconDim: Float,
-    iconSize: Size,
     deleteIcon: Painter,
     rotateIcon: Painter,
     dottedStroke: DrawStyle,
 ) {
-    if (viewModel.showCircles)
+    if (viewModel.showCircles) {
+        val iconSize: Size = Size(iconDim, iconDim)
         when (viewModel.handleConfig.value) {
-            // TODO: delete handle bottom left + for multi rotate bottom right
             is HandleConfig.SingleCircle -> {
                 val selectedCircle = viewModel.circles[viewModel.selection.single()]
                 val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
@@ -310,10 +306,11 @@ private fun DrawScope.drawHandles(
                 )
                 translate(bottom.x - iconDim/2, bottom.y - iconDim/2) {
                     with (deleteIcon) {
-                        draw(iconSize, colorFilter = ColorFilter.tint(Color.Red))
+                        draw(iconSize, colorFilter = ColorFilter.tint(deleteIconTint))
                     }
                 }
             }
+
             is HandleConfig.SeveralCircles -> {
                 val selectionRect = viewModel.getSelectionRect()
                 val bottom = selectionRect.bottomCenter
@@ -349,4 +346,5 @@ private fun DrawScope.drawHandles(
                 }
             }
         }
+    }
 }
