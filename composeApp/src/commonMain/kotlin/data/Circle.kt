@@ -1,13 +1,14 @@
 package data
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.unit.minus
 import kotlinx.serialization.Serializable
 import utils.ComplexField
 import utils.r
 import utils.r2
 import utils.toComplex
 import kotlin.math.abs
+import kotlin.math.hypot
+import kotlin.math.sqrt
 
 @Serializable
 data class Circle(
@@ -17,6 +18,9 @@ data class Circle(
 ) {
     val offset: Offset
         get() = Offset(x.toFloat(), y.toFloat())
+
+    val r2: Double
+        get() = radius * radius
 
     constructor(center: Offset, radius: Double) :
         this(center.x.toDouble(), center.y.toDouble(), radius)
@@ -59,6 +63,61 @@ data class Circle(
                 return Circle(c.re, c.im, r)
             }
         }
+
+        fun invert(inverting: Circle, theOneBeingInverted: Circle): Circle {
+            val (x, y, r) = inverting
+            val (x0, y0, r0) = theOneBeingInverted
+            return when {
+                r == Double.POSITIVE_INFINITY -> // return a line somehow
+                    throw NumberFormatException("Not a circle")
+                x == x0 && y == y0 ->
+                    Circle(x, y, r*r / r0)
+                else -> {
+                    val dx = x0 - x
+                    val dy = y0 - y
+                    val d = hypot(dx, dy)
+                    if (d == r0) // inverting.center ∈ theOneBeingInverted
+                        throw NumberFormatException("Not a circle")
+//                        d2 += 1e-6 // cheat to avoid returning a straight line
+                    val ratio = r*r / (d*d - r0*r0)
+                    val newX = x + ratio * dx
+                    val newY = y + ratio * dy
+                    // NOTE: sign(ratio) = sign(d - r0)
+                    //  ratio > 0 => orientation changes, ratio < 0 orientation stays the same
+                    //  ratio == 0 => line
+                    val newRadius = abs(ratio) * r0
+                    return Circle(newX, newY, newRadius)
+                }
+            }
+        }
+
+        fun findIntersectionPoints(circle0: Circle, circle: Circle): Pair<Pair<Double, Double>, Pair<Double, Double>>? {
+            val (x0,y0,r0) = circle0
+            val (x,y,r) = circle
+            val r12 = circle0.r2
+            val r22 = circle.r2
+            val dcx = x - x0
+            val dcy = y - y0
+            val d2 = dcx*dcx + dcy*dcy
+            val d = sqrt(d2)
+            if (abs(r0 - r) > d || d > r0 + r)
+                return null
+            val dr2 = r12 - r22
+            // reference (0=this, 1=circle):
+            // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
+            val a = (d2 + dr2)/(2 * d)
+            val h = sqrt(r12 - a*a)
+            val pcx = x0 + a * dcx / d
+            val pcy = y0 + a * dcy / d
+            val vx = h * dcx / d
+            val vy = h * dcy / d
+            // Q: does point order depend on input circle order?
+            return Pair(
+                Pair(pcx + vy, pcy - vx),
+                Pair(pcx - vy, pcy + vx)
+            )
+        }
+
     }
 }
 
