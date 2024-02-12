@@ -198,7 +198,12 @@ fun EditClusterCanvas(
                         drawCircle(color = Color.Green, radius = handleRadius * 3/4, center = viewModel.absolute(it))
                     }
                     if (m.points.size == 2)
-                        drawLine(Color.Green, m.points.first(), m.points.last(), strokeWidth)
+                        drawLine(
+                            Color.Green,
+                            start = viewModel.absolute(m.points.first()),
+                            end = viewModel.absolute(m.points.last()),
+                            strokeWidth
+                        )
                     else if (m.points.size == 3) {
                         try {
                             val c = Circle.by3Points(m.points[0], m.points[1], m.points[2])

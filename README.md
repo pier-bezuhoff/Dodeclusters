@@ -25,7 +25,7 @@ Cluster = circles + union of intersections of some of these circles (their insid
   - [x] select binary interlacing even/odd regions (like chessboard coloring)
   - [x] load/save individual clusters as .ddc (actually json inside, temporary solution)
   - [ ] additional context-dependent toolbar to group categories of tools (a-la bucket fill + gradient)
-  - [ ] tools: circle by center & radius, by 3 points; line by 2 points
+  - [x] tools: circle by center & radius, by 3 points; maybe line by 2 points
   - [ ] bezier-like pathing tool
   - [ ] maybe finer control over angles/distances
 * Multi-cluster editor
