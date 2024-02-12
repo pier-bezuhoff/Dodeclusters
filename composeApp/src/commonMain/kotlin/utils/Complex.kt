@@ -25,6 +25,9 @@ val Complex.reciprocal: Complex
         return Complex(re / scale, -im / scale)
     }
 
+val Complex.r2: Double
+    get() = re * re + im * im
+
 /**
  * Absolute value of complex number.
  */

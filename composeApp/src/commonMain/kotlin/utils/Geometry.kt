@@ -42,3 +42,6 @@ fun Offset.angleCos(other: Offset): Double {
 fun Offset.angleSin(other: Offset): Double {
     return (x.toDouble()*other.y - y*other.x)/getDistance()/other.getDistance()
 }
+
+fun Offset.toComplex(): Complex =
+    Complex(x, y)

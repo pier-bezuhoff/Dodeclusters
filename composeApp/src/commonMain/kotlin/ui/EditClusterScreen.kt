@@ -278,7 +278,7 @@ inline fun <reified M: Mode> ModeToggle(
 ) {
     // Crossfade/AnimatedContent dont work for w/e reason (mb cuz VM is caught in the closure)
     IconToggleButton(
-        checked = checkedPredicate().also { println("@$targetMode: $it") },
+        checked = checkedPredicate(),
         onCheckedChange = {
             viewModel.switchSelectionMode(targetMode)
         },

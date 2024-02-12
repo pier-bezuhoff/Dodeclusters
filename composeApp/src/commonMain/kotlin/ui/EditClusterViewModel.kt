@@ -204,14 +204,15 @@ class EditClusterViewModel(
     ) = coroutineScope.launch {
         recordCommand(Command.CREATE)
         showCircles = true
-        _decayingCircles.emit(
-            DecayingCircles(listOf(newCircle), Color.Green)
-        )
         circles.add(newCircle)
         if (switchToSelectionMode && !mode.isSelectingCircles())
             switchSelectionMode(SelectionMode.Drag)
         selection.clear()
         selection.add(circles.size - 1)
+//        println("create new circle")
+        _decayingCircles.emit(
+            DecayingCircles(listOf(newCircle), Color.Green)
+        )
     }
 
     fun copyCircles() = coroutineScope.launch {
@@ -220,9 +221,6 @@ class EditClusterViewModel(
             val copiedCircles = selection.map { circles[it] } // preserves selection order
             val oldSize = circles.size
             val reindexing = selection.mapIndexed { i, ix -> ix to (oldSize + i) }.toMap()
-            _decayingCircles.emit(
-                DecayingCircles(copiedCircles, Color.Blue)
-            )
             circles.addAll(copiedCircles)
             val newParts = parts.filter {
                 selection.containsAll(it.insides) && selection.containsAll(it.outsides)
@@ -236,6 +234,9 @@ class EditClusterViewModel(
             parts.addAll(newParts)
             selection.clear()
             selection.addAll(oldSize until (oldSize + copiedCircles.size))
+            _decayingCircles.emit(
+                DecayingCircles(copiedCircles, Color.Blue)
+            )
         }
     }
 
@@ -255,9 +256,6 @@ class EditClusterViewModel(
             recordCommand(Command.DELETE)
             val whatsGone = selection.toSet()
             val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
-            _decayingCircles.emit(
-                DecayingCircles(selection.map { circles[it] }, Color.Red)
-            )
             val oldParts = parts.toList()
             val reindexing = reindexingMap(circles.indices, whatsGone)
             selection.clear()
@@ -276,6 +274,9 @@ class EditClusterViewModel(
                         )
                     }
                     .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
+            )
+            _decayingCircles.emit(
+                DecayingCircles(selection.map { circles[it] }, Color.Red)
             )
         }
     }
@@ -544,6 +545,23 @@ class EditClusterViewModel(
                     )
                     _mode.value = CreationMode.CircleByCenterAndRadius.Center()
                 }
+            is CreationMode.CircleBy3Points -> when (m.phase) {
+                1 -> _mode.value = m.copy(2, listOf(visiblePosition ?: m.points[0]))
+                2 -> _mode.value = m.copy(3, listOf(m.points[0], visiblePosition ?: m.points[1]))
+                3 -> {
+                    try {
+                        val newCircle = Circle.by3Points(
+                            absolute(m.points[0]), absolute(m.points[1]),
+                            absolute(visiblePosition ?: m.points[2])
+                        )
+                        createNewCircle(newCircle, switchToSelectionMode = false)
+                    } catch (e: NumberFormatException) {
+                        e.printStackTrace()
+                    } finally {
+                        _mode.value = CreationMode.CircleBy3Points()
+                    }
+                }
+            }
             else -> {}
         }
     }
@@ -596,7 +614,13 @@ class EditClusterViewModel(
                         println("bad2")
                     }
 
-                is CreationMode.CircleBy3Points -> 2
+                is CreationMode.CircleBy3Points -> {
+                    when (m.phase) {
+                        1 -> _mode.value = m.copy(points = listOf(visiblePosition))
+                        2 -> _mode.value = m.copy(points = listOf(m.points[0], visiblePosition))
+                        3 -> _mode.value = m.copy(points = listOf(m.points[0], m.points[1], visiblePosition))
+                    }
+                }
                 else -> {}
             }
         }
@@ -679,6 +703,11 @@ class EditClusterViewModel(
                         _mode.value = CreationMode.CircleByCenterAndRadius.Radius(m.center, centroid)
                 is CreationMode.CircleByCenterAndRadius.Radius ->
                     _mode.value = m.copy(radiusPoint = centroid)
+                is CreationMode.CircleBy3Points -> {
+                    _mode.value = m.copy(
+                        points = m.points.take(m.phase - 1).plusElement(centroid)
+                    )
+                }
                 else -> translation.value = translation.value + pan // navigate canvas
             }
         }

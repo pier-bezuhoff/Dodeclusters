@@ -35,6 +35,7 @@ import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import data.Circle
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
@@ -198,8 +199,19 @@ fun EditClusterCanvas(
                     }
                     if (m.points.size == 2)
                         drawLine(Color.Green, m.points.first(), m.points.last(), strokeWidth)
-                    else if (m.points.size == 3)
-                        3
+                    else if (m.points.size == 3) {
+                        try {
+                            val c = Circle.by3Points(m.points[0], m.points[1], m.points[2])
+                            drawCircle(
+                                color = Color.Green,
+                                style = circleStroke,
+                                radius = c.radius.toFloat(),
+                                center = viewModel.absolute(c.offset)
+                            )
+                        } catch (e: NumberFormatException) {
+                            e.printStackTrace()
+                        }
+                    }
                 }
                 else -> {}
             }
