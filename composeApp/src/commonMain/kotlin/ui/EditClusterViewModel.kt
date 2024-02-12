@@ -275,7 +275,7 @@ class EditClusterViewModel(
                     }
                     .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
             )
-            _decayingCircles.emit(
+            _decayingCircles.emit( // BUG: not working on android
                 DecayingCircles(selection.map { circles[it] }, Color.Red)
             )
         }
