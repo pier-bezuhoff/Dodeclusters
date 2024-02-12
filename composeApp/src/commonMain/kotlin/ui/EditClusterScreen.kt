@@ -63,7 +63,9 @@ import ui.colorpicker.HsvColor
 fun EditClusterScreen(sampleIndex: Int? = null) {
     val coroutineScope = rememberCoroutineScope()
     val clusterRepository = remember { ClusterRepository() }
-    val viewModel = rememberSaveable(saver = EditClusterViewModel.Saver(coroutineScope)) {
+    val saver = remember { EditClusterViewModel.Saver(coroutineScope) }
+    // test bg kills more
+    val viewModel = rememberSaveable(saver = saver) {
         EditClusterViewModel.UiState.restore(coroutineScope, EditClusterViewModel.UiState.DEFAULT)
     }
     viewModel.setEpsilon(LocalDensity.current)
