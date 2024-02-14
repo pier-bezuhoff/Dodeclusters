@@ -155,6 +155,12 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
             painterResource("icons/select_region_mode_intersection.xml"),
             contentDescription = "select region mode",
         )
+        Divider( // modes <-> tools divider
+            Modifier
+                .padding(8.dp)
+                .fillMaxHeight()
+                .width(4.dp)
+        )
         BinaryToggle(
             viewModel.showCircles,
             painterResource("icons/visible.xml"), painterResource("icons/invisible.xml"),
@@ -162,12 +168,6 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
         ) {
             viewModel.showCircles = !viewModel.showCircles
         }
-        Divider( // modes <-> tools divider
-            Modifier
-                .padding(8.dp)
-                .fillMaxHeight()
-                .width(4.dp)
-        )
         var showColorPickerDialog by remember { mutableStateOf(false) }
         IconButton(onClick = {
             showColorPickerDialog = true

@@ -46,6 +46,7 @@ data class Cluster(
     }
 }
 
+// TODO: change to css color for better interop
 // i have no idea why there was no default serializer
 object ColorSerializer : KSerializer<Color> {
     override val descriptor = ULong.serializer().descriptor

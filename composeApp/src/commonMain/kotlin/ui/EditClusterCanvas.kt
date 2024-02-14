@@ -72,7 +72,7 @@ fun EditClusterCanvas(
 
     val backgroundColor = Color.White
     val circleColor = Color.Black
-    val clusterPathAlpha = 0.7f
+    val clusterPathAlpha = 1f //0.7f
     val selectionLinesColor = Color.Gray
     val selectionMarkingsColor = Color.DarkGray // center-radius line / bounding rect of selection
     val maxDecayAlpha = 0.5f
@@ -84,11 +84,12 @@ fun EditClusterCanvas(
     val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch {
         viewModel.decayingCircles.collect { event ->
-            decayAlpha.snapTo(maxDecayAlpha)
             decayingCircles = event
+//            decayAlpha.snapTo(maxDecayAlpha)
+            decayAlpha.animateTo(maxDecayAlpha, tween(decayDuration/30, easing = LinearEasing))
             decayAlpha.animateTo(
                 targetValue = 0f,
-                animationSpec = tween(decayDuration, easing = LinearEasing),
+                tween(decayDuration*29/30, easing = LinearEasing),
 //                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
             )
 
@@ -211,6 +212,7 @@ private fun DrawScope.drawParts(
     circleStroke: DrawStyle,
 ) {
     for (part in viewModel.parts) {
+//        println(part)
         drawPath(
             viewModel.part2path(part),
             color = part.fillColor,

@@ -3,7 +3,7 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE-3RD-PARTY.txt file.
  */
 // source: https://github.com/SciProgCentre/kmath/blob/83d9e1f0afb3024101a2f90a99b54f2a8b6e4212/kmath-complex/src/commonMain/kotlin/space/kscience/kmath/complex/Complex.kt
-// original APACHE 2.0 license attached in the folder
+// original APACHE 2.0 license attached in this folder
 // + cherry-picked by me
 
 package utils

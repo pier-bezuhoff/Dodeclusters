@@ -1,7 +1,7 @@
 # Dodeclusters
 
 Vector image editor using only circles (WIP)  
-Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform) targeting
+Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform), targeting
 - [x] Desktop (Windows, Linux)
 - [x] Android 7.0+ (SDK 24+)
 - [x] Web (via WASM; _doesn't work on mobile_ yet because of the [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
