@@ -13,7 +13,7 @@ data class Cluster(
     /** union of parts comprised of circle intersections */
     val parts: List<Part> = emptyList(),
     /** fill regions inside / wireframe */
-    val fill: Boolean = true,
+    val filled: Boolean = true,
 ) {
     /** intersection of insides and outside of circles of a cluster */
     @Serializable
@@ -41,7 +41,7 @@ data class Cluster(
         val SAMPLE = Cluster(
             circles = listOf(Circle(200.0, 100.0, 50.0)),
             parts = emptyList(),
-            fill = true
+            filled = true
         )
     }
 }

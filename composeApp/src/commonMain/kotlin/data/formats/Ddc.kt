@@ -1,13 +1,16 @@
-package data
+package data.formats
 
 import androidx.compose.ui.graphics.Color
+import data.Circle
+import data.Cluster
 
 // MIME type: application/yaml
-/** Aim for nicely-formatted, readable YAML subset */
-class Dodeclusters(
+/** Dodeclusters format .ddc. Aiming for nicely-formatted, readable YAML subset */
+class Ddc(
     val params: Map<String, String>,
     val figures: List<Figure>,
 ) {
+    /** ddc tokens */
     sealed class Figure {
         data class Cluster(
             val cluster: data.Cluster,
@@ -31,8 +34,14 @@ private data class Indentation(val indentLevel: Int) {
     val prevIndent: String
         get() = " ".repeat(2*(indentLevel - 1))
 
+    fun down(): Indentation =
+        Indentation(indentLevel + 1)
+
     fun encode(key: String, value: Any): String =
         "$indent$key: $value"
+
+    fun encode(key: String): String =
+        "$indent$key"
 
     fun encodeOptional(key: String, value: Any?): String =
         value?.let { encode(key, value) } ?: ""
@@ -45,17 +54,17 @@ private data class Indentation(val indentLevel: Int) {
         "$prevIndent- $header\n" +
             lines.joinToString(prefix = "  ", separator = "\n")
 
-    fun encodeCircle(c: Dodeclusters.Figure.Circle): String =
+    fun encodeCircle(f: Ddc.Figure.Circle): String =
         encodeListItem(
-            "circle: ${c.index}",
-            encode("x", c.circle.x),
-            encode("y", c.circle.y),
-            encode("r", c.circle.radius),
-            encode("visible", c.visible),
-            encode("filled", c.filled),
-            encodeOptional("fillColor", c.fillColor?.value?.toString(16)),
-            encodeOptional("borderColor", c.borderColor?.value?.toString(16)),
-            encodeOptional("rule", if (c.rule.isEmpty()) null else encodeIntSequence(c.rule))
+            "circle: ${f.index}",
+            encode("x", f.circle.x),
+            encode("y", f.circle.y),
+            encode("r", f.circle.radius),
+            encode("visible", f.visible),
+            encode("filled", f.filled),
+            encodeOptional("fillColor", f.fillColor?.value?.toString(16)),
+            encodeOptional("borderColor", f.borderColor?.value?.toString(16)),
+            encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule))
         )
 
     fun encodeClusterCircle(circle: Circle): String =
@@ -67,18 +76,20 @@ private data class Indentation(val indentLevel: Int) {
 
     fun encodeClusterPart(part: Cluster.Part): String =
         encodeListItem(
-            "insides:" + encodeIntSequence(part.insides.sorted()),
+            "insides: " + encodeIntSequence(part.insides.sorted()),
             encode("outsides", encodeIntSequence(part.outsides.sorted())),
             encodeOptional("fillColor", part.fillColor.value.toString(16)),
 //            encodeOptional("borderColor", part.borderColor?.value?.toString(16)),
         )
 
-    fun encodeCluster(cluster: Cluster): String =
+    fun encodeCluster(f: Ddc.Figure.Cluster): String =
         encodeListItem(
-            "cluster:",
-            "circles:",
-            "parts",
-            "filled",
-            "rule:",
+            "cluster: [${f.indexRange.first}, ${f.indexRange.last}]",
+            encode("circles:"),
+            *f.cluster.circles.map { down().encodeClusterCircle(it) }.toTypedArray(),
+            encode("parts:"),
+            *f.cluster.parts.map { down().encodeClusterPart(it) }.toTypedArray(),
+            encode("filled", f.cluster.filled),
+            encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule))
         )
 }

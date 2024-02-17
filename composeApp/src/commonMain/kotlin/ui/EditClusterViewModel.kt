@@ -109,7 +109,7 @@ class EditClusterViewModel(
 
     fun saveAsJSON(): String {
         val cluster = Cluster(
-            circles, parts, fill = true
+            circles, parts, filled = true
         )
         return Json.encodeToString(Cluster.serializer(), cluster)
     }
@@ -799,7 +799,7 @@ class EditClusterViewModel(
             fun restore(coroutineScope: CoroutineScope, uiState: UiState): EditClusterViewModel =
                 EditClusterViewModel(
                     coroutineScope,
-                    Cluster(uiState.circles.toList(), uiState.parts.toList(), fill = true)
+                    Cluster(uiState.circles.toList(), uiState.parts.toList(), filled = true)
                 ).apply {
                     _mode.value = uiState.mode
                     selection.addAll(uiState.selection)
