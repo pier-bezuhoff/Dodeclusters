@@ -1,4 +1,7 @@
 [versions]
+dodeclusters-versionCode = "1"
+dodeclusters-version = "0.1.6"
+
 agp = "8.2.1"
 android-compileSdk = "34"
 android-minSdk = "24" # = Android 7.0 Nougat

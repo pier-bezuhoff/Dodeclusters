@@ -66,8 +66,8 @@ android {
         applicationId = "com.pierbezuhoff.dodeclusters"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = libs.versions.dodeclusters.versionCode.get().toInt()
+        versionName = libs.versions.dodeclusters.version.get()
     }
     packaging {
         resources {
@@ -96,7 +96,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.pierbezuhoff.dodeclusters"
-            packageVersion = "1.0.0"
+            packageVersion = "1.0.0" // cannot start with 0 it seems //libs.versions.dodeclusters.version.get()
             macOS {
                 iconFile.set(project.file("icon.icns"))
             }

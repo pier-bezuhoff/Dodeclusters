@@ -204,13 +204,13 @@ class EditClusterViewModel(
     ) = coroutineScope.launch {
         if (newCircle.radius > 0.0) {
             recordCommand(Command.CREATE)
+            println("createNewCircle $newCircle")
             showCircles = true
             circles.add(newCircle)
             if (switchToSelectionMode && !mode.isSelectingCircles())
                 switchSelectionMode(SelectionMode.Drag)
             selection.clear()
             selection.add(circles.size - 1)
-            // BUG: when animations overlap the later one gets played twice
             _decayingCircles.emit(
                 DecayingCircles(listOf(newCircle), Color.Green)
             )
@@ -728,7 +728,8 @@ class EditClusterViewModel(
                         circles[ix] = circle.copy(radius = zoom * circle.radius)
                     } else if (selection.size > 1) { // scale radius & position
                         recordCommand(Command.SCALE)
-                        val center = getSelectionRect().center
+                        val rect = getSelectionRect()
+                        val center = if (rect.minDimension < 5_000) rect.center else Offset.Zero
                         for (ix in selection) {
                             val circle = circles[ix]
                             val newOffset = (circle.offset - center) * zoom + center

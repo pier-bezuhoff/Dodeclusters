@@ -73,7 +73,7 @@ fun EditClusterCanvas(
     val backgroundColor = Color.White
     val circleColor = Color.Black
     val clusterPathAlpha = 0.7f
-//    val clusterPathAlpha = 1f
+//    val clusterPathAlpha = 1f // TODO: add a switch for this
     val selectionLinesColor = Color.Gray
     val selectionMarkingsColor = Color.DarkGray // center-radius line / bounding rect of selection
     val maxDecayAlpha = 0.5f

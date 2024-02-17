@@ -50,18 +50,36 @@ data class Circle(
         fun by3Points(p1: Offset, p2: Offset, p3: Offset): Circle {
             // reference: https://math.stackexchange.com/a/3503338
             if (p1 == p2)
-                throw NumberFormatException("Not a circle")
-            val z1 = p1.toComplex()
-            val z2 = p2.toComplex()
-            val z3 = p3.toComplex()
+                return almostALine(p1, p3)
+            else if (p1 == p3 || p2 == p3)
+                return almostALine(p1, p2)
             with (ComplexField) {
+                val z1 = p1.toComplex()
+                val z2 = p2.toComplex()
+                val z3 = p3.toComplex()
                 val w = (z3 - z1)/(z2 - z1)
-                if (abs(w.im) <= 1e-6)
-                    throw NumberFormatException("Not a circle")
+                if (abs(w.im) <= 1e-6) // z1, z2, z3 are collinear
+                    return almostALine(p1, p2)
                 val c = (z2 - z1)*(w - w.r2)/(2.0*w.im*i) + z1
                 val r = (z1 - c).r
                 return Circle(c.re, c.im, r)
             }
+        }
+
+        /** Not really a line but still might be useful;
+         * returns a circle thru [p1], [p2] with a very big radius and center to the right of (p2-p1) */
+        fun almostALine(p1: Offset, p2: Offset): Circle {
+            val veryBigRadius = 100_000.0
+            with (ComplexField) {
+                val z1 = p1.toComplex()
+                val z2 = p2.toComplex()
+                val v = z2 - z1
+                if (v.r <= 1e-6)
+                    throw NumberFormatException("Not a line: 2 line points coincide")
+                val center = (z1 + z2)/2 + veryBigRadius*(v/v.r)*i
+                return Circle(center.re, center.im, veryBigRadius)
+            }
+
         }
 
         fun invert(inverting: Circle, theOneBeingInverted: Circle): Circle {
