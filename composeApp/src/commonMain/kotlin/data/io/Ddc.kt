@@ -1,38 +1,74 @@
-package data.formats
+package data.io
 
 import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
+import data.ColorSerializer
+import kotlinx.serialization.Serializable
 
 // MIME type: application/yaml
-/** Dodeclusters format .ddc. Aiming for nicely-formatted, readable YAML subset */
-class Ddc(
-    val params: Map<String, String>,
-    val figures: List<Figure>,
+// extension: idk, either .ddc or .yaml
+/** Dodeclusters' format `.ddc`. Aiming for a nicely-formatted, readable & extendable YAML subset */
+@Serializable
+data class Ddc(
+    val param1: String = "abc",
+    val content: List<Figure>,
 ) {
     /** ddc tokens */
+    @Serializable
     sealed class Figure {
+        @Serializable
         data class Cluster(
-            val cluster: data.Cluster,
-            val indexRange: IntRange,
+            /** 2 value list: [[first circle index, last circle index]] */
+            val cluster: List<Int>,
+            val circles: List<data.Circle>,
+            val parts: List<data.Cluster.Part>,
+            val filled: Boolean = true,
             val rule: List<Int> = emptyList(),
-        ) : Figure()
+        ) : Figure() {
+            fun toCluster(): data.Cluster =
+                Cluster(circles, parts, filled)
+        }
+        @Serializable
         data class Circle(
-            val circle: data.Circle,
-            val index: Int,
+            val circle: Int,
+            val x: Double,
+            val y: Double,
+            val r: Double,
             val visible: Boolean = false,
             val filled: Boolean = true,
+            @Serializable(ColorSerializer::class)
             val fillColor: Color? = null,
+            @Serializable(ColorSerializer::class)
             val borderColor: Color? = null,
             val rule: List<Int> = emptyList(),
-        ) : Figure()
+        ) : Figure() {
+            fun toCircle(): data.Circle =
+                Circle(x, y, r)
+        }
     }
+
+    fun encode(): String =
+        with (Indentation(0)) {
+            listOf(
+                "---",
+                encode("param1", param1),
+                encode("content:"),
+                content.map {
+                    when (it) {
+                        is Figure.Circle -> down().encodeCircle(it)
+                        is Figure.Cluster -> down().encodeCluster(it)
+                    }
+                },
+                "..."
+            ).joinToString(separator = "\n")
+        }
 }
 
 private data class Indentation(val indentLevel: Int) {
-    val indent: String = " ".repeat(2*indentLevel)
+    val indent: String = SINGLE_INDENT.repeat(indentLevel)
     val prevIndent: String
-        get() = " ".repeat(2*(indentLevel - 1))
+        get() = SINGLE_INDENT.repeat(indentLevel - 1)
 
     fun down(): Indentation =
         Indentation(indentLevel + 1)
@@ -52,14 +88,14 @@ private data class Indentation(val indentLevel: Int) {
     /** [header] is unindented */
     fun encodeListItem(header: String, vararg lines: String): String =
         "$prevIndent- $header\n" +
-            lines.joinToString(prefix = "  ", separator = "\n")
+            lines.joinToString(prefix = SINGLE_INDENT, separator = "\n")
 
     fun encodeCircle(f: Ddc.Figure.Circle): String =
         encodeListItem(
-            "circle: ${f.index}",
-            encode("x", f.circle.x),
-            encode("y", f.circle.y),
-            encode("r", f.circle.radius),
+            "circle: ${f.circle}",
+            encode("x", f.x),
+            encode("y", f.y),
+            encode("r", f.r),
             encode("visible", f.visible),
             encode("filled", f.filled),
             encodeOptional("fillColor", f.fillColor?.value?.toString(16)),
@@ -84,12 +120,16 @@ private data class Indentation(val indentLevel: Int) {
 
     fun encodeCluster(f: Ddc.Figure.Cluster): String =
         encodeListItem(
-            "cluster: [${f.indexRange.first}, ${f.indexRange.last}]",
+            "cluster: [${f.cluster.first()}, ${f.cluster.last()}]",
             encode("circles:"),
-            *f.cluster.circles.map { down().encodeClusterCircle(it) }.toTypedArray(),
+            *f.circles.map { down().encodeClusterCircle(it) }.toTypedArray(),
             encode("parts:"),
-            *f.cluster.parts.map { down().encodeClusterPart(it) }.toTypedArray(),
-            encode("filled", f.cluster.filled),
+            *f.parts.map { down().encodeClusterPart(it) }.toTypedArray(),
+            encode("filled", f.filled),
             encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule))
         )
+
+    companion object {
+        const val SINGLE_INDENT = "  "
+    }
 }

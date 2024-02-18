@@ -20,6 +20,7 @@ compose-plugin = "1.6.0-alpha01"
 material3 = "1.1.2"
 junit = "4.13.2"
 colormath = "3.4.0"
+kaml = "0.57.0"
 #noinspection GradleDependency
 kotlin = "1.9.21"
 
@@ -43,6 +44,7 @@ compose-material3 = { module = "androidx.compose.material3:material3", version.r
 compose-material3-window-size-klass = { module = "androidx.compose.material3:material3-window-size-class", version.ref = "material3" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization"}
 colormath = { module = "com.github.ajalt.colormath:colormath", version.ref = "colormath" }
+kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -37,6 +37,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.ui.tooling.preview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.kaml)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -50,6 +51,7 @@ kotlin {
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+            implementation(libs.kaml)
         }
     }
 }
