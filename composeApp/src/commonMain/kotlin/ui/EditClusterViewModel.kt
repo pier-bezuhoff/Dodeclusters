@@ -23,7 +23,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import utils.ColorAsCss
 import utils.angleDeg
 import utils.rotateBy
 import kotlin.math.absoluteValue
@@ -126,7 +128,9 @@ class EditClusterViewModel(
                 .toCluster()
             loadCluster(cluster)
         } catch (e: Exception) { // Q: can we catch an exception from js tho?
+            println("Failed to parse yaml")
             e.printStackTrace()
+            println("Falling back to json")
             loadFromJson(yaml) // backwards compat
         }
     }

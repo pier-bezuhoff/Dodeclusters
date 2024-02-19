@@ -1,12 +1,8 @@
 package data
 
 import androidx.compose.ui.graphics.Color
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-import utils.ColorSerializer
+import utils.ColorCssSerializer
 
 @Serializable
 data class Cluster(
@@ -23,7 +19,7 @@ data class Cluster(
         val insides: Set<Int>,
         /** indices of bounding complementary circles */
         val outsides: Set<Int>,
-        @Serializable(ColorSerializer::class)
+        @Serializable(ColorCssSerializer::class)
         val fillColor: Color = Color.Cyan,
 //        @Serializable(ColorSerializer::class)
 //        val borderColor: Color,

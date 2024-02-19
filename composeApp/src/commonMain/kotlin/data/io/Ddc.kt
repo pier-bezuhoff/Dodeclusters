@@ -5,7 +5,7 @@ import data.Circle
 import data.Cluster
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import utils.ColorSerializer
+import utils.ColorCssSerializer
 
 // MIME type: application/yaml
 // extension: idk, either .ddc or .yaml
@@ -48,9 +48,9 @@ data class Ddc(
             val r: Double,
             val visible: Boolean = false,
             val filled: Boolean = true,
-            @Serializable(ColorSerializer::class)
+            @Serializable(ColorCssSerializer::class)
             val fillColor: Color? = null,
-            @Serializable(ColorSerializer::class)
+            @Serializable(ColorCssSerializer::class)
             val borderColor: Color? = null,
             val rule: List<Int> = emptyList(),
         ) : Token() {
@@ -95,8 +95,7 @@ private data class Indentation(val indentLevel: Int) {
         value?.let { encode(key, value) } ?: ""
 
     fun Color.encodeColor(): String =
-        Json.encodeToString(ColorSerializer, this)
-            .drop(1).dropLast(1)
+        Json.encodeToString(ColorCssSerializer, this)
 
     fun encodeIntSequence(ints: List<Int>): String =
         ints.joinToString(prefix = "[", postfix = "]", separator = ",")

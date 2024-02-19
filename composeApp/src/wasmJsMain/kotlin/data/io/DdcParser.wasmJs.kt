@@ -3,18 +3,24 @@ package data.io
 import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
+import utils.ColorAsCss
+import utils.ColorCssSerializer
 
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
 actual fun parseDdc(content: String): Ddc {
     fun <S : JsAny, T> JsArray<S>.map(f: (S) -> T): List<T> =
         (0 until length).map { f(get(it)!!) }
+    fun JsString.parseColor(): Color =
+        Json.decodeFromString(ColorCssSerializer, '"' + toString() + '"')
     val jsDdc = loadYaml(content) as JsDdc
+    println("js parsed yaml: $jsDdc")
     val ddc = Ddc(
         param1 = jsDdc.param1 ?: "abc",
         content = jsDdc.content.map { jsFigure ->
             when {
                 isCircleObject(jsFigure) -> {
-                    println("circle: $jsFigure")
                     val jsCircle = jsFigure as JsCircleFigure
                     Ddc.Token.Circle(
                         circle = jsCircle.circle,
@@ -23,24 +29,23 @@ actual fun parseDdc(content: String): Ddc {
                         r = jsCircle.r,
                         visible = jsCircle.visible ?: false,
                         filled = jsCircle.filled ?: true,
-                        fillColor = jsCircle.fillColor?.let { Color(value = it.toString().toULong()) },
-                        borderColor = jsCircle.borderColor?.let { Color(value = it.toString().toULong()) },
+                        fillColor = jsCircle.fillColor?.parseColor(),
+                        borderColor = jsCircle.borderColor?.parseColor(),
                         rule = jsCircle.rule?.map { it.toInt() } ?: emptyList()
                     )
                 }
                 isClusterObject(jsFigure) -> {
-                    println("cluster: $jsFigure")
                     val jsCluster = jsFigure as JsCluster
                     Ddc.Token.Cluster(
                         cluster = jsCluster.cluster.map { it.toInt() },
                         circles = jsCluster.circles.map {
                             Circle(it.x, it.y, it.r)
                         },
-                        parts = jsCluster.parts.map {
+                        parts = jsCluster.parts.map { part ->
                             Cluster.Part(
-                                insides = it.insides.map { it.toInt() }.toSet(),
-                                outsides = it.insides.map { it.toInt() }.toSet(),
-                                fillColor = Color(value = it.fillColor.toString().toULong()),
+                                insides = part.insides.map { it.toInt() }.toSet(),
+                                outsides = part.outsides.map { it.toInt() }.toSet(),
+                                fillColor = part.fillColor.parseColor()
                             )
                         },
                         filled = jsCluster.filled ?: true,
