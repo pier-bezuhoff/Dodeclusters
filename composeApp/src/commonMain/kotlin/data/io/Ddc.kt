@@ -61,18 +61,19 @@ data class Ddc(
 
     fun encode(): String =
         with (Indentation(0)) {
-            listOf(
+            val head = listOf(
                 "---",
                 encode("param1", param1),
                 encode("content:"),
-                content.map {
-                    when (it) {
-                        is Token.Circle -> down().encodeCircle(it)
-                        is Token.Cluster -> down().encodeCluster(it)
-                    }
-                },
-                "..."
-            ).joinToString(separator = "\n")
+            )
+            val body = content.map {
+                when (it) {
+                    is Token.Circle -> down().encodeCircle(it)
+                    is Token.Cluster -> down().encodeCluster(it)
+                }
+            }
+            val end = "..."
+            (head + body + end).joinToString(separator = "\n")
         }
 }
 

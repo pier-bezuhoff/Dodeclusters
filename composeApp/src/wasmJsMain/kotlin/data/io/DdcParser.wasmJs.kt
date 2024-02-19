@@ -13,7 +13,8 @@ actual fun parseDdc(content: String): Ddc {
         param1 = jsDdc.param1 ?: "abc",
         content = jsDdc.content.map { jsFigure ->
             when {
-                jsFigure.unsafeCast<JsCircleFigure>().circle != null -> {
+                isCircleObject(jsFigure) -> {
+                    println("circle: $jsFigure")
                     val jsCircle = jsFigure as JsCircleFigure
                     Ddc.Token.Circle(
                         circle = jsCircle.circle,
@@ -27,7 +28,8 @@ actual fun parseDdc(content: String): Ddc {
                         rule = jsCircle.rule?.map { it.toInt() } ?: emptyList()
                     )
                 }
-                jsFigure.unsafeCast<JsCluster>().cluster != null -> {
+                isClusterObject(jsFigure) -> {
+                    println("cluster: $jsFigure")
                     val jsCluster = jsFigure as JsCluster
                     Ddc.Token.Cluster(
                         cluster = jsCluster.cluster.map { it.toInt() },
@@ -51,6 +53,12 @@ actual fun parseDdc(content: String): Ddc {
     )
     return ddc
 }
+
+fun isCircleObject(obj: JsAny): Boolean =
+    js("'circle' in obj")
+
+fun isClusterObject(obj: JsAny): Boolean =
+    js("'cluster' in obj")
 
 typealias JsIntArray = JsArray<JsNumber>
 

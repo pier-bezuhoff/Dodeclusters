@@ -111,7 +111,7 @@ class EditClusterViewModel(
 
     fun saveAsYaml(): String {
         val cluster = Cluster(
-            circles, parts, filled = true
+            circles.toList(), parts.toList(), filled = true
         )
         return Ddc(cluster).encode()
     }
@@ -119,6 +119,7 @@ class EditClusterViewModel(
     fun loadFromYaml(yaml: String) {
         try {
             val ddc = parseDdc(yaml)
+            println(ddc)
             val cluster = ddc.content
                 .filterIsInstance<Ddc.Token.Cluster>()
                 .first()
@@ -132,7 +133,7 @@ class EditClusterViewModel(
 
     fun saveAsJson(): String {
         val cluster = Cluster(
-            circles, parts, filled = true
+            circles.toList(), parts.toList(), filled = true
         )
         return Json.encodeToString(Cluster.serializer(), cluster)
     }
