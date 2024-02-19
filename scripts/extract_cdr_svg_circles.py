@@ -34,7 +34,7 @@ for shape in group:
             # reference: https://androidx.tech/artifacts/compose.ui/ui-graphics/1.6.1-source/commonMain/androidx/compose/ui/graphics/Color.kt.html
             # line #420
             long_color = ((0xff << 24 | r << 16 | g << 8 | b) & 0xffffffff) << 32
-            color = long_color
+            color = css_color
         except ValueError:
             print(f"oof #{circle_id}: fill={fill}")
             color = None

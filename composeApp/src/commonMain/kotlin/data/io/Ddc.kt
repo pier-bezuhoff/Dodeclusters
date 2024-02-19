@@ -3,8 +3,9 @@ package data.io
 import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
-import data.ColorSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import utils.ColorSerializer
 
 // MIME type: application/yaml
 // extension: idk, either .ddc or .yaml
@@ -12,11 +13,21 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Ddc(
     val param1: String = "abc",
-    val content: List<Figure>,
+    val content: List<Token>,
 ) {
+    constructor(cluster: Cluster) : this(
+        content = listOf(Token.Cluster(
+            if (cluster.circles.isEmpty()) emptyList() else listOf(0, cluster.circles.size),
+            cluster.circles,
+            cluster.parts,
+            cluster.filled
+        )
+        )
+    )
+
     /** ddc tokens */
     @Serializable
-    sealed class Figure {
+    sealed class Token {
         @Serializable
         data class Cluster(
             /** 2 value list: [[first circle index, last circle index]] */
@@ -25,7 +36,7 @@ data class Ddc(
             val parts: List<data.Cluster.Part>,
             val filled: Boolean = true,
             val rule: List<Int> = emptyList(),
-        ) : Figure() {
+        ) : Token() {
             fun toCluster(): data.Cluster =
                 Cluster(circles, parts, filled)
         }
@@ -42,7 +53,7 @@ data class Ddc(
             @Serializable(ColorSerializer::class)
             val borderColor: Color? = null,
             val rule: List<Int> = emptyList(),
-        ) : Figure() {
+        ) : Token() {
             fun toCircle(): data.Circle =
                 Circle(x, y, r)
         }
@@ -56,8 +67,8 @@ data class Ddc(
                 encode("content:"),
                 content.map {
                     when (it) {
-                        is Figure.Circle -> down().encodeCircle(it)
-                        is Figure.Cluster -> down().encodeCluster(it)
+                        is Token.Circle -> down().encodeCircle(it)
+                        is Token.Cluster -> down().encodeCluster(it)
                     }
                 },
                 "..."
@@ -82,15 +93,19 @@ private data class Indentation(val indentLevel: Int) {
     fun encodeOptional(key: String, value: Any?): String =
         value?.let { encode(key, value) } ?: ""
 
+    fun Color.encodeColor(): String =
+        Json.encodeToString(ColorSerializer, this)
+            .drop(1).dropLast(1)
+
     fun encodeIntSequence(ints: List<Int>): String =
         ints.joinToString(prefix = "[", postfix = "]", separator = ",")
 
     /** [header] is unindented */
     fun encodeListItem(header: String, vararg lines: String): String =
         "$prevIndent- $header\n" +
-            lines.joinToString(prefix = SINGLE_INDENT, separator = "\n")
+            lines.joinToString(separator = "\n")
 
-    fun encodeCircle(f: Ddc.Figure.Circle): String =
+    fun encodeCircle(f: Ddc.Token.Circle): String =
         encodeListItem(
             "circle: ${f.circle}",
             encode("x", f.x),
@@ -98,8 +113,8 @@ private data class Indentation(val indentLevel: Int) {
             encode("r", f.r),
             encode("visible", f.visible),
             encode("filled", f.filled),
-            encodeOptional("fillColor", f.fillColor?.value?.toString(16)),
-            encodeOptional("borderColor", f.borderColor?.value?.toString(16)),
+            encodeOptional("fillColor", f.fillColor?.encodeColor()),
+            encodeOptional("borderColor", f.borderColor?.encodeColor()),
             encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule))
         )
 
@@ -114,11 +129,11 @@ private data class Indentation(val indentLevel: Int) {
         encodeListItem(
             "insides: " + encodeIntSequence(part.insides.sorted()),
             encode("outsides", encodeIntSequence(part.outsides.sorted())),
-            encodeOptional("fillColor", part.fillColor.value.toString(16)),
-//            encodeOptional("borderColor", part.borderColor?.value?.toString(16)),
+            encodeOptional("fillColor", part.fillColor.encodeColor()),
+//            encodeOptional("borderColor", part.borderColor?.encodeColor()),
         )
 
-    fun encodeCluster(f: Ddc.Figure.Cluster): String =
+    fun encodeCluster(f: Ddc.Token.Cluster): String =
         encodeListItem(
             "cluster: [${f.cluster.first()}, ${f.cluster.last()}]",
             encode("circles:"),

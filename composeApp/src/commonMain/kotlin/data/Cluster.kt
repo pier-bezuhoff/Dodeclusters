@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import utils.ColorSerializer
 
 @Serializable
 data class Cluster(
@@ -28,7 +29,7 @@ data class Cluster(
 //        val borderColor: Color,
     ) {
         override fun toString(): String =
-            "Cluster.Part(in = [${insides.joinToString()}], out = [${outsides.joinToString()}], color = $fillColor)"
+            "Cluster.Part(in = [${insides.joinToString()}],\nout = [${outsides.joinToString()}],\ncolor = $fillColor)"
 
         /** ruff semiorder ⊆ on delimited regions; only goes off indices */
         infix fun isObviouslyInside(otherPart: Part): Boolean =
@@ -43,19 +44,5 @@ data class Cluster(
             parts = emptyList(),
             filled = true
         )
-    }
-}
-
-// TODO: change to css color for better interop
-// i have no idea why there was no default serializer
-object ColorSerializer : KSerializer<Color> {
-    override val descriptor = ULong.serializer().descriptor
-
-    override fun serialize(encoder: Encoder, value: Color) {
-        encoder.encodeSerializableValue(ULong.serializer(), value.value)
-    }
-
-    override fun deserialize(decoder: Decoder): Color {
-        return Color(value = decoder.decodeSerializableValue(ULong.serializer()))
     }
 }

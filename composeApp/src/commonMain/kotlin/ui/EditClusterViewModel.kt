@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import data.Circle
 import data.Cluster
+import data.io.Ddc
+import data.io.parseDdc
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -107,38 +109,63 @@ class EditClusterViewModel(
     fun saveAndGoBack() {}
     fun cancelAndGoBack() {}
 
-    fun saveAsJSON(): String {
+    fun saveAsYaml(): String {
+        val cluster = Cluster(
+            circles, parts, filled = true
+        )
+        return Ddc(cluster).encode()
+    }
+
+    fun loadFromYaml(yaml: String) {
+        try {
+            val ddc = parseDdc(yaml)
+            val cluster = ddc.content
+                .filterIsInstance<Ddc.Token.Cluster>()
+                .first()
+                .toCluster()
+            loadCluster(cluster)
+        } catch (e: Exception) { // Q: can we catch an exception from js tho?
+            e.printStackTrace()
+            loadFromJson(yaml) // backwards compat
+        }
+    }
+
+    fun saveAsJson(): String {
         val cluster = Cluster(
             circles, parts, filled = true
         )
         return Json.encodeToString(Cluster.serializer(), cluster)
     }
 
-    fun loadFromJSON(json: String) {
+    fun loadFromJson(json: String) {
         try {
             val permissiveJson = Json {
                 isLenient = true
                 ignoreUnknownKeys = true // enables backward compatibility to a certain level
             }
             val cluster = permissiveJson.decodeFromString(Cluster.serializer(), json)
-            translation.value = Offset.Zero
-            selection.clear()
-            parts.clear()
-            circles.clear()
-            circles.addAll(cluster.circles)
-            parts.addAll(cluster.parts)
-            // reset history on load
-            undoIsEnabled = false
-            redoIsEnabled = false
-            redoHistory.clear()
-            redoCommands.clear()
-            history.clear()
-            commands.clear()
+            loadCluster(cluster)
         } catch (e: SerializationException) {
             e.printStackTrace()
         } catch (e: IllegalArgumentException) {
             e.printStackTrace()
         }
+    }
+
+    private fun loadCluster(cluster: Cluster) {
+        translation.value = Offset.Zero
+        selection.clear()
+        parts.clear()
+        circles.clear()
+        circles.addAll(cluster.circles)
+        parts.addAll(cluster.parts)
+        // reset history on load
+        undoIsEnabled = false
+        redoIsEnabled = false
+        redoHistory.clear()
+        redoCommands.clear()
+        history.clear()
+        commands.clear()
     }
 
     fun undo() {

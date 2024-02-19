@@ -30,7 +30,6 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
@@ -89,7 +88,7 @@ fun EditClusterScreen(sampleIndex: Int? = null) {
         if (sampleIndex != null) {
             clusterRepository.loadSampleClusterJson(sampleIndex) { json ->
                 if (json != null) {
-                    viewModel.loadFromJSON(json)
+                    viewModel.loadFromJson(json)
                 }
             }
         }
@@ -109,13 +108,13 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
         actions = {
             SaveFileButton(painterResource("icons/save.xml"), "Save",
                 saveDataProvider = { SaveData(
-                    "cluster", "ddc", viewModel.saveAsJSON()) }
+                    "cluster", "yml", viewModel.saveAsYaml()) }
             ) {
                 println(if (it) "saved" else "not saved")
             }
             OpenFileButton(painterResource("icons/open_file.xml"), "Open file") { content ->
                 content?.let {
-                    viewModel.loadFromJSON(content)
+                    viewModel.loadFromYaml(content)
                 }
             }
             IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {

@@ -15,7 +15,7 @@ actual fun parseDdc(content: String): Ddc {
             when {
                 jsFigure.unsafeCast<JsCircleFigure>().circle != null -> {
                     val jsCircle = jsFigure as JsCircleFigure
-                    Ddc.Figure.Circle(
+                    Ddc.Token.Circle(
                         circle = jsCircle.circle,
                         x = jsCircle.x,
                         y = jsCircle.y,
@@ -29,7 +29,7 @@ actual fun parseDdc(content: String): Ddc {
                 }
                 jsFigure.unsafeCast<JsCluster>().cluster != null -> {
                     val jsCluster = jsFigure as JsCluster
-                    Ddc.Figure.Cluster(
+                    Ddc.Token.Cluster(
                         cluster = jsCluster.cluster.map { it.toInt() },
                         circles = jsCluster.circles.map {
                             Circle(it.x, it.y, it.r)

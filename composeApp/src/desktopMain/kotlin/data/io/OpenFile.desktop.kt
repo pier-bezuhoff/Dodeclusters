@@ -61,6 +61,11 @@ private fun LoadFileDialog(
 ) = AwtWindow(
     create = {
         object : FileDialog(parent, "Choose a file", LOAD) {
+            init {
+                setFilenameFilter { dir, name ->
+                    name.endsWith(".ddc") || name.endsWith(".yml") || name.endsWith(".yaml")
+                }
+            }
             override fun setVisible(value: Boolean) {
                 super.setVisible(value)
                 if (value) {
