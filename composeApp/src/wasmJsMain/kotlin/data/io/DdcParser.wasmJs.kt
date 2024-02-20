@@ -3,7 +3,6 @@ package data.io
 import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import utils.ColorCssSerializer
 import utils.ColorULongSerializer
@@ -17,10 +16,12 @@ actual fun parseDdc(content: String): Ddc {
     fun JsString.parseColor(): Color =
         try {
             Json.decodeFromString(ColorCssSerializer, '"' + toString() + '"')
-        } catch (e: SerializationException) {
-            Json.decodeFromString(ColorULongSerializer, toString())
-        } catch (e: IllegalArgumentException) {
-            Json.decodeFromString(ColorULongSerializer, toString())
+        } catch (e: Exception) {
+            try {
+                Json.decodeFromString(ColorULongSerializer, toString())
+            } catch (e: Exception) {
+                Color.Black
+            }
         }
 
     val jsDdc = loadYaml(content) as JsDdc
