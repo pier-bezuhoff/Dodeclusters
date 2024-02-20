@@ -59,7 +59,10 @@ import ui.colorpicker.HsvColor
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
 @Composable
-fun EditClusterScreen(sampleIndex: Int? = null) {
+fun EditClusterScreen(
+    sampleIndex: Int? = null,
+    ddcContent: String? = null,
+) {
     val coroutineScope = rememberCoroutineScope()
     val clusterRepository = remember { ClusterRepository() }
     val saver = remember { EditClusterViewModel.Saver(coroutineScope) }
@@ -85,7 +88,10 @@ fun EditClusterScreen(sampleIndex: Int? = null) {
     }
 
     coroutineScope.launch {
-        if (sampleIndex != null) {
+        if (ddcContent != null) {
+            println("loading external ddc")
+            viewModel.loadFromYaml(ddcContent)
+        } else if (sampleIndex != null) {
             clusterRepository.loadSampleClusterJson(sampleIndex) { json ->
                 if (json != null) {
                     viewModel.loadFromJson(json)

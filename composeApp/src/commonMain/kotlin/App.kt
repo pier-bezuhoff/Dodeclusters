@@ -21,14 +21,15 @@ import ui.EditClusterScreen
 fun App(
     usingMobileBrowser: Boolean = false,
     sampleIndex: Int? = null,
+    ddcContent: String? = null,
 ) {
     MaterialTheme {
         if (usingMobileBrowser) {
             Column(Modifier.fillMaxHeight()) {
                 Text("Dodeclusters is not compatible with mobile browsers yet, consider installing it from an .apk for Android")
-                EditClusterScreen(sampleIndex)
+                EditClusterScreen(sampleIndex, ddcContent = ddcContent)
             }
-        } else EditClusterScreen(sampleIndex)
+        } else EditClusterScreen(sampleIndex, ddcContent = ddcContent)
     }
 }
 

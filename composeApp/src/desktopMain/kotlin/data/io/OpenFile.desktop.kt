@@ -38,7 +38,7 @@ actual fun OpenFileButton(
         val sample = """
 param1: abc
 content:
-- !<Cluster>
+- type: Cluster
   indices: [0, 4]
   circles:
   - x: 200.0
@@ -70,12 +70,12 @@ content:
         val config = YamlConfiguration(
             encodeDefaults = true,
             strictMode = false,
-            polymorphismStyle = PolymorphismStyle.Tag
+            polymorphismStyle = PolymorphismStyle.Property
         )
 //        println(
 //            Yaml(module, config).encodeToString(Ddc.serializer(), ddc)
 //        )
-        val muh = parseDdc(sample)
+//        val muh = parseDdc(sample)
 //        println(muh)
         fileDialogIsOpen = true
     }) {

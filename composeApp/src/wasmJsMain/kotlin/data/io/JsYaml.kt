@@ -14,10 +14,8 @@ external interface TypeParams : JsAny {
     var kind: String
 }
 
-external class Schema : JsAny {
-    companion object {
-        fun create(types: JsArray<JsAny>): Schema
-    }
+external object Schema : JsAny {
+    fun create(types: JsArray<JsAny>): Schema
 }
 
 external interface YamlSettings : JsAny {

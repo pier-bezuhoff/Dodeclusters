@@ -1,7 +1,6 @@
 package data
 
 import androidx.compose.ui.geometry.Offset
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import utils.ComplexField
 import utils.r
@@ -15,7 +14,6 @@ import kotlin.math.sqrt
 data class Circle(
     val x: Double,
     val y: Double,
-    @SerialName("r")
     val radius: Double,
 ) {
     val offset: Offset

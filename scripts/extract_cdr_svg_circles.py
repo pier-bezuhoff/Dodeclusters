@@ -46,6 +46,7 @@ shift_y = 0
 circles_entry = [ {'x': c['x']/scale_down - shift_x, 'y': c['y']/scale_down - shift_y, 'radius': c['r']/scale_down} for c in circles ]
 parts_entry = [ {'insides': [ix], 'outsides': [], 'fillColor': circles[ix]['color'] } for ix in range(len(circles)) ]
 cluster = {
+    'type': 'Cluster',
     'circles': circles_entry,
     'parts': parts_entry
 }

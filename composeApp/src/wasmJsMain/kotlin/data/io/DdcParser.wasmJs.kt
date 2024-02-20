@@ -15,8 +15,8 @@ actual fun parseDdc(content: String): Ddc {
     fun JsString.parseColor(): Color =
         Json.decodeFromString(ColorCssSerializer, '"' + toString() + '"')
 
-    val yamlSettings = registerCustomTags()
-    val jsDdc = loadYaml(content, yamlSettings) as JsDdc
+//    val yamlSettings = registerCustomTags()
+    val jsDdc = loadYaml(content, null) as JsDdc
     println("js-yaml parsed yaml successfully")
     val ddc = Ddc(
         param1 = jsDdc.param1 ?: Ddc.DEFAULT_PARAM1,
@@ -28,7 +28,7 @@ actual fun parseDdc(content: String): Ddc {
                         index = jsCircle.index,
                         x = jsCircle.x,
                         y = jsCircle.y,
-                        r = jsCircle.r,
+                        radius = jsCircle.radius,
                         visible = jsCircle.visible ?: Ddc.DEFAULT_CIRCLE_VISIBLE,
                         filled = jsCircle.filled ?: Ddc.DEFAULT_CIRCLE_FILLED,
                         fillColor = jsCircle.fillColor?.parseColor() ?: Ddc.DEFAULT_CIRCLE_FILL_COLOR,
@@ -41,7 +41,7 @@ actual fun parseDdc(content: String): Ddc {
                     Ddc.Token.Cluster(
                         indices = jsCluster.indices.map { it.toInt() },
                         circles = jsCluster.circles.map {
-                            Circle(it.x, it.y, it.r)
+                            Circle(it.x, it.y, it.radius)
                         },
                         parts = jsCluster.parts.map { part ->
                             Cluster.Part(
@@ -71,13 +71,18 @@ fun registerCustomTags(): YamlSettings {
     return YamlSettings().apply { schema = customSchema }
 }
 
-fun TypeParams(): TypeParams =
-    js("{}")
+fun TypeParams(): TypeParams = js("{}")
+fun YamlSettings(): YamlSettings = js("{}")
 
-fun YamlSettings(): YamlSettings =
-    js("{}")
+fun registerCustomTags1(): YamlSettings =
+    js("""{
+    const CircleType = Type("!<Circle>");
+    const ClusterType = Type("!<Cluster>");
+    const MY_SCHEMA = Schema.create([CircleType, ClusterType]);
+    return { "schema": MY_SCHEMA };
+    }""")
 
-fun _registerCustomTags(): YamlSettings =
+fun registerCustomTags0(): YamlSettings =
     js("""{
     jsyaml = require('js-yaml');
     const CircleType = jsyaml.Type("!<Circle>");
@@ -105,7 +110,7 @@ external interface JsCircleFigure : JsFigure {
     val index: Int
     val x: Double
     val y: Double
-    val r: Double
+    val radius: Double
     val visible: Boolean?
     val filled: Boolean?
     val fillColor: JsString?
@@ -124,7 +129,7 @@ external interface JsCluster : JsFigure {
 external interface JsCircle : JsAny {
     val x: Double
     val y: Double
-    val r: Double
+    val radius: Double
 }
 
 external interface JsClusterPart : JsAny {

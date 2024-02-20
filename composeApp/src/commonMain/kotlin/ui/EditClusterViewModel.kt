@@ -122,7 +122,7 @@ class EditClusterViewModel(
     fun loadFromYaml(yaml: String) {
         try {
             val ddc = parseDdc(yaml)
-            println(ddc)
+//            println(ddc)
             val cluster = ddc.content
                 .filterIsInstance<Ddc.Token.Cluster>()
                 .first()
@@ -132,7 +132,7 @@ class EditClusterViewModel(
             println("Failed to parse yaml")
             e.printStackTrace()
             println("Falling back to json")
-            loadFromJson(yaml) // backwards compat
+            loadFromJson(yaml) // NOTE: for backwards compat
         }
     }
 
@@ -152,8 +152,10 @@ class EditClusterViewModel(
             val cluster = permissiveJson.decodeFromString(Cluster.serializer(), json)
             loadCluster(cluster)
         } catch (e: SerializationException) {
+            println("Failed to parse json")
             e.printStackTrace()
         } catch (e: IllegalArgumentException) {
+            println("Failed to parse json")
             e.printStackTrace()
         }
     }

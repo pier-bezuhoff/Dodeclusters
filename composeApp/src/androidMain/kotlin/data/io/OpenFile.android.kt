@@ -1,6 +1,7 @@
 package data.io
 
-import android.content.Intent
+import android.content.Context
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.Icon
@@ -19,19 +20,24 @@ actual fun OpenFileButton(
     // MAYBE: use OpenDocument instead of GetContent for persistent files only (no cloud etc)
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
         val content: String? = uri?.let {
-//            val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            // NOTE: uncomment the following ONLY for ACTION_OPEN_DOCUMENT (ACTION_GET_CONTENT is NOT for persistable Uri's, only for temporary ones)
-            // context.contentResolver.takePersistableUriPermission(uri, takeFlags)
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                inputStream.bufferedReader().readText()
-            }
+            readDdcFromUri(context, uri)
         }
         onOpen(content)
     }
     IconButton(onClick = {
-//        launcher.launch("*/*") // NOTE: "text/plain" doesnt work for custom extensions it seems
-        launcher.launch("application/yaml")
+        // NOTE: "text/plain" doesnt work for custom extensions it seems
+        launcher.launch("application/*") // casts a wide net, including .ddc, .yaml, ..., pdf..
+//        launcher.launch("application/yaml")
     }) {
         Icon(iconPainter, contentDescription)
+    }
+}
+
+fun readDdcFromUri(context: Context, uri: Uri): String? {
+    //val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+    // NOTE: uncomment the following ONLY for ACTION_OPEN_DOCUMENT (ACTION_GET_CONTENT is NOT for persistable Uri's, only for temporary ones)
+    // context.contentResolver.takePersistableUriPermission(uri, takeFlags)
+    return context.contentResolver.openInputStream(uri)?.use { inputStream ->
+        inputStream.bufferedReader().readText()
     }
 }

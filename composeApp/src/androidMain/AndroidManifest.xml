@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:installLocation="auto"
+>
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:anyDensity="true" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+        />
 
     <application
         android:allowBackup="true"
@@ -17,8 +26,73 @@
             android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+<!--                BUG: Google Drive doesn't suggest it as an app for .ddc, only .yaml -->
+<!--                <action android:name="android.intent.action.OPEN_DOCUMENT"/>-->
+<!--                <action android:name="android.intent.action.CHOOSER"/>-->
+                <action android:name="android.intent.action.EDIT" />
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:host="*" />
+                <data android:scheme="file"/>
+                <data android:scheme="content"/>
+                <data android:scheme="http"/>
+                <data android:mimeType="application/yaml"/>
+                <data android:mimeType="application/json"/>
+                <data android:pathPattern=".*" />
+                <data android:pathPattern=".*\\.*" />
+                <data android:pathPattern=".*\\..*\\.*" />
+                <data android:pathPattern=".*\\..*\\..*\\.*" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.*" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.*" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.*" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.*" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.*" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.*" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:mimeType="*/*" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.yaml" />
+                <data android:pathPattern=".*\\..*\\.yaml" />
+                <data android:pathPattern=".*\\..*\\..*\\.yaml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.yaml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.yaml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.yaml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.yaml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.yaml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.yaml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.yaml" />
+                <data android:pathPattern=".*\\.yml" />
+                <data android:pathPattern=".*\\..*\\.yml" />
+                <data android:pathPattern=".*\\..*\\..*\\.yml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.yml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.yml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.yml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.yml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.yml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.yml" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.yml" />
+                <data android:pathPattern=".*\\.ddc" />
+                <data android:pathPattern=".*\\..*\\.ddc" />
+                <data android:pathPattern=".*\\..*\\..*\\.ddc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.ddc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.ddc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.ddc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.ddc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ddc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ddc" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ddc" />
             </intent-filter>
         </activity>
     </application>

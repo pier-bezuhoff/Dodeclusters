@@ -18,7 +18,7 @@ actual fun parseDdc(content: String): Ddc {
     val config = YamlConfiguration(
         encodeDefaults = true,
         strictMode = false,
-        polymorphismStyle = PolymorphismStyle.Tag
+        polymorphismStyle = PolymorphismStyle.Property
     )
     return Yaml(module, config).decodeFromString(Ddc.serializer(), content)
 }
