@@ -10,8 +10,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.window.AwtWindow
+import com.charleskorn.kaml.PolymorphismStyle
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.YamlConfiguration
+import data.Cluster
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
+import ui.EditClusterViewModel
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -27,6 +35,48 @@ actual fun OpenFileButton(
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
     IconButton(onClick = {
+        val sample = """
+param1: abc
+content:
+- !<Cluster>
+  indices: [0, 4]
+  circles:
+  - x: 200.0
+    y: 200.0
+    r: 100.0
+  - x: 250.0
+    y: 200.0
+    r: 100.0
+  - x: 200.0
+    y: 250.0
+    r: 100.0
+  - x: 250.0
+    y: 250.0
+    r: 100.0
+  parts:
+  - insides: [0]
+    outsides: [1,2,3]
+    fillColor: "#00ffff"
+  filled: true
+"""
+        val cluster = EditClusterViewModel.UiState.DEFAULT.let { Cluster(it.circles, it.parts) }
+        val ddc = Ddc(cluster)
+        val module = SerializersModule {
+            polymorphic(Ddc.Token::class) {
+                subclass(Ddc.Token.Cluster::class)
+                subclass(Ddc.Token.Circle::class)
+            }
+        }
+        val config = YamlConfiguration(
+            encodeDefaults = true,
+            strictMode = false,
+            polymorphismStyle = PolymorphismStyle.Tag
+        )
+//        println(
+//            Yaml(module, config).encodeToString(Ddc.serializer(), ddc)
+//        )
+        val muh = parseDdc(sample)
+//        println(muh)
         fileDialogIsOpen = true
     }) {
         Icon(iconPainter, contentDescription)

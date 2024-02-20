@@ -113,9 +113,10 @@ class EditClusterViewModel(
 
     fun saveAsYaml(): String {
         val cluster = Cluster(
-            circles.toList(), parts.toList(), filled = true
+            circles.toList(), parts.toList()
         )
         return Ddc(cluster).encode()
+//        return Json.encodeToString(Ddc(cluster))
     }
 
     fun loadFromYaml(yaml: String) {
@@ -127,7 +128,7 @@ class EditClusterViewModel(
                 .first()
                 .toCluster()
             loadCluster(cluster)
-        } catch (e: Exception) { // Q: can we catch an exception from js tho?
+        } catch (e: Exception) {
             println("Failed to parse yaml")
             e.printStackTrace()
             println("Falling back to json")

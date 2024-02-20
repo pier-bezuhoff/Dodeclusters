@@ -29,8 +29,8 @@ actual fun OpenFileButton(
         onOpen(content)
     }
     IconButton(onClick = {
-        launcher.launch("*/*") // NOTE: "text/plain" doesnt work for custom extensions it seems
-//        launcher.launch("text/plain")
+//        launcher.launch("*/*") // NOTE: "text/plain" doesnt work for custom extensions it seems
+        launcher.launch("application/yaml")
     }) {
         Icon(iconPainter, contentDescription)
     }

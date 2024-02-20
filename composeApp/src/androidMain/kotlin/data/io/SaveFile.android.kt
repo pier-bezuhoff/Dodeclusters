@@ -25,7 +25,8 @@ actual fun SaveFileButton(
 
     val launcher = rememberLauncherForActivityResult(
 //        contract = ActivityResultContracts.CreateDocument("text/plain") // forces .txt extension; when used with filename ending in .txt creates empty file
-        contract = ActivityResultContracts.CreateDocument("*/*")
+//        contract = ActivityResultContracts.CreateDocument("*/*")
+        contract = ActivityResultContracts.CreateDocument("application/yaml")
     ) { uri ->
         try {
             uri?.let {

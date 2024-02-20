@@ -1,6 +1,7 @@
 package data
 
 import androidx.compose.ui.graphics.Color
+import data.io.Ddc
 import kotlinx.serialization.Serializable
 import utils.ColorCssSerializer
 
@@ -10,7 +11,7 @@ data class Cluster(
     /** union of parts comprised of circle intersections */
     val parts: List<Part> = emptyList(),
     /** fill regions inside / wireframe */
-    val filled: Boolean = true,
+    val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
 ) {
     /** intersection of insides and outside of circles of a cluster */
     @Serializable
@@ -20,7 +21,7 @@ data class Cluster(
         /** indices of bounding complementary circles */
         val outsides: Set<Int>,
         @Serializable(ColorCssSerializer::class)
-        val fillColor: Color = Color.Cyan,
+        val fillColor: Color = Ddc.DEFAULT_CLUSTER_FILL_COLOR,
 //        @Serializable(ColorSerializer::class)
 //        val borderColor: Color,
     ) {

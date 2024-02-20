@@ -3,6 +3,7 @@ package data.io
 import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import utils.ColorCssSerializer
@@ -12,47 +13,49 @@ import utils.ColorCssSerializer
 /** Dodeclusters' format `.ddc`. Aiming for a nicely-formatted, readable & extendable YAML subset */
 @Serializable
 data class Ddc(
-    val param1: String = "abc",
+    val param1: String = DEFAULT_PARAM1,
     val content: List<Token>,
 ) {
     constructor(cluster: Cluster) : this(
         content = listOf(Token.Cluster(
-            if (cluster.circles.isEmpty()) emptyList() else listOf(0, cluster.circles.size),
+            if (cluster.circles.isEmpty()) emptyList()
+            else listOf(0, cluster.circles.size - 1),
             cluster.circles,
             cluster.parts,
             cluster.filled
-        )
-        )
+        ))
     )
 
     /** ddc tokens */
     @Serializable
     sealed class Token {
+        @SerialName("Cluster")
         @Serializable
         data class Cluster(
             /** 2 value list: [[first circle index, last circle index]] */
-            val cluster: List<Int>,
+            val indices: List<Int>,
             val circles: List<data.Circle>,
             val parts: List<data.Cluster.Part>,
-            val filled: Boolean = true,
-            val rule: List<Int> = emptyList(),
+            val filled: Boolean = DEFAULT_CLUSTER_FILLED,
+            val rule: List<Int> = DEFAULT_CLUSTER_RULE,
         ) : Token() {
             fun toCluster(): data.Cluster =
                 Cluster(circles, parts, filled)
         }
+        @SerialName("Circle")
         @Serializable
         data class Circle(
-            val circle: Int,
+            val index: Int,
             val x: Double,
             val y: Double,
             val r: Double,
-            val visible: Boolean = false,
-            val filled: Boolean = true,
+            val visible: Boolean = DEFAULT_CIRCLE_VISIBLE,
+            val filled: Boolean = DEFAULT_CIRCLE_FILLED,
             @Serializable(ColorCssSerializer::class)
-            val fillColor: Color? = null,
+            val fillColor: Color? = DEFAULT_CIRCLE_FILL_COLOR,
             @Serializable(ColorCssSerializer::class)
-            val borderColor: Color? = null,
-            val rule: List<Int> = emptyList(),
+            val borderColor: Color? = DEFAULT_CIRCLE_BORDER_COLOR,
+            val rule: List<Int> = DEFAULT_CIRCLE_RULE,
         ) : Token() {
             fun toCircle(): data.Circle =
                 Circle(x, y, r)
@@ -73,8 +76,23 @@ data class Ddc(
                 }
             }
             val end = "..."
-            (head + body + end).joinToString(separator = "\n")
+            (head + body).joinToString(separator = "\n") + end
         }
+
+    companion object {
+        const val DEFAULT_PARAM1 = "abc"
+
+        const val DEFAULT_CLUSTER_FILLED = true
+        const val DEFAULT_CLUSTER_VISIBLE = true
+        val DEFAULT_CLUSTER_FILL_COLOR = Color.Cyan
+        val DEFAULT_CLUSTER_RULE = emptyList<Int>()
+
+        const val DEFAULT_CIRCLE_VISIBLE = false
+        const val DEFAULT_CIRCLE_FILLED = true
+        val DEFAULT_CIRCLE_FILL_COLOR = null
+        val DEFAULT_CIRCLE_BORDER_COLOR = null
+        val DEFAULT_CIRCLE_RULE = emptyList<Int>()
+    }
 }
 
 private data class Indentation(val indentLevel: Int) {
@@ -107,7 +125,8 @@ private data class Indentation(val indentLevel: Int) {
 
     fun encodeCircle(f: Ddc.Token.Circle): String =
         encodeListItem(
-            "circle: ${f.circle}",
+            "!<Circle>",
+            encode("index", f.index),
             encode("x", f.x),
             encode("y", f.y),
             encode("r", f.r),
@@ -135,7 +154,8 @@ private data class Indentation(val indentLevel: Int) {
 
     fun encodeCluster(f: Ddc.Token.Cluster): String =
         encodeListItem(
-            "cluster: [${f.cluster.first()}, ${f.cluster.last()}]",
+            "!<Cluster>",
+            encode("indices", "[${f.indices.first()}, ${f.indices.last()}]"),
             encode("circles:"),
             *f.circles.map { down().encodeClusterCircle(it) }.toTypedArray(),
             encode("parts:"),

@@ -4,40 +4,42 @@ import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
-import utils.ColorAsCss
 import utils.ColorCssSerializer
 
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
 actual fun parseDdc(content: String): Ddc {
+
     fun <S : JsAny, T> JsArray<S>.map(f: (S) -> T): List<T> =
         (0 until length).map { f(get(it)!!) }
+
     fun JsString.parseColor(): Color =
         Json.decodeFromString(ColorCssSerializer, '"' + toString() + '"')
-    val jsDdc = loadYaml(content) as JsDdc
-    println("js parsed yaml: $jsDdc")
+
+    val yamlSettings = registerCustomTags()
+    val jsDdc = loadYaml(content, yamlSettings) as JsDdc
+    println("js-yaml parsed yaml successfully")
     val ddc = Ddc(
-        param1 = jsDdc.param1 ?: "abc",
+        param1 = jsDdc.param1 ?: Ddc.DEFAULT_PARAM1,
         content = jsDdc.content.map { jsFigure ->
             when {
                 isCircleObject(jsFigure) -> {
                     val jsCircle = jsFigure as JsCircleFigure
                     Ddc.Token.Circle(
-                        circle = jsCircle.circle,
+                        index = jsCircle.index,
                         x = jsCircle.x,
                         y = jsCircle.y,
                         r = jsCircle.r,
-                        visible = jsCircle.visible ?: false,
-                        filled = jsCircle.filled ?: true,
-                        fillColor = jsCircle.fillColor?.parseColor(),
-                        borderColor = jsCircle.borderColor?.parseColor(),
-                        rule = jsCircle.rule?.map { it.toInt() } ?: emptyList()
+                        visible = jsCircle.visible ?: Ddc.DEFAULT_CIRCLE_VISIBLE,
+                        filled = jsCircle.filled ?: Ddc.DEFAULT_CIRCLE_FILLED,
+                        fillColor = jsCircle.fillColor?.parseColor() ?: Ddc.DEFAULT_CIRCLE_FILL_COLOR,
+                        borderColor = jsCircle.borderColor?.parseColor() ?: Ddc.DEFAULT_CIRCLE_BORDER_COLOR,
+                        rule = jsCircle.rule?.map { it.toInt() } ?: Ddc.DEFAULT_CIRCLE_RULE
                     )
                 }
                 isClusterObject(jsFigure) -> {
                     val jsCluster = jsFigure as JsCluster
                     Ddc.Token.Cluster(
-                        cluster = jsCluster.cluster.map { it.toInt() },
+                        indices = jsCluster.indices.map { it.toInt() },
                         circles = jsCluster.circles.map {
                             Circle(it.x, it.y, it.r)
                         },
@@ -48,8 +50,8 @@ actual fun parseDdc(content: String): Ddc {
                                 fillColor = part.fillColor.parseColor()
                             )
                         },
-                        filled = jsCluster.filled ?: true,
-                        rule = jsCluster.rule?.map { it.toInt() } ?: emptyList()
+                        filled = jsCluster.filled ?: Ddc.DEFAULT_CLUSTER_FILLED,
+                        rule = jsCluster.rule?.map { it.toInt() } ?: Ddc.DEFAULT_CLUSTER_RULE
                     )
                 }
                 else -> throw IllegalArgumentException("Bad YAML: cannot parse \"$jsFigure\" as a Ddc.Figure")
@@ -59,11 +61,24 @@ actual fun parseDdc(content: String): Ddc {
     return ddc
 }
 
+fun registerCustomTags() {
+    val circleType = Type("!<Circle>", TypeParams())
+}
+
+fun _registerCustomTags(): YamlSettings =
+    js("""{
+    jsyaml = require('js-yaml');
+    const CircleType = jsyaml.Type("!<Circle>");
+    const ClusterType = jsyaml.Type("!<Cluster>");
+    const MY_SCHEMA = jsyaml.Schema.create([CircleType, ClusterType]);
+    return { "schema": MY_SCHEMA };
+    }""")
+
 fun isCircleObject(obj: JsAny): Boolean =
-    js("'circle' in obj")
+    js("'x' in obj")
 
 fun isClusterObject(obj: JsAny): Boolean =
-    js("'cluster' in obj")
+    js("'circles' in obj")
 
 typealias JsIntArray = JsArray<JsNumber>
 
@@ -75,7 +90,7 @@ external interface JsDdc : JsAny {
 external interface JsFigure : JsAny
 
 external interface JsCircleFigure : JsFigure {
-    val circle: Int
+    val index: Int
     val x: Double
     val y: Double
     val r: Double
@@ -87,7 +102,7 @@ external interface JsCircleFigure : JsFigure {
 }
 
 external interface JsCluster : JsFigure {
-    val cluster: JsIntArray
+    val indices: JsIntArray
     val circles: JsArray<JsCircle>
     val parts: JsArray<JsClusterPart>
     val filled: Boolean?

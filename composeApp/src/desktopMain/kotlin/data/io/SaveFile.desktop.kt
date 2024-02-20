@@ -16,7 +16,6 @@ import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import java.io.IOException
-import javax.swing.JFileChooser
 
 @Composable
 actual fun SaveFileButton(
@@ -87,7 +86,7 @@ private fun SaveFileDialog(
     onCloseRequest: (directory: String?, filename: String?) -> Unit
 ) = AwtWindow(
     create = {
-//        JFileChooser
+        // MAYBE: use JFileChooser instead
         object : FileDialog(parent, "Save this cluster", SAVE) {
             init {
                 directory = defaultDir
