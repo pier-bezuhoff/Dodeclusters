@@ -61,9 +61,21 @@ actual fun parseDdc(content: String): Ddc {
     return ddc
 }
 
-fun registerCustomTags() {
-    val circleType = Type("!<Circle>", TypeParams())
+fun registerCustomTags(): YamlSettings {
+    val circleType = Type("!<Circle>", TypeParams().apply { kind = "map" } )
+    val clusterType = Type("!<Cluster>", TypeParams().apply { kind = "map" })
+    val array = JsArray<JsAny>()
+    array[0] = circleType
+    array[1] = clusterType
+    val customSchema = Schema.create(array)
+    return YamlSettings().apply { schema = customSchema }
 }
+
+fun TypeParams(): TypeParams =
+    js("{}")
+
+fun YamlSettings(): YamlSettings =
+    js("{}")
 
 fun _registerCustomTags(): YamlSettings =
     js("""{

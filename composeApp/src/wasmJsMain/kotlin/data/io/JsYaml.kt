@@ -10,18 +10,18 @@ external fun loadYaml(source: String, settings: YamlSettings?): JsAny
 
 external fun Type(tag: String, params: TypeParams?): JsAny
 
-external class TypeParams : JsAny {
-    val kind: JsString
+external interface TypeParams : JsAny {
+    var kind: String
 }
 
 external class Schema : JsAny {
     companion object {
-        fun create(types: JsArray<JsAny>)
+        fun create(types: JsArray<JsAny>): Schema
     }
 }
 
-external class YamlSettings : JsAny {
-    val schema: JsAny
+external interface YamlSettings : JsAny {
+    var schema: JsAny
 }
 
 @JsName("dump")
