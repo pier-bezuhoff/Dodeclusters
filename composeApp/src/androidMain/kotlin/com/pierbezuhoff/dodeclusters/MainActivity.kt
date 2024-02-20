@@ -2,7 +2,6 @@ package com.pierbezuhoff.dodeclusters
 
 import App
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,12 +14,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            App(ddcContent = catchExternalImplicitIntents())
+            App(ddcContent = getContentFromExternalImplicitIntent())
         }
     }
 
     /** check AndroidManifest for inputs */
-    private fun catchExternalImplicitIntents(): String? {
+    private fun getContentFromExternalImplicitIntent(): String? {
         var content: String? = null
         if (intent.action in setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT)) {
             intent.data?.let { uri ->

@@ -3,8 +3,10 @@ package data.io
 import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import utils.ColorCssSerializer
+import utils.ColorULongSerializer
 
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
 actual fun parseDdc(content: String): Ddc {
@@ -13,10 +15,15 @@ actual fun parseDdc(content: String): Ddc {
         (0 until length).map { f(get(it)!!) }
 
     fun JsString.parseColor(): Color =
-        Json.decodeFromString(ColorCssSerializer, '"' + toString() + '"')
+        try {
+            Json.decodeFromString(ColorCssSerializer, '"' + toString() + '"')
+        } catch (e: SerializationException) {
+            Json.decodeFromString(ColorULongSerializer, toString())
+        } catch (e: IllegalArgumentException) {
+            Json.decodeFromString(ColorULongSerializer, toString())
+        }
 
-//    val yamlSettings = registerCustomTags()
-    val jsDdc = loadYaml(content, null) as JsDdc
+    val jsDdc = loadYaml(content) as JsDdc
     println("js-yaml parsed yaml successfully")
     val ddc = Ddc(
         param1 = jsDdc.param1 ?: Ddc.DEFAULT_PARAM1,
@@ -61,42 +68,14 @@ actual fun parseDdc(content: String): Ddc {
     return ddc
 }
 
-fun registerCustomTags(): YamlSettings {
-    val circleType = Type("!<Circle>", TypeParams().apply { kind = "map" } )
-    val clusterType = Type("!<Cluster>", TypeParams().apply { kind = "map" })
-    val array = JsArray<JsAny>()
-    array[0] = circleType
-    array[1] = clusterType
-    val customSchema = Schema.create(array)
-    return YamlSettings().apply { schema = customSchema }
-}
-
-fun TypeParams(): TypeParams = js("{}")
-fun YamlSettings(): YamlSettings = js("{}")
-
-fun registerCustomTags1(): YamlSettings =
-    js("""{
-    const CircleType = Type("!<Circle>");
-    const ClusterType = Type("!<Cluster>");
-    const MY_SCHEMA = Schema.create([CircleType, ClusterType]);
-    return { "schema": MY_SCHEMA };
-    }""")
-
-fun registerCustomTags0(): YamlSettings =
-    js("""{
-    jsyaml = require('js-yaml');
-    const CircleType = jsyaml.Type("!<Circle>");
-    const ClusterType = jsyaml.Type("!<Cluster>");
-    const MY_SCHEMA = jsyaml.Schema.create([CircleType, ClusterType]);
-    return { "schema": MY_SCHEMA };
-    }""")
-
 fun isCircleObject(obj: JsAny): Boolean =
     js("'x' in obj")
 
 fun isClusterObject(obj: JsAny): Boolean =
     js("'circles' in obj")
 
+
+// DTO model
 typealias JsIntArray = JsArray<JsNumber>
 
 external interface JsDdc : JsAny {

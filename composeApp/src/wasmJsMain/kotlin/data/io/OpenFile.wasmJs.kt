@@ -44,7 +44,6 @@ fun queryFile(callback: (file: File?) -> Unit) {
     }
     input.setAttribute("style", "display: none") // this should work
     input.click()
-    // NOTE: apparently js-yaml is already in the yarn.lock, try using it
 }
 
 fun extractFileFromEvent(event: Event): File =

@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -29,5 +30,17 @@ object ColorCssSerializer : KSerializer<Color> {
         val s = decoder.decodeString()
         val colorInt = (s.trimStart('#')).toInt(16)
         return Color(color = colorInt).copy(alpha = 1f)
+    }
+}
+
+object ColorULongSerializer : KSerializer<Color> {
+    override val descriptor = ULong.serializer().descriptor
+
+    override fun serialize(encoder: Encoder, value: Color) {
+        encoder.encodeSerializableValue(ULong.serializer(), value.value)
+    }
+
+    override fun deserialize(decoder: Decoder): Color {
+        return Color(value = decoder.decodeSerializableValue(ULong.serializer()))
     }
 }

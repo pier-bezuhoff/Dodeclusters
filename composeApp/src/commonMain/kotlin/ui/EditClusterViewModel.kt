@@ -23,9 +23,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import utils.ColorAsCss
 import utils.angleDeg
 import utils.rotateBy
 import kotlin.math.absoluteValue
@@ -116,13 +114,11 @@ class EditClusterViewModel(
             circles.toList(), parts.toList()
         )
         return Ddc(cluster).encode()
-//        return Json.encodeToString(Ddc(cluster))
     }
 
     fun loadFromYaml(yaml: String) {
         try {
             val ddc = parseDdc(yaml)
-//            println(ddc)
             val cluster = ddc.content
                 .filterIsInstance<Ddc.Token.Cluster>()
                 .first()
