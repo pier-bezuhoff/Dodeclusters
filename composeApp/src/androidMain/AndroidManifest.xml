@@ -9,12 +9,15 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <application
-        android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
+        android:requestLegacyExternalStorage="true"
+        android:allowBackup="true"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
@@ -26,9 +29,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
-<!--                BUG: Google Drive doesn't suggest it as an app for .ddc, only .yaml -->
 <!--                <action android:name="android.intent.action.OPEN_DOCUMENT"/>-->
-<!--                <action android:name="android.intent.action.CHOOSER"/>-->
                 <action android:name="android.intent.action.EDIT" />
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -40,6 +41,7 @@
                 <data android:scheme="http"/>
                 <data android:mimeType="application/yaml"/>
                 <data android:mimeType="application/json"/>
+                <data android:mimeType="application/*"/>
                 <data android:pathPattern=".*" />
                 <data android:pathPattern=".*\\.*" />
                 <data android:pathPattern=".*\\..*\\.*" />
@@ -53,6 +55,7 @@
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.*" />
             </intent-filter>
             <intent-filter>
+                <action android:name="android.intent.action.EDIT" />
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -90,6 +93,7 @@
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ddc" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ddc" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ddc" />
+<!--            it's a christmas tree lol   -->
             </intent-filter>
         </activity>
     </application>
