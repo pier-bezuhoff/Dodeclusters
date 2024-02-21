@@ -33,12 +33,9 @@ Cluster = circles + union of intersections of some of these circles (their insid
   - move, scale & rotate clusters
   - change color, border color, fill/wireframe
   - re-order / sidebar layer-like interface
-* New cluster-based format to supersede `.ddu` (e.g. `.ddc`)
-  - JSON or YAML based, human readable/editable to an extent
-  - centered to (0,0)
-  - cluster indexing & separate circle indexing
-* other actions
+* Other
   - [x] history: undo + redo
+  - [x] New cluster-based format to supercede `.ddu`, YAML subset
   - [ ] read `.ddu`
   - [ ] maybe export as `.svg`
   - [ ] maybe add up/down/left/right arrow controls to temporarily fix the mobile browser issue

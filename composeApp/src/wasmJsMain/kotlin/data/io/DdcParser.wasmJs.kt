@@ -13,21 +13,35 @@ actual fun parseDdc(content: String): Ddc {
     fun <S : JsAny, T> JsArray<S>.map(f: (S) -> T): List<T> =
         (0 until length).map { f(get(it)!!) }
 
-    fun JsString.parseColor(): Color =
+    fun JsString.parseColor(): Color? =
         try {
             Json.decodeFromString(ColorCssSerializer, '"' + toString() + '"')
         } catch (e: Exception) {
             try {
                 Json.decodeFromString(ColorULongSerializer, toString())
             } catch (e: Exception) {
-                Color.Black
+                null
+            }
+        }
+
+    fun JsString?.parseShape(): Shape? =
+        this?.let {
+            try {
+                Shape.valueOf(toString())
+            } catch (e: Exception) {
+                null
             }
         }
 
     val jsDdc = loadYaml(content) as JsDdc
     println("js-yaml parsed yaml successfully")
     val ddc = Ddc(
-        param1 = jsDdc.param1 ?: Ddc.DEFAULT_PARAM1,
+        name = jsDdc.name ?: Ddc.DEFAULT_NAME,
+        backgroundColor = jsDdc.backgroundColor?.parseColor() ?: Ddc.DEFAULT_BACKGROUND_COLOR,
+        bestCenterX = jsDdc.bestCenterX ?: Ddc.DEFAULT_BEST_CENTER_X,
+        bestCenterY = jsDdc.bestCenterY ?: Ddc.DEFAULT_BEST_CENTER_Y,
+        shape = jsDdc.shape.parseShape() ?: Ddc.DEFAULT_SHAPE,
+        drawTrace = jsDdc.drawTrace ?: Ddc.DEFAULT_DRAW_TRACE,
         content = jsDdc.content.map { jsFigure ->
             when {
                 isCircleObject(jsFigure) -> {
@@ -55,14 +69,17 @@ actual fun parseDdc(content: String): Ddc {
                             Cluster.Part(
                                 insides = part.insides.map { it.toInt() }.toSet(),
                                 outsides = part.outsides.map { it.toInt() }.toSet(),
-                                fillColor = part.fillColor.parseColor()
+                                fillColor = part.fillColor.parseColor() ?: Ddc.DEFAULT_CLUSTER_FILL_COLOR,
+                                borderColor = part.borderColor?.parseColor() ?: Ddc.DEFAULT_CLUSTER_FILL_COLOR,
                             )
                         },
                         filled = jsCluster.filled ?: Ddc.DEFAULT_CLUSTER_FILLED,
                         rule = jsCluster.rule?.map { it.toInt() } ?: Ddc.DEFAULT_CLUSTER_RULE
                     )
                 }
-                else -> throw IllegalArgumentException("Bad YAML: cannot parse \"$jsFigure\" as a Ddc.Figure")
+                else -> {
+                    throw IllegalArgumentException("Bad YAML: cannot parse \"${jsonStringify(jsFigure)}\" as a Ddc.Figure")
+                }
             }
         }
     )
@@ -75,12 +92,20 @@ fun isCircleObject(obj: JsAny): Boolean =
 fun isClusterObject(obj: JsAny): Boolean =
     js("'circles' in obj")
 
+fun jsonStringify(obj: JsAny): String =
+    js("JSON.stringify(obj)")
 
-// DTO model
+
 typealias JsIntArray = JsArray<JsNumber>
 
+// DTO model
 external interface JsDdc : JsAny {
-    val param1: String?
+    val name: String?
+    val backgroundColor: JsString?
+    val bestCenterX: Float?
+    val bestCenterY: Float?
+    val shape: JsString?
+    val drawTrace: Boolean?
     val content: JsArray<JsFigure>
 }
 
@@ -116,4 +141,5 @@ external interface JsClusterPart : JsAny {
     val insides: JsIntArray
     val outsides: JsIntArray
     val fillColor: JsString
+    val borderColor: JsString?
 }

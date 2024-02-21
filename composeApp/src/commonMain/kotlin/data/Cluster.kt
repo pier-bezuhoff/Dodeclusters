@@ -22,8 +22,8 @@ data class Cluster(
         val outsides: Set<Int>,
         @Serializable(ColorCssSerializer::class)
         val fillColor: Color = Ddc.DEFAULT_CLUSTER_FILL_COLOR,
-//        @Serializable(ColorSerializer::class)
-//        val borderColor: Color,
+        @Serializable(ColorCssSerializer::class)
+        val borderColor: Color? = Ddc.DEFAULT_CLUSTER_BORDER_COLOR,
     ) {
         override fun toString(): String =
             "Cluster.Part(in = [${insides.joinToString()}],\nout = [${outsides.joinToString()}],\ncolor = $fillColor)"

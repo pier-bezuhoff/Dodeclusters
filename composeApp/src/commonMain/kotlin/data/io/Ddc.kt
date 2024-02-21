@@ -5,15 +5,22 @@ import data.Circle
 import data.Cluster
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import utils.ColorCssSerializer
 
 // MIME type: application/yaml
 // extension: idk, either .ddc or .yaml
-/** Dodeclusters' format `.ddc`. Aiming for a nicely-formatted, readable & extendable YAML subset */
+/** Dodeclusters' format. Aiming for a nicely-formatted, readable & extensible YAML subset */
 @Serializable
 data class Ddc(
-    val param1: String = DEFAULT_PARAM1,
+    val name: String = DEFAULT_NAME,
+    @Serializable(ColorCssSerializer::class)
+    val backgroundColor: Color = DEFAULT_BACKGROUND_COLOR,
+    val bestCenterX: Float? = DEFAULT_BEST_CENTER_X,
+    val bestCenterY: Float? = DEFAULT_BEST_CENTER_Y,
+    val shape: Shape = DEFAULT_SHAPE,
+    val drawTrace: Boolean = DEFAULT_DRAW_TRACE,
     val content: List<Token>,
 ) {
     constructor(cluster: Cluster) : this(
@@ -64,9 +71,14 @@ data class Ddc(
 
     fun encode(): String =
         with (Indentation(0)) {
-            val head = listOf(
+            val head = listOfNotNull(
                 "---",
-                encode("param1", param1),
+                encode("name", name),
+                encode("backgroundColor", Json.encodeToString(ColorCssSerializer, backgroundColor)),
+                encode("bestCenterX", bestCenterX.toString()),
+                encode("bestCenterY", bestCenterY.toString()),
+                encode("shape", Json.encodeToString(shape)),
+                encode("drawTrace", drawTrace.toString()),
                 encode("content:"),
             )
             val body = content.map {
@@ -80,11 +92,17 @@ data class Ddc(
         }
 
     companion object {
-        const val DEFAULT_PARAM1 = "abc"
+        const val DEFAULT_NAME = "cluster"
+        val DEFAULT_BACKGROUND_COLOR = Color.White
+        val DEFAULT_BEST_CENTER_X: Float? = null
+        val DEFAULT_BEST_CENTER_Y: Float? = null
+        val DEFAULT_SHAPE = Shape.CIRCLE
+        const val DEFAULT_DRAW_TRACE = true
 
         const val DEFAULT_CLUSTER_FILLED = true
         const val DEFAULT_CLUSTER_VISIBLE = true
         val DEFAULT_CLUSTER_FILL_COLOR = Color.Cyan
+        val DEFAULT_CLUSTER_BORDER_COLOR: Color? = null
         val DEFAULT_CLUSTER_RULE = emptyList<Int>()
 
         const val DEFAULT_CIRCLE_VISIBLE = false
@@ -149,7 +167,7 @@ private data class Indentation(val indentLevel: Int) {
             "insides: " + encodeIntSequence(part.insides.sorted()),
             encode("outsides", encodeIntSequence(part.outsides.sorted())),
             encodeOptional("fillColor", part.fillColor.encodeColor()),
-//            encodeOptional("borderColor", part.borderColor?.encodeColor()),
+            encodeOptional("borderColor", part.borderColor?.encodeColor()),
         )
 
     fun encodeCluster(f: Ddc.Token.Cluster): String =
@@ -167,4 +185,10 @@ private data class Indentation(val indentLevel: Int) {
     companion object {
         const val SINGLE_INDENT = "  "
     }
+}
+
+@Serializable
+/** Shapes to draw instead of circles */
+enum class Shape {
+    CIRCLE, SQUARE, CROSS, VERTICAL_BAR, HORIZONTAL_BAR;
 }
