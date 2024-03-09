@@ -4,7 +4,7 @@ Vector image editor using only circles (WIP)
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform), targeting
 - [x] Desktop (Windows, Linux)
 - [x] Android 7.0+ (SDK 24+)
-- [x] Web (via WASM; _doesn't work on mobile_ yet because of the [panning issue](https://github.com/JetBrains/compose-multiplatform/issues/3491))
+- [x] Web (via [Wasm](#Web-Wasm-compatibility))
 - [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries)
 
 ## Installation
@@ -71,7 +71,7 @@ output directory: `composeApp/build/dist/wasmJs/productionExecutable/`
 output directory: `composeApp/build/outputs/apk/debug/`
 
 
-## Web (Wasm) compatibility
+## Web Wasm compatibility
 
 To run applications built with Kotlin/Wasm in a browser, you need a browser supporting [wasm garbage collection feature](https://github.com/WebAssembly/gc):  
 - For **Chrome** and **Chromium-based** browsers (Edge, Brave etc.), it **should just work** since version 119.
@@ -80,5 +80,6 @@ To run applications built with Kotlin/Wasm in a browser, you need a browser supp
   1. Open `about:config` in the browser.
   2. Enable **javascript.options.wasm_gc**.
   3. Refresh the page.  
+- For **Safari** it is _NOT_ implemented as of now (March 2024)
 
 For more information see https://kotl.in/wasm_help/.
