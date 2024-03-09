@@ -11,7 +11,7 @@ class ClusterRepository {
         onLoaded: (json: String?) -> Unit
     ) {
         if (sampleIndex in SAMPLE_PATHS.indices) {
-            val r = Res.readBytes(SAMPLE_PATHS[sampleIndex])
+            val r =  Res.readBytes(SAMPLE_PATHS[sampleIndex])
             val json = r.decodeToString()
             onLoaded(json)
         } else {
@@ -20,6 +20,6 @@ class ClusterRepository {
     }
 
     companion object {
-        val SAMPLE_PATHS = listOf("samples/m-portrait.ddc")
+        val SAMPLE_PATHS = listOf("files/m-portrait.ddc")
     }
 }

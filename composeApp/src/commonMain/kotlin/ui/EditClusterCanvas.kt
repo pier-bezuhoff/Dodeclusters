@@ -35,8 +35,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import data.Circle
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
 import kotlin.math.max
 
 @OptIn(ExperimentalResourceApi::class)
@@ -63,14 +65,7 @@ fun EditClusterCanvas(
 //    val deleteIcon = painterResource("icons/cancel.xml")
     val deleteIcon = rememberVectorPainter(Icons.Default.Delete)
     val deleteIconTint = Color.Red
-//    val rotateIcon = painterResource("drawable/rotate_counterclockwise.xml")
-    val rotateIcon = object : Painter() {
-        override val intrinsicSize: Size
-            get() = Size(10f,10f)
-
-        override fun DrawScope.onDraw() {
-        }
-    }
+    val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
     val rotateIconTint = Color(0f, 0.5f, 0f)
     val rotationIndicatorRadius = handleRadius * 3/4
     val rotationIndicatorColor = Color.Green.copy(alpha = 0.5f)
