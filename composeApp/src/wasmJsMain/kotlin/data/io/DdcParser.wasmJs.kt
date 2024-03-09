@@ -86,12 +86,15 @@ actual fun parseDdc(content: String): Ddc {
     return ddc
 }
 
+@Suppress("UNUSED_PARAMETER")
 fun isCircleObject(obj: JsAny): Boolean =
     js("'x' in obj")
 
+@Suppress("UNUSED_PARAMETER")
 fun isClusterObject(obj: JsAny): Boolean =
     js("'circles' in obj")
 
+@Suppress("UNUSED_PARAMETER")
 fun jsonStringify(obj: JsAny): String =
     js("JSON.stringify(obj)")
 

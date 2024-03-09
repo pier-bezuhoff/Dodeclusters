@@ -2,7 +2,8 @@
 dodeclusters-versionCode = "1"
 dodeclusters-version = "0.1.6"
 
-agp = "8.2.1"
+#noinspection GradleDependency
+agp = "8.2.1" # latest compatible with this Android Studio version
 android-compileSdk = "34"
 android-minSdk = "24" # = Android 7.0 Nougat
 android-targetSdk = "34"
@@ -14,10 +15,11 @@ androidx-espresso-core = "3.5.1"
 androidx-material = "1.11.0"
 androidx-test-junit = "1.1.5"
 kotlinx-serialization = "1.6.2"
-compose = "1.5.4"
-compose-compiler = "1.5.6"
-compose-plugin = "1.6.0-alpha01"
-material3 = "1.1.2"
+compose = "1.6.3"
+compose-compiler = "1.5.10"
+compose-plugin = "1.6.0"
+#noinspection GradleDependency
+material3 = "1.1.2" # unused so far
 junit = "4.13.2"
 colormath = "3.4.0"
 kaml = "0.57.0"

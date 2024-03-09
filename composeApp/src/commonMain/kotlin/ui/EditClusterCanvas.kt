@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,9 +34,9 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import data.Circle
+import dodeclusters.composeapp.generated.resources.Res
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
-import org.jetbrains.compose.resources.painterResource
 import kotlin.math.max
 
 @OptIn(ExperimentalResourceApi::class)
@@ -65,9 +63,16 @@ fun EditClusterCanvas(
 //    val deleteIcon = painterResource("icons/cancel.xml")
     val deleteIcon = rememberVectorPainter(Icons.Default.Delete)
     val deleteIconTint = Color.Red
-    val rotateIcon = painterResource("icons/rotate_counterclockwise.xml")
+//    val rotateIcon = painterResource("drawable/rotate_counterclockwise.xml")
+    val rotateIcon = object : Painter() {
+        override val intrinsicSize: Size
+            get() = Size(10f,10f)
+
+        override fun DrawScope.onDraw() {
+        }
+    }
     val rotateIconTint = Color(0f, 0.5f, 0f)
-    val rotationIndicatorRaidus = handleRadius * 3/4
+    val rotationIndicatorRadius = handleRadius * 3/4
     val rotationIndicatorColor = Color.Green.copy(alpha = 0.5f)
 
     val backgroundColor = Color.White
@@ -120,7 +125,7 @@ fun EditClusterCanvas(
                 drawCircles(viewModel, circleColor, circleStroke)
             drawParts(viewModel, clusterPathAlpha, circleStroke)
             drawCreationPrototypes(viewModel, handleRadius, circleStroke, strokeWidth)
-            drawHandles(viewModel, selectionMarkingsColor, scaleHandleColor, deleteIconTint, rotateIconTint, rotationIndicatorColor, rotationIndicatorRaidus, handleRadius, iconDim, deleteIcon, rotateIcon, dottedStroke)
+            drawHandles(viewModel, selectionMarkingsColor, scaleHandleColor, deleteIconTint, rotateIconTint, rotationIndicatorColor, rotationIndicatorRadius, handleRadius, iconDim, deleteIcon, rotateIcon, dottedStroke)
         }
     }
 }

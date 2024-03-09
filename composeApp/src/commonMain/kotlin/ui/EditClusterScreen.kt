@@ -30,6 +30,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
@@ -41,7 +42,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -54,6 +58,7 @@ import data.io.SaveFileButton
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import ui.IconPainter.draw
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 
@@ -101,6 +106,16 @@ fun EditClusterScreen(
     }
 }
 
+private object IconPainter : Painter() {
+    val icon = Icons.Default.Add
+    override val intrinsicSize: Size
+        get() = Size(icon.viewportWidth, icon.viewportHeight)
+
+    override fun DrawScope.onDraw() {
+    }
+}
+private fun painterResource(s: String): Painter = IconPainter
+
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterTopBar(viewModel: EditClusterViewModel) {
@@ -112,22 +127,22 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
 //            }
         },
         actions = {
-            SaveFileButton(painterResource("icons/save.xml"), "Save",
+            SaveFileButton(painterResource("drawable/save.xml"), "Save",
                 saveDataProvider = { SaveData(
                     "cluster", "yml", viewModel.saveAsYaml()) }
             ) {
                 println(if (it) "saved" else "not saved")
             }
-            OpenFileButton(painterResource("icons/open_file.xml"), "Open file") { content ->
+            OpenFileButton(painterResource("drawable/open_file.xml"), "Open file") { content ->
                 content?.let {
                     viewModel.loadFromYaml(content)
                 }
             }
             IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
-                Icon(painterResource("icons/undo.xml"), contentDescription = "Undo")
+                Icon(painterResource("drawable/undo.xml"), contentDescription = "Undo")
             }
             IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
-                Icon(painterResource("icons/redo.xml"), contentDescription = "Redo")
+                Icon(painterResource("drawable/redo.xml"), contentDescription = "Redo")
             }
 //            IconButton(onClick = viewModel::cancelAndGoBack) {
 //                Icon(Icons.Default.Close, contentDescription = "Cancel")
@@ -144,20 +159,20 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
         ModeToggle(
             SelectionMode.Drag,
             viewModel,
-            painterResource("icons/drag_mode_1_circle.xml"),
+            painterResource("drawable/drag_mode_1_circle.xml"),
             contentDescription = "drag mode",
         )
         // MAYBE: select regions within multiselect
         ModeToggle(
             SelectionMode.Multiselect,
             viewModel,
-            painterResource("icons/multiselect_mode_3_scattered_circles.xml"),
+            painterResource("drawable/multiselect_mode_3_scattered_circles.xml"),
             contentDescription = "multiselect mode",
         )
         ModeToggle(
             SelectionMode.SelectRegion,
             viewModel,
-            painterResource("icons/select_region_mode_intersection.xml"),
+            painterResource("drawable/select_region_mode_intersection.xml"),
             contentDescription = "select region mode",
         )
         Divider( // modes <-> tools divider
@@ -168,7 +183,7 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
         )
         BinaryToggle(
             viewModel.showCircles,
-            painterResource("icons/visible.xml"), painterResource("icons/invisible.xml"),
+            painterResource("drawable/visible.xml"), painterResource("drawable/invisible.xml"),
             "make circles invisible"
         ) {
             viewModel.showCircles = !viewModel.showCircles
@@ -177,8 +192,8 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
         IconButton(onClick = {
             showColorPickerDialog = true
         }) {
-            Icon(painterResource("icons/palette.xml"), contentDescription = "choose color")
-            Icon(painterResource("icons/rounded_square.xml"), contentDescription = "current color",
+            Icon(painterResource("drawable/palette.xml"), contentDescription = "choose color")
+            Icon(painterResource("drawable/rounded_square.xml"), contentDescription = "current color",
                 Modifier.size(56.dp), // nantoka nare (icon size should be 48.dp)
                 tint = viewModel.regionColor
             )
@@ -197,7 +212,7 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
             onClick = viewModel::copyCircles,
             enabled = viewModel.copyAndDeleteAreEnabled
         ) {
-            Icon(painterResource("icons/copy.xml"), contentDescription = "copy circle(s)")
+            Icon(painterResource("drawable/copy.xml"), contentDescription = "copy circle(s)")
         }
         IconButton(
             onClick = viewModel::deleteCircles,
@@ -211,11 +226,11 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
         }
         ModeToggle<CreationMode.CircleByCenterAndRadius>(
             CreationMode.CircleByCenterAndRadius.Center(), viewModel,
-            painterResource("icons/center.xml"), "circle by center & radius",
+            painterResource("drawable/center.xml"), "circle by center & radius",
         )
         ModeToggle<CreationMode.CircleBy3Points>(
             CreationMode.CircleBy3Points(), viewModel,
-            painterResource("icons/circle_3_points.xml"), "circle by 3 points"
+            painterResource("drawable/circle_3_points.xml"), "circle by 3 points"
         )
 //        IconButton(onClick = viewModel::createNewCircle) {
 //            Icon(Icons.Default.AddCircle, contentDescription = "create new circle")
@@ -381,7 +396,7 @@ fun ColorPickerDialog(
                         border = BorderStroke(2.dp, MaterialTheme.colors.primary),
                         shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
                     ) {
-                        Icon(painterResource("icons/cancel.xml"), "cancel")
+                        Icon(painterResource("drawable/cancel.xml"), "cancel")
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                         Text("Cancel", fontSize = 24.sp)
                     }
@@ -391,7 +406,7 @@ fun ColorPickerDialog(
                         border = BorderStroke(2.dp, MaterialTheme.colors.primary),
                         shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
                     ) {
-                        Icon(painterResource("icons/confirm.xml"), "confirm")
+                        Icon(painterResource("drawable/confirm.xml"), "confirm")
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                         Text("OK", fontSize = 24.sp)
                     }

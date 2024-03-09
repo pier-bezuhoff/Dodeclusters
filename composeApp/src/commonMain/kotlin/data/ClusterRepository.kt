@@ -1,7 +1,7 @@
 package data
 
+import dodeclusters.composeapp.generated.resources.Res
 import org.jetbrains.compose.resources.ExperimentalResourceApi
-import org.jetbrains.compose.resources.resource
 
 class ClusterRepository {
 
@@ -11,8 +11,8 @@ class ClusterRepository {
         onLoaded: (json: String?) -> Unit
     ) {
         if (sampleIndex in SAMPLE_PATHS.indices) {
-            val r = resource(SAMPLE_PATHS[sampleIndex])
-            val json = r.readBytes().decodeToString()
+            val r = Res.readBytes(SAMPLE_PATHS[sampleIndex])
+            val json = r.decodeToString()
             onLoaded(json)
         } else {
             onLoaded(null)

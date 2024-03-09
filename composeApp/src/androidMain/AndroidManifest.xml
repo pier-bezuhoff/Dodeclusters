@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="auto">
     <supports-screens
         android:smallScreens="true"
@@ -95,6 +96,11 @@
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ddc" />
 <!--            it's a christmas tree lol   -->
             </intent-filter>
+<!--            <intent-filter>-->
+<!--                <data-->
+<!--                    android:scheme="https"-->
+<!--                    android:host="pier-bezuhoff.github.io"/>-->
+<!--            </intent-filter>-->
         </activity>
     </application>
 
