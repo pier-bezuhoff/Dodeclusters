@@ -5,7 +5,7 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
 - [x] Desktop (Windows, Linux)
 - [x] Android 7.0+ (SDK 24+)
 - [x] Web (via [Wasm](#Web-Wasm-compatibility))
-- [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries)
+- [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries), for now only works as a web app thru Chrome/Firefox
 
 ## Installation
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  

@@ -12,7 +12,7 @@ class ClusterRepository {
     ) {
         if (sampleIndex in SAMPLE_PATHS.indices) {
             val r =  Res.readBytes(SAMPLE_PATHS[sampleIndex])
-            val json = r.decodeToString()
+            val json = r.decodeToString() // why is it json and not yaml btw?
             onLoaded(json)
         } else {
             onLoaded(null)
