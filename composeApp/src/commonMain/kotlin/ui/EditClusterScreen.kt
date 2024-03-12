@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +24,7 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.IconToggleButton
 import androidx.compose.material.LocalContentAlpha
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Scaffold
@@ -32,8 +34,10 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.primarySurface
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +46,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.painter.Painter
@@ -95,15 +101,18 @@ fun EditClusterScreen(
     val scaffoldState = rememberScaffoldState()
     Scaffold(
         scaffoldState = scaffoldState,
-        topBar = {
-            EditClusterTopBar(viewModel)
-        },
-        bottomBar = {
-            EditClusterBottomBar(viewModel)
-        },
+//        topBar = {
+//            EditClusterTopBar(viewModel)
+//        },
+//        bottomBar = {
+//        },
     ) { inPaddings ->
         Surface {
-            EditClusterCanvas(viewModel, Modifier.padding(inPaddings))
+            Box {
+                EditClusterCanvas(viewModel)//, Modifier.padding(inPaddings))
+                EditClusterTopBar(viewModel)
+                EditClusterBottomBar(viewModel, modifier = Modifier.align(Alignment.BottomCenter))
+            }
         }
     }
 
@@ -125,121 +134,155 @@ fun EditClusterScreen(
 @Composable
 fun EditClusterTopBar(viewModel: EditClusterViewModel) {
     TopAppBar(
-        title = { Text("Edit cluster") },
+        title = { Text("Edit cluster", color = MaterialTheme.colors.onPrimary) },
         navigationIcon = {
 //            IconButton(onClick = viewModel::saveAndGoBack) {
 //                Icon(Icons.Default.Done, contentDescription = "Done")
 //            }
         },
         actions = {
-            SaveFileButton(painterResource(Res.drawable.save), "Save",
-                saveDataProvider = { SaveData(
-                    "cluster", "yml", viewModel.saveAsYaml()) }
+            CompositionLocalProvider(
+                LocalContentAlpha provides 1f,
+                LocalContentColor provides Color.White
             ) {
-                println(if (it) "saved" else "not saved")
-            }
-            OpenFileButton(painterResource(Res.drawable.open_file), "Open file") { content ->
-                content?.let {
-                    viewModel.loadFromYaml(content)
+                SaveFileButton(painterResource(Res.drawable.save), "Save",
+                    saveDataProvider = { SaveData(
+                        "cluster", "yml", viewModel.saveAsYaml()) }
+                ) {
+                    println(if (it) "saved" else "not saved")
                 }
-            }
-            IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
-                Icon(painterResource(Res.drawable.undo), contentDescription = "Undo")
-            }
-            IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
-                Icon(painterResource(Res.drawable.redo), contentDescription = "Redo")
-            }
+                OpenFileButton(painterResource(Res.drawable.open_file), "Open file") { content ->
+                    content?.let {
+                        viewModel.loadFromYaml(content)
+                    }
+                }
+                IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
+                    Icon(painterResource(Res.drawable.undo), contentDescription = "Undo")
+                }
+                IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
+                    Icon(painterResource(Res.drawable.redo), contentDescription = "Redo")
+                }
 //            IconButton(onClick = viewModel::cancelAndGoBack) {
 //                Icon(Icons.Default.Close, contentDescription = "Cancel")
 //            }
-        }
+            }
+        },
+        modifier = Modifier.background(
+            Brush.verticalGradient(
+                0f to MaterialTheme.colors.primarySurface, //Color.Cyan.copy(alpha = 0.8f),
+                1f to MaterialTheme.colors.primarySurface.copy(alpha = 0.8f) //Color(0x00BEB2).copy(alpha = 0.8f)
+            )
+        ),
+        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.1f), //Color.Transparent,
+//        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.8f), //Color.Blue.copy(alpha = 0.8f),
+        elevation = 0.dp,
     )
 }
 
 // TODO: can overflow on mobile, make it scrollable LazyRow or smth
 @OptIn(ExperimentalResourceApi::class)
 @Composable
-fun EditClusterBottomBar(viewModel: EditClusterViewModel) {
-    BottomAppBar {
-        ModeToggle(
-            SelectionMode.Drag,
-            viewModel,
-            painterResource(Res.drawable.drag_mode_1_circle),
-            contentDescription = "drag mode",
-        )
-        // MAYBE: select regions within multiselect
-        ModeToggle(
-            SelectionMode.Multiselect,
-            viewModel,
-            painterResource(Res.drawable.multiselect_mode_3_scattered_circles),
-            contentDescription = "multiselect mode",
-        )
-        ModeToggle(
-            SelectionMode.SelectRegion,
-            viewModel,
-            painterResource(Res.drawable.select_region_mode_intersection),
-            contentDescription = "select region mode",
-        )
-        Divider( // modes <-> tools divider
-            Modifier
-                .padding(8.dp)
-                .fillMaxHeight()
-                .width(4.dp)
-        )
-        BinaryToggle(
-            viewModel.showCircles,
-            painterResource(Res.drawable.visible), painterResource(Res.drawable.invisible),
-            "make circles invisible"
-        ) {
-            viewModel.showCircles = !viewModel.showCircles
-        }
-        var showColorPickerDialog by remember { mutableStateOf(false) }
-        IconButton(onClick = {
-            showColorPickerDialog = true
-        }) {
-            Icon(painterResource(Res.drawable.palette), contentDescription = "choose color")
-            Icon(painterResource(Res.drawable.rounded_square), contentDescription = "current color",
-                Modifier.size(56.dp), // nantoka nare (icon size should be 48.dp)
-                tint = viewModel.regionColor
+fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = Modifier) {
+    BottomAppBar(
+        modifier = modifier.background(
+            Brush.verticalGradient(
+                0f to MaterialTheme.colors.primarySurface.copy(alpha = 0.8f), //Color(0x00BEB2).copy(alpha = 0.8f)
+                1f to MaterialTheme.colors.primarySurface, //Color.Cyan.copy(alpha = 0.8f),
             )
-        }
-        if (showColorPickerDialog)
-            ColorPickerDialog(
-                initialColor = viewModel.regionColor,
-                onDismissRequest = { showColorPickerDialog = false },
-                onConfirmation = { newColor ->
-                    showColorPickerDialog = false
-                    viewModel.regionColor = newColor
-                    viewModel.switchSelectionMode(SelectionMode.SelectRegion, noAlteringShortcuts = true)
-                }
+        ),
+        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.1f), //Color.Transparent,
+//        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.8f), //Color.Blue.copy(alpha = 0.8f),
+        elevation = 0.dp,
+    ) {
+        CompositionLocalProvider(
+            LocalContentAlpha provides 1f,
+            LocalContentColor provides Color.White,
+            ) {
+            ModeToggle(
+                SelectionMode.Drag,
+                viewModel,
+                painterResource(Res.drawable.drag_mode_1_circle),
+                contentDescription = "drag mode",
             )
-        IconButton(
-            onClick = viewModel::copyCircles,
-            enabled = viewModel.copyAndDeleteAreEnabled
-        ) {
-            Icon(painterResource(Res.drawable.copy), contentDescription = "copy circle(s)")
-        }
-        IconButton(
-            onClick = viewModel::deleteCircles,
-            enabled = viewModel.copyAndDeleteAreEnabled,
-        ) {
-            Icon(
-                Icons.Default.Delete,
-                tint = Color(1f, 0.5f, 0.5f).copy(alpha = LocalContentAlpha.current),
-                contentDescription = "delete circle(s)"
+            // MAYBE: select regions within multiselect
+            ModeToggle(
+                SelectionMode.Multiselect,
+                viewModel,
+                painterResource(Res.drawable.multiselect_mode_3_scattered_circles),
+                contentDescription = "multiselect mode",
             )
-        }
-        ModeToggle<CreationMode.CircleByCenterAndRadius>(
-            CreationMode.CircleByCenterAndRadius.Center(), viewModel,
-            painterResource(Res.drawable.center), "circle by center & radius",
-        )
-        ModeToggle<CreationMode.CircleBy3Points>(
-            CreationMode.CircleBy3Points(), viewModel,
-            painterResource(Res.drawable.circle_3_points), "circle by 3 points"
-        )
+            ModeToggle(
+                SelectionMode.SelectRegion,
+                viewModel,
+                painterResource(Res.drawable.select_region_mode_intersection),
+                contentDescription = "select region mode",
+            )
+            Divider( // modes <-> tools divider
+                Modifier
+                    .padding(8.dp)
+                    .fillMaxHeight()
+                    .width(4.dp)
+            )
+            BinaryToggle(
+                viewModel.showCircles,
+                painterResource(Res.drawable.visible), painterResource(Res.drawable.invisible),
+                "make circles invisible"
+            ) {
+                viewModel.showCircles = !viewModel.showCircles
+            }
+            var showColorPickerDialog by remember { mutableStateOf(false) }
+            IconButton(onClick = {
+                showColorPickerDialog = true
+            }) {
+                Icon(painterResource(Res.drawable.palette), contentDescription = "choose color")
+                Icon(
+                    painterResource(Res.drawable.rounded_square),
+                    contentDescription = "current color",
+                    Modifier.size(56.dp), // nantoka nare (icon size should be 48.dp)
+                    tint = viewModel.regionColor
+                )
+            }
+            if (showColorPickerDialog)
+                ColorPickerDialog(
+                    initialColor = viewModel.regionColor,
+                    onDismissRequest = { showColorPickerDialog = false },
+                    onConfirmation = { newColor ->
+                        showColorPickerDialog = false
+                        viewModel.regionColor = newColor
+                        viewModel.switchSelectionMode(
+                            SelectionMode.SelectRegion,
+                            noAlteringShortcuts = true
+                        )
+                    }
+                )
+            IconButton(
+                onClick = viewModel::copyCircles,
+                enabled = viewModel.copyAndDeleteAreEnabled
+            ) {
+                Icon(painterResource(Res.drawable.copy), contentDescription = "copy circle(s)")
+            }
+            IconButton(
+                onClick = viewModel::deleteCircles,
+                enabled = viewModel.copyAndDeleteAreEnabled,
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    tint = Color(1f, 0.5f, 0.5f).copy(alpha = LocalContentAlpha.current),
+                    contentDescription = "delete circle(s)"
+                )
+            }
+            ModeToggle<CreationMode.CircleByCenterAndRadius>(
+                CreationMode.CircleByCenterAndRadius.Center(), viewModel,
+                painterResource(Res.drawable.center), "circle by center & radius",
+            )
+            ModeToggle<CreationMode.CircleBy3Points>(
+                CreationMode.CircleBy3Points(), viewModel,
+                painterResource(Res.drawable.circle_3_points), "circle by 3 points"
+            )
 //        IconButton(onClick = viewModel::createNewCircle) {
 //            Icon(Icons.Default.AddCircle, contentDescription = "create new circle")
 //        }
+        }
     }
 }
 
