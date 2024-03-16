@@ -1,6 +1,7 @@
 package utils
 
 import androidx.compose.ui.geometry.Offset
+import kotlin.jvm.JvmName
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -45,3 +46,18 @@ fun Offset.angleSin(other: Offset): Double {
 
 fun Offset.toComplex(): Complex =
     Complex(x, y)
+
+@JvmName("averageOfOffset") fun Iterable<Offset>.average(): Offset {
+    var n = 0
+    var sumX = 0f
+    var sumY = 0f
+    for ((x, y) in this) {
+        n += 1
+        sumX += x
+        sumY += y
+    }
+    return if (n == 0)
+        Offset.Zero
+    else
+        Offset(sumX/n, sumY/n)
+}

@@ -1,5 +1,6 @@
 package data.io
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
@@ -64,6 +65,8 @@ data class Ddc(
             val borderColor: Color? = DEFAULT_CIRCLE_BORDER_COLOR,
             val rule: List<Int> = DEFAULT_CIRCLE_RULE,
         ) : Token() {
+            val offset: Offset
+                get() = Offset(x.toFloat(), y.toFloat())
             fun toCircle(): data.Circle =
                 Circle(x, y, radius)
         }
