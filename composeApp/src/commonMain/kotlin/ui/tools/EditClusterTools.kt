@@ -26,6 +26,7 @@ sealed interface EditClusterTool : Tool {
         override val description = "Copy selected circles and then select the copies"
         override val iconResource = IconResource.AsImageVector(Icons.Default.Delete)
     }
+    // MAYBE: add partial argument icon(s)
     data object ConstructCircleByCenterAndRadius : Tool.MultiArg2<InputType.AnyPoint, InputType.AnyPoint>, EditClusterTool {
         override val name = "Circle by center and radius"
         override val description = "Construct a circle by its center and radius point"
