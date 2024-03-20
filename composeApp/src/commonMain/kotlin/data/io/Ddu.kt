@@ -9,7 +9,6 @@ import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import utils.average
 import kotlin.math.roundToInt
@@ -129,7 +128,7 @@ class Ddu(
         private const val NORMAL_PREVIEW_SIZE = 300 // with this preview_size preview_scale was tuned
         private const val PREVIEW_SCALE = 0.5f
 
-//        suspend fun fromStream(stream: InputStream): Ddu = withContext(Dispatchers.IO) {
+//        suspend fun fromStream(stream: InputStream): Ddu = withContext(Dispatchers.Default) {
 //            DduReader(stream.reader()).read()
 //        }
 
@@ -227,7 +226,7 @@ private class DduReader(private val reader: () -> Iterable<String>) {
     private var nOfLine: Long = 0
 
     suspend fun read(): Ddu =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             reader().map { line: String ->
                 nOfLine++
                 trimmedLine = line.trim()
@@ -365,7 +364,7 @@ private class DduWriter(private val ddu: Ddu) {
 
     @Throws(IncompatibleFormatException::class)
     suspend fun write(stringBuilder: StringBuilder) {
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             this@DduWriter.stringBuilder = stringBuilder
             writeLine(HEADER)
             legacyGlobals.forEach { writeLegacyGlobal(it) }
@@ -382,7 +381,7 @@ private class DduWriter(private val ddu: Ddu) {
 
     suspend fun writeForDodecaLook(stringBuilder: StringBuilder) {
         // MAYBE: abstract DduWriter + 2 impl-s
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             this@DduWriter.stringBuilder = stringBuilder
             writeLine(DODECA_LOOK_HEADER)
             legacyGlobals.forEach { writeLegacyGlobal(it) }

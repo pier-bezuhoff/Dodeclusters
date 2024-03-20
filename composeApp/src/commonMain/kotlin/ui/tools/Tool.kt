@@ -3,7 +3,7 @@ package ui.tools
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.jetbrains.compose.resources.DrawableResource
 
-interface Tool {
+sealed interface Tool {
     val name: String
     val iconResource: IconResource
     val description: String // MAYBE: R.string.id instead
