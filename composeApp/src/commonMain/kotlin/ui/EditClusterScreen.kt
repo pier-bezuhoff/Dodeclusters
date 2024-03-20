@@ -92,7 +92,7 @@ fun EditClusterScreen(
     val coroutineScope = rememberCoroutineScope()
     val clusterRepository = remember { ClusterRepository() }
     val saver = remember { EditClusterViewModel.Saver(coroutineScope) }
-    // test bg kills more
+    // TODO: test bg kills more
     val viewModel = rememberSaveable(saver = saver) {
         EditClusterViewModel.UiState.restore(coroutineScope, EditClusterViewModel.UiState.DEFAULT)
     }
@@ -167,14 +167,14 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
 //            }
             }
         },
+        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.1f), //Color.Transparent,
+//        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.8f), //Color.Blue.copy(alpha = 0.8f),
         modifier = Modifier.background(
             Brush.verticalGradient(
                 0f to MaterialTheme.colors.primarySurface, //Color.Cyan.copy(alpha = 0.8f),
                 1f to MaterialTheme.colors.primarySurface.copy(alpha = 0.8f) //Color(0x00BEB2).copy(alpha = 0.8f)
             )
         ),
-        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.1f), //Color.Transparent,
-//        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.8f), //Color.Blue.copy(alpha = 0.8f),
         elevation = 0.dp,
     )
 }

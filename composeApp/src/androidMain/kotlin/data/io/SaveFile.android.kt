@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -28,23 +29,25 @@ actual fun SaveFileButton(
 //        contract = ActivityResultContracts.CreateDocument("*/*")
         contract = ActivityResultContracts.CreateDocument("application/yaml")
     ) { uri ->
-        try {
-            uri?.let {
-                context.contentResolver.openFileDescriptor(uri, "w")?.use { parcelFileDescriptor ->
-                    FileOutputStream(parcelFileDescriptor.fileDescriptor).use { outputStream ->
-                        val saveData = saveDataProvider()
-                        outputStream.write(saveData.content.toByteArray())
-                        onSaved(true)
-                    }
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                uri?.let {
+                    context.contentResolver.openFileDescriptor(uri, "w")?.use { parcelFileDescriptor ->
+                        FileOutputStream(parcelFileDescriptor.fileDescriptor).use { outputStream ->
+                            val saveData = saveDataProvider()
+                            outputStream.write(saveData.content.toByteArray())
+                            onSaved(true)
+                        }
+                    } ?: onSaved(false)
                 } ?: onSaved(false)
-            } ?: onSaved(false)
-        } catch (e: IOException) {
-            e.printStackTrace()
-            onSaved(false)
+            } catch (e: IOException) {
+                e.printStackTrace()
+                onSaved(false)
 
-        } catch (e: FileNotFoundException) {
-            e.printStackTrace()
-            onSaved(false)
+            } catch (e: FileNotFoundException) {
+                e.printStackTrace()
+                onSaved(false)
+            }
         }
     }
     IconButton(onClick = {
