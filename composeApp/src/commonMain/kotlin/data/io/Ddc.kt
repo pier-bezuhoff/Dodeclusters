@@ -43,8 +43,10 @@ data class Ddc(
             /** 2 value list: [[first circle index, last circle index]] */
             val indices: List<Int>,
             val circles: List<data.Circle>,
+            /** circle indices used parts shall be Ddc-global circle indices, the one consistent with cluster.indices */
             val parts: List<data.Cluster.Part>,
             val filled: Boolean = DEFAULT_CLUSTER_FILLED,
+            /** circle indices used shall be Ddc-global circle indices, the one consistent with cluster.indices and circle.index */
             val rule: List<Int> = DEFAULT_CLUSTER_RULE,
         ) : Token() {
             fun toCluster(): data.Cluster =
@@ -63,6 +65,7 @@ data class Ddc(
             val fillColor: Color? = DEFAULT_CIRCLE_FILL_COLOR,
             @Serializable(ColorCssSerializer::class)
             val borderColor: Color? = DEFAULT_CIRCLE_BORDER_COLOR,
+            /** circle indices used shall be Ddc-global circle indices, the one consistent with cluster.indices and circle.index */
             val rule: List<Int> = DEFAULT_CIRCLE_RULE,
         ) : Token() {
             val offset: Offset

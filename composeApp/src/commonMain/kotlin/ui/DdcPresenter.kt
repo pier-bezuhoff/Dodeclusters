@@ -68,8 +68,12 @@ class DdcPresenter(
             }
         }
         clusterPartsIxs = indexedParts.map { ps -> ps.map { it.first } }
-        // dont forget to shift part.insides
-//        partInsides = indexedParts.flatten().map { (_, part) -> part.insides }.toTypedArray()
+        partInsides = clusters.flatMap { cluster ->
+            cluster.parts.map { it.insides.sorted() }
+        }
+        partOutsides = clusters.flatMap { cluster ->
+            cluster.parts.map { it.outsides.sorted() }
+        }
         partFillColor = indexedParts.flatten().map { (_, part) -> part.fillColor }
         partBorderColor = indexedParts.flatten().map { (_, part) -> part.borderColor }
         circleCount = originalDdc.content
@@ -108,4 +112,10 @@ class DdcPresenter(
 
     fun update() {}
     fun draw() {}
+
+    companion object {
+        fun fromDdc(ddc: Ddc): DdcPresenter {
+
+        }
+    }
 }
