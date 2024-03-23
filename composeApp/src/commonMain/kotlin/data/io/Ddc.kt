@@ -110,7 +110,7 @@ data class Ddc(
 
         const val DEFAULT_CIRCLE_VISIBLE = false
         const val DEFAULT_CIRCLE_FILLED = true
-        val DEFAULT_CIRCLE_FILL_COLOR: Color? = null
+        val DEFAULT_CIRCLE_FILL_COLOR: Color = Color.Black
         val DEFAULT_CIRCLE_BORDER_COLOR: Color? = null
         val DEFAULT_CIRCLE_RULE = emptyList<Int>()
     }

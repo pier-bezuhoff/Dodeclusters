@@ -7,8 +7,12 @@ import utils.r
 import utils.r2
 import utils.toComplex
 import kotlin.math.abs
+import kotlin.math.absoluteValue
 import kotlin.math.hypot
+import kotlin.math.pow
 import kotlin.math.sqrt
+
+const val EPSILON: Double = 1e-6
 
 @Serializable
 data class Circle(
@@ -58,7 +62,7 @@ data class Circle(
                 val z2 = p2.toComplex()
                 val z3 = p3.toComplex()
                 val w = (z3 - z1)/(z2 - z1)
-                if (abs(w.im) <= 1e-6) // z1, z2, z3 are collinear
+                if (abs(w.im) <= EPSILON) // z1, z2, z3 are collinear
                     return almostALine(p1, p2)
                 val c = (z2 - z1)*(w - w.r2)/(2.0*w.im*i) + z1
                 val r = (z1 - c).r
@@ -74,7 +78,7 @@ data class Circle(
                 val z1 = p1.toComplex()
                 val z2 = p2.toComplex()
                 val v = z2 - z1
-                if (v.r <= 1e-6)
+                if (v.r <= EPSILON)
                     throw NumberFormatException("Not a line: 2 line points coincide")
                 val center = (z1 + z2)/2 + veryBigRadius*(v/v.r)*i
                 return Circle(center.re, center.im, veryBigRadius)
@@ -96,7 +100,7 @@ data class Circle(
                     val d = hypot(dx, dy)
                     if (d == r0) // inverting.center ∈ theOneBeingInverted
                         throw NumberFormatException("Not a circle")
-//                        d2 += 1e-6 // cheat to avoid returning a straight line
+//                        d2 += EPSILON // cheat to avoid returning a straight line
                     val ratio = r*r / (d*d - r0*r0)
                     val newX = x + ratio * dx
                     val newY = y + ratio * dy
@@ -146,5 +150,55 @@ data class DirectedCircle(
     val radius: Double,
     /** Circle direction, inside/outside ~ counterclockwise/clockwise */
     val inside: Boolean,
+)
+
+// TODO: Clifford algebra
+/**
+ * e_0 = (e_minus - e_plus) / 2
+ * e_inf = e_plus + e_minus
+ *
+ * e_0 = w = 1
+ * x = cx
+ * y = cy
+ * e_inf = z = (cx^2 + cy^2 - r^2) / 2
+ * */
+@Serializable
+data class GeneralizedCircle(
+    val w: Double,
+    val x: Double,
+    val y: Double,
+    val z: Double
 ) {
+    constructor(circle: Circle) : this(
+        1.0,
+        circle.x, circle.y,
+        (circle.x.pow(2) + circle.y.pow(2) - circle.radius.pow(2))/2
+    )
+
+    fun toCircle(): Circle? {
+        if (abs(w) < EPSILON)
+            return null
+        // assuming normalization w=1
+        require(abs(w - 1) < EPSILON)
+        val r2 = x.pow(2) + y.pow(2) - 2*w
+        if (r2 <= 0.0)
+            return null
+        return Circle(x, y, sqrt(r2))
+    }
+
+    companion object {
+        /**
+         * a*x + b*y + c = 0
+         * -> a*e_x + b*e_y + c*e_inf
+         */
+        fun line(a: Double, b: Double, c: Double): GeneralizedCircle =
+            GeneralizedCircle(0.0, a, b, c)
+
+        fun lineBy2Points(p1: Offset, p2: Offset): GeneralizedCircle {
+            val dy = p2.y.toDouble() - p1.y
+            val dx = p2.x.toDouble() - p1.x
+            val c = p1.y*dx - p1.x*dy
+            return line(dy, -dx, c)
+        }
+    }
 }
