@@ -490,22 +490,29 @@ class EditClusterViewModel(
                     } else false
                     if (clickedDeleteHandle)
                         deleteCircles()
-                    else {
+                    else { // (re)-select part
                         val selectedCircleIx = reselectCirclesAt(position)
                         if (selectedCircleIx == null) { // try to select bounding circles of the selected part
                             val (part, part0) = selectPartAt(position)
-                            parts
-                                .withIndex()
-                                .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
-                                .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }
-                                ?.let { (i, existingPart) ->
-                                    println("existing bound of $existingPart")
-                                    val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
-                                    if (bounds != selection.toSet()) {
-                                        selection.clear()
-                                        selection.addAll(bounds)
-                                    } else selection.clear()
-                                } ?: run { // select bound of a non-existent part
+                            if (part0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
+                                if (!selection.containsAll(circles.indices.toSet())) {
+                                    selection.clear()
+                                    selection.addAll(circles.indices)
+                                } else
+                                    selection.clear()
+                            } else {
+                                parts
+                                    .withIndex()
+                                    .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
+                                    .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }
+                                    ?.let { (i, existingPart) ->
+                                        println("existing bound of $existingPart")
+                                        val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
+                                        if (bounds != selection.toSet()) {
+                                            selection.clear()
+                                            selection.addAll(bounds)
+                                        } else selection.clear()
+                                    } ?: run { // select bound of a non-existent part
                                     println("bounds of $part")
                                     val bounds: Set<Ix> = part.insides + part.outsides
                                     if (bounds != selection.toSet()) {
@@ -513,6 +520,7 @@ class EditClusterViewModel(
                                         selection.addAll(bounds)
                                     } else selection.clear()
                                 }
+                            }
                         }
                     }
                 }
