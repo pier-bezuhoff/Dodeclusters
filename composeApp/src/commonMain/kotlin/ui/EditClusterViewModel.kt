@@ -9,8 +9,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import data.Circle
@@ -467,46 +465,6 @@ class EditClusterViewModel(
         val bottom = selectedCircles.maxOf { (it.y + it.radius) }.toFloat()
         return Rect(left, top, right, bottom)
     }
-
-    // NOTE: to create proper reduce(xor):
-    // 2^(# circles) -> binary -> filter even number of 1 -> to parts
-    // MAYBE: move to Cluster methods
-    // MAYBE: add threading cuz it can be slow
-    fun part2path(part: Cluster.Part): Path {
-        fun circle2path(circle: Circle): Path =
-            Path().apply {
-                addOval(
-                    Rect(
-                        center = circle.offset,
-                        radius = circle.radius.toFloat()
-                    )
-                )
-            }
-
-        val circleInsides = part.insides.map { circles[it] }
-        val insidePath: Path? = circleInsides
-            .map { circle2path(it) }
-            .reduceOrNull { acc: Path, anotherPath: Path ->
-                Path.combine(PathOperation.Intersect, path1 = acc, path2 = anotherPath)
-            }
-        val circleOutsides = part.outsides.map { circles[it] }
-        return if (insidePath == null) {
-            circles.map { circle2path(it) }
-                // TODO: encapsulate as a separate tool
-                // NOTE: reduce(xor) on outsides = makes binary interlacing pattern
-                // cuz it makes even # of layers = transparent, odd = filled
-                // NOTE: soft limit is 500-1k circles for this to have bearable performance
-                .reduceOrNull { acc: Path, anotherPath: Path ->
-                    Path.combine(PathOperation.Xor, acc, anotherPath)
-                } ?: Path()
-        } else if (part.outsides.isEmpty())
-            insidePath
-        else
-            circleOutsides.fold(insidePath) { acc: Path, circleOutside: Circle ->
-                Path.combine(PathOperation.Difference, acc, circle2path(circleOutside))
-            }
-    }
-
 
     // pointer input callbacks
     fun onTap(position: Offset) {

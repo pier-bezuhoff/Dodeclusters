@@ -46,6 +46,7 @@ compose-material3 = { module = "androidx.compose.material3:material3", version.r
 compose-material3-window-size-klass = { module = "androidx.compose.material3:material3-window-size-class", version.ref = "material3" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization"}
 colormath = { module = "com.github.ajalt.colormath:colormath", version.ref = "colormath" }
+
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 
 [plugins]

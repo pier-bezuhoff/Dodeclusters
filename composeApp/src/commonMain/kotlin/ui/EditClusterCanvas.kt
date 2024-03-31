@@ -39,6 +39,7 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import utils.part2path
 import kotlin.math.max
 
 @OptIn(ExperimentalResourceApi::class)
@@ -215,7 +216,7 @@ private fun DrawScope.drawParts(
     for (part in viewModel.parts) {
 //        println(part)
         drawPath(
-            viewModel.part2path(part),
+            part2path(viewModel.circles, part),
             color = part.fillColor,
             alpha = clusterPathAlpha,
             style = if (viewModel.showWireframes) circleStroke else Fill,
