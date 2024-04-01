@@ -6,7 +6,7 @@
 // original APACHE 2.0 license attached in this folder
 // + cherry-picked by me
 
-package utils
+package data.kmath_complex
 
 import kotlin.math.*
 

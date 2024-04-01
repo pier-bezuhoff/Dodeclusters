@@ -4,8 +4,8 @@ import androidx.compose.ui.graphics.Color
 import data.Circle
 import data.Cluster
 import kotlinx.serialization.json.Json
-import utils.ColorCssSerializer
-import utils.ColorULongSerializer
+import data.ColorCssSerializer
+import data.ColorULongSerializer
 
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
 actual fun parseDdc(content: String): Ddc {

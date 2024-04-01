@@ -1,4 +1,4 @@
-package utils
+package ui
 
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path

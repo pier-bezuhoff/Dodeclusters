@@ -8,7 +8,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import utils.ColorCssSerializer
+import data.ColorCssSerializer
 
 // MIME type: application/yaml
 // extension: idk, either .ddc or .yaml

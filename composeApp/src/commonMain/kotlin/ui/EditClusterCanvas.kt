@@ -39,7 +39,6 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import utils.part2path
 import kotlin.math.max
 
 @OptIn(ExperimentalResourceApi::class)

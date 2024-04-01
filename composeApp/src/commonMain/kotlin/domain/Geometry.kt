@@ -1,6 +1,7 @@
-package utils
+package domain
 
 import androidx.compose.ui.geometry.Offset
+import data.kmath_complex.Complex
 import kotlin.jvm.JvmName
 import kotlin.math.PI
 import kotlin.math.atan2

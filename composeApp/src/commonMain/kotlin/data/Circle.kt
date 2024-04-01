@@ -2,12 +2,11 @@ package data
 
 import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
-import utils.ComplexField
-import utils.r
-import utils.r2
-import utils.toComplex
+import data.kmath_complex.ComplexField
+import data.kmath_complex.r
+import data.kmath_complex.r2
+import data.kmath_complex.toComplex
 import kotlin.math.abs
-import kotlin.math.absoluteValue
 import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.sqrt

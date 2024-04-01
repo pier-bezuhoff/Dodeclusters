@@ -3,7 +3,6 @@ package data
 import androidx.compose.ui.graphics.Color
 import data.io.Ddc
 import kotlinx.serialization.Serializable
-import utils.ColorCssSerializer
 
 @Serializable
 data class Cluster(

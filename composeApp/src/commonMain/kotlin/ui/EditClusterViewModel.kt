@@ -22,8 +22,8 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import utils.angleDeg
-import utils.rotateBy
+import domain.angleDeg
+import domain.rotateBy
 import kotlin.math.absoluteValue
 import kotlin.math.pow
 
