@@ -9,17 +9,22 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.launch
@@ -38,13 +43,17 @@ actual fun SaveFileButton(
 ) {
     val coroutineScope = rememberCoroutineScope()
     var openDialog by remember { mutableStateOf(false) }
-    var ddcName by remember { mutableStateOf(Ddc.DEFAULT_NAME) }
+    var ddcName by remember { mutableStateOf(TextFieldValue(
+        text = Ddc.DEFAULT_NAME,
+        selection = TextRange(Ddc.DEFAULT_NAME.length) // important to insert cursor AT THE END
+    )) }
+    val textFieldFocusRequester = remember { FocusRequester() }
 
     fun onConfirm() {
         openDialog = false
         coroutineScope.launch {
             // NOTE: ddcName from the dialog is only used as a file name, not inside the ddc itself
-            val saveData = saveDataProvider().copy(name = ddcName)
+            val saveData = saveDataProvider().copy(name = ddcName.text)
             try {
                 downloadTextFile3(saveData.filename, saveData.content)
                 onSaved(true)
@@ -59,7 +68,7 @@ actual fun SaveFileButton(
     }) {
         Icon(iconPainter, contentDescription)
     }
-    if (openDialog)
+    if (openDialog) {
         AlertDialog(
             onDismissRequest = { openDialog = false },
             confirmButton = {
@@ -67,29 +76,33 @@ actual fun SaveFileButton(
                     Text("Confirm")
                 }
             },
-//            dismissButton = {},
+    //            dismissButton = {},
             title = { Text("Choose a name") },
             text = {
-               OutlinedTextField(
-                   value = ddcName,
-                   onValueChange = { ddcName = it },
-                   label = { Text("Name") },
-                   singleLine = true,
-                   keyboardOptions = KeyboardOptions( // smart ass enter capturing
-                       imeAction = ImeAction.Done
-                   ),
-                   keyboardActions = KeyboardActions(
-                       onDone = { onConfirm() }
-                   ),
-                   modifier = Modifier.onKeyEvent {
-                       if (it.key == Key.Enter) {
-                           onConfirm()
-                           true
-                       } else false
-                   }
-               )
+                OutlinedTextField(
+                    value = ddcName,
+                    onValueChange = { ddcName = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions( // smart ass enter capturing
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { onConfirm() }
+                    ),
+                    modifier = Modifier.onKeyEvent {
+                        if (it.key == Key.Enter) {
+                            onConfirm()
+                            true
+                        } else false
+                    }.focusRequester(textFieldFocusRequester)
+                )
             },
         )
+        LaunchedEffect(openDialog) {
+            textFieldFocusRequester.requestFocus()
+        }
+    }
 }
 
 // showSaveFilePicker() is still experimental, cmon js bros...

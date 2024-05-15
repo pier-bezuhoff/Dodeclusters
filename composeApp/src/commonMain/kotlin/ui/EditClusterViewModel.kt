@@ -131,6 +131,10 @@ class EditClusterViewModel(
                 .first()
                 .toCluster()
             loadCluster(cluster)
+            translation.value = Offset(
+                ddc.bestCenterX?.let { it - canvasSize.value.width/2f } ?: 0f,
+                ddc.bestCenterY?.let { it - canvasSize.value.height/2f } ?: 0f
+            )
         } catch (e: Exception) {
             println("Failed to parse yaml")
             e.printStackTrace()
