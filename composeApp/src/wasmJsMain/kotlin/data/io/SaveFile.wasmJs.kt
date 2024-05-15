@@ -1,10 +1,25 @@
 package data.io
 
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.text.input.ImeAction
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.launch
@@ -22,9 +37,14 @@ actual fun SaveFileButton(
     onSaved: (successful: Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    IconButton(onClick = {
+    var openDialog by remember { mutableStateOf(false) }
+    var ddcName by remember { mutableStateOf(Ddc.DEFAULT_NAME) }
+
+    fun onConfirm() {
+        openDialog = false
         coroutineScope.launch {
-            val saveData = saveDataProvider()
+            // NOTE: ddcName from the dialog is only used as a file name, not inside the ddc itself
+            val saveData = saveDataProvider().copy(name = ddcName)
             try {
                 downloadTextFile3(saveData.filename, saveData.content)
                 onSaved(true)
@@ -32,9 +52,44 @@ actual fun SaveFileButton(
                 onSaved(false)
             }
         }
+    }
+
+    IconButton(onClick = {
+        openDialog = true
     }) {
         Icon(iconPainter, contentDescription)
     }
+    if (openDialog)
+        AlertDialog(
+            onDismissRequest = { openDialog = false },
+            confirmButton = {
+                TextButton(onClick = ::onConfirm) {
+                    Text("Confirm")
+                }
+            },
+//            dismissButton = {},
+            title = { Text("Choose a name") },
+            text = {
+               OutlinedTextField(
+                   value = ddcName,
+                   onValueChange = { ddcName = it },
+                   label = { Text("Name") },
+                   singleLine = true,
+                   keyboardOptions = KeyboardOptions( // smart ass enter capturing
+                       imeAction = ImeAction.Done
+                   ),
+                   keyboardActions = KeyboardActions(
+                       onDone = { onConfirm() }
+                   ),
+                   modifier = Modifier.onKeyEvent {
+                       if (it.key == Key.Enter) {
+                           onConfirm()
+                           true
+                       } else false
+                   }
+               )
+            },
+        )
 }
 
 // showSaveFilePicker() is still experimental, cmon js bros...

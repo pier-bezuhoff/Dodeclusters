@@ -8,9 +8,9 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.toArgb
+import domain.average
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import utils.average
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlin.reflect.KMutableProperty0

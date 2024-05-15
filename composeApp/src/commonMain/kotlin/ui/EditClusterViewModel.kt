@@ -8,8 +8,10 @@ import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import data.Circle
 import data.Cluster
@@ -91,6 +93,7 @@ class EditClusterViewModel(
     private val _decayingCircles = MutableSharedFlow<DecayingCircles>()
     val decayingCircles = _decayingCircles.asSharedFlow()
 
+    val canvasSize = mutableStateOf(IntSize.Zero) // used when saving best-center
     val translation = mutableStateOf(Offset.Zero) // pre-scale offset
 //    val scale = mutableStateOf(1f)
 
@@ -111,7 +114,13 @@ class EditClusterViewModel(
         val cluster = Cluster(
             circles.toList(), parts.toList()
         )
-        return Ddc(cluster).encode()
+        var ddc = Ddc(cluster)
+        if (canvasSize.value != IntSize.Zero) {
+            val visibleCenter = Offset(canvasSize.value.width/2f, canvasSize.value.height/2f)
+            val center = absolute(visibleCenter)
+            ddc = ddc.copy(bestCenterX = center.x, bestCenterY = center.y)
+        }
+        return ddc.encode()
     }
 
     fun loadFromYaml(yaml: String) {

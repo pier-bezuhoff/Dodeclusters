@@ -6,6 +6,7 @@ import data.kmath_complex.ComplexField
 import data.kmath_complex.r
 import data.kmath_complex.r2
 import data.kmath_complex.toComplex
+import domain.toComplex
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow
