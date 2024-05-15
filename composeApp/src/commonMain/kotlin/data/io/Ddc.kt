@@ -10,8 +10,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import data.ColorCssSerializer
 
-// MIME type: application/yaml
-// extension: idk, either .ddc or .yaml
+// MIME type: application/yaml or text/plain
+// extension: .ddc or .yaml/.yml
 /** Dodeclusters' format. Aiming for a nicely-formatted, readable & extensible YAML subset */
 @Serializable
 data class Ddc(
@@ -24,6 +24,14 @@ data class Ddc(
     val drawTrace: Boolean = DEFAULT_DRAW_TRACE,
     val content: List<Token>,
 ) {
+    val nCircles: Int
+        get() = content.lastOrNull()?.let {
+            when (it) {
+                is Token.Circle -> it.index + 1
+                is Token.Cluster -> it.indices.last() + 1
+            }
+        } ?: 0
+
     constructor(cluster: Cluster) : this(
         content = listOf(Token.Cluster(
             if (cluster.circles.isEmpty()) emptyList()
@@ -34,7 +42,6 @@ data class Ddc(
         ))
     )
 
-    /** ddc tokens */
     @Serializable
     sealed class Token {
         @SerialName("Cluster")
@@ -94,7 +101,7 @@ data class Ddc(
                 }
             }
             val end = "..."
-            (head + body).joinToString(separator = "\n") + end
+            (head + body + listOf(end)).joinToString(separator = "\n")
         }
 
     companion object {
@@ -133,8 +140,8 @@ private data class Indentation(val indentLevel: Int) {
     fun encode(key: String): String =
         "$indent$key"
 
-    fun encodeOptional(key: String, value: Any?): String =
-        value?.let { encode(key, value) } ?: ""
+    fun encodeOptional(key: String, value: Any?): String? =
+        value?.let { encode(key, value) }
 
     fun Color.encodeColor(): String =
         Json.encodeToString(ColorCssSerializer, this)
@@ -143,9 +150,9 @@ private data class Indentation(val indentLevel: Int) {
         ints.joinToString(prefix = "[", postfix = "]", separator = ",")
 
     /** [header] is unindented */
-    fun encodeListItem(header: String, vararg lines: String): String =
+    fun encodeListItem(header: String, vararg lines: String?): String =
         "$prevIndent- $header\n" +
-            lines.joinToString(separator = "\n")
+            lines.filterNotNull().joinToString(separator = "\n")
 
     fun encodeCircle(f: Ddc.Token.Circle): String =
         encodeListItem(
@@ -158,7 +165,7 @@ private data class Indentation(val indentLevel: Int) {
             encode("filled", f.filled),
             encodeOptional("fillColor", f.fillColor?.encodeColor()),
             encodeOptional("borderColor", f.borderColor?.encodeColor()),
-            encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule))
+            encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule)),
         )
 
     fun encodeClusterCircle(circle: Circle): String =
@@ -184,8 +191,8 @@ private data class Indentation(val indentLevel: Int) {
             *f.circles.map { down().encodeClusterCircle(it) }.toTypedArray(),
             encode("parts:"),
             *f.parts.map { down().encodeClusterPart(it) }.toTypedArray(),
+            encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule)),
             encode("filled", f.filled),
-            encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule))
         )
 
     companion object {

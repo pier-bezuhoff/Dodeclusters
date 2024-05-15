@@ -1,11 +1,17 @@
 # Dodeclusters
 
-Vector image editor using only circles (WIP)  
+Conformal vector image editor: using only circles (WIP)  
+<insert 0-inf banner here>  
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform), targeting
 - [x] Desktop (Windows, Linux)
 - [x] Android 7.0+ (SDK 24+)
 - [x] Web (via [Wasm](#Web-Wasm-compatibility))
 - [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries), for now only works as a web app thru Chrome/Firefox
+
+## End goal
+Combine interactive designs ~ Geogebra  
+with graphical vector editor ~ Inkscape
+and specific type of animations ~ [Möbius transformations](https://en.wikipedia.org/wiki/M%C3%B6bius_transformation) and possibly [Lie sphere geometry](https://en.wikipedia.org/wiki/Lie_sphere_geometry)  
 
 ## Installation
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
@@ -33,6 +39,7 @@ Cluster = circles + union of intersections of some of these circles (their insid
   - move, scale & rotate clusters
   - change color, border color, fill/wireframe
   - re-order / sidebar layer-like interface
+  - create and apply Möbius transforms as animations
 * Other
   - [x] history: undo + redo
   - [x] New cluster-based format to supercede `.ddu`, YAML subset

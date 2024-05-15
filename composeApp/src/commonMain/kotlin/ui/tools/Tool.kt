@@ -3,6 +3,7 @@ package ui.tools
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.jetbrains.compose.resources.DrawableResource
 
+/** Describes metadata associated with toolbar's tools (no algorithms per se) */
 sealed interface Tool {
     val name: String
     val iconResource: IconResource
@@ -10,6 +11,7 @@ sealed interface Tool {
 
     /** Action = tool with 0 input parameters */
     sealed interface Action : Tool
+    /** Switches between 2 different modes */
     sealed interface BinaryToggle : Action {
         val disabledIconResource: IconResource
     }
@@ -17,6 +19,7 @@ sealed interface Tool {
     /** Can only be applied to a non-empty active selection */
     sealed interface ActionOnSelection : Tool
 
+    /** Tool that prompts selecting several items, described by MultiArgN<...> dependent types, to perform an action */
     sealed interface MultiArg : Tool {
         val nArgs: Int
         val argDescriptions: List<String>
@@ -43,6 +46,7 @@ sealed interface IconResource {
     class AsDrawable(val drawableResource: DrawableResource) : IconResource
 }
 
+/** Selectable item types, used by some tools */
 sealed interface InputType {
     data object AnyPoint : InputType
     data object Circle : InputType

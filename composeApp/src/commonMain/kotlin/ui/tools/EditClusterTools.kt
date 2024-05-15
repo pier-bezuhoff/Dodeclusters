@@ -9,6 +9,7 @@ import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.invisible
 import dodeclusters.composeapp.generated.resources.visible
 
+// TODO: hard-coded strings -> string resources
 sealed interface EditClusterTool : Tool {
     data object ShowCircles : Tool.BinaryToggle, EditClusterTool {
         override val name = "Show circles"
