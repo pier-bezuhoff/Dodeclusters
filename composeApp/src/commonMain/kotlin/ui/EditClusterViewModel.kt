@@ -115,13 +115,19 @@ class EditClusterViewModel(
             circles.toList(), parts.toList()
         )
         var ddc = Ddc(cluster)
-        if (canvasSize.value != IntSize.Zero) {
-            val visibleCenter = Offset(canvasSize.value.width/2f, canvasSize.value.height/2f)
-            val center = absolute(visibleCenter)
+        computeAbsoluteCenter()?.let { center ->
             ddc = ddc.copy(bestCenterX = center.x, bestCenterY = center.y)
         }
         return ddc.encode()
     }
+
+    private fun computeAbsoluteCenter(): Offset? =
+        if (canvasSize.value == IntSize.Zero) {
+            null
+        } else {
+            val visibleCenter = Offset(canvasSize.value.width/2f, canvasSize.value.height/2f)
+            absolute(visibleCenter)
+        }
 
     fun loadFromYaml(yaml: String) {
         try {
@@ -131,16 +137,20 @@ class EditClusterViewModel(
                 .first()
                 .toCluster()
             loadCluster(cluster)
-            translation.value = -Offset(
-                ddc.bestCenterX?.let { it - canvasSize.value.width/2f } ?: 0f,
-                ddc.bestCenterY?.let { it - canvasSize.value.height/2f } ?: 0f
-            )
+            moveToDdcCenter(ddc)
         } catch (e: Exception) {
             println("Failed to parse yaml")
             e.printStackTrace()
             println("Falling back to json")
             loadFromJson(yaml) // NOTE: for backwards compat
         }
+    }
+
+    private fun moveToDdcCenter(ddc: Ddc) {
+        translation.value = -Offset(
+            ddc.bestCenterX?.let { it - canvasSize.value.width/2f } ?: 0f,
+            ddc.bestCenterY?.let { it - canvasSize.value.height/2f } ?: 0f
+        )
     }
 
     fun saveAsJson(): String {

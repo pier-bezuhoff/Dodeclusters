@@ -1,4 +1,5 @@
 # Dodeclusters
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
 Conformal vector image editor: using only circles (WIP)  
 <insert 0-inf banner here>  
@@ -10,11 +11,10 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
 
 ## End goal
 Combine interactive designs ~ Geogebra  
-with graphical vector editor ~ Inkscape
+with graphical vector editor ~ Inkscape  
 and specific type of animations ~ [Möbius transformations](https://en.wikipedia.org/wiki/M%C3%B6bius_transformation) and possibly [Lie sphere geometry](https://en.wikipedia.org/wiki/Lie_sphere_geometry)  
 
 ## Installation
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 [Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
 Binaries for Linux, Window and Android are stored [here](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=drive_link).
 
