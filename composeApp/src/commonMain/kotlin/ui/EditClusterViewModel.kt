@@ -49,6 +49,9 @@ class EditClusterViewModel(
     var showCircles by mutableStateOf(true)
     /** which style to use when drawing parts: true = stroke, false = fill */
     var showWireframes by mutableStateOf(false)
+    /** applies to [SelectionMode.SelectRegion]:
+     * only use circles present in the [selection] to determine which parts to fill */
+    var restrictRegionsToSelection by mutableStateOf(true)
 
     val handleConfig = derivedStateOf { // depends on selectionMode & selection
         when (mode) {
@@ -406,11 +409,11 @@ class EditClusterViewModel(
                 selection.add(ix)
         }
 
-    /** -> (compressed part, verbose part) surrounding clicked position */
-    private fun selectPartAt(visiblePosition: Offset): Pair<Cluster.Part, Cluster.Part> {
+    /** -> (compressed part, verbose part involving all circles) surrounding clicked position */
+    private fun selectPartAt(visiblePosition: Offset, boundingCircles: List<Ix>? = null): Pair<Cluster.Part, Cluster.Part> {
         val position = absolute(visiblePosition)
-        val delimiters = circles.indices
-        val ins = delimiters
+        val delimiters = boundingCircles ?: circles.indices
+        val ins = delimiters // NOTE: doesn't include circles that the point lies on
             .filter { ix -> circles[ix].hasInside(position) }
             .sortedBy { ix -> circles[ix].radius }
         val outs = delimiters
@@ -438,14 +441,16 @@ class EditClusterViewModel(
         return Pair(part, part0)
     }
 
-    fun reselectRegionAt(visiblePosition: Offset) {
-        val (part, part0) = selectPartAt(visiblePosition)
+    fun reselectRegionAt(visiblePosition: Offset, boundingCircles: List<Ix>? = null) {
+        val (part, part0) = selectPartAt(visiblePosition, boundingCircles)
         val outerParts = parts.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
         if (outerParts.isEmpty()) {
             recordCommand(Command.SELECT_REGION)
             parts.add(part)
-            selection.clear()
-            selection.addAll(part.insides + part.outsides)
+//            if (!restrictRegionsToSelection) {
+//                selection.clear()
+//                selection.addAll(part.insides + part.outsides)
+//            }
             println("added $part")
         } else {
             val sameExistingPart = parts.singleOrNull {
@@ -458,8 +463,10 @@ class EditClusterViewModel(
                     println("removed $sameExistingPart")
                 } else { // we are trying to change color im guessing
                     parts.add(sameExistingPart.copy(fillColor = part.fillColor))
-                    selection.clear()
-                    selection.addAll(part.insides + part.outsides)
+//                    if (!restrictRegionsToSelection) {
+//                        selection.clear()
+//                        selection.addAll(part.insides + part.outsides)
+//                    }
                     println("recolored $sameExistingPart")
                 }
             } else {
@@ -487,6 +494,15 @@ class EditClusterViewModel(
         val top = selectedCircles.minOf { (it.y - it.radius) }.toFloat()
         val bottom = selectedCircles.maxOf { (it.y + it.radius) }.toFloat()
         return Rect(left, top, right, bottom)
+    }
+
+    fun toggleSelectAll() {
+        if (!selection.containsAll(circles.indices.toSet())) {
+            selection.clear()
+            selection.addAll(circles.indices)
+        } else {
+            selection.clear()
+        }
     }
 
     // pointer input callbacks
@@ -518,11 +534,7 @@ class EditClusterViewModel(
                         if (selectedCircleIx == null) { // try to select bounding circles of the selected part
                             val (part, part0) = selectPartAt(position)
                             if (part0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
-                                if (!selection.containsAll(circles.indices.toSet())) {
-                                    selection.clear()
-                                    selection.addAll(circles.indices)
-                                } else
-                                    selection.clear()
+                                toggleSelectAll()
                             } else {
                                 parts
                                     .withIndex()
@@ -547,7 +559,14 @@ class EditClusterViewModel(
                         }
                     }
                 }
-                SelectionMode.SelectRegion -> reselectRegionAt(position)
+                SelectionMode.SelectRegion -> {
+                    if (restrictRegionsToSelection && selection.isNotEmpty()) {
+                        val restriction = selection.toList()
+                        reselectRegionAt(position, restriction)
+                    } else {
+                        reselectRegionAt(position)
+                    }
+                }
                 else -> {}
             }
         }
@@ -865,6 +884,12 @@ sealed class SelectionMode : Mode() {
     data object Multiselect : SelectionMode()
     @Serializable
     data object SelectRegion : SelectionMode()
+}
+
+@Serializable
+/** sub-modes of [SelectionMode.Multiselect] related to how new selection is added */
+enum class MultiselectLogic {
+    SYMMETRIC_DIFFIRENCE, ADD, SUBTRACT
 }
 
 sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode() {

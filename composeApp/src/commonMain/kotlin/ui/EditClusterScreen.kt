@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.BottomAppBar
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
+import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.IconToggleButton
@@ -64,12 +66,14 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.center
 import dodeclusters.composeapp.generated.resources.circle_3_points
+import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
 import dodeclusters.composeapp.generated.resources.invisible
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
 import dodeclusters.composeapp.generated.resources.open_file
+import dodeclusters.composeapp.generated.resources.open_region
 import dodeclusters.composeapp.generated.resources.palette
 import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.rounded_square
@@ -101,6 +105,20 @@ fun EditClusterScreen(
     val scaffoldState = rememberScaffoldState()
     Scaffold(
         scaffoldState = scaffoldState,
+//        floatingActionButton = {
+//            FloatingActionButton(
+//                onClick = {
+//                    println("FAB")
+//                    viewModel.switchSelectionMode(CreationMode.CircleByCenterAndRadius.Center())
+//                },
+//                backgroundColor = MaterialTheme.colors.secondary,
+//                contentColor = MaterialTheme.colors.onSecondary,
+//                shape = CircleShape,
+//            ) {
+//                Icon(Icons.Filled.Add, "FAB create circle")
+//            }
+//        },
+
 //        topBar = {
 //            EditClusterTopBar(viewModel)
 //        },
@@ -197,7 +215,7 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
         CompositionLocalProvider(
             LocalContentAlpha provides 1f,
             LocalContentColor provides Color.White,
-            ) {
+        ) {
             ModeToggle(
                 SelectionMode.Drag,
                 viewModel,
@@ -229,6 +247,13 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
                 "make circles invisible"
             ) {
                 viewModel.showCircles = !viewModel.showCircles
+            }
+            BinaryToggle(
+                viewModel.restrictRegionsToSelection,
+                painterResource(Res.drawable.circled_region), painterResource(Res.drawable.open_region),
+                "restrict regions to selection"
+            ) {
+                viewModel.restrictRegionsToSelection = !viewModel.restrictRegionsToSelection
             }
             var showColorPickerDialog by remember { mutableStateOf(false) }
             IconButton(onClick = {

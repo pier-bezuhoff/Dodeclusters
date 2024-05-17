@@ -159,9 +159,13 @@ private fun SelectionsCanvas(
         drawRect(backgroundColor)
         // overlay w/ selected circles
         translate(viewModel.translation.value.x, viewModel.translation.value.y) {
-            if (viewModel.mode.isSelectingCircles() && viewModel.showCircles)
-                for (ix in viewModel.selection) {
-                    val circle = viewModel.circles[ix]
+            if (viewModel.showCircles &&
+                (viewModel.mode.isSelectingCircles() ||
+                    viewModel.mode is SelectionMode.SelectRegion && viewModel.restrictRegionsToSelection
+                )
+            ) {
+                val circles = viewModel.selection.map { viewModel.circles[it] }
+                for (circle in circles) {
                     drawCircle( // alpha = where selection lines are shown
                         color = Color.Black,
                         radius = circle.radius.toFloat(),
@@ -169,6 +173,8 @@ private fun SelectionsCanvas(
                         style = Fill,
                         blendMode = BlendMode.DstOut, // dst out = erase the BG rectangle => show hatching thats drawn behind it
                     )
+                }
+                for (circle in circles) {
                     drawCircle( // thiccer lines
                         color = circleColor,
                         alpha = thiccSelectionCircleAlpha,
@@ -177,6 +183,7 @@ private fun SelectionsCanvas(
                         style = circleThiccStroke,
                     )
                 }
+            }
         }
     }
 }
