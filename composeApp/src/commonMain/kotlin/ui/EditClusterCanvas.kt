@@ -197,7 +197,7 @@ private fun DrawScope.drawAnimation(
     // animations
     for (circle in decayingCircles.circles) {
         drawCircle(
-            color = decayingCircles.color,
+            color = decayingCircles.color.copy(alpha = 0.5f),
             alpha = decayAlpha.value,
             radius = circle.radius.toFloat(),
             center = circle.offset
