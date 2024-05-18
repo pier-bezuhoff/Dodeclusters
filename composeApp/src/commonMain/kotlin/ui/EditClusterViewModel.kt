@@ -26,6 +26,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import domain.angleDeg
 import domain.rotateBy
+import ui.theme.DodeclustersColors
 import kotlin.math.absoluteValue
 import kotlin.math.pow
 
@@ -45,7 +46,7 @@ class EditClusterViewModel(
     /** indices of selected circles */
     val selection = mutableStateListOf<Ix>()
 
-    var regionColor by mutableStateOf(Color.Cyan)
+    var regionColor by mutableStateOf(DodeclustersColors.lightPurple)
     var showCircles by mutableStateOf(true)
     /** which style to use when drawing parts: true = stroke, false = fill */
     var showWireframes by mutableStateOf(false)
@@ -441,16 +442,20 @@ class EditClusterViewModel(
         return Pair(part, part0)
     }
 
-    fun reselectRegionAt(visiblePosition: Offset, boundingCircles: List<Ix>? = null) {
+    fun reselectRegionAt(
+        visiblePosition: Offset,
+        boundingCircles: List<Ix>? = null,
+        setSelectionToRegionBounds: Boolean = false
+    ) {
         val (part, part0) = selectPartAt(visiblePosition, boundingCircles)
         val outerParts = parts.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
         if (outerParts.isEmpty()) {
             recordCommand(Command.SELECT_REGION)
             parts.add(part)
-//            if (!restrictRegionsToSelection) {
-//                selection.clear()
-//                selection.addAll(part.insides + part.outsides)
-//            }
+            if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                selection.clear()
+                selection.addAll(part.insides + part.outsides)
+            }
             println("added $part")
         } else {
             val sameExistingPart = parts.singleOrNull {
@@ -463,10 +468,10 @@ class EditClusterViewModel(
                     println("removed $sameExistingPart")
                 } else { // we are trying to change color im guessing
                     parts.add(sameExistingPart.copy(fillColor = part.fillColor))
-//                    if (!restrictRegionsToSelection) {
-//                        selection.clear()
-//                        selection.addAll(part.insides + part.outsides)
-//                    }
+                    if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                        selection.clear()
+                        selection.addAll(part.insides + part.outsides)
+                    }
                     println("recolored $sameExistingPart")
                 }
             } else {

@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import data.ColorCssSerializer
+import ui.theme.DodeclustersColors
 
 // MIME type: application/yaml or text/plain
 // extension: .ddc or .yaml/.yml
@@ -106,6 +107,7 @@ data class Ddc(
 
     companion object {
         const val DEFAULT_NAME = "cluster"
+        const val DEFAULT_EXTENSION = "yml"
         val DEFAULT_BACKGROUND_COLOR = Color.White
         val DEFAULT_BEST_CENTER_X: Float? = null
         val DEFAULT_BEST_CENTER_Y: Float? = null
@@ -114,7 +116,7 @@ data class Ddc(
 
         const val DEFAULT_CLUSTER_FILLED = true
         const val DEFAULT_CLUSTER_VISIBLE = true
-        val DEFAULT_CLUSTER_FILL_COLOR = Color.Cyan
+        val DEFAULT_CLUSTER_FILL_COLOR = DodeclustersColors.lightPurple // a bit of a questionable dependency here
         val DEFAULT_CLUSTER_BORDER_COLOR: Color? = null
         val DEFAULT_CLUSTER_RULE = emptyList<Int>()
 

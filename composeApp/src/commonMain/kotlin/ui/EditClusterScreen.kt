@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import data.ClusterRepository
+import data.io.Ddc
 import data.io.OpenFileButton
 import data.io.SaveData
 import data.io.SaveFileButton
@@ -86,6 +87,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
+import ui.theme.DodeclustersColors
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
 @Composable
@@ -105,19 +107,19 @@ fun EditClusterScreen(
     val scaffoldState = rememberScaffoldState()
     Scaffold(
         scaffoldState = scaffoldState,
-//        floatingActionButton = {
-//            FloatingActionButton(
-//                onClick = {
-//                    println("FAB")
-//                    viewModel.switchSelectionMode(CreationMode.CircleByCenterAndRadius.Center())
-//                },
-//                backgroundColor = MaterialTheme.colors.secondary,
-//                contentColor = MaterialTheme.colors.onSecondary,
-//                shape = CircleShape,
-//            ) {
-//                Icon(Icons.Filled.Add, "FAB create circle")
-//            }
-//        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    println("FAB")
+                    viewModel.switchSelectionMode(CreationMode.CircleByCenterAndRadius.Center())
+                },
+                backgroundColor = MaterialTheme.colors.secondary,
+                contentColor = MaterialTheme.colors.onSecondary,
+                shape = CircleShape,
+            ) {
+                Icon(Icons.Filled.Add, "FAB create circle")
+            }
+        },
 
 //        topBar = {
 //            EditClusterTopBar(viewModel)
@@ -151,8 +153,10 @@ fun EditClusterScreen(
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterTopBar(viewModel: EditClusterViewModel) {
+    val backgroundColor = MaterialTheme.colors.primary
+    val contentColor = MaterialTheme.colors.onPrimary
     TopAppBar(
-        title = { Text("Edit cluster", color = MaterialTheme.colors.onPrimary) },
+        title = { Text("Edit cluster", color = DodeclustersColors.black) },
         navigationIcon = {
 //            IconButton(onClick = viewModel::saveAndGoBack) {
 //                Icon(Icons.Default.Done, contentDescription = "Done")
@@ -161,11 +165,11 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
         actions = {
             CompositionLocalProvider(
                 LocalContentAlpha provides 1f,
-                LocalContentColor provides Color.White
+//                LocalContentColor provides Color.White
             ) {
                 SaveFileButton(painterResource(Res.drawable.save), "Save",
                     saveDataProvider = { SaveData(
-                        "cluster", "yml", viewModel.saveAsYaml()) }
+                        Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION, viewModel.saveAsYaml()) }
                 ) {
                     println(if (it) "saved" else "not saved")
                 }
@@ -185,12 +189,12 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
 //            }
             }
         },
-        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.1f), //Color.Transparent,
-//        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.8f), //Color.Blue.copy(alpha = 0.8f),
+        backgroundColor = backgroundColor.copy(alpha = 0.1f),
+        contentColor = contentColor,
         modifier = Modifier.background(
             Brush.verticalGradient(
-                0f to MaterialTheme.colors.primarySurface, //Color.Cyan.copy(alpha = 0.8f),
-                1f to MaterialTheme.colors.primarySurface.copy(alpha = 0.8f) //Color(0x00BEB2).copy(alpha = 0.8f)
+                0f to backgroundColor,
+                1f to backgroundColor.copy(alpha = 0.8f)
             )
         ),
         elevation = 0.dp,
@@ -201,20 +205,22 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = Modifier) {
+    val backgroundColor = MaterialTheme.colors.primary
+    val contentColor = MaterialTheme.colors.onPrimary
     BottomAppBar(
         modifier = modifier.background(
             Brush.verticalGradient(
-                0f to MaterialTheme.colors.primarySurface.copy(alpha = 0.8f), //Color(0x00BEB2).copy(alpha = 0.8f)
-                1f to MaterialTheme.colors.primarySurface, //Color.Cyan.copy(alpha = 0.8f),
+                0f to backgroundColor.copy(alpha = 0.8f),
+                1f to backgroundColor,
             )
         ),
-        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.1f), //Color.Transparent,
-//        backgroundColor = MaterialTheme.colors.primarySurface.copy(alpha = 0.8f), //Color.Blue.copy(alpha = 0.8f),
+        backgroundColor = backgroundColor.copy(alpha = 0.1f),
+        contentColor = contentColor,
         elevation = 0.dp,
     ) {
         CompositionLocalProvider(
             LocalContentAlpha provides 1f,
-            LocalContentColor provides Color.White,
+//            LocalContentColor provides Color.White,
         ) {
             ModeToggle(
                 SelectionMode.Drag,

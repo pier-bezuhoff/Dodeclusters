@@ -6,6 +6,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
@@ -40,6 +41,7 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import ui.theme.DodeclustersColors
 import kotlin.math.max
 
 @OptIn(ExperimentalResourceApi::class)
@@ -61,22 +63,22 @@ fun EditClusterCanvas(
     ) }
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
-    val scaleHandleColor = Color.Gray
+    val scaleHandleColor = DodeclustersColors.gray
     val iconDim = with (LocalDensity.current) { 18.dp.toPx() }
 //    val deleteIcon = painterResource("icons/cancel.xml")
     val deleteIcon = rememberVectorPainter(Icons.Default.Delete)
-    val deleteIconTint = Color.Red
+    val deleteIconTint = DodeclustersColors.red
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
-    val rotateIconTint = Color(0f, 0.5f, 0f)
+    val rotateIconTint = DodeclustersColors.darkGreen
     val rotationIndicatorRadius = handleRadius * 3/4
-    val rotationIndicatorColor = Color.Green.copy(alpha = 0.5f)
+    val rotationIndicatorColor = DodeclustersColors.green.copy(alpha = 0.5f)
 
-    val backgroundColor = Color.White
-    val circleColor = Color.Black
+    val backgroundColor = MaterialTheme.colors.surface
+    val circleColor = MaterialTheme.colors.onSurface
     val clusterPathAlpha = 0.7f
 //    val clusterPathAlpha = 1f // TODO: add a switch for this
-    val selectionLinesColor = Color.Gray
-    val selectionMarkingsColor = Color.DarkGray // center-radius line / bounding rect of selection
+    val selectionLinesColor = DodeclustersColors.gray
+    val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val maxDecayAlpha = 0.5f
     val decayDuration = 1_500
     val decayAlpha = remember { Animatable(0f) }
@@ -240,7 +242,7 @@ private fun DrawScope.drawCreationPrototypes(
     circleStroke: DrawStyle,
     strokeWidth: Float,
     creationPointRadius: Float = handleRadius * 3/4,
-    creationPrototypeColor: Color = Color.Green,
+    creationPrototypeColor: Color = DodeclustersColors.green,
 ) {
     when (val m = viewModel.mode) {
         is CreationMode.CircleByCenterAndRadius.Center ->
