@@ -26,7 +26,6 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.IconToggleButton
 import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Scaffold
@@ -36,7 +35,6 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.primarySurface
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -48,11 +46,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -230,13 +225,13 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
             )
             // MAYBE: select regions within multiselect
             ModeToggle(
-                SelectionMode.Multiselect,
+                SelectionMode.Multiselect.Default,
                 viewModel,
                 painterResource(Res.drawable.multiselect_mode_3_scattered_circles),
                 contentDescription = "multiselect mode",
             )
             ModeToggle(
-                SelectionMode.SelectRegion,
+                SelectionMode.Region,
                 viewModel,
                 painterResource(Res.drawable.select_region_mode_intersection),
                 contentDescription = "select region mode",
@@ -281,7 +276,7 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
                         showColorPickerDialog = false
                         viewModel.regionColor = newColor
                         viewModel.switchSelectionMode(
-                            SelectionMode.SelectRegion,
+                            SelectionMode.Region,
                             noAlteringShortcuts = true
                         )
                     }

@@ -163,7 +163,7 @@ private fun SelectionsCanvas(
         translate(viewModel.translation.value.x, viewModel.translation.value.y) {
             if (viewModel.showCircles &&
                 (viewModel.mode.isSelectingCircles() ||
-                    viewModel.mode is SelectionMode.SelectRegion && viewModel.restrictRegionsToSelection
+                    viewModel.mode is SelectionMode.Region && viewModel.restrictRegionsToSelection
                 )
             ) {
                 val circles = viewModel.selection.map { viewModel.circles[it] }

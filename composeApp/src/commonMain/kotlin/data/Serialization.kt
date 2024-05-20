@@ -1,7 +1,11 @@
 package data
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.util.packFloats
+import androidx.compose.ui.util.unpackFloat1
+import androidx.compose.ui.util.unpackFloat2
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
@@ -43,5 +47,20 @@ object ColorULongSerializer : KSerializer<Color> {
 
     override fun deserialize(decoder: Decoder): Color {
         return Color(value = decoder.decodeSerializableValue(ULong.serializer()))
+    }
+}
+
+/** Serialize using [packFloats] into a [Long], idk why it's not by default */
+object OffsetSerializer : KSerializer<Offset> {
+    override val descriptor = Long.serializer().descriptor
+
+    override fun serialize(encoder: Encoder, value: Offset) {
+        val (x, y) = value
+        encoder.encodeSerializableValue(Long.serializer(), packFloats(x, y))
+    }
+
+    override fun deserialize(decoder: Decoder): Offset {
+        val long = decoder.decodeSerializableValue(Long.serializer())
+        return Offset(unpackFloat1(long), unpackFloat2(long))
     }
 }
