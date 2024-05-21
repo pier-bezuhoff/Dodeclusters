@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
@@ -64,6 +65,62 @@ fun ClassicColorPicker(
     val colorPickerValueState = rememberSaveable(stateSaver = HsvColor.Saver) {
         mutableStateOf(color)
     }
+    Row(modifier = modifier) {
+        val barThickness = 32.dp
+        val paddingBetweenBars = 8.dp
+        val updatedOnColorChanged by rememberUpdatedState(onColorChanged)
+        Column(modifier = Modifier.weight(0.8f)) {
+            SaturationValueArea(
+                modifier = Modifier.weight(0.8f),
+                currentColor = colorPickerValueState.value,
+                onSaturationValueChanged = { saturation, value ->
+                    colorPickerValueState.value =
+                        colorPickerValueState.value.copy(saturation = saturation, value = value)
+                    updatedOnColorChanged(colorPickerValueState.value)
+                }
+            )
+            if (showAlphaBar) {
+                Spacer(modifier = Modifier.height(paddingBetweenBars))
+                AlphaBar(
+                    modifier = Modifier.height(barThickness),
+                    currentColor = colorPickerValueState.value,
+                    onAlphaChanged = { alpha ->
+                        colorPickerValueState.value = colorPickerValueState.value.copy(alpha = alpha)
+                        updatedOnColorChanged(colorPickerValueState.value)
+                    }
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(paddingBetweenBars))
+        HueBar(
+            modifier = Modifier.width(barThickness),
+            currentColor = colorPickerValueState.value,
+            onHueChanged = { newHue ->
+                colorPickerValueState.value = colorPickerValueState.value.copy(hue = newHue)
+                updatedOnColorChanged(colorPickerValueState.value)
+            }
+        )
+    }
+}
+
+// slight modification to provide state
+/**
+ * Classic Color Picker Component that shows a HSV representation of a color, with a Hue Bar on the right,
+ * Alpha Bar on the bottom and the rest of the area covered with an area with saturation value touch area.
+ *
+ * @param modifier modifiers to set to this color picker.
+ * @param colorPickerValueState the color state.
+ * @param showAlphaBar whether or not to show the bottom alpha bar on the color picker.
+ * @param onColorChanged callback that is triggered when the color changes
+ *
+ */
+@Composable
+fun ClassicColorPicker(
+    modifier: Modifier = Modifier,
+    colorPickerValueState: MutableState<HsvColor>,
+    showAlphaBar: Boolean = true,
+    onColorChanged: (HsvColor) -> Unit
+) {
     Row(modifier = modifier) {
         val barThickness = 32.dp
         val paddingBetweenBars = 8.dp

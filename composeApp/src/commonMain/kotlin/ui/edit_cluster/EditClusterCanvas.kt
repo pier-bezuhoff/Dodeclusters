@@ -1,4 +1,4 @@
-package ui
+package ui.edit_cluster
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -41,6 +41,8 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import ui.part2path
+import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
 import kotlin.math.max
 
@@ -85,6 +87,7 @@ fun EditClusterCanvas(
 //    val decayingCircles by viewModel.decayingCircles.collectAsState(DecayingCircles(emptyList(), Color.White))
     // NOTE: unfinished animations queue sequentially and do not overlap
     var decayingCircles by mutableStateOf(DecayingCircles(emptyList(), Color.White))
+    // TODO: Map<DecayingCircles, Animatable> for seamless parallel execution
     val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch {
         viewModel.decayingCircles.collect { event ->

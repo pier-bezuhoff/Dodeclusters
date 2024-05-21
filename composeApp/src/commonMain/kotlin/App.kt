@@ -1,5 +1,5 @@
 import androidx.compose.runtime.Composable
-import ui.EditClusterScreen
+import ui.edit_cluster.EditClusterScreen
 import ui.theme.DodeclustersTheme
 
 @Composable

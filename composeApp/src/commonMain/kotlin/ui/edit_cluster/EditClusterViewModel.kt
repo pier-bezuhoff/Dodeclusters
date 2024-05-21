@@ -1,4 +1,4 @@
-package ui
+package ui.edit_cluster
 
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -341,7 +341,7 @@ class EditClusterViewModel(
 
     fun switchSelectionMode(newMode: Mode, noAlteringShortcuts: Boolean = false) {
         val new = when (newMode) {
-            is SelectionMode.Multiselect.Default -> newMode.redirect
+            is SelectionMode.Multiselect.Default -> SelectionMode.Multiselect.Default.redirect
             else -> newMode // TODO: smarter defaulting integrated with tool ADT
         }
         if (selection.size > 1 && new == SelectionMode.Drag)
@@ -745,7 +745,8 @@ class EditClusterViewModel(
                     if (m.center == null)
                         _mode.value = m.copy(center = centroid)
                     else
-                        _mode.value = CreationMode.CircleByCenterAndRadius.Radius(m.center, centroid)
+                        _mode.value =
+                            CreationMode.CircleByCenterAndRadius.Radius(m.center, centroid)
                 is CreationMode.CircleByCenterAndRadius.Radius ->
                     _mode.value = m.copy(radiusPoint = centroid)
                 is CreationMode.CircleBy3Points -> {
@@ -844,7 +845,7 @@ class EditClusterViewModel(
                 ),
                 parts = listOf(Cluster.Part(setOf(0), setOf(1,2,3))),
                 selection = listOf(0),
-                translation = -Offset(225f, 225f)
+                translation = Offset(225f, 225f)
             )
 
             fun restore(coroutineScope: CoroutineScope, uiState: UiState): EditClusterViewModel =
@@ -874,7 +875,10 @@ class EditClusterViewModel(
         override fun SaverScope.save(value: EditClusterViewModel): String =
             Json.encodeToString(UiState.serializer(), UiState.save(value))
         override fun restore(value: String): EditClusterViewModel {
-            return UiState.restore(coroutineScope, Json.decodeFromString(UiState.serializer(), value))
+            return UiState.restore(
+                coroutineScope,
+                Json.decodeFromString(UiState.serializer(), value)
+            )
         }
     }
 
@@ -898,7 +902,7 @@ sealed interface SelectionMode : Mode {
     @Serializable
     data object Drag : SelectionMode
     @Serializable
-    sealed interface Multiselect : SelectionMode{
+    sealed interface Multiselect : SelectionMode {
         @Serializable
         /** null-like, default [Multiselect] mode implementation: either last used or global default */
         data object Default: Multiselect {
