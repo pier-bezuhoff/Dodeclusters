@@ -6,15 +6,19 @@ import dodeclusters.composeapp.generated.resources.colors_category_name
 import dodeclusters.composeapp.generated.resources.create_category_name
 import dodeclusters.composeapp.generated.resources.multiselect_category_name
 import dodeclusters.composeapp.generated.resources.region_category_name
+import dodeclusters.composeapp.generated.resources.transform_category_name
 import dodeclusters.composeapp.generated.resources.visibility_category_name
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 
+sealed interface EditClusterToolbarItem
+
 sealed class EditClusterCategory(
     override val name: StringResource,
     override val tools: List<EditClusterTool>,
+    // imo var is sensible here
     final override var default: EditClusterTool = tools.first()
-) : Category {
+) : Category, EditClusterToolbarItem {
     override val icon: DrawableResource = default.icon
     // mode ~ toggle as their both their states are determined by a predicate & action is separated
     data object Multiselect : EditClusterCategory(
@@ -69,6 +73,14 @@ sealed class EditClusterCategory(
             EditClusterTool.Duplicate,
         ),
     ) // ~button-like
+    data object Transform : EditClusterCategory(
+        Res.string.transform_category_name,
+        listOf(EditClusterTool.Delete)
+    ) { // ~button-like
+        // button: scale -> slider or some other interface
+        // button: rotate -> slider, manual angle, etc
+        // + invert, etc
+    }
     data object Create : EditClusterCategory(
         Res.string.create_category_name,
         listOf(

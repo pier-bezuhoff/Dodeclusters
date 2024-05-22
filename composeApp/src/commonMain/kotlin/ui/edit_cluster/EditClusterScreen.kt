@@ -1,27 +1,15 @@
 package ui.edit_cluster
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.BottomAppBar
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
@@ -29,20 +17,15 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.IconToggleButton
 import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,31 +37,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import com.github.ajalt.colormath.RenderCondition
-import com.github.ajalt.colormath.model.RGB
 import data.ClusterRepository
-import data.ColorCssSerializer
 import data.io.Ddc
 import data.io.OpenFileButton
 import data.io.SaveData
 import data.io.SaveFileButton
 import dodeclusters.composeapp.generated.resources.Res
-import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.center
 import dodeclusters.composeapp.generated.resources.circle_3_points
 import dodeclusters.composeapp.generated.resources.circled_region
-import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
@@ -99,12 +68,9 @@ import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.visible
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import ui.colorpicker.ClassicColorPicker
-import ui.colorpicker.HsvColor
 import ui.theme.DodeclustersColors
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
@@ -438,117 +404,4 @@ fun BinaryToggle(
         }
     }
     Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
-}
-
-// BUG: cancel/ok buttons look bad in landscape
-@OptIn(ExperimentalResourceApi::class)
-@Composable
-fun ColorPickerDialog(
-    initialColor: Color,
-    onDismissRequest: () -> Unit,
-    onConfirm: (Color) -> Unit,
-) {
-    fun computeHex(clr: State<HsvColor>): TextFieldValue {
-        val c = clr.value.toColor()
-        val s = RGB(c.red, c.green, c.blue).toHex(withNumberSign = false, renderAlpha = RenderCondition.NEVER)
-        return TextFieldValue(s, TextRange(s.length))
-    }
-    val color = rememberSaveable(stateSaver = HsvColor.Saver) {
-        mutableStateOf(HsvColor.from(initialColor))
-    }
-    var hex by mutableStateOf(computeHex(color)) // need to be manually updated on every color's change
-    Dialog(onDismissRequest = {
-//        onDismissRequest()
-        onConfirm(color.value.toColor()) // thats how it be
-    }) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize(0.9f),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = "Pick a color",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.h4,
-                )
-//                HarmonyColorPicker(
-//                    Modifier
-//                        .fillMaxHeight(0.7f)
-//                        .padding(16.dp),
-//                    harmonyMode = ColorHarmonyMode.ANALOGOUS,
-//                    color = color
-//                ) { color = it }
-                ClassicColorPicker(
-                    Modifier
-                        .fillMaxHeight(0.7f)
-                        .padding(16.dp),
-                    colorPickerValueState = color,
-                    showAlphaBar = false, // MAYBE: add alpha someday
-                ) {
-                    // color is updated internally by the ColorPicker
-                    hex = computeHex(color)
-                }
-                OutlinedTextField(
-                    value = hex,
-                    onValueChange = { new ->
-                        hex = new
-                        if (new.text.length == 6) // primitive hex validation
-                            try {
-                                val rgb = RGB(new.text)
-                                color.value = HsvColor.from(Color(rgb.r, rgb.g, rgb.b))
-                            } catch (e: IllegalArgumentException) {
-                                e.printStackTrace()
-                                println("cannot parse hex string \"${new.text}\"")
-                            }
-                    },
-                    label = { Text("hex") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions( // smart ass enter capturing
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = { onConfirm(color.value.toColor()) }
-                    ),
-                    modifier = Modifier.onKeyEvent {
-                        if (it.key == Key.Enter) {
-                            onConfirm(color.value.toColor())
-                            true
-                        } else false
-                    }
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                ) {
-                    OutlinedButton(
-                        onClick = { onDismissRequest() },
-                        modifier = Modifier.padding(8.dp),
-                        border = BorderStroke(2.dp, MaterialTheme.colors.primary),
-                        shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
-                    ) {
-                        Icon(painterResource(Res.drawable.cancel), "cancel")
-                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text("Cancel", fontSize = 24.sp)
-                    }
-                    Button(
-                        onClick = { onConfirm(color.value.toColor()) },
-                        modifier = Modifier.padding(8.dp),
-                        border = BorderStroke(2.dp, MaterialTheme.colors.primary),
-                        shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
-                    ) {
-                        Icon(painterResource(Res.drawable.confirm), "confirm")
-                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text("OK", fontSize = 24.sp)
-                    }
-                }
-            }
-        }
-    }
 }

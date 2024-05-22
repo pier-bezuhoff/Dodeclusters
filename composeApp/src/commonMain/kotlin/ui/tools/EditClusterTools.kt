@@ -33,7 +33,6 @@ import dodeclusters.composeapp.generated.resources.rounded_square
 import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
 import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.visible
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
@@ -42,7 +41,7 @@ sealed class EditClusterTool(
     override val name: StringResource,
     override val description: StringResource,
     override val icon: DrawableResource,
-) : Tool {
+) : Tool, EditClusterToolbarItem {
     open class Switch(
         name: StringResource,
         description: StringResource,
