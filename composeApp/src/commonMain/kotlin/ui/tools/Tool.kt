@@ -13,7 +13,7 @@ sealed interface Tool {
     sealed interface Action : Tool
     /** Switches between 2 different modes */
     sealed interface BinaryToggle : Action {
-        val disabledIconResource: IconResource
+        val disabledIconResource: IconResource? // null => un-highlight icon instead
     }
 
     /** Can only be applied to a non-empty active selection */
@@ -39,6 +39,7 @@ sealed interface Tool {
     sealed interface MultiArg5<T1 : InputType, T2: InputType, T3: InputType, T4: InputType, T5: InputType> : MultiArg {
         override val nArgs get() = 5
     }
+    // potentially inf-arg for polygons
 }
 
 sealed interface IconResource {

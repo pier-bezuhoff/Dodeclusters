@@ -1,12 +1,12 @@
 package data
 
 import androidx.compose.ui.geometry.Offset
-import kotlinx.serialization.Serializable
 import data.kmath_complex.ComplexField
 import data.kmath_complex.r
 import data.kmath_complex.r2
-import data.kmath_complex.toComplex
 import domain.toComplex
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow
@@ -20,6 +20,7 @@ data class Circle(
     val y: Double,
     val radius: Double,
 ) {
+    /** center offset */
     val offset: Offset
         get() = Offset(x.toFloat(), y.toFloat())
 
@@ -49,6 +50,9 @@ data class Circle(
 
     fun hasOutside(point: Offset): Boolean =
         checkPosition(point) > 0
+
+    fun toCircleF(): CircleF =
+        CircleF(x.toFloat(), y.toFloat(), radius.toFloat())
 
     companion object {
         fun by3Points(p1: Offset, p2: Offset, p3: Offset): Circle {
@@ -141,6 +145,16 @@ data class Circle(
         }
 
     }
+}
+
+@Serializable
+data class CircleF(
+    val x: Float,
+    val y: Float,
+    val radius: Float,
+) {
+    @Transient
+    val center = Offset(x, y)
 }
 
 @Serializable

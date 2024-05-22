@@ -10,6 +10,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,25 +82,28 @@ fun EditClusterCanvas(
 //    val clusterPathAlpha = 1f // TODO: add a switch for this
     val selectionLinesColor = DodeclustersColors.gray
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
-    val maxDecayAlpha = 0.5f
+    val maxDecayAlpha = 0.2f
     val decayDuration = 1_500
-    val decayAlpha = remember { Animatable(0f) }
+//    val decayAlpha = remember { Animatable(0f) }
 //    val decayingCircles by viewModel.decayingCircles.collectAsState(DecayingCircles(emptyList(), Color.White))
     // NOTE: unfinished animations queue sequentially and do not overlap
-    var decayingCircles by mutableStateOf(DecayingCircles(emptyList(), Color.White))
-    // TODO: Map<DecayingCircles, Animatable> for seamless parallel execution
+//    var decayingCircles by mutableStateOf(DecayingCircles(emptyList(), Color.White))
+    val animations: MutableMap<DecayingCircles, Animatable<Float, AnimationVector1D>> =
+        remember { mutableMapOf() }
     val coroutineScope = rememberCoroutineScope()
-    coroutineScope.launch {
+    coroutineScope.launch { // listen to circle animations
         viewModel.decayingCircles.collect { event ->
-            decayingCircles = event
-//            decayAlpha.snapTo(maxDecayAlpha)
-            decayAlpha.animateTo(maxDecayAlpha, tween(decayDuration/30, easing = LinearEasing))
-            decayAlpha.animateTo(
-                targetValue = 0f,
-                tween(decayDuration*29/30, easing = LinearEasing),
+            launch {
+                val animatable = Animatable(0f)
+                animations[event] = animatable
+                animatable.animateTo(maxDecayAlpha, tween(decayDuration/30, easing = LinearEasing))
+                animatable.animateTo(
+                    targetValue = 0f,
+                    tween(decayDuration*29/30, easing = LinearEasing),
 //                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
-            )
-
+                )
+                animations.remove(event) // idk, this might be bad
+            }
         }
     }
     SelectionsCanvas(modifier, viewModel, selectionLinesColor, backgroundColor, circleColor, circleThiccStroke)
@@ -121,7 +125,8 @@ fun EditClusterCanvas(
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // crucial for proper alpha blending
     ) {
         translate(viewModel.translation.value.x, viewModel.translation.value.y) {
-            drawAnimation(decayingCircles, decayAlpha)
+//            drawAnimation(decayingCircles, decayAlpha)
+            drawAnimation(animations)
             if (viewModel.showCircles)
                 drawCircles(viewModel, circleColor, circleStroke)
             drawParts(viewModel, clusterPathAlpha, circleStroke)
@@ -194,18 +199,16 @@ private fun SelectionsCanvas(
 }
 
 private fun DrawScope.drawAnimation(
-    decayingCircles: DecayingCircles,
-    decayAlpha: Animatable<Float, AnimationVector1D>,
+    animations: Map<DecayingCircles, Animatable<Float, AnimationVector1D>>
 ) {
-    // animations
-    for (circle in decayingCircles.circles) {
-        drawCircle(
-            color = decayingCircles.color.copy(alpha = 0.5f),
-            alpha = decayAlpha.value,
-            radius = circle.radius.toFloat(),
-            center = circle.offset
-        )
-    }
+    for ((decayingCircles, decayAlpha) in animations)
+        for (circle in decayingCircles.circles)
+            drawCircle(
+                color = decayingCircles.color,
+                alpha = decayAlpha.value,
+                radius = circle.radius,
+                center = circle.center
+            )
 }
 
 private fun DrawScope.drawCircles(

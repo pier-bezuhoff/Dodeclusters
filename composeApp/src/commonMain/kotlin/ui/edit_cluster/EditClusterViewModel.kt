@@ -13,7 +13,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import data.Circle
+import data.CircleF
 import data.Cluster
+import data.ColorCssSerializer
 import data.OffsetSerializer
 import data.io.Ddc
 import data.io.parseDdc
@@ -268,7 +270,7 @@ class EditClusterViewModel(
             selection.clear()
             selection.add(circles.size - 1)
             _decayingCircles.emit(
-                DecayingCircles(listOf(newCircle), Color.Green)
+                DecayingCircles(listOf(newCircle.toCircleF()), Color.Green)
             )
         }
     }
@@ -293,7 +295,7 @@ class EditClusterViewModel(
             selection.clear()
             selection.addAll(oldSize until (oldSize + copiedCircles.size))
             _decayingCircles.emit(
-                DecayingCircles(copiedCircles, Color.Blue)
+                DecayingCircles(copiedCircles.map { it.toCircleF() }, Color.Blue)
             )
         }
     }
@@ -317,7 +319,7 @@ class EditClusterViewModel(
             val oldParts = parts.toList()
             val reindexing = reindexingMap(circles.indices, whatsGone)
             _decayingCircles.emit(
-                DecayingCircles(selection.map { circles[it] }, Color.Red)
+                DecayingCircles(selection.map { circles[it].toCircleF() }, Color.Red)
             )
             selection.clear()
             parts.clear()
@@ -754,7 +756,10 @@ class EditClusterViewModel(
                         points = m.points.take(m.phase - 1).plusElement(centroid)
                     )
                 }
-                else -> translation.value = translation.value + pan // navigate canvas
+                else -> {
+//                    recordCommand(Command.CHANGE_POV)
+                    translation.value = translation.value + pan // navigate canvas
+                }
             }
         }
     }
@@ -845,7 +850,7 @@ class EditClusterViewModel(
                 ),
                 parts = listOf(Cluster.Part(setOf(0), setOf(1,2,3))),
                 selection = listOf(0),
-                translation = Offset(225f, 225f)
+                translation = Offset(225f, 225f) + Offset(200f, 200f)
             )
 
             fun restore(coroutineScope: CoroutineScope, uiState: UiState): EditClusterViewModel =
@@ -853,9 +858,10 @@ class EditClusterViewModel(
                     coroutineScope,
                     Cluster(uiState.circles.toList(), uiState.parts.toList(), filled = true)
                 ).apply {
-                    translation.value = uiState.translation
                     _mode.value = uiState.mode
                     selection.addAll(uiState.selection)
+//                    translation.value = Offset(100f, 0f) //uiState.translation
+                    // this translation recovery dont work
                 }
 
             fun save(viewModel: EditClusterViewModel): UiState =
@@ -953,9 +959,11 @@ enum class Handle {
     SCALE, ROTATE
 }
 
-/** params for copy/delete animations */
+/** params for create/copy/delete animations */
+@Serializable
 data class DecayingCircles(
-    val circles: List<Circle>,
+    val circles: List<CircleF>,
+    @Serializable(ColorCssSerializer::class)
     val color: Color
 )
 
@@ -966,4 +974,6 @@ enum class Command {
     ROTATE,
     COPY, DELETE, CREATE,
     SELECT_REGION,
+    /** records canvas translations and scaling */
+    CHANGE_POV,
 }
