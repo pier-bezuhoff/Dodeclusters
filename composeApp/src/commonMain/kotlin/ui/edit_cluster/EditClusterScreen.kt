@@ -80,22 +80,29 @@ import dodeclusters.composeapp.generated.resources.circle_3_points
 import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.copy
+import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
+import dodeclusters.composeapp.generated.resources.edit_cluster_title
 import dodeclusters.composeapp.generated.resources.invisible
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
 import dodeclusters.composeapp.generated.resources.open_file
+import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.open_region
 import dodeclusters.composeapp.generated.resources.palette
 import dodeclusters.composeapp.generated.resources.redo
+import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.rounded_square
 import dodeclusters.composeapp.generated.resources.save
+import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
 import dodeclusters.composeapp.generated.resources.undo
+import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.visible
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.theme.DodeclustersColors
@@ -167,7 +174,7 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
     val backgroundColor = MaterialTheme.colors.primary
     val contentColor = MaterialTheme.colors.onPrimary
     TopAppBar(
-        title = { Text("Edit cluster", color = DodeclustersColors.black) },
+        title = { Text(stringResource(Res.string.edit_cluster_title), color = DodeclustersColors.black) },
         navigationIcon = {
 //            IconButton(onClick = viewModel::saveAndGoBack) {
 //                Icon(Icons.Default.Done, contentDescription = "Done")
@@ -178,22 +185,22 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
                 LocalContentAlpha provides 1f,
 //                LocalContentColor provides Color.White
             ) {
-                SaveFileButton(painterResource(Res.drawable.save), "Save",
+                SaveFileButton(painterResource(Res.drawable.save), stringResource(Res.string.save_cluster_name),
                     saveDataProvider = { SaveData(
                         Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION, viewModel.saveAsYaml()) }
                 ) {
                     println(if (it) "saved" else "not saved")
                 }
-                OpenFileButton(painterResource(Res.drawable.open_file), "Open file") { content ->
+                OpenFileButton(painterResource(Res.drawable.open_file), stringResource(Res.string.open_file_name)) { content ->
                     content?.let {
                         viewModel.loadFromYaml(content)
                     }
                 }
                 IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
-                    Icon(painterResource(Res.drawable.undo), contentDescription = "Undo")
+                    Icon(painterResource(Res.drawable.undo), stringResource(Res.string.undo_name))
                 }
                 IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
-                    Icon(painterResource(Res.drawable.redo), contentDescription = "Redo")
+                    Icon(painterResource(Res.drawable.redo), stringResource(Res.string.redo_name))
                 }
 //            IconButton(onClick = viewModel::cancelAndGoBack) {
 //                Icon(Icons.Default.Close, contentDescription = "Cancel")
@@ -308,7 +315,7 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
                 enabled = viewModel.copyAndDeleteAreEnabled,
             ) {
                 Icon(
-                    Icons.Default.Delete,
+                    painterResource(Res.drawable.delete_forever),
                     tint = Color(1f, 0.5f, 0.5f).copy(alpha = LocalContentAlpha.current),
                     contentDescription = "delete circle(s)"
                 )

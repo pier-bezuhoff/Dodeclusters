@@ -84,10 +84,6 @@ fun EditClusterCanvas(
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val maxDecayAlpha = 0.2f
     val decayDuration = 1_500
-//    val decayAlpha = remember { Animatable(0f) }
-//    val decayingCircles by viewModel.decayingCircles.collectAsState(DecayingCircles(emptyList(), Color.White))
-    // NOTE: unfinished animations queue sequentially and do not overlap
-//    var decayingCircles by mutableStateOf(DecayingCircles(emptyList(), Color.White))
     val animations: MutableMap<DecayingCircles, Animatable<Float, AnimationVector1D>> =
         remember { mutableMapOf() }
     val coroutineScope = rememberCoroutineScope()

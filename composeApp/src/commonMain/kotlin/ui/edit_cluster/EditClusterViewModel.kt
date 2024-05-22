@@ -19,6 +19,8 @@ import data.ColorCssSerializer
 import data.OffsetSerializer
 import data.io.Ddc
 import data.io.parseDdc
+import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.stub
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
