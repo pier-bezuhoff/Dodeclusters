@@ -42,7 +42,8 @@ sealed class EditClusterTool(
     override val description: StringResource,
     override val icon: DrawableResource,
 ) : Tool, EditClusterToolbarItem {
-    open class Switch(
+    // mode ~ toggle as their both their states are determined by a predicate & action is separated
+    abstract class Switch(
         name: StringResource,
         description: StringResource,
         icon: DrawableResource,

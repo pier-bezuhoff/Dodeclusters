@@ -72,6 +72,9 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.theme.DodeclustersColors
+import ui.tools.EditClusterCategory
+import ui.tools.EditClusterTool
+import ui.tools.EditClusterToolbarItem
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
 @Composable
@@ -294,63 +297,45 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
                 CreationMode.CircleBy3Points(), viewModel,
                 painterResource(Res.drawable.circle_3_points), "circle by 3 points"
             )
-//        IconButton(onClick = viewModel::createNewCircle) {
-//            Icon(Icons.Default.AddCircle, contentDescription = "create new circle")
-//        }
         }
     }
 }
 
+fun setup() {
+    val toolbar: List<EditClusterToolbarItem> = listOf(
+        EditClusterTool.Drag, // MAYBE: convert to category for regularity
+        EditClusterCategory.Multiselect,
+        EditClusterCategory.Region,
+        EditClusterCategory.Visibility,
+        EditClusterCategory.Colors,
+        EditClusterCategory.Attributes,
+        EditClusterCategory.Transform,
+        EditClusterCategory.Create
+    )
+    val tools = mutableListOf<EditClusterTool>()
+    val categories = mutableListOf<EditClusterCategory>()
+    for (item in toolbar) {
+        when (item) {
+            is EditClusterTool -> tools.add(item)
+            is EditClusterCategory -> {
+                tools.addAll(item.tools)
+                categories.add(item)
+            }
+        }
+    }
+    // this int list is to be persisted/preserved
+    // category index -> tool index among category.tools
+    val defaults: IntArray = categories.map { it.tools.indexOf(it.default) }.toIntArray()
+}
+
 @Composable
-fun Panel() {
+fun Panel(category: EditClusterCategory) {
     // shown on the top of the bottom toolbar
     // scrollable lazy row, w = wrap content
     // can be shown or hidden with a collapse button at the end
-}
-
-@Composable
-fun MultiselectPanel() {
-    // actions:
-    // select all circles
-    // deselect all circles
-    // rectangular selection
-    // <collapse panel>
-}
-
-@Composable
-fun RegionsPanel() {
-    // switch:
-    // binary chessboard selection
-    // actions:
-    // deselect all regions
-    // choose color via color picker
-    // <several most common colors to choose from>
-    // <collapse panel>
-}
-
-@Composable
-fun VisibilityPanel() {
-    // switches:
-    // circle visibility
-    // regions are filled/wireframes
-    // <collapse panel>
-}
-
-@Composable
-fun CreationPanel() {
-    // selectable creation mode:
-    // circle by center & radius
-    // circle by 3 points
-    // line by 2 points
-    // <collapse panel>
-}
-
-@Composable
-fun TransformToolsPanel() {
-    // default: move/drag
-    // scale
-    // rotate
-    // inverse
+    if (category.tools.size > 1) {
+        1
+    }
 }
 
 @Composable

@@ -4,6 +4,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.attributes_category_name
 import dodeclusters.composeapp.generated.resources.colors_category_name
 import dodeclusters.composeapp.generated.resources.create_category_name
+import dodeclusters.composeapp.generated.resources.drag_name
 import dodeclusters.composeapp.generated.resources.multiselect_category_name
 import dodeclusters.composeapp.generated.resources.region_category_name
 import dodeclusters.composeapp.generated.resources.transform_category_name
@@ -17,10 +18,14 @@ sealed class EditClusterCategory(
     override val name: StringResource,
     override val tools: List<EditClusterTool>,
     // imo var is sensible here
-    final override var default: EditClusterTool = tools.first()
+    final override val default: EditClusterTool = tools.first()
 ) : Category, EditClusterToolbarItem {
     override val icon: DrawableResource = default.icon
-    // mode ~ toggle as their both their states are determined by a predicate & action is separated
+
+//    data object Drag : EditClusterCategory(
+//        Res.string.drag_name,
+//        listOf(EditClusterTool.Drag)
+//    )
     data object Multiselect : EditClusterCategory(
         Res.string.multiselect_category_name,
         listOf(
