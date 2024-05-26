@@ -19,8 +19,6 @@ import data.ColorCssSerializer
 import data.OffsetSerializer
 import data.io.Ddc
 import data.io.parseDdc
-import dodeclusters.composeapp.generated.resources.Res
-import dodeclusters.composeapp.generated.resources.stub
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -31,6 +29,7 @@ import kotlinx.serialization.json.Json
 import domain.angleDeg
 import domain.rotateBy
 import ui.theme.DodeclustersColors
+import ui.tools.EditClusterTool
 import kotlin.math.absoluteValue
 import kotlin.math.pow
 
@@ -48,8 +47,9 @@ class EditClusterViewModel(
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
-    val selection = mutableStateListOf<Ix>()
+    val selection = mutableStateListOf<Ix>() // MAYBE: when circles are hidden select parts instead
 
+    /** currently selected color */
     var regionColor by mutableStateOf(DodeclustersColors.lightPurple)
     var showCircles by mutableStateOf(true)
     /** which style to use when drawing parts: true = stroke, false = fill */
@@ -58,6 +58,9 @@ class EditClusterViewModel(
      * only use circles present in the [selection] to determine which parts to fill */
     var restrictRegionsToSelection by mutableStateOf(true)
 
+    val circleSelectionIsActive by derivedStateOf {
+        showCircles&& selection.isNotEmpty() && mode.isSelectingCircles()
+    }
     val handleConfig = derivedStateOf { // depends on selectionMode & selection
         when (mode) {
             is SelectionMode.Drag ->
@@ -80,9 +83,6 @@ class EditClusterViewModel(
 
     var undoIsEnabled by mutableStateOf(false) // = history is not empty
     var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
-    val copyAndDeleteAreEnabled by derivedStateOf {
-        mode.isSelectingCircles() && selection.isNotEmpty()
-    }
     // tagged & grouped gap buffer
     private val commands = ArrayDeque<Command>(HISTORY_SIZE)
     private val redoCommands = ArrayDeque<Command>(HISTORY_SIZE)
@@ -100,6 +100,8 @@ class EditClusterViewModel(
 
     private val _decayingCircles = MutableSharedFlow<DecayingCircles>()
     val decayingCircles = _decayingCircles.asSharedFlow()
+
+    var showColorPickerDialog by mutableStateOf(false)
 
     val canvasSize = mutableStateOf(IntSize.Zero) // used when saving best-center
     val translation = mutableStateOf(Offset.Zero) // pre-scale offset
@@ -234,7 +236,7 @@ class EditClusterViewModel(
         circles.clear()
         circles.addAll(state.circles)
         parts.addAll(state.parts)
-        switchSelectionMode(state.mode, noAlteringShortcuts = true)
+        switchToMode(state.mode, noAlteringShortcuts = true)
         selection.clear() // switch can populate it
         selection.addAll(state.selection)
     }
@@ -268,7 +270,7 @@ class EditClusterViewModel(
             showCircles = true
             circles.add(newCircle)
             if (switchToSelectionMode && !mode.isSelectingCircles())
-                switchSelectionMode(SelectionMode.Drag)
+                switchToMode(SelectionMode.Drag)
             selection.clear()
             selection.add(circles.size - 1)
             _decayingCircles.emit(
@@ -343,7 +345,7 @@ class EditClusterViewModel(
         }
     }
 
-    fun switchSelectionMode(newMode: Mode, noAlteringShortcuts: Boolean = false) {
+    fun switchToMode(newMode: Mode, noAlteringShortcuts: Boolean = false) {
         val new = when (newMode) {
             is SelectionMode.Multiselect.Default -> SelectionMode.Multiselect.Default.redirect
             else -> newMode // TODO: smarter defaulting integrated with tool ADT
@@ -516,6 +518,14 @@ class EditClusterViewModel(
         } else {
             selection.clear()
         }
+    }
+
+    fun toggleShowCircles() {
+        showCircles = !showCircles
+    }
+
+    fun toggleRestrictRegionsToSelection() {
+        restrictRegionsToSelection = !restrictRegionsToSelection
     }
 
     // pointer input callbacks
@@ -831,6 +841,37 @@ class EditClusterViewModel(
     fun onLongDragEnd() {
         grabbedCircleIx = null
     }
+
+    fun toolAction(tool: EditClusterTool): Unit =
+        when (tool) {
+            EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
+            EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect.Default)
+            EditClusterTool.Region -> switchToMode(SelectionMode.Region)
+            EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
+            EditClusterTool.ShowCircles -> toggleShowCircles()
+            EditClusterTool.Palette -> showColorPickerDialog = true
+            EditClusterTool.Delete -> {
+                deleteCircles(); Unit
+            }
+            EditClusterTool.Duplicate -> {
+                copyCircles(); Unit
+            }
+            EditClusterTool.ConstructCircleByCenterAndRadius -> switchToMode(CreationMode.CircleByCenterAndRadius.Center())
+            EditClusterTool.ConstructCircleBy3Points -> switchToMode(CreationMode.CircleBy3Points())
+        }
+
+    /** Is [tool] enabled? */
+    fun toolPredicate(tool: EditClusterTool): Boolean =
+        when (tool) {
+            EditClusterTool.Drag -> mode is SelectionMode.Drag
+            EditClusterTool.Multiselect -> mode is SelectionMode.Multiselect
+            EditClusterTool.Region -> mode is SelectionMode.Region
+            EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
+            EditClusterTool.ShowCircles -> showCircles
+            EditClusterTool.ConstructCircleByCenterAndRadius -> mode is CreationMode.CircleByCenterAndRadius
+            EditClusterTool.ConstructCircleBy3Points -> mode is CreationMode.CircleBy3Points
+            else -> true
+        }
 
     @Serializable
     data class UiState(

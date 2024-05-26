@@ -43,7 +43,7 @@ sealed class EditClusterTool(
     override val icon: DrawableResource,
 ) : Tool, EditClusterToolbarItem {
     // mode ~ toggle as their both their states are determined by a predicate & action is separated
-    abstract class Switch(
+    sealed class Switch(
         name: StringResource,
         description: StringResource,
         icon: DrawableResource,
@@ -84,7 +84,7 @@ sealed class EditClusterTool(
         Res.string.palette_name,
         Res.string.palette_description,
         Res.drawable.palette
-    ), Tool.Action {
+    ), Tool.InstantAction {
         val colorOutlineIcon = Res.drawable.rounded_square
     }
 

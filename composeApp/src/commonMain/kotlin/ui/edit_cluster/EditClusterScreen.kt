@@ -2,12 +2,16 @@ package ui.edit_cluster
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.BottomAppBar
 import androidx.compose.material.Divider
@@ -26,12 +30,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -73,8 +74,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
-import ui.tools.EditClusterTool
-import ui.tools.EditClusterToolbarItem
+import ui.tools.Tool
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
 @Composable
@@ -98,7 +98,7 @@ fun EditClusterScreen(
             FloatingActionButton(
                 onClick = {
                     println("FAB")
-                    viewModel.switchSelectionMode(CreationMode.CircleByCenterAndRadius.Center())
+                    viewModel.switchToMode(CreationMode.CircleByCenterAndRadius.Center())
                 },
                 backgroundColor = MaterialTheme.colors.secondary,
                 contentColor = MaterialTheme.colors.onSecondary,
@@ -221,6 +221,7 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
                 viewModel,
                 painterResource(Res.drawable.multiselect_mode_3_scattered_circles),
                 contentDescription = "multiselect mode",
+                checkedPredicate = { viewModel.mode is SelectionMode.Multiselect }
             )
             ModeToggle(
                 SelectionMode.Region,
@@ -248,9 +249,8 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
             ) {
                 viewModel.restrictRegionsToSelection = !viewModel.restrictRegionsToSelection
             }
-            var showColorPickerDialog by remember { mutableStateOf(false) }
             IconButton(onClick = {
-                showColorPickerDialog = true
+                viewModel.showColorPickerDialog = true
             }) {
                 Icon(painterResource(Res.drawable.palette), contentDescription = "choose color")
                 Icon(
@@ -260,14 +260,14 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
                     tint = viewModel.regionColor
                 )
             }
-            if (showColorPickerDialog)
+            if (viewModel.showColorPickerDialog)
                 ColorPickerDialog(
                     initialColor = viewModel.regionColor,
-                    onDismissRequest = { showColorPickerDialog = false },
+                    onDismissRequest = { viewModel.showColorPickerDialog = false },
                     onConfirm = { newColor ->
-                        showColorPickerDialog = false
+                        viewModel.showColorPickerDialog = false
                         viewModel.regionColor = newColor
-                        viewModel.switchSelectionMode(
+                        viewModel.switchToMode(
                             SelectionMode.Region,
                             noAlteringShortcuts = true
                         )
@@ -275,13 +275,13 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
                 )
             IconButton(
                 onClick = viewModel::copyCircles,
-                enabled = viewModel.copyAndDeleteAreEnabled
+                enabled = viewModel.circleSelectionIsActive
             ) {
                 Icon(painterResource(Res.drawable.copy), contentDescription = "copy circle(s)")
             }
             IconButton(
                 onClick = viewModel::deleteCircles,
-                enabled = viewModel.copyAndDeleteAreEnabled,
+                enabled = viewModel.circleSelectionIsActive,
             ) {
                 Icon(
                     painterResource(Res.drawable.delete_forever),
@@ -301,9 +301,9 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
     }
 }
 
-fun setup() {
-    val toolbar: List<EditClusterToolbarItem> = listOf(
-        EditClusterTool.Drag, // MAYBE: convert to category for regularity
+fun setupToolbar() {
+    val categories: List<EditClusterCategory> = listOf(
+        EditClusterCategory.Drag,
         EditClusterCategory.Multiselect,
         EditClusterCategory.Region,
         EditClusterCategory.Visibility,
@@ -312,29 +312,57 @@ fun setup() {
         EditClusterCategory.Transform,
         EditClusterCategory.Create
     )
-    val tools = mutableListOf<EditClusterTool>()
-    val categories = mutableListOf<EditClusterCategory>()
-    for (item in toolbar) {
-        when (item) {
-            is EditClusterTool -> tools.add(item)
-            is EditClusterCategory -> {
-                tools.addAll(item.tools)
-                categories.add(item)
-            }
-        }
-    }
+    val categoryIndices = categories.withIndex().associate { it.value to it.index }
+    val tools = categories.flatMap { it.tools }.distinct()
     // this int list is to be persisted/preserved
     // category index -> tool index among category.tools
-    val defaults: IntArray = categories.map { it.tools.indexOf(it.default) }.toIntArray()
+    val defaults: MutableList<Int> = categories.map { it.tools.indexOf(it.default) }.toMutableList()
+    var category = categories.first()
+    var toolIndex = defaults[categoryIndices[category]!!]
+    val tool = category.tools[toolIndex]
+    var showPanel = category.tools.size > 1
 }
 
 @Composable
-fun Panel(category: EditClusterCategory) {
+fun Panel(
+    category: EditClusterCategory,
+    toolIndex: Ix,
+    viewModel: EditClusterViewModel,
+    onSelectTool: (toolIndex: Ix) -> Unit,
+    onHide: () -> Unit = {}
+) {
     // shown on the top of the bottom toolbar
     // scrollable lazy row, w = wrap content
     // can be shown or hidden with a collapse button at the end
-    if (category.tools.size > 1) {
-        1
+    require(category.tools.size > 1)
+    // scrollable row + highlight selected tool
+    val scrollState = rememberScrollState()
+    Row(
+        modifier = Modifier.horizontalScroll(scrollState),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start,
+    ) {
+        for ((ix, tool) in category.tools.withIndex()) {
+            val highlight = ix == toolIndex
+            when (tool) {
+                is Tool.ActionOnSelection -> {
+                    viewModel.circleSelectionIsActive
+                    viewModel.toolAction(tool)
+                } // action + disabled when no selection / hidden circles
+                is Tool.InstantAction -> {
+                    viewModel.toolAction(tool)
+                } // action
+                is Tool.BinaryToggle -> {
+                    viewModel.toolPredicate(tool)
+                    viewModel.toolAction(tool)
+                } // predicate & action
+                else -> throw IllegalStateException("Never") // wont compile without it
+            }
+        }
+        if (category is EditClusterCategory.Region || category is EditClusterCategory.Colors) {
+            // used colors
+        }
+        // hide panel button
     }
 }
 
@@ -350,7 +378,7 @@ inline fun <reified M: Mode> ModeToggle(
     IconToggleButton(
         checked = checkedPredicate(),
         onCheckedChange = {
-            viewModel.switchSelectionMode(targetMode)
+            viewModel.switchToMode(targetMode)
         },
         modifier = Modifier
             .background(
