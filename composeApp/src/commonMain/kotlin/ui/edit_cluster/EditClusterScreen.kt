@@ -49,6 +49,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.center
 import dodeclusters.composeapp.generated.resources.circle_3_points
 import dodeclusters.composeapp.generated.resources.circled_region
+import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
@@ -65,6 +66,7 @@ import dodeclusters.composeapp.generated.resources.rounded_square
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
+import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.visible
@@ -74,6 +76,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
+import ui.tools.EditClusterTool
 import ui.tools.Tool
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
@@ -178,7 +181,7 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
         },
         backgroundColor = backgroundColor.copy(alpha = 0.1f),
         contentColor = contentColor,
-        modifier = Modifier.background(
+        modifier = Modifier.background( // transparency gradient
             Brush.verticalGradient(
                 0f to backgroundColor,
                 1f to backgroundColor.copy(alpha = 0.8f)
@@ -188,7 +191,6 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
     )
 }
 
-// TODO: can overflow on mobile, make it scrollable LazyRow or smth
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = Modifier) {
@@ -301,71 +303,6 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
     }
 }
 
-fun setupToolbar() {
-    val categories: List<EditClusterCategory> = listOf(
-        EditClusterCategory.Drag,
-        EditClusterCategory.Multiselect,
-        EditClusterCategory.Region,
-        EditClusterCategory.Visibility,
-        EditClusterCategory.Colors,
-        EditClusterCategory.Attributes,
-        EditClusterCategory.Transform,
-        EditClusterCategory.Create
-    )
-    val categoryIndices = categories.withIndex().associate { it.value to it.index }
-    val tools = categories.flatMap { it.tools }.distinct()
-    // this int list is to be persisted/preserved
-    // category index -> tool index among category.tools
-    val defaults: MutableList<Int> = categories.map { it.tools.indexOf(it.default) }.toMutableList()
-    var category = categories.first()
-    var toolIndex = defaults[categoryIndices[category]!!]
-    val tool = category.tools[toolIndex]
-    var showPanel = category.tools.size > 1
-}
-
-@Composable
-fun Panel(
-    category: EditClusterCategory,
-    toolIndex: Ix,
-    viewModel: EditClusterViewModel,
-    onSelectTool: (toolIndex: Ix) -> Unit,
-    onHide: () -> Unit = {}
-) {
-    // shown on the top of the bottom toolbar
-    // scrollable lazy row, w = wrap content
-    // can be shown or hidden with a collapse button at the end
-    require(category.tools.size > 1)
-    // scrollable row + highlight selected tool
-    val scrollState = rememberScrollState()
-    Row(
-        modifier = Modifier.horizontalScroll(scrollState),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Start,
-    ) {
-        for ((ix, tool) in category.tools.withIndex()) {
-            val highlight = ix == toolIndex
-            when (tool) {
-                is Tool.ActionOnSelection -> {
-                    viewModel.circleSelectionIsActive
-                    viewModel.toolAction(tool)
-                } // action + disabled when no selection / hidden circles
-                is Tool.InstantAction -> {
-                    viewModel.toolAction(tool)
-                } // action
-                is Tool.BinaryToggle -> {
-                    viewModel.toolPredicate(tool)
-                    viewModel.toolAction(tool)
-                } // predicate & action
-                else -> throw IllegalStateException("Never") // wont compile without it
-            }
-        }
-        if (category is EditClusterCategory.Region || category is EditClusterCategory.Colors) {
-            // used colors
-        }
-        // hide panel button
-    }
-}
-
 @Composable
 inline fun <reified M: Mode> ModeToggle(
     targetMode: M,
@@ -415,6 +352,185 @@ fun BinaryToggle(
                 contentDescription
             )
         }
+    }
+    Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
+}
+
+// move to VM
+fun setupToolbar() {
+    val categories: List<EditClusterCategory> = listOf(
+        EditClusterCategory.Drag,
+        EditClusterCategory.Multiselect,
+        EditClusterCategory.Region,
+        EditClusterCategory.Visibility,
+        EditClusterCategory.Colors,
+        EditClusterCategory.Attributes,
+        EditClusterCategory.Transform,
+        EditClusterCategory.Create
+    )
+    val categoryIndices = categories.withIndex().associate { it.value to it.index }
+    val tools = categories.flatMap { it.tools }.distinct()
+    // this int list is to be persisted/preserved
+    // category index -> tool index among category.tools
+    val defaults: MutableList<Int> = categories.map { it.tools.indexOf(it.default) }.toMutableList()
+    var category = categories.first()
+    var toolIndex = defaults[categoryIndices[category]!!]
+    val tool = category.tools[toolIndex]
+    var showPanel = category.tools.size > 1
+}
+
+// MAYBE: hoist VM upwards with callbacks
+@Composable
+fun Panel(
+    category: EditClusterCategory,
+    toolIndex: Ix,
+    viewModel: EditClusterViewModel,
+    onSelectTool: (toolIndex: Ix) -> Unit,
+    onHide: () -> Unit = {}
+) {
+    // shown on the top of the bottom toolbar
+    // scrollable lazy row, w = wrap content
+    // can be shown or hidden with a collapse button at the end
+    require(category.tools.size > 1)
+    // scrollable row + highlight selected tool
+    val scrollState = rememberScrollState()
+    Row(
+        modifier = Modifier
+            .horizontalScroll(scrollState)
+            .background(Color.Transparent),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start,
+    ) {
+        for ((ix, tool) in category.tools.withIndex()) {
+            val highlighted = ix == toolIndex
+            val icon = painterResource(tool.icon)
+            val name = stringResource(tool.name)
+            val onClick = {
+                viewModel.toolAction(tool)
+                onSelectTool(ix)
+            }
+            when (tool) {
+                is Tool.ActionOnSelection -> {
+//                    if (tool is EditClusterTool.Delete) // red tint
+                    DisableableButton(
+                        icon, name,
+                        disabled = !viewModel.circleSelectionIsActive,
+                        highlighted,
+                        onClick
+                    )
+                }
+                is Tool.InstantAction -> {
+//                    if (tool is EditClusterTool.Palette) // colored outline
+                    SimpleButton(icon, name, highlighted, onClick)
+                }
+                is Tool.BinaryToggle -> {
+                    if (tool.disabledIcon == null)
+                        OnOffButton(
+                            icon, name,
+                            enabled = viewModel.toolPredicate(tool),
+                            highlighted,
+                            onClick
+                        )
+                    else
+                        TwoIconButton(
+                            icon,
+                            disabledIconPainter = painterResource(tool.disabledIcon!!),
+                            name,
+                            enabled = viewModel.toolPredicate(tool),
+                            highlighted,
+                            onClick
+                        )
+                }
+                else -> throw IllegalStateException("Never") // wont compile otherwise
+            }
+        }
+        if (category is EditClusterCategory.Region || category is EditClusterCategory.Colors) {
+            // used colors button
+        }
+        // hide panel button
+        SimpleButton(
+            painterResource(Res.drawable.collapse_down),
+            stringResource(Res.string.stub),
+            onClick = onHide
+        )
+    }
+}
+
+@Composable
+fun SimpleButton(
+    iconPainter: Painter,
+    name: String,
+    highlighted: Boolean = false,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+    ) {
+        Icon(iconPainter, contentDescription = name)
+    }
+}
+
+@Composable
+fun DisableableButton(
+    iconPainter: Painter,
+    name: String,
+    disabled: Boolean,
+    highlighted: Boolean = false,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        enabled = !disabled
+    ) {
+        Icon(iconPainter, contentDescription = name)
+    }
+}
+
+@Composable
+fun TwoIconButton(
+    iconPainter: Painter,
+    disabledIconPainter: Painter,
+    name: String,
+    enabled: Boolean,
+    highlighted: Boolean = false,
+    onClick: () -> Unit
+) {
+    IconToggleButton(
+        checked = enabled,
+        onCheckedChange = { onClick() },
+    ) {
+        Crossfade(enabled) { targetChecked ->
+            Icon(
+                if (targetChecked) iconPainter
+                else disabledIconPainter,
+                contentDescription = name
+            )
+        }
+    }
+//    Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
+}
+
+@Composable
+fun OnOffButton(
+    iconPainter: Painter,
+    name: String,
+    enabled: Boolean,
+    highlighted: Boolean = false,
+    onClick: () -> Unit
+) {
+    // Crossfade/AnimatedContent dont work for w/e reason (mb cuz VM is caught in the closure)
+    IconToggleButton(
+        checked = enabled,
+        onCheckedChange = { onClick() },
+        modifier = Modifier
+            .background(
+                if (enabled)
+                    MaterialTheme.colors.primaryVariant
+                else
+                    MaterialTheme.colors.primary,
+            )
+    ) {
+        Icon(iconPainter, contentDescription = name)
     }
     Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
 }

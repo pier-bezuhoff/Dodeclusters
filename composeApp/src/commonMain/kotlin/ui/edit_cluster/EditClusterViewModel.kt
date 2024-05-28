@@ -1,5 +1,7 @@
 package ui.edit_cluster
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -37,6 +39,7 @@ import kotlin.math.pow
 typealias Ix = Int
 
 // NOTE: waiting for decompose 3.0-stable for a real VM impl
+@Stable
 class EditClusterViewModel(
     /** NOT a viewModelScope, just a rememberCS from the screen composable */
     private val coroutineScope: CoroutineScope,
@@ -842,6 +845,7 @@ class EditClusterViewModel(
         grabbedCircleIx = null
     }
 
+    @Stable
     fun toolAction(tool: EditClusterTool): Unit =
         when (tool) {
             EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
@@ -861,8 +865,8 @@ class EditClusterViewModel(
         }
 
     /** Is [tool] enabled? */
-    fun toolPredicate(tool: EditClusterTool): Boolean =
-        when (tool) {
+    inline fun toolPredicate(tool: EditClusterTool): Boolean =
+        when (tool) { // NOTE: i think this has to return State<Boolean> too work properly
             EditClusterTool.Drag -> mode is SelectionMode.Drag
             EditClusterTool.Multiselect -> mode is SelectionMode.Multiselect
             EditClusterTool.Region -> mode is SelectionMode.Region
@@ -874,6 +878,7 @@ class EditClusterViewModel(
         }
 
     @Serializable
+    @Immutable
     data class UiState(
         val mode: Mode,
         val circles: List<Circle>,
@@ -941,6 +946,7 @@ class EditClusterViewModel(
 }
 
 @Serializable
+@Immutable
 sealed interface Mode {
     fun isSelectingCircles(): Boolean =
         this is SelectionMode.Drag || this is SelectionMode.Multiselect
@@ -993,6 +999,7 @@ sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode {
 }
 
 /** ixs = indices of circles to which the handle is attached */
+@Immutable
 sealed class HandleConfig(open val ixs: List<Ix>) {
     data class SingleCircle(val ix: Ix): HandleConfig(listOf(ix))
     data class SeveralCircles(override val ixs: List<Ix>): HandleConfig(ixs)
@@ -1004,6 +1011,7 @@ enum class Handle {
 
 /** params for create/copy/delete animations */
 @Serializable
+@Immutable
 data class DecayingCircles(
     val circles: List<CircleF>,
     @Serializable(ColorCssSerializer::class)

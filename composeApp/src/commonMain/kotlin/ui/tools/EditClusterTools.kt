@@ -1,5 +1,6 @@
 package ui.tools
 
+import androidx.compose.runtime.Immutable
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.center
 import dodeclusters.composeapp.generated.resources.circle_3_points
@@ -37,6 +38,7 @@ import dodeclusters.composeapp.generated.resources.visible
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 
+@Immutable
 sealed class EditClusterTool(
     override val name: StringResource,
     override val description: StringResource,

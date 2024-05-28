@@ -1,5 +1,6 @@
 package ui.tools
 
+import androidx.compose.runtime.Immutable
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.attributes_category_name
 import dodeclusters.composeapp.generated.resources.colors_category_name
@@ -15,6 +16,7 @@ import org.jetbrains.compose.resources.StringResource
 
 sealed interface EditClusterToolbarItem
 
+@Immutable
 sealed class EditClusterCategory(
     override val name: StringResource,
     override val tools: List<EditClusterTool>,
