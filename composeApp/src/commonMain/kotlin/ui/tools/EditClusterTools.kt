@@ -8,6 +8,7 @@ import dodeclusters.composeapp.generated.resources.circle_by_3_points_descriptio
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_name
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_description
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_name
+import dodeclusters.composeapp.generated.resources.circle_center_and_radius_point
 import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_description
@@ -34,6 +35,8 @@ import dodeclusters.composeapp.generated.resources.rounded_square
 import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
 import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
+import dodeclusters.composeapp.generated.resources.stub
+import dodeclusters.composeapp.generated.resources.two_of_three_circles_connected
 import dodeclusters.composeapp.generated.resources.visible
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
@@ -43,7 +46,7 @@ sealed class EditClusterTool(
     override val name: StringResource,
     override val description: StringResource,
     override val icon: DrawableResource,
-) : Tool, EditClusterToolbarItem {
+) : Tool {
     // mode ~ toggle as their both their states are determined by a predicate & action is separated
     sealed class Switch(
         name: StringResource,
@@ -62,6 +65,11 @@ sealed class EditClusterTool(
         Res.string.multiselect_name,
         Res.string.multiselect_description,
         Res.drawable.multiselect_mode_3_scattered_circles
+    )
+    data object FlowSelect: Switch(
+        Res.string.stub,
+        Res.string.stub,
+        Res.drawable.two_of_three_circles_connected
     )
 
     data object Region: Switch(
@@ -105,7 +113,7 @@ sealed class EditClusterTool(
     data object ConstructCircleByCenterAndRadius: Switch(
         Res.string.circle_by_center_and_radius_name,
         Res.string.circle_by_center_and_radius_description,
-        Res.drawable.center
+        Res.drawable.circle_center_and_radius_point
     ), Tool.MultiArg2<InputType.AnyPoint, InputType.AnyPoint> {
         override val argDescriptions = listOf("Circle's center", "Any point on the circle")
     }

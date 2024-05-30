@@ -6,7 +6,6 @@ import dodeclusters.composeapp.generated.resources.attributes_category_name
 import dodeclusters.composeapp.generated.resources.colors_category_name
 import dodeclusters.composeapp.generated.resources.create_category_name
 import dodeclusters.composeapp.generated.resources.drag_category_name
-import dodeclusters.composeapp.generated.resources.drag_name
 import dodeclusters.composeapp.generated.resources.multiselect_category_name
 import dodeclusters.composeapp.generated.resources.region_category_name
 import dodeclusters.composeapp.generated.resources.transform_category_name
@@ -14,16 +13,13 @@ import dodeclusters.composeapp.generated.resources.visibility_category_name
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 
-sealed interface EditClusterToolbarItem
-
 @Immutable
 sealed class EditClusterCategory(
     override val name: StringResource,
     override val tools: List<EditClusterTool>,
-    // imo var is sensible here
     final override val default: EditClusterTool = tools.first()
-) : Category, EditClusterToolbarItem {
-    override val icon: DrawableResource = default.icon
+) : Category {
+    override val icon: DrawableResource? = null
 
     data object Drag : EditClusterCategory(
         Res.string.drag_category_name,
@@ -74,6 +70,7 @@ sealed class EditClusterCategory(
     ) { // ~button-like
         // buttons: [most used colors]
     }
+    // MAYBE: this should be a separate context menu, not a general category
     data object Attributes : EditClusterCategory(
         Res.string.attributes_category_name,
         listOf(
