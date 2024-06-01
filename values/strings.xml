@@ -32,6 +32,7 @@
 <!--    <string name="_description"></string>-->
 
     <!-- categories -->
+    <string name="drag_category_name">Drag</string>
     <string name="multiselect_category_name">Multiselect</string>
     <string name="region_category_name">Region</string>
     <string name="visibility_category_name">Visibility</string>
