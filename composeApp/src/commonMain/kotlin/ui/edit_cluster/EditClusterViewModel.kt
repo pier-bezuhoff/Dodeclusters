@@ -62,7 +62,7 @@ class EditClusterViewModel(
     var restrictRegionsToSelection by mutableStateOf(true)
 
     val circleSelectionIsActive by derivedStateOf {
-        showCircles&& selection.isNotEmpty() && mode.isSelectingCircles()
+        showCircles && selection.isNotEmpty() && mode.isSelectingCircles()
     }
     val handleConfig = derivedStateOf { // depends on selectionMode & selection
         when (mode) {
@@ -282,9 +282,9 @@ class EditClusterViewModel(
         }
     }
 
-    fun copyCircles() = coroutineScope.launch {
+    fun duplicateCircles() = coroutineScope.launch {
         if (mode.isSelectingCircles()) {
-            recordCommand(Command.COPY)
+            recordCommand(Command.DUPLICATE)
             val copiedCircles = selection.map { circles[it] } // preserves selection order
             val oldSize = circles.size
             val reindexing = selection.mapIndexed { i, ix -> ix to (oldSize + i) }.toMap()
@@ -529,6 +529,29 @@ class EditClusterViewModel(
 
     fun toggleRestrictRegionsToSelection() {
         restrictRegionsToSelection = !restrictRegionsToSelection
+    }
+
+    private fun scaleSelection(zoom: Float) {
+        if (circleSelectionIsActive)
+            when (selection.size) {
+                0 -> Unit
+                1 -> {
+                    recordCommand(Command.CHANGE_RADIUS)
+                    val ix = selection.single()
+                    val circle = circles[ix]
+                    circles[ix] = circle.copy(radius = zoom * circle.radius)
+                }
+                else -> {
+                    recordCommand(Command.SCALE)
+                    val rect = getSelectionRect()
+                    val center = if (rect.minDimension < 5_000) rect.center else Offset.Zero
+                    for (ix in selection) {
+                        val circle = circles[ix]
+                        val newOffset = (circle.offset - center) * zoom + center
+                        circles[ix] = Circle(newOffset, zoom * circle.radius)
+                    }
+                }
+            }
     }
 
     // pointer input callbacks
@@ -781,34 +804,7 @@ class EditClusterViewModel(
 
     fun onVerticalScroll(yDelta: Float) {
         val zoom = (1.01f).pow(-yDelta)
-        if (showCircles) {
-            when (mode) {
-                SelectionMode.Drag -> if (selection.isNotEmpty()) { // move + scale radius
-                    recordCommand(Command.CHANGE_RADIUS)
-                    val ix = selection.single()
-                    val circle = circles[ix]
-                    circles[ix] = circle.copy(radius = zoom * circle.radius)
-                }
-                is SelectionMode.Multiselect -> {
-                    if (selection.size == 1) { // move + scale radius
-                        recordCommand(Command.CHANGE_RADIUS)
-                        val ix = selection.single()
-                        val circle = circles[ix]
-                        circles[ix] = circle.copy(radius = zoom * circle.radius)
-                    } else if (selection.size > 1) { // scale radius & position
-                        recordCommand(Command.SCALE)
-                        val rect = getSelectionRect()
-                        val center = if (rect.minDimension < 5_000) rect.center else Offset.Zero
-                        for (ix in selection) {
-                            val circle = circles[ix]
-                            val newOffset = (circle.offset - center) * zoom + center
-                            circles[ix] = Circle(newOffset, zoom * circle.radius)
-                        }
-                    }
-                }
-                else -> {}
-            }
-        }
+        scaleSelection(zoom)
     }
 
     fun onLongDragStart(position: Offset) {
@@ -845,11 +841,28 @@ class EditClusterViewModel(
         grabbedCircleIx = null
     }
 
+    fun processKeyboardAction(action: KeyboardAction) {
+        when (action) {
+            KeyboardAction.SELECT_ALL -> toggleSelectAll()
+            KeyboardAction.DELETE -> deleteCircles()
+            KeyboardAction.PASTE -> duplicateCircles()
+            KeyboardAction.ZOOM_IN -> scaleSelection(ZOOM_INCREMENT)
+            KeyboardAction.ZOOM_OUT -> scaleSelection(1/ZOOM_INCREMENT)
+            KeyboardAction.UNDO -> undo()
+            KeyboardAction.REDO -> redo()
+            KeyboardAction.CANCEL -> when (val m = mode) { // reset creation mode
+                is CreationMode -> switchToMode(m.startState)
+                else -> Unit
+            }
+        }
+    }
+
     @Stable
     fun toolAction(tool: EditClusterTool): Unit =
         when (tool) {
             EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
             EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect.Default)
+            EditClusterTool.FlowSelect -> TODO()
             EditClusterTool.Region -> switchToMode(SelectionMode.Region)
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             EditClusterTool.ShowCircles -> toggleShowCircles()
@@ -858,7 +871,7 @@ class EditClusterViewModel(
                 deleteCircles(); Unit
             }
             EditClusterTool.Duplicate -> {
-                copyCircles(); Unit
+                duplicateCircles(); Unit
             }
             EditClusterTool.ConstructCircleByCenterAndRadius -> switchToMode(CreationMode.CircleByCenterAndRadius.Center())
             EditClusterTool.ConstructCircleBy3Points -> switchToMode(CreationMode.CircleBy3Points())
@@ -941,6 +954,7 @@ class EditClusterViewModel(
         const val DRAG_ONLY = true
         /** min tap/grab distance to select an object in dp */
         const val EPSILON = 10f
+        const val ZOOM_INCREMENT = 1.05f // +5%
         const val HISTORY_SIZE = 100
     }
 }
@@ -998,6 +1012,12 @@ sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode {
 //    data class LineBy2Points(override val phase: Int) : CreationMode(phase, nPhases = 2)
 }
 
+val CreationMode.startState: CreationMode
+    get() = when (this) {
+        is CreationMode.CircleByCenterAndRadius -> CreationMode.CircleByCenterAndRadius.Center()
+        is CreationMode.CircleBy3Points -> CreationMode.CircleBy3Points()
+    }
+
 /** ixs = indices of circles to which the handle is attached */
 @Immutable
 sealed class HandleConfig(open val ixs: List<Ix>) {
@@ -1023,7 +1043,7 @@ enum class Command {
     MOVE,
     CHANGE_RADIUS, SCALE,
     ROTATE,
-    COPY, DELETE, CREATE,
+    DUPLICATE, DELETE, CREATE,
     SELECT_REGION,
     /** records canvas translations and scaling */
     CHANGE_POV,

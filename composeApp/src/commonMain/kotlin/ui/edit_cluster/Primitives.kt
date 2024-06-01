@@ -21,11 +21,6 @@ import androidx.compose.ui.unit.dp
 fun CategoryButton(
 ) {
     1
-    Modifier.onPreviewKeyEvent {
-        Key.Delete
-        Key.Backspace
-        it.isCtrlPressed
-    }
 }
 
 // MAYBE: pass Modifier

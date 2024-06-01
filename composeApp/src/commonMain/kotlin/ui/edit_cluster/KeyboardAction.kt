@@ -10,77 +10,81 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 
-enum class KeyboardShortcuts {
+enum class KeyboardAction {
     SELECT_ALL,
     DELETE,
-    // + Ctrl-C
+    // + Ctrl-C: copy (what? we already have duplicate)
+    // + Enter: finish/confirm cluster creation & go to multi-cluster editor
     PASTE,
     ZOOM_IN, ZOOM_OUT,
     UNDO, REDO,
-    SAVE, OPEN,
+//    SAVE, OPEN,
+    /** Cancel ongoing action (partial constructions, etc) */
     CANCEL
 }
 
+// NOTE: doesn't work in browser (yet?)
+//  related? https://github.com/JetBrains/compose-multiplatform/issues/4673
 fun Modifier.handleKeyboardActions(
-    onAction: (KeyboardShortcuts) -> Unit,
+    onAction: (KeyboardAction) -> Unit, // MAYBE: use Flow or smth instead of callback
 ): Modifier =
     onPreviewKeyEvent {
         if (it.type == KeyEventType.KeyUp && !it.isAltPressed && !it.isMetaPressed) {
             when (it.key) {
-                Key.Escape -> {
-                    onAction(KeyboardShortcuts.CANCEL)
-                    true
-                }
                 Key.Delete, Key.Backspace -> {
-                    onAction(KeyboardShortcuts.DELETE)
+                    onAction(KeyboardAction.DELETE)
                     true
                 }
                 Key.Paste -> {
-                    onAction(KeyboardShortcuts.PASTE)
+                    onAction(KeyboardAction.PASTE)
                     true
                 }
                 Key.ZoomIn -> {
-                    onAction(KeyboardShortcuts.ZOOM_IN)
+                    onAction(KeyboardAction.ZOOM_IN)
                     true
                 }
                 Key.ZoomOut -> {
-                    onAction(KeyboardShortcuts.ZOOM_OUT)
+                    onAction(KeyboardAction.ZOOM_OUT)
+                    true
+                }
+                Key.Escape -> {
+                    onAction(KeyboardAction.CANCEL)
                     true
                 }
                 else -> if (it.isCtrlPressed) {
                     when (it.key) {
                         Key.V -> {
-                            onAction(KeyboardShortcuts.PASTE)
+                            onAction(KeyboardAction.PASTE)
                             true
                         }
                         Key.A -> {
-                            onAction(KeyboardShortcuts.SELECT_ALL)
+                            onAction(KeyboardAction.SELECT_ALL)
                             true
                         }
                         Key.Plus, Key.Equals -> {
-                            onAction(KeyboardShortcuts.ZOOM_IN)
+                            onAction(KeyboardAction.ZOOM_IN)
                             true
                         }
                         Key.Minus -> {
-                            onAction(KeyboardShortcuts.ZOOM_OUT)
+                            onAction(KeyboardAction.ZOOM_OUT)
                             true
                         }
                         Key.Z -> {
-                            onAction(KeyboardShortcuts.UNDO)
+                            onAction(KeyboardAction.UNDO)
                             true
                         }
                         Key.Y -> {
-                            onAction(KeyboardShortcuts.REDO)
+                            onAction(KeyboardAction.REDO)
                             true
                         }
-                        Key.S -> {
-                            onAction(KeyboardShortcuts.SAVE)
-                            true
-                        }
-                        Key.O -> {
-                            onAction(KeyboardShortcuts.OPEN)
-                            true
-                        }
+//                        Key.S -> {
+//                            onAction(KeyboardAction.SAVE)
+//                            true
+//                        }
+//                        Key.O -> {
+//                            onAction(KeyboardAction.OPEN)
+//                            true
+//                        }
                         else -> false
                     }
                 } else false

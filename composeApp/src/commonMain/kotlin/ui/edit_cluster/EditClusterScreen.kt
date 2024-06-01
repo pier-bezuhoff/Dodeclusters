@@ -76,7 +76,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
-import ui.tools.EditClusterTool
 import ui.tools.Tool
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
@@ -96,11 +95,12 @@ fun EditClusterScreen(
 
     val scaffoldState = rememberScaffoldState()
     Scaffold(
+        modifier = Modifier.handleKeyboardActions(viewModel::processKeyboardAction),
         scaffoldState = scaffoldState,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    println("FAB")
+                    println("FAB: open create panel")
                     viewModel.switchToMode(CreationMode.CircleByCenterAndRadius.Center())
                 },
                 backgroundColor = MaterialTheme.colors.secondary,
@@ -276,7 +276,7 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
                     }
                 )
             IconButton(
-                onClick = viewModel::copyCircles,
+                onClick = viewModel::duplicateCircles,
                 enabled = viewModel.circleSelectionIsActive
             ) {
                 Icon(painterResource(Res.drawable.copy), contentDescription = "copy circle(s)")
