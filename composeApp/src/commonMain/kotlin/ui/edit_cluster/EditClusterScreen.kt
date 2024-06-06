@@ -95,6 +95,7 @@ fun EditClusterScreen(
 
     val scaffoldState = rememberScaffoldState()
     Scaffold(
+        // MAYBE: potentially lift it to window-level (desktop)
         modifier = Modifier.handleKeyboardActions(viewModel::processKeyboardAction),
         scaffoldState = scaffoldState,
         floatingActionButton = {
@@ -146,6 +147,7 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
     val backgroundColor = MaterialTheme.colors.primary
     val contentColor = MaterialTheme.colors.onPrimary
     TopAppBar(
+        // TODO: hide title and make empty top bar space transparent
         title = { Text(stringResource(Res.string.edit_cluster_title), color = DodeclustersColors.black) },
         navigationIcon = {
 //            IconButton(onClick = viewModel::saveAndGoBack) {
@@ -219,7 +221,7 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
             )
             // MAYBE: select regions within multiselect
             ModeToggle(
-                SelectionMode.Multiselect.Default,
+                SelectionMode.Multiselect.DEFAULT,
                 viewModel,
                 painterResource(Res.drawable.multiselect_mode_3_scattered_circles),
                 contentDescription = "multiselect mode",

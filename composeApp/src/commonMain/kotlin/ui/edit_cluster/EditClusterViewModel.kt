@@ -21,6 +21,8 @@ import data.ColorCssSerializer
 import data.OffsetSerializer
 import data.io.Ddc
 import data.io.parseDdc
+import domain.angleDeg
+import domain.rotateBy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -28,8 +30,6 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import domain.angleDeg
-import domain.rotateBy
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterTool
 import kotlin.math.absoluteValue
@@ -39,6 +39,7 @@ import kotlin.math.pow
 typealias Ix = Int
 
 // NOTE: waiting for decompose 3.0-stable for a real VM impl
+// MAYBE: use UiState functional pattern instead this mess
 @Stable
 class EditClusterViewModel(
     /** NOT a viewModelScope, just a rememberCS from the screen composable */
@@ -51,6 +52,8 @@ class EditClusterViewModel(
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
     val selection = mutableStateListOf<Ix>() // MAYBE: when circles are hidden select parts instead
+    val selectedCircles
+        get() = selection.map { circles[it] }
 
     /** currently selected color */
     var regionColor by mutableStateOf(DodeclustersColors.lightPurple)
@@ -349,18 +352,14 @@ class EditClusterViewModel(
     }
 
     fun switchToMode(newMode: Mode, noAlteringShortcuts: Boolean = false) {
-        val new = when (newMode) {
-            is SelectionMode.Multiselect.Default -> SelectionMode.Multiselect.Default.redirect
-            else -> newMode // TODO: smarter defaulting integrated with tool ADT
-        }
-        if (selection.size > 1 && new == SelectionMode.Drag)
+        if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
-        if (mode is SelectionMode.Multiselect && new is SelectionMode.Multiselect && !noAlteringShortcuts) {
+        if (mode is SelectionMode.Multiselect && newMode is SelectionMode.Multiselect && !noAlteringShortcuts) {
             if (selection.isEmpty())
                 selection.addAll(circles.indices)
             else
                 selection.clear()
-        } else if (mode == SelectionMode.Region && new == SelectionMode.Region && !noAlteringShortcuts) {
+        } else if (mode == SelectionMode.Region && newMode == SelectionMode.Region && !noAlteringShortcuts) {
             if (parts.isEmpty()) {
                 recordCommand(Command.SELECT_REGION)
                 // select interlacing, todo: proper 2^n -> even # of 1's -> {0101001} -> parts
@@ -370,11 +369,11 @@ class EditClusterViewModel(
                 parts.clear()
             }
         }
-        if (new is CreationMode) {
+        if (newMode is CreationMode) {
             selection.clear()
             showCircles = true
         }
-        _mode.value = new
+        _mode.value = newMode
     }
 
     fun absolute(visiblePosition: Offset): Offset =
@@ -861,7 +860,7 @@ class EditClusterViewModel(
     fun toolAction(tool: EditClusterTool): Unit =
         when (tool) {
             EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
-            EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect.Default)
+            EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect.DEFAULT)
             EditClusterTool.FlowSelect -> TODO()
             EditClusterTool.Region -> switchToMode(SelectionMode.Region)
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
@@ -958,65 +957,6 @@ class EditClusterViewModel(
         const val HISTORY_SIZE = 100
     }
 }
-
-@Serializable
-@Immutable
-sealed interface Mode {
-    fun isSelectingCircles(): Boolean =
-        this is SelectionMode.Drag || this is SelectionMode.Multiselect
-}
-
-@Serializable
-sealed interface SelectionMode : Mode {
-    @Serializable
-    data object Drag : SelectionMode
-    @Serializable
-    sealed interface Multiselect : SelectionMode {
-        @Serializable
-        /** null-like, default [Multiselect] mode implementation: either last used or global default */
-        data object Default: Multiselect {
-            val redirect = ByClick
-        }
-        @Serializable
-        data object ByClick: Multiselect
-        @Serializable
-        data object ByFlow: Multiselect
-    }
-    @Serializable
-    /** mode: select regions to create new [Cluster.Part]s */
-    data object Region : SelectionMode
-}
-
-@Serializable
-/** sub-modes of [SelectionMode.Multiselect] related to how new selection is added */
-enum class MultiselectLogic {
-    SYMMETRIC_DIFFIRENCE, ADD, SUBTRACT
-}
-
-@Serializable
-sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode {
-    fun isTerminal(): Boolean =
-        phase == nPhases
-
-    sealed class CircleByCenterAndRadius(
-        override val phase: Int,
-    ) : CreationMode(phase, nPhases = 2) {
-        // visible positions are used
-        data class Center(val center: Offset? = null) : CircleByCenterAndRadius(phase = 1)
-        data class Radius(val center: Offset, val radiusPoint: Offset? = null) : CircleByCenterAndRadius(phase = 2)
-    }
-    data class CircleBy3Points(
-        override val phase: Int = 1,
-        val points: List<Offset> = emptyList()
-    ) : CreationMode(phase, nPhases = 3)
-//    data class LineBy2Points(override val phase: Int) : CreationMode(phase, nPhases = 2)
-}
-
-val CreationMode.startState: CreationMode
-    get() = when (this) {
-        is CreationMode.CircleByCenterAndRadius -> CreationMode.CircleByCenterAndRadius.Center()
-        is CreationMode.CircleBy3Points -> CreationMode.CircleBy3Points()
-    }
 
 /** ixs = indices of circles to which the handle is attached */
 @Immutable
