@@ -4,34 +4,22 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
 
-@Serializable
 @Immutable
 sealed interface Mode {
     fun isSelectingCircles(): Boolean =
         this is SelectionMode.Drag || this is SelectionMode.Multiselect
 }
 
-// MAYBE: flatten into enum + separate multiselect sub-type
-@Serializable
 sealed interface SelectionMode : Mode {
-    @Serializable
     /** Select & drag singular circles */
     data object Drag : SelectionMode
-
-    @Serializable
-    sealed interface Multiselect : SelectionMode {
-        @Serializable
-        data object ByClick: Multiselect
-        @Serializable
-        data object ByFlow: Multiselect
-
-        companion object {
-            val DEFAULT: Multiselect = ByClick
-        }
-    }
-    @Serializable
+    data object Multiselect : SelectionMode
     /** Select regions to create new [Cluster.Part]s */
     data object Region : SelectionMode
+}
+
+enum class MultiselectMethod {
+    BY_CLICK, BY_FLOW
 }
 
 @Serializable
@@ -40,8 +28,6 @@ enum class MultiselectLogic {
     SYMMETRIC_DIFFIRENCE, ADD, SUBTRACT
 }
 
-// TODO: sub-mode of Drag aka solo-select
-@Serializable
 @Immutable
 sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode {
     sealed class CircleByCenterAndRadius(

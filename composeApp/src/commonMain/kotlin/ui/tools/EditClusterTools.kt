@@ -4,8 +4,10 @@ import androidx.compose.runtime.Immutable
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.center
 import dodeclusters.composeapp.generated.resources.circle_3_points
+import dodeclusters.composeapp.generated.resources.circle_by_3_points_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_description
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_name
+import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_description
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_name
 import dodeclusters.composeapp.generated.resources.circle_center_and_radius_point
@@ -19,6 +21,8 @@ import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
 import dodeclusters.composeapp.generated.resources.drag_name
 import dodeclusters.composeapp.generated.resources.duplicate_description
 import dodeclusters.composeapp.generated.resources.duplicate_name
+import dodeclusters.composeapp.generated.resources.flow_multiselect_description
+import dodeclusters.composeapp.generated.resources.flow_multiselect_name
 import dodeclusters.composeapp.generated.resources.invisible
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
@@ -67,8 +71,8 @@ sealed class EditClusterTool(
         Res.drawable.multiselect_mode_3_scattered_circles
     )
     data object FlowSelect: Switch(
-        Res.string.stub,
-        Res.string.stub,
+        Res.string.flow_multiselect_name,
+        Res.string.flow_multiselect_description,
         Res.drawable.two_of_three_circles_connected
     )
 
@@ -95,6 +99,7 @@ sealed class EditClusterTool(
         Res.string.palette_description,
         Res.drawable.palette
     ), Tool.InstantAction {
+        // custom appearance
         val colorOutlineIcon = Res.drawable.rounded_square
     }
 
@@ -103,6 +108,7 @@ sealed class EditClusterTool(
         Res.string.duplicate_description,
         Res.drawable.copy
     ), Tool.ActionOnSelection
+    // MAYBE: eraser-like mode
     data object Delete: EditClusterTool(
         Res.string.delete_name,
         Res.string.delete_description,
@@ -115,14 +121,14 @@ sealed class EditClusterTool(
         Res.string.circle_by_center_and_radius_description,
         Res.drawable.circle_center_and_radius_point
     ), Tool.MultiArg2<InputType.AnyPoint, InputType.AnyPoint> {
-        override val argDescriptions = listOf("Circle's center", "Any point on the circle")
+        override val argDescriptions = Res.string.circle_by_center_and_radius_arg_descriptions
     }
     data object ConstructCircleBy3Points: Switch(
         Res.string.circle_by_3_points_name,
         Res.string.circle_by_3_points_description,
         Res.drawable.circle_3_points
     ), Tool.MultiArg3<InputType.AnyPoint, InputType.AnyPoint, InputType.AnyPoint> {
-        override val argDescriptions = listOf("1st point on the circle", "2nd point on the circle", "3rd point on the circle")
+        override val argDescriptions = Res.string.circle_by_3_points_arg_descriptions
     }
     // line by 2 pts
     // insert cross/rect/square

@@ -27,7 +27,7 @@ sealed interface Tool {
     /** Tool that prompts selecting several items, described by MultiArgN<...> dependent types, to perform an action */
     sealed interface MultiArg : Tool {
         val nArgs: Int
-        val argDescriptions: List<String> // TODO: migrate to StringResource's
+        val argDescriptions: StringResource // can be a string array with the same type apparently
     }
     sealed interface MultiArg1<T1 : InputType> : MultiArg {
         override val nArgs get() = 1

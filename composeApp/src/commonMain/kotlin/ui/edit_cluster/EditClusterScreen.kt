@@ -76,6 +76,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
+import ui.tools.EditClusterTool
 import ui.tools.Tool
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
@@ -221,7 +222,7 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
             )
             // MAYBE: select regions within multiselect
             ModeToggle(
-                SelectionMode.Multiselect.DEFAULT,
+                SelectionMode.Multiselect,
                 viewModel,
                 painterResource(Res.drawable.multiselect_mode_3_scattered_circles),
                 contentDescription = "multiselect mode",
@@ -367,7 +368,7 @@ fun setupToolbar() {
         EditClusterCategory.Visibility,
         EditClusterCategory.Colors,
         EditClusterCategory.Attributes,
-        EditClusterCategory.Transform,
+//        EditClusterCategory.Transform,
         EditClusterCategory.Create
     )
     val categoryIndices = categories.withIndex().associate { it.value to it.index }
@@ -379,6 +380,50 @@ fun setupToolbar() {
     var toolIndex = defaults[categoryIndices[category]!!]
     val tool = category.tools[toolIndex]
     var showPanel = category.tools.size > 1
+}
+
+@Composable
+fun BottomToolbar(
+    categories: List<EditClusterCategory>,
+    selectedCategoryIndex: Ix,
+    onSelectCategory: (EditClusterCategory) -> Unit
+) {
+    val backgroundColor = MaterialTheme.colors.primary
+    val contentColor = MaterialTheme.colors.onPrimary
+    BottomAppBar(
+        modifier = Modifier.background(
+            Brush.verticalGradient(
+                0f to backgroundColor.copy(alpha = 0.8f),
+                1f to backgroundColor,
+            )
+        ),
+        backgroundColor = backgroundColor.copy(alpha = 0.1f),
+        contentColor = contentColor,
+        elevation = 0.dp,
+    ) {
+        CompositionLocalProvider(LocalContentAlpha provides 1f) {
+            for ((i, category) in categories.withIndex()) {
+                val selected = i == selectedCategoryIndex
+                when (category) {
+                    is EditClusterCategory.Multiselect -> {
+                        val icon = EditClusterTool.Multiselect.icon
+                        val icon2 = EditClusterTool.FlowSelect.icon
+                        OnOffButton(
+                            painterResource(icon), stringResource(category.name), selected
+                        ) { onSelectCategory(category) }
+                    } // show normal|flow icon
+                    is EditClusterCategory.Colors -> {
+                        2
+                    } // show colored outline + dialog
+                    is EditClusterCategory.Create -> {} // FAB
+                    else ->
+                        OnOffButton(
+                            painterResource(category.default.icon), stringResource(category.name), selected
+                        ) { onSelectCategory(category) }
+                }
+            }
+        }
+    }
 }
 
 // MAYBE: hoist VM upwards with callbacks
@@ -404,7 +449,7 @@ fun Panel(
         horizontalArrangement = Arrangement.Start,
     ) {
         for ((ix, tool) in category.tools.withIndex()) {
-            val highlighted = ix == toolIndex
+            val highlighted = ix == toolIndex // i think this is already reflected by predicates
             val icon = painterResource(tool.icon)
             val name = stringResource(tool.name)
             val onClick = {
@@ -417,20 +462,18 @@ fun Panel(
                     DisableableButton(
                         icon, name,
                         disabled = !viewModel.circleSelectionIsActive,
-                        highlighted,
                         onClick
                     )
                 }
                 is Tool.InstantAction -> {
 //                    if (tool is EditClusterTool.Palette) // colored outline
-                    SimpleButton(icon, name, highlighted, onClick)
+                    SimpleButton(icon, name, onClick)
                 }
                 is Tool.BinaryToggle -> {
                     if (tool.disabledIcon == null)
                         OnOffButton(
                             icon, name,
-                            enabled = viewModel.toolPredicate(tool),
-                            highlighted,
+                            isOn = viewModel.toolPredicate(tool),
                             onClick
                         )
                     else
@@ -439,7 +482,6 @@ fun Panel(
                             disabledIconPainter = painterResource(tool.disabledIcon!!),
                             name,
                             enabled = viewModel.toolPredicate(tool),
-                            highlighted,
                             onClick
                         )
                 }

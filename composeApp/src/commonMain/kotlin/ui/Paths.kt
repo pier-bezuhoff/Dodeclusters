@@ -29,6 +29,7 @@ fun part2path(circles: List<Circle>, part: Cluster.Part): Path {
         }
     val circleOutsides = part.outsides.map { circles[it] }
     return if (insidePath == null) { // chessboard pattern case
+        // MAYBE: toggle fill type to signify "outside of"
         circles.map { circle2path(it) }
             // TODO: encapsulate as a separate tool
             // NOTE: reduce(xor) on outsides = makes binary interlacing pattern

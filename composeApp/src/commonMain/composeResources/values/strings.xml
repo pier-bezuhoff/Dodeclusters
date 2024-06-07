@@ -12,6 +12,8 @@
     <string name="drag_description">Grab &amp; drag circles</string>
     <string name="multiselect_name">Multiselect</string>
     <string name="multiselect_description">Select several circles</string>
+    <string name="flow_multiselect_name">Flow-multiselect</string>
+    <string name="flow_multiselect_description">Select circles by swiping through them</string>
     <string name="region_name">Region</string>
     <string name="region_description">Pick regions between circles to fill with color</string>
     <string name="restrict_region_to_selection_name">Restrict region to selection</string>

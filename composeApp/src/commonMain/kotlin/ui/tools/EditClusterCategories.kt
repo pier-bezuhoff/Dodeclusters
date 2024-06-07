@@ -33,12 +33,12 @@ sealed class EditClusterCategory(
     ) { // ~mode-like
         // toggle: select all/unselect all (active when everything is selected)
 
-        // mode: select-by-click
-        // mode: flow-select
+        // submode1: select-by-click
+        // submode1: flow-select
 
-        // mode2: xor selection logic
-        // mode2: add selection logic
-        // mode2: subtract selection logic
+        // submode2: xor selection logic
+        // submode2: add selection logic
+        // submode2: subtract selection logic
     }
     data object Region : EditClusterCategory(
         Res.string.region_category_name,
@@ -77,14 +77,14 @@ sealed class EditClusterCategory(
             EditClusterTool.Delete,
             EditClusterTool.Duplicate,
         ),
-    ) // ~button-like
+    ) // just open panel, mb diff icon also (like setting wheel)
     data object Transform : EditClusterCategory(
         Res.string.transform_category_name,
         listOf(EditClusterTool.Delete)
-    ) { // ~button-like
+    ) { // ~mode-like
         // button: scale -> slider or some other interface
         // button: rotate -> slider, manual angle, etc
-        // + invert, etc
+        // + invert, kaleidoscopic reflection, etc
     }
     data object Create : EditClusterCategory(
         Res.string.create_category_name,

@@ -24,6 +24,7 @@ import data.io.parseDdc
 import domain.angleDeg
 import domain.rotateBy
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
@@ -242,7 +243,6 @@ class EditClusterViewModel(
         circles.clear()
         circles.addAll(state.circles)
         parts.addAll(state.parts)
-        switchToMode(state.mode, noAlteringShortcuts = true)
         selection.clear() // switch can populate it
         selection.addAll(state.selection)
     }
@@ -269,85 +269,91 @@ class EditClusterViewModel(
     fun createNewCircle(
         newCircle: Circle = Circle(absolute(Offset(200f, 200f)), 50.0),
         switchToSelectionMode: Boolean = true
-    ) = coroutineScope.launch {
-        if (newCircle.radius > 0.0) {
-            recordCommand(Command.CREATE)
-            println("createNewCircle $newCircle")
-            showCircles = true
-            circles.add(newCircle)
-            if (switchToSelectionMode && !mode.isSelectingCircles())
-                switchToMode(SelectionMode.Drag)
-            selection.clear()
-            selection.add(circles.size - 1)
-            _decayingCircles.emit(
-                DecayingCircles(listOf(newCircle.toCircleF()), Color.Green)
-            )
-        }
-    }
-
-    fun duplicateCircles() = coroutineScope.launch {
-        if (mode.isSelectingCircles()) {
-            recordCommand(Command.DUPLICATE)
-            val copiedCircles = selection.map { circles[it] } // preserves selection order
-            val oldSize = circles.size
-            val reindexing = selection.mapIndexed { i, ix -> ix to (oldSize + i) }.toMap()
-            circles.addAll(copiedCircles)
-            val newParts = parts.filter {
-                selection.containsAll(it.insides) && selection.containsAll(it.outsides)
-            }.map { part ->
-                Cluster.Part( // TODO: test part copying further
-                    insides = part.insides.map { reindexing[it]!! }.toSet(),
-                    outsides = part.outsides.map { reindexing[it]!! }.toSet(),
-                    fillColor = part.fillColor
+    ) {
+        coroutineScope.launch {
+            if (newCircle.radius > 0.0) {
+                recordCommand(Command.CREATE)
+                println("createNewCircle $newCircle")
+                showCircles = true
+                circles.add(newCircle)
+                if (switchToSelectionMode && !mode.isSelectingCircles())
+                    switchToMode(SelectionMode.Drag)
+                selection.clear()
+                selection.add(circles.size - 1)
+                _decayingCircles.emit(
+                    DecayingCircles(listOf(newCircle.toCircleF()), Color.Green)
                 )
             }
-            parts.addAll(newParts)
-            selection.clear()
-            selection.addAll(oldSize until (oldSize + copiedCircles.size))
-            _decayingCircles.emit(
-                DecayingCircles(copiedCircles.map { it.toCircleF() }, Color.Blue)
-            )
         }
     }
 
-    fun deleteCircles() = coroutineScope.launch {
-        fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Ix>): Map<Ix, Ix> {
-            val re = mutableMapOf<Ix, Ix>()
-            var shift = 0
-            for (ix in originalIndices) {
-                if (ix in deletedIndices)
-                    shift += 1
-                else
-                    re[ix] = ix - shift
+    fun duplicateCircles() {
+        coroutineScope.launch {
+            if (mode.isSelectingCircles()) {
+                recordCommand(Command.DUPLICATE)
+                val copiedCircles = selection.map { circles[it] } // preserves selection order
+                val oldSize = circles.size
+                val reindexing = selection.mapIndexed { i, ix -> ix to (oldSize + i) }.toMap()
+                circles.addAll(copiedCircles)
+                val newParts = parts.filter {
+                    selection.containsAll(it.insides) && selection.containsAll(it.outsides)
+                }.map { part ->
+                    Cluster.Part( // TODO: test part copying further
+                        insides = part.insides.map { reindexing[it]!! }.toSet(),
+                        outsides = part.outsides.map { reindexing[it]!! }.toSet(),
+                        fillColor = part.fillColor
+                    )
+                }
+                parts.addAll(newParts)
+                selection.clear()
+                selection.addAll(oldSize until (oldSize + copiedCircles.size))
+                _decayingCircles.emit(
+                    DecayingCircles(copiedCircles.map { it.toCircleF() }, Color.Blue)
+                )
             }
-            return re
         }
-        if (mode.isSelectingCircles()) {
-            recordCommand(Command.DELETE)
-            val whatsGone = selection.toSet()
-            val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
-            val oldParts = parts.toList()
-            val reindexing = reindexingMap(circles.indices, whatsGone)
-            _decayingCircles.emit(
-                DecayingCircles(selection.map { circles[it].toCircleF() }, Color.Red)
-            )
-            selection.clear()
-            parts.clear()
-            circles.clear()
-            circles.addAll(whatsLeft)
-            parts.addAll(
-                oldParts
-                    // to avoid stray chessboard selections
-                    .filterNot { (ins, _, _) -> ins.isNotEmpty() && ins.minus(whatsGone).isEmpty() }
-                    .map { (ins, outs, fillColor) ->
-                        Cluster.Part(
-                            insides = ins.minus(whatsGone).map { reindexing[it]!! }.toSet(),
-                            outsides = outs.minus(whatsGone).map { reindexing[it]!! }.toSet(),
-                            fillColor = fillColor
-                        )
-                    }
-                    .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
-            )
+    }
+
+    fun deleteCircles() {
+        coroutineScope.launch {
+            fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Ix>): Map<Ix, Ix> {
+                val re = mutableMapOf<Ix, Ix>()
+                var shift = 0
+                for (ix in originalIndices) {
+                    if (ix in deletedIndices)
+                        shift += 1
+                    else
+                        re[ix] = ix - shift
+                }
+                return re
+            }
+            if (mode.isSelectingCircles()) {
+                recordCommand(Command.DELETE)
+                val whatsGone = selection.toSet()
+                val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
+                val oldParts = parts.toList()
+                val reindexing = reindexingMap(circles.indices, whatsGone)
+                _decayingCircles.emit(
+                    DecayingCircles(selection.map { circles[it].toCircleF() }, Color.Red)
+                )
+                selection.clear()
+                parts.clear()
+                circles.clear()
+                circles.addAll(whatsLeft)
+                parts.addAll(
+                    oldParts
+                        // to avoid stray chessboard selections
+                        .filterNot { (ins, _, _) -> ins.isNotEmpty() && ins.minus(whatsGone).isEmpty() }
+                        .map { (ins, outs, fillColor) ->
+                            Cluster.Part(
+                                insides = ins.minus(whatsGone).map { reindexing[it]!! }.toSet(),
+                                outsides = outs.minus(whatsGone).map { reindexing[it]!! }.toSet(),
+                                fillColor = fillColor
+                            )
+                        }
+                        .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
+                )
+            }
         }
     }
 
@@ -687,7 +693,7 @@ class EditClusterViewModel(
                 else -> null
             }
             // NOTE: this enables drag-only behavior, you lose your selection when grabbing new circle
-            if (DRAG_ONLY && grabbedHandle == null && mode == SelectionMode.Drag) {
+            if (grabbedHandle == null && mode == SelectionMode.Drag) {
                 val previouslySelected = selection.firstOrNull()
                 reselectCircleAt(visiblePosition)
                 if (previouslySelected != null && selection.isEmpty()) // this line requires deselecting first to navigate around canvas
@@ -857,28 +863,25 @@ class EditClusterViewModel(
     }
 
     @Stable
-    fun toolAction(tool: EditClusterTool): Unit =
+    fun toolAction(tool: EditClusterTool) {
         when (tool) {
             EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
-            EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect.DEFAULT)
+            EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect)
             EditClusterTool.FlowSelect -> TODO()
             EditClusterTool.Region -> switchToMode(SelectionMode.Region)
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             EditClusterTool.ShowCircles -> toggleShowCircles()
             EditClusterTool.Palette -> showColorPickerDialog = true
-            EditClusterTool.Delete -> {
-                deleteCircles(); Unit
-            }
-            EditClusterTool.Duplicate -> {
-                duplicateCircles(); Unit
-            }
+            EditClusterTool.Delete -> deleteCircles()
+            EditClusterTool.Duplicate -> duplicateCircles()
             EditClusterTool.ConstructCircleByCenterAndRadius -> switchToMode(CreationMode.CircleByCenterAndRadius.Center())
             EditClusterTool.ConstructCircleBy3Points -> switchToMode(CreationMode.CircleBy3Points())
         }
+    }
 
     /** Is [tool] enabled? */
     inline fun toolPredicate(tool: EditClusterTool): Boolean =
-        when (tool) { // NOTE: i think this has to return State<Boolean> too work properly
+        when (tool) { // NOTE: i think this has to return State<Boolean> to work properly
             EditClusterTool.Drag -> mode is SelectionMode.Drag
             EditClusterTool.Multiselect -> mode is SelectionMode.Multiselect
             EditClusterTool.Region -> mode is SelectionMode.Region
@@ -892,7 +895,6 @@ class EditClusterViewModel(
     @Serializable
     @Immutable
     data class UiState(
-        val mode: Mode,
         val circles: List<Circle>,
         val parts: List<Cluster.Part>,
         val selection: List<Ix>, // circle indices
@@ -901,7 +903,6 @@ class EditClusterViewModel(
     ) { // MAYBE: save translations & scaling and/or also keep such movements in history
         companion object {
             val DEFAULT = UiState(
-                SelectionMode.Drag,
                 circles = listOf(
                     Circle(200.0, 200.0, 100.0),
                     Circle(250.0, 200.0, 100.0),
@@ -918,7 +919,8 @@ class EditClusterViewModel(
                     coroutineScope,
                     Cluster(uiState.circles.toList(), uiState.parts.toList(), filled = true)
                 ).apply {
-                    _mode.value = uiState.mode
+                    if (uiState.selection.size > 1)
+                        _mode.value = SelectionMode.Multiselect
                     selection.addAll(uiState.selection)
 //                    translation.value = Offset(100f, 0f) //uiState.translation
                     // this translation recovery dont work
@@ -927,7 +929,6 @@ class EditClusterViewModel(
             fun save(viewModel: EditClusterViewModel): UiState =
                 with (viewModel) {
                     UiState(
-                        mode,
                         circles.toList(), parts.toList(), selection.toList(),
                         viewModel.translation.value
                     )
@@ -949,11 +950,9 @@ class EditClusterViewModel(
     }
 
     companion object {
-        /** In drag mode: enables simple drag&drop behavior that is otherwise only available after long press */
-        const val DRAG_ONLY = true
         /** min tap/grab distance to select an object in dp */
         const val EPSILON = 10f
-        const val ZOOM_INCREMENT = 1.05f // +5%
+        const val ZOOM_INCREMENT = 1.05f // == +5%
         const val HISTORY_SIZE = 100
     }
 }
@@ -975,7 +974,7 @@ enum class Handle {
 data class DecayingCircles(
     val circles: List<CircleF>,
     @Serializable(ColorCssSerializer::class)
-    val color: Color
+    val color: Color // TODO: replace color with cr/cp/d enum values
 )
 
 /** used for grouping UiState changes into batches for history keeping */
