@@ -29,6 +29,7 @@ sealed interface Tool {
         val nArgs: Int
         val argDescriptions: StringResource // can be a string array with the same type apparently
     }
+    // NOTE: realistically number of args and their types don't belong here
     sealed interface MultiArg1<T1 : InputType> : MultiArg {
         override val nArgs get() = 1
     }
@@ -49,7 +50,7 @@ sealed interface Tool {
 
 /** Selectable item types, used by [Tool.MultiArg] tools */
 sealed interface InputType {
-    data object AnyPoint : InputType
-    data object Circle : InputType
+    data object AnyPoint : InputType // (x, y)
+    data object Circle : InputType // circle index within current cluster
 }
 
