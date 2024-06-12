@@ -426,6 +426,7 @@ fun BottomToolbar(
     }
 }
 
+// slide up/down animations
 // MAYBE: hoist VM upwards with callbacks
 @Composable
 fun Panel(
@@ -457,16 +458,26 @@ fun Panel(
                 onSelectTool(ix)
             }
             when (tool) {
+                EditClusterTool.Delete -> {
+                    IconButton(
+                        onClick = onClick,
+                        enabled = viewModel.circleSelectionIsActive
+                    ) {
+                        Icon(
+                            icon,
+                            tint = EditClusterTool.Delete.tint.copy(alpha = LocalContentAlpha.current),
+                            contentDescription = name
+                        )
+                    }
+                } // apply red tint
                 is Tool.ActionOnSelection -> {
-//                    if (tool is EditClusterTool.Delete) // red tint
                     DisableableButton(
                         icon, name,
-                        disabled = !viewModel.circleSelectionIsActive,
+                        enabled = viewModel.circleSelectionIsActive,
                         onClick
                     )
                 }
                 is Tool.InstantAction -> {
-//                    if (tool is EditClusterTool.Palette) // colored outline
                     SimpleButton(icon, name, onClick)
                 }
                 is Tool.BinaryToggle -> {
@@ -488,7 +499,7 @@ fun Panel(
                 else -> throw IllegalStateException("Never") // wont compile otherwise
             }
         }
-        if (category is EditClusterCategory.Region || category is EditClusterCategory.Colors) {
+        if (category is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
             // used colors button
         }
         // hide panel button

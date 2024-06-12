@@ -19,6 +19,7 @@ object DodeclustersColors {
     val darkGray = Color(0xff_2c2c2c)
     val red = Color.Red
     val pinkishRed = Color(0xff_cf6679)
+    val pinkish = Color(1f, 0.5f, 0.5f)
     val green = Color(0f, 1f, 0f)
     val darkGreen = Color(0f, 0.7f, 0f)
 }
@@ -48,7 +49,7 @@ val dodeclustersLightColorPalette = with (DodeclustersColors) {
         primaryVariant = turquoise,
         secondary = lightPurple,
         secondaryVariant = purple,
-        background = veryLightGray,
+        background = white,//veryLightGray,
         surface = white,
         error = pinkishRed,
         onPrimary = black,

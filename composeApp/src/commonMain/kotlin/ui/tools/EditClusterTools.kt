@@ -44,6 +44,7 @@ import dodeclusters.composeapp.generated.resources.two_of_three_circles_connecte
 import dodeclusters.composeapp.generated.resources.visible
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
+import ui.theme.DodeclustersColors
 
 @Immutable
 sealed class EditClusterTool(
@@ -113,7 +114,9 @@ sealed class EditClusterTool(
         Res.string.delete_name,
         Res.string.delete_description,
         Res.drawable.delete_forever
-    ), Tool.ActionOnSelection
+    ), Tool.ActionOnSelection {
+        val tint = DodeclustersColors.pinkish
+    }
 
     // MAYBE: add partial argument icon(s)
     data object ConstructCircleByCenterAndRadius: Switch(

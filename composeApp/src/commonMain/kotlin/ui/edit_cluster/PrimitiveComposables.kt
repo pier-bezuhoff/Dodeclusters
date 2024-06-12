@@ -38,12 +38,12 @@ fun SimpleButton(
 fun DisableableButton(
     iconPainter: Painter,
     name: String,
-    disabled: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit
 ) {
     IconButton(
         onClick = onClick,
-        enabled = !disabled
+        enabled = enabled
     ) {
         Icon(iconPainter, contentDescription = name)
     }
