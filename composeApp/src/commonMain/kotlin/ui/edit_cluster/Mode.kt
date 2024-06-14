@@ -2,6 +2,7 @@ package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import data.PartialArgList
 import kotlinx.serialization.Serializable
 
 @Immutable
@@ -18,6 +19,7 @@ sealed interface SelectionMode : Mode {
     data object Region : SelectionMode
 }
 
+@Serializable
 enum class MultiselectMethod {
     BY_CLICK, BY_FLOW
 }
@@ -28,6 +30,14 @@ enum class MultiselectLogic {
     SYMMETRIC_DIFFIRENCE, ADD, SUBTRACT
 }
 
+// MultiArg Tool -> this enum mapping
+@Serializable
+enum class ToolMode(val signature: PartialArgList.Signature) { // : Mode
+    CIRCLE_BY_CENTER_AND_RADIUS(PartialArgList.SIGNATURE_2_POINTS),
+    CIRCLE_BY_3_POINTS(PartialArgList.SIGNATURE_3_POINTS),
+}
+
+// TODO: migrate to PartialArgList instead
 @Immutable
 sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode {
     sealed class CircleByCenterAndRadius(

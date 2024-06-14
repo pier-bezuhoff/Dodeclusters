@@ -25,11 +25,14 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
+import androidx.compose.material.contentColorFor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.primarySurface
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -359,6 +362,7 @@ fun BinaryToggle(
     Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
 }
 
+
 // move to VM
 fun setupToolbar() {
     val categories: List<EditClusterCategory> = listOf(
@@ -367,18 +371,19 @@ fun setupToolbar() {
         EditClusterCategory.Region,
         EditClusterCategory.Visibility,
         EditClusterCategory.Colors,
-        EditClusterCategory.Attributes,
+        EditClusterCategory.Attributes, // replace with floating context menu
 //        EditClusterCategory.Transform,
-        EditClusterCategory.Create
+        EditClusterCategory.Create, // FAB
     )
     val categoryIndices = categories.withIndex().associate { it.value to it.index }
-    val tools = categories.flatMap { it.tools }.distinct()
+//    val tools = categories.flatMap { it.tools }.distinct()
     // this int list is to be persisted/preserved
     // category index -> tool index among category.tools
     val defaults: MutableList<Int> = categories.map { it.tools.indexOf(it.default) }.toMutableList()
-    var category = categories.first()
+    var categoryIndex = 0
+    var category = categories[categoryIndex]
     var toolIndex = defaults[categoryIndices[category]!!]
-    val tool = category.tools[toolIndex]
+//    val tool = category.tools[toolIndex]
     var showPanel = category.tools.size > 1
 }
 
@@ -388,8 +393,8 @@ fun BottomToolbar(
     selectedCategoryIndex: Ix,
     onSelectCategory: (EditClusterCategory) -> Unit
 ) {
-    val backgroundColor = MaterialTheme.colors.primary
-    val contentColor = MaterialTheme.colors.onPrimary
+    val backgroundColor = MaterialTheme.colors.primarySurface
+    val contentColor = MaterialTheme.colors.contentColorFor(backgroundColor)
     BottomAppBar(
         modifier = Modifier.background(
             Brush.verticalGradient(
@@ -399,7 +404,7 @@ fun BottomToolbar(
         ),
         backgroundColor = backgroundColor.copy(alpha = 0.1f),
         contentColor = contentColor,
-        elevation = 0.dp,
+        elevation = 4.dp,
     ) {
         CompositionLocalProvider(LocalContentAlpha provides 1f) {
             for ((i, category) in categories.withIndex()) {
@@ -428,6 +433,8 @@ fun BottomToolbar(
 
 // slide up/down animations
 // MAYBE: hoist VM upwards with callbacks
+// MAYBE: just make individual panel for every category instead of generalization
+/** [toolIndex]: index of the tool selected from within the category */
 @Composable
 fun Panel(
     category: EditClusterCategory,
@@ -450,15 +457,15 @@ fun Panel(
         horizontalArrangement = Arrangement.Start,
     ) {
         for ((ix, tool) in category.tools.withIndex()) {
-            val highlighted = ix == toolIndex // i think this is already reflected by predicates
+//            val highlighted = ix == toolIndex // i think this is already reflected by the predicates
             val icon = painterResource(tool.icon)
             val name = stringResource(tool.name)
             val onClick = {
                 viewModel.toolAction(tool)
-                onSelectTool(ix)
+                onSelectTool(ix) // order?
             }
             when (tool) {
-                EditClusterTool.Delete -> {
+                EditClusterTool.Delete -> { // red tint
                     IconButton(
                         onClick = onClick,
                         enabled = viewModel.circleSelectionIsActive
@@ -469,7 +476,7 @@ fun Panel(
                             contentDescription = name
                         )
                     }
-                } // apply red tint
+                }
                 is Tool.ActionOnSelection -> {
                     DisableableButton(
                         icon, name,
@@ -481,13 +488,13 @@ fun Panel(
                     SimpleButton(icon, name, onClick)
                 }
                 is Tool.BinaryToggle -> {
-                    if (tool.disabledIcon == null)
+                    if (tool.disabledIcon == null) {
                         OnOffButton(
                             icon, name,
                             isOn = viewModel.toolPredicate(tool),
                             onClick
                         )
-                    else
+                    } else {
                         TwoIconButton(
                             icon,
                             disabledIconPainter = painterResource(tool.disabledIcon!!),
@@ -495,11 +502,21 @@ fun Panel(
                             enabled = viewModel.toolPredicate(tool),
                             onClick
                         )
+                    }
                 }
                 else -> throw IllegalStateException("Never") // wont compile otherwise
             }
         }
         if (category is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
+            val colorsByMostUsed = viewModel.parts
+                .flatMap { part ->
+                    part.borderColor?.let { listOf(part.fillColor, it) } ?: listOf(part.fillColor)
+                }
+                .groupingBy { it }
+                .eachCount()
+                .entries
+                .sortedByDescending { (_, count) -> count }
+                .map { (color, _) -> color }
             // used colors button
         }
         // hide panel button
@@ -508,5 +525,8 @@ fun Panel(
             stringResource(Res.string.stub),
             onClick = onHide
         )
+    }
+    LaunchedEffect(toolIndex) {
+        scrollState.animateScrollTo(toolIndex) // probs?
     }
 }

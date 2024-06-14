@@ -1,6 +1,7 @@
 package ui.theme
 
 import androidx.compose.material.Colors
+import androidx.compose.material.darkColors
 import androidx.compose.ui.graphics.Color
 
 object DodeclustersColors {
@@ -15,7 +16,7 @@ object DodeclustersColors {
     val golden = Color(0xff_ffaa00) // accent
     val gray = Color.Gray
     val veryLightGray = Color(0xff_DEDEDE)
-    val veryDarkGray = Color(0xff_212121)
+    val veryDarkGray = Color(0xff_121212) // <- google rec // Color(0xff_212121)
     val darkGray = Color(0xff_2c2c2c)
     val red = Color.Red
     val pinkishRed = Color(0xff_cf6679)
@@ -24,9 +25,10 @@ object DodeclustersColors {
     val darkGreen = Color(0f, 0.7f, 0f)
 }
 
+val x = darkColors()
 val dodeclustersDarkColorPalette = with (DodeclustersColors) {
     Colors(
-        primary = turquoise,
+        primary = turquoise, // probably change too gray like in discord and other dark mode examples
         primaryVariant = darkTurquoise,
         secondary = purple,
         secondaryVariant = darkPurple,
