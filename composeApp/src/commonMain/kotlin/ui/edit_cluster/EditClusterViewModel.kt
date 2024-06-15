@@ -560,12 +560,13 @@ class EditClusterViewModel(
     }
 
     // pointer input callbacks
+    // onTap triggers after onDown
     fun onTap(position: Offset) {
         // select circle(s)/region
         if (showCircles) {
             when (mode) {
                 SelectionMode.Drag -> {
-                    val clickedDeleteHandle = if (selection.isNotEmpty()) {
+                    val clickedDeleteHandle = if (grabbedHandle ==  Handle.DELETE && selection.isNotEmpty()) {
                         val circle = circles[selection.single()]
                         val bottom = circle.offset + Offset(0f, circle.radius.toFloat())
                         isCloseEnoughToSelect(bottom, position)
@@ -577,7 +578,7 @@ class EditClusterViewModel(
                 }
 
                 is SelectionMode.Multiselect -> {
-                    val clickedDeleteHandle = if (selection.isNotEmpty()) {
+                    val clickedDeleteHandle = if (grabbedHandle ==  Handle.DELETE && selection.isNotEmpty()) {
                         val deleteHandlePosition = getSelectionRect().bottomCenter
                         isCloseEnoughToSelect(deleteHandlePosition, position)
                     } else false
@@ -624,6 +625,7 @@ class EditClusterViewModel(
                 else -> {}
             }
         }
+        grabbedHandle = null
     }
 
     fun onUp(visiblePosition: Offset?) {
@@ -666,28 +668,34 @@ class EditClusterViewModel(
     fun onDown(visiblePosition: Offset) {
         rotationAnchor = null
         rotationIndicatorPosition = null
+        grabbedHandle = null
         // no need for onUp since all actions occur after onDown
         if (showCircles) {
             grabbedHandle = when (val h = handleConfig.value) {
                 is HandleConfig.SingleCircle -> {
                     val circle = circles[h.ix]
                     val radiusHandlePosition = circle.offset + Offset(circle.radius.toFloat(), 0f)
-                    Handle.SCALE.takeIf {
-                        isCloseEnoughToSelect(radiusHandlePosition, visiblePosition)
+                    val deleteHandlePosition = circle.offset + Offset(0f, circle.radius.toFloat())
+                    when {
+                        isCloseEnoughToSelect(radiusHandlePosition, visiblePosition) -> Handle.SCALE
+                        isCloseEnoughToSelect(deleteHandlePosition, visiblePosition) -> Handle.DELETE
+                        else -> null
                     }
                 }
                 is HandleConfig.SeveralCircles -> {
                     val rect = getSelectionRect()
                     val scaleHandlePosition = rect.topRight
-                    if (isCloseEnoughToSelect(scaleHandlePosition, visiblePosition))
-                        Handle.SCALE
-                    else {
-                        val rotateHandlePosition = rect.bottomRight
-                        if (isCloseEnoughToSelect(rotateHandlePosition, visiblePosition)) {
+                    val rotateHandlePosition = rect.bottomRight
+                    val deleteHandlePosition = rect.bottomCenter
+                    when {
+                        isCloseEnoughToSelect(scaleHandlePosition, visiblePosition) -> Handle.SCALE
+                        isCloseEnoughToSelect(rotateHandlePosition, visiblePosition) -> {
                             rotationAnchor = rect.center
                             rotationIndicatorPosition = rotateHandlePosition
                             Handle.ROTATE
-                        } else null
+                        }
+                        isCloseEnoughToSelect(deleteHandlePosition, visiblePosition) -> Handle.DELETE
+                        else -> null
                     }
                 }
                 else -> null
@@ -718,7 +726,7 @@ class EditClusterViewModel(
 
     // MAYBE: handle key arrows as panning
     fun onPanZoomRotate(pan: Offset, centroid: Offset, zoom: Float, rotationAngle: Float) {
-        if (grabbedHandle != null) {
+        if (grabbedHandle != null && grabbedHandle != Handle.DELETE) {
             // drag handle
             when (val h = handleConfig.value) {
                 is HandleConfig.SingleCircle -> {
@@ -757,7 +765,7 @@ class EditClusterViewModel(
                                 circles[ix] = Circle(newOffset, circle.radius)
                             }
                         }
-                        null -> {}
+                        else -> Unit
                     }
                 }
                 else -> Unit
@@ -965,7 +973,7 @@ sealed class HandleConfig(open val ixs: List<Ix>) {
 }
 
 enum class Handle {
-    SCALE, ROTATE
+    SCALE, ROTATE, DELETE
 }
 
 /** params for create/copy/delete animations */

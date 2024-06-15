@@ -62,10 +62,11 @@ inline fun Modifier.reactiveCanvas(
                     onDown(it)
                     awaitRelease()
                     onUp(it)
+                },
+                onTap = { position ->
+                    onTap(position)
                 }
-            ) { position ->
-                onTap(position)
-            }
+            )
         }
         // NOTE: the later pointInput-s *can* consume events before passing it higher
 //        .pointerInput(*keys) {
