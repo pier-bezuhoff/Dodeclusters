@@ -28,15 +28,15 @@ object DodeclustersColors {
 val x = darkColors()
 val dodeclustersDarkColorPalette = with (DodeclustersColors) {
     Colors(
-        primary = turquoise, // probably change too gray like in discord and other dark mode examples
+        primary = turquoise, // 81D5CA
         primaryVariant = darkTurquoise,
-        secondary = purple,
+        secondary = purple, // EBB5ED
         secondaryVariant = darkPurple,
         background = veryDarkGray,
         surface = darkGray,
         error = pinkishRed,
-        onPrimary = white,
-        onSecondary = white,
+        onPrimary = white, // 003732
+        onSecondary = white, // 48204E
         onBackground = white,
         onSurface = golden,
         onError = black,

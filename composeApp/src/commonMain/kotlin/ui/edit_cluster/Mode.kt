@@ -20,12 +20,16 @@ sealed interface SelectionMode : Mode {
 }
 
 @Serializable
+/** sub-modes of [SelectionMode.Multiselect] related to the method by which circles are selected */
 enum class MultiselectMethod {
-    BY_CLICK, BY_FLOW
+    BY_CLICK,
+    /** Imagine a line/trail drawn by moving down-ed cursor,
+     * if the line passes through a circle, the circle is added to the selection */
+    BY_FLOW
 }
 
 @Serializable
-/** sub-modes of [SelectionMode.Multiselect] related to how new selection is added */
+/** sub-modes of [SelectionMode.Multiselect] related to how new selection is combined */
 enum class MultiselectLogic {
     SYMMETRIC_DIFFIRENCE, ADD, SUBTRACT
 }
@@ -37,7 +41,7 @@ enum class ToolMode(val signature: PartialArgList.Signature) { // : Mode
     CIRCLE_BY_3_POINTS(PartialArgList.SIGNATURE_3_POINTS),
 }
 
-// TODO: migrate to PartialArgList instead
+// TODO: migrate to ToolMode & PartialArgList instead
 @Immutable
 sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode {
     sealed class CircleByCenterAndRadius(

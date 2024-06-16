@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,9 +35,14 @@ import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -115,21 +122,28 @@ fun EditClusterScreen(
                 Icon(Icons.Filled.Add, "FAB create circle")
             }
         },
-
-//        topBar = {
-//            EditClusterTopBar(viewModel)
-//        },
-//        bottomBar = {
-//        },
-    ) { inPaddings ->
+    ) {
         Surface {
             Box {
-                EditClusterCanvas(viewModel)//, Modifier.padding(inPaddings))
+                EditClusterCanvas(viewModel)
                 EditClusterTopBar(viewModel)
                 EditClusterBottomBar(viewModel, modifier = Modifier.align(Alignment.BottomCenter))
             }
         }
     }
+    if (viewModel.showColorPickerDialog)
+        ColorPickerDialog(
+            initialColor = viewModel.regionColor,
+            onDismissRequest = { viewModel.showColorPickerDialog = false },
+            onConfirm = { newColor ->
+                viewModel.showColorPickerDialog = false
+                viewModel.regionColor = newColor
+                viewModel.switchToMode(
+                    SelectionMode.Region,
+                    noAlteringShortcuts = true
+                )
+            }
+        )
 
     coroutineScope.launch {
         if (ddcContent != null) {
@@ -148,16 +162,11 @@ fun EditClusterScreen(
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterTopBar(viewModel: EditClusterViewModel) {
-    val backgroundColor = MaterialTheme.colors.primary
-    val contentColor = MaterialTheme.colors.onPrimary
+    val backgroundColor = MaterialTheme.colors.primarySurface
+    val contentColor = MaterialTheme.colors.contentColorFor(backgroundColor)
     TopAppBar(
         // TODO: hide title and make empty top bar space transparent
         title = { Text(stringResource(Res.string.edit_cluster_title), color = DodeclustersColors.black) },
-        navigationIcon = {
-//            IconButton(onClick = viewModel::saveAndGoBack) {
-//                Icon(Icons.Default.Done, contentDescription = "Done")
-//            }
-        },
         actions = {
             CompositionLocalProvider(
                 LocalContentAlpha provides 1f,
@@ -180,9 +189,6 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
                 IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
                     Icon(painterResource(Res.drawable.redo), stringResource(Res.string.redo_name))
                 }
-//            IconButton(onClick = viewModel::cancelAndGoBack) {
-//                Icon(Icons.Default.Close, contentDescription = "Cancel")
-//            }
             }
         },
         backgroundColor = backgroundColor.copy(alpha = 0.1f),
@@ -193,7 +199,7 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
                 1f to backgroundColor.copy(alpha = 0.8f)
             )
         ),
-        elevation = 0.dp,
+        elevation = 4.dp,
     )
 }
 
@@ -268,19 +274,6 @@ fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = M
                     tint = viewModel.regionColor
                 )
             }
-            if (viewModel.showColorPickerDialog)
-                ColorPickerDialog(
-                    initialColor = viewModel.regionColor,
-                    onDismissRequest = { viewModel.showColorPickerDialog = false },
-                    onConfirm = { newColor ->
-                        viewModel.showColorPickerDialog = false
-                        viewModel.regionColor = newColor
-                        viewModel.switchToMode(
-                            SelectionMode.Region,
-                            noAlteringShortcuts = true
-                        )
-                    }
-                )
             IconButton(
                 onClick = viewModel::duplicateCircles,
                 enabled = viewModel.circleSelectionIsActive
@@ -363,8 +356,11 @@ fun BinaryToggle(
 }
 
 
-// move to VM
-fun setupToolbar() {
+// move to VM?
+@Composable
+fun BoxScope.BottomToolbars(
+    viewModel: EditClusterViewModel
+) {
     val categories: List<EditClusterCategory> = listOf(
         EditClusterCategory.Drag,
         EditClusterCategory.Multiselect,
@@ -376,22 +372,45 @@ fun setupToolbar() {
         EditClusterCategory.Create, // FAB
     )
     val categoryIndices = categories.withIndex().associate { it.value to it.index }
-//    val tools = categories.flatMap { it.tools }.distinct()
     // this int list is to be persisted/preserved
     // category index -> tool index among category.tools
-    val defaults: MutableList<Int> = categories.map { it.tools.indexOf(it.default) }.toMutableList()
-    var categoryIndex = 0
-    var category = categories[categoryIndex]
-    var toolIndex = defaults[categoryIndices[category]!!]
-//    val tool = category.tools[toolIndex]
-    var showPanel = category.tools.size > 1
+    val defaults = rememberSaveable { categories.map { it.tools.indexOf(it.default) }.toMutableStateList() }
+    var categoryIndex by rememberSaveable { mutableIntStateOf(0) }
+    var toolIndex by rememberSaveable { mutableIntStateOf(defaults[categoryIndex]) }
+    val category = categories[categoryIndex]
+    val tool = category.tools[toolIndex]
+
+    val panelNeedsToBeShown = category.tools.size > 1
+    var showPanel by remember { mutableStateOf(panelNeedsToBeShown) }
+
+    Column(
+        Modifier.align(Alignment.BottomCenter)
+    ) {
+        if (showPanel) {
+            Panel(
+                viewModel, category, toolIndex,
+                onSelectTool = { newToolIndex ->
+                    toolIndex = newToolIndex
+                    if (newToolIndex in category.defaultables)
+                        defaults[categoryIndex] = newToolIndex
+                },
+                onHide = { showPanel = false }
+            )
+        }
+        BottomToolbar(viewModel, categories, categoryIndex, defaults) { newCategoryIndex ->
+            categoryIndex = newCategoryIndex
+            showPanel = panelNeedsToBeShown
+        }
+    }
 }
 
 @Composable
 fun BottomToolbar(
+    viewModel: EditClusterViewModel,
     categories: List<EditClusterCategory>,
     selectedCategoryIndex: Ix,
-    onSelectCategory: (EditClusterCategory) -> Unit
+    defaults: List<Int>,
+    onSelectCategoryIndex: (Ix) -> Unit
 ) {
     val backgroundColor = MaterialTheme.colors.primarySurface
     val contentColor = MaterialTheme.colors.contentColorFor(backgroundColor)
@@ -409,22 +428,21 @@ fun BottomToolbar(
         CompositionLocalProvider(LocalContentAlpha provides 1f) {
             for ((i, category) in categories.withIndex()) {
                 val selected = i == selectedCategoryIndex
+                val defaultTool = category.tools[defaults[i]]
+                val icon = category.icon ?: defaultTool.icon
                 when (category) {
-                    is EditClusterCategory.Multiselect -> {
-                        val icon = EditClusterTool.Multiselect.icon
-                        val icon2 = EditClusterTool.FlowSelect.icon
+                    is EditClusterCategory.Create -> {} // FAB
+                    is EditClusterCategory.Colors -> {
+                        PaletteButton(viewModel.regionColor) {
+                            onSelectCategoryIndex(i)
+                            viewModel.showColorPickerDialog = true
+                        }
+                    }
+                    else -> {
                         OnOffButton(
                             painterResource(icon), stringResource(category.name), selected
-                        ) { onSelectCategory(category) }
-                    } // show normal|flow icon
-                    is EditClusterCategory.Colors -> {
-                        2
-                    } // show colored outline + dialog
-                    is EditClusterCategory.Create -> {} // FAB
-                    else ->
-                        OnOffButton(
-                            painterResource(category.default.icon), stringResource(category.name), selected
-                        ) { onSelectCategory(category) }
+                        ) { onSelectCategoryIndex(i) }
+                    }
                 }
             }
         }
@@ -437,10 +455,10 @@ fun BottomToolbar(
 /** [toolIndex]: index of the tool selected from within the category */
 @Composable
 fun Panel(
+    viewModel: EditClusterViewModel,
     category: EditClusterCategory,
     toolIndex: Ix,
-    viewModel: EditClusterViewModel,
-    onSelectTool: (toolIndex: Ix) -> Unit,
+    onSelectTool: (newToolIndex: Ix) -> Unit,
     onHide: () -> Unit = {}
 ) {
     // shown on the top of the bottom toolbar
@@ -452,7 +470,8 @@ fun Panel(
     Row(
         modifier = Modifier
             .horizontalScroll(scrollState)
-            .background(Color.Transparent),
+            .background(MaterialTheme.colors.primarySurface.copy(alpha = 0.1f)),
+//            .background(Color.Transparent),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start,
     ) {
@@ -528,5 +547,24 @@ fun Panel(
     }
     LaunchedEffect(toolIndex) {
         scrollState.animateScrollTo(toolIndex) // probs?
+    }
+}
+
+@Composable
+fun PaletteButton(
+    selectedColor: Color,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            painterResource(EditClusterTool.Palette.icon),
+            contentDescription = stringResource(EditClusterTool.Palette.name)
+        )
+        Icon(
+            painterResource(EditClusterTool.Palette.colorOutlineIcon),
+            contentDescription = stringResource(EditClusterCategory.Colors.name),
+            modifier = Modifier.size(56.dp), // nantoka nare (default icon size should be 48.dp)
+            tint = selectedColor
+        )
     }
 }

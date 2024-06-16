@@ -625,7 +625,6 @@ class EditClusterViewModel(
                 else -> {}
             }
         }
-        grabbedHandle = null
     }
 
     fun onUp(visiblePosition: Offset?) {
@@ -668,8 +667,7 @@ class EditClusterViewModel(
     fun onDown(visiblePosition: Offset) {
         rotationAnchor = null
         rotationIndicatorPosition = null
-        grabbedHandle = null
-        // no need for onUp since all actions occur after onDown
+        grabbedHandle = null // reset grabbed thingies
         if (showCircles) {
             grabbedHandle = when (val h = handleConfig.value) {
                 is HandleConfig.SingleCircle -> {

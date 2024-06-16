@@ -14,12 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 
-@Composable
-fun CategoryButton(
-) {
-    1
-}
-
 // MAYBE: pass a Modifier
 @Composable
 fun SimpleButton(

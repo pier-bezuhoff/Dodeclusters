@@ -17,6 +17,7 @@ import org.jetbrains.compose.resources.StringResource
 sealed class EditClusterCategory(
     override val name: StringResource,
     override val tools: List<EditClusterTool>,
+    final override val defaultables: List<Int> = listOf(0),
     final override val default: EditClusterTool = tools.first()
 ) : Category {
     override val icon: DrawableResource? = null
@@ -77,6 +78,7 @@ sealed class EditClusterCategory(
             EditClusterTool.Delete,
             EditClusterTool.Duplicate,
         ),
+        defaultables = listOf(0, 1)
     ) // just open panel, mb diff icon also (like setting wheel)
     data object Transform : EditClusterCategory(
         Res.string.transform_category_name,
@@ -92,6 +94,7 @@ sealed class EditClusterCategory(
             EditClusterTool.ConstructCircleByCenterAndRadius,
             EditClusterTool.ConstructCircleBy3Points
         ),
+        defaultables = listOf(0, 1)
     ) { // ~mode-like
         // mode: circle by center&radius
         // mode: circle by 3 points
