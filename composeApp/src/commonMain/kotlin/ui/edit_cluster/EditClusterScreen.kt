@@ -35,6 +35,7 @@ import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -113,7 +114,7 @@ fun EditClusterScreen(
             FloatingActionButton(
                 onClick = {
                     println("FAB: open create panel")
-                    viewModel.switchToMode(CreationMode.CircleByCenterAndRadius.Center())
+                    viewModel.selectCategory(EditClusterCategory.Create)
                 },
                 backgroundColor = MaterialTheme.colors.secondary,
                 contentColor = MaterialTheme.colors.onSecondary,
@@ -127,7 +128,17 @@ fun EditClusterScreen(
             Box {
                 EditClusterCanvas(viewModel)
                 EditClusterTopBar(viewModel)
-                EditClusterBottomBar(viewModel, modifier = Modifier.align(Alignment.BottomCenter))
+//                EditClusterBottomBar(viewModel, modifier = Modifier.align(Alignment.BottomCenter))
+                Column(
+                    Modifier.align(Alignment.BottomCenter),
+                    verticalArrangement = Arrangement.Bottom,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (viewModel.showPanel) {
+                        Panel(viewModel)
+                    }
+                    BottomToolbar(viewModel)
+                }
             }
         }
     }
@@ -355,62 +366,9 @@ fun BinaryToggle(
     Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
 }
 
-
-// move to VM?
-@Composable
-fun BoxScope.BottomToolbars(
-    viewModel: EditClusterViewModel
-) {
-    val categories: List<EditClusterCategory> = listOf(
-        EditClusterCategory.Drag,
-        EditClusterCategory.Multiselect,
-        EditClusterCategory.Region,
-        EditClusterCategory.Visibility,
-        EditClusterCategory.Colors,
-        EditClusterCategory.Attributes, // replace with floating context menu
-//        EditClusterCategory.Transform,
-        EditClusterCategory.Create, // FAB
-    )
-    val categoryIndices = categories.withIndex().associate { it.value to it.index }
-    // this int list is to be persisted/preserved
-    // category index -> tool index among category.tools
-    val defaults = rememberSaveable { categories.map { it.tools.indexOf(it.default) }.toMutableStateList() }
-    var categoryIndex by rememberSaveable { mutableIntStateOf(0) }
-    var toolIndex by rememberSaveable { mutableIntStateOf(defaults[categoryIndex]) }
-    val category = categories[categoryIndex]
-    val tool = category.tools[toolIndex]
-
-    val panelNeedsToBeShown = category.tools.size > 1
-    var showPanel by remember { mutableStateOf(panelNeedsToBeShown) }
-
-    Column(
-        Modifier.align(Alignment.BottomCenter)
-    ) {
-        if (showPanel) {
-            Panel(
-                viewModel, category, toolIndex,
-                onSelectTool = { newToolIndex ->
-                    toolIndex = newToolIndex
-                    if (newToolIndex in category.defaultables)
-                        defaults[categoryIndex] = newToolIndex
-                },
-                onHide = { showPanel = false }
-            )
-        }
-        BottomToolbar(viewModel, categories, categoryIndex, defaults) { newCategoryIndex ->
-            categoryIndex = newCategoryIndex
-            showPanel = panelNeedsToBeShown
-        }
-    }
-}
-
 @Composable
 fun BottomToolbar(
     viewModel: EditClusterViewModel,
-    categories: List<EditClusterCategory>,
-    selectedCategoryIndex: Ix,
-    defaults: List<Int>,
-    onSelectCategoryIndex: (Ix) -> Unit
 ) {
     val backgroundColor = MaterialTheme.colors.primarySurface
     val contentColor = MaterialTheme.colors.contentColorFor(backgroundColor)
@@ -423,25 +381,28 @@ fun BottomToolbar(
         ),
         backgroundColor = backgroundColor.copy(alpha = 0.1f),
         contentColor = contentColor,
-        elevation = 4.dp,
+//        elevation = 4.dp,
     ) {
         CompositionLocalProvider(LocalContentAlpha provides 1f) {
-            for ((i, category) in categories.withIndex()) {
-                val selected = i == selectedCategoryIndex
-                val defaultTool = category.tools[defaults[i]]
+            for ((i, category) in viewModel.categories.withIndex()) {
+                val selected = i == viewModel.categoryIndex
+                val defaultTool = category.tools[viewModel.categoryDefaults[i]]
                 val icon = category.icon ?: defaultTool.icon
                 when (category) {
                     is EditClusterCategory.Create -> {} // FAB
                     is EditClusterCategory.Colors -> {
                         PaletteButton(viewModel.regionColor) {
-                            onSelectCategoryIndex(i)
+                            viewModel.selectCategory(EditClusterCategory.Colors)
                             viewModel.showColorPickerDialog = true
                         }
                     }
                     else -> {
                         OnOffButton(
                             painterResource(icon), stringResource(category.name), selected
-                        ) { onSelectCategoryIndex(i) }
+                        ) {
+                            viewModel.selectCategory(category)
+                            viewModel.toolAction(defaultTool)
+                        }
                     }
                 }
             }
@@ -456,17 +417,14 @@ fun BottomToolbar(
 @Composable
 fun Panel(
     viewModel: EditClusterViewModel,
-    category: EditClusterCategory,
-    toolIndex: Ix,
-    onSelectTool: (newToolIndex: Ix) -> Unit,
-    onHide: () -> Unit = {}
 ) {
     // shown on the top of the bottom toolbar
     // scrollable lazy row, w = wrap content
     // can be shown or hidden with a collapse button at the end
-    require(category.tools.size > 1)
+    require(viewModel.category.tools.size > 1)
     // scrollable row + highlight selected tool
     val scrollState = rememberScrollState()
+    // mb wrap in a surface
     Row(
         modifier = Modifier
             .horizontalScroll(scrollState)
@@ -475,13 +433,15 @@ fun Panel(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start,
     ) {
-        for ((ix, tool) in category.tools.withIndex()) {
+        for ((ix, tool) in viewModel.category.tools.withIndex()) {
 //            val highlighted = ix == toolIndex // i think this is already reflected by the predicates
+            ToolButton(viewModel, tool) {
+                viewModel.selectTool(tool)
+            }
             val icon = painterResource(tool.icon)
             val name = stringResource(tool.name)
             val onClick = {
-                viewModel.toolAction(tool)
-                onSelectTool(ix) // order?
+                viewModel.selectTool(tool)
             }
             when (tool) {
                 EditClusterTool.Delete -> { // red tint
@@ -526,7 +486,7 @@ fun Panel(
                 else -> throw IllegalStateException("Never") // wont compile otherwise
             }
         }
-        if (category is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
+        if (viewModel.category is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
             val colorsByMostUsed = viewModel.parts
                 .flatMap { part ->
                     part.borderColor?.let { listOf(part.fillColor, it) } ?: listOf(part.fillColor)
@@ -542,11 +502,70 @@ fun Panel(
         SimpleButton(
             painterResource(Res.drawable.collapse_down),
             stringResource(Res.string.stub),
-            onClick = onHide
+            onClick = { viewModel.showPanel = false }
         )
     }
-    LaunchedEffect(toolIndex) {
-        scrollState.animateScrollTo(toolIndex) // probs?
+    LaunchedEffect(viewModel.toolIndex) {
+        scrollState.animateScrollTo(viewModel.toolIndex) // probs?
+    }
+}
+
+@Composable
+fun ToolButton(
+    viewModel: EditClusterViewModel,
+    tool: EditClusterTool,
+    onSelectTool: (newTool: EditClusterTool) -> Unit,
+) {
+    val icon = painterResource(tool.icon)
+    val name = stringResource(tool.name)
+    val onClick = {
+        viewModel.toolAction(tool)
+        onSelectTool(tool) // order?
+    }
+    when (tool) {
+        EditClusterTool.Delete -> { // red tint
+            IconButton(
+                onClick = onClick,
+                enabled = viewModel.circleSelectionIsActive
+            ) {
+                Icon(
+                    icon,
+                    tint = EditClusterTool.Delete.tint.copy(alpha = LocalContentAlpha.current),
+                    contentDescription = name
+                )
+            }
+        }
+        EditClusterTool.Palette -> {
+            PaletteButton(viewModel.regionColor, onClick)
+        }
+        is Tool.ActionOnSelection -> {
+            DisableableButton(
+                icon, name,
+                enabled = viewModel.circleSelectionIsActive,
+                onClick
+            )
+        }
+        is Tool.InstantAction -> {
+            SimpleButton(icon, name, onClick)
+        }
+        is Tool.BinaryToggle -> {
+            if (tool.disabledIcon == null) {
+                OnOffButton(
+                    icon, name,
+                    isOn = viewModel.toolPredicate(tool),
+                    onClick
+                )
+            } else {
+                TwoIconButton(
+                    icon,
+                    disabledIconPainter = painterResource(tool.disabledIcon!!),
+                    name,
+                    enabled = viewModel.toolPredicate(tool),
+                    onClick
+                )
+            }
+        }
+        else -> throw IllegalStateException("Never") // wont compile otherwise
     }
 }
 

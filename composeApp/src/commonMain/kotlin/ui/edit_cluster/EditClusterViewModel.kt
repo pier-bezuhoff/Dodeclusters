@@ -4,10 +4,15 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.SaverScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -24,7 +29,6 @@ import data.io.parseDdc
 import domain.angleDeg
 import domain.rotateBy
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
@@ -32,6 +36,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
+import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import kotlin.math.absoluteValue
 import kotlin.math.pow
@@ -55,6 +60,29 @@ class EditClusterViewModel(
     val selection = mutableStateListOf<Ix>() // MAYBE: when circles are hidden select parts instead
     val selectedCircles
         get() = selection.map { circles[it] }
+
+
+    val categories: List<EditClusterCategory> = listOf(
+        EditClusterCategory.Drag,
+        EditClusterCategory.Multiselect,
+        EditClusterCategory.Region,
+        EditClusterCategory.Visibility,
+        EditClusterCategory.Colors,
+        EditClusterCategory.Attributes, // replace with floating context menu
+//        EditClusterCategory.Transform,
+        EditClusterCategory.Create, // FAB
+    )
+    // this int list is to be persisted/preserved
+    // category index -> tool index among category.tools
+    val categoryDefaults: SnapshotStateList<Int> =
+        categories.map { it.tools.indexOf(it.default) }.toMutableStateList()
+    var categoryIndex: Int by mutableIntStateOf(0)
+        private set
+    var toolIndex: Int by mutableIntStateOf(categoryDefaults[categoryIndex])
+        private set
+    val category: EditClusterCategory by derivedStateOf { categories[categoryIndex] }
+    val panelNeedsToBeShown by derivedStateOf { category.tools.size > 1 }
+    var showPanel by mutableStateOf(panelNeedsToBeShown)
 
     /** currently selected color */
     var regionColor by mutableStateOf(DodeclustersColors.lightPurple)
@@ -520,6 +548,7 @@ class EditClusterViewModel(
     }
 
     fun toggleSelectAll() {
+        switchToMode(SelectionMode.Multiselect, noAlteringShortcuts = true)
         if (!selection.containsAll(circles.indices.toSet())) {
             selection.clear()
             selection.addAll(circles.indices)
@@ -852,7 +881,26 @@ class EditClusterViewModel(
         grabbedCircleIx = null
     }
 
+    fun selectCategory(category: EditClusterCategory) {
+        val ix = categories.indexOf(category)
+        if (ix != categoryIndex) {
+            categoryIndex = ix
+            showPanel = panelNeedsToBeShown
+        }
+    }
+
+    fun selectTool(tool: EditClusterTool) {
+        val cIndex = categories.indexOfFirst { tool in it.tools }
+        val c = categories[cIndex]
+        val i = c.tools.indexOf(tool)
+        if (i in c.defaultables)
+            categoryDefaults[cIndex] = i
+        selectCategory(c)
+        toolAction(tool)
+    }
+
     fun processKeyboardAction(action: KeyboardAction) {
+        println("processing $action")
         when (action) {
             KeyboardAction.SELECT_ALL -> toggleSelectAll()
             KeyboardAction.DELETE -> deleteCircles()
@@ -870,6 +918,7 @@ class EditClusterViewModel(
 
     @Stable
     fun toolAction(tool: EditClusterTool) {
+        println("toolAction($tool)")
         when (tool) {
             EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
             EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect)
@@ -895,6 +944,7 @@ class EditClusterViewModel(
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ConstructCircleByCenterAndRadius -> mode is CreationMode.CircleByCenterAndRadius
             EditClusterTool.ConstructCircleBy3Points -> mode is CreationMode.CircleBy3Points
+            EditClusterTool.Palette -> showColorPickerDialog
             else -> true
         }
 
