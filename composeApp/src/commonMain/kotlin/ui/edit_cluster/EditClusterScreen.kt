@@ -24,6 +24,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LocalAbsoluteTonalElevation
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -168,44 +170,39 @@ fun EditClusterScreen(
 @OptIn(ExperimentalResourceApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun EditClusterTopBar(viewModel: EditClusterViewModel) {
-    val backgroundColor = MaterialTheme.colorScheme.primaryContainer
-    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val contentColor = MaterialTheme.colorScheme.onSurface
     TopAppBar(
         // TODO: hide title and make empty top bar space transparent
         title = { Text(stringResource(Res.string.edit_cluster_title)) },
         actions = {
-            CompositionLocalProvider(
-//                LocalContentAlpha provides 1f,
-//                LocalContentColor provides Color.White
+            SaveFileButton(painterResource(Res.drawable.save), stringResource(Res.string.save_cluster_name),
+                saveDataProvider = { SaveData(
+                    Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION, viewModel.saveAsYaml()) }
             ) {
-                SaveFileButton(painterResource(Res.drawable.save), stringResource(Res.string.save_cluster_name),
-                    saveDataProvider = { SaveData(
-                        Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION, viewModel.saveAsYaml()) }
-                ) {
-                    println(if (it) "saved" else "not saved")
+                println(if (it) "saved" else "not saved")
+            }
+            OpenFileButton(painterResource(Res.drawable.open_file), stringResource(Res.string.open_file_name)) { content ->
+                content?.let {
+                    viewModel.loadFromYaml(content)
                 }
-                OpenFileButton(painterResource(Res.drawable.open_file), stringResource(Res.string.open_file_name)) { content ->
-                    content?.let {
-                        viewModel.loadFromYaml(content)
-                    }
-                }
-                IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
-                    Icon(painterResource(Res.drawable.undo), stringResource(Res.string.undo_name))
-                }
-                IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
-                    Icon(painterResource(Res.drawable.redo), stringResource(Res.string.redo_name))
-                }
+            }
+            IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
+                Icon(painterResource(Res.drawable.undo), stringResource(Res.string.undo_name))
+            }
+            IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
+                Icon(painterResource(Res.drawable.redo), stringResource(Res.string.redo_name))
             }
         },
         colors = TopAppBarDefaults.topAppBarColors().copy(
             containerColor = backgroundColor.copy(alpha = 0.1f),
-            titleContentColor = contentColor,
+            titleContentColor = MaterialTheme.colorScheme.tertiary,
             actionIconContentColor = contentColor,
         ),
         modifier = Modifier.background( // transparency gradient
             Brush.verticalGradient(
                 0f to backgroundColor,
-                1f to backgroundColor.copy(alpha = 0.8f)
+                1f to backgroundColor.copy(alpha = 0.7f)
             )
         ),
     )
@@ -216,37 +213,46 @@ fun BottomToolbar(
     viewModel: EditClusterViewModel,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = MaterialTheme.colorScheme.primaryContainer
-    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-//    LocalAbsoluteTonalElevation.current
+    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val contentColor = MaterialTheme.colorScheme.onSurface
     BottomAppBar(
-//        modifier = modifier.background(
-//            Brush.verticalGradient(
-//                0f to backgroundColor.copy(alpha = 0.8f),
-//                1f to backgroundColor,
-//            )
-//        ),
-//        backgroundColor = backgroundColor.copy(alpha = 0.1f),
-//        contentColor = contentColor,
+//        tonalElevation = 4.dp,
+        modifier = modifier.background(
+            Brush.verticalGradient(
+                0f to backgroundColor.copy(alpha = 0.7f),
+                1f to backgroundColor,
+            )
+        ),
+        containerColor = backgroundColor.copy(alpha = 0.1f),
+        contentColor = contentColor,
     ) {
-        // i dont like this anymore just make category bar and panels for each one by one
-        CompositionLocalProvider(
-//            LocalContentAlpha provides 1f
-        ) {
-            for ((i, category) in viewModel.categories.withIndex()) {
-                // idk how to mark it, not always what's active due to tools' predicates
-                val selected = i == viewModel.activeCategoryIndex
-                val defaultTool = category.tools[viewModel.categoryDefaults[i]]
-                val icon = category.icon ?: defaultTool.icon
-                // use category.name and .icon somewhere else ig
-                when (category) {
-                    is EditClusterCategory.Create -> {} // FAB
-                    else -> {
-                        ToolButton(viewModel, defaultTool)
-                        // TODO: use crossfade(defaultTool)
-                        // TODO: second click should trigger category collapse i think
-                    }
-                }
+        MaterialTheme.colorScheme.outlineVariant // divider color
+        CategoryButton(viewModel, EditClusterCategory.Drag)
+        CategoryButton(viewModel, EditClusterCategory.Multiselect)
+        CategoryButton(viewModel, EditClusterCategory.Region)
+        VerticalDivider(Modifier.fillMaxHeight(0.8f))
+        CategoryButton(viewModel, EditClusterCategory.Visibility)
+        CategoryButton(viewModel, EditClusterCategory.Colors)
+        CategoryButton(viewModel, EditClusterCategory.Attributes)
+    }
+}
+
+@Composable
+fun CategoryButton(
+    viewModel: EditClusterViewModel,
+    category: EditClusterCategory
+) {
+    val i = viewModel.categories.indexOf(category)
+    val selected = viewModel.categories[viewModel.activeCategoryIndex] == category // maybe use bar on top to indicate
+    val defaultTool = category.tools[viewModel.categoryDefaults[i]]
+//    val icon = category.icon ?: defaultTool.icon
+//    Spacer(Modifier.size(width = 12.dp, height = 0.dp))
+    Crossfade(defaultTool) {
+        ToolButton(viewModel, defaultTool, Modifier.padding(horizontal = 8.dp)) {
+            val panelIsShown = viewModel.showPanel
+            viewModel.selectTool(defaultTool)
+            if (selected && viewModel.panelNeedsToBeShown) {
+                viewModel.showPanel = !panelIsShown
             }
         }
     }
@@ -305,6 +311,7 @@ fun Panel(
 fun ToolButton(
     viewModel: EditClusterViewModel,
     tool: EditClusterTool,
+    modifier: Modifier = Modifier.padding(4.dp),
     onClick: () -> Unit = { viewModel.selectTool(tool) }
 ) {
     val icon = painterResource(tool.icon)
@@ -313,34 +320,38 @@ fun ToolButton(
         EditClusterTool.Delete -> { // red tint
             IconButton(
                 onClick = onClick,
+                modifier = modifier,
                 enabled = viewModel.circleSelectionIsActive
             ) {
+                val alpha = if (viewModel.circleSelectionIsActive) 1f else 0.5f
                 Icon(
                     icon,
-                    tint = EditClusterTool.Delete.tint,
+                    tint = EditClusterTool.Delete.tint.copy(alpha = alpha),
                     contentDescription = name
                 )
             }
         }
         EditClusterTool.Palette -> {
-            PaletteButton(viewModel.regionColor, onClick)
+            PaletteButton(viewModel.regionColor, modifier, onClick)
         }
         is Tool.ActionOnSelection -> {
             DisableableButton(
                 icon, name,
                 enabled = viewModel.circleSelectionIsActive,
+                modifier,
                 onClick
             )
         }
         is Tool.InstantAction -> {
-            SimpleButton(icon, name, onClick)
+            SimpleButton(icon, name, modifier, onClick)
         }
         is Tool.BinaryToggle -> {
             if (tool.disabledIcon == null) {
                 OnOffButton(
                     icon, name,
                     isOn = viewModel.toolPredicate(tool),
-                    onClick
+                    modifier = modifier,
+                    onClick = onClick
                 )
             } else {
                 TwoIconButton(
@@ -348,6 +359,7 @@ fun ToolButton(
                     disabledIconPainter = painterResource(tool.disabledIcon!!),
                     name,
                     enabled = viewModel.toolPredicate(tool),
+                    modifier,
                     onClick
                 )
             }
@@ -359,19 +371,26 @@ fun ToolButton(
 @Composable
 fun PaletteButton(
     selectedColor: Color,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier,
+        colors = IconButtonDefaults.iconButtonColors().copy(
+            containerColor = selectedColor,
+        )
+    ) {
         Icon(
             painterResource(EditClusterTool.Palette.icon),
             contentDescription = stringResource(EditClusterTool.Palette.name)
         )
-        Icon(
-            painterResource(EditClusterTool.Palette.colorOutlineIcon),
-            contentDescription = stringResource(EditClusterCategory.Colors.name),
-            modifier = Modifier.size(56.dp), // nantoka nare (default icon size should be 48.dp),
-            // looks awkward & small in the browser & android
-            tint = selectedColor
-        )
+//        Icon(
+//            painterResource(EditClusterTool.Palette.colorOutlineIcon),
+//            contentDescription = stringResource(EditClusterCategory.Colors.name),
+//            modifier = Modifier.size(64.dp), // nantoka nare (default icon size should be 48.dp),
+//            // looks awkward & small in the browser & android
+//            tint = selectedColor
+//        )
     }
 }

@@ -10,7 +10,7 @@ fun DodeclustersTheme(
     content: @Composable () -> Unit
 ) {
 //    val colors = if (false) dodeclustersDarkScheme else dodeclustersLightScheme
-    val scheme = if (true) darkScheme else lightScheme
+    val scheme = if (true) dodeclustersDarkScheme else dodeclustersLightScheme
     MaterialTheme(
         colorScheme = scheme,
         content = content

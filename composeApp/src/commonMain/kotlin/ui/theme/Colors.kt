@@ -1,8 +1,5 @@
 package ui.theme
 
-import androidx.compose.material.Colors
-import androidx.compose.material.darkColors
-import androidx.compose.material.lightColors
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
@@ -80,9 +77,8 @@ val surfaceContainerDark = Color(0xFF231E23)
 val surfaceContainerHighDark = Color(0xFF2E282D)
 val surfaceContainerHighestDark = Color(0xFF393338)
 
-
 // M3
-val lightScheme = lightColorScheme(
+val dodeclustersLightScheme = lightColorScheme(
     primary = primaryLight,
     onPrimary = onPrimaryLight,
     primaryContainer = primaryContainerLight,
@@ -120,7 +116,7 @@ val lightScheme = lightColorScheme(
     surfaceContainerHighest = surfaceContainerHighestLight,
 )
 
-val darkScheme = darkColorScheme(
+val dodeclustersDarkScheme = darkColorScheme(
     primary = primaryDark,
     onPrimary = onPrimaryDark,
     primaryContainer = primaryContainerDark,
@@ -158,40 +154,7 @@ val darkScheme = darkColorScheme(
     surfaceContainerHighest = surfaceContainerHighestDark,
 )
 
-
-// M2
-val dodeclustersLightScheme = lightColors(
-    primary = primaryLight,
-    primaryVariant = primaryContainerLight,
-    secondary = secondaryLight,
-    secondaryVariant = secondaryContainerLight,
-    background = backgroundLight,
-    surface = surfaceLight,
-    error = errorLight,
-    onPrimary = onPrimaryLight,
-    onSecondary = onSecondaryLight,
-    onBackground = onBackgroundLight,
-    onSurface = onTertiaryContainerLight, // circle color
-    onError = onErrorLight,
-)
-
-val dodeclustersDarkScheme = darkColors(
-    primary = primaryDark,
-    primaryVariant = primaryContainerDark,
-    secondary = secondaryDark,
-    secondaryVariant = secondaryContainerDark,
-    background = backgroundDark,
-    surface = surfaceDark,
-    error = errorDark,
-    onPrimary = onPrimaryDark,
-    onSecondary = onSecondaryDark,
-    onBackground = onBackgroundDark,
-    onSurface = tertiaryDark, // golden circle color
-    onError = onErrorDark,
-)
-
-
-// old theme
+// custom colors
 object DodeclustersColors {
     val white = Color(0xff_ffffff)
     val black = Color(0xff_000000)
@@ -211,41 +174,4 @@ object DodeclustersColors {
     val pinkish = Color(1f, 0.5f, 0.5f)
     val green = Color(0f, 1f, 0f)
     val darkGreen = Color(0f, 0.7f, 0f)
-}
-
-//val x = darkColors()
-val dodeclustersDarkColorPalette = with (DodeclustersColors) {
-    Colors(
-        primary = turquoise, // 81D5CA
-        primaryVariant = darkTurquoise,
-        secondary = purple, // EBB5ED
-        secondaryVariant = darkPurple,
-        background = veryDarkGray,
-        surface = darkGray,
-        error = pinkishRed,
-        onPrimary = white, // 003732
-        onSecondary = white, // 48204E
-        onBackground = white,
-        onSurface = golden,
-        onError = black,
-        isLight = false
-    )
-}
-
-val dodeclustersLightColorPalette = with (DodeclustersColors) {
-    Colors(
-        primary = lightTurquoise,
-        primaryVariant = turquoise,
-        secondary = lightPurple,
-        secondaryVariant = purple,
-        background = white,//veryLightGray,
-        surface = white,
-        error = pinkishRed,
-        onPrimary = black,
-        onSecondary = white,
-        onBackground = black,
-        onSurface = black,
-        onError = black,
-        isLight = true
-    )
 }

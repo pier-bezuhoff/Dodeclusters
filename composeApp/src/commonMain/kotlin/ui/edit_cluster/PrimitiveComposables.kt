@@ -1,14 +1,13 @@
 package ui.edit_cluster
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
@@ -19,10 +18,12 @@ import androidx.compose.ui.unit.dp
 fun SimpleButton(
     iconPainter: Painter,
     name: String,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     IconButton(
         onClick = onClick,
+        modifier = modifier
     ) {
         Icon(iconPainter, contentDescription = name)
     }
@@ -33,11 +34,13 @@ fun DisableableButton(
     iconPainter: Painter,
     name: String,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     IconButton(
         onClick = onClick,
-        enabled = enabled
+        modifier = modifier,
+        enabled = enabled,
     ) {
         Icon(iconPainter, contentDescription = name)
     }
@@ -49,13 +52,15 @@ fun TwoIconButton(
     disabledIconPainter: Painter,
     name: String,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    IconToggleButton(
-        checked = enabled,
-        onCheckedChange = { onClick() },
-    ) {
-        Crossfade(enabled) { targetChecked ->
+    Crossfade(enabled) { targetChecked ->
+        IconToggleButton(
+            checked = enabled,
+            onCheckedChange = { onClick() },
+            modifier = modifier,
+        ) {
             Icon(
                 if (targetChecked) iconPainter
                 else disabledIconPainter,
@@ -63,7 +68,6 @@ fun TwoIconButton(
             )
         }
     }
-//    Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
 }
 
 @Composable
@@ -71,24 +75,21 @@ fun OnOffButton(
     iconPainter: Painter,
     name: String,
     isOn: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    // Crossfade/AnimatedContent dont work for w/e reason (mb cuz VM is caught in the closure)
-    val backgroundColor = if (isOn)
-        MaterialTheme.colorScheme.primaryContainer
-    else
-        MaterialTheme.colorScheme.surfaceVariant
-    val contentColor = if (isOn)
-        MaterialTheme.colorScheme.onPrimaryContainer
-    else
-        MaterialTheme.colorScheme.onSurfaceVariant
-    IconToggleButton(
+    OutlinedIconToggleButton(
         checked = isOn,
         onCheckedChange = { onClick() },
-        modifier = Modifier.background(backgroundColor)
+        modifier = modifier,
+        colors = IconButtonDefaults.outlinedIconToggleButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        border = if (isOn) BorderStroke(2.dp, MaterialTheme.colorScheme.outline) else null
     ) {
-        Icon(iconPainter, contentDescription = name, tint = contentColor)
+        Icon(iconPainter, contentDescription = name)
     }
-    // why not jusp h-padding?
-    Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
 }
