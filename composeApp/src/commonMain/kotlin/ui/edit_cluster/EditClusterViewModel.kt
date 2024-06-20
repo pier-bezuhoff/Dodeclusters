@@ -7,9 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.SaverScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
@@ -76,12 +74,12 @@ class EditClusterViewModel(
     // category index -> tool index among category.tools
     val categoryDefaults: SnapshotStateList<Int> =
         categories.map { it.tools.indexOf(it.default) }.toMutableStateList()
-    var categoryIndex: Int by mutableIntStateOf(0)
+    var activeCategoryIndex: Int by mutableIntStateOf(0)
         private set
-    var toolIndex: Int by mutableIntStateOf(categoryDefaults[categoryIndex])
+    var activeToolIndex: Int by mutableIntStateOf(categoryDefaults[activeCategoryIndex])
         private set
-    val category: EditClusterCategory by derivedStateOf { categories[categoryIndex] }
-    val panelNeedsToBeShown by derivedStateOf { category.tools.size > 1 }
+    val activeCategory: EditClusterCategory by derivedStateOf { categories[activeCategoryIndex] }
+    val panelNeedsToBeShown by derivedStateOf { activeCategory.tools.size > 1 }
     var showPanel by mutableStateOf(panelNeedsToBeShown)
 
     /** currently selected color */
@@ -385,7 +383,8 @@ class EditClusterViewModel(
         }
     }
 
-    fun switchToMode(newMode: Mode, noAlteringShortcuts: Boolean = false) {
+    fun switchToMode(newMode: Mode, noAlteringShortcuts: Boolean = true) {
+        // NOTE: these altering shortcuts are unused for now so that they don't confuse category-expand buttons
         if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
         if (mode is SelectionMode.Multiselect && newMode is SelectionMode.Multiselect && !noAlteringShortcuts) {
@@ -883,10 +882,8 @@ class EditClusterViewModel(
 
     fun selectCategory(category: EditClusterCategory) {
         val ix = categories.indexOf(category)
-        if (ix != categoryIndex) {
-            categoryIndex = ix
-            showPanel = panelNeedsToBeShown
-        }
+        activeCategoryIndex = ix
+        showPanel = panelNeedsToBeShown
     }
 
     fun selectTool(tool: EditClusterTool) {

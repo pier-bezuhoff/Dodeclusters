@@ -78,7 +78,7 @@ sealed class EditClusterCategory(
             EditClusterTool.Delete,
             EditClusterTool.Duplicate,
         ),
-        defaultables = listOf(0, 1)
+        defaultables = listOf(0, 1) // TODO: remove defaultables from here
     ) // just open panel, mb diff icon also (like setting wheel)
     data object Transform : EditClusterCategory(
         Res.string.transform_category_name,
