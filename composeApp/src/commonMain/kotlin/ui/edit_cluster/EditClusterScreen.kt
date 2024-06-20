@@ -6,7 +6,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -16,27 +15,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.BottomAppBar
-import androidx.compose.material.Divider
-import androidx.compose.material.ElevationOverlay
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.FloatingActionButtonDefaults
-import androidx.compose.material.FloatingActionButtonElevation
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.IconToggleButton
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.LocalElevationOverlay
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
-import androidx.compose.material.contentColorFor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.primarySurface
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.LocalAbsoluteTonalElevation
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarColors
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -104,19 +101,17 @@ fun EditClusterScreen(
     }
     viewModel.setEpsilon(LocalDensity.current)
 
-    val scaffoldState = rememberScaffoldState()
     Scaffold(
         // MAYBE: potentially lift it to window-level (desktop)
         modifier = Modifier.handleKeyboardActions(viewModel::processKeyboardAction),
-        scaffoldState = scaffoldState,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
                     println("FAB: open create panel")
                     viewModel.selectCategory(EditClusterCategory.Create)
                 },
-                backgroundColor = MaterialTheme.colors.secondary,
-                contentColor = MaterialTheme.colors.onSecondary,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 shape = CircleShape,
                 elevation = FloatingActionButtonDefaults.elevation()
             ) {
@@ -170,17 +165,17 @@ fun EditClusterScreen(
     }
 }
 
-@OptIn(ExperimentalResourceApi::class)
+@OptIn(ExperimentalResourceApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun EditClusterTopBar(viewModel: EditClusterViewModel) {
-    val backgroundColor = MaterialTheme.colors.primarySurface
-    val contentColor = MaterialTheme.colors.contentColorFor(backgroundColor)
+    val backgroundColor = MaterialTheme.colorScheme.primaryContainer
+    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
     TopAppBar(
         // TODO: hide title and make empty top bar space transparent
-        title = { Text(stringResource(Res.string.edit_cluster_title), color = DodeclustersColors.black) },
+        title = { Text(stringResource(Res.string.edit_cluster_title)) },
         actions = {
             CompositionLocalProvider(
-                LocalContentAlpha provides 1f,
+//                LocalContentAlpha provides 1f,
 //                LocalContentColor provides Color.White
             ) {
                 SaveFileButton(painterResource(Res.drawable.save), stringResource(Res.string.save_cluster_name),
@@ -202,168 +197,18 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
                 }
             }
         },
-        backgroundColor = backgroundColor.copy(alpha = 0.1f),
-        contentColor = contentColor,
+        colors = TopAppBarDefaults.topAppBarColors().copy(
+            containerColor = backgroundColor.copy(alpha = 0.1f),
+            titleContentColor = contentColor,
+            actionIconContentColor = contentColor,
+        ),
         modifier = Modifier.background( // transparency gradient
             Brush.verticalGradient(
                 0f to backgroundColor,
                 1f to backgroundColor.copy(alpha = 0.8f)
             )
         ),
-        elevation = 4.dp,
     )
-}
-
-@OptIn(ExperimentalResourceApi::class)
-@Composable
-fun EditClusterBottomBar(viewModel: EditClusterViewModel, modifier: Modifier = Modifier) {
-    val backgroundColor = MaterialTheme.colors.primary
-    val contentColor = MaterialTheme.colors.onPrimary
-    BottomAppBar(
-        modifier = modifier.background(
-            Brush.verticalGradient(
-                0f to backgroundColor.copy(alpha = 0.8f),
-                1f to backgroundColor,
-            )
-        ),
-        backgroundColor = backgroundColor.copy(alpha = 0.1f),
-        contentColor = contentColor,
-        elevation = 0.dp,
-    ) {
-        CompositionLocalProvider(
-            LocalContentAlpha provides 1f,
-//            LocalContentColor provides Color.White,
-        ) {
-            ModeToggle(
-                SelectionMode.Drag,
-                viewModel,
-                painterResource(Res.drawable.drag_mode_1_circle),
-                contentDescription = "drag mode",
-            )
-            // MAYBE: select regions within multiselect
-            ModeToggle(
-                SelectionMode.Multiselect,
-                viewModel,
-                painterResource(Res.drawable.multiselect_mode_3_scattered_circles),
-                contentDescription = "multiselect mode",
-                checkedPredicate = { viewModel.mode is SelectionMode.Multiselect }
-            )
-            ModeToggle(
-                SelectionMode.Region,
-                viewModel,
-                painterResource(Res.drawable.select_region_mode_intersection),
-                contentDescription = "select region mode",
-            )
-            Divider( // modes <-> tools divider
-                Modifier
-                    .padding(8.dp)
-                    .fillMaxHeight()
-                    .width(4.dp)
-            )
-            BinaryToggle(
-                viewModel.showCircles,
-                painterResource(Res.drawable.visible), painterResource(Res.drawable.invisible),
-                "make circles invisible"
-            ) {
-                viewModel.showCircles = !viewModel.showCircles
-            }
-            BinaryToggle(
-                viewModel.restrictRegionsToSelection,
-                painterResource(Res.drawable.circled_region), painterResource(Res.drawable.open_region),
-                "restrict regions to selection"
-            ) {
-                viewModel.restrictRegionsToSelection = !viewModel.restrictRegionsToSelection
-            }
-            IconButton(onClick = {
-                viewModel.showColorPickerDialog = true
-            }) {
-                Icon(painterResource(Res.drawable.palette), contentDescription = "choose color")
-                Icon(
-                    painterResource(Res.drawable.rounded_square),
-                    contentDescription = "current color",
-                    Modifier.size(56.dp), // nantoka nare (icon size should be 48.dp)
-                    tint = viewModel.regionColor
-                )
-            }
-            IconButton(
-                onClick = viewModel::duplicateCircles,
-                enabled = viewModel.circleSelectionIsActive
-            ) {
-                Icon(painterResource(Res.drawable.copy), contentDescription = "copy circle(s)")
-            }
-            IconButton(
-                onClick = viewModel::deleteCircles,
-                enabled = viewModel.circleSelectionIsActive,
-            ) {
-                Icon(
-                    painterResource(Res.drawable.delete_forever),
-                    tint = Color(1f, 0.5f, 0.5f).copy(alpha = LocalContentAlpha.current),
-                    contentDescription = "delete circle(s)"
-                )
-            }
-            ModeToggle<CreationMode.CircleByCenterAndRadius>(
-                CreationMode.CircleByCenterAndRadius.Center(), viewModel,
-                painterResource(Res.drawable.center), "circle by center & radius",
-            )
-            ModeToggle<CreationMode.CircleBy3Points>(
-                CreationMode.CircleBy3Points(), viewModel,
-                painterResource(Res.drawable.circle_3_points), "circle by 3 points"
-            )
-        }
-    }
-}
-
-@Composable
-inline fun <reified M: Mode> ModeToggle(
-    targetMode: M,
-    viewModel: EditClusterViewModel,
-    painter: Painter,
-    contentDescription: String,
-    checkedPredicate: () -> Boolean = { viewModel.mode is M }
-) {
-    // Crossfade/AnimatedContent dont work for w/e reason (mb cuz VM is caught in the closure)
-    IconToggleButton(
-        checked = checkedPredicate(),
-        onCheckedChange = {
-            viewModel.switchToMode(targetMode)
-        },
-        modifier = Modifier
-            .background(
-                if (checkedPredicate())
-                    MaterialTheme.colors.primaryVariant
-                else
-                    MaterialTheme.colors.primary,
-            )
-    ) {
-        Icon(
-            painter,
-            contentDescription = contentDescription,
-        )
-    }
-    Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
-}
-
-@Composable
-fun BinaryToggle(
-    checked: Boolean,
-    checkedPainter: Painter,
-    uncheckedPainter: Painter,
-    contentDescription: String,
-    onCheckChange: (Boolean) -> Unit,
-) {
-    IconToggleButton(
-        checked = checked,
-        onCheckedChange = onCheckChange,
-    ) {
-        Crossfade(checked) { targetChecked ->
-            Icon(
-                if (targetChecked) checkedPainter
-                else uncheckedPainter,
-                contentDescription
-            )
-        }
-    }
-    Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
 }
 
 @Composable
@@ -371,9 +216,9 @@ fun BottomToolbar(
     viewModel: EditClusterViewModel,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = MaterialTheme.colors.primarySurface
-    val contentColor = MaterialTheme.colors.contentColorFor(backgroundColor)
-    LocalElevationOverlay.current?.apply(backgroundColor, 4.dp)
+    val backgroundColor = MaterialTheme.colorScheme.primaryContainer
+    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+//    LocalAbsoluteTonalElevation.current
     BottomAppBar(
 //        modifier = modifier.background(
 //            Brush.verticalGradient(
@@ -383,10 +228,11 @@ fun BottomToolbar(
 //        ),
 //        backgroundColor = backgroundColor.copy(alpha = 0.1f),
 //        contentColor = contentColor,
-        elevation = 4.dp,
     ) {
         // i dont like this anymore just make category bar and panels for each one by one
-        CompositionLocalProvider(LocalContentAlpha provides 1f) {
+        CompositionLocalProvider(
+//            LocalContentAlpha provides 1f
+        ) {
             for ((i, category) in viewModel.categories.withIndex()) {
                 // idk how to mark it, not always what's active due to tools' predicates
                 val selected = i == viewModel.activeCategoryIndex
@@ -425,7 +271,7 @@ fun Panel(
     Row(
         modifier = modifier
             .horizontalScroll(scrollState)
-            .background(MaterialTheme.colors.primarySurface.copy(alpha = 0.1f)),
+            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)),
 //            .background(Color.Transparent),
     ) {
         for (tool in viewModel.activeCategory.tools) {
@@ -471,7 +317,7 @@ fun ToolButton(
             ) {
                 Icon(
                     icon,
-                    tint = EditClusterTool.Delete.tint.copy(alpha = LocalContentAlpha.current),
+                    tint = EditClusterTool.Delete.tint,
                     contentDescription = name
                 )
             }
@@ -523,7 +369,8 @@ fun PaletteButton(
         Icon(
             painterResource(EditClusterTool.Palette.colorOutlineIcon),
             contentDescription = stringResource(EditClusterCategory.Colors.name),
-            modifier = Modifier.size(56.dp), // nantoka nare (default icon size should be 48.dp)
+            modifier = Modifier.size(56.dp), // nantoka nare (default icon size should be 48.dp),
+            // looks awkward & small in the browser & android
             tint = selectedColor
         )
     }

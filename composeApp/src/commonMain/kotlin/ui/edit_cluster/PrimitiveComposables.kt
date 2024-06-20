@@ -5,11 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.IconToggleButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.contentColorFor
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
@@ -76,13 +75,13 @@ fun OnOffButton(
 ) {
     // Crossfade/AnimatedContent dont work for w/e reason (mb cuz VM is caught in the closure)
     val backgroundColor = if (isOn)
-        MaterialTheme.colors.primary
+        MaterialTheme.colorScheme.primaryContainer
     else
-        MaterialTheme.colors.primaryVariant
+        MaterialTheme.colorScheme.surfaceVariant
     val contentColor = if (isOn)
-        MaterialTheme.colors.onPrimary
+        MaterialTheme.colorScheme.onPrimaryContainer
     else
-        MaterialTheme.colors.primary
+        MaterialTheme.colorScheme.onSurfaceVariant
     IconToggleButton(
         checked = isOn,
         onCheckedChange = { onClick() },

@@ -6,16 +6,10 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -32,12 +26,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import data.Circle
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -68,16 +62,15 @@ fun EditClusterCanvas(
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
     val scaleHandleColor = DodeclustersColors.gray
     val iconDim = with (LocalDensity.current) { 18.dp.toPx() }
-//    val deleteIcon = painterResource("icons/cancel.xml")
-    val deleteIcon = rememberVectorPainter(Icons.Default.Delete)
+    val deleteIcon = painterResource(Res.drawable.delete_forever)
     val deleteIconTint = DodeclustersColors.red
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
     val rotateIconTint = DodeclustersColors.darkGreen
     val rotationIndicatorRadius = handleRadius * 3/4
     val rotationIndicatorColor = DodeclustersColors.green.copy(alpha = 0.5f)
 
-    val backgroundColor = MaterialTheme.colors.surface
-    val circleColor = MaterialTheme.colors.onSurface
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val circleColor = MaterialTheme.colorScheme.tertiary // MAYBE: black for light scheme
     val clusterPathAlpha = 0.7f
 //    val clusterPathAlpha = 1f // TODO: add a switch for this
     val selectionLinesColor = DodeclustersColors.gray

@@ -14,14 +14,14 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -94,7 +94,7 @@ fun ColorPickerDialog(
                 Text(
                     text = stringResource(Res.string.color_picker_title),
                     modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.h5,
+                    style = MaterialTheme.typography.titleMedium,
                 )
                 ClassicColorPicker(
                     Modifier
@@ -144,7 +144,7 @@ fun ColorPickerDialog(
                     OutlinedButton(
                         onClick = { onDismissRequest() },
                         modifier = Modifier.padding(8.dp),
-                        border = BorderStroke(2.dp, MaterialTheme.colors.primary),
+                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
                     ) {
                         Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel_name))
@@ -154,7 +154,7 @@ fun ColorPickerDialog(
                     Button(
                         onClick = { onConfirm(color.value.toColor()) },
                         modifier = Modifier.padding(8.dp),
-                        border = BorderStroke(2.dp, MaterialTheme.colors.primary),
+                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
                     ) {
                         Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
