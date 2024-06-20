@@ -915,7 +915,7 @@ class EditClusterViewModel(
 
     @Stable
     fun toolAction(tool: EditClusterTool) {
-        println("toolAction($tool)")
+//        println("toolAction($tool)")
         when (tool) {
             EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
             EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect)

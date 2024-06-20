@@ -18,11 +18,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.BottomAppBar
 import androidx.compose.material.Divider
+import androidx.compose.material.ElevationOverlay
 import androidx.compose.material.FloatingActionButton
+import androidx.compose.material.FloatingActionButtonDefaults
+import androidx.compose.material.FloatingActionButtonElevation
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.IconToggleButton
 import androidx.compose.material.LocalContentAlpha
+import androidx.compose.material.LocalElevationOverlay
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
@@ -114,6 +118,7 @@ fun EditClusterScreen(
                 backgroundColor = MaterialTheme.colors.secondary,
                 contentColor = MaterialTheme.colors.onSecondary,
                 shape = CircleShape,
+                elevation = FloatingActionButtonDefaults.elevation()
             ) {
                 Icon(Icons.Filled.Add, "FAB create circle")
             }
@@ -368,16 +373,17 @@ fun BottomToolbar(
 ) {
     val backgroundColor = MaterialTheme.colors.primarySurface
     val contentColor = MaterialTheme.colors.contentColorFor(backgroundColor)
+    LocalElevationOverlay.current?.apply(backgroundColor, 4.dp)
     BottomAppBar(
-        modifier = modifier.background(
-            Brush.verticalGradient(
-                0f to backgroundColor.copy(alpha = 0.8f),
-                1f to backgroundColor,
-            )
-        ),
-        backgroundColor = backgroundColor.copy(alpha = 0.1f),
-        contentColor = contentColor,
-//        elevation = 4.dp,
+//        modifier = modifier.background(
+//            Brush.verticalGradient(
+//                0f to backgroundColor.copy(alpha = 0.8f),
+//                1f to backgroundColor,
+//            )
+//        ),
+//        backgroundColor = backgroundColor.copy(alpha = 0.1f),
+//        contentColor = contentColor,
+        elevation = 4.dp,
     ) {
         // i dont like this anymore just make category bar and panels for each one by one
         CompositionLocalProvider(LocalContentAlpha provides 1f) {

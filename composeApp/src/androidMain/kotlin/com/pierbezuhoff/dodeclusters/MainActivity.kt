@@ -1,6 +1,7 @@
 package com.pierbezuhoff.dodeclusters
 
 import App
+import android.app.Activity
 import android.app.RecoverableSecurityException
 import android.content.Context
 import android.content.Intent
@@ -15,15 +16,23 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.view.WindowCompat
 import data.io.readDdcFromUri
+import ui.theme.dodeclustersDarkScheme
+import ui.theme.dodeclustersLightScheme
 import java.io.FileNotFoundException
 
 class MainActivity : ComponentActivity() {
@@ -62,7 +71,17 @@ class MainActivity : ComponentActivity() {
                 if (intent.action in setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT))
                     ddcContent = intent.data?.let { getContentFromExternalImplicitIntent(it, anchorUri, altLauncher, recoveryLauncher) }
             }
-
+            val view = LocalView.current
+            val isDarkTheme = isSystemInDarkTheme()
+            val scheme = if (isDarkTheme) dodeclustersDarkScheme else dodeclustersLightScheme
+            val statusBarColor = scheme.primary.toArgb()
+            if (!view.isInEditMode) {
+                SideEffect {
+                    val window = (view.context as Activity).window
+                    window.statusBarColor = statusBarColor
+                    WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = isDarkTheme
+                }
+            }
             App(ddcContent = ddcContent)
         }
     }

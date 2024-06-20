@@ -9,6 +9,7 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.IconToggleButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
@@ -74,18 +75,20 @@ fun OnOffButton(
     onClick: () -> Unit
 ) {
     // Crossfade/AnimatedContent dont work for w/e reason (mb cuz VM is caught in the closure)
+    val backgroundColor = if (isOn)
+        MaterialTheme.colors.primary
+    else
+        MaterialTheme.colors.primaryVariant
+    val contentColor = if (isOn)
+        MaterialTheme.colors.onPrimary
+    else
+        MaterialTheme.colors.primary
     IconToggleButton(
         checked = isOn,
         onCheckedChange = { onClick() },
-        modifier = Modifier
-            .background(
-                if (isOn)
-                    MaterialTheme.colors.primaryVariant
-                else
-                    MaterialTheme.colors.primary,
-            )
+        modifier = Modifier.background(backgroundColor)
     ) {
-        Icon(iconPainter, contentDescription = name)
+        Icon(iconPainter, contentDescription = name, tint = contentColor)
     }
     // why not jusp h-padding?
     Spacer(Modifier.fillMaxHeight().width(8.dp)) // horizontal margin
