@@ -1,6 +1,6 @@
 [versions]
 dodeclusters-versionCode = "1"
-dodeclusters-version = "0.1.6"
+dodeclusters-version = "0.1.7"
 
 #noinspection GradleDependency
 agp = "8.2.1" # latest compatible with this Android Studio version
@@ -18,8 +18,7 @@ kotlinx-serialization = "1.6.2"
 compose = "1.6.3"
 compose-compiler = "1.5.10"
 compose-plugin = "1.6.0"
-#noinspection GradleDependency
-material3 = "1.1.2" # unused so far
+material3 = "1.6.0" # m3 version should match compose-plugin
 junit = "4.13.2"
 colormath = "3.4.0"
 kaml = "0.57.0"
@@ -43,7 +42,8 @@ compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview"
 compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
 compose-material = { module = "androidx.compose.material:material", version.ref = "compose" }
 compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
-compose-material3-window-size-klass = { module = "androidx.compose.material3:material3-window-size-class", version.ref = "material3" }
+# no wasm/js window-size-class support so far
+#compose-material3-window-size-klass = { module = "androidx.compose.material3:material3-window-size-class", version.ref = "material3" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization"}
 colormath = { module = "com.github.ajalt.colormath:colormath", version.ref = "colormath" }
 
