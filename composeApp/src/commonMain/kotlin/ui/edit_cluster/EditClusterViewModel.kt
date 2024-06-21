@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import ui.theme.ColorTheme
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
@@ -89,7 +90,7 @@ class EditClusterViewModel(
     var showWireframes by mutableStateOf(false)
     /** applies to [SelectionMode.Region]:
      * only use circles present in the [selection] to determine which parts to fill */
-    var restrictRegionsToSelection by mutableStateOf(true)
+    var restrictRegionsToSelection by mutableStateOf(false)
 
     val circleSelectionIsActive by derivedStateOf {
         showCircles && selection.isNotEmpty() && mode.isSelectingCircles()
@@ -897,9 +898,12 @@ class EditClusterViewModel(
     }
 
     fun processKeyboardAction(action: KeyboardAction) {
-        println("processing $action")
+//        println("processing $action")
         when (action) {
-            KeyboardAction.SELECT_ALL -> toggleSelectAll()
+            KeyboardAction.SELECT_ALL -> {
+                selectCategory(EditClusterCategory.Multiselect)
+                toggleSelectAll()
+            }
             KeyboardAction.DELETE -> deleteCircles()
             KeyboardAction.PASTE -> duplicateCircles()
             KeyboardAction.ZOOM_IN -> scaleSelection(ZOOM_INCREMENT)

@@ -3,39 +3,32 @@ package ui.edit_cluster
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
-import androidx.compose.material3.LocalAbsoluteTonalElevation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -46,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import data.ClusterRepository
@@ -56,34 +48,23 @@ import data.io.SaveData
 import data.io.SaveFileButton
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.center
-import dodeclusters.composeapp.generated.resources.circle_3_points
-import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.collapse_down
-import dodeclusters.composeapp.generated.resources.copy
-import dodeclusters.composeapp.generated.resources.delete_forever
-import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
 import dodeclusters.composeapp.generated.resources.edit_cluster_title
-import dodeclusters.composeapp.generated.resources.invisible
-import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
 import dodeclusters.composeapp.generated.resources.open_file
 import dodeclusters.composeapp.generated.resources.open_file_name
-import dodeclusters.composeapp.generated.resources.open_region
-import dodeclusters.composeapp.generated.resources.palette
 import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.redo_name
-import dodeclusters.composeapp.generated.resources.rounded_square
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
-import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
-import dodeclusters.composeapp.generated.resources.visible
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import ui.theme.DodeclustersColors
+import ui.theme.ColorTheme
+import ui.theme.LocalColorTheme
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import ui.tools.Tool
@@ -102,14 +83,13 @@ fun EditClusterScreen(
         EditClusterViewModel.UiState.restore(coroutineScope, EditClusterViewModel.UiState.DEFAULT)
     }
     viewModel.setEpsilon(LocalDensity.current)
-
     Scaffold(
         // MAYBE: potentially lift it to window-level (desktop)
         modifier = Modifier.handleKeyboardActions(viewModel::processKeyboardAction),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    println("FAB: open create panel")
+//                    println("FAB: open create panel")
                     viewModel.selectCategory(EditClusterCategory.Create)
                 },
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -140,7 +120,7 @@ fun EditClusterScreen(
             }
         }
     }
-    if (viewModel.showColorPickerDialog)
+    if (viewModel.showColorPickerDialog) {
         ColorPickerDialog(
             initialColor = viewModel.regionColor,
             onDismissRequest = { viewModel.showColorPickerDialog = false },
@@ -153,6 +133,7 @@ fun EditClusterScreen(
                 )
             }
         )
+    }
     coroutineScope.launch {
         if (ddcContent != null) {
             println("loading external ddc")
@@ -176,22 +157,37 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
         // TODO: hide title and make empty top bar space transparent
         title = { Text(stringResource(Res.string.edit_cluster_title)) },
         actions = {
-            SaveFileButton(painterResource(Res.drawable.save), stringResource(Res.string.save_cluster_name),
-                saveDataProvider = { SaveData(
-                    Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION, viewModel.saveAsYaml()) }
-            ) {
-                println(if (it) "saved" else "not saved")
-            }
-            OpenFileButton(painterResource(Res.drawable.open_file), stringResource(Res.string.open_file_name)) { content ->
-                content?.let {
-                    viewModel.loadFromYaml(content)
+            WithTooltip(stringResource(Res.string.save_cluster_name)) {
+                SaveFileButton(painterResource(Res.drawable.save),
+                    stringResource(Res.string.save_cluster_name),
+                    saveDataProvider = {
+                        SaveData(
+                            Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION, viewModel.saveAsYaml()
+                        )
+                    }
+                ) {
+                    println(if (it) "saved" else "not saved")
                 }
             }
-            IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
-                Icon(painterResource(Res.drawable.undo), stringResource(Res.string.undo_name))
+            WithTooltip(stringResource(Res.string.open_file_name)) {
+                OpenFileButton(
+                    painterResource(Res.drawable.open_file),
+                    stringResource(Res.string.open_file_name)
+                ) { content ->
+                    content?.let {
+                        viewModel.loadFromYaml(content)
+                    }
+                }
             }
-            IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
-                Icon(painterResource(Res.drawable.redo), stringResource(Res.string.redo_name))
+            WithTooltip(stringResource(Res.string.undo_name)) {
+                IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
+                    Icon(painterResource(Res.drawable.undo), stringResource(Res.string.undo_name))
+                }
+            }
+            WithTooltip(stringResource(Res.string.redo_name)) {
+                IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
+                    Icon(painterResource(Res.drawable.redo), stringResource(Res.string.redo_name))
+                }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors().copy(
@@ -213,10 +209,10 @@ fun BottomToolbar(
     viewModel: EditClusterViewModel,
     modifier: Modifier = Modifier
 ) {
+    // too bright in light mode imo
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
     BottomAppBar(
-//        tonalElevation = 4.dp,
         modifier = modifier.background(
             Brush.verticalGradient(
                 0f to backgroundColor.copy(alpha = 0.7f),
@@ -226,13 +222,13 @@ fun BottomToolbar(
         containerColor = backgroundColor.copy(alpha = 0.1f),
         contentColor = contentColor,
     ) {
-        MaterialTheme.colorScheme.outlineVariant // divider color
         CategoryButton(viewModel, EditClusterCategory.Drag)
         CategoryButton(viewModel, EditClusterCategory.Multiselect)
         CategoryButton(viewModel, EditClusterCategory.Region)
         VerticalDivider(Modifier.fillMaxHeight(0.8f))
         CategoryButton(viewModel, EditClusterCategory.Visibility)
         CategoryButton(viewModel, EditClusterCategory.Colors)
+        // TODO: diff icon + no defaultables
         CategoryButton(viewModel, EditClusterCategory.Attributes)
     }
 }
@@ -316,55 +312,62 @@ fun ToolButton(
 ) {
     val icon = painterResource(tool.icon)
     val name = stringResource(tool.name)
-    when (tool) {
-        EditClusterTool.Delete -> { // red tint
-            IconButton(
-                onClick = onClick,
-                modifier = modifier,
-                enabled = viewModel.circleSelectionIsActive
-            ) {
-                val alpha = if (viewModel.circleSelectionIsActive) 1f else 0.5f
-                Icon(
-                    icon,
-                    tint = EditClusterTool.Delete.tint.copy(alpha = alpha),
-                    contentDescription = name
-                )
-            }
-        }
-        EditClusterTool.Palette -> {
-            PaletteButton(viewModel.regionColor, modifier, onClick)
-        }
-        is Tool.ActionOnSelection -> {
-            DisableableButton(
-                icon, name,
-                enabled = viewModel.circleSelectionIsActive,
-                modifier,
-                onClick
-            )
-        }
-        is Tool.InstantAction -> {
-            SimpleButton(icon, name, modifier, onClick)
-        }
-        is Tool.BinaryToggle -> {
-            if (tool.disabledIcon == null) {
-                OnOffButton(
-                    icon, name,
-                    isOn = viewModel.toolPredicate(tool),
+    val description = stringResource(tool.description)
+    WithTooltip(description) {
+        when (tool) {
+            EditClusterTool.Delete -> { // red tint
+                IconButton(
+                    onClick = onClick,
                     modifier = modifier,
-                    onClick = onClick
-                )
-            } else {
-                TwoIconButton(
-                    icon,
-                    disabledIconPainter = painterResource(tool.disabledIcon!!),
-                    name,
-                    enabled = viewModel.toolPredicate(tool),
+                    enabled = viewModel.circleSelectionIsActive
+                ) {
+                    val alpha = if (viewModel.circleSelectionIsActive) 1f else 0.5f
+                    Icon(
+                        icon,
+                        tint = EditClusterTool.Delete.tint.copy(alpha = alpha),
+                        contentDescription = name
+                    )
+                }
+            }
+
+            EditClusterTool.Palette -> {
+                PaletteButton(viewModel.regionColor, modifier, onClick)
+            }
+
+            is Tool.ActionOnSelection -> {
+                DisableableButton(
+                    icon, name,
+                    enabled = viewModel.circleSelectionIsActive,
                     modifier,
                     onClick
                 )
             }
+
+            is Tool.InstantAction -> {
+                SimpleButton(icon, name, modifier, onClick)
+            }
+
+            is Tool.BinaryToggle -> {
+                if (tool.disabledIcon == null) {
+                    OnOffButton(
+                        icon, name,
+                        isOn = viewModel.toolPredicate(tool),
+                        modifier = modifier,
+                        onClick = onClick
+                    )
+                } else {
+                    TwoIconButton(
+                        icon,
+                        disabledIconPainter = painterResource(tool.disabledIcon!!),
+                        name,
+                        enabled = viewModel.toolPredicate(tool),
+                        modifier,
+                        onClick
+                    )
+                }
+            }
+            else -> throw IllegalStateException("Never") // wont compile otherwise
         }
-        else -> throw IllegalStateException("Never") // wont compile otherwise
     }
 }
 

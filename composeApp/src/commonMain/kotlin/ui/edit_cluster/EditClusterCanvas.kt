@@ -222,8 +222,10 @@ private fun DrawScope.drawParts(
 ) {
     for (part in viewModel.parts) {
 //        println(part)
+        val (path, pathType) = part2path(viewModel.circles, part)
+        // TODO: invert path when needed
         drawPath(
-            part2path(viewModel.circles, part),
+            path,
             color = part.fillColor,
             alpha = clusterPathAlpha,
             style = if (viewModel.showWireframes) circleStroke else Fill,

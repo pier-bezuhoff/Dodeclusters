@@ -94,7 +94,7 @@ fun ColorPickerDialog(
                 Text(
                     text = stringResource(Res.string.color_picker_title),
                     modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                 )
                 ClassicColorPicker(
                     Modifier
