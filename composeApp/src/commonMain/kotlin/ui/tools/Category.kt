@@ -10,7 +10,7 @@ sealed interface Category {
      * otherwise a static icon */
     val icon: DrawableResource?
     val tools: List<Tool>
-    val default: Tool
+    val default: Tool?
     /** Indices of tools that can be made default */
     val defaultables: List<Int>
 }

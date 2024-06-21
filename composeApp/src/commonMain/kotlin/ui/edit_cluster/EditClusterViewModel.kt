@@ -33,7 +33,6 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import ui.theme.ColorTheme
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
@@ -565,6 +564,13 @@ class EditClusterViewModel(
         restrictRegionsToSelection = !restrictRegionsToSelection
     }
 
+    fun selectRegionColor(color: Color) {
+        showColorPickerDialog = false
+        regionColor = color
+        selectTool(EditClusterTool.Region)
+//        showPanel = true
+    }
+
     private fun scaleSelection(zoom: Float) {
         if (circleSelectionIsActive)
             when (selection.size) {
@@ -657,6 +663,7 @@ class EditClusterViewModel(
     }
 
     fun onUp(visiblePosition: Offset?) {
+        rotationIndicatorPosition = null
         when (val m = mode) {
             is CreationMode.CircleByCenterAndRadius.Center ->
                 (visiblePosition ?: m.center)?.let { c ->
@@ -881,20 +888,41 @@ class EditClusterViewModel(
         grabbedCircleIx = null
     }
 
-    fun selectCategory(category: EditClusterCategory) {
+    private fun selectCategory(category: EditClusterCategory, togglePanel: Boolean = false) {
+        val wasSelected = activeCategory == category
+        val panelWasShown = showPanel
         val ix = categories.indexOf(category)
         activeCategoryIndex = ix
         showPanel = panelNeedsToBeShown
+        if (togglePanel && wasSelected && panelNeedsToBeShown) {
+            showPanel = !panelWasShown
+        }
     }
 
-    fun selectTool(tool: EditClusterTool) {
-        val cIndex = categories.indexOfFirst { tool in it.tools }
-        val c = categories[cIndex]
-        val i = c.tools.indexOf(tool)
-        if (i in c.defaultables)
-            categoryDefaults[cIndex] = i
-        selectCategory(c)
+    fun selectTool(tool: EditClusterTool, togglePanel: Boolean = false) {
+        val category: EditClusterCategory
+        if (tool is EditClusterTool.AppliedColor) {
+            category = EditClusterCategory.Colors
+        } else {
+            val cIndex = categories.indexOfFirst { tool in it.tools }
+            category = categories[cIndex]
+            val i = category.tools.indexOf(tool)
+            if (i in category.defaultables)
+                categoryDefaults[cIndex] = i
+        }
+        selectCategory(category, togglePanel = togglePanel)
         toolAction(tool)
+    }
+
+    fun switchToCategory(category: EditClusterCategory, togglePanel: Boolean = false) {
+        val categoryIndex = categories.indexOf(category)
+        val defaultToolIndex = categoryDefaults[categoryIndex]
+        if (defaultToolIndex != -1) {
+            val defaultTool = category.tools[defaultToolIndex]
+            selectTool(defaultTool, togglePanel = togglePanel)
+        } else {
+            selectCategory(category, togglePanel = togglePanel)
+        }
     }
 
     fun processKeyboardAction(action: KeyboardAction) {
@@ -932,6 +960,7 @@ class EditClusterViewModel(
             EditClusterTool.Duplicate -> duplicateCircles()
             EditClusterTool.ConstructCircleByCenterAndRadius -> switchToMode(CreationMode.CircleByCenterAndRadius.Center())
             EditClusterTool.ConstructCircleBy3Points -> switchToMode(CreationMode.CircleBy3Points())
+            is EditClusterTool.AppliedColor -> selectRegionColor(tool.color)
         }
     }
 

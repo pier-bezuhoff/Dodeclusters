@@ -22,6 +22,8 @@
     <string name="show_circles_description">Show/hide all circle outlines</string>
     <string name="palette_name">Palette</string>
     <string name="palette_description">Pick colors</string>
+    <string name="applied_color_name">Applied color</string>
+    <string name="applied_color_description">Switch to this recently used color</string>
     <string name="duplicate_name">Duplicate</string>
     <string name="duplicate_description">Duplicate selected circles and then select the new copies</string>
     <string name="delete_name">Delete</string>

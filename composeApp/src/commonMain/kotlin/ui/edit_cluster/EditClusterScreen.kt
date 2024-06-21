@@ -87,17 +87,17 @@ fun EditClusterScreen(
         // MAYBE: potentially lift it to window-level (desktop)
         modifier = Modifier.handleKeyboardActions(viewModel::processKeyboardAction),
         floatingActionButton = {
+            val category = EditClusterCategory.Create
             FloatingActionButton(
                 onClick = {
-//                    println("FAB: open create panel")
-                    viewModel.selectCategory(EditClusterCategory.Create)
+                    viewModel.switchToCategory(category, togglePanel = true)
                 },
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 shape = CircleShape,
                 elevation = FloatingActionButtonDefaults.elevation()
             ) {
-                Icon(Icons.Filled.Add, "FAB create circle")
+                Icon(Icons.Filled.Add, stringResource(category.name))
             }
         },
     ) {
@@ -105,7 +105,6 @@ fun EditClusterScreen(
             Box {
                 EditClusterCanvas(viewModel)
                 EditClusterTopBar(viewModel)
-//                EditClusterBottomBar(viewModel, modifier = Modifier.align(Alignment.BottomCenter))
                 Column(
                     Modifier
                         .align(Alignment.BottomCenter)
@@ -124,14 +123,7 @@ fun EditClusterScreen(
         ColorPickerDialog(
             initialColor = viewModel.regionColor,
             onDismissRequest = { viewModel.showColorPickerDialog = false },
-            onConfirm = { newColor ->
-                viewModel.showColorPickerDialog = false
-                viewModel.regionColor = newColor
-                viewModel.switchToMode(
-                    SelectionMode.Region,
-                    noAlteringShortcuts = true
-                )
-            }
+            onConfirm = viewModel::selectRegionColor
         )
     }
     coroutineScope.launch {
@@ -228,8 +220,7 @@ fun BottomToolbar(
         VerticalDivider(Modifier.fillMaxHeight(0.8f))
         CategoryButton(viewModel, EditClusterCategory.Visibility)
         CategoryButton(viewModel, EditClusterCategory.Colors)
-        // TODO: diff icon + no defaultables
-        CategoryButton(viewModel, EditClusterCategory.Attributes)
+        AttributesCategoryButton(viewModel)
     }
 }
 
@@ -239,18 +230,29 @@ fun CategoryButton(
     category: EditClusterCategory
 ) {
     val i = viewModel.categories.indexOf(category)
-    val selected = viewModel.categories[viewModel.activeCategoryIndex] == category // maybe use bar on top to indicate
     val defaultTool = category.tools[viewModel.categoryDefaults[i]]
 //    val icon = category.icon ?: defaultTool.icon
-//    Spacer(Modifier.size(width = 12.dp, height = 0.dp))
     Crossfade(defaultTool) {
         ToolButton(viewModel, defaultTool, Modifier.padding(horizontal = 8.dp)) {
-            val panelIsShown = viewModel.showPanel
-            viewModel.selectTool(defaultTool)
-            if (selected && viewModel.panelNeedsToBeShown) {
-                viewModel.showPanel = !panelIsShown
-            }
+            viewModel.selectTool(defaultTool, togglePanel = true)
         }
+    }
+}
+
+@Composable
+fun AttributesCategoryButton(
+    viewModel: EditClusterViewModel
+) {
+    // TODO: add tooltip
+    val category = EditClusterCategory.Attributes
+    SimpleButton(
+        painterResource(category.icon!!),
+        stringResource(category.name),
+        Modifier.padding(horizontal = 8.dp)
+    ) {
+        if (!viewModel.mode.isSelectingCircles())
+            viewModel.switchToMode(SelectionMode.Drag)
+        viewModel.switchToCategory(category, togglePanel = true)
     }
 }
 
@@ -289,6 +291,9 @@ fun Panel(
                 .entries
                 .sortedByDescending { (_, count) -> count }
                 .map { (color, _) -> color }
+            for (color in colorsByMostUsed) {
+                ToolButton(viewModel, EditClusterTool.AppliedColor(color))
+            }
             // used colors button
         }
         // hide panel button
@@ -332,6 +337,19 @@ fun ToolButton(
 
             EditClusterTool.Palette -> {
                 PaletteButton(viewModel.regionColor, modifier, onClick)
+            }
+
+            is EditClusterTool.AppliedColor -> {
+                IconButton(
+                    onClick = onClick,
+                    modifier = modifier,
+                ) {
+                    Icon(
+                        icon,
+                        tint = tool.color,
+                        contentDescription = name
+                    )
+                }
             }
 
             is Tool.ActionOnSelection -> {

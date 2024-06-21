@@ -3,9 +3,11 @@ package ui.tools
 import androidx.compose.runtime.Immutable
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.attributes_category_name
+import dodeclusters.composeapp.generated.resources.circled_tool
 import dodeclusters.composeapp.generated.resources.colors_category_name
 import dodeclusters.composeapp.generated.resources.create_category_name
 import dodeclusters.composeapp.generated.resources.drag_category_name
+import dodeclusters.composeapp.generated.resources.half_diffused_circle
 import dodeclusters.composeapp.generated.resources.multiselect_category_name
 import dodeclusters.composeapp.generated.resources.region_category_name
 import dodeclusters.composeapp.generated.resources.transform_category_name
@@ -18,9 +20,9 @@ sealed class EditClusterCategory(
     override val name: StringResource,
     override val tools: List<EditClusterTool>,
     final override val defaultables: List<Int> = listOf(0),
-    final override val default: EditClusterTool = tools.first()
+    final override val default: EditClusterTool? = defaultables.firstOrNull()?.let { tools[it] },
+    final override val icon: DrawableResource? = null
 ) : Category {
-    override val icon: DrawableResource? = null
 
     data object Drag : EditClusterCategory(
         Res.string.drag_category_name,
@@ -78,11 +80,14 @@ sealed class EditClusterCategory(
             EditClusterTool.Delete,
             EditClusterTool.Duplicate,
         ),
-        defaultables = listOf(0, 1) // TODO: remove defaultables from here
+        defaultables = emptyList(),
+        icon = Res.drawable.half_diffused_circle
     ) // just open panel, mb diff icon also (like setting wheel)
     data object Transform : EditClusterCategory(
         Res.string.transform_category_name,
-        listOf(EditClusterTool.Delete)
+        listOf(EditClusterTool.Delete),
+        defaultables = emptyList(),
+        icon = Res.drawable.circled_tool
     ) { // ~mode-like
         // button: scale -> slider or some other interface
         // button: rotate -> slider, manual angle, etc

@@ -1,7 +1,10 @@
 package ui.tools
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.applied_color_description
+import dodeclusters.composeapp.generated.resources.applied_color_name
 import dodeclusters.composeapp.generated.resources.center
 import dodeclusters.composeapp.generated.resources.circle_3_points
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_arg_descriptions
@@ -28,6 +31,7 @@ import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
 import dodeclusters.composeapp.generated.resources.multiselect_name
 import dodeclusters.composeapp.generated.resources.open_region
+import dodeclusters.composeapp.generated.resources.paint_splash
 import dodeclusters.composeapp.generated.resources.palette
 import dodeclusters.composeapp.generated.resources.palette_description
 import dodeclusters.composeapp.generated.resources.palette_name
@@ -103,6 +107,13 @@ sealed class EditClusterTool(
         // custom appearance
         val colorOutlineIcon = Res.drawable.rounded_square
     }
+    data class AppliedColor(
+        val color: Color
+    ) : EditClusterTool(
+        Res.string.applied_color_name,
+        Res.string.applied_color_description,
+        Res.drawable.paint_splash, // tint=color should be applied
+    ), Tool.InstantAction
 
     data object Duplicate: EditClusterTool(
         Res.string.duplicate_name,
