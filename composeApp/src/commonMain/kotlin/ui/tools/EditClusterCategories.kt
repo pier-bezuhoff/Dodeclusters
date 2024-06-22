@@ -32,9 +32,9 @@ sealed class EditClusterCategory(
         Res.string.multiselect_category_name,
         listOf(
             EditClusterTool.Multiselect,
+            EditClusterTool.ToggleSelectAll,
         )
     ) { // ~mode-like
-        // toggle: select all/unselect all (active when everything is selected)
 
         // submode1: select-by-click
         // submode1: flow-select
@@ -48,22 +48,19 @@ sealed class EditClusterCategory(
         listOf(
             EditClusterTool.Region,
             EditClusterTool.RestrictRegionToSelection,
+            EditClusterTool.DeleteAllParts,
+            // EditClusterTool.AppliedColor are auto-added
         )
     ) { // ~mode-like
-        // toggle: restrict regions to current selection toggle
-        // button: chessboard pattern
-        // button: erase all parts
-        // buttons: [most used colors as a list (sorted by frequency & recency)]
+        // button/switch: chessboard pattern
     }
     data object Visibility : EditClusterCategory(
         Res.string.visibility_category_name,
         listOf(
-            EditClusterTool.ShowCircles
+            EditClusterTool.ShowCircles,
+            EditClusterTool.ToggleFilledOrOutline,
         )
-    ) { // ~button-like
-        // toggle: show/hide circle + mb only select ones
-        // toggle: fill/unfill the cluster
-        // toggle: show points (potentially)
+    ) { // ~button/switch-like
     }
     data object Colors : EditClusterCategory(
         Res.string.colors_category_name,
@@ -71,7 +68,6 @@ sealed class EditClusterCategory(
             EditClusterTool.Palette
         )
     ) { // ~button-like
-        // buttons: [most used colors]
     }
     // MAYBE: this should be a separate context menu, not a general category
     data object Attributes : EditClusterCategory(
@@ -101,8 +97,7 @@ sealed class EditClusterCategory(
         ),
         defaultables = listOf(0, 1)
     ) { // ~mode-like
-        // mode: circle by center&radius
-        // mode: circle by 3 points
+        // mode: bezier-like arc path
         // mode: line by 2 points
         // mode: rectangle by top-left & bottom-right
         // mode: polygon

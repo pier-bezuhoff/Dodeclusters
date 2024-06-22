@@ -84,12 +84,16 @@ class EditClusterViewModel(
 
     /** currently selected color */
     var regionColor by mutableStateOf(DodeclustersColors.lightPurple)
+        private set
     var showCircles by mutableStateOf(true)
+        private set
     /** which style to use when drawing parts: true = stroke, false = fill */
     var showWireframes by mutableStateOf(false)
+        private set
     /** applies to [SelectionMode.Region]:
      * only use circles present in the [selection] to determine which parts to fill */
     var restrictRegionsToSelection by mutableStateOf(false)
+        private set
 
     val circleSelectionIsActive by derivedStateOf {
         showCircles && selection.isNotEmpty() && mode.isSelectingCircles()
@@ -676,7 +680,6 @@ class EditClusterViewModel(
                         radius = (absolute(rP) - absolute(m.center)).getDistance()
                     )
                     createNewCircle(newCircle, switchToSelectionMode = false)
-//                    println("cr new c #${circles.size}")
                     _mode.value = CreationMode.CircleByCenterAndRadius.Center()
                 }
             is CreationMode.CircleBy3Points -> when (m.phase) {
@@ -929,7 +932,7 @@ class EditClusterViewModel(
 //        println("processing $action")
         when (action) {
             KeyboardAction.SELECT_ALL -> {
-                selectCategory(EditClusterCategory.Multiselect)
+                switchToCategory(EditClusterCategory.Multiselect) // BUG: weird inconsistent behavior
                 toggleSelectAll()
             }
             KeyboardAction.DELETE -> deleteCircles()
@@ -940,6 +943,7 @@ class EditClusterViewModel(
             KeyboardAction.REDO -> redo()
             KeyboardAction.CANCEL -> when (val m = mode) { // reset creation mode
                 is CreationMode -> switchToMode(m.startState)
+                is SelectionMode -> selection.clear()
                 else -> Unit
             }
         }
@@ -952,9 +956,12 @@ class EditClusterViewModel(
             EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
             EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect)
             EditClusterTool.FlowSelect -> TODO()
+            EditClusterTool.ToggleSelectAll -> toggleSelectAll()
             EditClusterTool.Region -> switchToMode(SelectionMode.Region)
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
-            EditClusterTool.ShowCircles -> toggleShowCircles()
+            EditClusterTool.DeleteAllParts -> parts.clear()
+            EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selected circles only
+            EditClusterTool.ToggleFilledOrOutline -> showWireframes = !showWireframes
             EditClusterTool.Palette -> showColorPickerDialog = true
             EditClusterTool.Delete -> deleteCircles()
             EditClusterTool.Duplicate -> duplicateCircles()
@@ -969,9 +976,11 @@ class EditClusterViewModel(
         when (tool) { // NOTE: i think this has to return State<Boolean> to work properly
             EditClusterTool.Drag -> mode is SelectionMode.Drag
             EditClusterTool.Multiselect -> mode is SelectionMode.Multiselect
+            EditClusterTool.ToggleSelectAll -> selection.containsAll(circles.indices.toSet())
             EditClusterTool.Region -> mode is SelectionMode.Region
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
+            EditClusterTool.ToggleFilledOrOutline -> !showWireframes
             EditClusterTool.ConstructCircleByCenterAndRadius -> mode is CreationMode.CircleByCenterAndRadius
             EditClusterTool.ConstructCircleBy3Points -> mode is CreationMode.CircleBy3Points
             EditClusterTool.Palette -> showColorPickerDialog

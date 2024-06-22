@@ -48,6 +48,7 @@ import data.io.SaveData
 import data.io.SaveFileButton
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.center
+import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.edit_cluster_title
 import dodeclusters.composeapp.generated.resources.open_file
@@ -85,6 +86,7 @@ fun EditClusterScreen(
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(
         // MAYBE: potentially lift it to window-level (desktop)
+        // BUG: unfocused at the start on desktop
         modifier = Modifier.handleKeyboardActions(viewModel::processKeyboardAction),
         floatingActionButton = {
             val category = EditClusterCategory.Create
@@ -297,14 +299,16 @@ fun Panel(
             // used colors button
         }
         // hide panel button
-        SimpleButton(
-            painterResource(Res.drawable.collapse_down),
-            stringResource(Res.string.stub),
-            onClick = { viewModel.showPanel = false }
-        )
+        WithTooltip(stringResource(Res.string.collapse)) {
+            SimpleButton(
+                painterResource(Res.drawable.collapse_down),
+                stringResource(Res.string.collapse),
+                onClick = { viewModel.showPanel = false }
+            )
+        }
     }
     LaunchedEffect(viewModel.activeToolIndex) {
-//        scrollState.animateScrollTo(viewModel.activeToolIndex) // probs?
+        scrollState.animateScrollTo(viewModel.activeToolIndex) // probs?
     }
 }
 
@@ -384,7 +388,7 @@ fun ToolButton(
                     )
                 }
             }
-            else -> throw IllegalStateException("Never") // wont compile otherwise
+            else -> throw IllegalStateException("Never: $tool")
         }
     }
 }

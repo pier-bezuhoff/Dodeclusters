@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
-import dodeclusters.composeapp.generated.resources.center
+import dodeclusters.composeapp.generated.resources.circle
 import dodeclusters.composeapp.generated.resources.circle_3_points
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_description
@@ -16,16 +16,21 @@ import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_n
 import dodeclusters.composeapp.generated.resources.circle_center_and_radius_point
 import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.copy
+import dodeclusters.composeapp.generated.resources.delete_all_parts_description
+import dodeclusters.composeapp.generated.resources.delete_all_parts_name
 import dodeclusters.composeapp.generated.resources.delete_description
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.delete_name
+import dodeclusters.composeapp.generated.resources.deselect
 import dodeclusters.composeapp.generated.resources.drag_description
 import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
 import dodeclusters.composeapp.generated.resources.drag_name
 import dodeclusters.composeapp.generated.resources.duplicate_description
 import dodeclusters.composeapp.generated.resources.duplicate_name
+import dodeclusters.composeapp.generated.resources.filled_circle
 import dodeclusters.composeapp.generated.resources.flow_multiselect_description
 import dodeclusters.composeapp.generated.resources.flow_multiselect_name
+import dodeclusters.composeapp.generated.resources.hide_layers
 import dodeclusters.composeapp.generated.resources.invisible
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
@@ -39,11 +44,14 @@ import dodeclusters.composeapp.generated.resources.region_description
 import dodeclusters.composeapp.generated.resources.region_name
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_description
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_name
-import dodeclusters.composeapp.generated.resources.rounded_square
+import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
 import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
-import dodeclusters.composeapp.generated.resources.stub
+import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_description
+import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_name
+import dodeclusters.composeapp.generated.resources.toggle_select_all_description
+import dodeclusters.composeapp.generated.resources.toggle_select_all_name
 import dodeclusters.composeapp.generated.resources.two_of_three_circles_connected
 import dodeclusters.composeapp.generated.resources.visible
 import org.jetbrains.compose.resources.DrawableResource
@@ -56,13 +64,19 @@ sealed class EditClusterTool(
     override val description: StringResource,
     override val icon: DrawableResource,
 ) : Tool {
-    // mode ~ toggle as their both their states are determined by a predicate & action is separated
+    // mode ~ toggle as both their states are determined by a predicate & action is separated
     sealed class Switch(
         name: StringResource,
         description: StringResource,
         icon: DrawableResource,
         override val disabledIcon: DrawableResource? = null
     ) : EditClusterTool(name, description, icon), Tool.BinaryToggle
+
+    sealed class Action(
+        name: StringResource,
+        description: StringResource,
+        icon: DrawableResource,
+    ) : EditClusterTool(name, description, icon), Tool.InstantAction
 
 
     data object Drag: Switch(
@@ -80,6 +94,12 @@ sealed class EditClusterTool(
         Res.string.flow_multiselect_description,
         Res.drawable.two_of_three_circles_connected
     )
+    data object ToggleSelectAll: Switch(
+        Res.string.toggle_select_all_name,
+        Res.string.toggle_select_all_description,
+        Res.drawable.select_all,
+        Res.drawable.deselect
+    )
 
     data object Region: Switch(
         Res.string.region_name,
@@ -92,28 +112,35 @@ sealed class EditClusterTool(
         Res.drawable.circled_region,
         Res.drawable.open_region
     )
+    data object DeleteAllParts: Action(
+        Res.string.delete_all_parts_name,
+        Res.string.delete_all_parts_description,
+        Res.drawable.hide_layers
+    )
 
     data object ShowCircles: Switch(
         Res.string.show_circles_name,
         Res.string.show_circles_description,
         Res.drawable.visible,
         Res.drawable.invisible
-    ), Tool.BinaryToggle
-    data object Palette: EditClusterTool(
+    )
+    data object ToggleFilledOrOutline: Switch(
+        Res.string.toggle_filled_or_outline_name,
+        Res.string.toggle_filled_or_outline_description,
+        Res.drawable.filled_circle,
+        Res.drawable.circle
+    )
+
+    data object Palette: Action(
         Res.string.palette_name,
         Res.string.palette_description,
         Res.drawable.palette
-    ), Tool.InstantAction {
-        // custom appearance
-        val colorOutlineIcon = Res.drawable.rounded_square
-    }
-    data class AppliedColor(
-        val color: Color
-    ) : EditClusterTool(
+    )
+    data class AppliedColor(val color: Color) : Action(
         Res.string.applied_color_name,
         Res.string.applied_color_description,
         Res.drawable.paint_splash, // tint=color should be applied
-    ), Tool.InstantAction
+    )
 
     data object Duplicate: EditClusterTool(
         Res.string.duplicate_name,

@@ -50,7 +50,7 @@ fun part2path(
             )
         } else {
             Pair(
-                circles.map { circle2path(it) } // this subsequently should be inverted/subtracted from visible rect
+                circles.map { circle2path(it) } // this subsequently should be inverted/subtracted from the visible rect
                     .fold(Path()) { acc: Path, anotherPath: Path ->
                         Path.combine(PathOperation.Union, acc, anotherPath)
                     },
@@ -69,5 +69,6 @@ fun part2path(
 }
 
 enum class PathType {
-    NORMAL, INVERTED, CHESSBOARD
+    NORMAL, CHESSBOARD,
+    INVERTED, // MAYBE: use Path.fillType to indicate normal/inverted
 }

@@ -14,11 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -36,6 +39,7 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import ui.PathType
 import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
@@ -222,14 +226,26 @@ private fun DrawScope.drawParts(
 ) {
     for (part in viewModel.parts) {
 //        println(part)
-        val (path, pathType) = part2path(viewModel.circles, part)
-        // TODO: invert path when needed
-        drawPath(
-            path,
-            color = part.fillColor,
-            alpha = clusterPathAlpha,
-            style = if (viewModel.showWireframes) circleStroke else Fill,
-        )
+        val (path, pathType) = part2path(viewModel.circles, part, useChessboardPatternForOutsides = false)
+        if (pathType == PathType.INVERTED) {
+            val visibleRect = size.toRect().translate(-viewModel.translation.value)
+            val normalPath = Path()
+            normalPath.addRect(visibleRect)
+            normalPath.op(normalPath, path, PathOperation.Difference)
+            drawPath(
+                normalPath,
+                color = part.fillColor,
+                alpha = clusterPathAlpha,
+                style = if (viewModel.showWireframes) circleStroke else Fill,
+            )
+        } else {
+            drawPath(
+                path,
+                color = part.fillColor,
+                alpha = clusterPathAlpha,
+                style = if (viewModel.showWireframes) circleStroke else Fill,
+            )
+        }
     }
 }
 
