@@ -8,18 +8,25 @@
     <string name="undo_name">Undo</string>
     <string name="redo_name">Redo</string>
     <!-- tools -->
+    <string name="collapse">Collapse</string>
     <string name="drag_name">Drag</string>
     <string name="drag_description">Grab &amp; drag circles</string>
     <string name="multiselect_name">Multiselect</string>
     <string name="multiselect_description">Select several circles</string>
     <string name="flow_multiselect_name">Flow-multiselect</string>
     <string name="flow_multiselect_description">Select circles by swiping through them</string>
+    <string name="toggle_select_all_name">Select/deselect all</string>
+    <string name="toggle_select_all_description">Select/deselect all circles</string>
     <string name="region_name">Region</string>
     <string name="region_description">Pick regions between circles to fill with color</string>
     <string name="restrict_region_to_selection_name">Restrict region to selection</string>
     <string name="restrict_region_to_selection_description">Restrict region's bounding circles to only those present in the current selection</string>
+    <string name="delete_all_parts_name">Delete all parts</string>
+    <string name="delete_all_parts_description">Delete all parts</string>
     <string name="show_circles_name">Show circles</string>
     <string name="show_circles_description">Show/hide all circle outlines</string>
+    <string name="toggle_filled_or_outline_name">Filled/outline</string>
+    <string name="toggle_filled_or_outline_description">Switch between showing only borders vs insides</string>
     <string name="palette_name">Palette</string>
     <string name="palette_description">Pick colors</string>
     <string name="applied_color_name">Applied color</string>
