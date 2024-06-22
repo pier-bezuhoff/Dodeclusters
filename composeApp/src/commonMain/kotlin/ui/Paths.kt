@@ -50,7 +50,7 @@ fun part2path(
             )
         } else {
             Pair(
-                circles.map { circle2path(it) } // this subsequently should be inverted/subtracted from the visible rect
+                circleOutsides.map { circle2path(it) } // this subsequently should be inverted/subtracted from the visible rect
                     .fold(Path()) { acc: Path, anotherPath: Path ->
                         Path.combine(PathOperation.Union, acc, anotherPath)
                     },
