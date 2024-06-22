@@ -83,7 +83,7 @@ class EditClusterViewModel(
     var showPanel by mutableStateOf(panelNeedsToBeShown)
 
     /** currently selected color */
-    var regionColor by mutableStateOf(DodeclustersColors.lightPurple)
+    var regionColor by mutableStateOf(DodeclustersColors.purple)
         private set
     var showCircles by mutableStateOf(true)
         private set
@@ -277,7 +277,8 @@ class EditClusterViewModel(
         selection.addAll(state.selection)
     }
 
-    /** let s_i := history[i], c_i := commands[i]
+    /** Use BEFORE modifying the state by the [command]!
+     * let s_i := history[[i]], c_i := commands[[i]]
      * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ... */
     private fun recordCommand(command: Command) {
         if (commands.lastOrNull() != command) {
@@ -573,6 +574,11 @@ class EditClusterViewModel(
         regionColor = color
         selectTool(EditClusterTool.Region)
 //        showPanel = true
+    }
+
+    fun deleteAllParts() { // TODO: in the future replace with select-all->delete in region mode
+        recordCommand(Command.DELETE)
+        parts.clear()
     }
 
     private fun scaleSelection(zoom: Float) {
@@ -959,7 +965,7 @@ class EditClusterViewModel(
             EditClusterTool.ToggleSelectAll -> toggleSelectAll()
             EditClusterTool.Region -> switchToMode(SelectionMode.Region)
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
-            EditClusterTool.DeleteAllParts -> parts.clear()
+            EditClusterTool.DeleteAllParts -> deleteAllParts()
             EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selected circles only
             EditClusterTool.ToggleFilledOrOutline -> showWireframes = !showWireframes
             EditClusterTool.Palette -> showColorPickerDialog = true
@@ -972,7 +978,7 @@ class EditClusterViewModel(
     }
 
     /** Is [tool] enabled? */
-    inline fun toolPredicate(tool: EditClusterTool): Boolean =
+    fun toolPredicate(tool: EditClusterTool): Boolean =
         when (tool) { // NOTE: i think this has to return State<Boolean> to work properly
             EditClusterTool.Drag -> mode is SelectionMode.Drag
             EditClusterTool.Multiselect -> mode is SelectionMode.Multiselect

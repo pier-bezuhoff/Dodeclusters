@@ -3,13 +3,13 @@ package ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.compositionLocalOf
 
 @Composable
 fun DodeclustersTheme(
+    colorTheme: ColorTheme = ColorTheme.DARK,
     content: @Composable () -> Unit
 ) {
-    val scheme = when (LocalColorTheme.current) {
+    val scheme = when (colorTheme) {
         ColorTheme.LIGHT -> dodeclustersLightScheme
         ColorTheme.DARK -> dodeclustersDarkScheme
         ColorTheme.DEFAULT ->
@@ -26,5 +26,3 @@ enum class ColorTheme {
     LIGHT, DARK,
     DEFAULT
 }
-
-val LocalColorTheme = compositionLocalOf { ColorTheme.DEFAULT }

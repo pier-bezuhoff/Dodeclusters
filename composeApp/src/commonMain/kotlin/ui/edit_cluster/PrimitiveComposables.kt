@@ -61,19 +61,31 @@ fun TwoIconButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    Crossfade(enabled) { targetChecked ->
-        IconToggleButton(
-            checked = enabled,
-            onCheckedChange = { onClick() },
-            modifier = modifier,
-        ) {
-            Icon(
-                if (targetChecked) iconPainter
-                else disabledIconPainter,
-                contentDescription = name
-            )
-        }
+    IconToggleButton(
+        checked = enabled,
+        onCheckedChange = { onClick() },
+        modifier = modifier,
+    ) {
+        Icon(
+            if (enabled) iconPainter
+            else disabledIconPainter,
+            contentDescription = name
+        )
     }
+    // crossfade performs meaningless in-transition 50% the panel changes
+//    Crossfade(enabled) { targetChecked ->
+//        IconToggleButton(
+//            checked = enabled,
+//            onCheckedChange = { onClick() },
+//            modifier = modifier,
+//        ) {
+//            Icon(
+//                if (targetChecked) iconPainter
+//                else disabledIconPainter,
+//                contentDescription = name
+//            )
+//        }
+//    }
 }
 
 @Composable

@@ -3,13 +3,13 @@ package ui.edit_cluster
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,7 +30,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,7 +46,6 @@ import data.io.OpenFileButton
 import data.io.SaveData
 import data.io.SaveFileButton
 import dodeclusters.composeapp.generated.resources.Res
-import dodeclusters.composeapp.generated.resources.center
 import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.edit_cluster_title
@@ -57,15 +55,12 @@ import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import ui.theme.ColorTheme
-import ui.theme.LocalColorTheme
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import ui.tools.Tool
@@ -274,16 +269,18 @@ fun Panel(
     // scrollable row + highlight selected tool
     val scrollState = rememberScrollState()
     // mb wrap in a surface
-    Row(
-        modifier = modifier
-            .horizontalScroll(scrollState)
-            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)),
-//            .background(Color.Transparent),
+    Row(modifier = modifier
+        .horizontalScroll(scrollState)
+        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)),
     ) {
         for (tool in viewModel.activeCategory.tools) {
             ToolButton(viewModel, tool)
         }
         if (viewModel.activeCategory is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
+            VerticalDivider(Modifier
+                .height(48.dp)
+                .padding(horizontal = 8.dp)
+            )
             val colorsByMostUsed = viewModel.parts
                 .flatMap { part ->
                     part.borderColor?.let { listOf(part.fillColor, it) } ?: listOf(part.fillColor)

@@ -116,7 +116,7 @@ data class Ddc(
 
         const val DEFAULT_CLUSTER_FILLED = true
         const val DEFAULT_CLUSTER_VISIBLE = true
-        val DEFAULT_CLUSTER_FILL_COLOR = DodeclustersColors.lightPurple // a bit of a questionable dependency here
+        val DEFAULT_CLUSTER_FILL_COLOR = DodeclustersColors.purple // a bit of a questionable dependency here
         val DEFAULT_CLUSTER_BORDER_COLOR: Color? = null
         val DEFAULT_CLUSTER_RULE = emptyList<Int>()
 

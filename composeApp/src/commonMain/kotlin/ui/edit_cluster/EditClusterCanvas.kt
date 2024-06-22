@@ -227,25 +227,19 @@ private fun DrawScope.drawParts(
     for (part in viewModel.parts) {
 //        println(part)
         val (path, pathType) = part2path(viewModel.circles, part, useChessboardPatternForOutsides = false)
-        if (pathType == PathType.INVERTED) {
+        val normalizedPath = if (pathType == PathType.INVERTED) {
             val visibleRect = size.toRect().translate(-viewModel.translation.value)
             val normalPath = Path()
             normalPath.addRect(visibleRect)
             normalPath.op(normalPath, path, PathOperation.Difference)
-            drawPath(
-                normalPath,
-                color = part.fillColor,
-                alpha = clusterPathAlpha,
-                style = if (viewModel.showWireframes) circleStroke else Fill,
-            )
-        } else {
-            drawPath(
-                path,
-                color = part.fillColor,
-                alpha = clusterPathAlpha,
-                style = if (viewModel.showWireframes) circleStroke else Fill,
-            )
-        }
+            normalPath
+        } else path
+        drawPath(
+            normalizedPath,
+            color = part.fillColor,
+            alpha = clusterPathAlpha,
+            style = if (viewModel.showWireframes) circleStroke else Fill,
+        )
     }
 }
 
