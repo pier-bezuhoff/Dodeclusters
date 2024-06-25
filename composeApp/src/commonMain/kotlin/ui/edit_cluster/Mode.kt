@@ -41,6 +41,12 @@ enum class ToolMode(val signature: PartialArgList.Signature) { // : Mode
     CIRCLE_BY_3_POINTS(PartialArgList.SIGNATURE_3_POINTS),
 }
 
+// equivalent to Multiselect but on confirmation (selection has to be non-empty) we go back
+// to [parentMode] and add what we selected as an arg
+data class TemporarySelectionMode(
+    val parentMode: ToolMode
+)
+
 // TODO: migrate to ToolMode & PartialArgList instead
 @Immutable
 sealed class CreationMode(open val phase: Int, val nPhases: Int): Mode {

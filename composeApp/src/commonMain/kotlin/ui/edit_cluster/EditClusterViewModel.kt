@@ -575,8 +575,9 @@ class EditClusterViewModel(
         selectTool(EditClusterTool.Region)
 //        showPanel = true
     }
-
-    fun deleteAllParts() { // TODO: in the future replace with select-all->delete in region mode
+    
+    // TODO: in the future replace with select-all->delete in invisible-circles part manipulation mode
+    fun deleteAllParts() {
         recordCommand(Command.DELETE)
         parts.clear()
     }

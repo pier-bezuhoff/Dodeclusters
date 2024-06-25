@@ -226,7 +226,6 @@ private fun DrawScope.drawParts(
 ) {
     for (part in viewModel.parts) {
 //        println(part)
-        // BUG: not working in browser!?
         val (path, pathType) = part2path(viewModel.circles, part, useChessboardPatternForOutsides = false)
         val normalizedPath = if (pathType == PathType.INVERTED) {
             val visibleRect = size.toRect()
