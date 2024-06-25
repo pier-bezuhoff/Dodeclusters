@@ -22,6 +22,7 @@ import data.CircleF
 import data.Cluster
 import data.ColorCssSerializer
 import data.OffsetSerializer
+import data.PartialArgList
 import data.io.Ddc
 import data.io.parseDdc
 import domain.angleDeg
@@ -50,8 +51,10 @@ class EditClusterViewModel(
     private val coroutineScope: CoroutineScope,
     cluster: Cluster = Cluster.SAMPLE
 ) {
-    private val _mode = mutableStateOf<Mode>(SelectionMode.Drag)
-    val mode: Mode by _mode
+    var mode: Mode by mutableStateOf(SelectionMode.Drag)
+        private set
+    var partialArgList: PartialArgList? by mutableStateOf(null)
+        private set
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
@@ -100,16 +103,16 @@ class EditClusterViewModel(
     }
     val handleConfig = derivedStateOf { // depends on selectionMode & selection
         when (mode) {
-            is SelectionMode.Drag ->
+            SelectionMode.Drag ->
                 if (selection.isEmpty()) null
                 else HandleConfig.SingleCircle(selection.single())
-            is SelectionMode.Multiselect -> when {
+            SelectionMode.Multiselect -> when {
                 selection.isEmpty() -> null
                 selection.size == 1 -> HandleConfig.SingleCircle(selection.single())
                 selection.size > 1 -> HandleConfig.SeveralCircles(selection)
                 else -> Unit // never
             }
-            is SelectionMode.Region -> null
+            SelectionMode.Region -> null
             else -> null
         }
     }
@@ -388,30 +391,16 @@ class EditClusterViewModel(
         }
     }
 
-    fun switchToMode(newMode: Mode, noAlteringShortcuts: Boolean = true) {
+    fun switchToMode(newMode: Mode) {
         // NOTE: these altering shortcuts are unused for now so that they don't confuse category-expand buttons
         if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
-        if (mode is SelectionMode.Multiselect && newMode is SelectionMode.Multiselect && !noAlteringShortcuts) {
-            if (selection.isEmpty())
-                selection.addAll(circles.indices)
-            else
-                selection.clear()
-        } else if (mode == SelectionMode.Region && newMode == SelectionMode.Region && !noAlteringShortcuts) {
-            if (parts.isEmpty()) {
-                recordCommand(Command.SELECT_REGION)
-                // select interlacing, todo: proper 2^n -> even # of 1's -> {0101001} -> parts
-                parts.add(Cluster.Part(emptySet(), circles.indices.toSet(), regionColor))
-            } else {
-                recordCommand(Command.SELECT_REGION)
-                parts.clear()
-            }
-        }
-        if (newMode is CreationMode) {
+        if (newMode is ToolMode) {
             selection.clear()
             showCircles = true
+            partialArgList = PartialArgList(newMode.signature)
         }
-        _mode.value = newMode
+        mode = newMode
     }
 
     fun absolute(visiblePosition: Offset): Offset =
@@ -552,7 +541,7 @@ class EditClusterViewModel(
     }
 
     fun toggleSelectAll() {
-        switchToMode(SelectionMode.Multiselect, noAlteringShortcuts = true)
+        switchToMode(SelectionMode.Multiselect)
         if (!selection.containsAll(circles.indices.toSet())) {
             selection.clear()
             selection.addAll(circles.indices)
@@ -623,7 +612,7 @@ class EditClusterViewModel(
                         reselectCircleAt(position)
                 }
 
-                is SelectionMode.Multiselect -> {
+                SelectionMode.Multiselect -> {
                     val clickedDeleteHandle = if (grabbedHandle ==  Handle.DELETE && selection.isNotEmpty()) {
                         val deleteHandlePosition = getSelectionRect().bottomCenter
                         isCloseEnoughToSelect(deleteHandlePosition, position)
@@ -675,35 +664,23 @@ class EditClusterViewModel(
 
     fun onUp(visiblePosition: Offset?) {
         rotationIndicatorPosition = null
-        when (val m = mode) {
-            is CreationMode.CircleByCenterAndRadius.Center ->
-                (visiblePosition ?: m.center)?.let { c ->
-                    _mode.value = CreationMode.CircleByCenterAndRadius.Radius(center = c)
-                }
-            is CreationMode.CircleByCenterAndRadius.Radius ->
-                (visiblePosition ?: m.radiusPoint)?.let { rP ->
-                    val newCircle = Circle(
-                        absolute(m.center),
-                        radius = (absolute(rP) - absolute(m.center)).getDistance()
-                    )
-                    createNewCircle(newCircle, switchToSelectionMode = false)
-                    _mode.value = CreationMode.CircleByCenterAndRadius.Center()
-                }
-            is CreationMode.CircleBy3Points -> when (m.phase) {
-                1 -> _mode.value = m.copy(2, listOf(visiblePosition ?: m.points[0]))
-                2 -> _mode.value = m.copy(3, listOf(m.points[0], visiblePosition ?: m.points[1]))
-                3 -> {
-                    try {
-                        val newCircle = Circle.by3Points(
-                            absolute(m.points[0]), absolute(m.points[1]),
-                            absolute(visiblePosition ?: m.points[2])
-                        )
-                        createNewCircle(newCircle, switchToSelectionMode = false)
-                    } catch (e: NumberFormatException) {
-                        e.printStackTrace()
-                    } finally {
-                        _mode.value = CreationMode.CircleBy3Points()
+        when (mode) {
+            is ToolMode -> {
+                // we only confirm args in onUp, they are created in onDown etc.
+                val args = partialArgList!! // ToolMode implies non-null partialArgList
+                val newArg = when (args.currentArg) {
+                    is PartialArgList.Arg.XYPoint -> visiblePosition?.let {
+                        PartialArgList.Arg.XYPoint.fromOffset(it)
                     }
+                    is PartialArgList.Arg.CircleIndex -> TODO()
+                    null -> throw IllegalStateException("Never")
+                }
+                partialArgList = if (newArg == null)
+                    args.copy(lastArgIsConfirmed = true)
+                else
+                    args.updateCurrentArg(newArg, confirmThisArg = true)
+                if (partialArgList!!.isFull) {
+                    completeToolMode()
                 }
             }
             else -> {}
@@ -750,19 +727,11 @@ class EditClusterViewModel(
                 reselectCircleAt(visiblePosition)
                 if (previouslySelected != null && selection.isEmpty()) // this line requires deselecting first to navigate around canvas
                     selection.add(previouslySelected)
-            } else when (val m = mode) {
-                is CreationMode.CircleByCenterAndRadius.Center ->
-                    _mode.value = m.copy(center = visiblePosition)
-                is CreationMode.CircleByCenterAndRadius.Radius ->
-                    _mode.value = m.copy(radiusPoint = visiblePosition)
-
-                is CreationMode.CircleBy3Points -> {
-                    when (m.phase) {
-                        1 -> _mode.value = m.copy(points = listOf(visiblePosition))
-                        2 -> _mode.value = m.copy(points = listOf(m.points[0], visiblePosition))
-                        3 -> _mode.value = m.copy(points = listOf(m.points[0], m.points[1], visiblePosition))
-                    }
-                }
+            } else when (mode) {
+                ToolMode.CIRCLE_BY_CENTER_AND_RADIUS ->
+                    partialArgList = partialArgList!!.addArg(PartialArgList.Arg.XYPoint.fromOffset(visiblePosition))
+                ToolMode.CIRCLE_BY_3_POINTS ->
+                    partialArgList = partialArgList!!.addArg(PartialArgList.Arg.XYPoint.fromOffset(visiblePosition))
                 else -> {}
             }
         }
@@ -821,7 +790,7 @@ class EditClusterViewModel(
             val circle = circles[ix]
             val newCenter = circle.offset + pan
             circles[ix] = Circle(newCenter, zoom * circle.radius)
-        } else if (mode is SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
+        } else if (mode == SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
             if (selection.size == 1) { // move + scale radius
                 recordCommand(Command.MOVE)
                 val ix = selection.single()
@@ -837,19 +806,14 @@ class EditClusterViewModel(
                 }
             }
         } else {
-            when (val m = mode) {
-                is CreationMode.CircleByCenterAndRadius.Center ->
-                    if (m.center == null)
-                        _mode.value = m.copy(center = centroid)
-                    else
-                        _mode.value =
-                            CreationMode.CircleByCenterAndRadius.Radius(m.center, centroid)
-                is CreationMode.CircleByCenterAndRadius.Radius ->
-                    _mode.value = m.copy(radiusPoint = centroid)
-                is CreationMode.CircleBy3Points -> {
-                    _mode.value = m.copy(
-                        points = m.points.take(m.phase - 1).plusElement(centroid)
-                    )
+            when (mode) {
+                ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> partialArgList!!.let { args ->
+                    val newArg = PartialArgList.Arg.XYPoint.fromOffset(centroid)
+                    partialArgList = args.addOrUpdate(newArg, confirmThisArg = false)
+                }
+                ToolMode.CIRCLE_BY_3_POINTS -> partialArgList!!.let { args ->
+                    val newArg = PartialArgList.Arg.XYPoint.fromOffset(centroid)
+                    partialArgList = args.addOrUpdate(newArg, confirmThisArg = false)
                 }
                 else -> {
 //                    recordCommand(Command.CHANGE_POV)
@@ -948,15 +912,55 @@ class EditClusterViewModel(
             KeyboardAction.ZOOM_OUT -> scaleSelection(1/ZOOM_INCREMENT)
             KeyboardAction.UNDO -> undo()
             KeyboardAction.REDO -> redo()
-            KeyboardAction.CANCEL -> when (val m = mode) { // reset creation mode
-                is CreationMode -> switchToMode(m.startState)
+            KeyboardAction.CANCEL -> when (mode) { // reset creation mode
+                is ToolMode -> partialArgList = PartialArgList(partialArgList!!.signature)
                 is SelectionMode -> selection.clear()
                 else -> Unit
             }
         }
     }
 
-    @Stable
+    private fun completeToolMode() {
+        val toolMode = mode
+        val argList = partialArgList
+        require(argList != null && argList.isFull && argList.isValid && argList.lastArgIsConfirmed)
+        require(toolMode is ToolMode && toolMode.signature == argList.signature)
+        when (toolMode) {
+            ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> completeCircleByCenterAndRadius()
+            ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
+        }
+    }
+
+    private fun completeCircleByCenterAndRadius() {
+        val argList = partialArgList!!
+        val (center, radiusPoint) = argList.args.map {
+            absolute((it as PartialArgList.Arg.XYPoint).toOffset())
+        }
+        val newCircle = Circle(
+            center,
+            radius = (radiusPoint - center).getDistance()
+        )
+        createNewCircle(newCircle, switchToSelectionMode = false)
+        partialArgList = PartialArgList(argList.signature)
+    }
+
+    private fun completeCircleBy3Points() {
+        val argList = partialArgList!!
+        val points = argList.args.map {
+            absolute((it as PartialArgList.Arg.XYPoint).toOffset())
+        }
+        try {
+            val newCircle = Circle.by3Points(
+                points[0], points[1], points[2]
+            )
+            createNewCircle(newCircle, switchToSelectionMode = false)
+        } catch (e: NumberFormatException) {
+            e.printStackTrace()
+        } finally {
+            partialArgList = PartialArgList(argList.signature)
+        }
+    }
+
     fun toolAction(tool: EditClusterTool) {
 //        println("toolAction($tool)")
         when (tool) {
@@ -972,8 +976,8 @@ class EditClusterViewModel(
             EditClusterTool.Palette -> showColorPickerDialog = true
             EditClusterTool.Delete -> deleteCircles()
             EditClusterTool.Duplicate -> duplicateCircles()
-            EditClusterTool.ConstructCircleByCenterAndRadius -> switchToMode(CreationMode.CircleByCenterAndRadius.Center())
-            EditClusterTool.ConstructCircleBy3Points -> switchToMode(CreationMode.CircleBy3Points())
+            EditClusterTool.ConstructCircleByCenterAndRadius -> switchToMode(ToolMode.CIRCLE_BY_CENTER_AND_RADIUS)
+            EditClusterTool.ConstructCircleBy3Points -> switchToMode(ToolMode.CIRCLE_BY_3_POINTS)
             is EditClusterTool.AppliedColor -> selectRegionColor(tool.color)
         }
     }
@@ -981,15 +985,15 @@ class EditClusterViewModel(
     /** Is [tool] enabled? */
     fun toolPredicate(tool: EditClusterTool): Boolean =
         when (tool) { // NOTE: i think this has to return State<Boolean> to work properly
-            EditClusterTool.Drag -> mode is SelectionMode.Drag
-            EditClusterTool.Multiselect -> mode is SelectionMode.Multiselect
+            EditClusterTool.Drag -> mode == SelectionMode.Drag
+            EditClusterTool.Multiselect -> mode == SelectionMode.Multiselect
             EditClusterTool.ToggleSelectAll -> selection.containsAll(circles.indices.toSet())
-            EditClusterTool.Region -> mode is SelectionMode.Region
+            EditClusterTool.Region -> mode == SelectionMode.Region
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
-            EditClusterTool.ConstructCircleByCenterAndRadius -> mode is CreationMode.CircleByCenterAndRadius
-            EditClusterTool.ConstructCircleBy3Points -> mode is CreationMode.CircleBy3Points
+            EditClusterTool.ConstructCircleByCenterAndRadius -> mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS
+            EditClusterTool.ConstructCircleBy3Points -> mode == ToolMode.CIRCLE_BY_3_POINTS
             EditClusterTool.Palette -> showColorPickerDialog
             else -> true
         }
@@ -1022,7 +1026,7 @@ class EditClusterViewModel(
                     Cluster(uiState.circles.toList(), uiState.parts.toList(), filled = true)
                 ).apply {
                     if (uiState.selection.size > 1)
-                        _mode.value = SelectionMode.Multiselect
+                        mode = SelectionMode.Multiselect
                     selection.addAll(uiState.selection)
 //                    translation.value = Offset(100f, 0f) //uiState.translation
                     // this translation recovery dont work

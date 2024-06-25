@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import data.Circle
+import data.PartialArgList
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
@@ -164,7 +165,7 @@ private fun SelectionsCanvas(
         translate(viewModel.translation.value.x, viewModel.translation.value.y) {
             if (viewModel.showCircles &&
                 (viewModel.mode.isSelectingCircles() ||
-                    viewModel.mode is SelectionMode.Region && viewModel.restrictRegionsToSelection
+                    viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection
                 )
             ) {
                 val circles = viewModel.selection.map { viewModel.circles[it] }
@@ -253,40 +254,55 @@ private fun DrawScope.drawCreationPrototypes(
     creationPointRadius: Float = handleRadius * 3/4,
     creationPrototypeColor: Color = DodeclustersColors.green,
 ) {
-    when (val m = viewModel.mode) {
-        is CreationMode.CircleByCenterAndRadius.Center ->
-            m.center?.let {
-                drawCircle(color = creationPrototypeColor, radius = creationPointRadius, center = viewModel.absolute(it))
-            }
-        is CreationMode.CircleByCenterAndRadius.Radius -> {
-            drawCircle(color = creationPrototypeColor, radius = creationPointRadius, center = viewModel.absolute(m.center))
-            m.radiusPoint?.let {
+    when (viewModel.mode) {
+        ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> viewModel.partialArgList!!.args.let { args ->
+            if (args.isNotEmpty()) {
+                val center = viewModel.absolute((args[0] as PartialArgList.Arg.XYPoint).toOffset())
                 drawCircle(
                     color = creationPrototypeColor,
-                    style = circleStroke,
-                    radius = (it - m.center).getDistance(),
-                    center = viewModel.absolute(m.center)
+                    radius = creationPointRadius,
+                    center = center
                 )
+                if (args.size == 2) {
+                    val radiusPoint = viewModel.absolute((args[1] as PartialArgList.Arg.XYPoint).toOffset())
+                    drawCircle(
+                        color = creationPrototypeColor,
+                        radius = creationPointRadius,
+                        center = radiusPoint
+                    )
+                    drawCircle(
+                        color = creationPrototypeColor,
+                        style = circleStroke,
+                        radius = (radiusPoint - center).getDistance(),
+                        center = center
+                    )
+                }
             }
         }
-        is CreationMode.CircleBy3Points -> {
-            m.points.forEach {
-                drawCircle(color = creationPrototypeColor, radius = creationPointRadius, center = viewModel.absolute(it))
+        ToolMode.CIRCLE_BY_3_POINTS -> viewModel.partialArgList!!.args.let { args ->
+            val points = args.map {
+                viewModel.absolute((it as PartialArgList.Arg.XYPoint).toOffset())
             }
-            if (m.points.size == 2)
+            for (point in points)
+                drawCircle(
+                    color = creationPrototypeColor,
+                    radius = creationPointRadius,
+                    center = point
+                )
+            if (args.size == 2)
                 drawLine(
                     creationPrototypeColor,
-                    start = viewModel.absolute(m.points.first()),
-                    end = viewModel.absolute(m.points.last()),
+                    start = points[0],
+                    end = points[1],
                     strokeWidth
                 )
-            else if (m.points.size == 3) {
+            else if (args.size == 3) {
                 try {
-                    val c = Circle.by3Points(m.points[0], m.points[1], m.points[2])
+                    val c = Circle.by3Points(points[0], points[1], points[2])
                     drawCircle(
                         color = creationPrototypeColor,
                         radius = c.radius.toFloat(),
-                        center = viewModel.absolute(c.offset),
+                        center = c.offset,
                         style = circleStroke,
                     )
                 } catch (e: NumberFormatException) {

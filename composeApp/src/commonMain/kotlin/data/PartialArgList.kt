@@ -1,12 +1,14 @@
 package data
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
 
 @Immutable
 data class PartialArgList(
     val signature: Signature,
-    val args: List<Arg> = emptyList()
+    val args: List<Arg> = emptyList(),
+    val lastArgIsConfirmed: Boolean = true
 ) {
     @Serializable
     enum class ArgType {
@@ -18,7 +20,15 @@ data class PartialArgList(
     sealed class Arg(val argType: ArgType) {
         // MAYBE: float coords instead?
         //  idk, i set double for now for accurate c-intersections & future snapping
-        data class XYPoint(val x: Double, val y: Double) : Arg(ArgType.XYPoint)
+        data class XYPoint(val x: Double, val y: Double) : Arg(ArgType.XYPoint) {
+            fun toOffset(): Offset =
+                Offset(x.toFloat(), y.toFloat())
+
+            companion object {
+                fun fromOffset(offset: Offset): XYPoint =
+                    XYPoint(offset.x.toDouble(), offset.y.toDouble())
+            }
+        }
         data class CircleIndex(val index: Int) : Arg(ArgType.CircleIndex)
     }
 
@@ -35,6 +45,11 @@ data class PartialArgList(
         args.size <= signature.argTypes.size &&
         args.zip(signature.argTypes).all { (arg, argType) -> arg.argType == argType }
 
+    val currentArg: Arg? =
+        args.lastOrNull()
+    val currentArgType: ArgType? =
+        currentArg?.argType
+
     val nextArgType: ArgType? =
         if (isFull) null else signature.argTypes[args.size]
 
@@ -42,13 +57,30 @@ data class PartialArgList(
         require(isValid) { "Invalid type signature $signature, with args $args" }
     }
 
+    fun addOrUpdate(arg: Arg, confirmThisArg: Boolean = false): PartialArgList =
+        if (lastArgIsConfirmed || args.isEmpty())
+            addArg(arg, confirmThisArg)
+        else
+            updateCurrentArg(arg, confirmThisArg)
+
+    fun updateCurrentArg(arg: Arg, confirmThisArg: Boolean = true): PartialArgList {
+        require(currentArg != null) { "The PartialArgList is empty, nothing to update" }
+        require(currentArg.argType == arg.argType) { "Invalid arg type, expected: $currentArgType, actual: $arg" }
+        return PartialArgList(
+            signature,
+            args.dropLast(1) + arg,
+            confirmThisArg
+        )
+    }
+
     // MAYBE: smarter currying, when arg types resolve uniquely regardless of order
-    fun addArg(arg: Arg): PartialArgList {
+    fun addArg(arg: Arg, confirmThisArg: Boolean = false): PartialArgList {
         require(!isFull) { "The $this is already full" }
         require(arg.argType == nextArgType) { "Invalid arg type, expected: $nextArgType, actual: $arg" }
         return PartialArgList(
             signature,
-            args + arg
+            args + arg,
+            confirmThisArg
         )
     }
 
