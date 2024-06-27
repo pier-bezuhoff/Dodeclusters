@@ -1,11 +1,10 @@
 package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.geometry.Offset
 import data.PartialArgList
 import kotlinx.serialization.Serializable
 import ui.tools.EditClusterTool
-import ui.tools.Tool
+import kotlin.jvm.Transient
 
 @Immutable
 sealed interface Mode {
@@ -38,7 +37,11 @@ enum class MultiselectLogic {
     SYMMETRIC_DIFFIRENCE, ADD, SUBTRACT, REPLACE
 }
 
-enum class ToolMode(val tool: EditClusterTool.MultiArg) : Mode {
+@Serializable
+enum class ToolMode(
+    @Transient
+    val tool: EditClusterTool.MultiArg
+) : Mode {
     CIRCLE_BY_CENTER_AND_RADIUS(EditClusterTool.ConstructCircleByCenterAndRadius),
     CIRCLE_BY_3_POINTS(EditClusterTool.ConstructCircleBy3Points),
 //    CIRCLE_INVERSION(EditClusterTool.CircleInversion),
@@ -47,8 +50,8 @@ enum class ToolMode(val tool: EditClusterTool.MultiArg) : Mode {
     val signature: PartialArgList.Signature = tool.signature
 
     companion object {
-        fun <T> fromTool(tool: T): ToolMode where T: EditClusterTool, T: Tool.MultiArg
-            = ToolMode.entries.first { it.tool == tool }
+        fun correspondingTo(tool: EditClusterTool.MultiArg): ToolMode =
+            ToolMode.entries.first { it.tool == tool }
     }
 }
 

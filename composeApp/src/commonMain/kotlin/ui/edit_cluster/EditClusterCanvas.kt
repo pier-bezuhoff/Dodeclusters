@@ -124,7 +124,7 @@ fun EditClusterCanvas(
 //                renderEffect = BlurEffect(20f, 20f)
             )
     ) {
-        translate(viewModel.translation.value.x, viewModel.translation.value.y) {
+        translate(viewModel.translation.x, viewModel.translation.y) {
             drawAnimation(animations)
             if (viewModel.showCircles)
                 drawCircles(viewModel, circleColor, circleStroke)
@@ -149,7 +149,7 @@ private fun SelectionsCanvas(
     Canvas(
         modifier.fillMaxSize()
             .onSizeChanged { size ->
-                viewModel.canvasSize.value = size
+                viewModel.canvasSize = size
             }
             // selection hatching lines, 45° SE
             .drawBehind {
@@ -167,7 +167,7 @@ private fun SelectionsCanvas(
     ) {
         drawRect(backgroundColor)
         // overlay w/ selected circles
-        translate(viewModel.translation.value.x, viewModel.translation.value.y) {
+        translate(viewModel.translation.x, viewModel.translation.y) {
             if (viewModel.showCircles &&
                 (viewModel.mode.isSelectingCircles() ||
                     viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection
@@ -236,7 +236,7 @@ private fun DrawScope.drawParts(
         val normalizedPath = if (pathType == PathType.INVERTED) {
             val visibleRect = size.toRect()
                 .inflate(100f) // slightly bigger than the screen so that the borders are invisible
-                .translate(-viewModel.translation.value)
+                .translate(-viewModel.translation)
             val normalPath = Path()
             normalPath.addRect(visibleRect)
             normalPath.op(normalPath, path, PathOperation.Difference)

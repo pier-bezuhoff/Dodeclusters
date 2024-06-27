@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import data.Circle
 import data.CircleF
 import data.Cluster
@@ -45,6 +46,7 @@ typealias Ix = Int
 
 // NOTE: waiting for decompose 3.0-stable for a real VM impl
 // MAYBE: use UiState functional pattern instead this mess
+// this class is obviously too big
 @Stable
 class EditClusterViewModel(
     /** NOT a viewModelScope, just a rememberCS from the screen composable */
@@ -59,8 +61,6 @@ class EditClusterViewModel(
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
     val selection = mutableStateListOf<Ix>() // MAYBE: when circles are hidden select parts instead
-    val selectedCircles
-        get() = selection.map { circles[it] }
 
 
     val categories: List<EditClusterCategory> = listOf(
@@ -143,8 +143,8 @@ class EditClusterViewModel(
 
     var showColorPickerDialog by mutableStateOf(false)
 
-    val canvasSize = mutableStateOf(IntSize.Zero) // used when saving best-center
-    val translation = mutableStateOf(Offset.Zero) // pre-scale offset
+    var canvasSize by mutableStateOf(IntSize.Zero) // used when saving best-center
+    var translation by mutableStateOf(Offset.Zero) // pre-scale offset
 //    val scale = mutableStateOf(1f)
 
     /** min tap/grab distance to select an object */
@@ -172,10 +172,10 @@ class EditClusterViewModel(
     }
 
     private fun computeAbsoluteCenter(): Offset? =
-        if (canvasSize.value == IntSize.Zero) {
+        if (canvasSize == IntSize.Zero) {
             null
         } else {
-            val visibleCenter = Offset(canvasSize.value.width/2f, canvasSize.value.height/2f)
+            val visibleCenter = Offset(canvasSize.width/2f, canvasSize.height/2f)
             absolute(visibleCenter)
         }
 
@@ -197,9 +197,9 @@ class EditClusterViewModel(
     }
 
     private fun moveToDdcCenter(ddc: Ddc) {
-        translation.value = -Offset(
-            ddc.bestCenterX?.let { it - canvasSize.value.width/2f } ?: 0f,
-            ddc.bestCenterY?.let { it - canvasSize.value.height/2f } ?: 0f
+        translation = -Offset(
+            ddc.bestCenterX?.let { it - canvasSize.width/2f } ?: 0f,
+            ddc.bestCenterY?.let { it - canvasSize.height/2f } ?: 0f
         )
     }
 
@@ -228,7 +228,7 @@ class EditClusterViewModel(
     }
 
     private fun loadCluster(cluster: Cluster) {
-        translation.value = Offset.Zero
+        translation = Offset.Zero
         selection.clear()
         parts.clear()
         circles.clear()
@@ -304,16 +304,15 @@ class EditClusterViewModel(
         newCircle: Circle = Circle(absolute(Offset(200f, 200f)), 50.0),
         switchToSelectionMode: Boolean = true
     ) {
-        coroutineScope.launch {
-            if (newCircle.radius > 0.0) {
-                recordCommand(Command.CREATE)
-                println("createNewCircle $newCircle")
-                showCircles = true
-                circles.add(newCircle)
-                if (switchToSelectionMode && !mode.isSelectingCircles())
-                    switchToMode(SelectionMode.Drag)
-                selection.clear()
-                selection.add(circles.size - 1)
+        if (newCircle.radius > 0.0) {
+            recordCommand(Command.CREATE)
+            showCircles = true
+            circles.add(newCircle)
+            if (switchToSelectionMode && !mode.isSelectingCircles())
+                switchToMode(SelectionMode.Drag)
+            selection.clear()
+            selection.add(circles.size - 1)
+            coroutineScope.launch {
                 _decayingCircles.emit(
                     DecayingCircles(listOf(newCircle.toCircleF()), Color.Green)
                 )
@@ -322,25 +321,25 @@ class EditClusterViewModel(
     }
 
     fun duplicateCircles() {
-        coroutineScope.launch {
-            if (mode.isSelectingCircles()) {
-                recordCommand(Command.DUPLICATE)
-                val copiedCircles = selection.map { circles[it] } // preserves selection order
-                val oldSize = circles.size
-                val reindexing = selection.mapIndexed { i, ix -> ix to (oldSize + i) }.toMap()
-                circles.addAll(copiedCircles)
-                val newParts = parts.filter {
-                    selection.containsAll(it.insides) && selection.containsAll(it.outsides)
-                }.map { part ->
-                    Cluster.Part( // TODO: test part copying further
-                        insides = part.insides.map { reindexing[it]!! }.toSet(),
-                        outsides = part.outsides.map { reindexing[it]!! }.toSet(),
-                        fillColor = part.fillColor
-                    )
-                }
-                parts.addAll(newParts)
-                selection.clear()
-                selection.addAll(oldSize until (oldSize + copiedCircles.size))
+        if (mode.isSelectingCircles()) {
+            recordCommand(Command.DUPLICATE)
+            val copiedCircles = selection.map { circles[it] } // preserves selection order
+            val oldSize = circles.size
+            val reindexing = selection.mapIndexed { i, ix -> ix to (oldSize + i) }.toMap()
+            circles.addAll(copiedCircles)
+            val newParts = parts.filter {
+                selection.containsAll(it.insides) && selection.containsAll(it.outsides)
+            }.map { part ->
+                Cluster.Part( // TODO: test part copying further
+                    insides = part.insides.map { reindexing[it]!! }.toSet(),
+                    outsides = part.outsides.map { reindexing[it]!! }.toSet(),
+                    fillColor = part.fillColor
+                )
+            }
+            parts.addAll(newParts)
+            selection.clear()
+            selection.addAll(oldSize until (oldSize + copiedCircles.size))
+            coroutineScope.launch {
                 _decayingCircles.emit(
                     DecayingCircles(copiedCircles.map { it.toCircleF() }, Color.Blue)
                 )
@@ -349,43 +348,43 @@ class EditClusterViewModel(
     }
 
     fun deleteCircles() {
-        coroutineScope.launch {
-            fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Ix>): Map<Ix, Ix> {
-                val re = mutableMapOf<Ix, Ix>()
-                var shift = 0
-                for (ix in originalIndices) {
-                    if (ix in deletedIndices)
-                        shift += 1
-                    else
-                        re[ix] = ix - shift
-                }
-                return re
+        fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Ix>): Map<Ix, Ix> {
+            val re = mutableMapOf<Ix, Ix>()
+            var shift = 0
+            for (ix in originalIndices) {
+                if (ix in deletedIndices)
+                    shift += 1
+                else
+                    re[ix] = ix - shift
             }
-            if (mode.isSelectingCircles()) {
-                recordCommand(Command.DELETE)
-                val whatsGone = selection.toSet()
-                val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
-                val oldParts = parts.toList()
-                val reindexing = reindexingMap(circles.indices, whatsGone)
+            return re
+        }
+        if (mode.isSelectingCircles()) {
+            recordCommand(Command.DELETE)
+            val whatsGone = selection.toSet()
+            val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
+            val oldParts = parts.toList()
+            val reindexing = reindexingMap(circles.indices, whatsGone)
+            selection.clear()
+            parts.clear()
+            circles.clear()
+            circles.addAll(whatsLeft)
+            parts.addAll(
+                oldParts
+                    // to avoid stray chessboard selections
+                    .filterNot { (ins, _, _) -> ins.isNotEmpty() && ins.minus(whatsGone).isEmpty() }
+                    .map { (ins, outs, fillColor) ->
+                        Cluster.Part(
+                            insides = ins.minus(whatsGone).map { reindexing[it]!! }.toSet(),
+                            outsides = outs.minus(whatsGone).map { reindexing[it]!! }.toSet(),
+                            fillColor = fillColor
+                        )
+                    }
+                    .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
+            )
+            coroutineScope.launch {
                 _decayingCircles.emit(
                     DecayingCircles(selection.map { circles[it].toCircleF() }, Color.Red)
-                )
-                selection.clear()
-                parts.clear()
-                circles.clear()
-                circles.addAll(whatsLeft)
-                parts.addAll(
-                    oldParts
-                        // to avoid stray chessboard selections
-                        .filterNot { (ins, _, _) -> ins.isNotEmpty() && ins.minus(whatsGone).isEmpty() }
-                        .map { (ins, outs, fillColor) ->
-                            Cluster.Part(
-                                insides = ins.minus(whatsGone).map { reindexing[it]!! }.toSet(),
-                                outsides = outs.minus(whatsGone).map { reindexing[it]!! }.toSet(),
-                                fillColor = fillColor
-                            )
-                        }
-                        .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
                 )
             }
         }
@@ -404,10 +403,10 @@ class EditClusterViewModel(
     }
 
     fun absolute(visiblePosition: Offset): Offset =
-        visiblePosition - translation.value
+        visiblePosition - translation
 
     fun visible(position: Offset): Offset =
-        position + translation.value
+        position + translation
 
     fun isCloseEnoughToSelect(absolutePosition: Offset, visiblePosition: Offset): Boolean {
         val position = absolute(visiblePosition)
@@ -571,6 +570,30 @@ class EditClusterViewModel(
         parts.clear()
     }
 
+    fun insertFullscreenCross() {
+        recordCommand(Command.CREATE)
+        val (midX, midY) = canvasSize.toSize()/2f
+        val horizontalLine = Circle.almostALine(
+            absolute(Offset(0f, midY)),
+            absolute(Offset(2*midX, midY)),
+        )
+        val verticalLine = Circle.almostALine(
+            absolute(Offset(midX, 0f)),
+            absolute(Offset(midX, 2*midY)),
+        )
+        showCircles = true
+        circles.add(horizontalLine)
+        circles.add(verticalLine)
+        switchToMode(SelectionMode.Multiselect)
+        selection.clear()
+        selection.addAll(listOf(circles.size - 2, circles.size - 1))
+        coroutineScope.launch { // NOTE: this animation looks bad for lines
+            _decayingCircles.emit(
+                DecayingCircles(listOf(horizontalLine.toCircleF(), verticalLine.toCircleF()), Color.Green)
+            )
+        }
+    }
+
     private fun scaleSelection(zoom: Float) {
         if (circleSelectionIsActive)
             when (selection.size) {
@@ -728,12 +751,13 @@ class EditClusterViewModel(
                 reselectCircleAt(visiblePosition)
                 if (previouslySelected != null && selection.isEmpty()) // this line requires deselecting first to navigate around canvas
                     selection.add(previouslySelected)
-            } else when (mode) {
-                ToolMode.CIRCLE_BY_CENTER_AND_RADIUS ->
-                    partialArgList = partialArgList!!.addArg(PartialArgList.Arg.XYPoint.fromOffset(visiblePosition))
-                ToolMode.CIRCLE_BY_3_POINTS ->
-                    partialArgList = partialArgList!!.addArg(PartialArgList.Arg.XYPoint.fromOffset(visiblePosition))
-                else -> {}
+            } else {
+                if (mode is ToolMode &&
+                    partialArgList!!.nextArgType == PartialArgList.ArgType.XYPoint
+                ) {
+                    val newArg = PartialArgList.Arg.XYPoint.fromOffset(visiblePosition)
+                    partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = false)
+                }
             }
         }
     }
@@ -807,25 +831,20 @@ class EditClusterViewModel(
                 }
             }
         } else {
-            when (mode) {
-                ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> partialArgList!!.let { args ->
-                    val newArg = PartialArgList.Arg.XYPoint.fromOffset(centroid)
-                    partialArgList = args.addOrUpdate(newArg, confirmThisArg = false)
-                }
-                ToolMode.CIRCLE_BY_3_POINTS -> partialArgList!!.let { args ->
-                    val newArg = PartialArgList.Arg.XYPoint.fromOffset(centroid)
-                    partialArgList = args.addOrUpdate(newArg, confirmThisArg = false)
-                }
-                else -> {
-//                    recordCommand(Command.CHANGE_POV)
-                    translation.value = translation.value + pan // navigate canvas
-                }
+            if (mode is ToolMode &&
+                partialArgList!!.currentArgType == PartialArgList.ArgType.XYPoint
+            ) {
+                val newArg = PartialArgList.Arg.XYPoint.fromOffset(centroid)
+                partialArgList = partialArgList!!.updateCurrentArg(newArg, confirmThisArg = false)
+            } else {
+//                recordCommand(Command.CHANGE_POV)
+                translation = translation + pan // navigate canvas
             }
         }
     }
 
     fun onVerticalScroll(yDelta: Float) {
-        val zoom = (1.01f).pow(-yDelta)
+        val zoom = (1.01f).pow(-yDelta) // NOTE: there is an argument to have lower exponent for browser
         scaleSelection(zoom)
     }
 
@@ -913,7 +932,7 @@ class EditClusterViewModel(
             KeyboardAction.ZOOM_OUT -> scaleSelection(1/ZOOM_INCREMENT)
             KeyboardAction.UNDO -> undo()
             KeyboardAction.REDO -> redo()
-            KeyboardAction.CANCEL -> when (mode) { // reset creation mode
+            KeyboardAction.CANCEL -> when (mode) { // reset mode
                 is ToolMode -> partialArgList = PartialArgList(partialArgList!!.signature)
                 is SelectionMode -> selection.clear()
                 else -> Unit
@@ -977,12 +996,9 @@ class EditClusterViewModel(
             EditClusterTool.Palette -> showColorPickerDialog = true
             EditClusterTool.Delete -> deleteCircles()
             EditClusterTool.Duplicate -> duplicateCircles()
-            is EditClusterTool.MultiArg -> switchToMode(ToolMode.fromTool(tool))
-//            EditClusterTool.ConstructCircleByCenterAndRadius -> switchToMode(ToolMode.CIRCLE_BY_CENTER_AND_RADIUS)
-//            EditClusterTool.ConstructCircleBy3Points -> switchToMode(ToolMode.CIRCLE_BY_3_POINTS)
+            EditClusterTool.InsertCenteredCross -> insertFullscreenCross()
+            is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
             is EditClusterTool.AppliedColor -> selectRegionColor(tool.color)
-            EditClusterTool.InsertCenteredCross -> TODO()
-            EditClusterTool.CircleInversion -> TODO()
         }
     }
 
@@ -996,9 +1012,7 @@ class EditClusterViewModel(
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
-            is EditClusterTool.MultiArg -> mode == ToolMode.fromTool(tool)
-//            EditClusterTool.ConstructCircleByCenterAndRadius -> mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS
-//            EditClusterTool.ConstructCircleBy3Points -> mode == ToolMode.CIRCLE_BY_3_POINTS
+            is EditClusterTool.MultiArg -> mode == ToolMode.correspondingTo(tool)
             EditClusterTool.Palette -> showColorPickerDialog
             else -> true
         }
@@ -1041,7 +1055,7 @@ class EditClusterViewModel(
                 with (viewModel) {
                     UiState(
                         circles.toList(), parts.toList(), selection.toList(),
-                        viewModel.translation.value
+                        viewModel.translation
                     )
                 }
         }
@@ -1093,7 +1107,8 @@ enum class Command {
     MOVE,
     CHANGE_RADIUS, SCALE,
     ROTATE,
-    DUPLICATE, DELETE, CREATE,
+    DUPLICATE, DELETE,
+    CREATE,
     SELECT_REGION,
     /** records canvas translations and scaling */
     CHANGE_POV,
