@@ -2,6 +2,7 @@ package ui.tools
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import data.PartialArgList
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
@@ -14,6 +15,10 @@ import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_a
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_description
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_name
 import dodeclusters.composeapp.generated.resources.circle_center_and_radius_point
+import dodeclusters.composeapp.generated.resources.circle_inversion
+import dodeclusters.composeapp.generated.resources.circle_inversion_arg_descriptions
+import dodeclusters.composeapp.generated.resources.circle_inversion_description
+import dodeclusters.composeapp.generated.resources.circle_inversion_name
 import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_all_parts_description
@@ -30,7 +35,10 @@ import dodeclusters.composeapp.generated.resources.duplicate_name
 import dodeclusters.composeapp.generated.resources.filled_circle
 import dodeclusters.composeapp.generated.resources.flow_multiselect_description
 import dodeclusters.composeapp.generated.resources.flow_multiselect_name
+import dodeclusters.composeapp.generated.resources.full_screen_cross
 import dodeclusters.composeapp.generated.resources.hide_layers
+import dodeclusters.composeapp.generated.resources.insert_centered_cross_description
+import dodeclusters.composeapp.generated.resources.insert_centered_cross_name
 import dodeclusters.composeapp.generated.resources.invisible
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
@@ -64,13 +72,21 @@ sealed class EditClusterTool(
     override val description: StringResource,
     override val icon: DrawableResource,
 ) : Tool {
-    // mode ~ toggle as both their states are determined by a predicate & action is separated
     sealed class Switch(
         name: StringResource,
         description: StringResource,
         icon: DrawableResource,
-        override val disabledIcon: DrawableResource? = null
+        final override val disabledIcon: DrawableResource? = null
     ) : EditClusterTool(name, description, icon), Tool.BinaryToggle
+
+    sealed class MultiArg(
+        final override val signature: PartialArgList.Signature,
+        name: StringResource,
+        description: StringResource,
+        final override val argDescriptions: StringResource,
+        icon: DrawableResource,
+        final override val disabledIcon: DrawableResource? = null,
+    ) : EditClusterTool(name, description, icon), Tool.BinaryToggle, Tool.MultiArg
 
     sealed class Action(
         name: StringResource,
@@ -142,13 +158,13 @@ sealed class EditClusterTool(
         Res.drawable.paint_splash, // tint=color should be applied
     )
 
-    data object Duplicate: EditClusterTool(
+    data object Duplicate: Action(
         Res.string.duplicate_name,
         Res.string.duplicate_description,
         Res.drawable.copy
     ), Tool.ActionOnSelection
     // MAYBE: eraser-like mode
-    data object Delete: EditClusterTool(
+    data object Delete: Action(
         Res.string.delete_name,
         Res.string.delete_description,
         Res.drawable.delete_forever
@@ -156,21 +172,34 @@ sealed class EditClusterTool(
         val tint = DodeclustersColors.pinkish
     }
 
+    data object CircleInversion: MultiArg(
+        PartialArgList.SIGNATURE_2_CIRCLES,
+        Res.string.circle_inversion_name,
+        Res.string.circle_inversion_description,
+        Res.string.circle_inversion_arg_descriptions,
+        Res.drawable.circle_inversion
+    )
+
     // MAYBE: add partial argument icon(s)
-    data object ConstructCircleByCenterAndRadius: Switch(
+    data object ConstructCircleByCenterAndRadius: MultiArg(
+        PartialArgList.SIGNATURE_2_POINTS,
         Res.string.circle_by_center_and_radius_name,
         Res.string.circle_by_center_and_radius_description,
-        Res.drawable.circle_center_and_radius_point
-    ), Tool.MultiArg2<InputType.AnyPoint, InputType.AnyPoint> {
-        override val argDescriptions = Res.string.circle_by_center_and_radius_arg_descriptions
-    }
-    data object ConstructCircleBy3Points: Switch(
+        Res.string.circle_by_center_and_radius_arg_descriptions,
+        Res.drawable.circle_center_and_radius_point,
+    )
+    data object ConstructCircleBy3Points: MultiArg(
+        PartialArgList.SIGNATURE_3_POINTS,
         Res.string.circle_by_3_points_name,
         Res.string.circle_by_3_points_description,
+        Res.string.circle_by_3_points_arg_descriptions,
         Res.drawable.circle_3_points
-    ), Tool.MultiArg3<InputType.AnyPoint, InputType.AnyPoint, InputType.AnyPoint> {
-        override val argDescriptions = Res.string.circle_by_3_points_arg_descriptions
-    }
+    )
     // line by 2 pts
-    // insert cross/rect/square
+    data object InsertCenteredCross: Action(
+        Res.string.insert_centered_cross_name,
+        Res.string.insert_centered_cross_description,
+        Res.drawable.full_screen_cross
+    )
+    // insert rect/square
 }

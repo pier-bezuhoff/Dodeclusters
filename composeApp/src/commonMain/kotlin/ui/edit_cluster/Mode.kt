@@ -4,6 +4,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import data.PartialArgList
 import kotlinx.serialization.Serializable
+import ui.tools.EditClusterTool
+import ui.tools.Tool
 
 @Immutable
 sealed interface Mode {
@@ -36,11 +38,18 @@ enum class MultiselectLogic {
     SYMMETRIC_DIFFIRENCE, ADD, SUBTRACT, REPLACE
 }
 
-// MultiArg Tool -> this enum mapping
-@Serializable
-enum class ToolMode(val signature: PartialArgList.Signature) : Mode {
-    CIRCLE_BY_CENTER_AND_RADIUS(PartialArgList.SIGNATURE_2_POINTS),
-    CIRCLE_BY_3_POINTS(PartialArgList.SIGNATURE_3_POINTS),
+enum class ToolMode(val tool: EditClusterTool.MultiArg) : Mode {
+    CIRCLE_BY_CENTER_AND_RADIUS(EditClusterTool.ConstructCircleByCenterAndRadius),
+    CIRCLE_BY_3_POINTS(EditClusterTool.ConstructCircleBy3Points),
+//    CIRCLE_INVERSION(EditClusterTool.CircleInversion),
+    ;
+
+    val signature: PartialArgList.Signature = tool.signature
+
+    companion object {
+        fun <T> fromTool(tool: T): ToolMode where T: EditClusterTool, T: Tool.MultiArg
+            = ToolMode.entries.first { it.tool == tool }
+    }
 }
 
 // equivalent to Multiselect but on confirmation (selection has to be non-empty) we go back

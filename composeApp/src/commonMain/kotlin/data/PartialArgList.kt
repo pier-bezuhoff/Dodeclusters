@@ -3,6 +3,7 @@ package data
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
+import ui.Indices
 
 @Immutable
 data class PartialArgList(
@@ -13,7 +14,8 @@ data class PartialArgList(
     @Serializable
     enum class ArgType {
         XYPoint,
-        CircleIndex
+        CircleIndex,
+        SelectedCircles,
     }
 
     @Immutable
@@ -30,6 +32,7 @@ data class PartialArgList(
             }
         }
         data class CircleIndex(val index: Int) : Arg(ArgType.CircleIndex)
+        data class SelectedCircles(val indices: Indices) : Arg(ArgType.SelectedCircles)
     }
 
     // TODO: creation tool -> signature mapping
@@ -87,5 +90,6 @@ data class PartialArgList(
     companion object {
         val SIGNATURE_2_POINTS = Signature(ArgType.XYPoint, ArgType.XYPoint)
         val SIGNATURE_3_POINTS = Signature(ArgType.XYPoint, ArgType.XYPoint, ArgType.XYPoint)
+        val SIGNATURE_2_CIRCLES = Signature(ArgType.CircleIndex, ArgType.CircleIndex)
     }
 }

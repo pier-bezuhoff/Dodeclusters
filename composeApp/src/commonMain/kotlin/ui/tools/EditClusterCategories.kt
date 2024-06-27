@@ -81,8 +81,8 @@ sealed class EditClusterCategory(
     ) // just open panel, mb diff icon also (like setting wheel)
     data object Transform : EditClusterCategory(
         Res.string.transform_category_name,
-        listOf(EditClusterTool.Delete),
-        defaultables = emptyList(),
+        listOf(EditClusterTool.CircleInversion),
+        defaultables = listOf(0),
         icon = Res.drawable.circled_tool
     ) { // ~mode-like
         // button: scale -> slider or some other interface
@@ -93,7 +93,8 @@ sealed class EditClusterCategory(
         Res.string.create_category_name,
         listOf(
             EditClusterTool.ConstructCircleByCenterAndRadius,
-            EditClusterTool.ConstructCircleBy3Points
+            EditClusterTool.ConstructCircleBy3Points,
+            EditClusterTool.InsertCenteredCross,
         ),
         defaultables = listOf(0, 1)
     ) { // ~mode-like

@@ -673,6 +673,7 @@ class EditClusterViewModel(
                         PartialArgList.Arg.XYPoint.fromOffset(it)
                     }
                     is PartialArgList.Arg.CircleIndex -> TODO()
+                    is PartialArgList.Arg.SelectedCircles -> TODO()
                     null -> throw IllegalStateException("Never")
                 }
                 partialArgList = if (newArg == null)
@@ -976,9 +977,12 @@ class EditClusterViewModel(
             EditClusterTool.Palette -> showColorPickerDialog = true
             EditClusterTool.Delete -> deleteCircles()
             EditClusterTool.Duplicate -> duplicateCircles()
-            EditClusterTool.ConstructCircleByCenterAndRadius -> switchToMode(ToolMode.CIRCLE_BY_CENTER_AND_RADIUS)
-            EditClusterTool.ConstructCircleBy3Points -> switchToMode(ToolMode.CIRCLE_BY_3_POINTS)
+            is EditClusterTool.MultiArg -> switchToMode(ToolMode.fromTool(tool))
+//            EditClusterTool.ConstructCircleByCenterAndRadius -> switchToMode(ToolMode.CIRCLE_BY_CENTER_AND_RADIUS)
+//            EditClusterTool.ConstructCircleBy3Points -> switchToMode(ToolMode.CIRCLE_BY_3_POINTS)
             is EditClusterTool.AppliedColor -> selectRegionColor(tool.color)
+            EditClusterTool.InsertCenteredCross -> TODO()
+            EditClusterTool.CircleInversion -> TODO()
         }
     }
 
@@ -992,8 +996,9 @@ class EditClusterViewModel(
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
-            EditClusterTool.ConstructCircleByCenterAndRadius -> mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS
-            EditClusterTool.ConstructCircleBy3Points -> mode == ToolMode.CIRCLE_BY_3_POINTS
+            is EditClusterTool.MultiArg -> mode == ToolMode.fromTool(tool)
+//            EditClusterTool.ConstructCircleByCenterAndRadius -> mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS
+//            EditClusterTool.ConstructCircleBy3Points -> mode == ToolMode.CIRCLE_BY_3_POINTS
             EditClusterTool.Palette -> showColorPickerDialog
             else -> true
         }

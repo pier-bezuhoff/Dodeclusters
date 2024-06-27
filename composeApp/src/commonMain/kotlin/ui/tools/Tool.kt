@@ -1,5 +1,6 @@
 package ui.tools
 
+import data.PartialArgList
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 
@@ -26,31 +27,9 @@ sealed interface Tool {
 
     /** Tool that prompts selecting several items, described by MultiArgN<...> dependent types, to perform an action */
     sealed interface MultiArg : Tool {
-        val nArgs: Int
+        val signature: PartialArgList.Signature
         val argDescriptions: StringResource // can be a string array with the same type apparently
+        val nArgs: Int
+            get() = signature.argTypes.size
     }
-    // NOTE: realistically arg types don't belong here
-    sealed interface MultiArg1<T1 : InputType> : MultiArg {
-        override val nArgs get() = 1
-    }
-    sealed interface MultiArg2<T1 : InputType, T2: InputType> : MultiArg {
-        override val nArgs get() = 2
-    }
-    sealed interface MultiArg3<T1 : InputType, T2: InputType, T3: InputType> : MultiArg {
-        override val nArgs get() = 3
-    }
-    sealed interface MultiArg4<T1 : InputType, T2: InputType, T3: InputType, T4: InputType> : MultiArg {
-        override val nArgs get() = 4
-    }
-    sealed interface MultiArg5<T1 : InputType, T2: InputType, T3: InputType, T4: InputType, T5: InputType> : MultiArg {
-        override val nArgs get() = 5
-    }
-    // potentially inf-arg for polygons & poly-arcs
 }
-
-/** Selectable item types, used by [Tool.MultiArg] tools */
-sealed interface InputType {
-    data object AnyPoint : InputType // (x, y)
-    data object Circle : InputType // circle index within current cluster
-}
-

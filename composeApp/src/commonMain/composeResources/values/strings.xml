@@ -35,6 +35,12 @@
     <string name="duplicate_description">Duplicate selected circles and then select the new copies</string>
     <string name="delete_name">Delete</string>
     <string name="delete_description">Delete selected circles</string>
+    <string name="circle_inversion_name">Circle inversion</string>
+    <string name="circle_inversion_description">Invert an object with respect to a circle</string>
+    <string-array name="circle_inversion_arg_descriptions">
+        <item>The object to transform</item>
+        <item>The circle with respect to which we are inverting</item>
+    </string-array>
     <string name="circle_by_center_and_radius_name">Circle by center and radius</string>
     <string name="circle_by_center_and_radius_description">Construct a circle by its center and radius point</string>
     <string-array name="circle_by_center_and_radius_arg_descriptions">
@@ -48,6 +54,8 @@
         <item>2nd point on the circle</item>
         <item>3rd point on the circle</item>
     </string-array>
+    <string name="insert_centered_cross_name">Insert centered cross</string>
+    <string name="insert_centered_cross_description">Insert centered cross</string>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
 

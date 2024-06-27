@@ -16,12 +16,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.RenderEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -116,10 +119,12 @@ fun EditClusterCanvas(
 //                onLongDragEnd = viewModel::onLongDragEnd,
             )
             .fillMaxSize()
-            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // crucial for proper alpha blending
+            .graphicsLayer(
+                compositingStrategy = CompositingStrategy.Offscreen, // crucial for proper alpha blending
+//                renderEffect = BlurEffect(20f, 20f)
+            )
     ) {
         translate(viewModel.translation.value.x, viewModel.translation.value.y) {
-//            drawAnimation(decayingCircles, decayAlpha)
             drawAnimation(animations)
             if (viewModel.showCircles)
                 drawCircles(viewModel, circleColor, circleStroke)
