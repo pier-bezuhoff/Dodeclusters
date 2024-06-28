@@ -570,7 +570,7 @@ class EditClusterViewModel(
         parts.clear()
     }
 
-    fun insertFullscreenCross() {
+    fun insertCenteredCross() {
         recordCommand(Command.CREATE)
         val (midX, midY) = canvasSize.toSize()/2f
         val horizontalLine = Circle.almostALine(
@@ -996,9 +996,9 @@ class EditClusterViewModel(
             EditClusterTool.Palette -> showColorPickerDialog = true
             EditClusterTool.Delete -> deleteCircles()
             EditClusterTool.Duplicate -> duplicateCircles()
-            EditClusterTool.InsertCenteredCross -> insertFullscreenCross()
-            is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
+            EditClusterTool.InsertCenteredCross -> insertCenteredCross()
             is EditClusterTool.AppliedColor -> selectRegionColor(tool.color)
+            is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
         }
     }
 
@@ -1012,8 +1012,8 @@ class EditClusterViewModel(
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
-            is EditClusterTool.MultiArg -> mode == ToolMode.correspondingTo(tool)
             EditClusterTool.Palette -> showColorPickerDialog
+            is EditClusterTool.MultiArg -> mode == ToolMode.correspondingTo(tool)
             else -> true
         }
 
