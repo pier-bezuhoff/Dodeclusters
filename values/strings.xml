@@ -10,7 +10,7 @@
     <!-- tools -->
     <string name="collapse">Collapse</string>
     <string name="drag_name">Drag</string>
-    <string name="drag_description">Grab &amp; drag circles</string>
+    <string name="drag_description">Grab &amp; drag circles one by one</string>
     <string name="multiselect_name">Multiselect</string>
     <string name="multiselect_description">Select several circles</string>
     <string name="flow_multiselect_name">Flow-multiselect</string>
@@ -22,17 +22,17 @@
     <string name="restrict_region_to_selection_name">Restrict region to selection</string>
     <string name="restrict_region_to_selection_description">Restrict region's bounding circles to only those present in the current selection</string>
     <string name="delete_all_parts_name">Delete all parts</string>
-    <string name="delete_all_parts_description">Delete all parts</string>
+    <string name="delete_all_parts_description">Clear all filled regions</string>
     <string name="show_circles_name">Show circles</string>
-    <string name="show_circles_description">Show/hide all circle outlines</string>
+    <string name="show_circles_description">Show/hide circles</string>
     <string name="toggle_filled_or_outline_name">Filled/outline</string>
-    <string name="toggle_filled_or_outline_description">Switch between showing only borders vs insides</string>
+    <string name="toggle_filled_or_outline_description">Switch between showing only region borders vs filled insides</string>
     <string name="palette_name">Palette</string>
     <string name="palette_description">Pick colors</string>
     <string name="applied_color_name">Applied color</string>
     <string name="applied_color_description">Switch to this recently used color</string>
     <string name="duplicate_name">Duplicate</string>
-    <string name="duplicate_description">Duplicate selected circles and then select the new copies</string>
+    <string name="duplicate_description">Duplicate selected circles</string>
     <string name="delete_name">Delete</string>
     <string name="delete_description">Delete selected circles</string>
     <string name="circle_inversion_name">Circle inversion</string>
@@ -42,7 +42,7 @@
         <item>The circle with respect to which we are inverting</item>
     </string-array>
     <string name="circle_by_center_and_radius_name">Circle by center and radius</string>
-    <string name="circle_by_center_and_radius_description">Construct a circle by its center and radius point</string>
+    <string name="circle_by_center_and_radius_description">Construct a circle by its center and a point lying on it</string>
     <string-array name="circle_by_center_and_radius_arg_descriptions">
         <item>Circle's center</item>
         <item>Any point on the circle</item>
@@ -62,8 +62,8 @@
     <!-- categories -->
     <string name="drag_category_name">Drag</string>
     <string name="multiselect_category_name">Multiselect</string>
-    <string name="region_category_name">Region</string>
-    <string name="visibility_category_name">Visibility</string>
+    <string name="region_category_name">Regions</string>
+    <string name="visibility_category_name">View</string>
     <string name="colors_category_name">Colors</string>
     <string name="attributes_category_name">Delete/Duplicate</string>
     <string name="transform_category_name">Transform</string>

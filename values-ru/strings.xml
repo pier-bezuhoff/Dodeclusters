@@ -1,0 +1,75 @@
+<resources>
+    <!-- top toolbar -->
+    <string name="edit_cluster_title">Редактирование кластера</string>
+    <string name="save_cluster_name">Сохранить текущий кластер</string>
+    <string name="open_file_name">Открыть Dodeclusters файл</string>
+    <string name="undo_name">Отменить действие</string>
+    <string name="redo_name">Повторить действие</string>
+    <!-- tools -->
+    <string name="collapse">Свернуть</string>
+    <string name="drag_name">Перетаскивание</string>
+    <string name="drag_description">Режим перетаскивания окружностей по одной</string>
+    <string name="multiselect_name">Выбор многих</string>
+    <string name="multiselect_description">Режим выбора нескольких окружностей кликом</string>
+    <string name="flow_multiselect_name">Свайп-выбор</string>
+    <string name="flow_multiselect_description">Режим выделения окружностей проводя курсором по ним</string>
+    <string name="toggle_select_all_name">Выделить всё/снять выделение</string>
+    <string name="toggle_select_all_description">Выделить всё/снять выделение</string>
+    <string name="region_name">Области</string>
+    <string name="region_description">Режим выбора областей между окружностями для заливки</string>
+    <string name="restrict_region_to_selection_name">Ограничить области выделением</string>
+    <string name="restrict_region_to_selection_description">Ограничить области только окружностями из выделения</string>
+    <string name="delete_all_parts_name">Очистить все области</string>
+    <string name="delete_all_parts_description">Очистить все области</string>
+    <string name="show_circles_name">Показать окружности</string>
+    <string name="show_circles_description">Показать/скрыть окружности</string>
+    <string name="toggle_filled_or_outline_name">Залито/границы</string>
+    <string name="toggle_filled_or_outline_description">Показывать области залитыми/показывать только границы областей</string>
+    <string name="palette_name">Палитра</string>
+    <string name="palette_description">Выбор цвета</string>
+    <string name="applied_color_name">Использованный цвет</string>
+    <string name="applied_color_description">Выбрать этот уже использованный цвет</string>
+    <string name="duplicate_name">Дублировать</string>
+    <string name="duplicate_description">Продублировать выделенные окружности</string>
+    <string name="delete_name">Удалить</string>
+    <string name="delete_description">Удалить выделенные окружности</string>
+    <string name="circle_inversion_name">Инверсия относительно окружности</string>
+    <string name="circle_inversion_description">Инвертировать объект относительно окружности</string>
+    <string-array name="circle_inversion_arg_descriptions">
+        <item>Инвертируемы объект</item>
+        <item>Окружность, относительно которой мы инвертируем</item>
+    </string-array>
+    <string name="circle_by_center_and_radius_name">Окружность по центру и радиусу</string>
+    <string name="circle_by_center_and_radius_description">Построить окружность по центру и точке на ней</string>
+    <string-array name="circle_by_center_and_radius_arg_descriptions">
+        <item>Центр окружности</item>
+        <item>Точка на окружности</item>
+    </string-array>
+    <string name="circle_by_3_points_name">Окружность по трём точкам</string>
+    <string name="circle_by_3_points_description">Построить окружность по трём точкам, лежащим на ней</string>
+    <string-array name="circle_by_3_points_arg_descriptions">
+        <item>1-ая точка на окружности</item>
+        <item>2-ая точка на окружности</item>
+        <item>3-ья точка на окружности</item>
+    </string-array>
+    <string name="insert_centered_cross_name">Вставить крест по центру</string>
+    <string name="insert_centered_cross_description">Вставить крест по центру</string>
+<!--    <string name="_name"></string>-->
+<!--    <string name="_description"></string>-->
+
+    <!-- categories -->
+    <string name="drag_category_name">Перетаскивание</string>
+    <string name="multiselect_category_name">Выделение многих</string>
+    <string name="region_category_name">Области</string>
+    <string name="visibility_category_name">Вид</string>
+    <string name="colors_category_name">Цвета</string>
+    <string name="attributes_category_name">Удаление/дублирование</string>
+    <string name="transform_category_name">Преобразования</string>
+    <string name="create_category_name">Создание</string>
+    <!-- color picker -->
+    <string name="color_picker_title">Выберите цвет</string>
+    <string name="hex_name">hex</string>
+    <string name="cancel_name">Отмена</string>
+    <string name="ok_name">OK</string>
+    <string name="ok_description">Подтвердить</string>
+</resources>
