@@ -16,15 +16,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
-import androidx.compose.ui.graphics.RenderEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -85,11 +82,11 @@ fun EditClusterCanvas(
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val maxDecayAlpha = 0.2f
     val decayDuration = 1_500
-    val animations: MutableMap<DecayingCircles, Animatable<Float, AnimationVector1D>> =
+    val animations: MutableMap<CircleAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableMapOf() }
     val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch { // listen to circle animations
-        viewModel.decayingCircles.collect { event ->
+        viewModel.circleAnimations.collect { event ->
             launch {
                 val animatable = Animatable(0f)
                 animations[event] = animatable
@@ -129,7 +126,7 @@ fun EditClusterCanvas(
             if (viewModel.showCircles)
                 drawCircles(viewModel, circleColor, circleStroke)
             drawParts(viewModel, clusterPathAlpha, circleStroke)
-            drawCreationPrototypes(viewModel, handleRadius, circleStroke, strokeWidth)
+            drawPartialConstructs(viewModel, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, selectionMarkingsColor, scaleHandleColor, deleteIconTint, rotateIconTint, rotationIndicatorColor, rotationIndicatorRadius, handleRadius, iconDim, deleteIcon, rotateIcon, dottedStroke)
         }
     }
@@ -198,16 +195,23 @@ private fun SelectionsCanvas(
 }
 
 private fun DrawScope.drawAnimation(
-    animations: Map<DecayingCircles, Animatable<Float, AnimationVector1D>>
+    animations: Map<CircleAnimation, Animatable<Float, AnimationVector1D>>
 ) {
-    for ((decayingCircles, decayAlpha) in animations)
-        for (circle in decayingCircles.circles)
+    for ((circleAnimation, decayAlpha) in animations) {
+        for (circle in circleAnimation.circles) {
+            val color = when (circleAnimation) {
+                is CircleAnimation.Entrance -> Color.Green
+                is CircleAnimation.ReEntrance -> Color.Blue
+                is CircleAnimation.Exit -> Color.Red
+            }
             drawCircle(
-                color = decayingCircles.color,
+                color = color,
                 alpha = decayAlpha.value,
                 radius = circle.radius,
                 center = circle.center
             )
+        }
+    }
 }
 
 private fun DrawScope.drawCircles(
@@ -251,7 +255,7 @@ private fun DrawScope.drawParts(
     }
 }
 
-private fun DrawScope.drawCreationPrototypes(
+private fun DrawScope.drawPartialConstructs(
     viewModel: EditClusterViewModel,
     handleRadius: Float,
     circleStroke: DrawStyle,
@@ -260,6 +264,25 @@ private fun DrawScope.drawCreationPrototypes(
     creationPrototypeColor: Color = DodeclustersColors.green,
 ) {
     when (viewModel.mode) {
+        ToolMode.CIRCLE_INVERSION -> viewModel.partialArgList!!.args.let { args ->
+            val circles = args.map { viewModel.circles[(it as PartialArgList.Arg.CircleIndex).index] }
+            if (circles.isNotEmpty()) {
+                drawCircle(
+                    color = creationPrototypeColor,
+                    radius = circles[0].radius.toFloat(),
+                    center = circles[0].offset,
+                    style = circleStroke
+                )
+            }
+            if (circles.size == 2) {
+                drawCircle(
+                    color = creationPrototypeColor.copy(alpha = 0.6f),
+                    radius = circles[1].radius.toFloat(),
+                    center = circles[1].offset,
+                    style = circleStroke
+                )
+            }
+        }
         ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> viewModel.partialArgList!!.args.let { args ->
             if (args.isNotEmpty()) {
                 val center = viewModel.absolute((args[0] as PartialArgList.Arg.XYPoint).toOffset())

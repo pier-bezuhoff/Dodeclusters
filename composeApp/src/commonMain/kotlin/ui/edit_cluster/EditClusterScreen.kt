@@ -221,6 +221,7 @@ fun BottomToolbar(
         CategoryButton(viewModel, EditClusterCategory.Visibility)
         CategoryButton(viewModel, EditClusterCategory.Colors)
         AttributesCategoryButton(viewModel)
+        CategoryButton(viewModel, EditClusterCategory.Transform)
     }
 }
 
@@ -297,7 +298,6 @@ fun Panel(
             for (color in colorsByMostUsed) {
                 ToolButton(viewModel, EditClusterTool.AppliedColor(color))
             }
-            // used colors button
         }
         // hide panel button
         WithTooltip(stringResource(Res.string.collapse)) {

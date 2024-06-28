@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.toSize
 import data.Circle
 import data.CircleF
 import data.Cluster
-import data.ColorCssSerializer
 import data.OffsetSerializer
 import data.PartialArgList
 import data.io.Ddc
@@ -70,7 +69,7 @@ class EditClusterViewModel(
         EditClusterCategory.Visibility,
         EditClusterCategory.Colors,
         EditClusterCategory.Attributes, // replace with floating context menu
-//        EditClusterCategory.Transform,
+        EditClusterCategory.Transform,
         EditClusterCategory.Create, // FAB
     )
     // this int list is to be persisted/preserved
@@ -138,8 +137,8 @@ class EditClusterViewModel(
     // s0  s1  s2 ... s_k    | s_k+1 |      s_k+2     s_k+3
     // ^ history (past) ^    |  ^^^current state  \  ^^ redo history (aka future)
 
-    private val _decayingCircles = MutableSharedFlow<DecayingCircles>()
-    val decayingCircles = _decayingCircles.asSharedFlow()
+    private val _circleAnimations = MutableSharedFlow<CircleAnimation>()
+    val circleAnimations = _circleAnimations.asSharedFlow()
 
     var showColorPickerDialog by mutableStateOf(false)
 
@@ -313,8 +312,8 @@ class EditClusterViewModel(
             selection.clear()
             selection.add(circles.size - 1)
             coroutineScope.launch {
-                _decayingCircles.emit(
-                    DecayingCircles(listOf(newCircle.toCircleF()), Color.Green)
+                _circleAnimations.emit(
+                    CircleAnimation.Entrance(listOf(newCircle.toCircleF()))
                 )
             }
         }
@@ -340,8 +339,8 @@ class EditClusterViewModel(
             selection.clear()
             selection.addAll(oldSize until (oldSize + copiedCircles.size))
             coroutineScope.launch {
-                _decayingCircles.emit(
-                    DecayingCircles(copiedCircles.map { it.toCircleF() }, Color.Blue)
+                _circleAnimations.emit(
+                    CircleAnimation.ReEntrance(copiedCircles.map { it.toCircleF() })
                 )
             }
         }
@@ -383,8 +382,8 @@ class EditClusterViewModel(
                     .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
             )
             coroutineScope.launch {
-                _decayingCircles.emit(
-                    DecayingCircles(selection.map { circles[it].toCircleF() }, Color.Red)
+                _circleAnimations.emit(
+                    CircleAnimation.Exit(selection.map { circles[it].toCircleF() })
                 )
             }
         }
@@ -551,6 +550,8 @@ class EditClusterViewModel(
 
     fun toggleShowCircles() {
         showCircles = !showCircles
+        if (!showCircles && mode is ToolMode)
+            switchToMode(SelectionMode.Drag)
     }
 
     fun toggleRestrictRegionsToSelection() {
@@ -588,8 +589,8 @@ class EditClusterViewModel(
         selection.clear()
         selection.addAll(listOf(circles.size - 2, circles.size - 1))
         coroutineScope.launch { // NOTE: this animation looks bad for lines
-            _decayingCircles.emit(
-                DecayingCircles(listOf(horizontalLine.toCircleF(), verticalLine.toCircleF()), Color.Green)
+            _circleAnimations.emit(
+                CircleAnimation.Entrance(listOf(horizontalLine.toCircleF(), verticalLine.toCircleF()))
             )
         }
     }
@@ -695,19 +696,19 @@ class EditClusterViewModel(
                     is PartialArgList.Arg.XYPoint -> visiblePosition?.let {
                         PartialArgList.Arg.XYPoint.fromOffset(it)
                     }
-                    is PartialArgList.Arg.CircleIndex -> TODO()
-                    is PartialArgList.Arg.SelectedCircles -> TODO()
+                    is PartialArgList.Arg.CircleIndex -> null
+                    is PartialArgList.Arg.SelectedCircles -> null
                     null -> throw IllegalStateException("Never")
                 }
                 partialArgList = if (newArg == null)
                     args.copy(lastArgIsConfirmed = true)
                 else
                     args.updateCurrentArg(newArg, confirmThisArg = true)
-                if (partialArgList!!.isFull) {
-                    completeToolMode()
-                }
             }
             else -> {}
+        }
+        if (partialArgList!!.isFull) {
+            completeToolMode()
         }
     }
 
@@ -752,11 +753,20 @@ class EditClusterViewModel(
                 if (previouslySelected != null && selection.isEmpty()) // this line requires deselecting first to navigate around canvas
                     selection.add(previouslySelected)
             } else {
-                if (mode is ToolMode &&
-                    partialArgList!!.nextArgType == PartialArgList.ArgType.XYPoint
-                ) {
-                    val newArg = PartialArgList.Arg.XYPoint.fromOffset(visiblePosition)
-                    partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = false)
+                if (mode is ToolMode) {
+                    when (partialArgList!!.nextArgType) {
+                        PartialArgList.ArgType.XYPoint -> {
+                            val newArg = PartialArgList.Arg.XYPoint.fromOffset(visiblePosition)
+                            partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = false)
+                        }
+                        PartialArgList.ArgType.CircleIndex -> {
+                            selectCircle(circles, visiblePosition)?.let { circleIndex ->
+                                val newArg = PartialArgList.Arg.CircleIndex(circleIndex)
+                                partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
+                            }
+                        }
+                        else -> {}
+                    }
                 }
             }
         }
@@ -848,39 +858,10 @@ class EditClusterViewModel(
         scaleSelection(zoom)
     }
 
-    fun onLongDragStart(position: Offset) {
-        // draggables = circles
-        if (showCircles)
-            selectCircle(circles, position)?.let { ix ->
-                grabbedCircleIx = ix
-                if (mode == SelectionMode.Drag) {
-                    selection.clear()
-                    selection.add(ix)
-                }
-            } ?: run {
-                if (true || mode == SelectionMode.Region) {
-                    // TODO: select part
-                    // drag bounding circles
-                }
-            }
-    }
-
-    fun onLongDrag(delta: Offset) {
-        // if grabbed smth, do things (regardless of selection)
-        grabbedCircleIx?.let {
-            recordCommand(Command.MOVE)
-            val circle = circles[it]
-            circles[it] = Circle(circle.offset + delta, circle.radius)
-        } ?: onPanZoomRotate(delta, Offset.Zero, 1f, 0f)
-    }
-
-    fun onLongDragCancel() {
-        grabbedCircleIx = null
-    }
-
-    fun onLongDragEnd() {
-        grabbedCircleIx = null
-    }
+    fun onLongDragStart(position: Offset) {}
+    fun onLongDrag(delta: Offset) {}
+    fun onLongDragCancel() {}
+    fun onLongDragEnd() {}
 
     private fun selectCategory(category: EditClusterCategory, togglePanel: Boolean = false) {
         val wasSelected = activeCategory == category
@@ -948,6 +929,7 @@ class EditClusterViewModel(
         when (toolMode) {
             ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> completeCircleByCenterAndRadius()
             ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
+            ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
         }
     }
 
@@ -979,6 +961,15 @@ class EditClusterViewModel(
         } finally {
             partialArgList = PartialArgList(argList.signature)
         }
+    }
+
+    private fun completeCircleInversion() {
+        val argList = partialArgList!!
+        val (circle0Index, invertingCircleIndex) = argList.args
+            .map { (it as PartialArgList.Arg.CircleIndex).index }
+        val newCircle = Circle.invert(circles[invertingCircleIndex], circles[circle0Index])
+        createNewCircle(newCircle, switchToSelectionMode = false)
+        partialArgList = PartialArgList(argList.signature)
     }
 
     fun toolAction(tool: EditClusterTool) {
@@ -1094,13 +1085,13 @@ enum class Handle {
 }
 
 /** params for create/copy/delete animations */
-@Serializable
 @Immutable
-data class DecayingCircles(
-    val circles: List<CircleF>,
-    @Serializable(ColorCssSerializer::class)
-    val color: Color // TODO: replace color with cr/cp/d enum values
-)
+sealed interface CircleAnimation {
+    val circles: List<CircleF>
+    data class Entrance(override val circles: List<CircleF>) : CircleAnimation
+    data class ReEntrance(override val circles: List<CircleF>) : CircleAnimation
+    data class Exit(override val circles: List<CircleF>) : CircleAnimation
+}
 
 /** used for grouping UiState changes into batches for history keeping */
 enum class Command {

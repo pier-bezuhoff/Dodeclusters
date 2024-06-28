@@ -44,7 +44,7 @@ enum class ToolMode(
 ) : Mode {
     CIRCLE_BY_CENTER_AND_RADIUS(EditClusterTool.ConstructCircleByCenterAndRadius),
     CIRCLE_BY_3_POINTS(EditClusterTool.ConstructCircleBy3Points),
-//    CIRCLE_INVERSION(EditClusterTool.CircleInversion),
+    CIRCLE_INVERSION(EditClusterTool.CircleInversion),
     ;
 
     val signature: PartialArgList.Signature = tool.signature
