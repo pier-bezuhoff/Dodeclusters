@@ -214,7 +214,10 @@ fun BottomToolbar(
         CategoryButton(viewModel, EditClusterCategory.Drag)
         CategoryButton(viewModel, EditClusterCategory.Multiselect)
         CategoryButton(viewModel, EditClusterCategory.Region)
-        VerticalDivider(Modifier.fillMaxHeight(0.8f))
+        VerticalDivider(Modifier
+            .fillMaxHeight(0.7f)
+            .align(Alignment.CenterVertically)
+        )
         CategoryButton(viewModel, EditClusterCategory.Visibility)
         CategoryButton(viewModel, EditClusterCategory.Colors)
         AttributesCategoryButton(viewModel)
@@ -278,8 +281,9 @@ fun Panel(
         }
         if (viewModel.activeCategory is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
             VerticalDivider(Modifier
-                .height(48.dp)
+                .height(40.dp)
                 .padding(horizontal = 8.dp)
+                .align(Alignment.CenterVertically)
             )
             val colorsByMostUsed = viewModel.parts
                 .flatMap { part ->
