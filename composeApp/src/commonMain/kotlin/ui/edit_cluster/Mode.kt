@@ -34,7 +34,7 @@ enum class MultiselectMethod {
 @Serializable
 /** sub-modes of [SelectionMode.Multiselect] related to how new selection is combined */
 enum class MultiselectLogic {
-    SYMMETRIC_DIFFIRENCE, ADD, SUBTRACT, REPLACE
+    ADD, REPLACE, SUBTRACT, SYMMETRIC_DIFFERENCE,
 }
 
 @Serializable

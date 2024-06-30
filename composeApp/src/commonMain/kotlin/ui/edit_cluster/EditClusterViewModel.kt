@@ -538,6 +538,15 @@ class EditClusterViewModel(
         return Rect(left, top, right, bottom)
     }
 
+    fun checkIfSelectionRectHandlesFitIn(): Boolean {
+        val rect = getSelectionRect()
+        val threshold = 0.2f // = 20%
+        val (w, h) = canvasSize
+        return rect.top > threshold * h &&
+            rect.bottom < (1 - threshold) * h &&
+            rect.right < (1 - threshold) * w
+    }
+
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
         if (!selection.containsAll(circles.indices.toSet())) {
@@ -698,7 +707,7 @@ class EditClusterViewModel(
                     }
                     is PartialArgList.Arg.CircleIndex -> null
                     is PartialArgList.Arg.SelectedCircles -> null
-                    null -> throw IllegalStateException("Never")
+                    null -> null // in case prev onDown failed to select anything
                 }
                 partialArgList = if (newArg == null)
                     args.copy(lastArgIsConfirmed = true)
@@ -707,7 +716,7 @@ class EditClusterViewModel(
             }
             else -> {}
         }
-        if (partialArgList!!.isFull) {
+        if (partialArgList?.isFull == true) {
             completeToolMode()
         }
     }
