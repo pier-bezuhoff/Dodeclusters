@@ -28,7 +28,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import data.io.readDdcFromUri
 import ui.theme.dodeclustersDarkScheme
 import ui.theme.dodeclustersLightScheme
@@ -37,6 +40,29 @@ import java.io.FileNotFoundException
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // configure full-screen, immersive mode
+        // reference: https://developer.android.com/develop/ui/views/layout/immersive
+        val windowInsetsController =
+            WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { view, windowInsets ->
+            if (windowInsets.isVisible(WindowInsetsCompat.Type.navigationBars())
+                || windowInsets.isVisible(WindowInsetsCompat.Type.statusBars())) {
+                if (false) { // when requested programmatically
+                    // Hide both the status bar and the navigation bar.
+                    windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+                }
+            } else {
+                if (false) { // when requested programmatically
+                    // Show both the status bar and the navigation bar.
+                    windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+                }
+            }
+            ViewCompat.onApplyWindowInsets(view, windowInsets)
+        }
 
         setContent {
             // this horrendous mess looks smart but is actually very stupid
