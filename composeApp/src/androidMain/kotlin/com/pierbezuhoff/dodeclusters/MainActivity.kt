@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // configure full-screen, immersive mode
+        // setup for full-screen, immersive mode
         // reference: https://developer.android.com/develop/ui/views/layout/immersive
         val windowInsetsController =
             WindowCompat.getInsetsController(window, window.decorView)

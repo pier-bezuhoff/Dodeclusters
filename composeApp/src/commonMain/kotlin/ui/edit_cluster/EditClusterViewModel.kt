@@ -27,6 +27,7 @@ import data.io.Ddc
 import data.io.parseDdc
 import domain.angleDeg
 import domain.rotateBy
+import getPlatform
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -100,7 +101,7 @@ class EditClusterViewModel(
     val circleSelectionIsActive by derivedStateOf {
         showCircles && selection.isNotEmpty() && mode.isSelectingCircles()
     }
-    val handleConfig = derivedStateOf { // depends on selectionMode & selection
+    val handleConfig by derivedStateOf { // depends on selectionMode & selection
         when (mode) {
             SelectionMode.Drag ->
                 if (selection.isEmpty()) null
@@ -726,7 +727,7 @@ class EditClusterViewModel(
         rotationIndicatorPosition = null
         grabbedHandle = null // reset grabbed thingies
         if (showCircles) {
-            grabbedHandle = when (val h = handleConfig.value) {
+            grabbedHandle = when (val h = handleConfig) {
                 is HandleConfig.SingleCircle -> {
                     val circle = circles[h.ix]
                     val radiusHandlePosition = circle.offset + Offset(circle.radius.toFloat(), 0f)
@@ -785,7 +786,7 @@ class EditClusterViewModel(
     fun onPanZoomRotate(pan: Offset, centroid: Offset, zoom: Float, rotationAngle: Float) {
         if (grabbedHandle != null && grabbedHandle != Handle.DELETE) {
             // drag handle
-            when (val h = handleConfig.value) {
+            when (val h = handleConfig) {
                 is HandleConfig.SingleCircle -> {
                     recordCommand(Command.CHANGE_RADIUS)
                     val center = circles[h.ix].offset
@@ -863,7 +864,7 @@ class EditClusterViewModel(
     }
 
     fun onVerticalScroll(yDelta: Float) {
-        val zoom = (1.01f).pow(-yDelta) // NOTE: there is an argument to have lower exponent for browser
+        val zoom = getPlatform().scrollToZoom(yDelta)
         scaleSelection(zoom)
     }
 
@@ -1036,7 +1037,8 @@ class EditClusterViewModel(
                 ),
                 parts = listOf(Cluster.Part(setOf(0), setOf(1,2,3))),
                 selection = listOf(0),
-                translation = Offset(225f, 225f) + Offset(200f, 200f)
+                // NOTE: hardcoded default is bad, much better would be to specify the center but oh well
+                translation = Offset(225f, 225f) + Offset(400f, 0f)
             )
 
             fun restore(coroutineScope: CoroutineScope, uiState: UiState): EditClusterViewModel =
@@ -1047,8 +1049,7 @@ class EditClusterViewModel(
                     if (uiState.selection.size > 1)
                         mode = SelectionMode.Multiselect
                     selection.addAll(uiState.selection)
-//                    translation.value = Offset(100f, 0f) //uiState.translation
-                    // this translation recovery dont work
+                    translation = uiState.translation
                 }
 
             fun save(viewModel: EditClusterViewModel): UiState =

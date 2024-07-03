@@ -319,10 +319,10 @@ private fun DrawScope.drawPartialConstructs(
                 )
             if (args.size == 2)
                 drawLine(
-                    creationPrototypeColor,
+                    color = creationPrototypeColor,
                     start = points[0],
                     end = points[1],
-                    strokeWidth
+                    strokeWidth = strokeWidth
                 )
             else if (args.size == 3) {
                 try {
@@ -349,7 +349,7 @@ private fun DrawScope.drawHandles(
     deleteIconTint: Color,
     rotateIconTint: Color,
     rotationIndicatorColor: Color,
-    rotationIndicatorRaidus: Float,
+    rotationIndicatorRadius: Float,
     handleRadius: Float,
     iconDim: Float,
     deleteIcon: Painter,
@@ -357,16 +357,16 @@ private fun DrawScope.drawHandles(
     dottedStroke: DrawStyle,
 ) {
     if (viewModel.showCircles) {
-        val iconSize: Size = Size(iconDim, iconDim)
-        when (viewModel.handleConfig.value) {
+        val iconSize = Size(iconDim, iconDim)
+        when (viewModel.handleConfig) {
             is HandleConfig.SingleCircle -> {
                 val selectedCircle = viewModel.circles[viewModel.selection.single()]
                 val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
                 val bottom = selectedCircle.offset + Offset(0f, selectedCircle.radius.toFloat())
                 drawLine( // radius marker
                     color = selectionMarkingsColor,
-                    selectedCircle.offset,
-                    right,
+                    start = selectedCircle.offset,
+                    end = right,
                 )
                 drawCircle( // radius handle
                     color = scaleHandleColor,
@@ -404,7 +404,7 @@ private fun DrawScope.drawHandles(
                 viewModel.rotationIndicatorPosition?.let {
                     drawCircle( // rotation indicator
                         color = rotationIndicatorColor,
-                        radius = rotationIndicatorRaidus,
+                        radius = rotationIndicatorRadius,
                         center = it,
                     )
                 }
@@ -416,4 +416,16 @@ private fun DrawScope.drawHandles(
             }
         }
     }
+}
+
+@Composable
+fun SelectionControls() {
+    // J-shaped carcass (always active when selection isn't empty)
+    // NE: scale handle
+    // E: copy button
+    // SE: rotate handle + (screen) center indicator & rotation indicator when it's grabbed
+    // S: delete button
+    // potentially add custom fields to specify angle & scale manually
+    // selection rect's scale & rotate handles are also always active
+    // tho when they aren't visible they can't be grabbed obv
 }
