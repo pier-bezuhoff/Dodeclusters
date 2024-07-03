@@ -1,6 +1,12 @@
 package ui.edit_cluster
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.BottomAppBar
@@ -108,9 +115,17 @@ fun EditClusterScreen(
                         .fillMaxWidth(),
                     verticalArrangement = Arrangement.Bottom,
                 ) {
-                    if (viewModel.showPanel) { // use animated visibility instead
+                    // MAYBE: use AnimatedContent
+                    AnimatedVisibility(
+                        viewModel.showPanel,
+                        enter = slideInHorizontally { w -> -w },
+                        exit = slideOutHorizontally { w -> -w }
+                    ) {
                         Panel(viewModel, Modifier.align(Alignment.Start))
                     }
+//                    if (viewModel.showPanel) { // use animated visibility instead
+//                        Panel(viewModel, Modifier.align(Alignment.Start))
+//                    }
                     BottomToolbar(viewModel, Modifier.align(Alignment.Start))
                 }
             }
@@ -275,7 +290,10 @@ fun Panel(
     // mb wrap in a surface
     Row(modifier = modifier
         .horizontalScroll(scrollState)
-        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)),
+        .background(
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
+            RoundedCornerShape(48.dp)
+        ),
     ) {
         for (tool in viewModel.activeCategory.tools) {
             ToolButton(viewModel, tool)
@@ -304,6 +322,7 @@ fun Panel(
             SimpleButton(
                 painterResource(Res.drawable.collapse_down),
                 stringResource(Res.string.collapse),
+                Modifier.padding(4.dp),
                 onClick = { viewModel.showPanel = false }
             )
         }
@@ -370,7 +389,7 @@ fun ToolButton(
                 SimpleButton(icon, name, modifier, onClick)
             }
 
-            is Tool.BinaryToggle -> {
+            is Tool.BinaryToggle -> { // TODO: remove on-tint
                 if (tool.disabledIcon == null) {
                     OnOffButton(
                         icon, name,

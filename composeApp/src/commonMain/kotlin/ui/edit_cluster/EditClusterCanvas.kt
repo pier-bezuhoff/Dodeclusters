@@ -5,11 +5,14 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -32,14 +35,21 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.times
 import data.Circle
 import data.PartialArgList
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_forever
+import dodeclusters.composeapp.generated.resources.delete_name
+import dodeclusters.composeapp.generated.resources.duplicate_name
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
+import dodeclusters.composeapp.generated.resources.stub
+import dodeclusters.composeapp.generated.resources.zoom_in
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import ui.PathType
 import ui.part2path
 import ui.reactiveCanvas
@@ -48,7 +58,7 @@ import kotlin.math.max
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable
-fun EditClusterCanvas(
+fun BoxScope.EditClusterCanvas(
     viewModel: EditClusterViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -75,7 +85,8 @@ fun EditClusterCanvas(
     val rotationIndicatorColor = DodeclustersColors.green.copy(alpha = 0.5f)
 
     val backgroundColor = MaterialTheme.colorScheme.background
-    val circleColor = MaterialTheme.colorScheme.tertiary // MAYBE: black for light scheme
+    val circleColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f) // MAYBE: black for light scheme
+    val selectedCircleColor = MaterialTheme.colorScheme.tertiary
     val clusterPathAlpha = 0.7f
 //    val clusterPathAlpha = 1f // TODO: add a switch for this
     val selectionLinesColor = DodeclustersColors.gray
@@ -100,7 +111,7 @@ fun EditClusterCanvas(
             }
         }
     }
-    SelectionsCanvas(modifier, viewModel, selectionLinesColor, backgroundColor, circleColor, circleThiccStroke)
+    SelectionsCanvas(modifier, viewModel, selectionLinesColor, backgroundColor, selectedCircleColor, circleThiccStroke)
     Canvas(
         modifier
             // NOTE: turned off long press for now (also inside of reactiveCanvas)
@@ -130,6 +141,7 @@ fun EditClusterCanvas(
             drawHandles(viewModel, selectionMarkingsColor, scaleHandleColor, deleteIconTint, rotateIconTint, rotationIndicatorColor, rotationIndicatorRadius, handleRadius, iconDim, deleteIcon, rotateIcon, dottedStroke)
         }
     }
+    HUD()
 }
 
 @Composable
@@ -138,7 +150,7 @@ private fun SelectionsCanvas(
     viewModel: EditClusterViewModel,
     selectionLinesColor: Color,
     backgroundColor: Color,
-    circleColor: Color,
+    selectedCircleColor: Color,
     circleThiccStroke: DrawStyle,
     halfNLines: Int = 200, // not all of them are visible, since we are simplifying to a square
     thiccSelectionCircleAlpha: Float = 0.4f,
@@ -180,9 +192,9 @@ private fun SelectionsCanvas(
                         blendMode = BlendMode.DstOut, // dst out = erase the BG rectangle => show hatching thats drawn behind it
                     )
                 }
-                for (circle in circles) {
+                for (circle in circles) { // MAYBE: draw circle outlines OVER parts
                     drawCircle( // thiccer lines
-                        color = circleColor,
+                        color = selectedCircleColor,
                         alpha = thiccSelectionCircleAlpha,
                         radius = circle.radius.toFloat(),
                         center = circle.offset,
@@ -416,6 +428,48 @@ private fun DrawScope.drawHandles(
             }
         }
     }
+}
+
+@Composable
+fun BoxScope.HUD() {
+    val rightMargin = 192.dp
+    val bottomMargin = 96.dp
+    // infinity button to the left-center
+    // + a way to trigger a visual effect over it
+//    SimpleButton(
+//        painterResource(Res.drawable.infinity),
+//        stringResource(Res.string.stub),
+//        Modifier.align(Alignment.CenterStart)
+//    ) {}
+    // duplicate & delete buttons
+    SimpleButton(
+        painterResource(Res.drawable.zoom_in),
+        stringResource(Res.string.stub),
+        Modifier
+            .align(Alignment.TopEnd)
+            .offset(x = -rightMargin, y = bottomMargin)
+    ) {}
+    SimpleButton(
+        painterResource(Res.drawable.rotate_counterclockwise),
+        stringResource(Res.string.stub),
+        Modifier
+            .align(Alignment.BottomEnd)
+            .offset(x = -rightMargin, y = -bottomMargin)
+    ) {}
+    SimpleButton(
+        painterResource(Res.drawable.copy),
+        stringResource(Res.string.duplicate_name),
+        Modifier
+            .align(Alignment.CenterEnd)
+            .offset(x = -rightMargin)
+    ) {}
+    SimpleButton(
+        painterResource(Res.drawable.delete_forever),
+        stringResource(Res.string.delete_name),
+        Modifier
+            .align(Alignment.BottomEnd)
+            .offset(x = -2*rightMargin, y = -bottomMargin)
+    ) {}
 }
 
 @Composable

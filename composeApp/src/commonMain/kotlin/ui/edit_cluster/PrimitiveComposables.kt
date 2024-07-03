@@ -7,6 +7,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconToggleButton
 import androidx.compose.material3.PlainTooltip
@@ -65,6 +66,9 @@ fun TwoIconButton(
         checked = enabled,
         onCheckedChange = { onClick() },
         modifier = modifier,
+        colors = IconButtonDefaults.iconToggleButtonColors(
+            checkedContentColor = LocalContentColor.current // no need for color variation since we have a diff icon
+        )
     ) {
         Icon(
             if (enabled) iconPainter
@@ -72,20 +76,6 @@ fun TwoIconButton(
             contentDescription = name
         )
     }
-    // crossfade performs meaningless in-transition 50% the panel changes
-//    Crossfade(enabled) { targetChecked ->
-//        IconToggleButton(
-//            checked = enabled,
-//            onCheckedChange = { onClick() },
-//            modifier = modifier,
-//        ) {
-//            Icon(
-//                if (targetChecked) iconPainter
-//                else disabledIconPainter,
-//                contentDescription = name
-//            )
-//        }
-//    }
 }
 
 @Composable
