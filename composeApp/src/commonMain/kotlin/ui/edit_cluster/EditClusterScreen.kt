@@ -1,12 +1,15 @@
 package ui.edit_cluster
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -115,17 +118,16 @@ fun EditClusterScreen(
                         .fillMaxWidth(),
                     verticalArrangement = Arrangement.Bottom,
                 ) {
-                    // MAYBE: use AnimatedContent
-                    AnimatedVisibility(
-                        viewModel.showPanel,
-                        enter = slideInHorizontally { w -> -w },
-                        exit = slideOutHorizontally { w -> -w }
-                    ) {
-                        Panel(viewModel, Modifier.align(Alignment.Start))
+                    AnimatedContent(
+                        Pair(viewModel.activeCategory, viewModel.showPanel),
+                        transitionSpec = {
+                            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End)
+                                .togetherWith(slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start))
+                        }
+                    ) { (activeCategory, showPanel) ->
+                        if (showPanel)
+                            Panel(viewModel, activeCategory, Modifier.align(Alignment.Start))
                     }
-//                    if (viewModel.showPanel) { // use animated visibility instead
-//                        Panel(viewModel, Modifier.align(Alignment.Start))
-//                    }
                     BottomToolbar(viewModel, Modifier.align(Alignment.Start))
                 }
             }
@@ -279,12 +281,13 @@ fun AttributesCategoryButton(
 @Composable
 fun Panel(
     viewModel: EditClusterViewModel,
+    activeCategory: EditClusterCategory,
     modifier: Modifier = Modifier
 ) {
     // shown on the top of the bottom toolbar
     // scrollable lazy row, w = wrap content
     // can be shown or hidden with a collapse button at the end
-    require(viewModel.activeCategory.tools.size > 1)
+    require(activeCategory.tools.size > 1)
     // scrollable row + highlight selected tool
     val scrollState = rememberScrollState()
     // mb wrap in a surface
@@ -295,10 +298,10 @@ fun Panel(
             RoundedCornerShape(48.dp)
         ),
     ) {
-        for (tool in viewModel.activeCategory.tools) {
+        for (tool in activeCategory.tools) {
             ToolButton(viewModel, tool)
         }
-        if (viewModel.activeCategory is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
+        if (activeCategory is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
             VerticalDivider(Modifier
                 .height(40.dp)
                 .padding(horizontal = 8.dp)
