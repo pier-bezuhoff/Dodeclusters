@@ -292,9 +292,10 @@ fun Panel(
     val scrollState = rememberScrollState()
     // mb wrap in a surface
     Row(modifier = modifier
+        .padding(start = 8.dp)
         .horizontalScroll(scrollState)
         .background(
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
             RoundedCornerShape(48.dp)
         ),
     ) {
@@ -389,7 +390,7 @@ fun ToolButton(
             }
 
             is Tool.InstantAction -> {
-                SimpleButton(icon, name, modifier, onClick)
+                SimpleButton(icon, name, modifier, onClick = onClick)
             }
 
             is Tool.BinaryToggle -> { // TODO: remove on-tint

@@ -39,7 +39,8 @@ val surfaceContainerLowestLight = Color(0xFFFFFFFF)
 val surfaceContainerLowLight = Color(0xFFFCF0F7)
 val surfaceContainerLight = Color(0xFFF6EBF2)
 val surfaceContainerHighLight = Color(0xFFF0E5EC)
-val surfaceContainerHighestLight = Color(0xFFEADFE6)
+val surfaceContainerHighestLight = // Color(0xFFEADFE6)
+    Color(0xFFCCCCCC) // haxz
 
 val primaryDark = Color(0xFFEBB5ED)
 val onPrimaryDark = Color(0xFF48204E)
@@ -162,7 +163,9 @@ object DodeclustersColors {
 
     val gray = Color.Gray
     val red = Color.Red
+    val lightRed = Color(0xff_ff7777)
     val pinkish = Color(1f, 0.5f, 0.5f)
     val green = Color(0f, 1f, 0f)
     val darkGreen = Color(0f, 0.7f, 0f)
+    val skyBlue = Color(0xff_2ca3ff)
 }

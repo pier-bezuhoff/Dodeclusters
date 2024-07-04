@@ -82,7 +82,7 @@ class EditClusterViewModel(
     var activeToolIndex: Int by mutableIntStateOf(categoryDefaults[activeCategoryIndex])
         private set
     val activeCategory: EditClusterCategory by derivedStateOf { categories[activeCategoryIndex] }
-    val panelNeedsToBeShown by derivedStateOf { activeCategory.tools.size > 1 }
+    private val panelNeedsToBeShown by derivedStateOf { activeCategory.tools.size > 1 }
     var showPanel by mutableStateOf(panelNeedsToBeShown)
 
     /** currently selected color */
@@ -362,6 +362,7 @@ class EditClusterViewModel(
         if (mode.isSelectingCircles()) {
             recordCommand(Command.DELETE)
             val whatsGone = selection.toSet()
+            val deletedCircles = whatsGone.map { circles[it] }
             val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
             val oldParts = parts.toList()
             val reindexing = reindexingMap(circles.indices, whatsGone)
@@ -384,7 +385,7 @@ class EditClusterViewModel(
             )
             coroutineScope.launch {
                 _circleAnimations.emit(
-                    CircleAnimation.Exit(selection.map { circles[it].toCircleF() })
+                    CircleAnimation.Exit(deletedCircles.map { it.toCircleF() })
                 )
             }
         }
