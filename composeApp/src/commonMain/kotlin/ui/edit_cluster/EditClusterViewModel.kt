@@ -39,7 +39,6 @@ import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import kotlin.math.absoluteValue
-import kotlin.math.pow
 
 /** circle index in vm.circles or cluster.circles */
 typealias Ix = Int
@@ -69,7 +68,7 @@ class EditClusterViewModel(
         EditClusterCategory.Region,
         EditClusterCategory.Visibility,
         EditClusterCategory.Colors,
-        EditClusterCategory.Attributes, // replace with floating context menu
+//        EditClusterCategory.Attributes, // replace with floating context menu
         EditClusterCategory.Transform,
         EditClusterCategory.Create, // FAB
     )
@@ -116,8 +115,9 @@ class EditClusterViewModel(
             else -> null
         }
     }
+    var submode: SubMode by mutableStateOf(SubMode.None)
+        private set
     private var grabbedHandle: Handle? = null
-    private var grabbedCircleIx: Ix? = null // only used for long-drag
     private var rotationAnchor: Offset? = null
     var rotationIndicatorPosition: Offset? by mutableStateOf(null)
 
@@ -1093,6 +1093,12 @@ sealed class HandleConfig(open val ixs: List<Ix>) {
 
 enum class Handle {
     SCALE, ROTATE, DELETE
+}
+
+sealed interface SubMode {
+    data object None : SubMode
+    data class Scale(val center: Offset) : SubMode
+    data class Rotate(val center: Offset, val lastPos: Offset?) : SubMode
 }
 
 /** params for create/copy/delete animations */

@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
@@ -34,9 +35,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.times
 import data.Circle
 import data.PartialArgList
 import dodeclusters.composeapp.generated.resources.Res
@@ -55,6 +54,7 @@ import ui.PathType
 import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
+import kotlin.math.abs
 import kotlin.math.max
 
 @OptIn(ExperimentalResourceApi::class)
@@ -85,6 +85,7 @@ fun BoxScope.EditClusterCanvas(
     val rotateIconTint = MaterialTheme.colorScheme.secondary
     val rotationIndicatorRadius = handleRadius * 3/4
     val rotationIndicatorColor = DodeclustersColors.green.copy(alpha = 0.5f)
+    val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer
 
     val backgroundColor = MaterialTheme.colorScheme.background
     val circleColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f) // MAYBE: black for light scheme
@@ -141,6 +142,7 @@ fun BoxScope.EditClusterCanvas(
                 drawCircles(viewModel, circleColor, circleStroke)
             drawPartialConstructs(viewModel, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, selectionMarkingsColor, scaleHandleColor, deleteIconTint, rotateIconTint, rotationIndicatorColor, rotationIndicatorRadius, handleRadius, iconDim, scaleIcon, deleteIcon, rotateIcon, dottedStroke)
+            drawSelectionControls(viewModel, jCarcassColor, scaleHandleColor, rotateIconTint, rotationIndicatorColor, rotationIndicatorRadius, handleRadius, iconDim, scaleIcon, rotateIcon)
         }
     }
     HUD(viewModel)
@@ -426,6 +428,7 @@ private fun DrawScope.drawHandles(
                         draw(iconSize, colorFilter = ColorFilter.tint(rotateIconTint))
                     }
                 }
+                // use line-angle instead
                 viewModel.rotationIndicatorPosition?.let {
                     drawCircle( // rotation indicator
                         color = rotationIndicatorColor,
@@ -471,12 +474,13 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
             .offset(x = -rightMargin, y = -bottomMargin),
         tint = MaterialTheme.colorScheme.secondary
     ) {}
+
     SimpleButton(
         painterResource(Res.drawable.copy),
         stringResource(Res.string.duplicate_name),
         Modifier
             .align(Alignment.CenterEnd)
-            .offset(x = -rightMargin),
+            .offset(x = -rightMargin + 30.dp),
         tint = DodeclustersColors.skyBlue.copy(alpha = 0.8f)
     ) { viewModel.duplicateCircles() }
     SimpleButton(
@@ -486,19 +490,53 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
             .align(Alignment.BottomEnd)
             .offset(
                 x = -rightMargin - bottomMargin,
-                y = -bottomMargin
+                y = -bottomMargin + 30.dp
             ),
         tint = DodeclustersColors.lightRed.copy(alpha = 0.8f)
     ) { viewModel.deleteCircles() }
 }
 
-@Composable
-fun SelectionControls() {
+fun DrawScope.drawSelectionControls(
+    viewModel: EditClusterViewModel,
+    jCarcassColor: Color,
+    scaleHandleColor: Color,
+    rotateHandleColor: Color,
+    rotationIndicatorColor: Color,
+    rotationIndicatorRadius: Float,
+    handleRadius: Float,
+    iconDim: Float,
+    scaleIcon: Painter,
+    rotateIcon: Painter,
+) {
+    val iconSize = Size(iconDim, iconDim)
+    val (w, h) = viewModel.canvasSize
+    val right = w * (1 - SelectionControlsPosition.RELATIVE_RIGHT_MARGIN)
+    val top = h * SelectionControlsPosition.RELATIVE_TOP_MARGIN
+    val cornerRadius = SelectionControlsPosition.REALTIVE_CORNER_RADIUS * h
+    val bottom = h * (1 - SelectionControlsPosition.RELATIVE_TOP_MARGIN)
+    val left = abs(0.5f - SelectionControlsPosition.RELATIVE_TOP_MARGIN) * h
+    val cornerRect = Rect(Offset(right - cornerRadius, bottom - cornerRadius), cornerRadius)
     // J-shaped carcass (always active when selection isn't empty)
-    // NE: scale handle
-    // E: copy button
-    // SE: rotate handle + (screen) center indicator & rotation indicator when it's grabbed
-    // S: delete button
+    val jPath = Path().apply {
+        moveTo(right, top)
+        lineTo(right, bottom - cornerRadius)
+        arcTo(cornerRect, 0f, 90f, forceMoveTo = true)
+        lineTo(left, bottom)
+    }
+    drawPath(jPath, jCarcassColor)
+    translate(right - iconDim/2f, top - iconDim/2f) {
+        with (scaleIcon) {
+            draw(iconSize, colorFilter = ColorFilter.tint(scaleHandleColor))
+        }
+    }
+    translate(right - iconDim/2f, bottom - iconDim/2f) {
+        with (rotateIcon) {
+            draw(iconSize, colorFilter = ColorFilter.tint(rotateHandleColor))
+        }
+    }
+    // when needed, draw rotation indicator
+    // when in rotation mode, draw rotation anchor/center
+
     // potentially add custom fields to specify angle & scale manually
     // selection rect's scale & rotate handles are also always active
     // tho when they aren't visible they can't be grabbed obv
@@ -507,4 +545,9 @@ fun SelectionControls() {
 object SelectionControlsPosition {
     val RELATIVE_RIGHT_MARGIN = 0.2f // = 20%
     val RELATIVE_TOP_MARGIN = 0.25f
+    val REALTIVE_CORNER_RADIUS = 0.1f // 10% of H
+    // NE: scale handle
+    // E: copy button
+    // SE: rotate handle + (screen) center indicator & rotation indicator when it's grabbed
+    // S: delete button
 }
