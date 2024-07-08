@@ -698,6 +698,10 @@ class EditClusterViewModel(
     }
 
     fun onUp(visiblePosition: Offset?) {
+        submode.let {
+            if (it is SubMode.Rotate)
+                submode = it.copy(lastPos = null)
+        }
         rotationIndicatorPosition = null
         when (mode) {
             is ToolMode -> {
