@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -84,7 +85,7 @@ fun BoxScope.EditClusterCanvas(
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
     val rotateIconTint = MaterialTheme.colorScheme.secondary
     val rotationIndicatorRadius = handleRadius * 3/4
-    val rotationIndicatorColor = DodeclustersColors.green.copy(alpha = 0.5f)
+    val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
     val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer
 
     val backgroundColor = MaterialTheme.colorScheme.background
@@ -141,11 +142,14 @@ fun BoxScope.EditClusterCanvas(
             if (viewModel.showCircles)
                 drawCircles(viewModel, circleColor, circleStroke)
             drawPartialConstructs(viewModel, handleRadius, circleStroke, strokeWidth)
-            drawHandles(viewModel, selectionMarkingsColor, scaleHandleColor, deleteIconTint, rotateIconTint, rotationIndicatorColor, rotationIndicatorRadius, handleRadius, iconDim, scaleIcon, deleteIcon, rotateIcon, dottedStroke)
-            drawSelectionControls(viewModel, jCarcassColor, scaleHandleColor, rotateIconTint, rotationIndicatorColor, rotationIndicatorRadius, handleRadius, iconDim, scaleIcon, rotateIcon)
+            drawHandles(viewModel, selectionMarkingsColor, scaleHandleColor, deleteIconTint, rotateIconTint, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, deleteIcon, rotateIcon, dottedStroke)
         }
+        if (viewModel.circleSelectionIsActive)
+            drawSelectionControls(viewModel, jCarcassColor, scaleHandleColor, rotateIconTint, rotationIndicatorColor, rotationIndicatorRadius, handleRadius, iconDim, scaleIcon, rotateIcon)
     }
-    HUD(viewModel)
+    if (viewModel.circleSelectionIsActive) {
+        HUD(viewModel)
+    }
 }
 
 @Composable
@@ -365,7 +369,6 @@ private fun DrawScope.drawHandles(
     deleteIconTint: Color,
     rotateIconTint: Color,
     rotationIndicatorColor: Color,
-    rotationIndicatorRadius: Float,
     handleRadius: Float,
     iconDim: Float,
     scaleIcon: Painter,
@@ -379,7 +382,6 @@ private fun DrawScope.drawHandles(
             is HandleConfig.SingleCircle -> {
                 val selectedCircle = viewModel.circles[viewModel.selection.single()]
                 val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
-                val bottom = selectedCircle.offset + Offset(0f, selectedCircle.radius.toFloat())
                 drawLine( // radius marker
                     color = selectionMarkingsColor,
                     start = selectedCircle.offset,
@@ -390,11 +392,6 @@ private fun DrawScope.drawHandles(
                     radius = handleRadius,
                     center = right
                 )
-                translate(bottom.x - iconDim/2, bottom.y - iconDim/2) {
-                    with (deleteIcon) {
-                        draw(iconSize, colorFilter = ColorFilter.tint(deleteIconTint))
-                    }
-                }
             }
 
             is HandleConfig.SeveralCircles -> {
@@ -428,17 +425,17 @@ private fun DrawScope.drawHandles(
                         draw(iconSize, colorFilter = ColorFilter.tint(rotateIconTint))
                     }
                 }
-                // use line-angle instead
-                viewModel.rotationIndicatorPosition?.let {
-                    drawCircle( // rotation indicator
-                        color = rotationIndicatorColor,
-                        radius = rotationIndicatorRadius,
-                        center = it,
-                    )
-                }
-                translate(bottom.x - iconDim/2, bottom.y - iconDim/2) {
-                    with (deleteIcon) {
-                        draw(iconSize, colorFilter = ColorFilter.tint(deleteIconTint))
+                (viewModel.submode as? SubMode.Rotate)?.let { submode ->
+                    submode.lastPos?.let {
+                        val d = it - submode.center
+                        val maxDim = viewModel.canvasSize.run { max(width, height) }
+                        val sameDirectionFarAway = submode.center + d / d.getDistance() * maxDim.toFloat()
+                        drawLine(
+                            color = rotationIndicatorColor,
+                            start = submode.center,
+                            end = sameDirectionFarAway,
+                            strokeWidth = 2f
+                        )
                     }
                 }
             }
@@ -457,24 +454,25 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
 //        stringResource(Res.string.stub),
 //        Modifier.align(Alignment.CenterStart)
 //    ) {}
-    // duplicate & delete buttons
-    SimpleButton(
-        painterResource(Res.drawable.zoom_in),
-        stringResource(Res.string.stub),
-        Modifier
-            .align(Alignment.TopEnd)
-            .offset(x = -rightMargin, y = bottomMargin),
-        tint = MaterialTheme.colorScheme.secondary
-    ) {}
-    SimpleButton(
-        painterResource(Res.drawable.rotate_counterclockwise),
-        stringResource(Res.string.stub),
-        Modifier
-            .align(Alignment.BottomEnd)
-            .offset(x = -rightMargin, y = -bottomMargin),
-        tint = MaterialTheme.colorScheme.secondary
-    ) {}
 
+//    SimpleButton(
+//        painterResource(Res.drawable.zoom_in),
+//        stringResource(Res.string.stub),
+//        Modifier
+//            .align(Alignment.TopEnd)
+//            .offset(x = -rightMargin, y = bottomMargin),
+//        tint = MaterialTheme.colorScheme.secondary
+//    ) {}
+//    SimpleButton(
+//        painterResource(Res.drawable.rotate_counterclockwise),
+//        stringResource(Res.string.stub),
+//        Modifier
+//            .align(Alignment.BottomEnd)
+//            .offset(x = -rightMargin, y = -bottomMargin),
+//        tint = MaterialTheme.colorScheme.secondary
+//    ) {}
+
+    // duplicate & delete buttons
     SimpleButton(
         painterResource(Res.drawable.copy),
         stringResource(Res.string.duplicate_name),
@@ -512,9 +510,9 @@ fun DrawScope.drawSelectionControls(
     val (w, h) = viewModel.canvasSize
     val right = w * (1 - SelectionControlsPosition.RELATIVE_RIGHT_MARGIN)
     val top = h * SelectionControlsPosition.RELATIVE_TOP_MARGIN
-    val cornerRadius = SelectionControlsPosition.REALTIVE_CORNER_RADIUS * h
+    val cornerRadius = h * SelectionControlsPosition.REALTIVE_CORNER_RADIUS
     val bottom = h * (1 - SelectionControlsPosition.RELATIVE_TOP_MARGIN)
-    val left = abs(0.5f - SelectionControlsPosition.RELATIVE_TOP_MARGIN) * h
+    val left = w * (1 - SelectionControlsPosition.RELATIVE_RIGHT_MARGIN) - h * SelectionControlsPosition.RELATIVE_TOP_MARGIN
     val cornerRect = Rect(Offset(right - cornerRadius, bottom - cornerRadius), cornerRadius)
     // J-shaped carcass (always active when selection isn't empty)
     val jPath = Path().apply {
@@ -523,7 +521,10 @@ fun DrawScope.drawSelectionControls(
         arcTo(cornerRect, 0f, 90f, forceMoveTo = true)
         lineTo(left, bottom)
     }
-    drawPath(jPath, jCarcassColor)
+    drawPath(
+        jPath, jCarcassColor,
+        style = Stroke(24f, cap = StrokeCap.Round)
+    )
     translate(right - iconDim/2f, top - iconDim/2f) {
         with (scaleIcon) {
             draw(iconSize, colorFilter = ColorFilter.tint(scaleHandleColor))

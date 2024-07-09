@@ -117,9 +117,6 @@ class EditClusterViewModel(
     }
     var submode: SubMode by mutableStateOf(SubMode.None)
         private set
-    private var grabbedHandle: Handle? = null
-    private var rotationAnchor: Offset? = null
-    var rotationIndicatorPosition: Offset? by mutableStateOf(null)
 
     var undoIsEnabled by mutableStateOf(false) // = history is not empty
     var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
@@ -270,7 +267,7 @@ class EditClusterViewModel(
     }
 
     private fun loadUiState(state: UiState) {
-        rotationIndicatorPosition = null
+        submode = SubMode.None
         selection.clear()
         parts.clear()
         circles.clear()
@@ -297,7 +294,10 @@ class EditClusterViewModel(
         redoHistory.clear()
         redoIsEnabled = false
         if (command != Command.ROTATE)
-            rotationIndicatorPosition = null
+            submode.let {
+                if (it is SubMode.Rotate)
+                    submode = it.copy(lastPos = null)
+            }
     }
 
     fun createNewCircle(
@@ -529,6 +529,7 @@ class EditClusterViewModel(
         }
     }
 
+    /** absolute positions */
     fun getSelectionRect(): Rect {
         if (selection.isEmpty()) // pls dont use when empty selection
             return Rect(0f, 0f, 0f, 0f)
@@ -636,50 +637,34 @@ class EditClusterViewModel(
         if (showCircles) {
             when (mode) {
                 SelectionMode.Drag -> {
-                    val clickedDeleteHandle = if (grabbedHandle ==  Handle.DELETE && selection.isNotEmpty()) {
-                        val circle = circles[selection.single()]
-                        val bottom = circle.offset + Offset(0f, circle.radius.toFloat())
-                        isCloseEnoughToSelect(bottom, position)
-                    } else false
-                    if (clickedDeleteHandle)
-                        deleteCircles()
-                    else
-                        reselectCircleAt(position)
+                    reselectCircleAt(position)
                 }
-
                 SelectionMode.Multiselect -> {
-                    val clickedDeleteHandle = if (grabbedHandle ==  Handle.DELETE && selection.isNotEmpty()) {
-                        val deleteHandlePosition = getSelectionRect().bottomCenter
-                        isCloseEnoughToSelect(deleteHandlePosition, position)
-                    } else false
-                    if (clickedDeleteHandle)
-                        deleteCircles()
-                    else { // (re)-select part
-                        val selectedCircleIx = reselectCirclesAt(position)
-                        if (selectedCircleIx == null) { // try to select bounding circles of the selected part
-                            val (part, part0) = selectPartAt(position)
-                            if (part0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
-                                toggleSelectAll()
-                            } else {
-                                parts
-                                    .withIndex()
-                                    .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
-                                    .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }
-                                    ?.let { (i, existingPart) ->
-                                        println("existing bound of $existingPart")
-                                        val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
-                                        if (bounds != selection.toSet()) {
-                                            selection.clear()
-                                            selection.addAll(bounds)
-                                        } else selection.clear()
-                                    } ?: run { // select bound of a non-existent part
-                                    println("bounds of $part")
-                                    val bounds: Set<Ix> = part.insides + part.outsides
+                    // (re)-select part
+                    val selectedCircleIx = reselectCirclesAt(position)
+                    if (selectedCircleIx == null) { // try to select bounding circles of the selected part
+                        val (part, part0) = selectPartAt(position)
+                        if (part0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
+                            toggleSelectAll()
+                        } else {
+                            parts
+                                .withIndex()
+                                .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
+                                .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }
+                                ?.let { (i, existingPart) ->
+                                    println("existing bound of $existingPart")
+                                    val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
                                     if (bounds != selection.toSet()) {
                                         selection.clear()
                                         selection.addAll(bounds)
                                     } else selection.clear()
-                                }
+                                } ?: run { // select bound of a non-existent part
+                                println("bounds of $part")
+                                val bounds: Set<Ix> = part.insides + part.outsides
+                                if (bounds != selection.toSet()) {
+                                    selection.clear()
+                                    selection.addAll(bounds)
+                                } else selection.clear()
                             }
                         }
                     }
@@ -702,7 +687,6 @@ class EditClusterViewModel(
             if (it is SubMode.Rotate)
                 submode = it.copy(lastPos = null)
         }
-        rotationIndicatorPosition = null
         when (mode) {
             is ToolMode -> {
                 // we only confirm args in onUp, they are created in onDown etc.
@@ -728,41 +712,35 @@ class EditClusterViewModel(
     }
 
     fun onDown(visiblePosition: Offset) {
-        rotationAnchor = null
-        rotationIndicatorPosition = null
-        grabbedHandle = null // reset grabbed thingies
+        // reset grabbed thingies
         if (showCircles) {
-            grabbedHandle = when (val h = handleConfig) {
+            submode = when (val h = handleConfig) {
                 is HandleConfig.SingleCircle -> {
                     val circle = circles[h.ix]
                     val radiusHandlePosition = circle.offset + Offset(circle.radius.toFloat(), 0f)
-                    val deleteHandlePosition = circle.offset + Offset(0f, circle.radius.toFloat())
                     when {
-                        isCloseEnoughToSelect(radiusHandlePosition, visiblePosition) -> Handle.SCALE
-                        isCloseEnoughToSelect(deleteHandlePosition, visiblePosition) -> Handle.DELETE
-                        else -> null
+                        isCloseEnoughToSelect(radiusHandlePosition, visiblePosition) ->
+                            SubMode.Scale(circle.offset)
+                        else -> SubMode.None
                     }
                 }
                 is HandleConfig.SeveralCircles -> {
                     val rect = getSelectionRect()
                     val scaleHandlePosition = rect.topRight
                     val rotateHandlePosition = rect.bottomRight
-                    val deleteHandlePosition = rect.bottomCenter
                     when {
-                        isCloseEnoughToSelect(scaleHandlePosition, visiblePosition) -> Handle.SCALE
+                        isCloseEnoughToSelect(scaleHandlePosition, visiblePosition) ->
+                            SubMode.Scale(rect.center)
                         isCloseEnoughToSelect(rotateHandlePosition, visiblePosition) -> {
-                            rotationAnchor = rect.center
-                            rotationIndicatorPosition = rotateHandlePosition
-                            Handle.ROTATE
+                            SubMode.Rotate(rect.center, rotateHandlePosition)
                         }
-                        isCloseEnoughToSelect(deleteHandlePosition, visiblePosition) -> Handle.DELETE
-                        else -> null
+                        else -> SubMode.None
                     }
                 }
-                else -> null
+                else -> SubMode.None
             }
             // NOTE: this enables drag-only behavior, you lose your selection when grabbing new circle
-            if (grabbedHandle == null && mode == SelectionMode.Drag) {
+            if (mode == SelectionMode.Drag && submode is SubMode.None) {
                 val previouslySelected = selection.firstOrNull()
                 reselectCircleAt(visiblePosition)
                 if (previouslySelected != null && selection.isEmpty()) // this line requires deselecting first to navigate around canvas
@@ -789,7 +767,7 @@ class EditClusterViewModel(
 
     // MAYBE: handle key arrows as panning
     fun onPanZoomRotate(pan: Offset, centroid: Offset, zoom: Float, rotationAngle: Float) {
-        if (grabbedHandle != null && grabbedHandle != Handle.DELETE) {
+        if (submode !is SubMode.None) {
             // drag handle
             when (val h = handleConfig) {
                 is HandleConfig.SingleCircle -> {
@@ -799,8 +777,8 @@ class EditClusterViewModel(
                     circles[h.ix] = circles[h.ix].copy(radius = r.toDouble())
                 }
                 is HandleConfig.SeveralCircles -> {
-                    when (grabbedHandle) {
-                        Handle.SCALE -> {
+                    when (val sm = submode) {
+                        is SubMode.Scale -> {
                             recordCommand(Command.SCALE)
                             val rect = getSelectionRect()
                             val scaleHandlePosition = rect.topRight
@@ -814,14 +792,15 @@ class EditClusterViewModel(
                                 circles[ix] = Circle(newOffset, handleScale * circle.radius)
                             }
                         }
-                        Handle.ROTATE -> {
+                        is SubMode.Rotate -> {
                             recordCommand(Command.ROTATE)
-                            val center = rotationAnchor!!
-                            val centerToHandle = rotationIndicatorPosition!! - center
+                            val center = sm.center
+                            val centerToHandle = sm.lastPos!! - center
                             val centerToCurrent = centerToHandle + pan
                             val angle = centerToHandle.angleDeg(centerToCurrent)
 //                            println(angle)
-                            rotationIndicatorPosition = (rotationIndicatorPosition!! - center).rotateBy(angle) + center
+//                            rotationIndicatorPosition = centerToHandle.rotateBy(angle) + center
+                            submode = sm.copy(lastPos = absolute(centroid))
                             for (ix in selection) {
                                 val circle = circles[ix]
                                 val newOffset = (circle.offset - center).rotateBy(angle) + center
