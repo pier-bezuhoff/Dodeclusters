@@ -168,12 +168,14 @@ data class DirectedCircle(
 
 // TODO: Clifford algebra
 /**
- * e_0 = (e_minus - e_plus) / 2
+ * Projective-conformal representation of circles/lines/points/imaginary circles via homogenous coordinates.
+ *
+ * e_0 = (e_minus - e_plus) / 2,
  * e_inf = e_plus + e_minus
  *
- * e_0 = w = 1
- * x = cx
- * y = cy
+ * e_0 = w = 1,
+ * x = cx,
+ * y = cy,
  * e_inf = z = (cx^2 + cy^2 - r^2) / 2
  * */
 @Serializable
@@ -183,22 +185,68 @@ data class GeneralizedCircle(
     val y: Double,
     val z: Double
 ) {
+    init {
+        require(listOf(w,x,y,z).any { abs(it) > EPSILON }) { "Homogenous coordinates are invalid" }
+    }
+
+    val isLine: Boolean =
+        abs(w) < EPSILON
+    /** Radius squared */
+    val r2: Double =
+        if (isLine) Double.POSITIVE_INFINITY
+        else (x/w).pow(2) + (y/w).pow(2) - 2*z/w
+    val isPoint: Boolean =
+        !isLine && abs(r2) < EPSILON
+    val isRealCircle: Boolean =
+        !isLine && r2 >= EPSILON
+    val isImaginaryCircle: Boolean =
+        !isLine && r2 <= EPSILON
+
+    /** Upcast a point (x, y) */
+    constructor(x: Double, y: Double) : this(
+        1.0, x, y, (x.pow(2) + y.pow(2))/2
+    )
+
     constructor(circle: Circle) : this(
         1.0,
         circle.x, circle.y,
         (circle.x.pow(2) + circle.y.pow(2) - circle.radius.pow(2))/2
     )
 
-    fun toCircle(): Circle? {
-        if (abs(w) < EPSILON)
-            return null
-        // assuming normalization w=1
-        require(abs(w - 1) < EPSILON)
-        val r2 = x.pow(2) + y.pow(2) - 2*w
-        if (r2 <= 0.0)
-            return null
-        return Circle(x, y, sqrt(r2))
+    fun toCircle(): Circle? =
+        if (isRealCircle)
+            Circle(x/w, y/w, sqrt(r2))
+        else null
+
+    operator fun times(a: Number): GeneralizedCircle {
+        val a0 = a.toDouble()
+        return GeneralizedCircle(w*a0, x*a0, y*a0, z*a0)
     }
+
+    operator fun plus(other: GeneralizedCircle): GeneralizedCircle =
+        GeneralizedCircle(w + other.w, x + other.x, y + other.y, z + other.z)
+
+    operator fun minus(other: GeneralizedCircle): GeneralizedCircle =
+        GeneralizedCircle(w - other.w, x - other.x, y - other.y, z - other.z)
+
+    fun affineCombination(other: GeneralizedCircle, k: Double): GeneralizedCircle =
+        this*k + other*(1 - k)
+
+    fun applyTo(target: GeneralizedCircle, times: Int = 1): GeneralizedCircle {
+        require(times > 0)
+        return affineCombination(target, times + 1.0)
+    }
+
+    /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
+     * counting from [this] circle's side */
+    fun bisector(other: GeneralizedCircle, nOfSections: Int = 2, index: Int = 1): GeneralizedCircle {
+        require(nOfSections >= 1)
+        return affineCombination(other, (nOfSections - index).toDouble()/nOfSections)
+    }
+
+    // = affineCombination(other, inf)
+    fun altBisector(other: GeneralizedCircle): GeneralizedCircle =
+        this - other
 
     companion object {
         /**
