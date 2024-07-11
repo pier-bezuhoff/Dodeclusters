@@ -229,6 +229,25 @@ data class GeneralizedCircle(
     operator fun minus(other: GeneralizedCircle): GeneralizedCircle =
         GeneralizedCircle(w - other.w, x - other.x, y - other.y, z - other.z)
 
+    infix fun homogenousEquals(other: GeneralizedCircle): Boolean =
+        if (isLine || other.isLine) {
+            if (isLine != other.isLine)
+                false
+            else if (x >= EPSILON)
+                abs(x - other.x) < EPSILON &&
+                abs(y/x - other.y/other.x) < EPSILON &&  // x == x' implies x' > 0
+                abs(z/x - other.z/other.x) < EPSILON
+            else if (y >= EPSILON)
+                abs(y - other.y) < EPSILON &&
+                abs(z/y - other.z/other.y) < EPSILON // y == y' implies y' > 0
+            else
+                abs(z - other.z) < EPSILON
+        } else { // w > 0 && w' > 0
+            abs(x/w - other.x/other.w) < EPSILON &&
+            abs(y/w - other.y/other.w) < EPSILON &&
+            abs(z/w - other.z/other.w) < EPSILON
+        }
+
     fun affineCombination(other: GeneralizedCircle, k: Double): GeneralizedCircle =
         this*k + other*(1 - k)
 
@@ -248,6 +267,12 @@ data class GeneralizedCircle(
     fun altBisector(other: GeneralizedCircle): GeneralizedCircle =
         this - other
 
+    fun calculatePencilType(other: GeneralizedCircle): CirclePencilType? =
+        if (this homogenousEquals other)
+            null
+        else
+            TODO()
+
     companion object {
         /**
          * a*x + b*y + c = 0
@@ -263,4 +288,10 @@ data class GeneralizedCircle(
             return line(dy, -dx, c)
         }
     }
+}
+
+enum class CirclePencilType {
+    ELLIPTIC, // lines with 1 common point, circles with 2 common points
+    PARABOLIC, // parallel lines, circles tangential to 1 common line at 1 common point
+    HYPERBOLIC, // concentric circles, circles perpendicular to every circle of a fixed (dual) elliptic pencil
 }
