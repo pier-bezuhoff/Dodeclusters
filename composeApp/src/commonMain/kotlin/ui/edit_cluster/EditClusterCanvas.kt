@@ -543,10 +543,29 @@ fun DrawScope.drawSelectionControls(
     // tho when they aren't visible they can't be grabbed obv
 }
 
+//            .
+//            .
+//           (+)   [scale up]
+//            |
+//            |
+//            ^
+//            O    [scale slider]
+//            v
+//            |
+//            |
+//           (-)   [scale down]
+//            .
+//            | x2 [copy]
+//            |
+//        ____J
+//      [x]   . R  [rotation handle]
+//            .
 object SelectionControlsPosition {
-    val RELATIVE_RIGHT_MARGIN = 0.2f // = 20%
-    val RELATIVE_TOP_MARGIN = 0.25f
-    val REALTIVE_CORNER_RADIUS = 0.1f // 10% of H
+    val RELATIVE_RIGHT_MARGIN = 0.15f // = 15% of W
+    val RELATIVE_TOP_MARGIN = 0.10f // = 10% of H
+    val RELATIVE_SCALE_SLIDER_HEIGHT = 0.5f // = 50% of H
+    val RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENTION = 0.05f // = 5% of H
+    val REALTIVE_CORNER_RADIUS = 0.1f // 10% of minDim
     // NE: scale handle
     // E: copy button
     // SE: rotate handle + (screen) center indicator & rotation indicator when it's grabbed

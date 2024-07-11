@@ -10,6 +10,7 @@ import kotlinx.serialization.Transient
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow
+import kotlin.math.sign
 import kotlin.math.sqrt
 
 const val EPSILON: Double = 1e-6
@@ -170,13 +171,11 @@ data class DirectedCircle(
 /**
  * Projective-conformal representation of circles/lines/points/imaginary circles via homogenous coordinates.
  *
- * e_0 = (e_minus - e_plus) / 2,
- * e_inf = e_plus + e_minus
+ * Homogenous scaling factor [w]: e_0 = (e_minus - e_plus) / 2,
  *
- * e_0 = w = 1,
- * x = cx,
- * y = cy,
- * e_inf = z = (cx^2 + cy^2 - r^2) / 2
+ * [z]: e_inf = e_plus + e_minus
+ *
+ * Circle upcasting: e_inf: [z] = ([x]^2 + [y]^2 - r^2) / 2; [w] = 1
  * */
 @Serializable
 data class GeneralizedCircle(
@@ -188,6 +187,9 @@ data class GeneralizedCircle(
     init {
         require(listOf(w,x,y,z).any { abs(it) > EPSILON }) { "Homogenous coordinates are invalid" }
     }
+
+    val ePlus: Double = (z - 2*w)/2
+    val eMinus: Double = (2*w + z)/2
 
     val isLine: Boolean =
         abs(w) < EPSILON
@@ -226,27 +228,44 @@ data class GeneralizedCircle(
     operator fun plus(other: GeneralizedCircle): GeneralizedCircle =
         GeneralizedCircle(w + other.w, x + other.x, y + other.y, z + other.z)
 
+    operator fun unaryMinus(): GeneralizedCircle =
+        GeneralizedCircle(-w, -x, -y, -z)
+
     operator fun minus(other: GeneralizedCircle): GeneralizedCircle =
         GeneralizedCircle(w - other.w, x - other.x, y - other.y, z - other.z)
 
-    infix fun homogenousEquals(other: GeneralizedCircle): Boolean =
-        if (isLine || other.isLine) {
-            if (isLine != other.isLine)
-                false
-            else if (x >= EPSILON)
-                abs(x - other.x) < EPSILON &&
-                abs(y/x - other.y/other.x) < EPSILON &&  // x == x' implies x' > 0
-                abs(z/x - other.z/other.x) < EPSILON
-            else if (y >= EPSILON)
-                abs(y - other.y) < EPSILON &&
-                abs(z/y - other.z/other.y) < EPSILON // y == y' implies y' > 0
-            else
-                abs(z - other.z) < EPSILON
-        } else { // w > 0 && w' > 0
-            abs(x/w - other.x/other.w) < EPSILON &&
-            abs(y/w - other.y/other.w) < EPSILON &&
-            abs(z/w - other.z/other.w) < EPSILON
-        }
+    infix fun scalarProduct(other: GeneralizedCircle): Double =
+        x*other.x +
+        y*other.y +
+        (z - w/2)*(other.z - other.w/2) + // e_plus part
+        - (z + w/2)*(other.z + other.w/2) // e_minus part
+
+    // imaginary circles have norm^2 < 0
+    // points have norm^2 == 0
+    fun norm2(): Double =
+        scalarProduct(this)
+
+    fun norm(): Double =
+        sqrt(abs(norm2()))
+
+    fun normalized(preserveDirection: Boolean = true): GeneralizedCircle {
+        val a = this * (1/norm())
+        return if (preserveDirection || a.w >= 0)
+            a
+        else
+            -a
+    }
+
+    // NOTE: -X != X, sign represents direction
+    //  X == k*X where k>0
+    fun homogenousEquals(other: GeneralizedCircle, checkDirection: Boolean = true): Boolean {
+        val (wxyz1, wxyz2) = listOf(this.normalized(), other.normalized())
+            .map { listOf(it.w, it.x, it.y, it.z) }
+        return wxyz1.zip(wxyz2)
+            .all { (a1, a2) ->
+                abs(a1 - a2) < EPSILON
+            }
+    }
 
     fun affineCombination(other: GeneralizedCircle, k: Double): GeneralizedCircle =
         this*k + other*(1 - k)
@@ -267,11 +286,20 @@ data class GeneralizedCircle(
     fun altBisector(other: GeneralizedCircle): GeneralizedCircle =
         this - other
 
+    // in non-elliptic pencils subdivide+out is meaningless
     fun calculatePencilType(other: GeneralizedCircle): CirclePencilType? =
-        if (this homogenousEquals other)
+        if (this.homogenousEquals(other, checkDirection = false)) {
             null
-        else
-            TODO()
+        } else {
+            val s = this.normalized(preserveDirection = false)
+                .scalarProduct(other.normalized(preserveDirection = false))
+            when {
+                abs(s) < EPSILON -> CirclePencilType.PARABOLIC
+                s > 0 -> CirclePencilType.ELLIPTIC
+                s < 0 -> CirclePencilType.HYPERBOLIC
+                else -> throw IllegalStateException("Never")
+            }
+        }
 
     companion object {
         /**
