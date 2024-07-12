@@ -2,9 +2,7 @@ package ui
 
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.PathOperation
-import androidx.compose.ui.graphics.vector.DefaultFillType
 import data.Circle
 import data.Cluster
 
@@ -12,7 +10,7 @@ fun circle2path(circle: Circle): Path =
     Path().apply {
         addOval(
             Rect(
-                center = circle.offset,
+                center = circle.center,
                 radius = circle.radius.toFloat()
             )
         )

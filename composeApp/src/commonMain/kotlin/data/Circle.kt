@@ -6,27 +6,27 @@ import data.kmath_complex.r
 import data.kmath_complex.r2
 import domain.toComplex
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlin.math.abs
 import kotlin.math.hypot
-import kotlin.math.pow
-import kotlin.math.sign
 import kotlin.math.sqrt
 
 const val EPSILON: Double = 1e-6
+
+/** A circle, line, imaginary circle or point */
+sealed interface GCircle
+sealed interface CircleOrLine : GCircle
 
 @Serializable
 data class Circle(
     val x: Double,
     val y: Double,
     val radius: Double,
-) {
-    /** center offset */
-    val offset: Offset
-        get() = Offset(x.toFloat(), y.toFloat())
+) : GCircle, CircleOrLine {
+    val center: Offset get() =
+        Offset(x.toFloat(), y.toFloat())
 
-    val r2: Double
-        get() = radius * radius
+    val r2: Double get() =
+        radius * radius
 
     constructor(center: Offset, radius: Double) :
         this(center.x.toDouble(), center.y.toDouble(), radius)
@@ -36,24 +36,21 @@ data class Circle(
 
     /** semiorder ⊆ on circles' insides (⭗) */
     infix fun isInside(otherCircle: Circle): Boolean =
-        (offset - otherCircle.offset).getDistance() + radius <= otherCircle.radius
+        (center - otherCircle.center).getDistance() + radius <= otherCircle.radius
 
     /** semiorder ⊇ on circles, includes side-by-side (oo) but not encapsulating (⭗) case */
     infix fun isOutside(otherCircle: Circle): Boolean =
-        (offset - otherCircle.offset).getDistance() >= otherCircle.radius + radius
+        (center - otherCircle.center).getDistance() >= otherCircle.radius + radius
 
     /** -1 = inside, 0 on the circle, +1 = outside */
     fun checkPosition(point: Offset): Int =
-        (offset - point).getDistance().compareTo(radius)
+        (center - point).getDistance().compareTo(radius)
 
     fun hasInside(point: Offset): Boolean =
         checkPosition(point) < 0
 
     fun hasOutside(point: Offset): Boolean =
         checkPosition(point) > 0
-
-    fun toCircleF(): CircleF =
-        CircleF(x.toFloat(), y.toFloat(), radius.toFloat())
 
     companion object {
         fun by3Points(p1: Offset, p2: Offset, p3: Offset): Circle {
@@ -148,16 +145,7 @@ data class Circle(
     }
 }
 
-@Serializable
-data class CircleF(
-    val x: Float,
-    val y: Float,
-    val radius: Float,
-) {
-    @Transient
-    val center = Offset(x, y)
-}
-
+// idk if i'll ever use it, technically it's also represented by GeneralizedCircle
 @Serializable
 data class DirectedCircle(
     val x: Double,
@@ -167,159 +155,40 @@ data class DirectedCircle(
     val inside: Boolean,
 )
 
-// TODO: Clifford algebra
-/**
- * Projective-conformal representation of circles/lines/points/imaginary circles via homogenous coordinates.
- *
- * Homogenous scaling factor [w]: e_0 = (e_minus - e_plus) / 2,
- *
- * [z]: e_inf = e_plus + e_minus
- *
- * Circle upcasting: e_inf: [z] = ([x]^2 + [y]^2 - r^2) / 2; [w] = 1
- * */
 @Serializable
-data class GeneralizedCircle(
-    val w: Double,
+data class ImaginaryCircle(
     val x: Double,
     val y: Double,
-    val z: Double
-) {
-    init {
-        require(listOf(w,x,y,z).any { abs(it) > EPSILON }) { "Homogenous coordinates are invalid" }
-    }
+    val radius: Double,
+) : GCircle
 
-    val ePlus: Double = (z - 2*w)/2
-    val eMinus: Double = (2*w + z)/2
-
-    val isLine: Boolean =
-        abs(w) < EPSILON
-    /** Radius squared */
-    val r2: Double =
-        if (isLine) Double.POSITIVE_INFINITY
-        else (x/w).pow(2) + (y/w).pow(2) - 2*z/w
-    val isPoint: Boolean =
-        !isLine && abs(r2) < EPSILON
-    val isRealCircle: Boolean =
-        !isLine && r2 >= EPSILON
-    val isImaginaryCircle: Boolean =
-        !isLine && r2 <= EPSILON
-
-    /** Upcast a point (x, y) */
-    constructor(x: Double, y: Double) : this(
-        1.0, x, y, (x.pow(2) + y.pow(2))/2
-    )
-
-    constructor(circle: Circle) : this(
-        1.0,
-        circle.x, circle.y,
-        (circle.x.pow(2) + circle.y.pow(2) - circle.radius.pow(2))/2
-    )
-
-    fun toCircle(): Circle? =
-        if (isRealCircle)
-            Circle(x/w, y/w, sqrt(r2))
-        else null
-
-    operator fun times(a: Number): GeneralizedCircle {
-        val a0 = a.toDouble()
-        return GeneralizedCircle(w*a0, x*a0, y*a0, z*a0)
-    }
-
-    operator fun plus(other: GeneralizedCircle): GeneralizedCircle =
-        GeneralizedCircle(w + other.w, x + other.x, y + other.y, z + other.z)
-
-    operator fun unaryMinus(): GeneralizedCircle =
-        GeneralizedCircle(-w, -x, -y, -z)
-
-    operator fun minus(other: GeneralizedCircle): GeneralizedCircle =
-        GeneralizedCircle(w - other.w, x - other.x, y - other.y, z - other.z)
-
-    infix fun scalarProduct(other: GeneralizedCircle): Double =
-        x*other.x +
-        y*other.y +
-        (z - w/2)*(other.z - other.w/2) + // e_plus part
-        - (z + w/2)*(other.z + other.w/2) // e_minus part
-
-    // imaginary circles have norm^2 < 0
-    // points have norm^2 == 0
-    fun norm2(): Double =
-        scalarProduct(this)
-
-    fun norm(): Double =
-        sqrt(abs(norm2()))
-
-    fun normalized(preserveDirection: Boolean = true): GeneralizedCircle {
-        val a = this * (1/norm())
-        return if (preserveDirection || a.w >= 0)
-            a
-        else
-            -a
-    }
-
-    // NOTE: -X != X, sign represents direction
-    //  X == k*X where k>0
-    fun homogenousEquals(other: GeneralizedCircle, checkDirection: Boolean = true): Boolean {
-        val (wxyz1, wxyz2) = listOf(this.normalized(), other.normalized())
-            .map { listOf(it.w, it.x, it.y, it.z) }
-        return wxyz1.zip(wxyz2)
-            .all { (a1, a2) ->
-                abs(a1 - a2) < EPSILON
-            }
-    }
-
-    fun affineCombination(other: GeneralizedCircle, k: Double): GeneralizedCircle =
-        this*k + other*(1 - k)
-
-    fun applyTo(target: GeneralizedCircle, times: Int = 1): GeneralizedCircle {
-        require(times > 0)
-        return affineCombination(target, times + 1.0)
-    }
-
-    /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
-     * counting from [this] circle's side */
-    fun bisector(other: GeneralizedCircle, nOfSections: Int = 2, index: Int = 1): GeneralizedCircle {
-        require(nOfSections >= 1)
-        return affineCombination(other, (nOfSections - index).toDouble()/nOfSections)
-    }
-
-    // = affineCombination(other, inf)
-    fun altBisector(other: GeneralizedCircle): GeneralizedCircle =
-        this - other
-
-    // in non-elliptic pencils subdivide+out is meaningless
-    fun calculatePencilType(other: GeneralizedCircle): CirclePencilType? =
-        if (this.homogenousEquals(other, checkDirection = false)) {
-            null
-        } else {
-            val s = this.normalized(preserveDirection = false)
-                .scalarProduct(other.normalized(preserveDirection = false))
-            when {
-                abs(s) < EPSILON -> CirclePencilType.PARABOLIC
-                s > 0 -> CirclePencilType.ELLIPTIC
-                s < 0 -> CirclePencilType.HYPERBOLIC
-                else -> throw IllegalStateException("Never")
-            }
-        }
-
+/** [a]*x + [b]*y + [c] = 0 */
+@Serializable
+data class Line(
+    val a: Double,
+    val b: Double,
+    val c: Double
+) : GCircle, CircleOrLine {
     companion object {
-        /**
-         * a*x + b*y + c = 0
-         * -> a*e_x + b*e_y + c*e_inf
-         */
-        fun line(a: Double, b: Double, c: Double): GeneralizedCircle =
-            GeneralizedCircle(0.0, a, b, c)
-
-        fun lineBy2Points(p1: Offset, p2: Offset): GeneralizedCircle {
+        fun lineBy2Points(p1: Offset, p2: Offset): Line {
             val dy = p2.y.toDouble() - p1.y
             val dx = p2.x.toDouble() - p1.x
             val c = p1.y*dx - p1.x*dy
-            return line(dy, -dx, c)
+            return Line(dy, -dx, c)
         }
     }
 }
 
-enum class CirclePencilType {
-    ELLIPTIC, // lines with 1 common point, circles with 2 common points
-    PARABOLIC, // parallel lines, circles tangential to 1 common line at 1 common point
-    HYPERBOLIC, // concentric circles, circles perpendicular to every circle of a fixed (dual) elliptic pencil
+@Serializable
+data class Point(
+    val x: Double,
+    val y: Double
+) : GCircle {
+    fun toOffset(): Offset =
+        Offset(x.toFloat(), y.toFloat())
+
+    companion object {
+        fun fromOffset(offset: Offset): Point =
+            Point(offset.x.toDouble(), offset.y.toDouble())
+    }
 }

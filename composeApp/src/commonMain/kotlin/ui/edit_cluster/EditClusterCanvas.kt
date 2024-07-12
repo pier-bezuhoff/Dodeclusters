@@ -45,7 +45,6 @@ import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.delete_name
 import dodeclusters.composeapp.generated.resources.duplicate_name
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.zoom_in
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -55,7 +54,6 @@ import ui.PathType
 import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
-import kotlin.math.abs
 import kotlin.math.max
 
 @OptIn(ExperimentalResourceApi::class)
@@ -195,7 +193,7 @@ private fun SelectionsCanvas(
                     drawCircle( // alpha = where selection lines are shown
                         color = Color.Black,
                         radius = circle.radius.toFloat(),
-                        center = circle.offset,
+                        center = circle.center,
                         style = Fill,
                         blendMode = BlendMode.DstOut, // dst out = erase the BG rectangle => show hatching thats drawn behind it
                     )
@@ -205,7 +203,7 @@ private fun SelectionsCanvas(
                         color = selectedCircleColor,
                         alpha = thiccSelectionCircleAlpha,
                         radius = circle.radius.toFloat(),
-                        center = circle.offset,
+                        center = circle.center,
                         style = circleThiccStroke,
                     )
                 }
@@ -227,7 +225,7 @@ private fun DrawScope.drawAnimation(
             drawCircle(
                 color = color,
                 alpha = decayAlpha.value,
-                radius = circle.radius,
+                radius = circle.radius.toFloat(),
                 center = circle.center
             )
         }
@@ -243,7 +241,7 @@ private fun DrawScope.drawCircles(
         drawCircle(
             color = circleColor,
             radius = circle.radius.toFloat(),
-            center = circle.offset,
+            center = circle.center,
             style = circleStroke,
         )
     }
@@ -290,7 +288,7 @@ private fun DrawScope.drawPartialConstructs(
                 drawCircle(
                     color = creationPrototypeColor,
                     radius = circles[0].radius.toFloat(),
-                    center = circles[0].offset,
+                    center = circles[0].center,
                     style = circleStroke
                 )
             }
@@ -298,7 +296,7 @@ private fun DrawScope.drawPartialConstructs(
                 drawCircle(
                     color = creationPrototypeColor.copy(alpha = 0.6f),
                     radius = circles[1].radius.toFloat(),
-                    center = circles[1].offset,
+                    center = circles[1].center,
                     style = circleStroke
                 )
             }
@@ -350,7 +348,7 @@ private fun DrawScope.drawPartialConstructs(
                     drawCircle(
                         color = creationPrototypeColor,
                         radius = c.radius.toFloat(),
-                        center = c.offset,
+                        center = c.center,
                         style = circleStroke,
                     )
                 } catch (e: NumberFormatException) {
@@ -381,10 +379,10 @@ private fun DrawScope.drawHandles(
         when (viewModel.handleConfig) {
             is HandleConfig.SingleCircle -> {
                 val selectedCircle = viewModel.circles[viewModel.selection.single()]
-                val right = selectedCircle.offset + Offset(selectedCircle.radius.toFloat(), 0f)
+                val right = selectedCircle.center + Offset(selectedCircle.radius.toFloat(), 0f)
                 drawLine( // radius marker
                     color = selectionMarkingsColor,
-                    start = selectedCircle.offset,
+                    start = selectedCircle.center,
                     end = right,
                 )
                 drawCircle( // radius handle
