@@ -1,10 +1,12 @@
-package data
+package data.geometry
 
-import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
+
+/** A circle, line, imaginary circle or point */
+sealed interface GCircle
 
 // TODO: Clifford algebra (geometric product + other operations)
 /**

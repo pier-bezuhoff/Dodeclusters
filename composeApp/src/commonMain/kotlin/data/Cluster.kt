@@ -1,6 +1,7 @@
 package data
 
 import androidx.compose.ui.graphics.Color
+import data.geometry.Circle
 import data.io.Ddc
 import kotlinx.serialization.Serializable
 

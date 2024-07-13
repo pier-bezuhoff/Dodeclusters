@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
-import data.Circle
+import data.geometry.Circle
 import data.Cluster
 import data.OffsetSerializer
 import data.PartialArgList

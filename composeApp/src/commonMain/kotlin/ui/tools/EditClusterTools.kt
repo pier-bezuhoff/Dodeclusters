@@ -19,6 +19,7 @@ import dodeclusters.composeapp.generated.resources.circle_inversion
 import dodeclusters.composeapp.generated.resources.circle_inversion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_inversion_description
 import dodeclusters.composeapp.generated.resources.circle_inversion_name
+import dodeclusters.composeapp.generated.resources.circle_inversion_v2
 import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_all_parts_description
@@ -177,7 +178,7 @@ sealed class EditClusterTool(
         Res.string.circle_inversion_name,
         Res.string.circle_inversion_description,
         Res.string.circle_inversion_arg_descriptions,
-        Res.drawable.circle_inversion
+        Res.drawable.circle_inversion_v2
     )
 
     // MAYBE: add partial argument icon(s)

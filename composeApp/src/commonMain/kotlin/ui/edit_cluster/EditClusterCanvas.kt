@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -37,14 +38,17 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import data.Circle
+import data.geometry.Circle
 import data.PartialArgList
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.delete_name
 import dodeclusters.composeapp.generated.resources.duplicate_name
+import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
+import dodeclusters.composeapp.generated.resources.shrink
+import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.zoom_in
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -55,6 +59,7 @@ import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
 import kotlin.math.max
+import kotlin.math.min
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable
@@ -77,14 +82,15 @@ fun BoxScope.EditClusterCanvas(
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
     val scaleIcon = painterResource(Res.drawable.zoom_in)
     val scaleHandleColor = MaterialTheme.colorScheme.secondary
-    val iconDim = with (LocalDensity.current) { 20.dp.toPx() }
+    val iconDim = with (LocalDensity.current) { 24.dp.toPx() }
     val deleteIcon = painterResource(Res.drawable.delete_forever)
     val deleteIconTint = DodeclustersColors.lightRed
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
     val rotateIconTint = MaterialTheme.colorScheme.secondary
     val rotationIndicatorRadius = handleRadius * 3/4
     val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
-    val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer
+    val sliderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
+    val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
 
     val backgroundColor = MaterialTheme.colorScheme.background
     val circleColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f) // MAYBE: black for light scheme
@@ -140,10 +146,30 @@ fun BoxScope.EditClusterCanvas(
             if (viewModel.showCircles)
                 drawCircles(viewModel, circleColor, circleStroke)
             drawPartialConstructs(viewModel, handleRadius, circleStroke, strokeWidth)
-            drawHandles(viewModel, selectionMarkingsColor, scaleHandleColor, deleteIconTint, rotateIconTint, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, deleteIcon, rotateIcon, dottedStroke)
+            drawHandles(
+                viewModel,
+                selectionMarkingsColor,
+                scaleHandleColor,
+                rotateIconTint,
+                rotationIndicatorColor,
+                handleRadius,
+                iconDim,
+                scaleIcon,
+                rotateIcon,
+                dottedStroke
+            )
         }
         if (viewModel.circleSelectionIsActive)
-            drawSelectionControls(viewModel, jCarcassColor, scaleHandleColor, rotateIconTint, rotationIndicatorColor, rotationIndicatorRadius, handleRadius, iconDim, scaleIcon, rotateIcon)
+            drawSelectionControls(
+                viewModel,
+                sliderColor,
+                jCarcassColor,
+                rotateIconTint,
+                rotationIndicatorColor,
+                handleRadius,
+                iconDim,
+                rotateIcon
+            )
     }
     if (viewModel.circleSelectionIsActive) {
         HUD(viewModel)
@@ -364,13 +390,11 @@ private fun DrawScope.drawHandles(
     viewModel: EditClusterViewModel,
     selectionMarkingsColor: Color, // for selection rect
     scaleHandleColor: Color,
-    deleteIconTint: Color,
     rotateIconTint: Color,
     rotationIndicatorColor: Color,
     handleRadius: Float,
     iconDim: Float,
     scaleIcon: Painter,
-    deleteIcon: Painter,
     rotateIcon: Painter,
     dottedStroke: DrawStyle,
 ) {
@@ -443,8 +467,8 @@ private fun DrawScope.drawHandles(
 
 @Composable
 fun BoxScope.HUD(viewModel: EditClusterViewModel) {
-    val rightMargin = (viewModel.canvasSize.width * SelectionControlsPosition.RELATIVE_RIGHT_MARGIN).dp
-    val bottomMargin = (viewModel.canvasSize.height * SelectionControlsPosition.RELATIVE_TOP_MARGIN).dp
+    val (w, h) = viewModel.canvasSize
+    val positions = SelectionControlsPosition(w, h)
     // infinity button to the left-center
     // + a way to trigger a visual effect over it
 //    SimpleButton(
@@ -453,82 +477,97 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
 //        Modifier.align(Alignment.CenterStart)
 //    ) {}
 
-//    SimpleButton(
-//        painterResource(Res.drawable.zoom_in),
-//        stringResource(Res.string.stub),
-//        Modifier
-//            .align(Alignment.TopEnd)
-//            .offset(x = -rightMargin, y = bottomMargin),
-//        tint = MaterialTheme.colorScheme.secondary
-//    ) {}
-//    SimpleButton(
-//        painterResource(Res.drawable.rotate_counterclockwise),
-//        stringResource(Res.string.stub),
-//        Modifier
-//            .align(Alignment.BottomEnd)
-//            .offset(x = -rightMargin, y = -bottomMargin),
-//        tint = MaterialTheme.colorScheme.secondary
-//    ) {}
+    SimpleButton(
+        painterResource(Res.drawable.expand),
+        stringResource(Res.string.stub),
+        Modifier.offset(
+            x = positions.right.dp,
+            y = positions.top.dp
+        ),
+        tint = MaterialTheme.colorScheme.secondary
+    ) {}
+    SimpleButton(
+        painterResource(Res.drawable.shrink),
+        stringResource(Res.string.stub),
+        Modifier.offset(
+            x = positions.right.dp,
+            y = positions.scaleSliderBottom.dp
+        ),
+        tint = MaterialTheme.colorScheme.secondary
+    ) {}
 
     // duplicate & delete buttons
     SimpleButton(
         painterResource(Res.drawable.copy),
         stringResource(Res.string.duplicate_name),
-        Modifier
-            .align(Alignment.CenterEnd)
-            .offset(x = -rightMargin + 30.dp),
+        Modifier.offset(
+            x = positions.right.dp,
+            y = positions.topUnderScaleSlider.dp
+        ),
         tint = DodeclustersColors.skyBlue.copy(alpha = 0.8f)
     ) { viewModel.duplicateCircles() }
     SimpleButton(
         painterResource(Res.drawable.delete_forever),
         stringResource(Res.string.delete_name),
-        Modifier
-            .align(Alignment.BottomEnd)
-            .offset(
-                x = -rightMargin - bottomMargin,
-                y = -bottomMargin + 30.dp
-            ),
+        Modifier.offset(
+            x = positions.left.dp,
+            y = positions.bottom.dp
+        ),
         tint = DodeclustersColors.lightRed.copy(alpha = 0.8f)
     ) { viewModel.deleteCircles() }
 }
 
 fun DrawScope.drawSelectionControls(
     viewModel: EditClusterViewModel,
+    sliderColor: Color,
     jCarcassColor: Color,
-    scaleHandleColor: Color,
     rotateHandleColor: Color,
     rotationIndicatorColor: Color,
-    rotationIndicatorRadius: Float,
     handleRadius: Float,
     iconDim: Float,
-    scaleIcon: Painter,
     rotateIcon: Painter,
 ) {
+    val carcassStyle = Stroke(24f, cap = StrokeCap.Round)
     val iconSize = Size(iconDim, iconDim)
     val (w, h) = viewModel.canvasSize
-    val right = w * (1 - SelectionControlsPosition.RELATIVE_RIGHT_MARGIN)
-    val top = h * SelectionControlsPosition.RELATIVE_TOP_MARGIN
-    val cornerRadius = h * SelectionControlsPosition.REALTIVE_CORNER_RADIUS
-    val bottom = h * (1 - SelectionControlsPosition.RELATIVE_TOP_MARGIN)
-    val left = w * (1 - SelectionControlsPosition.RELATIVE_RIGHT_MARGIN) - h * SelectionControlsPosition.RELATIVE_TOP_MARGIN
-    val cornerRect = Rect(Offset(right - cornerRadius, bottom - cornerRadius), cornerRadius)
+    val positions = SelectionControlsPosition(w, h)
+    val cornerRect = Rect(
+        center = Offset(
+            positions.right - positions.cornerRadius,
+            positions.bottom - positions.cornerRadius
+        ),
+        radius = positions.cornerRadius
+    )
+    val sliderBGPath = Path().apply {
+        moveTo(positions.right, positions.top)
+        lineTo(positions.right, positions.scaleSliderBottom)
+    }
     // J-shaped carcass (always active when selection isn't empty)
     val jPath = Path().apply {
-        moveTo(right, top)
-        lineTo(right, bottom - cornerRadius)
+        moveTo(positions.right, positions.topUnderScaleSlider)
+        lineTo(positions.right, positions.bottom - positions.cornerRadius)
         arcTo(cornerRect, 0f, 90f, forceMoveTo = true)
-        lineTo(left, bottom)
+        lineTo(positions.left, positions.bottom)
     }
     drawPath(
-        jPath, jCarcassColor,
-        style = Stroke(24f, cap = StrokeCap.Round)
+        sliderBGPath, jCarcassColor,
+        style = carcassStyle
     )
-    translate(right - iconDim/2f, top - iconDim/2f) {
-        with (scaleIcon) {
-            draw(iconSize, colorFilter = ColorFilter.tint(scaleHandleColor))
-        }
-    }
-    translate(right - iconDim/2f, bottom - iconDim/2f) {
+    drawPath(
+        jPath, jCarcassColor,
+        style = carcassStyle
+    )
+    drawLine(
+        sliderColor,
+        Offset(positions.right, positions.top + positions.sliderPadding),
+        Offset(positions.right, positions.scaleSliderBottom - positions.sliderPadding)
+    )
+//    translate(right - iconDim/2f, top - iconDim/2f) {
+//        with (scaleIcon) {
+//            draw(iconSize, colorFilter = ColorFilter.tint(scaleHandleColor))
+//        }
+//    }
+    translate(positions.right - iconDim/2f, positions.bottom - iconDim/2f) {
         with (rotateIcon) {
             draw(iconSize, colorFilter = ColorFilter.tint(rotateHandleColor))
         }
@@ -558,14 +597,35 @@ fun DrawScope.drawSelectionControls(
 //        ____J
 //      [x]   . R  [rotation handle]
 //            .
-object SelectionControlsPosition {
-    val RELATIVE_RIGHT_MARGIN = 0.15f // = 15% of W
-    val RELATIVE_TOP_MARGIN = 0.10f // = 10% of H
-    val RELATIVE_SCALE_SLIDER_HEIGHT = 0.5f // = 50% of H
-    val RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENTION = 0.05f // = 5% of H
-    val REALTIVE_CORNER_RADIUS = 0.1f // 10% of minDim
-    // NE: scale handle
-    // E: copy button
-    // SE: rotate handle + (screen) center indicator & rotation indicator when it's grabbed
-    // S: delete button
+@Immutable
+data class SelectionControlsPosition(
+    val width: Int,
+    val height: Int
+) {
+    val minDim = min(width, height)
+    val cornerRadius = minDim * REALTIVE_CORNER_RADIUS
+
+    val top = height * RELATIVE_VERTICAL_MARGIN
+    val sliderPadding = height * RELATIVE_SCALE_SLIDER_PADDING
+    val sliderMiddlePosition = top + (height * RELATIVE_SCALE_SLIDER_HEIGHT) / 2f
+    val scaleSliderBottom = top + height * RELATIVE_SCALE_SLIDER_HEIGHT
+    val topUnderScaleSlider = scaleSliderBottom + height * RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT
+    val bottom = height * (1 - RELATIVE_VERTICAL_MARGIN)
+
+    val right = width * (1 - RELATIVE_RIGHT_MARGIN)
+//    val left = right - cornerRadius - width * RELATIVE_LEFTMOST_INDENT
+    val left = right - (bottom - topUnderScaleSlider)
+
+    companion object {
+        val RELATIVE_RIGHT_MARGIN = 0.05f // = % of W
+//        val RELATIVE_LEFTMOST_INDENT = 0.05f // = % of W
+        val RELATIVE_VERTICAL_MARGIN = 0.15f // = % of H
+        val RELATIVE_SCALE_SLIDER_HEIGHT = 0.40f // = % of H
+        val RELATIVE_SCALE_SLIDER_PADDING = 0.02f // = % of H
+        val RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT = 0.10f // = % of H
+        val REALTIVE_CORNER_RADIUS = 0.10f // % of minDim
+        // E: copy button
+        // SE: rotate handle + (screen) center indicator & rotation indicator when it's grabbed
+        // S: delete button
+    }
 }

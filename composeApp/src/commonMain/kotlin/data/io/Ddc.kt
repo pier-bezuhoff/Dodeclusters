@@ -2,7 +2,7 @@ package data.io
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import data.Circle
+import data.geometry.Circle
 import data.Cluster
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -50,7 +50,7 @@ data class Ddc(
         data class Cluster(
             /** 2 value list: [[first circle index, last circle index]] */
             val indices: List<Int>,
-            val circles: List<data.Circle>,
+            val circles: List<data.geometry.Circle>,
             /** circle indices used parts shall be Ddc-global circle indices, the one consistent with cluster.indices */
             val parts: List<data.Cluster.Part>,
             val filled: Boolean = DEFAULT_CLUSTER_FILLED,
@@ -78,7 +78,7 @@ data class Ddc(
         ) : Token() {
             val offset: Offset
                 get() = Offset(x.toFloat(), y.toFloat())
-            fun toCircle(): data.Circle =
+            fun toCircle(): data.geometry.Circle =
                 Circle(x, y, radius)
         }
     }

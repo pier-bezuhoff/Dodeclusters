@@ -1,7 +1,7 @@
 package data.io
 
 import androidx.compose.ui.graphics.Color
-import data.Circle
+import data.geometry.Circle
 import data.Cluster
 import kotlinx.serialization.json.Json
 import data.ColorCssSerializer

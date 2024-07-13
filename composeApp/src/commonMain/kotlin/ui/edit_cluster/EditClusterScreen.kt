@@ -237,7 +237,7 @@ fun BottomToolbar(
         )
         CategoryButton(viewModel, EditClusterCategory.Visibility)
         CategoryButton(viewModel, EditClusterCategory.Colors)
-        AttributesCategoryButton(viewModel)
+//        AttributesCategoryButton(viewModel)
         CategoryButton(viewModel, EditClusterCategory.Transform)
     }
 }
