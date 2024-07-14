@@ -3,6 +3,7 @@ package data.io
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import kotlinx.browser.document
 import org.w3c.dom.HTMLInputElement
@@ -15,21 +16,25 @@ import org.w3c.files.get
 actual fun OpenFileButton(
     iconPainter: Painter,
     contentDescription: String,
+    modifier: Modifier,
     onOpen: (content: String?) -> Unit
 ) {
-    IconButton(onClick = {
-        queryFile { file ->
-            file?.let {
-                val reader = FileReader()
-                reader.readAsText(file, "UTF-8")
-                reader.onload = {
-                    val content = reader.result?.toString()
-                    onOpen(content)
-                }
-            } ?: onOpen(null)
-        }
-    }) {
-        Icon(iconPainter, contentDescription)
+    IconButton(
+        onClick = {
+            queryFile { file ->
+                file?.let {
+                    val reader = FileReader()
+                    reader.readAsText(file, "UTF-8")
+                    reader.onload = {
+                        val content = reader.result?.toString()
+                        onOpen(content)
+                    }
+                } ?: onOpen(null)
+            }
+        },
+        modifier = modifier
+    ) {
+        Icon(iconPainter, contentDescription, modifier)
     }
 }
 

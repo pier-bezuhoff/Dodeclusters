@@ -39,6 +39,7 @@ actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
     saveDataProvider: () -> SaveData,
+    modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -63,10 +64,13 @@ actual fun SaveFileButton(
         }
     }
 
-    IconButton(onClick = {
-        openDialog = true
-    }) {
-        Icon(iconPainter, contentDescription)
+    IconButton(
+        onClick = {
+            openDialog = true
+        },
+        modifier = modifier,
+    ) {
+        Icon(iconPainter, contentDescription, modifier)
     }
     if (openDialog) {
         AlertDialog(
@@ -76,7 +80,7 @@ actual fun SaveFileButton(
                     Text("Confirm")
                 }
             },
-    //            dismissButton = {},
+            //            dismissButton = {},
             title = { Text("Choose a name") },
             text = {
                 OutlinedTextField(

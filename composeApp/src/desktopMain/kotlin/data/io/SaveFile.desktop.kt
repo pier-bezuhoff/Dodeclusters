@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.window.AwtWindow
 import kotlinx.coroutines.Dispatchers
@@ -22,15 +23,19 @@ actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
     saveDataProvider: () -> SaveData,
+    modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
     var lastDir by remember { mutableStateOf<String?>(null) }
-    IconButton(onClick = {
-        fileDialogIsOpen = true
-    }) {
-        Icon(iconPainter, contentDescription)
+    IconButton(
+        onClick = {
+            fileDialogIsOpen = true
+        },
+        modifier = modifier,
+    ) {
+        Icon(iconPainter, contentDescription, modifier)
     }
     if (fileDialogIsOpen) {
         val saveData = saveDataProvider()

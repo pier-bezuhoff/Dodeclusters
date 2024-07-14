@@ -11,9 +11,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -468,7 +468,8 @@ private fun DrawScope.drawHandles(
 @Composable
 fun BoxScope.HUD(viewModel: EditClusterViewModel) {
     val (w, h) = viewModel.canvasSize
-    val positions = SelectionControlsPosition(w, h)
+    val positions = SelectionControlsPositions(w, h)
+    val halfSize = (48/2).dp
     // infinity button to the left-center
     // + a way to trigger a visual effect over it
 //    SimpleButton(
@@ -481,20 +482,20 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
         painterResource(Res.drawable.expand),
         stringResource(Res.string.stub),
         Modifier.offset(
-            x = positions.right.dp,
-            y = positions.top.dp
+            x = positions.right.dp - halfSize,
+            y = positions.top.dp - halfSize
         ),
         tint = MaterialTheme.colorScheme.secondary
-    ) {}
+    ) { viewModel.scaleSelection(1.1f) }
     SimpleButton(
         painterResource(Res.drawable.shrink),
         stringResource(Res.string.stub),
         Modifier.offset(
-            x = positions.right.dp,
-            y = positions.scaleSliderBottom.dp
+            x = positions.right.dp - halfSize,
+            y = positions.scaleSliderBottom.dp - halfSize
         ),
         tint = MaterialTheme.colorScheme.secondary
-    ) {}
+    ) { viewModel.scaleSelection(1/1.1f) }
 
     // duplicate & delete buttons
     SimpleButton(
@@ -527,10 +528,10 @@ fun DrawScope.drawSelectionControls(
     iconDim: Float,
     rotateIcon: Painter,
 ) {
-    val carcassStyle = Stroke(24f, cap = StrokeCap.Round)
+    val carcassStyle = Stroke(16f, cap = StrokeCap.Round)
     val iconSize = Size(iconDim, iconDim)
     val (w, h) = viewModel.canvasSize
-    val positions = SelectionControlsPosition(w, h)
+    val positions = SelectionControlsPositions(w, h)
     val cornerRect = Rect(
         center = Offset(
             positions.right - positions.cornerRadius,
@@ -562,11 +563,11 @@ fun DrawScope.drawSelectionControls(
         Offset(positions.right, positions.top + positions.sliderPadding),
         Offset(positions.right, positions.scaleSliderBottom - positions.sliderPadding)
     )
-//    translate(right - iconDim/2f, top - iconDim/2f) {
-//        with (scaleIcon) {
-//            draw(iconSize, colorFilter = ColorFilter.tint(scaleHandleColor))
-//        }
-//    }
+    drawCircle( // slider handle
+        sliderColor,
+        handleRadius,
+        Offset(positions.right, positions.sliderMiddlePosition)
+    )
     translate(positions.right - iconDim/2f, positions.bottom - iconDim/2f) {
         with (rotateIcon) {
             draw(iconSize, colorFilter = ColorFilter.tint(rotateHandleColor))
@@ -598,7 +599,7 @@ fun DrawScope.drawSelectionControls(
 //      [x]   . R  [rotation handle]
 //            .
 @Immutable
-data class SelectionControlsPosition(
+data class SelectionControlsPositions(
     val width: Int,
     val height: Int
 ) {
@@ -615,6 +616,11 @@ data class SelectionControlsPosition(
     val right = width * (1 - RELATIVE_RIGHT_MARGIN)
 //    val left = right - cornerRadius - width * RELATIVE_LEFTMOST_INDENT
     val left = right - (bottom - topUnderScaleSlider)
+
+    @Stable
+    fun calculateSliderPosition(percentage: Float = 0.5f): Float =
+        top + (height * RELATIVE_SCALE_SLIDER_HEIGHT) * percentage
+
 
     companion object {
         val RELATIVE_RIGHT_MARGIN = 0.05f // = % of W

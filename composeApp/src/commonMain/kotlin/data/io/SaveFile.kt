@@ -1,6 +1,7 @@
 package data.io
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 
 data class SaveData(
@@ -18,5 +19,6 @@ expect fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
     saveDataProvider: () -> SaveData,
+    modifier: Modifier = Modifier,
     onSaved: (successful: Boolean) -> Unit = { }
 )

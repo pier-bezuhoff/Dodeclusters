@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.window.AwtWindow
 import kotlinx.coroutines.Dispatchers
@@ -22,14 +23,18 @@ import java.io.IOException
 actual fun OpenFileButton(
     iconPainter: Painter,
     contentDescription: String,
+    modifier: Modifier,
     onOpen: (content: String?) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
-    IconButton(onClick = {
-        fileDialogIsOpen = true
-    }) {
-        Icon(iconPainter, contentDescription)
+    IconButton(
+        onClick = {
+            fileDialogIsOpen = true
+        },
+        modifier = modifier
+    ) {
+        Icon(iconPainter, contentDescription, modifier)
     }
     if (fileDialogIsOpen) {
         LoadFileDialog { directory, filename ->

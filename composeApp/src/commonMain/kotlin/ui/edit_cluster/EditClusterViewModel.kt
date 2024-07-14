@@ -606,7 +606,7 @@ class EditClusterViewModel(
         }
     }
 
-    private fun scaleSelection(zoom: Float) {
+    fun scaleSelection(zoom: Float) {
         if (circleSelectionIsActive)
             when (selection.size) {
                 0 -> Unit

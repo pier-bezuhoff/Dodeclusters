@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 
@@ -14,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 actual fun OpenFileButton(
     iconPainter: Painter,
     contentDescription: String,
+    modifier: Modifier,
     onOpen: (content: String?) -> Unit
 ) {
     val context = LocalContext.current
@@ -24,12 +26,15 @@ actual fun OpenFileButton(
         }
         onOpen(content)
     }
-    IconButton(onClick = {
-        // NOTE: "text/plain" doesnt work for custom extensions it seems
-        launcher.launch("application/*") // casts a wide net, including .ddc, .yaml, ..., pdf..
+    IconButton(
+        onClick = {
+            // NOTE: "text/plain" doesnt work for custom extensions it seems
+            launcher.launch("application/*") // casts a wide net, including .ddc, .yaml, ..., pdf..
 //        launcher.launch("application/yaml")
-    }) {
-        Icon(iconPainter, contentDescription)
+        },
+        modifier = modifier
+    ) {
+        Icon(iconPainter, contentDescription, modifier)
     }
 }
 

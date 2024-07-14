@@ -2,24 +2,21 @@ package ui.edit_cluster
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -104,7 +102,13 @@ fun EditClusterScreen(
                 shape = CircleShape,
                 elevation = FloatingActionButtonDefaults.elevation()
             ) {
-                Icon(Icons.Filled.Add, stringResource(category.name))
+                Icon(
+                    Icons.Filled.Add,
+                    stringResource(category.name),
+                    Modifier
+                        .padding(8.dp)
+                        .size(48.dp)
+                )
             }
         },
     ) {
@@ -157,6 +161,9 @@ fun EditClusterScreen(
 @OptIn(ExperimentalResourceApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun EditClusterTopBar(viewModel: EditClusterViewModel) {
+    val iconModifier = Modifier
+        .padding(8.dp)
+        .size(48.dp)
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
     TopAppBar(
@@ -164,13 +171,15 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
         title = { Text(stringResource(Res.string.edit_cluster_title)) },
         actions = {
             WithTooltip(stringResource(Res.string.save_cluster_name)) {
-                SaveFileButton(painterResource(Res.drawable.save),
+                SaveFileButton(
+                    painterResource(Res.drawable.save),
                     stringResource(Res.string.save_cluster_name),
                     saveDataProvider = {
                         SaveData(
                             Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION, viewModel.saveAsYaml()
                         )
-                    }
+                    },
+                    modifier = iconModifier
                 ) {
                     println(if (it) "saved" else "not saved")
                 }
@@ -178,7 +187,8 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
             WithTooltip(stringResource(Res.string.open_file_name)) {
                 OpenFileButton(
                     painterResource(Res.drawable.open_file),
-                    stringResource(Res.string.open_file_name)
+                    stringResource(Res.string.open_file_name),
+                    iconModifier
                 ) { content ->
                     content?.let {
                         viewModel.loadFromYaml(content)
@@ -186,13 +196,27 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
                 }
             }
             WithTooltip(stringResource(Res.string.undo_name)) {
-                IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
-                    Icon(painterResource(Res.drawable.undo), stringResource(Res.string.undo_name))
-                }
+                DisableableButton(
+                    painterResource(Res.drawable.undo),
+                    stringResource(Res.string.undo_name),
+                    viewModel.undoIsEnabled,
+                    iconModifier,
+                    viewModel::undo
+                )
+//                IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
+//                    Icon(painterResource(Res.drawable.undo), stringResource(Res.string.undo_name))
+//                }
             }
             WithTooltip(stringResource(Res.string.redo_name)) {
+                DisableableButton(
+                    painterResource(Res.drawable.redo),
+                    stringResource(Res.string.redo_name),
+                    viewModel.redoIsEnabled,
+                    iconModifier,
+                    viewModel::redo
+                )
                 IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
-                    Icon(painterResource(Res.drawable.redo), stringResource(Res.string.redo_name))
+//                    Icon(painterResource(Res.drawable.redo), stringResource(Res.string.redo_name))
                 }
             }
         },
@@ -250,8 +274,15 @@ fun CategoryButton(
     val i = viewModel.categories.indexOf(category)
     val defaultTool = category.tools[viewModel.categoryDefaults[i]]
 //    val icon = category.icon ?: defaultTool.icon
+    Spacer(Modifier.size(16.dp, 0.dp))
     Crossfade(defaultTool) {
-        ToolButton(viewModel, defaultTool, Modifier.padding(horizontal = 8.dp)) {
+        ToolButton(
+            viewModel,
+            defaultTool,
+            Modifier
+                .padding(4.dp)
+                .size(48.dp)
+        ) {
             viewModel.selectTool(defaultTool, togglePanel = true)
         }
     }
@@ -357,8 +388,9 @@ fun ToolButton(
                     val alpha = if (viewModel.circleSelectionIsActive) 1f else 0.5f
                     Icon(
                         icon,
+                        contentDescription = name,
+                        modifier = modifier,
                         tint = EditClusterTool.Delete.tint.copy(alpha = alpha),
-                        contentDescription = name
                     )
                 }
             }
@@ -374,8 +406,9 @@ fun ToolButton(
                 ) {
                     Icon(
                         icon,
+                        contentDescription = name,
+                        modifier = modifier,
                         tint = tool.color,
-                        contentDescription = name
                     )
                 }
             }
@@ -432,7 +465,8 @@ fun PaletteButton(
     ) {
         Icon(
             painterResource(EditClusterTool.Palette.icon),
-            contentDescription = stringResource(EditClusterTool.Palette.name)
+            contentDescription = stringResource(EditClusterTool.Palette.name),
+            modifier = modifier
         )
 //        Icon(
 //            painterResource(EditClusterTool.Palette.colorOutlineIcon),

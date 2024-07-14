@@ -6,6 +6,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,7 @@ actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
     saveDataProvider: () -> SaveData,
+    modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -50,12 +52,15 @@ actual fun SaveFileButton(
             }
         }
     }
-    IconButton(onClick = {
-        coroutineScope.launch {
-            val saveData = saveDataProvider()
-            launcher.launch(saveData.filename)
-        }
-    }) {
-        Icon(iconPainter, contentDescription)
+    IconButton(
+        onClick = {
+            coroutineScope.launch {
+                val saveData = saveDataProvider()
+                launcher.launch(saveData.filename)
+            }
+        },
+        modifier = modifier,
+    ) {
+        Icon(iconPainter, contentDescription, modifier)
     }
 }

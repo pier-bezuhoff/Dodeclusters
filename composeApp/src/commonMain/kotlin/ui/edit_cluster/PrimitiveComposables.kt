@@ -1,6 +1,5 @@
 package ui.edit_cluster
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,6 +36,7 @@ fun SimpleButton(
         Icon(
             iconPainter,
             contentDescription = name,
+            modifier = Modifier,
             tint = tint
         )
     }
@@ -55,7 +55,11 @@ fun DisableableButton(
         modifier = modifier,
         enabled = enabled,
     ) {
-        Icon(iconPainter, contentDescription = name)
+        Icon(
+            iconPainter,
+            contentDescription = name,
+            modifier = modifier
+        )
     }
 }
 
@@ -79,7 +83,8 @@ fun TwoIconButton(
         Icon(
             if (enabled) iconPainter
             else disabledIconPainter,
-            contentDescription = name
+            contentDescription = name,
+            modifier = modifier
         )
     }
 }
@@ -104,7 +109,11 @@ fun OnOffButton(
         ),
         border = if (isOn) BorderStroke(2.dp, MaterialTheme.colorScheme.outline) else null
     ) {
-        Icon(iconPainter, contentDescription = name)
+        Icon(
+            iconPainter,
+            contentDescription = name,
+            modifier = modifier
+        )
     }
 }
 
