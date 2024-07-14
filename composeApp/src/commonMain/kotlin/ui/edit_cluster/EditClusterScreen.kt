@@ -4,7 +4,9 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,6 +32,7 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -37,6 +41,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -114,7 +119,7 @@ fun EditClusterScreen(
         Surface {
             Box {
                 EditClusterCanvas(viewModel)
-                EditClusterTopBar(viewModel)
+                EditClusterTopBar(viewModel, Modifier.align(Alignment.TopEnd))
                 Column(
                     Modifier
                         .align(Alignment.BottomCenter)
@@ -157,18 +162,39 @@ fun EditClusterScreen(
     }
 }
 
-@OptIn(ExperimentalResourceApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalResourceApi::class)
 @Composable
-fun EditClusterTopBar(viewModel: EditClusterViewModel) {
+fun EditClusterTopBar(
+    viewModel: EditClusterViewModel,
+    modifier: Modifier = Modifier
+) {
     val iconModifier = Modifier
         .padding(8.dp, 4.dp)
         .size(40.dp)
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
-    TopAppBar(
-        // TODO: hide title and make empty top bar space transparent
-        title = { Text(stringResource(Res.string.edit_cluster_title)) },
-        actions = {
+    Row(modifier
+        // NOTE: i might be hallucinating but ive seen this break tooltip positioning, now works tho (?)
+        .offset(x = 24.dp, y = -(24).dp) // leave only 1, bottom-left rounded corner
+        .background(
+            Brush.verticalGradient(
+                0.3f to backgroundColor.copy(alpha = 1.0f),
+                1f to backgroundColor.copy(alpha = 0.5f),
+            ),
+            RoundedCornerShape(24.dp)
+        )
+        .padding(top = 24.dp, end = 24.dp) // offsets the corner-removing offset
+        .height(64.dp),
+        Arrangement.End,
+        Alignment.CenterVertically
+    ) {
+//        Text(
+//            stringResource(Res.string.edit_cluster_title),
+////            Modifier.align(Alignment.Start),
+//            color = MaterialTheme.colorScheme.tertiary
+//        )
+        CompositionLocalProvider(LocalContentColor provides contentColor) {
+            Spacer(Modifier.width(16.dp))
             WithTooltip(stringResource(Res.string.save_cluster_name)) {
                 SaveFileButton(
                     painterResource(Res.drawable.save),
@@ -202,9 +228,6 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
                     iconModifier,
                     viewModel::undo
                 )
-//                IconButton(onClick = viewModel::undo, enabled = viewModel.undoIsEnabled) {
-//                    Icon(painterResource(Res.drawable.undo), stringResource(Res.string.undo_name))
-//                }
             }
             WithTooltip(stringResource(Res.string.redo_name)) {
                 DisableableButton(
@@ -214,23 +237,9 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
                     iconModifier,
                     viewModel::redo
                 )
-                IconButton(onClick = viewModel::redo, enabled = viewModel.redoIsEnabled) {
-//                    Icon(painterResource(Res.drawable.redo), stringResource(Res.string.redo_name))
-                }
             }
-        },
-        colors = TopAppBarDefaults.topAppBarColors().copy(
-            containerColor = backgroundColor.copy(alpha = 0.1f),
-            titleContentColor = MaterialTheme.colorScheme.tertiary,
-            actionIconContentColor = contentColor,
-        ),
-        modifier = Modifier.background( // transparency gradient
-            Brush.verticalGradient(
-                0f to backgroundColor.copy(alpha = 1.0f),
-                1f to backgroundColor.copy(alpha = 0.5f)
-            )
-        ),//.height(60.dp),
-    )
+        }
+    }
 }
 
 @Composable
@@ -240,31 +249,32 @@ fun BottomToolbar(
 ) {
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
-    // MAYBE: transition to a normal Row instead (for better size control)
-    BottomAppBar(
-        modifier = modifier
-//            .height(64.dp) // breaks vertical centering of icons; 80 by default
+    Row(modifier
             .background(
                 Brush.verticalGradient(
                     0f to backgroundColor.copy(alpha = 0.7f),
                     1f to backgroundColor,
                 )
-            ),
-        containerColor = backgroundColor.copy(alpha = 0.1f),
-        contentColor = contentColor,
+            )
+            .fillMaxWidth()
+            .height(64.dp),
+        Arrangement.Start,
+        Alignment.CenterVertically
     ) {
-        CategoryButton(viewModel, EditClusterCategory.Drag)
-        CategoryButton(viewModel, EditClusterCategory.Multiselect)
-        CategoryButton(viewModel, EditClusterCategory.Region)
-        Spacer(Modifier.size(12.dp, 0.dp))
-        VerticalDivider(Modifier
-            .fillMaxHeight(0.7f)
-            .align(Alignment.CenterVertically)
-        )
-        CategoryButton(viewModel, EditClusterCategory.Visibility)
-        CategoryButton(viewModel, EditClusterCategory.Colors)
+        CompositionLocalProvider(LocalContentColor provides contentColor) {
+            CategoryButton(viewModel, EditClusterCategory.Drag)
+            CategoryButton(viewModel, EditClusterCategory.Multiselect)
+            CategoryButton(viewModel, EditClusterCategory.Region)
+            Spacer(Modifier.size(12.dp, 0.dp))
+            VerticalDivider(Modifier
+                .fillMaxHeight(0.7f)
+                .align(Alignment.CenterVertically)
+            )
+            CategoryButton(viewModel, EditClusterCategory.Visibility)
+            CategoryButton(viewModel, EditClusterCategory.Colors)
 //        AttributesCategoryButton(viewModel)
-        CategoryButton(viewModel, EditClusterCategory.Transform)
+            CategoryButton(viewModel, EditClusterCategory.Transform)
+        }
     }
 }
 
@@ -290,27 +300,8 @@ fun CategoryButton(
     }
 }
 
-@Composable
-fun AttributesCategoryButton(
-    viewModel: EditClusterViewModel
-) {
-    // TODO: add tooltip
-    val category = EditClusterCategory.Attributes
-    SimpleButton(
-        painterResource(category.icon!!),
-        stringResource(category.name),
-        Modifier.padding(horizontal = 8.dp)
-    ) {
-        if (!viewModel.mode.isSelectingCircles())
-            viewModel.switchToMode(SelectionMode.Drag)
-        viewModel.switchToCategory(category, togglePanel = true)
-    }
-}
-
-// slide up/down animations
 // MAYBE: hoist VM upwards with callbacks
 // MAYBE: just make individual panel for every category instead of generalization
-/** [toolIndex]: index of the tool selected from within the category */
 @Composable
 fun Panel(
     viewModel: EditClusterViewModel,
@@ -326,10 +317,12 @@ fun Panel(
     // mb wrap in a surface
     Row(modifier = modifier
         .horizontalScroll(scrollState)
+        .offset(x = (-24).dp) // hide round corners to the left
         .background(
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
-            RoundedCornerShape(48.dp)
-        ),
+            RoundedCornerShape(24.dp)
+        )
+        .padding(start = 24.dp),
     ) {
         Spacer(Modifier.width(8.dp))
         for (tool in activeCategory.tools) {

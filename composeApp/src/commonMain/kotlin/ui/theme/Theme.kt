@@ -12,7 +12,7 @@ fun DodeclustersTheme(
     val scheme = when (colorTheme) {
         ColorTheme.LIGHT -> dodeclustersLightScheme
         ColorTheme.DARK -> dodeclustersDarkScheme
-        ColorTheme.DEFAULT ->
+        ColorTheme.AUTO ->
             if (isSystemInDarkTheme()) dodeclustersDarkScheme
             else dodeclustersLightScheme
     }
@@ -24,5 +24,6 @@ fun DodeclustersTheme(
 
 enum class ColorTheme {
     LIGHT, DARK,
-    DEFAULT
+    /** Automatically detect current system color theme */
+    AUTO
 }

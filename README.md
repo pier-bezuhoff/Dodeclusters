@@ -28,9 +28,9 @@ Cluster = circles + union of intersections of some of these circles (their insid
   - [x] move & scale circles
   - [x] select/deselect intersection regions
   - [x] fill regions with diff colors
-  - [x] select binary interlacing even/odd regions (like chessboard coloring)
-  - [x] load/save individual clusters as .ddc (actually json inside, temporary solution)
-  - [ ] additional context-dependent toolbar to group categories of tools (a-la bucket fill + gradient)
+  - [ ] select binary interlacing even/odd regions (like chessboard coloring)
+  - [x] load/save individual clusters as .ddc/.yml (based on yaml)
+  - [x] additional context-dependent toolbar to group categories of tools (a-la bucket fill + gradient)
   - [x] tools: circle by center & radius, by 3 points; maybe line by 2 points
   - [ ] bezier-like pathing tool
   - [ ] maybe finer control over angles/distances
@@ -45,7 +45,6 @@ Cluster = circles + union of intersections of some of these circles (their insid
   - [x] New cluster-based format to supercede `.ddu`, YAML subset
   - [ ] read `.ddu`
   - [ ] maybe export as `.svg`
-  - [ ] maybe add up/down/left/right arrow controls to temporarily fix the mobile browser issue
 
 
 ## Build and run via Gradle

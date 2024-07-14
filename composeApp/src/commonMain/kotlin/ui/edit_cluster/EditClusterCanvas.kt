@@ -56,6 +56,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.PathType
+import ui.circle2path
 import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
@@ -142,7 +143,7 @@ fun BoxScope.EditClusterCanvas(
             )
     ) {
         translate(viewModel.translation.x, viewModel.translation.y) {
-            drawAnimation(animations)
+            drawAnimation(animations, viewModel.translation)
             drawParts(viewModel, clusterPathAlpha, circleStroke)
             if (viewModel.showCircles)
                 drawCircles(viewModel, circleColor, circleStroke)
@@ -166,7 +167,6 @@ fun BoxScope.EditClusterCanvas(
                 sliderColor,
                 jCarcassColor,
                 rotateIconTint,
-                rotationIndicatorColor,
                 handleRadius,
                 iconDim,
                 rotateIcon
@@ -240,8 +240,14 @@ private fun SelectionsCanvas(
 }
 
 private fun DrawScope.drawAnimation(
-    animations: Map<CircleAnimation, Animatable<Float, AnimationVector1D>>
+    animations: Map<CircleAnimation, Animatable<Float, AnimationVector1D>>,
+    translation: Offset
 ) {
+    val visibleRect = size.toRect()
+        .translate(-translation)
+    val visibleScreenPath = Path().apply { addRect(visibleRect) }
+    // TODO: either transition to a different animation
+    //  or distinguish between circles and lines (lines lag for now)
     for ((circleAnimation, decayAlpha) in animations) {
         for (circle in circleAnimation.circles) {
             val color = when (circleAnimation) {
@@ -249,12 +255,9 @@ private fun DrawScope.drawAnimation(
                 is CircleAnimation.ReEntrance -> Color.Blue
                 is CircleAnimation.Exit -> Color.Red
             }
-            drawCircle(
-                color = color,
-                alpha = decayAlpha.value,
-                radius = circle.radius.toFloat(),
-                center = circle.center
-            )
+            val path = circle2path(circle)
+            path.op(path, visibleScreenPath, PathOperation.Intersect)
+            drawPath(path, color.copy(alpha = decayAlpha.value))
         }
     }
 }
@@ -479,46 +482,48 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
 //        Modifier.align(Alignment.CenterStart)
 //    ) {}
 
-    SimpleButton(
-        painterResource(Res.drawable.expand),
-        stringResource(Res.string.stub),
-        Modifier
-            .align(Alignment.TopStart)
-            .offset(
-                x = positions.right.dp - halfSize,
-                y = positions.top.dp - halfSize
+    with (LocalDensity.current) {
+        SimpleButton(
+            painterResource(Res.drawable.expand),
+            stringResource(Res.string.stub),
+            Modifier
+                .align(Alignment.TopStart)
+                .offset(
+                    x = positions.right.toDp() - halfSize,
+                    y = positions.top.toDp() - halfSize
+                ),
+            tint = MaterialTheme.colorScheme.secondary
+        ) { viewModel.scaleSelection(1.1f) }
+        SimpleButton(
+            painterResource(Res.drawable.shrink),
+            stringResource(Res.string.stub),
+            Modifier.offset(
+                x = positions.right.toDp() - halfSize,
+                y = positions.scaleSliderBottom.toDp() - halfSize
             ),
-        tint = MaterialTheme.colorScheme.secondary
-    ) { viewModel.scaleSelection(1.1f) }
-    SimpleButton(
-        painterResource(Res.drawable.shrink),
-        stringResource(Res.string.stub),
-        Modifier.offset(
-            x = positions.right.dp - halfSize,
-            y = positions.scaleSliderBottom.dp - halfSize
-        ),
-        tint = MaterialTheme.colorScheme.secondary
-    ) { viewModel.scaleSelection(1/1.1f) }
+            tint = MaterialTheme.colorScheme.secondary
+        ) { viewModel.scaleSelection(1/1.1f) }
 
-    // duplicate & delete buttons
-    SimpleButton(
-        painterResource(Res.drawable.copy),
-        stringResource(Res.string.duplicate_name),
-        Modifier.offset(
-            x = positions.right.dp,
-            y = positions.topUnderScaleSlider.dp
-        ),
-        tint = DodeclustersColors.skyBlue.copy(alpha = 0.8f)
-    ) { viewModel.duplicateCircles() }
-    SimpleButton(
-        painterResource(Res.drawable.delete_forever),
-        stringResource(Res.string.delete_name),
-        Modifier.offset(
-            x = positions.left.dp,
-            y = positions.bottom.dp
-        ),
-        tint = DodeclustersColors.lightRed.copy(alpha = 0.8f)
-    ) { viewModel.deleteCircles() }
+        // duplicate & delete buttons
+        SimpleButton(
+            painterResource(Res.drawable.copy),
+            stringResource(Res.string.duplicate_name),
+            Modifier.offset(
+                x = positions.right.toDp() - halfSize,
+                y = positions.topUnderScaleSlider.toDp() - halfSize
+            ),
+            tint = DodeclustersColors.skyBlue.copy(alpha = 0.8f)
+        ) { viewModel.duplicateCircles() }
+        SimpleButton(
+            painterResource(Res.drawable.delete_forever),
+            stringResource(Res.string.delete_name),
+            Modifier.offset(
+                x = positions.left.toDp() - halfSize,
+                y = positions.bottom.toDp() - halfSize
+            ),
+            tint = DodeclustersColors.lightRed.copy(alpha = 0.8f)
+        ) { viewModel.deleteCircles() }
+    }
 }
 
 fun DrawScope.drawSelectionControls(
@@ -526,7 +531,6 @@ fun DrawScope.drawSelectionControls(
     sliderColor: Color,
     jCarcassColor: Color,
     rotateHandleColor: Color,
-    rotationIndicatorColor: Color,
     handleRadius: Float,
     iconDim: Float,
     rotateIcon: Painter,
@@ -561,6 +565,8 @@ fun DrawScope.drawSelectionControls(
         jPath, jCarcassColor,
         style = carcassStyle
     )
+    drawCircle(jCarcassColor, radius = 30f, center = Offset(positions.right, positions.topUnderScaleSlider))
+    drawCircle(jCarcassColor, radius = 30f, center = Offset(positions.left, positions.bottom))
     drawLine(
         sliderColor,
         Offset(positions.right, positions.top + positions.sliderPadding),

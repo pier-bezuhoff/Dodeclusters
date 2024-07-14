@@ -59,6 +59,7 @@ import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 
 // BUG: cancel/ok buttons look bad in mobile/landscape
+// TODO: preview previous vs current color
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun ColorPickerDialog(

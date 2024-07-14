@@ -1,5 +1,6 @@
 package ui.edit_cluster
 
+import androidx.compose.foundation.BasicTooltipDefaults
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -123,7 +124,11 @@ fun WithTooltip(
     description: String,
     content: @Composable () -> Unit
 ) {
-    // i want to increase tooltip screen time but cant find where
+    // NOTE: ironically tooltips work much better on desktop/in browser than
+    //  on android (since it requires hover vs long-press there)
+    // i want to increase tooltip screen time but
+    // it's hardcoded here: BasicTooltipDefaults.TooltipDuration
+    // but i'd have to manually rewrite TooltipState implementation to specify custom one
     TooltipBox(
         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
         tooltip = {

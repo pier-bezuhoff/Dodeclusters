@@ -827,9 +827,10 @@ class EditClusterViewModel(
                 circles[ix] = Circle(newCenter, zoom * circle.radius)
             } else if (selection.size > 1) { // scale radius & position
                 recordCommand(Command.MOVE)
+                val c = absolute(centroid)
                 for (ix in selection) {
                     val circle = circles[ix]
-                    val newOffset = (circle.center - centroid).rotateBy(rotationAngle) * zoom + centroid + pan
+                    val newOffset = (circle.center - c).rotateBy(rotationAngle) * zoom + c + pan
                     circles[ix] = Circle(newOffset, zoom * circle.radius)
                 }
             }
