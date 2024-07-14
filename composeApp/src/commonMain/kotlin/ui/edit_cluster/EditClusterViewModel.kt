@@ -53,6 +53,7 @@ class EditClusterViewModel(
 ) {
     var mode: Mode by mutableStateOf(SelectionMode.Drag)
         private set
+    // XYPoint uses absolute positioning
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
@@ -140,6 +141,7 @@ class EditClusterViewModel(
     var showColorPickerDialog by mutableStateOf(false)
 
     var canvasSize by mutableStateOf(IntSize.Zero) // used when saving best-center
+    // TODO: keep track of the center instead
     var translation by mutableStateOf(Offset.Zero) // pre-scale offset
 //    val scale = mutableStateOf(1f)
 
@@ -692,7 +694,7 @@ class EditClusterViewModel(
                 val args = partialArgList!! // ToolMode implies non-null partialArgList
                 val newArg = when (args.currentArg) {
                     is PartialArgList.Arg.XYPoint -> visiblePosition?.let {
-                        PartialArgList.Arg.XYPoint.fromOffset(it)
+                        PartialArgList.Arg.XYPoint.fromOffset(absolute(it))
                     }
                     is PartialArgList.Arg.CircleIndex -> null
                     is PartialArgList.Arg.SelectedCircles -> null
@@ -748,7 +750,7 @@ class EditClusterViewModel(
                 if (mode is ToolMode) {
                     when (partialArgList!!.nextArgType) {
                         PartialArgList.ArgType.XYPoint -> {
-                            val newArg = PartialArgList.Arg.XYPoint.fromOffset(visiblePosition)
+                            val newArg = PartialArgList.Arg.XYPoint.fromOffset(absolute(visiblePosition))
                             partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = false)
                         }
                         PartialArgList.ArgType.CircleIndex -> {
@@ -766,13 +768,14 @@ class EditClusterViewModel(
 
     // MAYBE: handle key arrows as panning
     fun onPanZoomRotate(pan: Offset, centroid: Offset, zoom: Float, rotationAngle: Float) {
+        val c = absolute(centroid)
         if (submode !is SubMode.None) {
             // drag handle
             when (val h = handleConfig) {
                 is HandleConfig.SingleCircle -> {
                     recordCommand(Command.CHANGE_RADIUS)
                     val center = circles[h.ix].center
-                    val r = (absolute(centroid) - center).getDistance()
+                    val r = (c - center).getDistance()
                     circles[h.ix] = circles[h.ix].copy(radius = r.toDouble())
                 }
                 is HandleConfig.SeveralCircles -> {
@@ -794,7 +797,7 @@ class EditClusterViewModel(
                         is SubMode.Rotate -> {
                             recordCommand(Command.ROTATE)
                             val center = sm.center
-                            val centerToCurrent = absolute(centroid) - center
+                            val centerToCurrent = c - center
                             val centerToPreviousHandle = centerToCurrent - pan
                             val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
 //                            println(angle)
@@ -827,7 +830,6 @@ class EditClusterViewModel(
                 circles[ix] = Circle(newCenter, zoom * circle.radius)
             } else if (selection.size > 1) { // scale radius & position
                 recordCommand(Command.MOVE)
-                val c = absolute(centroid)
                 for (ix in selection) {
                     val circle = circles[ix]
                     val newOffset = (circle.center - c).rotateBy(rotationAngle) * zoom + c + pan
@@ -838,7 +840,7 @@ class EditClusterViewModel(
             if (mode is ToolMode &&
                 partialArgList!!.currentArgType == PartialArgList.ArgType.XYPoint
             ) {
-                val newArg = PartialArgList.Arg.XYPoint.fromOffset(centroid)
+                val newArg = PartialArgList.Arg.XYPoint.fromOffset(c)
                 partialArgList = partialArgList!!.updateCurrentArg(newArg, confirmThisArg = false)
             } else {
 //                recordCommand(Command.CHANGE_POV)
@@ -930,7 +932,7 @@ class EditClusterViewModel(
     private fun completeCircleByCenterAndRadius() {
         val argList = partialArgList!!
         val (center, radiusPoint) = argList.args.map {
-            absolute((it as PartialArgList.Arg.XYPoint).toOffset())
+            (it as PartialArgList.Arg.XYPoint).toOffset()
         }
         val newCircle = Circle(
             center,
@@ -943,7 +945,7 @@ class EditClusterViewModel(
     private fun completeCircleBy3Points() {
         val argList = partialArgList!!
         val points = argList.args.map {
-            absolute((it as PartialArgList.Arg.XYPoint).toOffset())
+            (it as PartialArgList.Arg.XYPoint).toOffset()
         }
         try {
             val newCircle = Circle.by3Points(
@@ -1076,6 +1078,7 @@ sealed class HandleConfig(open val ixs: List<Ix>) {
 
 sealed interface SubMode {
     data object None : SubMode
+    // center uses absolute positioning
     data class Scale(val center: Offset) : SubMode
     data class Rotate(val center: Offset, val angle: Double = 0.0) : SubMode
 }

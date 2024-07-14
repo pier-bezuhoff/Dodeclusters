@@ -334,14 +334,14 @@ private fun DrawScope.drawPartialConstructs(
         }
         ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> viewModel.partialArgList!!.args.let { args ->
             if (args.isNotEmpty()) {
-                val center = viewModel.absolute((args[0] as PartialArgList.Arg.XYPoint).toOffset())
+                val center = (args[0] as PartialArgList.Arg.XYPoint).toOffset()
                 drawCircle(
                     color = creationPrototypeColor,
                     radius = creationPointRadius,
                     center = center
                 )
                 if (args.size == 2) {
-                    val radiusPoint = viewModel.absolute((args[1] as PartialArgList.Arg.XYPoint).toOffset())
+                    val radiusPoint = (args[1] as PartialArgList.Arg.XYPoint).toOffset()
                     drawCircle(
                         color = creationPrototypeColor,
                         radius = creationPointRadius,
@@ -357,9 +357,7 @@ private fun DrawScope.drawPartialConstructs(
             }
         }
         ToolMode.CIRCLE_BY_3_POINTS -> viewModel.partialArgList!!.args.let { args ->
-            val points = args.map {
-                viewModel.absolute((it as PartialArgList.Arg.XYPoint).toOffset())
-            }
+            val points = args.map { (it as PartialArgList.Arg.XYPoint).toOffset() }
             for (point in points)
                 drawCircle(
                     color = creationPrototypeColor,
