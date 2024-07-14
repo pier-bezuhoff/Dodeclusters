@@ -51,6 +51,7 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.zoom_in
+import domain.rotateBy
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
@@ -422,7 +423,6 @@ private fun DrawScope.drawHandles(
 
             is HandleConfig.SeveralCircles -> {
                 val selectionRect = viewModel.getSelectionRect()
-                val bottom = selectionRect.bottomCenter
                 drawRect( // selection rect
                     color = selectionMarkingsColor,
                     topLeft = selectionRect.topLeft,
@@ -451,20 +451,19 @@ private fun DrawScope.drawHandles(
                         draw(iconSize, colorFilter = ColorFilter.tint(rotateIconTint))
                     }
                 }
-                (viewModel.submode as? SubMode.Rotate)?.let { submode ->
-                    submode.lastPos?.let {
-                        val d = it - submode.center
-                        val maxDim = viewModel.canvasSize.run { max(width, height) }
-                        val sameDirectionFarAway = submode.center + d / d.getDistance() * maxDim.toFloat()
-                        drawLine(
-                            color = rotationIndicatorColor,
-                            start = submode.center,
-                            end = sameDirectionFarAway,
-                            strokeWidth = 2f
-                        )
-                    }
-                }
             }
+        }
+        (viewModel.submode as? SubMode.Rotate)?.let { (center, angle) ->
+            val currentDirection = Offset(0f, -1f).rotateBy(angle.toFloat())
+            val maxDim = viewModel.canvasSize.run { max(width, height) }
+            val sameDirectionFarAway =
+                center + currentDirection * maxDim.toFloat()
+            drawLine(
+                color = rotationIndicatorColor,
+                start = center,
+                end = sameDirectionFarAway,
+                strokeWidth = 2f
+            )
         }
     }
 }

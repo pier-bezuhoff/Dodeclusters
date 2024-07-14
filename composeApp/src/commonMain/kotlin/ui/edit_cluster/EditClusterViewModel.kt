@@ -295,7 +295,7 @@ class EditClusterViewModel(
         if (command != Command.ROTATE)
             submode.let {
                 if (it is SubMode.Rotate)
-                    submode = it.copy(lastPos = null)
+                    submode = it.copy(angle = 0.0)
             }
     }
 
@@ -684,7 +684,7 @@ class EditClusterViewModel(
     fun onUp(visiblePosition: Offset?) {
         submode.let {
             if (it is SubMode.Rotate)
-                submode = it.copy(lastPos = null)
+                submode = it.copy(angle = 0.0)
         }
         when (mode) {
             is ToolMode -> {
@@ -731,7 +731,7 @@ class EditClusterViewModel(
                         isCloseEnoughToSelect(scaleHandlePosition, visiblePosition) ->
                             SubMode.Scale(rect.center)
                         isCloseEnoughToSelect(rotateHandlePosition, visiblePosition) -> {
-                            SubMode.Rotate(rect.center, rotateHandlePosition)
+                            SubMode.Rotate(rect.center)
                         }
                         else -> SubMode.None
                     }
@@ -794,12 +794,12 @@ class EditClusterViewModel(
                         is SubMode.Rotate -> {
                             recordCommand(Command.ROTATE)
                             val center = sm.center
-                            val centerToHandle = sm.lastPos!! - center
-                            val centerToCurrent = centerToHandle + pan
-                            val angle = centerToHandle.angleDeg(centerToCurrent)
+                            val centerToCurrent = absolute(centroid) - center
+                            val centerToPreviousHandle = centerToCurrent - pan
+                            val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
 //                            println(angle)
 //                            rotationIndicatorPosition = centerToHandle.rotateBy(angle) + center
-                            submode = sm.copy(lastPos = absolute(centroid))
+                            submode = sm.copy(angle = sm.angle + angle)
                             for (ix in selection) {
                                 val circle = circles[ix]
                                 val newOffset = (circle.center - center).rotateBy(angle) + center
@@ -1074,14 +1074,10 @@ sealed class HandleConfig(open val ixs: List<Ix>) {
     data class SeveralCircles(override val ixs: List<Ix>): HandleConfig(ixs)
 }
 
-enum class Handle {
-    SCALE, ROTATE, DELETE
-}
-
 sealed interface SubMode {
     data object None : SubMode
     data class Scale(val center: Offset) : SubMode
-    data class Rotate(val center: Offset, val lastPos: Offset?) : SubMode
+    data class Rotate(val center: Offset, val angle: Double = 0.0) : SubMode
 }
 
 /** params for create/copy/delete animations */
