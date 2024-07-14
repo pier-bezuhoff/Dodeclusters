@@ -295,7 +295,7 @@ class EditClusterViewModel(
         if (command != Command.ROTATE)
             submode.let {
                 if (it is SubMode.Rotate)
-                    submode = it.copy(angle = 0.0)
+                    submode = SubMode.None
             }
     }
 
@@ -684,7 +684,7 @@ class EditClusterViewModel(
     fun onUp(visiblePosition: Offset?) {
         submode.let {
             if (it is SubMode.Rotate)
-                submode = it.copy(angle = 0.0)
+                submode = SubMode.None
         }
         when (mode) {
             is ToolMode -> {
