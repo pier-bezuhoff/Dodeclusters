@@ -14,6 +14,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -481,10 +482,12 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
     SimpleButton(
         painterResource(Res.drawable.expand),
         stringResource(Res.string.stub),
-        Modifier.offset(
-            x = positions.right.dp - halfSize,
-            y = positions.top.dp - halfSize
-        ),
+        Modifier
+            .align(Alignment.TopStart)
+            .offset(
+                x = positions.right.dp - halfSize,
+                y = positions.top.dp - halfSize
+            ),
         tint = MaterialTheme.colorScheme.secondary
     ) { viewModel.scaleSelection(1.1f) }
     SimpleButton(

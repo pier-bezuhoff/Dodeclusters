@@ -9,7 +9,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -162,8 +161,8 @@ fun EditClusterScreen(
 @Composable
 fun EditClusterTopBar(viewModel: EditClusterViewModel) {
     val iconModifier = Modifier
-        .padding(8.dp)
-        .size(48.dp)
+        .padding(8.dp, 4.dp)
+        .size(40.dp)
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
     TopAppBar(
@@ -227,10 +226,10 @@ fun EditClusterTopBar(viewModel: EditClusterViewModel) {
         ),
         modifier = Modifier.background( // transparency gradient
             Brush.verticalGradient(
-                0f to backgroundColor,
-                1f to backgroundColor.copy(alpha = 0.7f)
+                0f to backgroundColor.copy(alpha = 1.0f),
+                1f to backgroundColor.copy(alpha = 0.5f)
             )
-        ),
+        ),//.height(60.dp),
     )
 }
 
@@ -239,22 +238,25 @@ fun BottomToolbar(
     viewModel: EditClusterViewModel,
     modifier: Modifier = Modifier
 ) {
-    // too bright in light mode imo
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
+    // MAYBE: transition to a normal Row instead (for better size control)
     BottomAppBar(
-        modifier = modifier.background(
-            Brush.verticalGradient(
-                0f to backgroundColor.copy(alpha = 0.7f),
-                1f to backgroundColor,
-            )
-        ),
+        modifier = modifier
+//            .height(64.dp) // breaks vertical centering of icons; 80 by default
+            .background(
+                Brush.verticalGradient(
+                    0f to backgroundColor.copy(alpha = 0.7f),
+                    1f to backgroundColor,
+                )
+            ),
         containerColor = backgroundColor.copy(alpha = 0.1f),
         contentColor = contentColor,
     ) {
         CategoryButton(viewModel, EditClusterCategory.Drag)
         CategoryButton(viewModel, EditClusterCategory.Multiselect)
         CategoryButton(viewModel, EditClusterCategory.Region)
+        Spacer(Modifier.size(12.dp, 0.dp))
         VerticalDivider(Modifier
             .fillMaxHeight(0.7f)
             .align(Alignment.CenterVertically)
@@ -274,14 +276,14 @@ fun CategoryButton(
     val i = viewModel.categories.indexOf(category)
     val defaultTool = category.tools[viewModel.categoryDefaults[i]]
 //    val icon = category.icon ?: defaultTool.icon
-    Spacer(Modifier.size(16.dp, 0.dp))
+    Spacer(Modifier.size(12.dp, 0.dp))
     Crossfade(defaultTool) {
         ToolButton(
             viewModel,
             defaultTool,
             Modifier
                 .padding(4.dp)
-                .size(48.dp)
+                .size(40.dp)
         ) {
             viewModel.selectTool(defaultTool, togglePanel = true)
         }
@@ -323,13 +325,13 @@ fun Panel(
     val scrollState = rememberScrollState()
     // mb wrap in a surface
     Row(modifier = modifier
-        .padding(start = 8.dp)
         .horizontalScroll(scrollState)
         .background(
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
             RoundedCornerShape(48.dp)
         ),
     ) {
+        Spacer(Modifier.width(8.dp))
         for (tool in activeCategory.tools) {
             ToolButton(viewModel, tool)
         }
