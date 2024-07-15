@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import data.geometry.Circle
 import data.PartialArgList
@@ -569,10 +570,14 @@ fun DrawScope.drawSelectionControls(
         Offset(positions.right, positions.top + positions.sliderPadding),
         Offset(positions.right, positions.scaleSliderBottom - positions.sliderPadding)
     )
+    val sliderPercentage = when (val submode = viewModel.submode) {
+        is SubMode.ScaleViaSlider -> submode.sliderPercentage
+        else -> 0.5f
+    }
     drawCircle( // slider handle
         sliderColor,
         handleRadius,
-        Offset(positions.right, positions.sliderMiddlePosition)
+        Offset(positions.right, positions.calculateSliderY(sliderPercentage))
     )
     translate(positions.right - iconDim/2f, positions.bottom - iconDim/2f) {
         with (rotateIcon) {
@@ -609,35 +614,42 @@ data class SelectionControlsPositions(
     val width: Int,
     val height: Int
 ) {
+    constructor(intSize: IntSize) : this(intSize.width, intSize.height)
+
     val minDim = min(width, height)
-    val cornerRadius = minDim * REALTIVE_CORNER_RADIUS
+    val cornerRadius = minDim * RELATIVE_CORNER_RADIUS
 
     val top = height * RELATIVE_VERTICAL_MARGIN
     val sliderPadding = height * RELATIVE_SCALE_SLIDER_PADDING
-    val sliderMiddlePosition = top + (height * RELATIVE_SCALE_SLIDER_HEIGHT) / 2f
+    val sliderFullHeight = height * RELATIVE_SCALE_SLIDER_HEIGHT
+    val sliderHeight = sliderFullHeight - 2*sliderPadding
+    val sliderMiddlePosition = top + sliderFullHeight / 2f
     val scaleSliderBottom = top + height * RELATIVE_SCALE_SLIDER_HEIGHT
     val topUnderScaleSlider = scaleSliderBottom + height * RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT
     val bottom = height * (1 - RELATIVE_VERTICAL_MARGIN)
 
     val right = width * (1 - RELATIVE_RIGHT_MARGIN)
-//    val left = right - cornerRadius - width * RELATIVE_LEFTMOST_INDENT
     val left = right - (bottom - topUnderScaleSlider)
 
-    @Stable
-    fun calculateSliderPosition(percentage: Float = 0.5f): Float =
-        top + (height * RELATIVE_SCALE_SLIDER_HEIGHT) * percentage
+    val sliderMiddleOffset = Offset(right, sliderMiddlePosition)
+    val rotationHandleOffset = Offset(right, bottom)
 
+    @Stable
+    fun calculateSliderY(percentage: Float = 0.5f): Float =
+        top + sliderPadding + sliderHeight * (1 - percentage)
+
+    @Stable
+    fun addPanToPercentage(currentPercentage: Float, pan: Offset): Float {
+        val p = -pan.y/sliderHeight
+        return (currentPercentage + p).coerceIn(0f, 1f)
+    }
 
     companion object {
-        val RELATIVE_RIGHT_MARGIN = 0.05f // = % of W
-//        val RELATIVE_LEFTMOST_INDENT = 0.05f // = % of W
-        val RELATIVE_VERTICAL_MARGIN = 0.15f // = % of H
-        val RELATIVE_SCALE_SLIDER_HEIGHT = 0.40f // = % of H
-        val RELATIVE_SCALE_SLIDER_PADDING = 0.02f // = % of H
-        val RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT = 0.10f // = % of H
-        val REALTIVE_CORNER_RADIUS = 0.10f // % of minDim
-        // E: copy button
-        // SE: rotate handle + (screen) center indicator & rotation indicator when it's grabbed
-        // S: delete button
+        const val RELATIVE_RIGHT_MARGIN = 0.05f // = % of W
+        const val RELATIVE_VERTICAL_MARGIN = 0.15f // = % of H
+        const val RELATIVE_SCALE_SLIDER_HEIGHT = 0.40f // = % of H
+        const val RELATIVE_SCALE_SLIDER_PADDING = 0.02f // = % of H
+        const val RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT = 0.10f // = % of H
+        const val RELATIVE_CORNER_RADIUS = 0.10f // % of minDim
     }
 }

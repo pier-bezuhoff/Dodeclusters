@@ -38,6 +38,7 @@ import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import kotlin.math.absoluteValue
+import kotlin.math.pow
 
 /** circle index in vm.circles or cluster.circles */
 typealias Ix = Int
@@ -56,6 +57,7 @@ class EditClusterViewModel(
     // XYPoint uses absolute positioning
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
+    // TODO: distinguish lines
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
@@ -141,6 +143,9 @@ class EditClusterViewModel(
     var showColorPickerDialog by mutableStateOf(false)
 
     var canvasSize by mutableStateOf(IntSize.Zero) // used when saving best-center
+    private val selectionControlsPositions by derivedStateOf {
+        SelectionControlsPositions(canvasSize.width, canvasSize.height)
+    }
     // TODO: keep track of the center instead
     var translation by mutableStateOf(Offset.Zero) // pre-scale offset
 //    val scale = mutableStateOf(1f)
@@ -684,10 +689,6 @@ class EditClusterViewModel(
     }
 
     fun onUp(visiblePosition: Offset?) {
-        submode.let {
-            if (it is SubMode.Rotate)
-                submode = SubMode.None
-        }
         when (mode) {
             is ToolMode -> {
                 // we only confirm args in onUp, they are created in onDown etc.
@@ -710,19 +711,19 @@ class EditClusterViewModel(
         if (partialArgList?.isFull == true) {
             completeToolMode()
         }
+        submode = SubMode.None
     }
 
     fun onDown(visiblePosition: Offset) {
         // reset grabbed thingies
         if (showCircles) {
-            submode = when (val h = handleConfig) {
+            when (val h = handleConfig) {
                 is HandleConfig.SingleCircle -> {
                     val circle = circles[h.ix]
                     val radiusHandlePosition = circle.center + Offset(circle.radius.toFloat(), 0f)
                     when {
                         isCloseEnoughToSelect(radiusHandlePosition, visiblePosition) ->
-                            SubMode.Scale(circle.center)
-                        else -> SubMode.None
+                            submode = SubMode.Scale(circle.center)
                     }
                 }
                 is HandleConfig.SeveralCircles -> {
@@ -731,14 +732,22 @@ class EditClusterViewModel(
                     val rotateHandlePosition = rect.bottomRight
                     when {
                         isCloseEnoughToSelect(scaleHandlePosition, visiblePosition) ->
-                            SubMode.Scale(rect.center)
+                            submode = SubMode.Scale(rect.center)
                         isCloseEnoughToSelect(rotateHandlePosition, visiblePosition) -> {
-                            SubMode.Rotate(rect.center)
+                            submode = SubMode.Rotate(rect.center)
                         }
-                        else -> SubMode.None
                     }
                 }
-                else -> SubMode.None
+            }
+            if (circleSelectionIsActive && submode is SubMode.None) {
+                val positions = SelectionControlsPositions(canvasSize.width, canvasSize.height)
+                val screenCenter = absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
+                when {
+                    isCloseEnoughToSelect(absolute(positions.sliderMiddleOffset), visiblePosition) ->
+                        submode = SubMode.ScaleViaSlider(screenCenter)
+                    isCloseEnoughToSelect(absolute(positions.rotationHandleOffset), visiblePosition) ->
+                        submode = SubMode.Rotate(screenCenter)
+                }
             }
             // NOTE: this enables drag-only behavior, you lose your selection when grabbing new circle
             if (mode == SelectionMode.Drag && submode is SubMode.None) {
@@ -773,10 +782,37 @@ class EditClusterViewModel(
             // drag handle
             when (val h = handleConfig) {
                 is HandleConfig.SingleCircle -> {
-                    recordCommand(Command.CHANGE_RADIUS)
-                    val center = circles[h.ix].center
-                    val r = (c - center).getDistance()
-                    circles[h.ix] = circles[h.ix].copy(radius = r.toDouble())
+                    when (val sm = submode) {
+                        is SubMode.Scale -> {
+                            recordCommand(Command.CHANGE_RADIUS)
+                            val center = sm.center
+                            val r = (c - center).getDistance()
+                            circles[h.ix] = circles[h.ix].copy(radius = r.toDouble())
+                        }
+                        is SubMode.ScaleViaSlider -> {
+                            val positions = SelectionControlsPositions(canvasSize.width, canvasSize.height)
+                            val newPercentage = positions.addPanToPercentage(sm.sliderPercentage, pan)
+                            if (sm.sliderPercentage != newPercentage) {
+                                recordCommand(Command.SCALE)
+                                val circle = circles[h.ix]
+                                val r = circle.radius * sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
+                                circles[h.ix] = circle.copy(radius = r)
+                                submode = sm.copy(sliderPercentage = newPercentage)
+                            }
+                        }
+                        is SubMode.Rotate -> {
+                            recordCommand(Command.ROTATE)
+                            val center = sm.center
+                            val centerToCurrent = c - center
+                            val centerToPreviousHandle = centerToCurrent - pan
+                            val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
+                            val circle = circles[h.ix]
+                            val newOffset = (circle.center - center).rotateBy(angle) + center
+                            circles[h.ix] = Circle(newOffset, circle.radius)
+                            submode = sm.copy(angle = sm.angle + angle)
+                        }
+                        else -> {}
+                    }
                 }
                 is HandleConfig.SeveralCircles -> {
                     when (val sm = submode) {
@@ -787,11 +823,25 @@ class EditClusterViewModel(
                             val center = rect.center
                             val centerToHandle = scaleHandlePosition - center
                             val centerToCurrent = centerToHandle + pan
-                            val handleScale = centerToCurrent.getDistance()/centerToHandle.getDistance()
+                            val scaleFactor = centerToCurrent.getDistance()/centerToHandle.getDistance()
                             for (ix in selection) {
                                 val circle = circles[ix]
-                                val newOffset = (circle.center - center) * handleScale + center
-                                circles[ix] = Circle(newOffset, handleScale * circle.radius)
+                                val newOffset = (circle.center - center) * scaleFactor + center
+                                circles[ix] = Circle(newOffset, scaleFactor * circle.radius)
+                            }
+                        }
+                        is SubMode.ScaleViaSlider -> {
+                            val positions = SelectionControlsPositions(canvasSize.width, canvasSize.height)
+                            val newPercentage = positions.addPanToPercentage(sm.sliderPercentage, pan)
+                            if (sm.sliderPercentage != newPercentage) {
+                                recordCommand(Command.SCALE)
+                                val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
+                                for (ix in selection) {
+                                    val circle = circles[ix]
+                                    val newOffset = (circle.center - sm.center) * scaleFactor + sm.center
+                                    circles[ix] = Circle(newOffset, scaleFactor * circle.radius)
+                                }
+                                submode = sm.copy(sliderPercentage = newPercentage)
                             }
                         }
                         is SubMode.Rotate -> {
@@ -800,14 +850,12 @@ class EditClusterViewModel(
                             val centerToCurrent = c - center
                             val centerToPreviousHandle = centerToCurrent - pan
                             val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
-//                            println(angle)
-//                            rotationIndicatorPosition = centerToHandle.rotateBy(angle) + center
-                            submode = sm.copy(angle = sm.angle + angle)
                             for (ix in selection) {
                                 val circle = circles[ix]
                                 val newOffset = (circle.center - center).rotateBy(angle) + center
                                 circles[ix] = Circle(newOffset, circle.radius)
                             }
+                            submode = sm.copy(angle = sm.angle + angle)
                         }
                         else -> Unit
                     }
@@ -1065,7 +1113,11 @@ class EditClusterViewModel(
         /** min tap/grab distance to select an object in dp */
         const val EPSILON = 10f
         const val ZOOM_INCREMENT = 1.05f // == +5%
+        const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val HISTORY_SIZE = 100
+
+        fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
+            MAX_SLIDER_ZOOM.pow(2*percentageDelta)
     }
 }
 
@@ -1076,10 +1128,12 @@ sealed class HandleConfig(open val ixs: List<Ix>) {
     data class SeveralCircles(override val ixs: List<Ix>): HandleConfig(ixs)
 }
 
+@Immutable
 sealed interface SubMode {
     data object None : SubMode
     // center uses absolute positioning
     data class Scale(val center: Offset) : SubMode
+    data class ScaleViaSlider(val center: Offset, val sliderPercentage: Float = 0.5f) : SubMode
     data class Rotate(val center: Offset, val angle: Double = 0.0) : SubMode
 }
 

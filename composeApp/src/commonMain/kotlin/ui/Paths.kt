@@ -60,6 +60,7 @@ fun part2path(
     else
         Pair(
             circleOutsides.fold(insidePath) { acc: Path, circleOutside: Circle ->
+                // BUG: this can fail, in particular when scaling/rotating magnet-problems.yml
                 Path.combine(PathOperation.Difference, acc, circle2path(circleOutside))
             },
             PathType.NORMAL
