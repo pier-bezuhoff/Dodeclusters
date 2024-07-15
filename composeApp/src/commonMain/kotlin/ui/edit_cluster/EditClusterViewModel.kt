@@ -794,8 +794,9 @@ class EditClusterViewModel(
                             if (sm.sliderPercentage != newPercentage) {
                                 recordCommand(Command.SCALE)
                                 val circle = circles[h.ix]
-                                val r = circle.radius * sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
-                                circles[h.ix] = circle.copy(radius = r)
+                                val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
+                                val newOffset = (circle.center - sm.center) * scaleFactor + sm.center
+                                circles[h.ix] = Circle(newOffset, scaleFactor * circle.radius)
                                 submode = sm.copy(sliderPercentage = newPercentage)
                             }
                         }
