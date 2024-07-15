@@ -69,16 +69,6 @@ sealed class EditClusterCategory(
         )
     ) { // ~button-like
     }
-    // MAYBE: this should be a separate context menu, not a general category
-    data object Attributes : EditClusterCategory(
-        Res.string.attributes_category_name,
-        listOf(
-            EditClusterTool.Delete,
-            EditClusterTool.Duplicate,
-        ),
-        defaultables = emptyList(),
-        icon = Res.drawable.half_diffused_circle
-    ) // just open panel, mb diff icon also (like setting wheel)
     data object Transform : EditClusterCategory(
         Res.string.transform_category_name,
         listOf(EditClusterTool.CircleInversion),
@@ -94,9 +84,10 @@ sealed class EditClusterCategory(
         listOf(
             EditClusterTool.ConstructCircleByCenterAndRadius,
             EditClusterTool.ConstructCircleBy3Points,
+            EditClusterTool.ConstructLineBy2Points,
             EditClusterTool.InsertCenteredCross,
         ),
-        defaultables = listOf(0, 1)
+        defaultables = listOf(0, 1, 2)
     ) { // ~mode-like
         // mode: bezier-like arc path
         // mode: line by 2 points

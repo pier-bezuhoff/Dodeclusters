@@ -972,6 +972,7 @@ class EditClusterViewModel(
         when (toolMode) {
             ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> completeCircleByCenterAndRadius()
             ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
+            ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
         }
     }
@@ -1004,6 +1005,18 @@ class EditClusterViewModel(
         } finally {
             partialArgList = PartialArgList(argList.signature)
         }
+    }
+
+    private fun completeLineBy2Points() {
+        val argList = partialArgList!!
+        val points = argList.args.map {
+            (it as PartialArgList.Arg.XYPoint).toOffset()
+        }
+        val newLine = Circle.almostALine(
+            points[0], points[1]
+        )
+        createNewCircle(newLine, switchToSelectionMode = false)
+        partialArgList = PartialArgList(argList.signature)
     }
 
     private fun completeCircleInversion() {

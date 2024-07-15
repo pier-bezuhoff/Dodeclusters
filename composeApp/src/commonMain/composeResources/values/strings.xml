@@ -54,6 +54,12 @@
         <item>2nd point on the circle</item>
         <item>3rd point on the circle</item>
     </string-array>
+    <string name="line_by_2_points_name">Line by 2 points</string>
+    <string name="line_by_2_points_description">Construct a line by 2 points lying on it</string>
+    <string-array name="line_by_2_points_arg_descriptions">
+        <item>1st point on the line</item>
+        <item>2nd point on the line</item>
+    </string-array>
     <string name="insert_centered_cross_name">Insert centered cross</string>
     <string name="insert_centered_cross_description">Insert centered cross</string>
 <!--    <string name="_name"></string>-->

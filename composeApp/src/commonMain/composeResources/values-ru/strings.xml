@@ -52,6 +52,12 @@
         <item>2-ая точка на окружности</item>
         <item>3-ья точка на окружности</item>
     </string-array>
+    <string name="line_by_2_points_name">Прямая по двум точкам</string>
+    <string name="line_by_2_points_description">Провести прямую через две заданные точки</string>
+    <string-array name="line_by_2_points_arg_descriptions">
+        <item>1-ая точка на прямой</item>
+        <item>2-ая точка на прямой</item>
+    </string-array>
     <string name="insert_centered_cross_name">Вставить крест по центру</string>
     <string name="insert_centered_cross_description">Вставить крест по центру</string>
 <!--    <string name="_name"></string>-->

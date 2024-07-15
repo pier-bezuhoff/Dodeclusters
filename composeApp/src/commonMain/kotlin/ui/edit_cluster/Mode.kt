@@ -42,9 +42,11 @@ enum class ToolMode(
     @Transient
     val tool: EditClusterTool.MultiArg
 ) : Mode {
+    CIRCLE_INVERSION(EditClusterTool.CircleInversion),
+
     CIRCLE_BY_CENTER_AND_RADIUS(EditClusterTool.ConstructCircleByCenterAndRadius),
     CIRCLE_BY_3_POINTS(EditClusterTool.ConstructCircleBy3Points),
-    CIRCLE_INVERSION(EditClusterTool.CircleInversion),
+    LINE_BY_2_POINTS(EditClusterTool.ConstructLineBy2Points),
     ;
 
     val signature: PartialArgList.Signature = tool.signature

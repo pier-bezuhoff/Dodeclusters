@@ -41,6 +41,10 @@ import dodeclusters.composeapp.generated.resources.hide_layers
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_description
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_name
 import dodeclusters.composeapp.generated.resources.invisible
+import dodeclusters.composeapp.generated.resources.line_2_points
+import dodeclusters.composeapp.generated.resources.line_by_2_points_arg_descriptions
+import dodeclusters.composeapp.generated.resources.line_by_2_points_description
+import dodeclusters.composeapp.generated.resources.line_by_2_points_name
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
 import dodeclusters.composeapp.generated.resources.multiselect_name
@@ -195,6 +199,13 @@ sealed class EditClusterTool(
         Res.string.circle_by_3_points_description,
         Res.string.circle_by_3_points_arg_descriptions,
         Res.drawable.circle_3_points
+    )
+    data object ConstructLineBy2Points: MultiArg(
+        PartialArgList.SIGNATURE_2_POINTS,
+        Res.string.line_by_2_points_name,
+        Res.string.line_by_2_points_description,
+        Res.string.line_by_2_points_arg_descriptions,
+        Res.drawable.line_2_points
     )
     // line by 2 pts
     data object InsertCenteredCross: Action(

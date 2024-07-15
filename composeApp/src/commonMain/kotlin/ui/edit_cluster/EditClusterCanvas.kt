@@ -365,14 +365,17 @@ private fun DrawScope.drawPartialConstructs(
                     radius = creationPointRadius,
                     center = point
                 )
-            if (args.size == 2)
+            if (args.size == 2) {
+                val (p1, p2) = points
+                val maxDim = size.maxDimension
+                val far = (p2 - p1)/(p2 - p1).getDistance()*maxDim
                 drawLine(
                     color = creationPrototypeColor,
-                    start = points[0],
-                    end = points[1],
+                    start = p1 - far,
+                    end = p2 + far,
                     strokeWidth = strokeWidth
                 )
-            else if (args.size == 3) {
+            } else if (args.size == 3) {
                 try {
                     val c = Circle.by3Points(points[0], points[1], points[2])
                     drawCircle(
@@ -384,6 +387,26 @@ private fun DrawScope.drawPartialConstructs(
                 } catch (e: NumberFormatException) {
                     e.printStackTrace()
                 }
+            }
+        }
+        ToolMode.LINE_BY_2_POINTS -> viewModel.partialArgList!!.args.let { args ->
+            val points = args.map { (it as PartialArgList.Arg.XYPoint).toOffset() }
+            for (point in points)
+                drawCircle(
+                    color = creationPrototypeColor,
+                    radius = creationPointRadius,
+                    center = point
+                )
+            if (args.size == 2) {
+                val (p1, p2) = points
+                val maxDim = size.maxDimension
+                val far = (p2 - p1)/(p2 - p1).getDistance()*maxDim
+                drawLine(
+                    color = creationPrototypeColor,
+                    start = p1 - far,
+                    end = p2 + far,
+                    strokeWidth = strokeWidth
+                )
             }
         }
         else -> {}
