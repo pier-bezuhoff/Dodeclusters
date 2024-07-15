@@ -101,6 +101,10 @@ compose.desktop {
 //        javaHome = "/usr/lib/jvm/java-17-openjdk/" // cannot find jpackage in the normal jbr-17
         mainClass = "MainKt"
 
+        buildTypes.release.proguard {
+            isEnabled = false
+        }
+
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.pierbezuhoff.dodeclusters"
