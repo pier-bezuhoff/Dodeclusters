@@ -70,7 +70,6 @@ class EditClusterViewModel(
         EditClusterCategory.Region,
         EditClusterCategory.Visibility,
         EditClusterCategory.Colors,
-//        EditClusterCategory.Attributes, // replace with floating context menu
         EditClusterCategory.Transform,
         EditClusterCategory.Create, // FAB
     )
@@ -415,9 +414,9 @@ class EditClusterViewModel(
     fun visible(position: Offset): Offset =
         position + translation
 
-    fun isCloseEnoughToSelect(absolutePosition: Offset, visiblePosition: Offset): Boolean {
+    fun isCloseEnoughToSelect(absolutePosition: Offset, visiblePosition: Offset, lowAccuracy: Boolean = false): Boolean {
         val position = absolute(visiblePosition)
-        return (absolutePosition - position).getDistance() <= epsilon
+        return (absolutePosition - position).getDistance() <= epsilon * (if (lowAccuracy) LOW_ACCURACY_FACTOR else 1f)
     }
 
     fun selectPoint(targets: List<Offset>, visiblePosition: Offset): Ix? {
@@ -722,7 +721,7 @@ class EditClusterViewModel(
                     val circle = circles[h.ix]
                     val radiusHandlePosition = circle.center + Offset(circle.radius.toFloat(), 0f)
                     when {
-                        isCloseEnoughToSelect(radiusHandlePosition, visiblePosition) ->
+                        isCloseEnoughToSelect(radiusHandlePosition, visiblePosition, lowAccuracy = true) ->
                             submode = SubMode.Scale(circle.center)
                     }
                 }
@@ -731,9 +730,9 @@ class EditClusterViewModel(
                     val scaleHandlePosition = rect.topRight
                     val rotateHandlePosition = rect.bottomRight
                     when {
-                        isCloseEnoughToSelect(scaleHandlePosition, visiblePosition) ->
+                        isCloseEnoughToSelect(scaleHandlePosition, visiblePosition, lowAccuracy = true) ->
                             submode = SubMode.Scale(rect.center)
-                        isCloseEnoughToSelect(rotateHandlePosition, visiblePosition) -> {
+                        isCloseEnoughToSelect(rotateHandlePosition, visiblePosition, lowAccuracy = true) -> {
                             submode = SubMode.Rotate(rect.center)
                         }
                     }
@@ -743,9 +742,9 @@ class EditClusterViewModel(
                 val positions = SelectionControlsPositions(canvasSize.width, canvasSize.height)
                 val screenCenter = absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
                 when {
-                    isCloseEnoughToSelect(absolute(positions.sliderMiddleOffset), visiblePosition) ->
+                    isCloseEnoughToSelect(absolute(positions.sliderMiddleOffset), visiblePosition, lowAccuracy = true) ->
                         submode = SubMode.ScaleViaSlider(screenCenter)
-                    isCloseEnoughToSelect(absolute(positions.rotationHandleOffset), visiblePosition) ->
+                    isCloseEnoughToSelect(absolute(positions.rotationHandleOffset), visiblePosition, lowAccuracy = true) ->
                         submode = SubMode.Rotate(screenCenter)
                 }
             }
@@ -1112,6 +1111,7 @@ class EditClusterViewModel(
     companion object {
         /** min tap/grab distance to select an object in dp */
         const val EPSILON = 10f
+        const val LOW_ACCURACY_FACTOR = 1.5f
         const val ZOOM_INCREMENT = 1.05f // == +5%
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val HISTORY_SIZE = 100

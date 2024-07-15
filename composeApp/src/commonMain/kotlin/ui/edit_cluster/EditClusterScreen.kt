@@ -110,8 +110,8 @@ fun EditClusterScreen(
                     Icons.Filled.Add,
                     stringResource(category.name),
                     Modifier
-                        .padding(8.dp)
-                        .size(48.dp)
+                        .padding(4.dp)
+                        .size(40.dp)
                 )
             }
         },
