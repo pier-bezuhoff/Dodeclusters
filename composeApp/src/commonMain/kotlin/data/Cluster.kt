@@ -2,12 +2,13 @@ package data
 
 import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
+import data.geometry.CircleOrLine
 import data.io.Ddc
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class Cluster(
-    val circles: List<Circle>,
+    val circles: List<CircleOrLine>,
     /** union of parts comprised of circle intersections */
     val parts: List<Part> = emptyList(),
     /** fill regions inside / wireframe */

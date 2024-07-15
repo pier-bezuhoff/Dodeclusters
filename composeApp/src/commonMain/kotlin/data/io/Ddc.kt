@@ -1,6 +1,5 @@
 package data.io
 
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
 import data.Cluster
@@ -9,6 +8,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import data.ColorCssSerializer
+import data.geometry.CircleOrLine
+import data.geometry.Line
 import ui.theme.DodeclustersColors
 
 // MIME type: application/yaml or text/plain
@@ -29,6 +30,7 @@ data class Ddc(
         get() = content.lastOrNull()?.let {
             when (it) {
                 is Token.Circle -> it.index + 1
+                is Token.Line -> it.index + 1
                 is Token.Cluster -> it.indices.last() + 1
             }
         } ?: 0
@@ -50,7 +52,7 @@ data class Ddc(
         data class Cluster(
             /** 2 value list: [[first circle index, last circle index]] */
             val indices: List<Int>,
-            val circles: List<data.geometry.Circle>,
+            val circles: List<CircleOrLine>,
             /** circle indices used parts shall be Ddc-global circle indices, the one consistent with cluster.indices */
             val parts: List<data.Cluster.Part>,
             val filled: Boolean = DEFAULT_CLUSTER_FILLED,
@@ -76,10 +78,25 @@ data class Ddc(
             /** circle indices used shall be Ddc-global circle indices, the one consistent with cluster.indices and circle.index */
             val rule: List<Int> = DEFAULT_CIRCLE_RULE,
         ) : Token() {
-            val offset: Offset
-                get() = Offset(x.toFloat(), y.toFloat())
             fun toCircle(): data.geometry.Circle =
                 Circle(x, y, radius)
+        }
+        @SerialName("Line")
+        @Serializable
+        data class Line(
+            val index: Int,
+            val a: Double,
+            val b: Double,
+            val c: Double,
+            val visible: Boolean = DEFAULT_CIRCLE_VISIBLE,
+            @Serializable(ColorCssSerializer::class)
+            val borderColor: Color? = DEFAULT_CIRCLE_BORDER_COLOR,
+            /** circle indices used shall be Ddc-global circle indices,
+             * the one consistent with cluster.indices and circle.index */
+            val rule: List<Int> = DEFAULT_CIRCLE_RULE,
+        ) : Token() {
+            fun toLine(): data.geometry.Line =
+                Line(a, b, c)
         }
     }
 
@@ -91,13 +108,14 @@ data class Ddc(
                 encode("backgroundColor", Json.encodeToString(ColorCssSerializer, backgroundColor)),
                 encode("bestCenterX", bestCenterX.toString()),
                 encode("bestCenterY", bestCenterY.toString()),
-                encode("shape", Json.encodeToString(shape)),
+                encodeOptional("shape", if (shape != DEFAULT_SHAPE) Json.encodeToString(shape) else null),
                 encode("drawTrace", drawTrace.toString()),
                 encode("content:"),
             )
             val body = content.map {
                 when (it) {
                     is Token.Circle -> down().encodeCircle(it)
+                    is Token.Line -> down().encodeLine(it)
                     is Token.Cluster -> down().encodeCluster(it)
                 }
             }
@@ -170,11 +188,32 @@ private data class Indentation(val indentLevel: Int) {
             encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule)),
         )
 
+    fun encodeLine(f: Ddc.Token.Line): String =
+        encodeListItem(
+            "type: Line",
+            encode("index", f.index),
+            encode("a", f.a),
+            encode("b", f.b),
+            encode("c", f.c),
+            encode("visible", f.visible),
+            encodeOptional("borderColor", f.borderColor?.encodeColor()),
+            encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule)),
+        )
+
     fun encodeClusterCircle(circle: Circle): String =
         encodeListItem(
-            "x: ${circle.x}",
+            "type: circle",
+            encode("x", circle.x),
             encode("y", circle.y),
             encode("radius", circle.radius),
+        )
+
+    fun encodeClusterLine(line: Line): String =
+        encodeListItem(
+            "type: line",
+            encode("a", line.a),
+            encode("b", line.b),
+            encode("c", line.c),
         )
 
     fun encodeClusterPart(part: Cluster.Part): String =
@@ -190,7 +229,12 @@ private data class Indentation(val indentLevel: Int) {
             "type: Cluster",
             encode("indices", "[${f.indices.first()}, ${f.indices.last()}]"),
             encode("circles:"),
-            *f.circles.map { down().encodeClusterCircle(it) }.toTypedArray(),
+            *f.circles.map {
+                when (it) {
+                    is Circle -> down().encodeClusterCircle(it)
+                    is Line -> down().encodeClusterLine(it)
+                }
+            }.toTypedArray(),
             encode("parts:"),
             *f.parts.map { down().encodeClusterPart(it) }.toTypedArray(),
             encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule)),

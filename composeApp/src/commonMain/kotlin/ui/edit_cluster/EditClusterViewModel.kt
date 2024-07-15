@@ -57,7 +57,6 @@ class EditClusterViewModel(
     // XYPoint uses absolute positioning
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
-    // TODO: distinguish lines
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
@@ -162,11 +161,11 @@ class EditClusterViewModel(
     fun saveAndGoBack() {}
     fun cancelAndGoBack() {}
 
-    fun saveAsYaml(): String {
+    fun saveAsYaml(name: String = Ddc.DEFAULT_NAME): String {
         val cluster = Cluster(
             circles.toList(), parts.toList()
         )
-        var ddc = Ddc(cluster)
+        var ddc = Ddc(cluster).copy(name = name)
         computeAbsoluteCenter()?.let { center ->
             ddc = ddc.copy(bestCenterX = center.x, bestCenterY = center.y)
         }

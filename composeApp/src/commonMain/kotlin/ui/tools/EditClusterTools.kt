@@ -15,7 +15,6 @@ import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_a
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_description
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_name
 import dodeclusters.composeapp.generated.resources.circle_center_and_radius_point
-import dodeclusters.composeapp.generated.resources.circle_inversion
 import dodeclusters.composeapp.generated.resources.circle_inversion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_inversion_description
 import dodeclusters.composeapp.generated.resources.circle_inversion_name
@@ -207,7 +206,6 @@ sealed class EditClusterTool(
         Res.string.line_by_2_points_arg_descriptions,
         Res.drawable.line_2_points
     )
-    // line by 2 pts
     data object InsertCenteredCross: Action(
         Res.string.insert_centered_cross_name,
         Res.string.insert_centered_cross_description,

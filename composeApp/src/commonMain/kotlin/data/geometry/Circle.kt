@@ -5,6 +5,7 @@ import data.kmath_complex.ComplexField
 import data.kmath_complex.r
 import data.kmath_complex.r2
 import domain.toComplex
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -14,6 +15,7 @@ const val EPSILON: Double = 1e-6
 
 sealed interface CircleOrLine : GCircle
 
+@SerialName("circle")
 @Serializable
 data class Circle(
     val x: Double,

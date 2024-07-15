@@ -31,7 +31,7 @@ data class GeneralizedCircle(
     val z: Double
 ) {
     init {
-        require(listOf(w,x,y,z).any { abs(it) > EPSILON }) { "Homogenous coordinates are invalid" }
+        require(listOf(w,x,y,z).any { it != 0.0 }) { "(0,0,0,0) Homogenous coordinates are invalid" }
     }
 
     val ePlusProjection: Double get() =
@@ -40,7 +40,7 @@ data class GeneralizedCircle(
         (2*w + z)/2
 
     val norm2: Double get() =
-        scalarProduct(this)
+        this scalarProduct this
     val norm: Double get() =
         sqrt(abs(norm2))
 
@@ -93,29 +93,36 @@ data class GeneralizedCircle(
         (z - w/2)*(other.z - other.w/2) + // e_plus part
         - (z + w/2)*(other.z + other.w/2) // e_minus part
 
-    fun normalized(preserveDirection: Boolean = true): GeneralizedCircle {
+    fun normalized(): GeneralizedCircle {
+        val n = norm
+        if (n == 0.0)
+            return this * (1/w)
         val a = this * (1/norm)
-        return if (preserveDirection)
-            a
-        else if (
+        return  if (
             a.w < 0 ||
             a.w == 0.0 && a.x < 0 ||
             a.x == 0.0 && a.y < 0 ||
             a.y == 0.0 && a.z < 0
         )
-            -a
+            -a // making sure c.normalized().w >= 0
         else
             a
     }
 
+    fun normalizedPreservingDirection(): GeneralizedCircle {
+        val n = norm
+        return if (n == 0.0)
+            this * (1/abs(w)) // n=0 => w!=0
+        else this * (1/n)
+    }
+
     // NOTE: -X != X, sign represents direction
     //  X == k*X where k>0
-    fun homogenousEquals(other: GeneralizedCircle, checkDirection: Boolean = true): Boolean {
+    infix fun homogenousEquals(other: GeneralizedCircle): Boolean {
         val (wxyz1, wxyz2) = listOf(
-            this.normalized(preserveDirection = checkDirection),
-            other.normalized(preserveDirection = checkDirection)
-        )
-            .map { listOf(it.w, it.x, it.y, it.z) }
+            this.normalized(),
+            other.normalized()
+        ).map { listOf(it.w, it.x, it.y, it.z) }
         return wxyz1.zip(wxyz2)
             .all { (a1, a2) ->
                 abs(a1 - a2) < EPSILON
@@ -137,17 +144,16 @@ data class GeneralizedCircle(
         return affineCombination(other, (nOfSections - index).toDouble()/nOfSections)
     }
 
-    // = affineCombination(other, inf)
+    // = affineCombination(other, infinity)
     fun altBisector(other: GeneralizedCircle): GeneralizedCircle =
         this - other
 
     // in non-elliptic pencils subdivide+out is meaningless
     fun calculatePencilType(other: GeneralizedCircle): CirclePencilType? =
-        if (this.homogenousEquals(other, checkDirection = false)) {
+        if (this homogenousEquals other) {
             null
         } else {
-            val s = this.normalized(preserveDirection = false)
-                .scalarProduct(other.normalized(preserveDirection = false))
+            val s = this.normalized() scalarProduct other.normalized()
             when {
                 abs(s) < EPSILON -> CirclePencilType.PARABOLIC
                 s > 0 -> CirclePencilType.ELLIPTIC

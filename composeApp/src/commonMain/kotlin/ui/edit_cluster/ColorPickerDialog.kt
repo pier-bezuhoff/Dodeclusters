@@ -60,6 +60,7 @@ import ui.colorpicker.HsvColor
 
 // BUG: cancel/ok buttons look bad in mobile/landscape
 // TODO: preview previous vs current color
+// TODO: add predefined colors (e.g. a-la in inkscape or such)
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun ColorPickerDialog(
@@ -75,7 +76,7 @@ fun ColorPickerDialog(
     val color = rememberSaveable(stateSaver = HsvColor.Saver) {
         mutableStateOf(HsvColor.from(initialColor))
     }
-    var hex by mutableStateOf(computeHex(color)) // need to be manually updated on every color's change
+    var hex by mutableStateOf(computeHex(color)) // need to be MANUALLY updated on every color change
     Dialog(onDismissRequest = {
 //        onDismissRequest()
         onConfirm(color.value.toColor()) // thats how it be

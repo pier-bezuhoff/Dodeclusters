@@ -477,9 +477,9 @@ private fun DrawScope.drawHandles(
         }
         (viewModel.submode as? SubMode.Rotate)?.let { (center, angle) ->
             val currentDirection = Offset(0f, -1f).rotateBy(angle.toFloat())
-            val maxDim = viewModel.canvasSize.run { max(width, height) }
+            val maxDim = size.maxDimension
             val sameDirectionFarAway =
-                center + currentDirection * maxDim.toFloat()
+                center + currentDirection * maxDim
             drawLine(
                 color = rotationIndicatorColor,
                 start = center,
@@ -607,12 +607,8 @@ fun DrawScope.drawSelectionControls(
             draw(iconSize, colorFilter = ColorFilter.tint(rotateHandleColor))
         }
     }
-    // when needed, draw rotation indicator
-    // when in rotation mode, draw rotation anchor/center
-
-    // potentially add custom fields to specify angle & scale manually
-    // selection rect's scale & rotate handles are also always active
-    // tho when they aren't visible they can't be grabbed obv
+    // MAYBE: when in rotation mode, draw rotation anchor/center
+    //  potentially add custom fields to specify angle & scale manually
 }
 
 //            .

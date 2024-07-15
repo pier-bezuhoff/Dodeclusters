@@ -49,7 +49,8 @@ actual fun SaveFileButton(
                     if (filename != null) {
                         if (directory != null)
                             lastDir = directory
-                        saveTextFile(saveData.content, File(directory, filename))
+                        val file = File(directory, filename)
+                        saveTextFile(saveData.content(file.nameWithoutExtension), file)
                         onSaved(true)
                     } else
                         onSaved(false)

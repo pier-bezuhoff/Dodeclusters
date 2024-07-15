@@ -9,7 +9,7 @@ data class SaveData(
     val name: String,
     /** no leading dot, empty string if no extension */
     val extension: String,
-    val content: String,
+    val content: (name: String) -> String,
 ) {
     val filename: String = if (extension.isBlank()) name else "$name.$extension"
 }

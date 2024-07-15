@@ -53,10 +53,9 @@ actual fun SaveFileButton(
     fun onConfirm() {
         openDialog = false
         coroutineScope.launch {
-            // NOTE: ddcName from the dialog is only used as a file name, not inside the ddc itself
             val saveData = saveDataProvider().copy(name = ddcName.text)
             try {
-                downloadTextFile3(saveData.filename, saveData.content)
+                downloadTextFile3(saveData.filename, saveData.content(ddcName.text))
                 onSaved(true)
             } catch (e: Exception) {
                 onSaved(false)

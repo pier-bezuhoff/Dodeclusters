@@ -1,9 +1,16 @@
 package data.geometry
 
 import androidx.compose.ui.geometry.Offset
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** [a]*x + [b]*y + [c] = 0 */
+/** [a]*x + [b]*y + [c] = 0
+ *
+ * Normal vector = ([a], [b]), so it depends on the sign
+ *
+ * Normal vector points "inside",
+ * "inside" = to the "left" side of the line*/
+@SerialName("line")
 @Serializable
 data class Line(
     val a: Double,

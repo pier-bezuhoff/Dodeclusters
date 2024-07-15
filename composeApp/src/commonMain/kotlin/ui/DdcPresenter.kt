@@ -178,6 +178,7 @@ class DdcPresenter(
                             filled = token.filled,
                             rule = token.rule
                         )
+                        is Ddc.Token.Line -> TODO()
                         is Ddc.Token.Cluster -> token
                     }
                 }
@@ -220,13 +221,15 @@ class DdcPresenter(
                         rs[token.index] = token.radius
                         rules[token.index] = token.rule
                     }
+                    is Ddc.Token.Line -> TODO()
                     is Ddc.Token.Cluster -> {
                         val firstIndex = token.indices.first()
                         token.circles.forEachIndexed { i, circle ->
-                            xs[firstIndex + i] = circle.x
-                            ys[firstIndex + i] = circle.y
-                            rs[firstIndex + i] = circle.radius
-                            rules[firstIndex + i] = token.rule
+                            TODO()
+//                            xs[firstIndex + i] = circle.x
+//                            ys[firstIndex + i] = circle.y
+//                            rs[firstIndex + i] = circle.radius
+//                            rules[firstIndex + i] = token.rule
                         }
                     }
                 }

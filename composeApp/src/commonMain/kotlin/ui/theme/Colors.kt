@@ -160,6 +160,7 @@ object DodeclustersColors {
     val purple = Color(0xff_A020F0) // used in the default cluster
     val dimPurple = Color(0xff_9141BD) // similar to purple but slightly less intensive
     val puce = Color(0xff_cc8899) // cute dark pink
+    val golden = tertiaryDark
 
     val gray = Color.Gray
     val red = Color.Red
