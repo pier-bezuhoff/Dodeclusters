@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import data.geometry.Circle
 import data.PartialArgList
+import data.geometry.CircleOrLine
+import data.geometry.Line
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_forever
@@ -145,7 +147,8 @@ fun BoxScope.EditClusterCanvas(
             )
     ) {
         translate(viewModel.translation.x, viewModel.translation.y) {
-            drawAnimation(animations, viewModel.translation)
+            val visibleRect = size.toRect().translate(-viewModel.translation)
+            drawAnimation(animations, visibleRect)
             drawParts(viewModel, clusterPathAlpha, circleStroke)
             if (viewModel.showCircles)
                 drawCircles(viewModel, circleColor, circleStroke)
@@ -241,12 +244,28 @@ private fun SelectionsCanvas(
     }
 }
 
+private fun DrawScope.drawCircleOrLine(
+    circle: CircleOrLine,
+    visibleRect: Rect,
+    color: Color,
+    alpha: Float = 1f,
+    style: DrawStyle = Fill,
+    blendMode: BlendMode = DrawScope.DefaultBlendMode
+) {
+    when (circle) {
+        is Circle -> drawCircle(
+            color, circle.radius.toFloat(), circle.center, alpha, style, blendMode = blendMode
+        )
+        is Line -> {
+            val maxDim = visibleRect.maxDimension
+        }
+    }
+}
+
 private fun DrawScope.drawAnimation(
     animations: Map<CircleAnimation, Animatable<Float, AnimationVector1D>>,
-    translation: Offset
+    visibleRect: Rect
 ) {
-    val visibleRect = size.toRect()
-        .translate(-translation)
     val visibleScreenPath = Path().apply { addRect(visibleRect) }
     // TODO: either transition to a different animation
     //  or distinguish between circles and lines (lines lag for now)

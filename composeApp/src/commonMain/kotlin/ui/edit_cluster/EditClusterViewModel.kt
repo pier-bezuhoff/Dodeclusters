@@ -22,6 +22,8 @@ import data.geometry.Circle
 import data.Cluster
 import data.OffsetSerializer
 import data.PartialArgList
+import data.geometry.CircleOrLine
+import data.geometry.Line
 import data.io.Ddc
 import data.io.parseDdc
 import domain.angleDeg
@@ -305,10 +307,10 @@ class EditClusterViewModel(
     }
 
     fun createNewCircle(
-        newCircle: Circle = Circle(absolute(Offset(200f, 200f)), 50.0),
+        newCircle: CircleOrLine = Circle(absolute(Offset(200f, 200f)), 50.0),
         switchToSelectionMode: Boolean = true
     ) {
-        if (newCircle.radius > 0.0) {
+        if (newCircle is Circle && newCircle.radius > 0.0 || newCircle is Line) {
             recordCommand(Command.CREATE)
             showCircles = true
             circles.add(newCircle)
@@ -426,10 +428,10 @@ class EditClusterViewModel(
             ?.let { (ix, _) -> ix }
     }
 
-    fun selectCircle(targets: List<Circle>, visiblePosition: Offset): Ix? {
+    fun selectCircle(targets: List<CircleOrLine>, visiblePosition: Offset): Ix? {
         val position = absolute(visiblePosition)
         return targets.mapIndexed { ix, circle ->
-            ix to ((circle.center - position).getDistance() - circle.radius).absoluteValue
+            ix to circle.distanceFrom(position)
         }
             .filter { (_, distance) -> distance <= epsilon }
             .minByOrNull { (_, distance) -> distance }
@@ -453,16 +455,27 @@ class EditClusterViewModel(
                 selection.add(ix)
         }
 
+    // TODO: enhance compressed part culling, based on semi-included intersection points and arcs
     /** -> (compressed part, verbose part involving all circles) surrounding clicked position */
     private fun selectPartAt(visiblePosition: Offset, boundingCircles: List<Ix>? = null): Pair<Cluster.Part, Cluster.Part> {
         val position = absolute(visiblePosition)
         val delimiters = boundingCircles ?: circles.indices
         val ins = delimiters // NOTE: doesn't include circles that the point lies on
             .filter { ix -> circles[ix].hasInside(position) }
-            .sortedBy { ix -> circles[ix].radius }
+            .sortedBy { ix ->
+                when (val circle = circles[ix]) {
+                    is Circle -> circle.radius
+                    is Line -> Double.POSITIVE_INFINITY
+                }
+            }
         val outs = delimiters
             .filter { ix -> circles[ix].hasOutside(position) }
-            .sortedByDescending { ix -> circles[ix].radius }
+            .sortedByDescending { ix ->
+                when (val circle = circles[ix]) {
+                    is Circle -> circle.radius
+                    is Line -> Double.POSITIVE_INFINITY
+                }
+            }
         // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
         val excessiveIns = ins.indices.filter { j -> // NOTE: tbh idt these can occur naturally
             val inJ = ins[j]
@@ -534,24 +547,17 @@ class EditClusterViewModel(
     }
 
     /** absolute positions */
-    fun getSelectionRect(): Rect {
-        if (selection.isEmpty()) // pls dont use when empty selection
-            return Rect(0f, 0f, 0f, 0f)
-        val selectedCircles = selection.map { circles[it] }
+    fun getSelectionRect(): Rect? {
+        val selectedCircles = selection
+            .map { circles[it] }
+            .filterIsInstance<Circle>()
+        if (selectedCircles.isEmpty() || selectedCircles.size < selection.size)
+            return null
         val left = selectedCircles.minOf { (it.x - it.radius).toFloat() }
         val right = selectedCircles.maxOf { (it.x + it.radius).toFloat() }
         val top = selectedCircles.minOf { (it.y - it.radius) }.toFloat()
         val bottom = selectedCircles.maxOf { (it.y + it.radius) }.toFloat()
         return Rect(left, top, right, bottom)
-    }
-
-    fun checkIfSelectionRectHandlesFitIn(): Boolean {
-        val rect = getSelectionRect()
-        val threshold = 0.2f // = 20%
-        val (w, h) = canvasSize
-        return rect.top > threshold * h &&
-            rect.bottom < (1 - threshold) * h &&
-            rect.right < (1 - threshold) * w
     }
 
     fun toggleSelectAll() {
@@ -618,17 +624,21 @@ class EditClusterViewModel(
                 1 -> {
                     recordCommand(Command.CHANGE_RADIUS)
                     val ix = selection.single()
-                    val circle = circles[ix]
-                    circles[ix] = circle.copy(radius = zoom * circle.radius)
+                    when (val circle = circles[ix]) {
+                        is Circle ->
+                            circles[ix] = circle.copy(radius = zoom * circle.radius)
+                        else -> {}
+                    }
                 }
                 else -> {
                     recordCommand(Command.SCALE)
                     val rect = getSelectionRect()
-                    val center = if (rect.minDimension < 5_000) rect.center else Offset.Zero
+                    val center =
+                        if (rect == null || rect.minDimension >= 5_000)
+                            Offset(canvasSize.width/2f, canvasSize.height/2f)
+                        else rect.center
                     for (ix in selection) {
-                        val circle = circles[ix]
-                        val newOffset = (circle.center - center) * zoom + center
-                        circles[ix] = Circle(newOffset, zoom * circle.radius)
+                        circles[ix] = circles[ix].scale(center, zoom)
                     }
                 }
             }
@@ -718,21 +728,24 @@ class EditClusterViewModel(
             when (val h = handleConfig) {
                 is HandleConfig.SingleCircle -> {
                     val circle = circles[h.ix]
-                    val radiusHandlePosition = circle.center + Offset(circle.radius.toFloat(), 0f)
-                    when {
-                        isCloseEnoughToSelect(radiusHandlePosition, visiblePosition, lowAccuracy = true) ->
-                            submode = SubMode.Scale(circle.center)
+                    if (circle is Circle) {
+                        val radiusHandlePosition = circle.center + Offset(circle.radius.toFloat(), 0f)
+                        when {
+                            isCloseEnoughToSelect(radiusHandlePosition, visiblePosition, lowAccuracy = true) ->
+                                submode = SubMode.Scale(circle.center)
+                        }
                     }
                 }
                 is HandleConfig.SeveralCircles -> {
-                    val rect = getSelectionRect()
-                    val scaleHandlePosition = rect.topRight
-                    val rotateHandlePosition = rect.bottomRight
-                    when {
-                        isCloseEnoughToSelect(scaleHandlePosition, visiblePosition, lowAccuracy = true) ->
-                            submode = SubMode.Scale(rect.center)
-                        isCloseEnoughToSelect(rotateHandlePosition, visiblePosition, lowAccuracy = true) -> {
-                            submode = SubMode.Rotate(rect.center)
+                    getSelectionRect()?.let { rect ->
+                        val scaleHandlePosition = rect.topRight
+                        val rotateHandlePosition = rect.bottomRight
+                        when {
+                            isCloseEnoughToSelect(scaleHandlePosition, visiblePosition, lowAccuracy = true) ->
+                                submode = SubMode.Scale(rect.center)
+                            isCloseEnoughToSelect(rotateHandlePosition, visiblePosition, lowAccuracy = true) -> {
+                                submode = SubMode.Rotate(rect.center)
+                            }
                         }
                     }
                 }
@@ -782,10 +795,13 @@ class EditClusterViewModel(
                 is HandleConfig.SingleCircle -> {
                     when (val sm = submode) {
                         is SubMode.Scale -> {
-                            recordCommand(Command.CHANGE_RADIUS)
-                            val center = sm.center
-                            val r = (c - center).getDistance()
-                            circles[h.ix] = circles[h.ix].copy(radius = r.toDouble())
+                            val circle = circles[h.ix]
+                            if (circle is Circle) {
+                                recordCommand(Command.CHANGE_RADIUS)
+                                val center = sm.center
+                                val r = (c - center).getDistance()
+                                circles[h.ix] = circle.copy(radius = r.toDouble())
+                            }
                         }
                         is SubMode.ScaleViaSlider -> {
                             val positions = SelectionControlsPositions(canvasSize.width, canvasSize.height)
@@ -794,8 +810,7 @@ class EditClusterViewModel(
                                 recordCommand(Command.SCALE)
                                 val circle = circles[h.ix]
                                 val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
-                                val newOffset = (circle.center - sm.center) * scaleFactor + sm.center
-                                circles[h.ix] = Circle(newOffset, scaleFactor * circle.radius)
+                                circles[h.ix] = circle.scale(sm.center, scaleFactor)
                                 submode = sm.copy(sliderPercentage = newPercentage)
                             }
                         }
@@ -805,9 +820,7 @@ class EditClusterViewModel(
                             val centerToCurrent = c - center
                             val centerToPreviousHandle = centerToCurrent - pan
                             val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
-                            val circle = circles[h.ix]
-                            val newOffset = (circle.center - center).rotateBy(angle) + center
-                            circles[h.ix] = Circle(newOffset, circle.radius)
+                            circles[h.ix] = circles[h.ix].rotate(center, angle)
                             submode = sm.copy(angle = sm.angle + angle)
                         }
                         else -> {}
@@ -817,16 +830,15 @@ class EditClusterViewModel(
                     when (val sm = submode) {
                         is SubMode.Scale -> {
                             recordCommand(Command.SCALE)
-                            val rect = getSelectionRect()
-                            val scaleHandlePosition = rect.topRight
-                            val center = rect.center
-                            val centerToHandle = scaleHandlePosition - center
-                            val centerToCurrent = centerToHandle + pan
-                            val scaleFactor = centerToCurrent.getDistance()/centerToHandle.getDistance()
-                            for (ix in selection) {
-                                val circle = circles[ix]
-                                val newOffset = (circle.center - center) * scaleFactor + center
-                                circles[ix] = Circle(newOffset, scaleFactor * circle.radius)
+                            getSelectionRect()?.let { rect ->
+                                val scaleHandlePosition = rect.topRight
+                                val center = rect.center
+                                val centerToHandle = scaleHandlePosition - center
+                                val centerToCurrent = centerToHandle + pan
+                                val scaleFactor = centerToCurrent.getDistance()/centerToHandle.getDistance()
+                                for (ix in selection) {
+                                    circles[ix] = circles[ix].scale(center, scaleFactor)
+                                }
                             }
                         }
                         is SubMode.ScaleViaSlider -> {
@@ -836,9 +848,7 @@ class EditClusterViewModel(
                                 recordCommand(Command.SCALE)
                                 val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
                                 for (ix in selection) {
-                                    val circle = circles[ix]
-                                    val newOffset = (circle.center - sm.center) * scaleFactor + sm.center
-                                    circles[ix] = Circle(newOffset, scaleFactor * circle.radius)
+                                    circles[ix] = circles[ix].scale(sm.center, scaleFactor)
                                 }
                                 submode = sm.copy(sliderPercentage = newPercentage)
                             }
@@ -850,9 +860,7 @@ class EditClusterViewModel(
                             val centerToPreviousHandle = centerToCurrent - pan
                             val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
                             for (ix in selection) {
-                                val circle = circles[ix]
-                                val newOffset = (circle.center - center).rotateBy(angle) + center
-                                circles[ix] = Circle(newOffset, circle.radius)
+                                circles[ix] = circles[ix].rotate(sm.center, angle)
                             }
                             submode = sm.copy(angle = sm.angle + angle)
                         }
@@ -865,22 +873,26 @@ class EditClusterViewModel(
             // move + scale radius
             recordCommand(Command.MOVE)
             val ix = selection.single()
-            val circle = circles[ix]
-            val newCenter = circle.center + pan
-            circles[ix] = Circle(newCenter, zoom * circle.radius)
+            when (val circle = circles[ix]) {
+                is Circle ->
+                    circles[ix] = circle.translate(pan).scale(circle.center, zoom)
+                is Line ->
+                    circles[ix] = circle.translate(pan)
+            }
         } else if (mode == SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
             if (selection.size == 1) { // move + scale radius
                 recordCommand(Command.MOVE)
                 val ix = selection.single()
-                val circle = circles[ix]
-                val newCenter = circle.center + pan
-                circles[ix] = Circle(newCenter, zoom * circle.radius)
+                when (val circle = circles[ix]) {
+                    is Circle ->
+                        circles[ix] = circle.translate(pan).scale(circle.center, zoom)
+                    is Line ->
+                        circles[ix] = circle.translate(pan)
+                }
             } else if (selection.size > 1) { // scale radius & position
                 recordCommand(Command.MOVE)
                 for (ix in selection) {
-                    val circle = circles[ix]
-                    val newOffset = (circle.center - c).rotateBy(rotationAngle) * zoom + c + pan
-                    circles[ix] = Circle(newOffset, zoom * circle.radius)
+                    circles[ix] = circles[ix].rotate(c, rotationAngle).scale(c, zoom).translate(pan)
                 }
             }
         } else {
@@ -1023,7 +1035,7 @@ class EditClusterViewModel(
         val argList = partialArgList!!
         val (circle0Index, invertingCircleIndex) = argList.args
             .map { (it as PartialArgList.Arg.CircleIndex).index }
-        val newCircle = Circle.invert(circles[invertingCircleIndex], circles[circle0Index])
+        val newCircle = Circle.invert(circles[invertingCircleIndex], circles[circle0Index]) as CircleOrLine
         createNewCircle(newCircle, switchToSelectionMode = false)
         partialArgList = PartialArgList(argList.signature)
     }
@@ -1067,7 +1079,7 @@ class EditClusterViewModel(
     @Serializable
     @Immutable
     data class UiState(
-        val circles: List<Circle>,
+        val circles: List<CircleOrLine>,
         val parts: List<Cluster.Part>,
         val selection: List<Ix>, // circle indices
         @Serializable(OffsetSerializer::class)
@@ -1153,10 +1165,10 @@ sealed interface SubMode {
 /** params for create/copy/delete animations */
 @Immutable
 sealed interface CircleAnimation {
-    val circles: List<Circle>
-    data class Entrance(override val circles: List<Circle>) : CircleAnimation
-    data class ReEntrance(override val circles: List<Circle>) : CircleAnimation
-    data class Exit(override val circles: List<Circle>) : CircleAnimation
+    val circles: List<CircleOrLine>
+    data class Entrance(override val circles: List<CircleOrLine>) : CircleAnimation
+    data class ReEntrance(override val circles: List<CircleOrLine>) : CircleAnimation
+    data class Exit(override val circles: List<CircleOrLine>) : CircleAnimation
 }
 
 /** used for grouping UiState changes into batches for history keeping */

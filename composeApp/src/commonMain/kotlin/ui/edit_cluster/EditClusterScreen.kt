@@ -201,8 +201,8 @@ fun EditClusterTopBar(
                     stringResource(Res.string.save_cluster_name),
                     saveDataProvider = {
                         SaveData(
-                            Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION, viewModel.saveAsYaml()
-                        )
+                            Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION
+                        ) { viewModel.saveAsYaml(it) }
                     },
                     modifier = iconModifier
                 ) {

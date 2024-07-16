@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import data.kmath_complex.ComplexField
 import data.kmath_complex.r
 import data.kmath_complex.r2
+import domain.rotateBy
 import domain.toComplex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -13,7 +14,22 @@ import kotlin.math.sqrt
 
 const val EPSILON: Double = 1e-6
 
-sealed interface CircleOrLine : GCircle
+@Serializable
+sealed interface CircleOrLine : GCircle {
+    fun distanceFrom(point: Offset): Double
+    fun checkPosition(point: Offset): Int
+    fun hasInside(point: Offset): Boolean =
+        checkPosition(point) < 0
+    fun hasOutside(point: Offset): Boolean =
+        checkPosition(point) > 0
+    /** semiorder ⊆ on circles' insides (⭗) */
+    infix fun isInside(circle: CircleOrLine): Boolean
+    /** semiorder ⊇ on circles, includes side-by-side (oo) but not encapsulating (⭗) case */
+    infix fun isOutside(circle: CircleOrLine): Boolean
+    fun translate(vector: Offset): CircleOrLine
+    fun scale(focus: Offset, zoom: Float): CircleOrLine
+    fun rotate(focus: Offset, angleDeg: Float): CircleOrLine
+}
 
 @SerialName("circle")
 @Serializable
@@ -34,23 +50,41 @@ data class Circle(
     constructor(center: Offset, radius: Float) :
         this(center.x.toDouble(), center.y.toDouble(), radius.toDouble())
 
-    /** semiorder ⊆ on circles' insides (⭗) */
-    infix fun isInside(otherCircle: Circle): Boolean =
-        (center - otherCircle.center).getDistance() + radius <= otherCircle.radius
+    override fun distanceFrom(point: Offset): Double =
+        abs((point - center).getDistance() - radius)
 
-    /** semiorder ⊇ on circles, includes side-by-side (oo) but not encapsulating (⭗) case */
-    infix fun isOutside(otherCircle: Circle): Boolean =
-        (center - otherCircle.center).getDistance() >= otherCircle.radius + radius
-
-    /** -1 = inside, 0 on the circle, +1 = outside */
-    fun checkPosition(point: Offset): Int =
+    /** <0 = inside, 0 on the circle, >0 = outside */
+    override fun checkPosition(point: Offset): Int =
         (center - point).getDistance().compareTo(radius)
 
-    fun hasInside(point: Offset): Boolean =
-        checkPosition(point) < 0
+    override fun translate(vector: Offset): Circle =
+        Circle(center + vector, radius)
 
-    fun hasOutside(point: Offset): Boolean =
-        checkPosition(point) > 0
+    override fun scale(focus: Offset, zoom: Float): Circle {
+        val newOffset = (center - focus) * zoom + focus
+        return Circle(newOffset, zoom * radius)
+    }
+
+    override fun rotate(focus: Offset, angleDeg: Float): Circle {
+        val newOffset = (center - focus).rotateBy(angleDeg) + focus
+        return Circle(newOffset, radius)
+    }
+
+    override fun isInside(circle: CircleOrLine): Boolean =
+        when (circle) {
+            is Circle ->
+                (center - circle.center).getDistance() + radius <= circle.radius
+            is Line ->
+                circle.hasInside(center) && circle.distanceFrom(center) >= radius
+        }
+
+    override fun isOutside(circle: CircleOrLine): Boolean =
+        when (circle) {
+            is Circle ->
+                (center - circle.center).getDistance() >= circle.radius + radius
+            is Line ->
+                circle.hasOutside(center) && circle.distanceFrom(center) >= radius
+        }
 
     companion object {
         fun by3Points(p1: Offset, p2: Offset, p3: Offset): Circle {
@@ -88,7 +122,23 @@ data class Circle(
 
         }
 
-        fun invert(inverting: Circle, theOneBeingInverted: Circle): Circle {
+        /** Apply the [inverting] circle or line to [theOneBeingInverted]
+         *
+         * [theOneBeingInverted] transforms accordingly depending to its type:
+         *
+         * [CircleOrLine] -> [CircleOrLine]
+         *
+         * [Point] -> [Point]
+         *
+         * [ImaginaryCircle] -> [ImaginaryCircle] */
+        fun invert(inverting: CircleOrLine, theOneBeingInverted: GCircle): GCircle {
+            val engine = GeneralizedCircle.fromGCircle(inverting)
+            val target = GeneralizedCircle.fromGCircle(theOneBeingInverted)
+            val result = engine.applyTo(target) // technology
+            return result.toGCircle()
+        }
+
+        fun _invert(inverting: Circle, theOneBeingInverted: Circle): Circle {
             val (x, y, r) = inverting
             val (x0, y0, r0) = theOneBeingInverted
             return when {
