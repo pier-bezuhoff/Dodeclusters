@@ -27,7 +27,6 @@ import data.geometry.Line
 import data.io.Ddc
 import data.io.parseDdc
 import domain.angleDeg
-import domain.rotateBy
 import getPlatform
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -39,7 +38,6 @@ import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
-import kotlin.math.absoluteValue
 import kotlin.math.pow
 
 /** circle index in vm.circles or cluster.circles */
@@ -596,11 +594,11 @@ class EditClusterViewModel(
     fun insertCenteredCross() {
         recordCommand(Command.CREATE)
         val (midX, midY) = canvasSize.toSize()/2f
-        val horizontalLine = Circle.almostALine(
+        val horizontalLine = Line.by2Points(
             absolute(Offset(0f, midY)),
             absolute(Offset(2*midX, midY)),
         )
-        val verticalLine = Circle.almostALine(
+        val verticalLine = Line.by2Points(
             absolute(Offset(midX, 0f)),
             absolute(Offset(midX, 2*midY)),
         )
@@ -635,7 +633,7 @@ class EditClusterViewModel(
                     val rect = getSelectionRect()
                     val center =
                         if (rect == null || rect.minDimension >= 5_000)
-                            Offset(canvasSize.width/2f, canvasSize.height/2f)
+                            absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
                         else rect.center
                     for (ix in selection) {
                         circles[ix] = circles[ix].scale(center, zoom)
@@ -1008,10 +1006,19 @@ class EditClusterViewModel(
             (it as PartialArgList.Arg.XYPoint).toOffset()
         }
         try {
-            val newCircle = Circle.by3Points(
-                points[0], points[1], points[2]
-            )
-            createNewCircle(newCircle, switchToSelectionMode = false)
+            val eps = 1e-3
+            if ((points[1] - points[0]).getDistance() < eps) {
+                val newLine = Line.by2Points(points[0], points[2])
+                createNewCircle(newLine, switchToSelectionMode = false)
+            } else if ((points[2] - points[1]).getDistance() < eps || (points[2] - points[0]).getDistance() < eps) {
+                val newLine = Line.by2Points(points[0], points[1])
+                createNewCircle(newLine, switchToSelectionMode = false)
+            } else {
+                val newCircle = Circle.by3Points(
+                    points[0], points[1], points[2]
+                )
+                createNewCircle(newCircle, switchToSelectionMode = false)
+            }
         } catch (e: NumberFormatException) {
             e.printStackTrace()
         } finally {
@@ -1024,7 +1031,7 @@ class EditClusterViewModel(
         val points = argList.args.map {
             (it as PartialArgList.Arg.XYPoint).toOffset()
         }
-        val newLine = Circle.almostALine(
+        val newLine = Line.by2Points(
             points[0], points[1]
         )
         createNewCircle(newLine, switchToSelectionMode = false)

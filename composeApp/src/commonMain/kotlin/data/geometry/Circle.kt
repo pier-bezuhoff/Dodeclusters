@@ -1,5 +1,6 @@
 package data.geometry
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import data.kmath_complex.ComplexField
 import data.kmath_complex.r
@@ -15,6 +16,7 @@ import kotlin.math.sqrt
 const val EPSILON: Double = 1e-6
 
 @Serializable
+@Immutable
 sealed interface CircleOrLine : GCircle {
     fun distanceFrom(point: Offset): Double
     fun checkPosition(point: Offset): Int
@@ -33,6 +35,7 @@ sealed interface CircleOrLine : GCircle {
 
 @SerialName("circle")
 @Serializable
+@Immutable
 data class Circle(
     val x: Double,
     val y: Double,
@@ -131,39 +134,66 @@ data class Circle(
          * [Point] -> [Point]
          *
          * [ImaginaryCircle] -> [ImaginaryCircle] */
-        fun invert(inverting: CircleOrLine, theOneBeingInverted: GCircle): GCircle {
+        fun _invert(inverting: CircleOrLine, theOneBeingInverted: GCircle): GCircle {
             val engine = GeneralizedCircle.fromGCircle(inverting)
             val target = GeneralizedCircle.fromGCircle(theOneBeingInverted)
-            val result = engine.applyTo(target) // technology
+            val result = engine.applyTo(target)
+            println("engine = $engine")
+            println("$target -> $result")
+            println("result.r2 = ${result.r2}")
+            println("result.norm = ${result.norm}")
             return result.toGCircle()
+//            return GeneralizedCircle.fromGCircle(theOneBeingInverted).toGCircle()
         }
 
-        fun _invert(inverting: Circle, theOneBeingInverted: Circle): Circle {
-            val (x, y, r) = inverting
-            val (x0, y0, r0) = theOneBeingInverted
-            return when {
-                r == Double.POSITIVE_INFINITY -> // return a line somehow
-                    throw NumberFormatException("Not a circle")
-                x == x0 && y == y0 ->
-                    Circle(x, y, r*r / r0)
-                else -> {
-                    val dx = x0 - x
-                    val dy = y0 - y
-                    val d = hypot(dx, dy)
-                    if (d == r0) // inverting.center ∈ theOneBeingInverted
-                        throw NumberFormatException("Not a circle")
+        fun invert(inverting: CircleOrLine, theOneBeingInverted: CircleOrLine): CircleOrLine =
+            when (inverting) {
+                is Line -> when (theOneBeingInverted) {
+                    is Line -> {
+                        val n0 = inverting.normalVector
+                        val n1 = theOneBeingInverted.normalVector
+                        val n2 = n1 - n0 * (2 * (n0.x*n1.x + n0.y*n1.y))
+                        theOneBeingInverted // TODO
+                    }
+                    is Circle -> {
+                        val c = theOneBeingInverted.center
+                        val centerProjection = inverting.project(c)
+                        val newCenter = centerProjection + (centerProjection - c)
+                        Circle(newCenter, theOneBeingInverted.radius)
+                    }
+                }
+                is Circle -> when (theOneBeingInverted) {
+                    is Line -> {
+                        theOneBeingInverted
+                    }
+                    is Circle -> {
+                        val (x, y, r) = inverting
+                        val (x0, y0, r0) = theOneBeingInverted
+                        when {
+                            r == Double.POSITIVE_INFINITY -> // return a line somehow
+                                throw NumberFormatException("Not a circle")
+                            x == x0 && y == y0 ->
+                                Circle(x, y, r*r / r0)
+                            else -> {
+                                val dx = x0 - x
+                                val dy = y0 - y
+                                val d = hypot(dx, dy)
+                                if (d == r0) // inverting.center ∈ theOneBeingInverted
+                                    throw NumberFormatException("Not a circle")
 //                        d2 += EPSILON // cheat to avoid returning a straight line
-                    val ratio = r*r / (d*d - r0*r0)
-                    val newX = x + ratio * dx
-                    val newY = y + ratio * dy
-                    // NOTE: sign(ratio) = sign(d - r0)
-                    //  ratio > 0 => orientation changes, ratio < 0 orientation stays the same
-                    //  ratio == 0 => line
-                    val newRadius = abs(ratio) * r0
-                    return Circle(newX, newY, newRadius)
+                                val ratio = r*r / (d*d - r0*r0)
+                                val newX = x + ratio * dx
+                                val newY = y + ratio * dy
+                                // NOTE: sign(ratio) = sign(d - r0)
+                                //  ratio > 0 => orientation changes, ratio < 0 orientation stays the same
+                                //  ratio == 0 => line
+                                val newRadius = abs(ratio) * r0
+                                Circle(newX, newY, newRadius)
+                            }
+                        }
+                    }
                 }
             }
-        }
 
         fun findIntersectionPoints(circle0: Circle, circle: Circle): Pair<Pair<Double, Double>, Pair<Double, Double>>? {
             val (x0,y0,r0) = circle0

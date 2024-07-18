@@ -1,11 +1,13 @@
 package data.geometry
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 
 /** A circle, line, imaginary circle or point */
+@Immutable
 sealed interface GCircle
 
 // TODO: Clifford algebra (geometric product + other operations)
@@ -14,6 +16,7 @@ sealed interface GCircle
  * via homogenous coordinates.
  * */
 @Serializable
+@Immutable
 data class GeneralizedCircle(
     /** e_0 projection, homogenous scaling factor
      *
@@ -57,10 +60,10 @@ data class GeneralizedCircle(
         abs(norm2) < EPSILON
 
     val isRealCircle: Boolean get() =
-        norm2 >= EPSILON
+        r2 >= EPSILON
 
     val isImaginaryCircle: Boolean get() =
-        norm2 <= -EPSILON
+        r2 <= -EPSILON
 
     /** Upcast a point (x, y) */
     constructor(x: Double, y: Double) : this(
@@ -132,9 +135,19 @@ data class GeneralizedCircle(
     fun affineCombination(other: GeneralizedCircle, k: Double): GeneralizedCircle =
         this*k + other*(1 - k)
 
-    fun applyTo(target: GeneralizedCircle, times: Int = 1): GeneralizedCircle {
+    fun applyTo(target: GeneralizedCircle): GeneralizedCircle =
+        GeneralizedCircle(
+            2*w*(x*target.x + y*target.y) - target.w*(x*x + y*y),
+            2*x*y*target.y + target.x*(x*x - y*y),
+            2*x*target.x*y + target.y*(-x*x + y*y),
+            2*z*(x*target.x + y*target.y) - target.z*(x*x + y*y)
+        )
+
+    // this is fake
+    fun _applyTo(target: GeneralizedCircle, times: Int = 1): GeneralizedCircle {
         require(times > 0)
-        return affineCombination(target, times + 1.0)
+//        return this.normalized().affineCombination(target.normalized(), times + 1.0)
+        return this.affineCombination(target, times + 1.0)
     }
 
     /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
@@ -162,14 +175,15 @@ data class GeneralizedCircle(
             }
         }
 
-    fun toGCircle(): GCircle =
-        when {
+    fun toGCircle(): GCircle {
+        return when {
             isRealCircle -> Circle(x / w, y / w, sqrt(r2))
             isLine -> Line(x, y, z)
             isPoint -> Point(x / w, y / w)
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
             else -> throw IllegalStateException("Never")
         }
+    }
 
     companion object {
         fun fromGCircle(gCircles: GCircle): GeneralizedCircle =
@@ -177,7 +191,7 @@ data class GeneralizedCircle(
                 is Circle -> GeneralizedCircle(gCircles)
                 // a*x + b*y + c = 0
                 // -> a*e_x + b*e_y + c*e_inf
-                is Line -> GeneralizedCircle(0.0, gCircles.a, gCircles.b, gCircles.c)
+                is Line -> GeneralizedCircle(0.0, gCircles.a, gCircles.b, gCircles.c).normalized()
                 is Point -> GeneralizedCircle(gCircles.x, gCircles.y)
                 is ImaginaryCircle -> GeneralizedCircle(
                     1.0, gCircles.x, gCircles.y,

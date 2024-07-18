@@ -1,12 +1,16 @@
 package data
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.io.Ddc
 import kotlinx.serialization.Serializable
+import ui.edit_cluster.Ix
 
 @Serializable
+@Immutable
 data class Cluster(
     val circles: List<CircleOrLine>,
     /** union of parts comprised of circle intersections */
@@ -16,6 +20,7 @@ data class Cluster(
 ) {
     /** intersection of insides and outside of circles of a cluster */
     @Serializable
+    @Immutable
     data class Part(
         /** indices of interior circles */
         val insides: Set<Int>,
@@ -43,4 +48,16 @@ data class Cluster(
             filled = true
         )
     }
+}
+
+fun compressPartToEssentials(
+    ins: List<CircleOrLine>,
+    outs: List<CircleOrLine>,
+    pointInside: Offset
+): Pair<List<Ix>, List<Ix>> {
+    // compute all intersections with circles they are on
+    // filter half-in's
+    // filter arcs between them
+    // arc => full circle is essential
+    TODO()
 }

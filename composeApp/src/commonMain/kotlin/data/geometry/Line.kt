@@ -1,9 +1,11 @@
 package data.geometry
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import domain.rotateBy
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlin.math.abs
 import kotlin.math.hypot
 
@@ -15,27 +17,47 @@ import kotlin.math.hypot
  * "inside" = to the "left" side of the line*/
 @SerialName("line")
 @Serializable
+@Immutable
 data class Line(
     val a: Double,
     val b: Double,
     val c: Double
 ) : GCircle, CircleOrLine {
 
+    @Transient
+    val norm: Double =
+        hypot(a, b)
+
+    val normalVector: Offset get() =
+        Offset((a/norm).toFloat(), (b/norm).toFloat())
+
+    val directionVector: Offset get() =
+        Offset((b/norm).toFloat(), (-a/norm).toFloat())
+
     // direction-preserving
     fun normalized(): Line =
-        hypot(a, b).let { norm ->
-            Line(a/norm, b/norm, c/norm)
-        }
+        Line(a/norm, b/norm, c/norm)
+
+    /** Project [point] down onto this line */
+    // reference: https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_an_equation
+    fun project(point: Offset): Offset {
+        val t = b*point.x - a*point.y
+        val n2 = a*a + b*b
+        return Offset(
+            ((b*t - a*c)/n2).toFloat(),
+            ((-a*t - b*c)/n2).toFloat()
+        )
+    }
 
     override fun distanceFrom(point: Offset): Double =
-        abs(a*point.x + b*point.y + c)/hypot(a, b)
+        abs(a*point.x + b*point.y + c)/norm
 
     /** <0 = inside, 0 on the line, >0 = outside */
     override fun checkPosition(point: Offset): Int =
         -(a*point.x + b*point.y + c).compareTo(0.0)
 
     override fun translate(vector: Offset): Line =
-       Line(a, b, c + (a*vector.x + b*vector.y)/hypot(a, b))
+       Line(a, b, c - (a*vector.x + b*vector.y))
 
     override fun scale(focus: Offset, zoom: Float): Line {
         // dist1 -> zoom * dist 1
@@ -44,7 +66,7 @@ data class Line(
     }
 
     override fun rotate(focus: Offset, angleDeg: Float): Line {
-        val newNormal = (Offset(a.toFloat(), b.toFloat()) - focus).rotateBy(angleDeg) + focus
+        val newNormal = normalVector.rotateBy(angleDeg)
         val newA = newNormal.x.toDouble()
         val newB = newNormal.y.toDouble()
         val newC = (hypot(newA, newB)/hypot(a, b)) * (a*focus.x + b*focus.y + c) - newA*focus.x - newB*focus.y
@@ -73,7 +95,7 @@ data class Line(
         }
 
     companion object {
-        fun lineBy2Points(p1: Offset, p2: Offset): Line {
+        fun by2Points(p1: Offset, p2: Offset): Line {
             val dy = p2.y.toDouble() - p1.y
             val dx = p2.x.toDouble() - p1.x
             val c = p1.y*dx - p1.x*dy

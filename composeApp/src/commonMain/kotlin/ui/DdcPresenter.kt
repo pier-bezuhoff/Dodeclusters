@@ -17,7 +17,8 @@ typealias Indices = List<Int>
 
 // naked top-level circle = cluster with 1 part = [this circle]
 // Analogue to Dodeca Meditation's CircleGroup
-// MAYBE: use projective circle representation that would also include true straight lines among other benefits
+// TODO: use projective circle representation that would also
+//  include true straight lines among other benefits
 /** Dynamic model of [Ddc], that efficiently encapsulates [draw] and [update] operations */
 class DdcPresenter(
     /** # of all clusters + visible circles */
@@ -79,6 +80,7 @@ class DdcPresenter(
     private fun part2path(partIx: Int): Path {
         val insidePath: Path? = partInsides[partIx]
             .map { circle2path(it) }
+            // TODO: Path.combine -> acc.op, since the former is not (?) supported on Android
             .reduceOrNull { acc: Path, anotherPath: Path ->
                 Path.combine(PathOperation.Intersect, path1 = acc, path2 = anotherPath)
             }
