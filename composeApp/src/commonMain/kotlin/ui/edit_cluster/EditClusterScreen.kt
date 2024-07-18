@@ -153,9 +153,9 @@ fun EditClusterScreen(
             println("loading external ddc")
             viewModel.loadFromYaml(ddcContent)
         } else if (sampleIndex != null) {
-            clusterRepository.loadSampleClusterJson(sampleIndex) { json ->
-                if (json != null) {
-                    viewModel.loadFromJson(json)
+            clusterRepository.loadSampleClusterJson(sampleIndex) { content ->
+                if (content != null) {
+                    viewModel.loadFromYaml(content)
                 }
             }
         }

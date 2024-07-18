@@ -50,6 +50,16 @@ data class Cluster(
     }
 }
 
+@Serializable
+@Immutable
+data class OldCluster(
+    val circles: List<Circle>,
+    /** union of parts comprised of circle intersections */
+    val parts: List<Cluster.Part> = emptyList(),
+    /** fill regions inside / wireframe */
+    val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
+)
+
 fun compressPartToEssentials(
     ins: List<CircleOrLine>,
     outs: List<CircleOrLine>,

@@ -21,11 +21,14 @@ import androidx.compose.ui.unit.toSize
 import data.geometry.Circle
 import data.Cluster
 import data.OffsetSerializer
+import data.OldCluster
 import data.PartialArgList
 import data.geometry.CircleOrLine
 import data.geometry.Line
 import data.io.Ddc
+import data.io.OldDdc
 import data.io.parseDdc
+import data.io.parseOldDdc
 import domain.angleDeg
 import getPlatform
 import kotlinx.coroutines.CoroutineScope
@@ -188,19 +191,31 @@ class EditClusterViewModel(
                 .first()
                 .toCluster()
             loadCluster(cluster)
-            moveToDdcCenter(ddc)
+            moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
         } catch (e: Exception) {
             println("Failed to parse yaml")
             e.printStackTrace()
-            println("Falling back to json")
-            loadFromJson(yaml) // NOTE: for backwards compat
+            try {
+                println("Falling back to OldDdc yaml")
+                e.printStackTrace()
+                val ddc = parseOldDdc(yaml)
+                val cluster = ddc.content
+                    .filterIsInstance<OldDdc.Token.Cluster>()
+                    .first()
+                    .toCluster()
+                loadCluster(cluster)
+                moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
+            } catch (e: Exception) {
+                println("Falling back to json")
+                loadFromJson(yaml) // NOTE: for backwards compat
+            }
         }
     }
 
-    private fun moveToDdcCenter(ddc: Ddc) {
+    private fun moveToDdcCenter(bestCenterX: Float?, bestCenterY: Float?) {
         translation = -Offset(
-            ddc.bestCenterX?.let { it - canvasSize.width/2f } ?: 0f,
-            ddc.bestCenterY?.let { it - canvasSize.height/2f } ?: 0f
+            bestCenterX?.let { it - canvasSize.width/2f } ?: 0f,
+            bestCenterY?.let { it - canvasSize.height/2f } ?: 0f
         )
     }
 
@@ -217,8 +232,12 @@ class EditClusterViewModel(
                 isLenient = true
                 ignoreUnknownKeys = true // enables backward compatibility to a certain level
             }
-            val cluster = permissiveJson.decodeFromString(Cluster.serializer(), json)
-            loadCluster(cluster)
+            val cluster = permissiveJson.decodeFromString(OldCluster.serializer(), json)
+            loadCluster(Cluster(
+                cluster.circles,
+                cluster.parts,
+                cluster.filled
+            ))
         } catch (e: SerializationException) {
             println("Failed to parse json")
             e.printStackTrace()
