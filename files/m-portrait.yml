@@ -1,0 +1,162 @@
+---
+name: m-portrait
+backgroundColor: "#ffffff"
+bestCenterX: 960.0
+bestCenterY: 501.5
+drawTrace: true
+content:
+- type: Cluster
+  indices: [0, 22]
+  circles:
+  - type: circle
+    x: 727.8306274414062
+    y: 375.89794921875
+    radius: 276.5496929615601
+  - type: circle
+    x: 751.3397827148438
+    y: 331.6552734375
+    radius: 280.8455946305902
+  - type: circle
+    x: 350.7078857421875
+    y: 203.27606201171875
+    radius: 137.88759746694979
+  - type: circle
+    x: 1223.105224609375
+    y: 658.90087890625
+    radius: 298.17048303517674
+  - type: circle
+    x: 1240.266357421875
+    y: 643.014404296875
+    radius: 298.17048303517674
+  - type: circle
+    x: 1279.9927978515625
+    y: 812.1995849609375
+    radius: 407.24002409489964
+  - type: circle
+    x: 1339.7823486328125
+    y: 798.0576171875
+    radius: 448.9848342192406
+  - type: circle
+    x: 1171.30029296875
+    y: 597.0608520507812
+    radius: 215.69114771085805
+  - type: circle
+    x: 1183.71484375
+    y: 585.5687866210938
+    radius: 215.69114771085805
+  - type: circle
+    x: 346.2421875
+    y: 533.7926025390625
+    radius: 195.65388865641455
+  - type: circle
+    x: 457.775634765625
+    y: 307.6529541015625
+    radius: 72.65585832983575
+  - type: circle
+    x: 469.0887451171875
+    y: 598.335205078125
+    radius: 493.401123422833
+  - type: circle
+    x: 580.0123901367188
+    y: 310.5482177734375
+    radius: 40.56856381811942
+  - type: circle
+    x: 1265.46044921875
+    y: 894.060546875
+    radius: 474.61610519440563
+  - type: circle
+    x: 1320.582763671875
+    y: 932.3302001953125
+    radius: 523.2674116010619
+  - type: circle
+    x: 566.9862060546875
+    y: 313.1981201171875
+    radius: 19.159924882585823
+  - type: circle
+    x: 571.1868896484375
+    y: 355.5255126953125
+    radius: 149.4966243242658
+  - type: circle
+    x: 536.3463134765625
+    y: 369.626708984375
+    radius: 149.4966243242658
+  - type: circle
+    x: 630.3246459960938
+    y: 232.60198974609375
+    radius: 44.1157816957779
+  - type: circle
+    x: 810.9307861328125
+    y: 323.0142822265625
+    radius: 38.89061194400529
+  - type: circle
+    x: 760.2275390625
+    y: 335.991943359375
+    radius: 87.00163518371701
+  - type: circle
+    x: 1048.0078125
+    y: 375.9676513671875
+    radius: 270.18148767049934
+  - type: circle
+    x: 798.3011474609375
+    y: 378.5919189453125
+    radius: 64.07141400593682
+  parts:
+  - insides: [1]
+    outsides: [0,2,3]
+    fillColor: "#a020f0"
+  - insides: [3]
+    outsides: [0,1,2,4]
+    fillColor: "#a020f0"
+  - insides: [5]
+    outsides: [0,1,2,3,4,6]
+    fillColor: "#a020f0"
+  - insides: [3,4,5,6,7]
+    outsides: [0,1,2,8]
+    fillColor: "#a020f0"
+  - insides: [0,3]
+    outsides: [1,2,4,5,6,7,8]
+    fillColor: "#a020f0"
+  - insides: [10]
+    outsides: [0,1,2,3,4,5,6,9]
+    fillColor: "#a020f0"
+  - insides: [0,1]
+    outsides: [2,3,4,5,6,9,10,11]
+    fillColor: "#a020f0"
+  - insides: [13]
+    outsides: [0,1,2,3,4,5,6,9,10,11,14]
+    fillColor: "#a020f0"
+  - insides: [11,13]
+    outsides: [0,1,2,3,4,5,6,9,10,14]
+    fillColor: "#a020f0"
+  - insides: [0,1,11,17]
+    outsides: [2,3,4,5,6,9,10,13,14,15,16]
+    fillColor: "#a020f0"
+  - insides: [0,9,11,17]
+    outsides: [1,2,3,4,5,6,10,13,14,15,16]
+    fillColor: "#a020f0"
+  - insides: [0,1,9,11,17]
+    outsides: [2,3,4,5,6,10,13,14,15,16]
+    fillColor: "#a020f0"
+  - insides: [0,1,11,16,18]
+    outsides: [2,3,4,5,6,9,10,13,14,15,17]
+    fillColor: "#a020f0"
+  - insides: [6,13,14]
+    outsides: [0,1,2,3,4,5,9,10,11,16,17,18]
+    fillColor: "#a020f0"
+  - insides: [14]
+    outsides: [0,1,2,3,4,5,6,9,10,11,13,18]
+    fillColor: "#a020f0"
+  - insides: [0,1,11,12,16,17]
+    outsides: [2,3,4,5,6,9,10,13,14,15,18]
+    fillColor: "#a020f0"
+  - insides: [0,11,17]
+    outsides: [1,2,3,4,5,6,9,10,13,14,16,18]
+    fillColor: "#a020f0"
+  - insides: [0,1,11,19,20,21]
+    outsides: [2,3,4,5,6,9,10,13,14,16,17,18]
+    fillColor: "#a020f0"
+  - insides: [0,1,11,20,21,22]
+    outsides: [2,3,4,5,6,9,10,13,14,17,18,19]
+    fillColor: "#a020f0"
+  filled: true
+...
