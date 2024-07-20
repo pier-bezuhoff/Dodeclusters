@@ -134,25 +134,24 @@ data class Circle(
          * [Point] -> [Point]
          *
          * [ImaginaryCircle] -> [ImaginaryCircle] */
-        fun _invert(inverting: CircleOrLine, theOneBeingInverted: GCircle): GCircle {
-            val engine = GeneralizedCircle.fromGCircle(inverting)
-            val target = GeneralizedCircle.fromGCircle(theOneBeingInverted)
-            val result = engine.applyTo(target)
-            println("engine = $engine")
-            println("$target -> $result")
-            println("result.r2 = ${result.r2}")
-            println("result.norm = ${result.norm}")
+        fun invert(inverting: CircleOrLine, theOneBeingInverted: GCircle): GCircle {
+            val engine = GeneralizedCircle.fromGCircle(inverting).normalized()
+            val target = GeneralizedCircle.fromGCircle(theOneBeingInverted).normalized()
+            val result = engine.applyTo(target).normalized()
+            println("\nengine = $engine, norm=${engine.norm}, r2=${engine.r2}; $inverting")
+            println("target = $target, norm=${target.norm}, r2=${target.r2}; $theOneBeingInverted")
+            println("result = $result, norm=${result.norm}, r2=${result.r2}; ${result.toGCircle()}")
             return result.toGCircle()
 //            return GeneralizedCircle.fromGCircle(theOneBeingInverted).toGCircle()
         }
 
-        fun invert(inverting: CircleOrLine, theOneBeingInverted: CircleOrLine): CircleOrLine =
+        fun _invert(inverting: CircleOrLine, theOneBeingInverted: CircleOrLine): CircleOrLine =
             when (inverting) {
                 is Line -> when (theOneBeingInverted) {
                     is Line -> {
-                        val n0 = inverting.normalVector
-                        val n1 = theOneBeingInverted.normalVector
-                        val n2 = n1 - n0 * (2 * (n0.x*n1.x + n0.y*n1.y))
+//                        val n0 = inverting.normalVector
+//                        val n1 = theOneBeingInverted.normalVector
+//                        val n2 = n1 - n0 * (2 * (n0.x*n1.x + n0.y*n1.y))
                         theOneBeingInverted // TODO
                     }
                     is Circle -> {

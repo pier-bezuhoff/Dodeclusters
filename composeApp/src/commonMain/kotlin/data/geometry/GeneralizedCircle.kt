@@ -43,38 +43,30 @@ data class GeneralizedCircle(
         (2*w + z)/2
 
     val norm2: Double get() =
-        this scalarProduct this
+        x*x + y*y - 2*w*z
+//        this scalarProduct this
+    // NOTE: for circles, c.norm = w*radius
     val norm: Double get() =
         sqrt(abs(norm2))
 
     val isLine: Boolean get() =
-        w == 0.0
-//        abs(w) < EPSILON
+        w == 0.0 ||
+        abs(this.normalized().w) < EPSILON
 
     /** Radius squared */
     val r2: Double get() =
         if (isLine) Double.POSITIVE_INFINITY
-        else (x/w).pow(2) + (y/w).pow(2) - 2*z/w
+        else norm2/(w*w)
+//        else (x/w).pow(2) + (y/w).pow(2) - 2*z/w
 
     val isPoint: Boolean get() =
-        abs(norm2) < EPSILON
+        !isLine && abs(norm) < EPSILON
 
     val isRealCircle: Boolean get() =
-        r2 >= EPSILON
+        !isLine && r2 >= EPSILON
 
     val isImaginaryCircle: Boolean get() =
-        r2 <= -EPSILON
-
-    /** Upcast a point (x, y) */
-    constructor(x: Double, y: Double) : this(
-        1.0, x, y, (x.pow(2) + y.pow(2))/2
-    )
-
-    constructor(circle: Circle) : this(
-        1.0,
-        circle.x, circle.y,
-        (circle.x.pow(2) + circle.y.pow(2) - circle.radius.pow(2))/2
-    )
+        !isLine && r2 <= -EPSILON
 
     operator fun times(a: Number): GeneralizedCircle {
         val a0 = a.toDouble()
@@ -93,8 +85,8 @@ data class GeneralizedCircle(
     infix fun scalarProduct(other: GeneralizedCircle): Double =
         x*other.x +
         y*other.y +
-        (z - w/2)*(other.z - other.w/2) + // e_plus part
-        - (z + w/2)*(other.z + other.w/2) // e_minus part
+        (z - w/2)*(other.z - other.w/2) - // e_plus part
+        (z + w/2)*(other.z + other.w/2) // e_minus part
 
     fun normalized(): GeneralizedCircle {
         val n = norm
@@ -133,21 +125,16 @@ data class GeneralizedCircle(
     }
 
     fun affineCombination(other: GeneralizedCircle, k: Double): GeneralizedCircle =
-        this*k + other*(1 - k)
+        this.normalized()*k + other.normalized()*(1 - k)
 
-    fun applyTo(target: GeneralizedCircle): GeneralizedCircle =
-        GeneralizedCircle(
-            2*w*(x*target.x + y*target.y) - target.w*(x*x + y*y),
-            2*x*y*target.y + target.x*(x*x - y*y),
-            2*x*target.x*y + target.y*(-x*x + y*y),
-            2*z*(x*target.x + y*target.y) - target.z*(x*x + y*y)
+    fun applyTo(target: GeneralizedCircle): GeneralizedCircle {
+        val (w0,x0,y0,z0) = target
+        return GeneralizedCircle(
+            2*(x*x0 + y*y0)*w - (x*x + y*y)*w0 - 2*z0*w*w,
+            2*x*y*y0 + x0*(x*x - y*y) - 2*(x*w0 - x0*w)*z - 2*x*z0*w,
+            2*x*x0*y + y0*(y*y - x*x) - 2*(y*w0 - y0*w)*z - 2*y*z0*w,
+            2*(x*x0 + y*y0)*z - (x*x + y*y)*z0 - 2*z*z*w0
         )
-
-    // this is fake
-    fun _applyTo(target: GeneralizedCircle, times: Int = 1): GeneralizedCircle {
-        require(times > 0)
-//        return this.normalized().affineCombination(target.normalized(), times + 1.0)
-        return this.affineCombination(target, times + 1.0)
     }
 
     /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
@@ -159,7 +146,7 @@ data class GeneralizedCircle(
 
     // = affineCombination(other, infinity)
     fun altBisector(other: GeneralizedCircle): GeneralizedCircle =
-        this - other
+        this.normalized() - other.normalized()
 
     // in non-elliptic pencils subdivide+out is meaningless
     fun calculatePencilType(other: GeneralizedCircle): CirclePencilType? =
@@ -177,8 +164,8 @@ data class GeneralizedCircle(
 
     fun toGCircle(): GCircle {
         return when {
-            isRealCircle -> Circle(x / w, y / w, sqrt(r2))
             isLine -> Line(x, y, z)
+            isRealCircle -> Circle(x / w, y / w, sqrt(r2))
             isPoint -> Point(x / w, y / w)
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
             else -> throw IllegalStateException("Never")
@@ -186,16 +173,24 @@ data class GeneralizedCircle(
     }
 
     companion object {
-        fun fromGCircle(gCircles: GCircle): GeneralizedCircle =
-            when (gCircles) {
-                is Circle -> GeneralizedCircle(gCircles)
+        fun fromGCircle(gCircle: GCircle): GeneralizedCircle =
+            when (gCircle) {
+                is Circle -> GeneralizedCircle(
+                    1.0,
+                    gCircle.x, gCircle.y,
+                    (gCircle.x.pow(2) + gCircle.y.pow(2) - gCircle.radius.pow(2))/2
+                )
                 // a*x + b*y + c = 0
                 // -> a*e_x + b*e_y + c*e_inf
-                is Line -> GeneralizedCircle(0.0, gCircles.a, gCircles.b, gCircles.c).normalized()
-                is Point -> GeneralizedCircle(gCircles.x, gCircles.y)
+                is Line -> GeneralizedCircle(0.0, gCircle.a, gCircle.b, gCircle.c)
+                is Point -> GeneralizedCircle(
+                    1.0,
+                    gCircle.x, gCircle.y,
+                    (gCircle.x.pow(2) + gCircle.y.pow(2))
+                )
                 is ImaginaryCircle -> GeneralizedCircle(
-                    1.0, gCircles.x, gCircles.y,
-                    (gCircles.x.pow(2) + gCircles.y.pow(2) + gCircles.radius.pow(2))/2
+                    1.0, gCircle.x, gCircle.y,
+                    (gCircle.x.pow(2) + gCircle.y.pow(2) + gCircle.radius.pow(2))/2
                 )
             }
     }
