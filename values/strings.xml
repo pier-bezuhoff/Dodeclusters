@@ -10,9 +10,9 @@
     <!-- tools -->
     <string name="collapse">Collapse</string>
     <string name="drag_name">Drag</string>
-    <string name="drag_description">Mode: Grab &amp; drag circles one by one</string>
+    <string name="drag_description">Mode: Drag &amp; drop circles one by one</string>
     <string name="multiselect_name">Multiselect</string>
-    <string name="multiselect_description">Mode: Select several circles</string>
+    <string name="multiselect_description">Mode: Select &amp; transform groups of circles</string>
     <string name="flow_multiselect_name">Flow-multiselect</string>
     <string name="flow_multiselect_description">Select circles by swiping through them</string>
     <string name="toggle_select_all_name">Select/deselect all</string>
