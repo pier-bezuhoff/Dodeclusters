@@ -60,8 +60,8 @@
         <item>1st point on the line</item>
         <item>2nd point on the line</item>
     </string-array>
-    <string name="insert_centered_cross_name">Insert centered cross</string>
-    <string name="insert_centered_cross_description">Insert centered cross</string>
+    <string name="insert_centered_cross_name">Insert a centered cross</string>
+    <string name="insert_centered_cross_description">Insert a centered cross</string>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
 
