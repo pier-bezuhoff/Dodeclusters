@@ -103,11 +103,11 @@ fun BoxScope.EditClusterCanvas(
 
     val backgroundColor = MaterialTheme.colorScheme.background
     val circleColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f) // MAYBE: black for light scheme
-    val selectedCircleColor = MaterialTheme.colorScheme.tertiary
+    val selectedCircleColor = DodeclustersColors.strongSalad
     val clusterPathAlpha = 0.7f
-//    val clusterPathAlpha = 1f // TODO: add a switch for this
     val selectionLinesColor = DodeclustersColors.gray
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
+    val thiccSelectionCircleAlpha: Float = 0.9f
     val maxDecayAlpha = 0.2f
     val decayDuration = 1_500
     val animations: MutableMap<CircleAnimation, Animatable<Float, AnimationVector1D>> =
@@ -128,7 +128,7 @@ fun BoxScope.EditClusterCanvas(
             }
         }
     }
-    SelectionsCanvas(modifier, viewModel, selectionLinesColor, backgroundColor, selectedCircleColor, circleThiccStroke)
+//    SelectionsCanvas(modifier, viewModel, selectionLinesColor, backgroundColor, selectedCircleColor, circleThiccStroke, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha)
     Canvas(
         modifier
             // NOTE: turned off long press for now (also inside of reactiveCanvas)
@@ -143,6 +143,9 @@ fun BoxScope.EditClusterCanvas(
 //                onLongDragCancel = viewModel::onLongDragCancel,
 //                onLongDragEnd = viewModel::onLongDragEnd,
             )
+            .onSizeChanged { size ->
+                viewModel.canvasSize = size
+            }
             .fillMaxSize()
             .graphicsLayer(
                 compositingStrategy = CompositingStrategy.Offscreen, // crucial for proper alpha blending
@@ -155,6 +158,20 @@ fun BoxScope.EditClusterCanvas(
             drawParts(viewModel, visibleRect, clusterPathAlpha, circleStroke)
             if (viewModel.showCircles)
                 drawCircles(viewModel, visibleRect, circleColor, circleStroke)
+            if (viewModel.showCircles &&
+                (viewModel.circleSelectionIsActive ||
+                    viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection
+                )
+            ) {
+                val circles = viewModel.selection.map { viewModel.circles[it] }
+                for (circle in circles) {
+                    drawCircleOrLine(
+                        circle, visibleRect, selectedCircleColor,
+                        alpha = thiccSelectionCircleAlpha,
+                        style = circleThiccStroke
+                    )
+                }
+            }
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleHandleColor, rotateIconTint, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
         }
@@ -175,20 +192,8 @@ private fun SelectionsCanvas(
     selectedCircleColor: Color,
     circleThiccStroke: Stroke,
     halfNLines: Int = 200, // not all of them are visible, since we are simplifying to a square
-    thiccSelectionCircleAlpha: Float = 1f,
+    thiccSelectionCircleAlpha: Float = 0.9f,
 ) {
-    val walkingDashes = rememberInfiniteTransition()
-    val dashPhase by walkingDashes.animateFloat(
-        0f, 1f,
-        infiniteRepeatable(tween(1_000, easing = LinearEasing))
-    )
-    val dashLength = 15f
-    val nonDashLength = 5f
-    val dashedEffect = PathEffect.dashPathEffect(
-        floatArrayOf(dashLength, nonDashLength),
-        phase = dashPhase*(dashLength+nonDashLength)
-    )
-    val walkingStroke = Stroke(circleThiccStroke.width, pathEffect = dashedEffect)
     Canvas(
         modifier.fillMaxSize()
             .onSizeChanged { size ->
@@ -227,7 +232,7 @@ private fun SelectionsCanvas(
                     drawCircleOrLine(
                         circle, visibleRect, selectedCircleColor,
                         alpha = thiccSelectionCircleAlpha,
-                        style = walkingStroke
+                        style = circleThiccStroke
                     )
                 }
             }

@@ -161,6 +161,7 @@ object DodeclustersColors {
     val dimPurple = Color(0xff_9141BD) // similar to purple but slightly less intensive
     val puce = Color(0xff_cc8899) // cute dark pink
     val golden = tertiaryDark
+    val strongSalad = Color(0xff_8aff00)
     val darkestGray = Color(0xff_121212)
     val lightestWhite = Color(0xff_FAF8FF)
 
