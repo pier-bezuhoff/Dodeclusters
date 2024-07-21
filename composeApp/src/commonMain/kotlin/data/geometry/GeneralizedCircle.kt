@@ -130,10 +130,20 @@ data class GeneralizedCircle(
     fun applyTo(target: GeneralizedCircle): GeneralizedCircle {
         val (w0,x0,y0,z0) = target
         return GeneralizedCircle(
-            2*(x*x0 + y*y0)*w - (x*x + y*y)*w0 - 2*z0*w*w,
-            2*x*y*y0 + x0*(x*x - y*y) - 2*(x*w0 - x0*w)*z - 2*x*z0*w,
-            2*x*x0*y + y0*(y*y - x*x) - 2*(y*w0 - y0*w)*z - 2*y*z0*w,
-            2*(x*x0 + y*y0)*z - (x*x + y*y)*z0 - 2*z*z*w0
+//            (x*x0 + y*y0 - 2*w*z0)*w + (w*x0 - w0*x)*x + (w*y0 - w0*y)*y,
+//            (x*x0 + y*y0 - 2*w0*z)*x + (x*y0 - x0*y)*y - 2*(x*z0 - x0*z)*w,
+//            (x*x0 + y*y0 - 2*w0*z)*y - (x*y0 - x0*y)*x - 2*(y*z0 - y0*z)*w,
+//            (x*x0 + y*y0 - 2*w0*z)*z - (x*z0 - x0*z)*x - (y*z0 - y0*z)*y
+
+            -2*w*w*z0 + 2*w*x*x0 + 2*w*y*y0 - w0*x*x - w0*y*y,
+            -2*w*x*z0 + 2*w*x0*z - 2*w0*x*z + x*x*x0 + 2*x*y*y0 - x0*y*y,
+            -2*w*y*z0 + 2*w*y0*z - 2*w0*y*z - x*x*y0 + 2*x*x0*y + y*y*y0,
+            -2*w0*z*z - x*x*z0 + 2*x*x0*z - y*y*z0 + 2*y*y0*z,
+
+//            2*(x*x0 + y*y0)*w - (x*x + y*y)*w0 - 2*z0*w*w,
+//            2*x*y*y0 + x0*(x*x - y*y) - 2*(x*w0 - x0*w)*z - 2*x*z0*w,
+//            2*x*x0*y + y0*(y*y - x*x) - 2*(y*w0 - y0*w)*z - 2*y*z0*w,
+//            2*(x*x0 + y*y0)*z - (x*x + y*y)*z0 - 2*z*z*w0
         )
     }
 
@@ -164,7 +174,7 @@ data class GeneralizedCircle(
 
     fun toGCircle(): GCircle {
         return when {
-            isLine -> Line(x, y, z)
+            isLine -> Line(x, y, -z)
             isRealCircle -> Circle(x / w, y / w, sqrt(r2))
             isPoint -> Point(x / w, y / w)
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
@@ -182,7 +192,7 @@ data class GeneralizedCircle(
                 )
                 // a*x + b*y + c = 0
                 // -> a*e_x + b*e_y + c*e_inf
-                is Line -> GeneralizedCircle(0.0, gCircle.a, gCircle.b, gCircle.c)
+                is Line -> GeneralizedCircle(0.0, gCircle.a, gCircle.b, -gCircle.c)
                 is Point -> GeneralizedCircle(
                     1.0,
                     gCircle.x, gCircle.y,

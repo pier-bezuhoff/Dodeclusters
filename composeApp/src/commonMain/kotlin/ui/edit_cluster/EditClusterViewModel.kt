@@ -81,9 +81,9 @@ class EditClusterViewModel(
         categories.map { it.tools.indexOf(it.default) }.toMutableStateList()
     var activeCategoryIndex: Int by mutableIntStateOf(0)
         private set
-    var activeToolIndex: Int by mutableIntStateOf(categoryDefaults[activeCategoryIndex])
-        private set
     val activeCategory: EditClusterCategory by derivedStateOf { categories[activeCategoryIndex] }
+    var activeTool: EditClusterTool by mutableStateOf(activeCategory.default ?: EditClusterTool.Drag)
+        private set
     private val panelNeedsToBeShown by derivedStateOf { activeCategory.tools.size > 1 }
     var showPanel by mutableStateOf(panelNeedsToBeShown)
 
@@ -957,6 +957,7 @@ class EditClusterViewModel(
             if (i in category.defaultables)
                 categoryDefaults[cIndex] = i
         }
+        activeTool = tool
         selectCategory(category, togglePanel = togglePanel)
         toolAction(tool)
     }

@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -25,8 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -34,15 +31,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -60,7 +55,6 @@ import data.io.SaveFileButton
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
-import dodeclusters.composeapp.generated.resources.edit_cluster_title
 import dodeclusters.composeapp.generated.resources.open_file
 import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.redo
@@ -119,6 +113,7 @@ fun EditClusterScreen(
         Surface {
             Box {
                 EditClusterCanvas(viewModel)
+                ToolDescription(viewModel.activeTool, Modifier.align(Alignment.TopStart))
                 EditClusterTopBar(viewModel, Modifier.align(Alignment.TopEnd))
                 Column(
                     Modifier
@@ -160,6 +155,20 @@ fun EditClusterScreen(
             }
         }
     }
+}
+
+@Composable
+fun ToolDescription(tool: EditClusterTool, modifier: Modifier = Modifier) {
+    Text(
+        stringResource(tool.description),
+        modifier
+            .padding(4.dp)
+            .border(2.dp, MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(24.dp))
+            .padding(16.dp, 8.dp)
+        ,
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
+        style = MaterialTheme.typography.titleMedium
+    )
 }
 
 @OptIn(ExperimentalResourceApi::class)
@@ -357,9 +366,9 @@ fun Panel(
             )
         }
     }
-    LaunchedEffect(viewModel.activeToolIndex) {
-        scrollState.animateScrollTo(viewModel.activeToolIndex) // probs?
-    }
+//    LaunchedEffect(viewModel.activeTool) {
+//        scrollState.animateScrollTo(viewModel.activeCategory.tools) // probs?
+//    }
 }
 
 @Composable
