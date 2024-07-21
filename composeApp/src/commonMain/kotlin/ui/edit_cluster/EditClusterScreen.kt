@@ -45,8 +45,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.github.ajalt.colormath.model.RGB
 import data.ClusterRepository
 import data.io.Ddc
 import data.io.OpenFileButton
@@ -159,16 +162,22 @@ fun EditClusterScreen(
 
 @Composable
 fun ToolDescription(tool: EditClusterTool, modifier: Modifier = Modifier) {
-    Text(
-        stringResource(tool.description),
-        modifier
-            .padding(4.dp)
-            .border(2.dp, MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(24.dp))
-            .padding(16.dp, 8.dp)
-        ,
-        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
-        style = MaterialTheme.typography.titleMedium
-    )
+    Crossfade(tool) { currentTool ->
+        Text(
+            stringResource(currentTool.description),
+            modifier
+                .padding(4.dp)
+                .border(
+                    2.dp,
+                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
+                    RoundedCornerShape(24.dp)
+                )
+                .padding(16.dp, 8.dp)
+            ,
+            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
+            style = MaterialTheme.typography.titleMedium
+        )
+    }
 }
 
 @OptIn(ExperimentalResourceApi::class)
@@ -197,11 +206,6 @@ fun EditClusterTopBar(
         Arrangement.End,
         Alignment.CenterVertically
     ) {
-//        Text(
-//            stringResource(Res.string.edit_cluster_title),
-////            Modifier.align(Alignment.Start),
-//            color = MaterialTheme.colorScheme.tertiary
-//        )
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             Spacer(Modifier.width(16.dp))
             WithTooltip(stringResource(Res.string.save_cluster_name)) {
@@ -281,7 +285,6 @@ fun BottomToolbar(
             )
             CategoryButton(viewModel, EditClusterCategory.Visibility)
             CategoryButton(viewModel, EditClusterCategory.Colors)
-//        AttributesCategoryButton(viewModel)
             CategoryButton(viewModel, EditClusterCategory.Transform)
         }
     }
@@ -383,7 +386,7 @@ fun ToolButton(
     val description = stringResource(tool.description)
     WithTooltip(description) {
         when (tool) {
-            EditClusterTool.Delete -> { // red tint
+            EditClusterTool.Delete -> {
                 IconButton(
                     onClick = onClick,
                     modifier = modifier,
@@ -460,17 +463,25 @@ fun PaletteButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val iconColor =
+        if (selectedColor.luminance() > 0.2) {
+//            val lab = RGB(selectedColor.red, selectedColor.green, selectedColor.blue).toOklab()
+//            val rgb = lab.copy(l = lab.l/3f).toSRGB()
+//            Color(rgb.r.coerceIn(0f, 1f), rgb.g.coerceIn(0f, 1f), rgb.b.coerceIn(0f, 1f))
+            Color.Black
+        } else LocalContentColor.current
     IconButton(
         onClick = onClick,
         modifier = modifier,
         colors = IconButtonDefaults.iconButtonColors().copy(
             containerColor = selectedColor,
+            contentColor = iconColor
         )
     ) {
         Icon(
             painterResource(EditClusterTool.Palette.icon),
             contentDescription = stringResource(EditClusterTool.Palette.name),
-            modifier = modifier
+            modifier = modifier,
         )
 //        Icon(
 //            painterResource(EditClusterTool.Palette.colorOutlineIcon),

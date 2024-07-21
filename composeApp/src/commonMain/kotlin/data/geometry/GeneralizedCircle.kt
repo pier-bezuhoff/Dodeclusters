@@ -174,7 +174,7 @@ data class GeneralizedCircle(
 
     fun toGCircle(): GCircle {
         return when {
-            isLine -> Line(x, y, -z)
+            isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
             isRealCircle -> Circle(x / w, y / w, sqrt(r2))
             isPoint -> Point(x / w, y / w)
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
