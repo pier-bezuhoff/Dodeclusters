@@ -70,6 +70,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import ui.tools.Tool
@@ -166,7 +167,7 @@ fun ToolDescription(tool: EditClusterTool, modifier: Modifier = Modifier) {
         Text(
             stringResource(currentTool.description),
             modifier
-                .padding(4.dp)
+                .padding(8.dp)
                 .border(
                     2.dp,
                     MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
@@ -433,7 +434,7 @@ fun ToolButton(
                 SimpleButton(icon, name, modifier, onClick = onClick)
             }
 
-            is Tool.BinaryToggle -> { // TODO: remove on-tint
+            is Tool.BinaryToggle -> {
                 if (tool.disabledIcon == null) {
                     OnOffButton(
                         icon, name,
@@ -465,11 +466,8 @@ fun PaletteButton(
 ) {
     val iconColor =
         if (selectedColor.luminance() > 0.2) {
-//            val lab = RGB(selectedColor.red, selectedColor.green, selectedColor.blue).toOklab()
-//            val rgb = lab.copy(l = lab.l/3f).toSRGB()
-//            Color(rgb.r.coerceIn(0f, 1f), rgb.g.coerceIn(0f, 1f), rgb.b.coerceIn(0f, 1f))
-            Color.Black
-        } else LocalContentColor.current
+            DodeclustersColors.darkestGray
+        } else DodeclustersColors.lightestWhite
     IconButton(
         onClick = onClick,
         modifier = modifier,

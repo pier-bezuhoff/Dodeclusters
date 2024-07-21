@@ -3,6 +3,9 @@ package ui.edit_cluster
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxScope
@@ -12,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -169,10 +173,22 @@ private fun SelectionsCanvas(
     selectionLinesColor: Color,
     backgroundColor: Color,
     selectedCircleColor: Color,
-    circleThiccStroke: DrawStyle,
+    circleThiccStroke: Stroke,
     halfNLines: Int = 200, // not all of them are visible, since we are simplifying to a square
-    thiccSelectionCircleAlpha: Float = 0.4f,
+    thiccSelectionCircleAlpha: Float = 1f,
 ) {
+    val walkingDashes = rememberInfiniteTransition()
+    val dashPhase by walkingDashes.animateFloat(
+        0f, 1f,
+        infiniteRepeatable(tween(1_000, easing = LinearEasing))
+    )
+    val dashLength = 15f
+    val nonDashLength = 5f
+    val dashedEffect = PathEffect.dashPathEffect(
+        floatArrayOf(dashLength, nonDashLength),
+        phase = dashPhase*(dashLength+nonDashLength)
+    )
+    val walkingStroke = Stroke(circleThiccStroke.width, pathEffect = dashedEffect)
     Canvas(
         modifier.fillMaxSize()
             .onSizeChanged { size ->
@@ -211,7 +227,7 @@ private fun SelectionsCanvas(
                     drawCircleOrLine(
                         circle, visibleRect, selectedCircleColor,
                         alpha = thiccSelectionCircleAlpha,
-                        style = circleThiccStroke
+                        style = walkingStroke
                     )
                 }
             }
@@ -239,14 +255,15 @@ private fun DrawScope.drawCircleOrLine(
             val farForward = pointClosestToScreenCenter + direction * maxDim
             when (style) {
                 Fill -> {
-                    val halfPlanePath = visibleHalfPlanePath(circle, visibleRect)
-                    drawPath(halfPlanePath, color, alpha, style, blendMode = blendMode)
+//                    val halfPlanePath = visibleHalfPlanePath(circle, visibleRect)
+//                    drawPath(halfPlanePath, color, alpha, style, blendMode = blendMode)
                 }
                 is Stroke -> {
                     drawLine(
                         color, farBack, farForward,
                         alpha = alpha,
                         strokeWidth = style.width,
+                        pathEffect = style.pathEffect,
                         blendMode = blendMode
                     )
                 }
@@ -260,8 +277,6 @@ private fun DrawScope.drawAnimation(
     visibleRect: Rect
 ) {
     val visibleScreenPath = Path().apply { addRect(visibleRect) }
-    // TODO: either transition to a different animation
-    //  or distinguish between circles and lines (lines lag for now)
     for ((circleAnimation, decayAlpha) in animations) {
         for (circle in circleAnimation.circles) {
             val color = when (circleAnimation) {
@@ -276,8 +291,14 @@ private fun DrawScope.drawAnimation(
                     drawPath(path, color, alpha = decayAlpha.value)
                 }
                 is Line -> {
-                    val path = visibleHalfPlanePath(circle, visibleRect)
-                    drawPath(path, color, alpha = decayAlpha.value)
+                    val maxDim = visibleRect.maxDimension
+                    val pointClosestToScreenCenter = circle.project(visibleRect.center)
+                    val direction =  circle.directionVector
+                    val farBack = pointClosestToScreenCenter - direction * maxDim
+                    val farForward = pointClosestToScreenCenter + direction * maxDim
+                    drawLine(color, farBack, farForward, strokeWidth = 20f, alpha = decayAlpha.value)
+//                    val path = visibleHalfPlanePath(circle, visibleRect)
+//                    drawPath(path, color, alpha = decayAlpha.value)
                 }
             }
         }
@@ -290,8 +311,15 @@ private fun DrawScope.drawCircles(
     circleColor: Color,
     circleStroke: DrawStyle,
 ) {
-    for (circle in viewModel.circles) {
-        drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
+    if (viewModel.circleSelectionIsActive) {
+        for ((ix, circle) in viewModel.circles.withIndex()) {
+            if (ix !in viewModel.selection)
+                drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
+        }
+    } else {
+        for (circle in viewModel.circles) {
+            drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
+        }
     }
 }
 
@@ -302,7 +330,6 @@ private fun DrawScope.drawParts(
     circleStroke: DrawStyle,
 ) {
     for (part in viewModel.parts) {
-//        println(part)
         val path = part2path(viewModel.circles, part, visibleRect)
         drawPath(
             path,
