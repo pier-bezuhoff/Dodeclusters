@@ -708,6 +708,12 @@ class EditClusterViewModel(
                         reselectRegionAt(position)
                     }
                 }
+                ToolMode.CIRCLE_BY_CENTER_AND_RADIUS ->
+                    if (FAST_CENTERED_CIRCLE && partialArgList!!.lastArgIsConfirmed) {
+                        partialArgList = partialArgList!!.copy(
+                            args = partialArgList!!.args.dropLast(1)
+                        )
+                    }
                 else -> {}
             }
         }
@@ -786,8 +792,15 @@ class EditClusterViewModel(
                 if (mode is ToolMode) {
                     when (partialArgList!!.nextArgType) {
                         PartialArgList.ArgType.XYPoint -> {
-                            val newArg = PartialArgList.Arg.XYPoint.fromOffset(absolute(visiblePosition))
-                            partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = false)
+                            if (FAST_CENTERED_CIRCLE && mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS && partialArgList!!.currentArg == null) {
+                                val newArg = PartialArgList.Arg.XYPoint.fromOffset(absolute(visiblePosition))
+                                partialArgList = partialArgList!!
+                                    .addArg(newArg, confirmThisArg = true)
+                                    .addArg(newArg, confirmThisArg = true)
+                            } else {
+                                val newArg = PartialArgList.Arg.XYPoint.fromOffset(absolute(visiblePosition))
+                                partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = false)
+                            }
                         }
                         PartialArgList.ArgType.CircleIndex -> {
                             selectCircle(circles, visiblePosition)?.let { circleIndex ->
@@ -1164,6 +1177,7 @@ class EditClusterViewModel(
         const val ZOOM_INCREMENT = 1.05f // == +5%
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val HISTORY_SIZE = 100
+        const val FAST_CENTERED_CIRCLE = true
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)
