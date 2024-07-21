@@ -101,13 +101,11 @@ fun BoxScope.EditClusterCanvas(
     val sliderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
     val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
 
-    val backgroundColor = MaterialTheme.colorScheme.background
     val circleColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f) // MAYBE: black for light scheme
     val selectedCircleColor = DodeclustersColors.strongSalad
     val clusterPathAlpha = 0.7f
-    val selectionLinesColor = DodeclustersColors.gray
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
-    val thiccSelectionCircleAlpha: Float = 0.9f
+    val thiccSelectionCircleAlpha = 0.9f
     val maxDecayAlpha = 0.2f
     val decayDuration = 1_500
     val animations: MutableMap<CircleAnimation, Animatable<Float, AnimationVector1D>> =
@@ -187,10 +185,10 @@ fun BoxScope.EditClusterCanvas(
 private fun SelectionsCanvas(
     modifier: Modifier,
     viewModel: EditClusterViewModel,
-    selectionLinesColor: Color,
-    backgroundColor: Color,
     selectedCircleColor: Color,
     circleThiccStroke: Stroke,
+    selectionLinesColor: Color = DodeclustersColors.gray,
+    backgroundColor: Color = MaterialTheme.colorScheme.background,
     halfNLines: Int = 200, // not all of them are visible, since we are simplifying to a square
     thiccSelectionCircleAlpha: Float = 0.9f,
 ) {
@@ -538,6 +536,7 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
 //    ) {}
 
     with (LocalDensity.current) {
+        // expand & shrink buttons
         SimpleButton(
             painterResource(Res.drawable.expand),
             stringResource(Res.string.stub),

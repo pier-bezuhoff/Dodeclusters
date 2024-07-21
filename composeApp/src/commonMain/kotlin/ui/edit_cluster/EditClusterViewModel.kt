@@ -145,18 +145,18 @@ class EditClusterViewModel(
 
     var canvasSize by mutableStateOf(IntSize.Zero) // used when saving best-center
     private val selectionControlsPositions by derivedStateOf {
-        SelectionControlsPositions(canvasSize.width, canvasSize.height)
+        SelectionControlsPositions(canvasSize)
     }
     // TODO: keep track of the center instead
     var translation by mutableStateOf(Offset.Zero) // pre-scale offset
 //    val scale = mutableStateOf(1f)
 
     /** min tap/grab distance to select an object */
-    private var epsilon = EPSILON
+    private var tapDistance = TAP_DISTANCE
 
     fun setEpsilon(density: Density) {
         with (density) {
-            epsilon = EPSILON.dp.toPx()
+            tapDistance = TAP_DISTANCE.dp.toPx()
         }
     }
 
@@ -434,13 +434,13 @@ class EditClusterViewModel(
 
     fun isCloseEnoughToSelect(absolutePosition: Offset, visiblePosition: Offset, lowAccuracy: Boolean = false): Boolean {
         val position = absolute(visiblePosition)
-        return (absolutePosition - position).getDistance() <= epsilon * (if (lowAccuracy) LOW_ACCURACY_FACTOR else 1f)
+        return (absolutePosition - position).getDistance() <= tapDistance * (if (lowAccuracy) LOW_ACCURACY_FACTOR else 1f)
     }
 
     fun selectPoint(targets: List<Offset>, visiblePosition: Offset): Ix? {
         val position = absolute(visiblePosition)
         return targets.mapIndexed { ix, offset -> ix to (offset - position).getDistance() }
-            .filter { (_, distance) -> distance <= epsilon }
+            .filter { (_, distance) -> distance <= tapDistance }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
     }
@@ -450,7 +450,7 @@ class EditClusterViewModel(
         return targets.mapIndexed { ix, circle ->
             ix to circle.distanceFrom(position)
         }
-            .filter { (_, distance) -> distance <= epsilon }
+            .filter { (_, distance) -> distance <= tapDistance }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
     }
@@ -768,12 +768,11 @@ class EditClusterViewModel(
                 }
             }
             if (circleSelectionIsActive && submode is SubMode.None) {
-                val positions = SelectionControlsPositions(canvasSize.width, canvasSize.height)
                 val screenCenter = absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
                 when {
-                    isCloseEnoughToSelect(absolute(positions.sliderMiddleOffset), visiblePosition, lowAccuracy = true) ->
+                    isCloseEnoughToSelect(absolute(selectionControlsPositions.sliderMiddleOffset), visiblePosition, lowAccuracy = true) ->
                         submode = SubMode.ScaleViaSlider(screenCenter)
-                    isCloseEnoughToSelect(absolute(positions.rotationHandleOffset), visiblePosition, lowAccuracy = true) ->
+                    isCloseEnoughToSelect(absolute(selectionControlsPositions.rotationHandleOffset), visiblePosition, lowAccuracy = true) ->
                         submode = SubMode.Rotate(screenCenter)
                 }
             }
@@ -821,8 +820,7 @@ class EditClusterViewModel(
                             }
                         }
                         is SubMode.ScaleViaSlider -> {
-                            val positions = SelectionControlsPositions(canvasSize.width, canvasSize.height)
-                            val newPercentage = positions.addPanToPercentage(sm.sliderPercentage, pan)
+                            val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
                             if (sm.sliderPercentage != newPercentage) {
                                 recordCommand(Command.SCALE)
                                 val circle = circles[h.ix]
@@ -859,8 +857,7 @@ class EditClusterViewModel(
                             }
                         }
                         is SubMode.ScaleViaSlider -> {
-                            val positions = SelectionControlsPositions(canvasSize.width, canvasSize.height)
-                            val newPercentage = positions.addPanToPercentage(sm.sliderPercentage, pan)
+                            val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
                             if (sm.sliderPercentage != newPercentage) {
                                 recordCommand(Command.SCALE)
                                 val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
@@ -1162,7 +1159,7 @@ class EditClusterViewModel(
 
     companion object {
         /** min tap/grab distance to select an object in dp */
-        const val EPSILON = 10f
+        const val TAP_DISTANCE = 10f
         const val LOW_ACCURACY_FACTOR = 1.5f
         const val ZOOM_INCREMENT = 1.05f // == +5%
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%

@@ -4,9 +4,11 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 
+val DEFAULT_COLOR_THEME = ColorTheme.DARK
+
 @Composable
 fun DodeclustersTheme(
-    colorTheme: ColorTheme = ColorTheme.DARK,
+    colorTheme: ColorTheme = DEFAULT_COLOR_THEME,
     content: @Composable () -> Unit
 ) {
     val scheme = when (colorTheme) {
