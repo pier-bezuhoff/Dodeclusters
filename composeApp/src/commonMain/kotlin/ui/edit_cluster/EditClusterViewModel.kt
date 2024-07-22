@@ -419,6 +419,13 @@ class EditClusterViewModel(
         if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
         if (newMode is ToolMode) {
+            if (mode == SelectionMode.Multiselect && selection.size > 1 &&
+                newMode.signature.argTypes.first() == PartialArgList.ArgType.SelectedCircles
+            ) {
+                // TODO: prompt to act upon the selection
+                partialArgList = PartialArgList(newMode.signature)
+                    .addArg(PartialArgList.Arg.SelectedCircles(selection), confirmThisArg = true)
+            }
             selection.clear()
             showCircles = true
             partialArgList = PartialArgList(newMode.signature)
@@ -805,6 +812,12 @@ class EditClusterViewModel(
                         PartialArgList.ArgType.CircleIndex -> {
                             selectCircle(circles, visiblePosition)?.let { circleIndex ->
                                 val newArg = PartialArgList.Arg.CircleIndex(circleIndex)
+                                partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
+                            }
+                        }
+                        PartialArgList.ArgType.SelectedCircles -> {
+                            selectCircle(circles, visiblePosition)?.let { circleIndex ->
+                                val newArg = PartialArgList.Arg.SelectedCircles(listOf(circleIndex))
                                 partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
                             }
                         }

@@ -3,9 +3,6 @@ package ui.edit_cluster
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxScope
@@ -15,7 +12,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -44,8 +40,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import data.geometry.Circle
 import data.PartialArgList
+import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
 import dodeclusters.composeapp.generated.resources.Res
@@ -67,7 +63,6 @@ import ui.circle2path
 import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
-import ui.visibleHalfPlanePath
 import kotlin.math.max
 import kotlin.math.min
 
@@ -557,6 +552,7 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
             ),
             tint = MaterialTheme.colorScheme.secondary
         ) { viewModel.scaleSelection(1/1.1f) }
+        // BUG: in browser after using "<url>?sample=0" shrink & copy button icons randomly disappear
 
         // duplicate & delete buttons
         SimpleButton(
@@ -566,7 +562,7 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
                 x = positions.right.toDp() - halfSize,
                 y = positions.topUnderScaleSlider.toDp() - halfSize
             ),
-            tint = DodeclustersColors.skyBlue.copy(alpha = 0.8f)
+            tint = DodeclustersColors.skyBlue.copy(alpha = 0.9f)
         ) { viewModel.duplicateCircles() }
         SimpleButton(
             painterResource(Res.drawable.delete_forever),
@@ -575,7 +571,7 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
                 x = positions.left.toDp() - halfSize,
                 y = positions.bottom.toDp() - halfSize
             ),
-            tint = DodeclustersColors.lightRed.copy(alpha = 0.8f)
+            tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
         ) { viewModel.deleteCircles() }
     }
 }

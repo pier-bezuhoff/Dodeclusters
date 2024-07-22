@@ -31,11 +31,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -47,10 +45,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.github.ajalt.colormath.model.RGB
 import data.ClusterRepository
 import data.io.Ddc
 import data.io.OpenFileButton
@@ -153,7 +149,7 @@ fun EditClusterScreen(
             println("loading external ddc")
             viewModel.loadFromYaml(ddcContent)
         } else if (sampleIndex != null) {
-            clusterRepository.loadSampleClusterJson(sampleIndex) { content ->
+            clusterRepository.loadSampleClusterYaml(sampleIndex) { content ->
                 if (content != null) {
                     viewModel.loadFromYaml(content)
                 }
@@ -168,7 +164,7 @@ fun ToolDescription(tool: EditClusterTool, modifier: Modifier = Modifier) {
         modifier.fillMaxWidth(0.5f) // we cant specify max text length, so im doing this
     ) {
         Crossfade(tool) { currentTool ->
-            // TODO: vertical center -> same as right toolbar
+            // MAYBE: vertical center -> same as right toolbar
             Text(
                 stringResource(currentTool.description),
                 modifier

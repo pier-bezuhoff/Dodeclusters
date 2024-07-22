@@ -6,7 +6,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 class ClusterRepository {
 
     @OptIn(ExperimentalResourceApi::class)
-    suspend fun loadSampleClusterJson(
+    suspend fun loadSampleClusterYaml(
         sampleIndex: Int,
         onLoaded: (content: String?) -> Unit
     ) {

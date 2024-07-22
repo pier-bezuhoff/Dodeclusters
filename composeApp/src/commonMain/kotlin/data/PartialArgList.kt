@@ -11,7 +11,6 @@ data class PartialArgList(
     val args: List<Arg> = emptyList(),
     val lastArgIsConfirmed: Boolean = true
 ) {
-    @Serializable
     enum class ArgType {
         XYPoint,
         CircleIndex,
@@ -91,5 +90,6 @@ data class PartialArgList(
         val SIGNATURE_2_POINTS = Signature(ArgType.XYPoint, ArgType.XYPoint)
         val SIGNATURE_3_POINTS = Signature(ArgType.XYPoint, ArgType.XYPoint, ArgType.XYPoint)
         val SIGNATURE_2_CIRCLES = Signature(ArgType.CircleIndex, ArgType.CircleIndex)
+        val SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE = Signature(ArgType.SelectedCircles, ArgType.CircleIndex)
     }
 }
