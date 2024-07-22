@@ -35,6 +35,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -163,21 +164,26 @@ fun EditClusterScreen(
 
 @Composable
 fun ToolDescription(tool: EditClusterTool, modifier: Modifier = Modifier) {
-    Crossfade(tool) { currentTool ->
-        Text(
-            stringResource(currentTool.description),
-            modifier
-                .padding(8.dp)
-                .border(
-                    2.dp,
-                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
-                    RoundedCornerShape(24.dp)
-                )
-                .padding(16.dp, 8.dp)
-            ,
-            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
-            style = MaterialTheme.typography.titleMedium
-        )
+    Column(
+        modifier.fillMaxWidth(0.5f) // we cant specify max text length, so im doing this
+    ) {
+        Crossfade(tool) { currentTool ->
+            // TODO: vertical center -> same as right toolbar
+            Text(
+                stringResource(currentTool.description),
+                modifier
+                    .padding(8.dp, 12.dp)
+                    .border(
+                        2.dp,
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
+                        RoundedCornerShape(24.dp)
+                    )
+                    .padding(16.dp, 8.dp)
+                ,
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
     }
 }
 
