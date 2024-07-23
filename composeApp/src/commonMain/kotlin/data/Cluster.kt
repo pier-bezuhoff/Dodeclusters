@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.EPSILON
+import data.geometry.Line
 import data.geometry.Point
 import data.io.Ddc
 import kotlinx.serialization.Serializable
@@ -62,18 +63,18 @@ data class OldCluster(
     val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
 )
 
+// BUG: handling regions with several disjunctive parts is broken
+//  same with all-outsides regions
 fun compressPartToEssentials(
     ins: List<CircleOrLine>,
     outs: List<CircleOrLine>,
+//): Triple<List<Ix>, List<Ix>, List<Point>> {
 ): Pair<List<Ix>, List<Ix>> {
-    // compute all intersections with circles they are on
-    // filter half-in's
-    // filter arcs between them
-    // arc => full circle is essential
     val allCircles = ins + outs
     val n = allCircles.size
     val nIns = ins.size
     val intersections = mutableListOf<Point>()
+//    val _intersections = mutableListOf<Point>()
     // circle ix -> ip ixs
     val circle2points: List<MutableSet<Int>> =
         allCircles.indices.map { mutableSetOf() }
@@ -85,9 +86,10 @@ fun compressPartToEssentials(
             for (ip in ips) {
                 val repeatIx = intersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
                 if (repeatIx == -1) { // new ip
+//                    _intersections.add(ip)
                     val itFits =
                         ins.all { it.checkPositionEpsilon(ip) <= 0 } &&
-                        outs.all { it.checkPositionEpsilon(ip) >= 0 }
+                                outs.all { it.checkPositionEpsilon(ip) >= 0 }
                     if (itFits) {
                         val ix = intersections.size
                         intersections.add(ip)
@@ -107,29 +109,49 @@ fun compressPartToEssentials(
         val c = allCircles[i]
         val orderedIPs = c.orderPoints(circle2points[i].map { intersections[it] })
         val m = orderedIPs.size
-        for (k in 0 until m) {
-            val prevK =
-                if (k == 0)
-                    m - 1
-                else k - 1
-            val ip1 = orderedIPs[prevK]
-            val ip2 = orderedIPs[k]
-            // order matters, arc(ip1,ip2) != arc(ip2,ip1)
-            // possible: ip1 == ip2
-            val mid = c.midArc(ip1, ip2)
+        if (m == 0) {
+            val mid = c.order2point(0.0)
+//            _intersections.add(mid)
             val itFits =
                 ins.all { it.checkPositionEpsilon(mid) <= 0 } &&
-                outs.all { it.checkPositionEpsilon(mid) >= 0 }
+                        outs.all { it.checkPositionEpsilon(mid) >= 0 }
             if (itFits) {
                 if (i < nIns)
                     essentialIns.add(i)
                 else
                     essentialOuts.add(i - nIns)
-                break // the circle is in, no need to check other ip arcs
+            }
+        } else {
+            for (k in 0 until m) {
+                val mid: Point =
+                    if (k == 0 && c is Line) {
+                        val ip2 = orderedIPs[k]
+                        c.pointInBetween(Point.CONFORMAL_INFINITY, ip2)
+                    } else {
+                        val prevK =
+                            if (k == 0)
+                                m - 1
+                            else k - 1
+                        val ip1 = orderedIPs[prevK]
+                        val ip2 = orderedIPs[k]
+                        c.pointInBetween(ip1, ip2)
+                    }
+//                _intersections.add(mid)
+                val itFits =
+                    ins.all { it.checkPositionEpsilon(mid) <= 0 } &&
+                            outs.all { it.checkPositionEpsilon(mid) >= 0 }
+                if (itFits) {
+                    if (i < nIns)
+                        essentialIns.add(i)
+                    else
+                        essentialOuts.add(i - nIns)
+                    break // the circle is in, no need to check other ip arcs
+                }
             }
         }
     }
     // BUG: no ips parts are not handled properly
     //  lines neither
     return Pair(essentialIns, essentialOuts)
+//    return Triple(essentialIns, essentialOuts, _intersections + intersections)
 }

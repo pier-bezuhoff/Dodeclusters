@@ -26,6 +26,7 @@ import data.PartialArgList
 import data.compressPartToEssentials
 import data.geometry.CircleOrLine
 import data.geometry.Line
+import data.geometry.Point
 import data.io.Ddc
 import data.io.OldDdc
 import data.io.parseDdc
@@ -62,6 +63,8 @@ class EditClusterViewModel(
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
+    var _points by mutableStateOf(emptyList<Point>())
+        private set
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
     val selection = mutableStateListOf<Ix>() // MAYBE: when circles are hidden select parts instead
@@ -479,7 +482,6 @@ class EditClusterViewModel(
                 selection.add(ix)
         }
 
-    // TODO: enhance compressed part culling, based on semi-included intersection points and arcs
     /** -> (compressed part, verbose part involving all circles) surrounding clicked position */
     private fun selectPartAt(visiblePosition: Offset, boundingCircles: List<Ix>? = null): Pair<Cluster.Part, Cluster.Part> {
         val position = absolute(visiblePosition)
@@ -521,12 +523,12 @@ class EditClusterViewModel(
         val essentialOuts = essentialOutsIxs.map { sievedOuts[it] }
         val part0 = Cluster.Part(ins.toSet(), outs.toSet(), regionColor)
         val part = Cluster.Part(
-            insides = sievedIns.toSet(),
-            outsides = sievedOuts.toSet(),
-//            insides = essentialIns.toSet(),
-//            outsides = essentialOuts.toSet(),
+//            insides = sievedIns.toSet(),
+//            outsides = sievedOuts.toSet(),
+            insides = essentialIns.toSet(),
+            outsides = essentialOuts.toSet(),
             fillColor = regionColor
-        )//.also { println("select part $it") }
+        )
         return Pair(part, part0)
     }
 

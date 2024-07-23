@@ -319,6 +319,8 @@ private fun DrawScope.drawCircles(
             drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
         }
     }
+    for (point in viewModel._points)
+        drawCircle(Color.Red, 5f, point.toOffset())
 }
 
 private fun DrawScope.drawParts(

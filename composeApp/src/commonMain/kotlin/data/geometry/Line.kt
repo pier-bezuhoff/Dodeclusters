@@ -6,12 +6,8 @@ import domain.rotateBy
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.hypot
-import kotlin.math.sin
 
 /** [a]*x + [b]*y + [c] = 0
  *
@@ -38,6 +34,12 @@ data class Line(
     /** length=1 direction vector */
     val directionVector: Offset get() =
         Offset((b/norm).toFloat(), (-a/norm).toFloat())
+
+    val directionX: Double get() =
+        b/norm
+
+    val directionY: Double get() =
+        -a/norm
 
     // direction-preserving
     fun normalized(): Line =
@@ -77,48 +79,43 @@ data class Line(
         val t = (a*point.x + b*point.y + c)/norm
         return if (abs(t) < EPSILON)
             0
-        else if (t > 0)
+        else if (t > 0) // inside
             -1
-        else
+        else // outside
             +1
     }
 
-    fun orderPoint(point: Point): Double {
-        val (vx, vy) = directionVector
+    override fun point2order(point: Point): Double {
         return if (point == Point.CONFORMAL_INFINITY)
             Double.NEGATIVE_INFINITY
         else
-            point.x*vx + point.y*vy
+            point.x*directionX + point.y*directionY
     }
 
-    override fun orderPoints(points: Collection<Point>): List<Point> {
-        return points.sortedBy { orderPoint(it) }
-    }
-
-    override fun midArc(p1: Point, p2: Point): Point {
-        val t1 = orderPoint(p1)
-        val t2 = orderPoint(p2)
-        val mid =
-            if (t1 == Double.NEGATIVE_INFINITY && t2 == Double.NEGATIVE_INFINITY)
-                0.0
-            else if (t1 == Double.NEGATIVE_INFINITY)
-                t2 - 10.0
-            else if (t2 == Double.NEGATIVE_INFINITY)
-                t1 + 10.0
-            else if (t2 > t1)
-                t1 + (t2 - t1)/2.0
-            else if (t2 == t1)
-                t1 + 10.0 // idk, w/e
-            else // t2 < t1
-                t1 + 10.0
-//        val half = (phi2 - phi1).mod(2*PI)/2.0
-        val (vx, vy) = directionVector
+    override fun order2point(order: Double): Point {
+        if (order == Double.NEGATIVE_INFINITY)
+            Point.CONFORMAL_INFINITY
         val p0 = project(0.0, 0.0)
         return Point(
-            p0.x + vx*mid,
-            p0.y + vy*mid
+            p0.x + directionX*order,
+            p0.y + directionY*order
         )
     }
+
+    override fun orderInBetween(order1: Double, order2: Double): Double =
+        if (order1 == Double.NEGATIVE_INFINITY && order2 == Double.NEGATIVE_INFINITY)
+            0.0
+        else if (order1 == Double.NEGATIVE_INFINITY)
+            order2 - 50.0
+        else if (order2 == Double.NEGATIVE_INFINITY)
+            order1 + 50.0
+        else if (order2 > order1)
+            order1 + (order2 - order1)/2.0
+        else if (order2 == order1)
+            order1 + 50.0 // idk, w/e
+        else // order2 < order1
+//            order1 + 50.0
+            order1 - (order1 - order2)/2.0
 
     override fun translate(vector: Offset): Line =
        Line(a, b, c - (a*vector.x + b*vector.y))

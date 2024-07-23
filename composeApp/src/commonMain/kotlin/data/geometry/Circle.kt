@@ -20,31 +20,6 @@ import kotlin.math.sqrt
 
 const val EPSILON: Double = 1e-6
 
-@Serializable
-@Immutable
-sealed interface CircleOrLine : GCircle {
-    fun distanceFrom(point: Offset): Double
-    /** <0 = inside, 0 on the circle, >0 = outside */
-    fun checkPosition(point: Offset): Int
-    /** same as [checkPosition] but additionally
-     * returns 0 when the distance in (-[EPSILON]; +[EPSILON]) */
-    fun checkPositionEpsilon(point: Point): Int
-    fun hasInside(point: Offset): Boolean =
-        checkPosition(point) < 0
-    fun hasOutside(point: Offset): Boolean =
-        checkPosition(point) > 0
-    /** semiorder ⊆ on circles' insides (⭗) */
-    infix fun isInside(circle: CircleOrLine): Boolean
-    /** semiorder ⊇ on circles, includes side-by-side (oo) but not encapsulating (⭗) case */
-    infix fun isOutside(circle: CircleOrLine): Boolean
-    /** sort points on the circle in the order they lie on it (starting from wherever) */
-    fun orderPoints(points: Collection<Point>): List<Point>
-    fun midArc(p1: Point, p2: Point): Point
-    fun translate(vector: Offset): CircleOrLine
-    fun scale(focus: Offset, zoom: Float): CircleOrLine
-    fun rotate(focus: Offset, angleDeg: Float): CircleOrLine
-}
-
 @SerialName("circle")
 @Serializable
 @Immutable
@@ -75,37 +50,37 @@ data class Circle(
 
     /** <0 = inside, 0 on the circle, >0 = outside */
     override fun checkPositionEpsilon(point: Point): Int {
+        if (point == Point.CONFORMAL_INFINITY)
+            return +1
         val distance = hypot(point.x - x, point.y - y)
         return if (abs(radius - distance) < EPSILON)
             0
         else if (distance < radius)
             -1
-        else
+        else // outside
             +1
     }
 
-    fun orderPoint(point: Point): Double =
+    override fun point2order(point: Point): Double =
         // NOTE: atan2 uses CCW y-top, x-right coordinates
         //  so we negate y for CCW direction
         atan2(-point.y + y, point.x - x)
 
-    override fun orderPoints(points: Collection<Point>): List<Point> =
-        points.sortedBy { orderPoint(it) }
-
-    override fun midArc(p1: Point, p2: Point): Point {
-        val phi1 = orderPoint(p1)
-        val phi2 = orderPoint(p2)
-        val mid =
-            if (phi2 > phi1)
-                phi1 + (phi2 - phi1)/2.0
-            else // includes phi1 == phi2 case
-                phi1 + (2*PI - (phi1 - phi2))/2.0
-//        val half = (phi2 - phi1).mod(2*PI)/2.0
-        return Point(
-            x + radius*cos(mid),
-            y - radius*sin(mid)
+    // Constraints:
+    // order2point(point2order(p)) === p
+    // point2order(order2point(o)) === o
+    override fun order2point(order: Double) =
+        Point(
+            x + radius*cos(order),
+            y - radius*sin(order)
         )
-    }
+
+    override fun orderInBetween(order1: Double, order2: Double): Double =
+        if (order2 > order1)
+            order1 + (order2 - order1)/2.0
+        else // includes order1 == order2 case
+            order1 + (2*PI - (order1 - order2))/2.0
+//        val half = (order2 - order1).mod(2*PI)/2.0
 
     override fun translate(vector: Offset): Circle =
         Circle(center + vector, radius)
@@ -244,37 +219,34 @@ data class Circle(
             circle1: CircleOrLine, circle2: CircleOrLine
         ): List<Point> =
             when {
-                // MAYBE: dont use Offsets and Floats for better precision
                 circle1 is Line && circle2 is Line -> {
                     val (a1, b1, c1) = circle1
                     val (a2, b2, c2) = circle2
-                    val n1 = circle1.normalVector
-                    val n2 = circle2.normalVector
-                    val vectorProduct = n1.x*n2.y - n2.x*n1.y
-                    if (abs(vectorProduct) < EPSILON) { // parallel condition
+                    val w = a1*b2 - a2*b1
+                    if (abs(w/circle1.norm/circle2.norm) < EPSILON) { // parallel condition
                         listOf(Point.CONFORMAL_INFINITY)
                     } else {
                         val wx = b1*c2 - b2*c1 // det in homogenous coordinates
                         val wy = a2*c1 - a1*c2
-                        val w = a1*b2 - a2*b1 // we know that w != 0 (non-parallel)
+                        // we know that w != 0 (non-parallel)
                         listOf(Point.CONFORMAL_INFINITY, Point(wx/w, wy/w))
                     }
                 }
                 circle1 is Line && circle2 is Circle -> {
-                    val c = circle2.center
-                    val r = circle2.radius
-                    val p = circle1.project(c)
-                    val distance = (p - c).getDistance()
+                    val (cx, cy, r) = circle2
+                    val (px, py) = circle1.project(cx, cy)
+                    val distance = hypot(px - cx, py - cy)
                     if (distance > r + EPSILON) {
                         emptyList()
                     } else if (abs(distance - r) < EPSILON) { // they touch
-                        listOf(Point.fromOffset(p))
+                        listOf(Point(px, py))
                     } else {
-                        val pToIntersection = sqrt(r.toFloat().pow(2) - distance*distance)
-                        val v = circle1.directionVector
+                        val pToIntersection = sqrt(r.pow(2) - distance*distance)
+                        val vx = circle1.directionX
+                        val vy = circle1.directionY
                         listOf(
-                            Point.fromOffset(p + v*pToIntersection),
-                            Point.fromOffset(p - v*pToIntersection),
+                            Point(px + vx*pToIntersection, py + vy*pToIntersection),
+                            Point(px - vx*pToIntersection, py - vy*pToIntersection),
                         )
                     }
                 }
@@ -316,6 +288,42 @@ data class Circle(
                 else -> throw IllegalStateException("Never")
             }
     }
+}
+
+@Serializable
+@Immutable
+sealed interface CircleOrLine : GCircle, LocusWithOrder {
+    fun distanceFrom(point: Offset): Double
+    /** <0 = inside, 0 on the circle, >0 = outside */
+    fun checkPosition(point: Offset): Int
+    /** same as [checkPosition] but additionally
+     * returns 0 when the distance in (-[EPSILON]; +[EPSILON]) */
+    fun checkPositionEpsilon(point: Point): Int
+    fun hasInside(point: Offset): Boolean =
+        checkPosition(point) < 0
+    fun hasOutside(point: Offset): Boolean =
+        checkPosition(point) > 0
+    /** semiorder ⊆ on circles' insides (⭗) */
+    infix fun isInside(circle: CircleOrLine): Boolean
+    /** semiorder ⊇ on circles, includes side-by-side (oo) but not encapsulating (⭗) case */
+    infix fun isOutside(circle: CircleOrLine): Boolean
+    /** sort points on the circle in the order they lie on it (starting from wherever) */
+    fun translate(vector: Offset): CircleOrLine
+    fun scale(focus: Offset, zoom: Float): CircleOrLine
+    fun rotate(focus: Offset, angleDeg: Float): CircleOrLine
+}
+
+/** Represents totally ordered set of points equivalent to R or S1 */
+sealed interface LocusWithOrder {
+    fun point2order(point: Point): Double
+    fun order2point(order: Double): Point
+    fun orderInBetween(order1: Double, order2: Double): Double
+
+    fun orderPoints(points: Collection<Point>): List<Point> =
+        points.sortedBy { point2order(it) }
+
+    fun pointInBetween(point1: Point, point2: Point) =
+        order2point(orderInBetween(point2order(point1), point2order(point2)))
 }
 
 // idk if i'll ever use it, technically it is also represented by GeneralizedCircle
