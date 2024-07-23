@@ -298,14 +298,14 @@ private data class Indentation(val indentLevel: Int) {
         encodeListItem(
             "type: Cluster",
             encode("indices", "[${f.indices.first()}, ${f.indices.last()}]"),
-            encode("circles:"),
+            encode("circles:" + if (f.circles.isEmpty()) " []" else ""),
             *f.circles.map {
                 when (it) {
                     is Circle -> down().encodeClusterCircle(it)
                     is Line -> down().encodeClusterLine(it)
                 }
             }.toTypedArray(),
-            encode("parts:"),
+            encode("parts:" + if (f.parts.isEmpty()) " []" else ""),
             *f.parts.map { down().encodeClusterPart(it) }.toTypedArray(),
             encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule)),
             encode("filled", f.filled),

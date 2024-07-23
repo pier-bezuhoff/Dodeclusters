@@ -23,6 +23,7 @@ import data.Cluster
 import data.OffsetSerializer
 import data.OldCluster
 import data.PartialArgList
+import data.compressPartToEssentials
 import data.geometry.CircleOrLine
 import data.geometry.Line
 import data.io.Ddc
@@ -460,11 +461,11 @@ class EditClusterViewModel(
             .filter { (_, distance) -> distance <= tapDistance }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
+            ?.also { println("select circle #$it") }
     }
 
     fun reselectCircleAt(visiblePosition: Offset) {
         selectCircle(circles, visiblePosition)?.let { ix ->
-//            println("select circle #$ix")
             selection.clear()
             selection.add(ix)
         } ?: selection.clear()
@@ -472,7 +473,6 @@ class EditClusterViewModel(
 
     fun reselectCirclesAt(visiblePosition: Offset): Ix? =
         selectCircle(circles, visiblePosition)?.also { ix ->
-            println("reselect circle @ $ix")
             if (ix in selection)
                 selection.remove(ix)
             else
@@ -513,12 +513,20 @@ class EditClusterViewModel(
                 circles[outJ] isInside circles[outs[largerRJ]]
             } || ins.any { ix -> circles[outJ] isOutside circles[ix] } // if an 'out' isOutside an 'in' it does nothing
         }.map { outs[it] }
+        val sievedIns = ins.minus(excessiveIns.toSet())
+        val sievedOuts = outs.minus(excessiveOuts.toSet())
+        val (essentialInsIxs, essentialOutsIxs) =
+            compressPartToEssentials(sievedIns.map { circles[it] }, sievedOuts.map { circles[it] })
+        val essentialIns = essentialInsIxs.map { sievedIns[it] }
+        val essentialOuts = essentialOutsIxs.map { sievedOuts[it] }
         val part0 = Cluster.Part(ins.toSet(), outs.toSet(), regionColor)
         val part = Cluster.Part(
-            insides = ins.toSet().minus(excessiveIns.toSet()),
-            outsides = outs.toSet().minus(excessiveOuts.toSet()),
+            insides = sievedIns.toSet(),
+            outsides = sievedOuts.toSet(),
+//            insides = essentialIns.toSet(),
+//            outsides = essentialOuts.toSet(),
             fillColor = regionColor
-        )
+        )//.also { println("select part $it") }
         return Pair(part, part0)
     }
 

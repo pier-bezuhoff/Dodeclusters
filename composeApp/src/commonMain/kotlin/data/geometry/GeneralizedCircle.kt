@@ -192,7 +192,7 @@ data class GeneralizedCircle(
                 )
                 // a*x + b*y + c = 0
                 // -> a*e_x + b*e_y + c*e_inf
-                is Line -> GeneralizedCircle(0.0, gCircle.a, gCircle.b, -gCircle.c)
+                is Line -> GeneralizedCircle(0.0, gCircle.a, gCircle.b, -gCircle.c).normalized()
                 is Point -> GeneralizedCircle(
                     1.0,
                     gCircle.x, gCircle.y,

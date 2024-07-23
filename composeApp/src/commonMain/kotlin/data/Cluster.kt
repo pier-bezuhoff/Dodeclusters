@@ -65,7 +65,6 @@ data class OldCluster(
 fun compressPartToEssentials(
     ins: List<CircleOrLine>,
     outs: List<CircleOrLine>,
-    pointInside: Offset
 ): Pair<List<Ix>, List<Ix>> {
     // compute all intersections with circles they are on
     // filter half-in's
@@ -125,10 +124,12 @@ fun compressPartToEssentials(
                 if (i < nIns)
                     essentialIns.add(i)
                 else
-                    essentialOuts.add(i)
+                    essentialOuts.add(i - nIns)
                 break // the circle is in, no need to check other ip arcs
             }
         }
     }
+    // BUG: no ips parts are not handled properly
+    //  lines neither
     return Pair(essentialIns, essentialOuts)
 }
