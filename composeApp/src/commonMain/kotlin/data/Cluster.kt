@@ -11,6 +11,7 @@ import data.geometry.Point
 import data.io.Ddc
 import kotlinx.serialization.Serializable
 import ui.edit_cluster.Ix
+import kotlin.math.abs
 
 @Serializable
 @Immutable
@@ -63,8 +64,6 @@ data class OldCluster(
     val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
 )
 
-// BUG: handling regions with several disjunctive parts is broken
-//  same with all-outsides regions
 fun compressPartToEssentials(
     ins: List<CircleOrLine>,
     outs: List<CircleOrLine>,
@@ -150,8 +149,17 @@ fun compressPartToEssentials(
             }
         }
     }
-    // BUG: no ips parts are not handled properly
-    //  lines neither
+    // salvaging all-concave (not strictly convex) parts
+    val allConcave = essentialIns.none { ins[it] is Circle }
+    if (allConcave && ins.isNotEmpty())
+        essentialIns.add(
+            ins.withIndex().minBy { (ix, circle) ->
+                when (circle) {
+                    is Line -> Double.POSITIVE_INFINITY
+                    is Circle -> abs(circle.radius)
+                }
+            }.index
+        )
     return Pair(essentialIns, essentialOuts)
 //    return Triple(essentialIns, essentialOuts, _intersections + intersections)
 }
