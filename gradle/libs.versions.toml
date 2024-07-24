@@ -1,8 +1,7 @@
 [versions]
-dodeclusters-versionCode = "1"
-dodeclusters-version = "0.1.7"
+dodeclusters-versionCode = "2"
+dodeclusters-version = "0.2.1"
 
-#noinspection GradleDependency
 agp = "8.2.1" # latest compatible with this Android Studio version
 android-compileSdk = "34"
 android-minSdk = "24" # = Android 7.0 Nougat
@@ -22,7 +21,6 @@ material3 = "1.6.0" # m3 version should match compose-plugin
 junit = "4.13.2"
 colormath = "3.4.0"
 kaml = "0.57.0"
-#noinspection GradleDependency
 kotlin = "1.9.21"
 
 [libraries]

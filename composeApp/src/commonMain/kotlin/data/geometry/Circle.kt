@@ -112,6 +112,7 @@ data class Circle(
         }
 
     companion object {
+        // MAYBE: return CircleOrLine instead of these hacks
         fun by3Points(p1: Offset, p2: Offset, p3: Offset): Circle {
             // reference: https://math.stackexchange.com/a/3503338
             if (p1 == p2)
