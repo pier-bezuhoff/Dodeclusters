@@ -73,23 +73,22 @@ fun BoxScope.EditClusterCanvas(
     modifier: Modifier = Modifier
 ) {
     val strokeWidth = with (LocalDensity.current) { 2.dp.toPx() }
-    val circleStroke = remember { Stroke(
+    val circleStroke = Stroke(
         width = strokeWidth
-    ) }
-    val circleThiccStroke = remember { Stroke(
+    )
+    val circleThiccStroke = Stroke(
         width = 2 * strokeWidth
-    ) }
-    val dottedStroke = remember { Stroke(
+    )
+    val dottedStroke = Stroke(
         width = strokeWidth,
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
-    ) }
+    )
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
     val scaleIcon = painterResource(Res.drawable.zoom_in)
-    val scaleHandleColor = MaterialTheme.colorScheme.secondary
+    val scaleHandleColor = // MaterialTheme.colorScheme.secondary
+        DodeclustersColors.skyBlue
     val iconDim = with (LocalDensity.current) { 24.dp.toPx() }
-    val deleteIcon = painterResource(Res.drawable.delete_forever)
-    val deleteIconTint = DodeclustersColors.lightRed
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
     val rotateIconTint = MaterialTheme.colorScheme.secondary
     val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
