@@ -67,13 +67,16 @@ data class OldCluster(
 fun compressPartToEssentials(
     ins: List<CircleOrLine>,
     outs: List<CircleOrLine>,
-//): Triple<List<Ix>, List<Ix>, List<Point>> {
 ): Pair<List<Ix>, List<Ix>> {
+
+    fun testIfPointFitsOurRequirements(point: Point): Boolean =
+        ins.all { it.checkPositionEpsilon(point) <= 0 } && // inside or bordering ins
+        outs.all { it.checkPositionEpsilon(point) >= 0 } // outside or bordering outs
+
     val allCircles = ins + outs
     val n = allCircles.size
     val nIns = ins.size
     val intersections = mutableListOf<Point>()
-//    val _intersections = mutableListOf<Point>()
     // circle ix -> ip ixs
     val circle2points: List<MutableSet<Int>> =
         allCircles.indices.map { mutableSetOf() }
@@ -85,10 +88,7 @@ fun compressPartToEssentials(
             for (ip in ips) {
                 val repeatIx = intersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
                 if (repeatIx == -1) { // new ip
-//                    _intersections.add(ip)
-                    val itFits =
-                        ins.all { it.checkPositionEpsilon(ip) <= 0 } &&
-                                outs.all { it.checkPositionEpsilon(ip) >= 0 }
+                    val itFits = testIfPointFitsOurRequirements(ip)
                     if (itFits) {
                         val ix = intersections.size
                         intersections.add(ip)
@@ -109,11 +109,8 @@ fun compressPartToEssentials(
         val orderedIPs = c.orderPoints(circle2points[i].map { intersections[it] })
         val m = orderedIPs.size
         if (m == 0) {
-            val mid = c.order2point(0.0)
-//            _intersections.add(mid)
-            val itFits =
-                ins.all { it.checkPositionEpsilon(mid) <= 0 } &&
-                        outs.all { it.checkPositionEpsilon(mid) >= 0 }
+            val mid = c.order2point(0.0) // no ips, checking random point on c
+            val itFits = testIfPointFitsOurRequirements(mid)
             if (itFits) {
                 if (i < nIns)
                     essentialIns.add(i)
@@ -135,10 +132,7 @@ fun compressPartToEssentials(
                         val ip2 = orderedIPs[k]
                         c.pointInBetween(ip1, ip2)
                     }
-//                _intersections.add(mid)
-                val itFits =
-                    ins.all { it.checkPositionEpsilon(mid) <= 0 } &&
-                            outs.all { it.checkPositionEpsilon(mid) >= 0 }
+                val itFits = testIfPointFitsOurRequirements(mid)
                 if (itFits) {
                     if (i < nIns)
                         essentialIns.add(i)
@@ -161,5 +155,4 @@ fun compressPartToEssentials(
             }.index
         )
     return Pair(essentialIns, essentialOuts)
-//    return Triple(essentialIns, essentialOuts, _intersections + intersections)
 }

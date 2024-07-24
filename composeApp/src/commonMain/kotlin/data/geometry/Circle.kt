@@ -160,13 +160,11 @@ data class Circle(
             val engine = GeneralizedCircle.fromGCircle(inverting).normalized()
             val target = GeneralizedCircle.fromGCircle(theOneBeingInverted).normalized()
             val result = engine.applyTo(target).normalized()
-//            println("\nengine = $engine, norm=${engine.norm}, r2=${engine.r2}; $inverting")
-//            println("target = $target, norm=${target.norm}, r2=${target.r2}; $theOneBeingInverted")
-//            println("result = $result, norm=${result.norm}, r2=${result.r2}; ${result.toGCircle()}")
             return result.toGCircle()
         }
 
-        fun _invert(inverting: CircleOrLine, theOneBeingInverted: CircleOrLine): CircleOrLine =
+        // we use superior technology in this house
+        fun _weakBetaInvert(inverting: CircleOrLine, theOneBeingInverted: CircleOrLine): CircleOrLine =
             when (inverting) {
                 is Line -> when (theOneBeingInverted) {
                     is Line -> {
@@ -238,7 +236,7 @@ data class Circle(
                     val distance = hypot(px - cx, py - cy)
                     if (distance > r + EPSILON) {
                         emptyList()
-                    } else if (abs(distance - r) < EPSILON) { // they touch
+                    } else if (abs(distance - r) < EPSILON) { // they touch (hold hands ///)
                         listOf(Point(px, py))
                     } else {
                         val pToIntersection = sqrt(r.pow(2) - distance*distance)

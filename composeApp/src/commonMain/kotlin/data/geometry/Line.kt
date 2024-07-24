@@ -114,7 +114,6 @@ data class Line(
         else if (order2 == order1)
             order1 + 50.0 // idk, w/e
         else // order2 < order1
-//            order1 + 50.0
             order1 - (order1 - order2)/2.0
 
     override fun translate(vector: Offset): Line =

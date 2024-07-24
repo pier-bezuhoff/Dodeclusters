@@ -79,10 +79,10 @@ fun BoxScope.EditClusterCanvas(
     val circleThiccStroke = Stroke(
         width = 2 * strokeWidth
     )
-    val dottedStroke = Stroke(
+    val dottedStroke = remember { Stroke(
         width = strokeWidth,
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
-    )
+    ) }
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
     val scaleIcon = painterResource(Res.drawable.zoom_in)
