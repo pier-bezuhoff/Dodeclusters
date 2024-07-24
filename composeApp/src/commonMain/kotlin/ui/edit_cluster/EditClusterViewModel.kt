@@ -31,6 +31,7 @@ import data.io.Ddc
 import data.io.OldDdc
 import data.io.parseDdc
 import data.io.parseOldDdc
+import dodeclusters.composeapp.generated.resources.Res
 import domain.angleDeg
 import getPlatform
 import kotlinx.coroutines.CoroutineScope

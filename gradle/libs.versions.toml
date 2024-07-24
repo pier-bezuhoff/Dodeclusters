@@ -6,45 +6,45 @@ agp = "8.5.1" # latest compatible with this Android Studio version
 android-compileSdk = "34"
 android-minSdk = "24" # = Android 7.0 Nougat
 android-targetSdk = "34"
-androidx-activityCompose = "1.8.2"
-androidx-appcompat = "1.6.1"
-androidx-constraintlayout = "2.1.4"
-androidx-core-ktx = "1.12.0"
-androidx-espresso-core = "3.5.1"
-androidx-material = "1.11.0"
-androidx-test-junit = "1.1.5"
-kotlinx-serialization = "1.6.2"
-compose = "1.6.3"
-compose-compiler = "1.5.10"
-compose-plugin = "1.6.0"
-material3 = "1.6.0" # m3 version should match compose-plugin
-junit = "4.13.2"
-colormath = "3.4.0"
-kaml = "0.57.0"
-kotlin = "1.9.21"
+androidx-activityCompose = "1.9.1"
+#androidx-appcompat = "1.6.1"
+#androidx-constraintlayout = "2.1.4"
+androidx-core-ktx = "1.13.1"
+#androidx-espresso-core = "3.5.1"
+#androidx-material = "1.11.0"
+#androidx-test-junit = "1.1.5"
+kotlinx-serialization = "1.7.1"
+jetpack-compose = "1.6.8" # check github compose-multiplatform/release for the one compatible
+# https://github.com/JetBrains/compose-multiplatform/releases/tag/v1.6.11
+compose-plugin = "1.6.11" # aligns with compose-multiplatform version
+material3 = "1.6.11" # m3 version should match compose-plugin
+#compose-compiler = "1.5.14" # auto-determined post kt2.0
+#junit = "4.13.2"
+colormath = "3.6.0"
+kaml = "0.60.0"
+kotlin = "2.0.0"
 
 [libraries]
-kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
+#kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+#kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 #junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidx-core-ktx" }
 #androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-junit" }
 #androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "androidx-espresso-core" }
-androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "androidx-appcompat" }
+#androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "androidx-appcompat" }
 #androidx-material = { group = "com.google.android.material", name = "material", version.ref = "androidx-material" }
 #androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "androidx-constraintlayout" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose" }
-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "compose" }
-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
-compose-material = { module = "androidx.compose.material:material", version.ref = "compose" }
+compose-ui = { module = "androidx.compose.ui:ui", version.ref = "jetpack-compose" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "jetpack-compose" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "jetpack-compose" }
+compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "jetpack-compose" }
+compose-material = { module = "androidx.compose.material:material", version.ref = "jetpack-compose" }
 compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 # no wasm/js window-size-class support so far
 #compose-material3-window-size-klass = { module = "androidx.compose.material3:material3-window-size-class", version.ref = "material3" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization"}
 colormath = { module = "com.github.ajalt.colormath:colormath", version.ref = "colormath" }
-
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 
 [plugins]
@@ -52,4 +52,5 @@ androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

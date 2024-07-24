@@ -67,6 +67,7 @@ import dodeclusters.composeapp.generated.resources.toggle_select_all_name
 import dodeclusters.composeapp.generated.resources.two_of_three_circles_connected
 import dodeclusters.composeapp.generated.resources.visible
 import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.StringArrayResource
 import org.jetbrains.compose.resources.StringResource
 import ui.theme.DodeclustersColors
 
@@ -87,7 +88,7 @@ sealed class EditClusterTool(
         final override val signature: PartialArgList.Signature,
         name: StringResource,
         description: StringResource,
-        final override val argDescriptions: StringResource,
+        final override val argDescriptions: StringArrayResource,
         icon: DrawableResource,
         final override val disabledIcon: DrawableResource? = null,
     ) : EditClusterTool(name, description, icon), Tool.BinaryToggle, Tool.MultiArg
@@ -180,7 +181,7 @@ sealed class EditClusterTool(
         PartialArgList.SIGNATURE_2_CIRCLES,
         Res.string.circle_inversion_name,
         Res.string.circle_inversion_description,
-        Res.string.circle_inversion_arg_descriptions,
+        Res.array.circle_inversion_arg_descriptions,
         Res.drawable.circle_inversion_v2
     )
 
@@ -189,21 +190,21 @@ sealed class EditClusterTool(
         PartialArgList.SIGNATURE_2_POINTS,
         Res.string.circle_by_center_and_radius_name,
         Res.string.circle_by_center_and_radius_description,
-        Res.string.circle_by_center_and_radius_arg_descriptions,
+        Res.array.circle_by_center_and_radius_arg_descriptions,
         Res.drawable.circle_center_and_radius_point,
     )
     data object ConstructCircleBy3Points: MultiArg(
         PartialArgList.SIGNATURE_3_POINTS,
         Res.string.circle_by_3_points_name,
         Res.string.circle_by_3_points_description,
-        Res.string.circle_by_3_points_arg_descriptions,
+        Res.array.circle_by_3_points_arg_descriptions,
         Res.drawable.circle_3_points
     )
     data object ConstructLineBy2Points: MultiArg(
         PartialArgList.SIGNATURE_2_POINTS,
         Res.string.line_by_2_points_name,
         Res.string.line_by_2_points_description,
-        Res.string.line_by_2_points_arg_descriptions,
+        Res.array.line_by_2_points_arg_descriptions,
         Res.drawable.line_2_points
     )
     data object InsertCenteredCross: Action(

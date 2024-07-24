@@ -5,6 +5,7 @@
 xcuserdata
 !src/**/build/
 local.properties
+.kotlin
 .idea
 .DS_Store
 captures
