@@ -197,6 +197,10 @@ fun ToolDescription(tool: EditClusterTool, partialArgList: PartialArgList?, modi
             )
         }
         val inputPrompt = stringResource(Res.string.tool_arg_input_prompt)
+        val toolName = stringResource(tool.name)
+        val argDescriptions = (tool as? EditClusterTool.MultiArg)?.let {
+            stringArrayResource(it.argDescriptions)
+        }
         val number =
             if (partialArgList == null || tool !is EditClusterTool.MultiArg)
                 null
@@ -205,9 +209,9 @@ fun ToolDescription(tool: EditClusterTool, partialArgList: PartialArgList?, modi
             else
                 max(0, partialArgList.args.size - 1)
         AnimatedContent(Pair(tool, number)) { (currentTool, currentNumber) ->
-            if (currentTool is EditClusterTool.MultiArg && currentNumber != null) {
-                println(stringResource(tool.name) + " #$number")
-                val argDescriptions = stringArrayResource(currentTool.argDescriptions)
+            if (currentTool is EditClusterTool.MultiArg && currentNumber != null && argDescriptions != null) {
+                // BUG: broken @ web
+                println("$toolName arg #$number")
                 if (argDescriptions.size > currentNumber) {
                     val argDescription = argDescriptions[currentNumber]
                     Text(
