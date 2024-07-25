@@ -41,29 +41,30 @@
         <item>The object to transform</item>
         <item>The circle with respect to which we are inverting</item>
     </string-array>
-    <string name="circle_by_center_and_radius_name">Circle by center and radius</string>
+    <string name="circle_by_center_and_radius_name">Circle by its center and radius</string>
     <string name="circle_by_center_and_radius_description">Construct a circle by its center and a point lying on it</string>
     <string-array name="circle_by_center_and_radius_arg_descriptions">
-        <item>Circle's center</item>
+        <item>The center of the circle</item>
         <item>Any point on the circle</item>
     </string-array>
     <string name="circle_by_3_points_name">Circle by 3 points</string>
     <string name="circle_by_3_points_description">Construct a circle by 3 points lying on it</string>
     <string-array name="circle_by_3_points_arg_descriptions">
-        <item>1st point on the circle</item>
-        <item>2nd point on the circle</item>
-        <item>3rd point on the circle</item>
+        <item>The 1st point on the circle</item>
+        <item>The 2nd point on the circle</item>
+        <item>The 3rd point on the circle</item>
     </string-array>
     <string name="line_by_2_points_name">Line by 2 points</string>
     <string name="line_by_2_points_description">Construct a line by 2 points lying on it</string>
     <string-array name="line_by_2_points_arg_descriptions">
-        <item>1st point on the line</item>
-        <item>2nd point on the line</item>
+        <item>The 1st point on the line</item>
+        <item>The 2nd point on the line</item>
     </string-array>
     <string name="insert_centered_cross_name">Insert a centered cross</string>
     <string name="insert_centered_cross_description">Insert a centered cross</string>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
+    <string name="tool_arg_input_prompt">Please specify</string>
 
     <!-- categories -->
     <string name="drag_category_name">Drag</string>

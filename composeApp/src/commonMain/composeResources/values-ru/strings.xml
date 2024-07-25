@@ -36,32 +36,33 @@
     <string name="circle_inversion_name">Инверсия относительно окружности</string>
     <string name="circle_inversion_description">Инвертировать объект относительно окружности</string>
     <string-array name="circle_inversion_arg_descriptions">
-        <item>Инвертируемы объект</item>
+        <item>Инвертируемый объект</item>
         <item>Окружность, относительно которой мы инвертируем</item>
     </string-array>
     <string name="circle_by_center_and_radius_name">Окружность по центру и радиусу</string>
     <string name="circle_by_center_and_radius_description">Построить окружность по центру и точке на ней</string>
     <string-array name="circle_by_center_and_radius_arg_descriptions">
         <item>Центр окружности</item>
-        <item>Точка на окружности</item>
+        <item>Точку на окружности</item>
     </string-array>
     <string name="circle_by_3_points_name">Окружность по трём точкам</string>
     <string name="circle_by_3_points_description">Построить окружность по трём точкам, лежащим на ней</string>
     <string-array name="circle_by_3_points_arg_descriptions">
-        <item>1-ая точка на окружности</item>
-        <item>2-ая точка на окружности</item>
-        <item>3-ья точка на окружности</item>
+        <item>1-ую точку на окружности</item>
+        <item>2-ую точку на окружности</item>
+        <item>3-ью точку на окружности</item>
     </string-array>
     <string name="line_by_2_points_name">Прямая по двум точкам</string>
     <string name="line_by_2_points_description">Провести прямую через две заданные точки</string>
     <string-array name="line_by_2_points_arg_descriptions">
-        <item>1-ая точка на прямой</item>
-        <item>2-ая точка на прямой</item>
+        <item>1-ую точку на прямой</item>
+        <item>2-ую точку на прямой</item>
     </string-array>
     <string name="insert_centered_cross_name">Вставить крест по центру</string>
     <string name="insert_centered_cross_description">Вставить крест по центру</string>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
+    <string name="tool_arg_input_prompt">Пожалуйста, укажите</string>
 
     <!-- categories -->
     <string name="drag_category_name">Перетаскивание</string>

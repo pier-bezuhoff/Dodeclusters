@@ -36,8 +36,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -50,8 +48,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import data.ClusterRepository
+import data.PartialArgList
 import data.io.Ddc
 import data.io.OpenFileButton
 import data.io.SaveData
@@ -65,16 +65,21 @@ import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
+import dodeclusters.composeapp.generated.resources.stub
+import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import ui.tools.Tool
+import kotlin.math.max
+import kotlin.math.min
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
@@ -125,7 +130,7 @@ fun EditClusterScreen(
         Surface {
             Box {
                 EditClusterCanvas(viewModel)
-                ToolDescription(viewModel.activeTool, Modifier.align(Alignment.TopStart))
+                ToolDescription(viewModel.activeTool, viewModel.partialArgList, Modifier.align(Alignment.TopStart))
                 EditClusterTopBar(viewModel, Modifier.align(Alignment.TopEnd))
                 Column(
                     Modifier
@@ -170,7 +175,7 @@ fun EditClusterScreen(
 }
 
 @Composable
-fun ToolDescription(tool: EditClusterTool, modifier: Modifier = Modifier) {
+fun ToolDescription(tool: EditClusterTool, partialArgList: PartialArgList?, modifier: Modifier = Modifier) {
     Column(
         modifier.fillMaxWidth(0.5f) // we cant specify max text length, so im doing this
     ) {
@@ -187,14 +192,35 @@ fun ToolDescription(tool: EditClusterTool, modifier: Modifier = Modifier) {
                     )
                     .padding(16.dp, 8.dp)
                 ,
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
                 style = MaterialTheme.typography.titleMedium,
             )
+        }
+        val inputPrompt = stringResource(Res.string.tool_arg_input_prompt)
+        val number =
+            if (partialArgList == null || tool !is EditClusterTool.MultiArg)
+                null
+            else if (partialArgList.lastArgIsConfirmed)
+                min(partialArgList.args.size, tool.signature.argTypes.size - 1)
+            else
+                max(0, partialArgList.args.size - 1)
+        AnimatedContent(Pair(tool, number)) { (currentTool, currentNumber) ->
+            if (currentNumber != null) {
+                val argDescriptions = (currentTool as EditClusterTool.MultiArg).argDescriptions
+                val argDescription = stringArrayResource(argDescriptions)[currentNumber]
+                Text(
+                    "$inputPrompt: $argDescription",
+                    modifier
+                        .padding(24.dp, 4.dp),
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
+                    textDecoration = TextDecoration.Underline,
+                    style = MaterialTheme.typography.titleSmall,
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun EditClusterTopBar(
     viewModel: EditClusterViewModel,
