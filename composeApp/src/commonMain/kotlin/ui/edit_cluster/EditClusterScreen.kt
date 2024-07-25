@@ -205,17 +205,19 @@ fun ToolDescription(tool: EditClusterTool, partialArgList: PartialArgList?, modi
             else
                 max(0, partialArgList.args.size - 1)
         AnimatedContent(Pair(tool, number)) { (currentTool, currentNumber) ->
-            if (currentNumber != null) {
-                val argDescriptions = (currentTool as EditClusterTool.MultiArg).argDescriptions
-                val argDescription = stringArrayResource(argDescriptions)[currentNumber]
-                Text(
-                    "$inputPrompt: $argDescription",
-                    modifier
-                        .padding(24.dp, 4.dp),
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
-                    textDecoration = TextDecoration.Underline,
-                    style = MaterialTheme.typography.titleSmall,
-                )
+            if (currentTool is EditClusterTool.MultiArg && currentNumber != null) {
+                println(stringResource(tool.name) + " #$number")
+                val argDescriptions = stringArrayResource(currentTool.argDescriptions)
+                if (argDescriptions.size > currentNumber) {
+                    val argDescription = argDescriptions[currentNumber]
+                    Text(
+                        "$inputPrompt: $argDescription",
+                        modifier.padding(24.dp, 4.dp),
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
+                        textDecoration = TextDecoration.Underline,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                }
             }
         }
     }
