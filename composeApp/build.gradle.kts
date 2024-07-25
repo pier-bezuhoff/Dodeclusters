@@ -1,4 +1,3 @@
-import com.android.kotlin.multiplatform.ide.models.serialization.androidTargetKey
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
@@ -24,14 +23,7 @@ kotlin {
         binaries.executable()
     }
 
-//    androidTarget {
-//        compilations.all {
-//            kotlinOptions {
-//                jvmTarget = "1.8"
-//            }
-//        }
-//    }
-    androidTarget { // kotlinOptions are now deprecated so i migrated to this
+    androidTarget {
         tasks.withType<KotlinJvmCompile>().configureEach {
             compilerOptions {
                 jvmTarget.set(JvmTarget.JVM_1_8)
@@ -63,12 +55,13 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.components.resources)
+            implementation(libs.compose.material3.window.size.klass)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.colormath)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
-            implementation(libs.kaml)
+            implementation(libs.kaml) // NOTE: kaml on wasm is experimental for now, maybe test it
         }
     }
 }
@@ -106,12 +99,6 @@ android {
         debugImplementation(libs.compose.ui.tooling)
     }
 }
-
-//java {
-//    toolchain {
-//        languageVersion = JavaLanguageVersion.of(8)
-//    }
-//}
 
 compose.desktop {
     application {

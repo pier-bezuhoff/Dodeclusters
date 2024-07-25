@@ -35,6 +35,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -73,11 +75,15 @@ import ui.tools.EditClusterTool
 import ui.tools.Tool
 
 // TODO: left & right toolbar for landscape orientation instead of top & bottom
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun EditClusterScreen(
     sampleIndex: Int? = null,
     ddcContent: String? = null,
 ) {
+    val windowSizeClass = calculateWindowSizeClass()
+    println(windowSizeClass)
+
     val coroutineScope = rememberCoroutineScope()
     val clusterRepository = remember { ClusterRepository() }
     val saver = remember { EditClusterViewModel.Saver(coroutineScope) }
