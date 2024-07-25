@@ -1,5 +1,8 @@
+import com.android.kotlin.multiplatform.ide.models.serialization.androidTargetKey
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -21,10 +24,17 @@ kotlin {
         binaries.executable()
     }
 
-    androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "1.8"
+//    androidTarget {
+//        compilations.all {
+//            kotlinOptions {
+//                jvmTarget = "1.8"
+//            }
+//        }
+//    }
+    androidTarget { // kotlinOptions are now deprecated so i migrated to this
+        tasks.withType<KotlinJvmCompile>().configureEach {
+            compilerOptions {
+                jvmTarget.set(JvmTarget.JVM_1_8)
             }
         }
     }
@@ -96,6 +106,12 @@ android {
         debugImplementation(libs.compose.ui.tooling)
     }
 }
+
+//java {
+//    toolchain {
+//        languageVersion = JavaLanguageVersion.of(8)
+//    }
+//}
 
 compose.desktop {
     application {
