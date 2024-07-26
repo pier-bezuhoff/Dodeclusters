@@ -63,6 +63,7 @@
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
     <string name="tool_arg_input_prompt">Пожалуйста, укажите</string>
+    <string name="set_selection_as_tool_arg_prompt">Использовать выделение как</string>
 
     <!-- categories -->
     <string name="drag_category_name">Перетаскивание</string>

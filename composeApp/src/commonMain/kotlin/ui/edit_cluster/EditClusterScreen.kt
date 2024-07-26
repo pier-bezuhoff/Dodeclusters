@@ -24,6 +24,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -59,12 +61,15 @@ import data.io.SaveFileButton
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
+import dodeclusters.composeapp.generated.resources.confirm
+import dodeclusters.composeapp.generated.resources.ok_name
 import dodeclusters.composeapp.generated.resources.open_file
 import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
+import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.undo
@@ -130,7 +135,13 @@ fun EditClusterScreen(
         Surface {
             Box {
                 EditClusterCanvas(viewModel)
-                ToolDescription(viewModel.activeTool, viewModel.partialArgList, Modifier.align(Alignment.TopStart))
+                ToolDescription(
+                    viewModel.activeTool,
+                    viewModel.partialArgList,
+                    viewModel.showPromptToSetActiveSelectionAsToolArg,
+                    viewModel::setActiveSelectionAsToolArg,
+                    Modifier.align(Alignment.TopStart)
+                )
                 EditClusterTopBar(viewModel, Modifier.align(Alignment.TopEnd))
                 Column(
                     Modifier
@@ -175,7 +186,13 @@ fun EditClusterScreen(
 }
 
 @Composable
-fun ToolDescription(tool: EditClusterTool, partialArgList: PartialArgList?, modifier: Modifier = Modifier) {
+fun ToolDescription(
+    tool: EditClusterTool,
+    partialArgList: PartialArgList?,
+    showSelectionAsArgPrompt: Boolean,
+    setSelectionAsArg: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier.fillMaxWidth(0.5f) // we cant specify max text length, so im doing this
     ) {
@@ -197,7 +214,6 @@ fun ToolDescription(tool: EditClusterTool, partialArgList: PartialArgList?, modi
             )
         }
         val inputPrompt = stringResource(Res.string.tool_arg_input_prompt)
-        val toolName = stringResource(tool.name)
         val argDescriptions = (tool as? EditClusterTool.MultiArg)?.let {
             stringArrayResource(it.argDescriptions)
         }
@@ -208,20 +224,63 @@ fun ToolDescription(tool: EditClusterTool, partialArgList: PartialArgList?, modi
                 min(partialArgList.args.size, tool.signature.argTypes.size - 1)
             else
                 max(0, partialArgList.args.size - 1)
-        AnimatedContent(Pair(tool, number)) { (currentTool, currentNumber) ->
-            if (currentTool is EditClusterTool.MultiArg && currentNumber != null && argDescriptions != null) {
-                // BUG: broken @ web
-                println("$toolName arg #$number")
-                if (argDescriptions.size > currentNumber) {
-                    val argDescription = argDescriptions[currentNumber]
+        AnimatedContent(Triple(tool, number, showSelectionAsArgPrompt)) { (currentTool, currentNumber, currentShowPrompt) ->
+            if (currentTool is EditClusterTool.MultiArg &&
+                currentNumber != null &&
+                argDescriptions != null &&
+                argDescriptions.size > currentNumber
+            ) {
+                val argDescription = argDescriptions[currentNumber]
+                val selectionAsArgPrompt = stringResource(Res.string.set_selection_as_tool_arg_prompt)
+                if (currentShowPrompt)
+                    Button(
+                        onClick = setSelectionAsArg,
+                        Modifier.padding(8.dp),
+                        colors = ButtonDefaults.buttonColors()
+                            .copy(
+                                contentColor = MaterialTheme.colorScheme.primary,
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            )
+                    ) {
+                        Text(
+                            "$selectionAsArgPrompt: $argDescription",
+                            Modifier.padding(4.dp, 4.dp),
+                            textDecoration = TextDecoration.Underline,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Icon(
+                            painterResource(Res.drawable.confirm),
+                            stringResource(Res.string.ok_name),
+                            Modifier.padding(start = 8.dp)
+                        )
+                    }
+//                    Row(
+//                        verticalAlignment = Alignment.CenterVertically
+//                    ) {
+//                        Text(
+//                            "$selectionAsArgPrompt: $argDescription",
+//                            Modifier.padding(24.dp, 4.dp),
+//                            color = MaterialTheme.colorScheme.primary,
+//                            textDecoration = TextDecoration.Underline,
+//                            style = MaterialTheme.typography.titleMedium,
+//                        )
+//                        IconButton(
+//                            onClick = setSelectionAsArg,
+//                            Modifier.padding(8.dp),
+//                            colors = IconButtonDefaults.iconButtonColors()
+//                                .copy(contentColor = MaterialTheme.colorScheme.primary)
+//                        ) {
+//                            Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_name))
+//                        }
+//                    }
+                else
                     Text(
                         "$inputPrompt: $argDescription",
-                        modifier.padding(24.dp, 4.dp),
+                        Modifier.padding(24.dp, 4.dp),
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
                         textDecoration = TextDecoration.Underline,
                         style = MaterialTheme.typography.titleSmall,
                     )
-                }
             }
         }
     }

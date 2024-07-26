@@ -65,6 +65,7 @@
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
     <string name="tool_arg_input_prompt">Please specify</string>
+    <string name="set_selection_as_tool_arg_prompt">Use active selection as</string>
 
     <!-- categories -->
     <string name="drag_category_name">Drag</string>

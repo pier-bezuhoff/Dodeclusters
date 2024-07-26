@@ -16,6 +16,7 @@ sealed interface Mode {
 enum class SelectionMode : Mode {
     /** Select & drag singular circles */
     Drag,
+    /** Select multiple circles */
     Multiselect,
     /** Select regions to create new [Cluster.Part]s */
     Region,

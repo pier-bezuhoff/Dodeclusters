@@ -178,7 +178,7 @@ sealed class EditClusterTool(
     }
 
     data object CircleInversion: MultiArg(
-        PartialArgList.SIGNATURE_2_CIRCLES,
+        PartialArgList.SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE,
         Res.string.circle_inversion_name,
         Res.string.circle_inversion_description,
         Res.array.circle_inversion_arg_descriptions,

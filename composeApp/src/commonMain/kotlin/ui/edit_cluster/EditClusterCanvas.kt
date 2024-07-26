@@ -40,6 +40,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import data.Cluster
 import data.PartialArgList
 import data.geometry.Circle
 import data.geometry.CircleOrLine
@@ -350,12 +351,16 @@ private fun DrawScope.drawPartialConstructs(
 ) {
     when (viewModel.mode) {
         ToolMode.CIRCLE_INVERSION -> viewModel.partialArgList!!.args.let { args ->
-            val circles = args.map { viewModel.circles[(it as PartialArgList.Arg.CircleIndex).index] }
-            if (circles.isNotEmpty()) {
-                drawCircleOrLine(circles[0], visibleRect, creationPrototypeColor, style = circleStroke)
+            if (args.isNotEmpty()) {
+                val targetCircles = (args[0] as PartialArgList.Arg.SelectedCircles)
+                    .indices
+                    .map { viewModel.circles[it] }
+                for (targetCircle in targetCircles)
+                    drawCircleOrLine(targetCircle, visibleRect, creationPrototypeColor, style = circleStroke)
             }
-            if (circles.size == 2) {
-                drawCircleOrLine(circles[1], visibleRect, creationPrototypeColor, alpha = 0.6f, style = circleStroke)
+            if (args.size == 2) {
+                val invertingCircle = viewModel.circles[(args[1] as PartialArgList.Arg.CircleIndex).index]
+                drawCircleOrLine(invertingCircle, visibleRect, creationPrototypeColor, alpha = 0.6f, style = circleStroke)
             }
         }
         ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> viewModel.partialArgList!!.args.let { args ->

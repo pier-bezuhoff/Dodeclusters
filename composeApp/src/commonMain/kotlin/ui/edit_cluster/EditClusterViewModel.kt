@@ -31,7 +31,6 @@ import data.io.Ddc
 import data.io.OldDdc
 import data.io.parseDdc
 import data.io.parseOldDdc
-import dodeclusters.composeapp.generated.resources.Res
 import domain.angleDeg
 import getPlatform
 import kotlinx.coroutines.CoroutineScope
@@ -91,6 +90,8 @@ class EditClusterViewModel(
         private set
     private val panelNeedsToBeShown by derivedStateOf { activeCategory.tools.size > 1 }
     var showPanel by mutableStateOf(panelNeedsToBeShown)
+    var showPromptToSetActiveSelectionAsToolArg by mutableStateOf(false)
+        private set
 
     /** currently selected color */
     var regionColor by mutableStateOf(DodeclustersColors.purple)
@@ -328,21 +329,25 @@ class EditClusterViewModel(
             }
     }
 
-    fun createNewCircle(
-        newCircle: CircleOrLine = Circle(absolute(Offset(200f, 200f)), 50.0),
-        switchToSelectionMode: Boolean = true
+    fun createNewCircles(
+        newCircles: List<CircleOrLine>,
+        switchToSelectionMode: Boolean = false
     ) {
-        if (newCircle is Circle && newCircle.radius > 0.0 || newCircle is Line) {
+        val validNewCircles = newCircles.filter { newCircle ->
+            newCircle is Circle && newCircle.radius > 0.0 || newCircle is Line
+        }
+        if (validNewCircles.isNotEmpty()) {
             recordCommand(Command.CREATE)
             showCircles = true
-            circles.add(newCircle)
+            val prevSize = circles.size
+            circles.addAll(validNewCircles)
             if (switchToSelectionMode && !mode.isSelectingCircles())
                 switchToMode(SelectionMode.Drag)
             selection.clear()
-            selection.add(circles.size - 1)
+            selection.addAll(prevSize until circles.size)
             coroutineScope.launch {
                 _circleAnimations.emit(
-                    CircleAnimation.Entrance(listOf(newCircle))
+                    CircleAnimation.Entrance(validNewCircles)
                 )
             }
         }
@@ -353,26 +358,35 @@ class EditClusterViewModel(
             recordCommand(Command.DUPLICATE)
             val copiedCircles = selection.map { circles[it] } // preserves selection order
             val oldSize = circles.size
-            val reindexing = selection.mapIndexed { i, ix -> ix to (oldSize + i) }.toMap()
             circles.addAll(copiedCircles)
-            val newParts = parts.filter {
-                selection.containsAll(it.insides) && selection.containsAll(it.outsides)
-            }.map { part ->
-                Cluster.Part( // TODO: test part copying further
-                    insides = part.insides.map { reindexing[it]!! }.toSet(),
-                    outsides = part.outsides.map { reindexing[it]!! }.toSet(),
-                    fillColor = part.fillColor
-                )
-            }
-            parts.addAll(newParts)
+            val newIndices = oldSize until oldSize + copiedCircles.size
+            copyParts(selection, newIndices.toList())
             selection.clear()
-            selection.addAll(oldSize until (oldSize + copiedCircles.size))
+            selection.addAll(newIndices)
             coroutineScope.launch {
                 _circleAnimations.emit(
                     CircleAnimation.ReEntrance(copiedCircles)
                 )
             }
         }
+    }
+
+    private fun copyParts(
+        oldIndices: List<Ix>,
+        newIndices: List<Ix>
+    ) {
+        require(oldIndices.size == newIndices.size)
+        val old2new = oldIndices.zip(newIndices).toMap()
+        val newParts = parts.filter {
+            oldIndices.containsAll(it.insides) && oldIndices.containsAll(it.outsides)
+        }.map { part ->
+            Cluster.Part( // TODO: test part copying further
+                insides = part.insides.map { old2new[it]!! }.toSet(),
+                outsides = part.outsides.map { old2new[it]!! }.toSet(),
+                fillColor = part.fillColor
+            )
+        }
+        parts.addAll(newParts)
     }
 
     fun deleteCircles() {
@@ -424,14 +438,13 @@ class EditClusterViewModel(
         if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
         if (newMode is ToolMode) {
-            if (mode == SelectionMode.Multiselect && selection.size > 1 &&
+            if (selection.size > 1 &&
                 newMode.signature.argTypes.first() == PartialArgList.ArgType.SelectedCircles
             ) {
-                // TODO: prompt to act upon the selection
-                partialArgList = PartialArgList(newMode.signature)
-                    .addArg(PartialArgList.Arg.SelectedCircles(selection), confirmThisArg = true)
+                showPromptToSetActiveSelectionAsToolArg = true
+            } else {
+                selection.clear()
             }
-            selection.clear()
             showCircles = true
             partialArgList = PartialArgList(newMode.signature)
         }
@@ -628,6 +641,30 @@ class EditClusterViewModel(
         parts.clear()
     }
 
+    fun cancelSelectionAsToolArgPrompt() {
+        if (showPromptToSetActiveSelectionAsToolArg) {
+            showPromptToSetActiveSelectionAsToolArg = false
+            selection.clear()
+        }
+    }
+
+    fun setActiveSelectionAsToolArg() {
+        activeTool.let { tool ->
+            require(
+                tool is EditClusterTool.MultiArg &&
+                tool.signature.argTypes.first() == PartialArgList.ArgType.SelectedCircles &&
+                selection.isNotEmpty()
+            )
+        }
+        partialArgList = partialArgList!!.addArg(
+            PartialArgList.Arg.SelectedCircles(selection.toList()),
+            confirmThisArg = true
+        )
+        cancelSelectionAsToolArgPrompt()
+        if (partialArgList!!.isFull)
+            completeToolMode()
+    }
+
     fun insertCenteredCross() {
         recordCommand(Command.CREATE)
         val (midX, midY) = canvasSize.toSize()/2f
@@ -680,7 +717,7 @@ class EditClusterViewModel(
     }
 
     // pointer input callbacks
-    // onTap triggers after onDown
+    // onDown -> onTap
     fun onTap(position: Offset) {
         // select circle(s)/region
         if (showCircles) {
@@ -738,6 +775,7 @@ class EditClusterViewModel(
     }
 
     fun onUp(visiblePosition: Offset?) {
+        cancelSelectionAsToolArgPrompt()
         when (mode) {
             is ToolMode -> {
                 // we only confirm args in onUp, they are created in onDown etc.
@@ -1050,7 +1088,7 @@ class EditClusterViewModel(
             center,
             radius = (radiusPoint - center).getDistance()
         )
-        createNewCircle(newCircle, switchToSelectionMode = false)
+        createNewCircles(listOf(newCircle), switchToSelectionMode = false)
         partialArgList = PartialArgList(argList.signature)
     }
 
@@ -1063,15 +1101,15 @@ class EditClusterViewModel(
             val eps = 1e-3
             if ((points[1] - points[0]).getDistance() < eps) {
                 val newLine = Line.by2Points(points[0], points[2])
-                createNewCircle(newLine, switchToSelectionMode = false)
+                createNewCircles(listOf(newLine), switchToSelectionMode = false)
             } else if ((points[2] - points[1]).getDistance() < eps || (points[2] - points[0]).getDistance() < eps) {
                 val newLine = Line.by2Points(points[0], points[1])
-                createNewCircle(newLine, switchToSelectionMode = false)
+                createNewCircles(listOf(newLine), switchToSelectionMode = false)
             } else {
                 val newCircle = Circle.by3Points(
                     points[0], points[1], points[2]
                 )
-                createNewCircle(newCircle, switchToSelectionMode = false)
+                createNewCircles(listOf(newCircle), switchToSelectionMode = false)
             }
         } catch (e: NumberFormatException) {
             e.printStackTrace()
@@ -1088,16 +1126,22 @@ class EditClusterViewModel(
         val newLine = Line.by2Points(
             points[0], points[1]
         )
-        createNewCircle(newLine, switchToSelectionMode = false)
+        createNewCircles(listOf(newLine), switchToSelectionMode = false)
         partialArgList = PartialArgList(argList.signature)
     }
 
     private fun completeCircleInversion() {
         val argList = partialArgList!!
-        val (circle0Index, invertingCircleIndex) = argList.args
-            .map { (it as PartialArgList.Arg.CircleIndex).index }
-        val newCircle = Circle.invert(circles[invertingCircleIndex], circles[circle0Index]) as CircleOrLine
-        createNewCircle(newCircle, switchToSelectionMode = false)
+        val targetCirclesIxs = (argList.args[0] as PartialArgList.Arg.SelectedCircles).indices
+        val invertingCircleIndex = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
+        val invertingCircle = circles[invertingCircleIndex]
+        val newCircles = targetCirclesIxs.map { targetIx ->
+            val targetCircle = circles[targetIx]
+            val newCircle = Circle.invert(invertingCircle, targetCircle) as CircleOrLine
+            newCircle
+        }
+        createNewCircles(newCircles, switchToSelectionMode = false)
+        copyParts(targetCirclesIxs, ((circles.size - newCircles.size) until circles.size).toList())
         partialArgList = PartialArgList(argList.signature)
     }
 
