@@ -32,6 +32,7 @@ sealed class EditClusterCategory(
         Res.string.multiselect_category_name,
         listOf(
             EditClusterTool.Multiselect,
+            EditClusterTool.FlowSelect,
             EditClusterTool.ToggleSelectAll,
         )
     ) { // ~mode-like

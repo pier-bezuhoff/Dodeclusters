@@ -40,7 +40,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import data.Cluster
 import data.PartialArgList
 import data.geometry.Circle
 import data.geometry.CircleOrLine
@@ -87,11 +86,11 @@ fun BoxScope.EditClusterCanvas(
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
     val scaleIcon = painterResource(Res.drawable.zoom_in)
-    val scaleHandleColor = // MaterialTheme.colorScheme.secondary
+    val scaleIconColor = // MaterialTheme.colorScheme.secondary
         DodeclustersColors.skyBlue
     val iconDim = with (LocalDensity.current) { 24.dp.toPx() }
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
-    val rotateIconTint = MaterialTheme.colorScheme.secondary
+    val rotateIconColor = MaterialTheme.colorScheme.secondary
     val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
     val sliderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
     val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
@@ -166,10 +165,10 @@ fun BoxScope.EditClusterCanvas(
                 }
             }
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
-            drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleHandleColor, rotateIconTint, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
+            drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
         }
         if (viewModel.circleSelectionIsActive)
-            drawSelectionControls(viewModel, sliderColor, jCarcassColor, rotateIconTint, handleRadius, iconDim, rotateIcon)
+            drawSelectionControls(viewModel, sliderColor, jCarcassColor, rotateIconColor, handleRadius, iconDim, rotateIcon)
     }
     if (viewModel.circleSelectionIsActive) {
         HUD(viewModel)
@@ -447,8 +446,8 @@ private fun DrawScope.drawHandles(
     viewModel: EditClusterViewModel,
     visibleRect: Rect,
     selectionMarkingsColor: Color, // for selection rect
-    scaleHandleColor: Color,
-    rotateIconTint: Color,
+    scaleIconColor: Color,
+    rotateIconColor: Color,
     rotationIndicatorColor: Color,
     handleRadius: Float,
     iconDim: Float,
@@ -469,7 +468,7 @@ private fun DrawScope.drawHandles(
                         end = right,
                     )
                     drawCircle( // radius handle
-                        color = scaleHandleColor,
+                        color = scaleIconColor,
                         radius = handleRadius,
                         center = right
                     )
@@ -485,24 +484,24 @@ private fun DrawScope.drawHandles(
                     )
                     // scale handle
                     drawCircle(
-                        color = scaleHandleColor,
+                        color = scaleIconColor,
                         radius = handleRadius/4f,
                         center = selectionRect.topRight,
                     )
                     translate(selectionRect.right - iconDim/2, selectionRect.top - iconDim/2) {
                         with (scaleIcon) {
-                            draw(iconSize, colorFilter = ColorFilter.tint(scaleHandleColor))
+                            draw(iconSize, colorFilter = ColorFilter.tint(scaleIconColor))
                         }
                     }
                     // rotate handle icon
                     drawCircle( // scale handle
-                        color = rotateIconTint,
+                        color = rotateIconColor,
                         radius = handleRadius/4f,
                         center = selectionRect.bottomRight,
                     )
                     translate(selectionRect.right - iconDim/2, selectionRect.bottom - iconDim/2) {
                         with (rotateIcon) {
-                            draw(iconSize, colorFilter = ColorFilter.tint(rotateIconTint))
+                            draw(iconSize, colorFilter = ColorFilter.tint(rotateIconColor))
                         }
                     }
                 }
