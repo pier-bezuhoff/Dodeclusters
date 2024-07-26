@@ -5,12 +5,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -90,28 +94,29 @@ fun ColorPickerDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded &&
-            windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Medium ||
+            windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Expanded ||
             windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium &&
-            windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Compact
-        ) {
+            windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Medium
+        ) { // landscape
             Surface(
                 modifier = Modifier
-                    .fillMaxHeight()
-//                    .wrapContentWidth()
+//                    .fillMaxHeight()
                     .padding(16.dp),
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Column(
-                    modifier = Modifier.fillMaxSize(0.95f),
+                    modifier = Modifier.fillMaxHeight(0.8f),
                     verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    horizontalAlignment = Alignment.Start,
                 ) {
-                    ColorPickerTitle()
-                    ColorPickerDisplay(color) {
+                    ColorPickerTitle(Modifier
+                        .align(Alignment.CenterHorizontally)
+                    )
+                    ColorPickerDisplay(color, Modifier.fillMaxHeight(0.7f)) {
                         hex.value = computeHex(color)
                     }
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+//                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceAround,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -123,7 +128,7 @@ fun ColorPickerDialog(
                     }
                 }
             }
-        } else {
+        } else { // portrait
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -137,7 +142,10 @@ fun ColorPickerDialog(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     ColorPickerTitle()
-                    ColorPickerDisplay(color) {
+                    ColorPickerDisplay(color, Modifier
+                        .align(Alignment.Start)
+                        .fillMaxHeight(0.7f)
+                    ) {
                         hex.value = computeHex(color)
                     }
                     HexInput(color, hex, Modifier.align(Alignment.Start)) {
@@ -145,6 +153,7 @@ fun ColorPickerDialog(
                     }
                     Row(
                         modifier = Modifier
+                            .defaultMinSize(minHeight = 48.dp)
                             .fillMaxWidth()
                             .padding(top = 16.dp)
                         ,
@@ -176,8 +185,9 @@ fun ColorPickerDisplay(
 ) {
     ClassicColorPicker(
         modifier
-            .fillMaxHeight(0.7f)
-            .padding(16.dp),
+            .aspectRatio(1.1f)
+            .padding(16.dp)
+        ,
         colorPickerValueState = color,
         showAlphaBar = false, // MAYBE: add alpha someday
         onColorChanged = { onColorChanged() }

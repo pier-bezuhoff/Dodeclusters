@@ -591,7 +591,8 @@ fun DrawScope.drawSelectionControls(
     iconDim: Float,
     rotateIcon: Painter,
 ) {
-    val carcassStyle = Stroke(16f, cap = StrokeCap.Round)
+    val carcassStyle = Stroke(0.7f*iconDim, cap = StrokeCap.Round)
+    val buttonBackdropRadius = 1.0f * iconDim
     val iconSize = Size(iconDim, iconDim)
     val (w, h) = viewModel.canvasSize
     val positions = SelectionControlsPositions(w, h)
@@ -621,8 +622,11 @@ fun DrawScope.drawSelectionControls(
         jPath, jCarcassColor,
         style = carcassStyle
     )
-    drawCircle(jCarcassColor, radius = 30f, center = Offset(positions.right, positions.topUnderScaleSlider))
-    drawCircle(jCarcassColor, radius = 30f, center = Offset(positions.left, positions.bottom))
+    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.top))
+    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.scaleSliderBottom))
+    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.topUnderScaleSlider))
+    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.left, positions.bottom))
+    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.bottom))
     drawLine(
         sliderColor,
         Offset(positions.right, positions.top + positions.sliderPadding),
