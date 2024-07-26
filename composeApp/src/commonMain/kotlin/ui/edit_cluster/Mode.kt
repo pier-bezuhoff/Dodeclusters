@@ -1,6 +1,8 @@
 package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.geometry.Offset
+import data.Cluster
 import data.PartialArgList
 import kotlinx.serialization.Serializable
 import ui.tools.EditClusterTool
@@ -22,17 +24,6 @@ enum class SelectionMode : Mode {
     Region,
 }
 
-@Serializable
-/** sub-modes of [SelectionMode.Multiselect] related to the method by which circles are selected */
-enum class MultiselectMethod {
-    BY_CLICK,
-    /** Imagine a line/trail drawn by moving down-ed cursor,
-     * if the line passes through a circle, the circle is added to the selection */
-    BY_FLOW,
-    RECTANGULAR
-}
-
-@Serializable
 /** sub-modes of [SelectionMode.Multiselect] related to how new selection is combined */
 enum class MultiselectLogic {
     ADD, REPLACE, SUBTRACT, SYMMETRIC_DIFFERENCE,
@@ -58,9 +49,18 @@ enum class ToolMode(
     }
 }
 
-// equivalent to Multiselect but on confirmation (selection has to be non-empty) we go back
-// to [parentMode] and add what we selected as an arg
-@Serializable
-data class TemporarySelectionMode(
-    val parentMode: ToolMode
-)
+@Immutable
+/** Additional mode accompanying [Mode] and
+ * carrying [SubMode]-specific relevant data, also
+ * they have specific behavior for [onPanZoom] */
+sealed interface SubMode {
+    data object None : SubMode
+    // center uses absolute positioning
+    /** Scale via top-right selection rect handle */
+    data class Scale(val center: Offset) : SubMode
+    data class ScaleViaSlider(val center: Offset, val sliderPercentage: Float = 0.5f) : SubMode
+    data class Rotate(val center: Offset, val angle: Double = 0.0) : SubMode
+    data class FlowSelect(val lastQualifiedPart: Cluster.Part? = null) : SubMode
+    data class FlowFill(val lastQualifiedPart: Cluster.Part? = null) : SubMode
+}
+

@@ -615,6 +615,11 @@ class EditClusterViewModel(
         submode = SubMode.FlowSelect()
     }
 
+    fun activateFlowFill() {
+        switchToMode(SelectionMode.Region)
+        submode = SubMode.FlowFill()
+    }
+
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
         if (!selection.containsAll(circles.indices.toSet())) {
@@ -855,6 +860,10 @@ class EditClusterViewModel(
                 if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
                     val (_, qualifiedPart) = selectPartAt(visiblePosition)
                     submode = SubMode.FlowSelect(qualifiedPart)
+                } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
+                    val (_, qualifiedPart) = selectPartAt(visiblePosition)
+                    submode = SubMode.FlowFill(qualifiedPart)
+                    reselectRegionAt(visiblePosition)
                 } else if (mode is ToolMode) {
                     when (partialArgList!!.nextArgType) {
                         PartialArgList.ArgType.XYPoint -> {
@@ -978,6 +987,15 @@ class EditClusterViewModel(
                         (qualifiedPart.insides - newQualifiedPart.insides) union (newQualifiedPart.insides - qualifiedPart.insides) union
                         (qualifiedPart.outsides - newQualifiedPart.outsides) union (newQualifiedPart.outsides - qualifiedPart.outsides)
                     selection.addAll(diff.filter { it !in selection })
+                }
+            } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
+                val qualifiedPart = (submode as SubMode.FlowFill).lastQualifiedPart
+                val (_, newQualifiedPart) = selectPartAt(centroid)
+                if (qualifiedPart == null) {
+                    submode = SubMode.FlowFill(newQualifiedPart)
+                } else if (qualifiedPart != newQualifiedPart) {
+                    reselectRegionAt(centroid)
+                    submode = SubMode.FlowFill(newQualifiedPart)
                 }
             }
         } else if (mode == SelectionMode.Drag && selection.isNotEmpty() && showCircles) {
@@ -1175,6 +1193,7 @@ class EditClusterViewModel(
             EditClusterTool.FlowSelect -> activateFlowSelect()
             EditClusterTool.ToggleSelectAll -> toggleSelectAll()
             EditClusterTool.Region -> switchToMode(SelectionMode.Region)
+            EditClusterTool.FlowFill -> activateFlowFill()
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             EditClusterTool.DeleteAllParts -> deleteAllParts()
             EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selected circles only
@@ -1196,6 +1215,7 @@ class EditClusterViewModel(
             EditClusterTool.FlowSelect -> mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
             EditClusterTool.ToggleSelectAll -> selection.containsAll(circles.indices.toSet())
             EditClusterTool.Region -> mode == SelectionMode.Region
+            EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
@@ -1280,21 +1300,6 @@ class EditClusterViewModel(
 sealed class HandleConfig(open val ixs: List<Ix>) {
     data class SingleCircle(val ix: Ix): HandleConfig(listOf(ix))
     data class SeveralCircles(override val ixs: List<Ix>): HandleConfig(ixs)
-}
-
-@Immutable
-/** Additional mode accompanying [Mode] and
- * carrying [SubMode]-specific relevant data, also
- * they have specific behavior for [onPanZoom] */
-sealed interface SubMode {
-    data object None : SubMode
-    // center uses absolute positioning
-    /** Scale via top-right selection rect handle */
-    data class Scale(val center: Offset) : SubMode
-    data class ScaleViaSlider(val center: Offset, val sliderPercentage: Float = 0.5f) : SubMode
-    data class Rotate(val center: Offset, val angle: Double = 0.0) : SubMode
-
-    data class FlowSelect(val lastQualifiedPart: Cluster.Part? = null) : SubMode
 }
 
 /** params for create/copy/delete animations */

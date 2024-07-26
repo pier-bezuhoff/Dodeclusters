@@ -48,6 +48,7 @@ sealed class EditClusterCategory(
         Res.string.region_category_name,
         listOf(
             EditClusterTool.Region,
+            EditClusterTool.FlowFill,
             EditClusterTool.RestrictRegionToSelection,
             EditClusterTool.DeleteAllParts,
             // EditClusterTool.AppliedColor are auto-added

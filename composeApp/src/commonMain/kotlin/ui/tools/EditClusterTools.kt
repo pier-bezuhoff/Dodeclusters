@@ -33,6 +33,8 @@ import dodeclusters.composeapp.generated.resources.drag_name
 import dodeclusters.composeapp.generated.resources.duplicate_description
 import dodeclusters.composeapp.generated.resources.duplicate_name
 import dodeclusters.composeapp.generated.resources.filled_circle
+import dodeclusters.composeapp.generated.resources.flow_fill_description
+import dodeclusters.composeapp.generated.resources.flow_fill_name
 import dodeclusters.composeapp.generated.resources.flow_multiselect_description
 import dodeclusters.composeapp.generated.resources.flow_multiselect_name
 import dodeclusters.composeapp.generated.resources.full_screen_cross
@@ -126,6 +128,11 @@ sealed class EditClusterTool(
         Res.string.region_name,
         Res.string.region_description,
         Res.drawable.select_region_mode_intersection
+    )
+    data object FlowFill: Switch(
+        Res.string.flow_fill_name,
+        Res.string.flow_fill_description,
+        Res.drawable.two_of_three_circles_connected
     )
     data object RestrictRegionToSelection: Switch(
         Res.string.restrict_region_to_selection_name,
