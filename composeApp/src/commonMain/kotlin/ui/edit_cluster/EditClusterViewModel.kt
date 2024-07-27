@@ -14,6 +14,7 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -126,24 +127,12 @@ class EditClusterViewModel(
     var submode: SubMode by mutableStateOf(SubMode.None)
         private set
 
-    // TODO: do not conflate last 5 commands for convenience
-    // TODO: encapsulate as a separate class
+    private val history = History<UiState>(
+        saveState = { UiState.save(this) },
+        loadState = { state -> loadUiState(state) }
+    )
     var undoIsEnabled by mutableStateOf(false) // = history is not empty
     var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
-    // tagged & grouped gap buffer
-    private val commands = ArrayDeque<Command>(HISTORY_SIZE)
-    private val redoCommands = ArrayDeque<Command>(HISTORY_SIZE)
-    // we group history by commands and record it only when the new command differs from the previous one
-    // NOTE: history doesn't survive background app kill
-    private val history = ArrayDeque<UiState>(HISTORY_SIZE)
-    private val redoHistory = ArrayDeque<UiState>(HISTORY_SIZE)
-    // c_i := commands[i], s_i := history[i],
-    // s_k+1 := current state (UiState.save(this))
-    // c_k+i := redoCommands[i-1], s_k+i := redoHistory[i-2]
-    // command c_i modifies previous state s_i into a new state s_i+1
-    //   c0  c1  c2 ...  c_k |       | c_k+1     c_k+2     c_k+3
-    // s0  s1  s2 ... s_k    | s_k+1 |      s_k+2     s_k+3
-    // ^ history (past) ^    |  ^^^current state  \  ^^ redo history (aka future)
 
     private val _circleAnimations = MutableSharedFlow<CircleAnimation>()
     val circleAnimations = _circleAnimations.asSharedFlow()
@@ -262,38 +251,21 @@ class EditClusterViewModel(
         circles.addAll(cluster.circles)
         parts.addAll(cluster.parts)
         // reset history on load
-        undoIsEnabled = false
-        redoIsEnabled = false
-        redoHistory.clear()
-        redoCommands.clear()
         history.clear()
-        commands.clear()
+        undoIsEnabled = history.undoIsEnabled
+        redoIsEnabled = history.redoIsEnabled
     }
 
     fun undo() {
-        if (history.isNotEmpty()) {
-            val currentState = UiState.save(this)
-            val previousState = history.removeLast()
-            val previousCommand = commands.removeLast() // previousState -> previousCommand ^n -> currentState
-            loadUiState(previousState)
-            redoCommands.addFirst(previousCommand)
-            redoHistory.addFirst(currentState)
-            redoIsEnabled = true
-            undoIsEnabled = history.isNotEmpty()
-        }
+        history.undo()
+        undoIsEnabled = history.undoIsEnabled
+        redoIsEnabled = history.redoIsEnabled
     }
 
     fun redo() {
-        if (redoHistory.isNotEmpty()) {
-            val currentState = UiState.save(this)
-            val nextCommand = redoCommands.removeFirst()
-            val nextState = redoHistory.removeFirst()
-            loadUiState(nextState)
-            commands.addLast(nextCommand)
-            history.addLast(currentState)
-            undoIsEnabled = true
-            redoIsEnabled = redoHistory.isNotEmpty()
-        }
+        history.redo()
+        undoIsEnabled = history.undoIsEnabled
+        redoIsEnabled = history.redoIsEnabled
     }
 
     private fun loadUiState(state: UiState) {
@@ -311,18 +283,9 @@ class EditClusterViewModel(
      * let s_i := history[[i]], c_i := commands[[i]]
      * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ... */
     private fun recordCommand(command: Command) {
-        if (commands.lastOrNull() != command) {
-            if (history.size == HISTORY_SIZE) {
-                history.removeAt(1) // save th original
-                commands.removeFirst()
-            }
-            history.addLast(UiState.save(this)) // saving state before [command]
-            commands.addLast(command)
-            undoIsEnabled = true
-        }
-        redoCommands.clear()
-        redoHistory.clear()
-        redoIsEnabled = false
+        history.recordCommand(command)
+        undoIsEnabled = history.undoIsEnabled
+        redoIsEnabled = history.redoIsEnabled
         if (command != Command.ROTATE)
             submode.let {
                 if (it is SubMode.Rotate)
