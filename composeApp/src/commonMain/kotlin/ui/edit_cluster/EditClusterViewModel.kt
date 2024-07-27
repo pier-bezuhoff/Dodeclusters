@@ -768,11 +768,13 @@ class EditClusterViewModel(
                     }
                 }
                 SelectionMode.Region -> {
-                    if (restrictRegionsToSelection && selection.isNotEmpty()) {
-                        val restriction = selection.toList()
-                        reselectRegionAt(position, restriction)
-                    } else {
-                        reselectRegionAt(position)
+                    if (submode !is SubMode.FlowFill) {
+                        if (restrictRegionsToSelection && selection.isNotEmpty()) {
+                            val restriction = selection.toList()
+                            reselectRegionAt(position, restriction)
+                        } else {
+                            reselectRegionAt(position)
+                        }
                     }
                 }
                 ToolMode.CIRCLE_BY_CENTER_AND_RADIUS ->
@@ -810,7 +812,8 @@ class EditClusterViewModel(
         if (partialArgList?.isFull == true) {
             completeToolMode()
         }
-        submode = SubMode.None
+        if (submode !is SubMode.FlowFill)
+            submode = SubMode.None
     }
 
     fun onDown(visiblePosition: Offset) {
@@ -863,7 +866,12 @@ class EditClusterViewModel(
                 } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
                     val (_, qualifiedPart) = selectPartAt(visiblePosition)
                     submode = SubMode.FlowFill(qualifiedPart)
-                    reselectRegionAt(visiblePosition)
+                    if (restrictRegionsToSelection && selection.isNotEmpty()) {
+                        val restriction = selection.toList()
+                        reselectRegionAt(visiblePosition, restriction)
+                    } else {
+                        reselectRegionAt(visiblePosition)
+                    }
                 } else if (mode is ToolMode) {
                     when (partialArgList!!.nextArgType) {
                         PartialArgList.ArgType.XYPoint -> {
@@ -994,8 +1002,13 @@ class EditClusterViewModel(
                 if (qualifiedPart == null) {
                     submode = SubMode.FlowFill(newQualifiedPart)
                 } else if (qualifiedPart != newQualifiedPart) {
-                    reselectRegionAt(centroid)
                     submode = SubMode.FlowFill(newQualifiedPart)
+                    if (restrictRegionsToSelection && selection.isNotEmpty()) {
+                        val restriction = selection.toList()
+                        reselectRegionAt(centroid, restriction)
+                    } else {
+                        reselectRegionAt(centroid)
+                    }
                 }
             }
         } else if (mode == SelectionMode.Drag && selection.isNotEmpty() && showCircles) {
@@ -1211,10 +1224,10 @@ class EditClusterViewModel(
     fun toolPredicate(tool: EditClusterTool): Boolean =
         when (tool) { // NOTE: i think this has to return State<Boolean> to work properly
             EditClusterTool.Drag -> mode == SelectionMode.Drag
-            EditClusterTool.Multiselect -> mode == SelectionMode.Multiselect
+            EditClusterTool.Multiselect -> mode == SelectionMode.Multiselect && submode !is SubMode.FlowSelect
             EditClusterTool.FlowSelect -> mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
             EditClusterTool.ToggleSelectAll -> selection.containsAll(circles.indices.toSet())
-            EditClusterTool.Region -> mode == SelectionMode.Region
+            EditClusterTool.Region -> mode == SelectionMode.Region && submode !is SubMode.FlowFill
             EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles

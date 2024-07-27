@@ -60,6 +60,7 @@ sealed interface SubMode {
     data class Scale(val center: Offset) : SubMode
     data class ScaleViaSlider(val center: Offset, val sliderPercentage: Float = 0.5f) : SubMode
     data class Rotate(val center: Offset, val angle: Double = 0.0) : SubMode
+    
     data class FlowSelect(val lastQualifiedPart: Cluster.Part? = null) : SubMode
     data class FlowFill(val lastQualifiedPart: Cluster.Part? = null) : SubMode
 }
