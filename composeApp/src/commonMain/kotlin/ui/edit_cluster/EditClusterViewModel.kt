@@ -14,7 +14,6 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -283,8 +282,16 @@ class EditClusterViewModel(
     /** Use BEFORE modifying the state by the [command]!
      * let s_i := history[[i]], c_i := commands[[i]]
      * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ... */
-    private fun recordCommand(command: Command) {
-        history.recordCommand(command)
+    private fun recordCommand(
+        command: Command,
+        targets: Iterable<Ix>? = null,
+        unique: Boolean = false
+    ) {
+        val tag = if (unique)
+            Command.Tag.Unique()
+        else
+            targets?.let { Command.Tag.Targets(it.toList()) }
+        history.recordCommand(command, tag)
         undoIsEnabled = history.undoIsEnabled
         redoIsEnabled = history.redoIsEnabled
         if (command != Command.ROTATE)
@@ -302,7 +309,7 @@ class EditClusterViewModel(
             newCircle is Circle && newCircle.radius > 0.0 || newCircle is Line
         }
         if (validNewCircles.isNotEmpty()) {
-            recordCommand(Command.CREATE)
+            recordCommand(Command.CREATE, unique = true)
             showCircles = true
             val prevSize = circles.size
             circles.addAll(validNewCircles)
@@ -320,7 +327,7 @@ class EditClusterViewModel(
 
     fun duplicateCircles() {
         if (mode.isSelectingCircles()) {
-            recordCommand(Command.DUPLICATE)
+            recordCommand(Command.DUPLICATE, selection)
             val copiedCircles = selection.map { circles[it] } // preserves selection order
             val oldSize = circles.size
             circles.addAll(copiedCircles)
@@ -367,7 +374,7 @@ class EditClusterViewModel(
             return re
         }
         if (mode.isSelectingCircles()) {
-            recordCommand(Command.DELETE)
+            recordCommand(Command.DELETE, unique = true)
             val whatsGone = selection.toSet()
             val deletedCircles = whatsGone.map { circles[it] }
             val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
@@ -520,7 +527,7 @@ class EditClusterViewModel(
         val (part, part0) = selectPartAt(visiblePosition, boundingCircles)
         val outerParts = parts.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
         if (outerParts.isEmpty()) {
-            recordCommand(Command.SELECT_REGION)
+            recordCommand(Command.FILL_REGION, listOf(parts.size))
             parts.add(part)
             if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
                 selection.clear()
@@ -531,8 +538,8 @@ class EditClusterViewModel(
             val sameExistingPart = parts.singleOrNull {
                 part.insides == it.insides && part.outsides == it.outsides
             }
+            recordCommand(Command.FILL_REGION, unique = true)
             if (sameExistingPart != null) {
-                recordCommand(Command.SELECT_REGION)
                 parts.remove(sameExistingPart)
                 if (part == sameExistingPart) {
                     println("removed $sameExistingPart")
@@ -545,7 +552,6 @@ class EditClusterViewModel(
                     println("recolored $sameExistingPart")
                 }
             } else {
-                recordCommand(Command.SELECT_REGION)
                 parts.removeAll(outerParts)
                 if (
                     outerParts.all { it.fillColor == outerParts[0].fillColor } &&
@@ -613,7 +619,7 @@ class EditClusterViewModel(
     
     // TODO: in the future replace with select-all->delete in invisible-circles part manipulation mode
     fun deleteAllParts() {
-        recordCommand(Command.DELETE)
+        recordCommand(Command.DELETE, unique = true)
         parts.clear()
     }
 
@@ -642,7 +648,7 @@ class EditClusterViewModel(
     }
 
     fun insertCenteredCross() {
-        recordCommand(Command.CREATE)
+        recordCommand(Command.CREATE, unique = true)
         val (midX, midY) = canvasSize.toSize()/2f
         val horizontalLine = Line.by2Points(
             absolute(Offset(0f, midY)),
@@ -670,7 +676,7 @@ class EditClusterViewModel(
             when (selection.size) {
                 0 -> Unit
                 1 -> {
-                    recordCommand(Command.CHANGE_RADIUS)
+                    recordCommand(Command.CHANGE_RADIUS, targets = selection)
                     val ix = selection.single()
                     when (val circle = circles[ix]) {
                         is Circle ->
@@ -679,7 +685,7 @@ class EditClusterViewModel(
                     }
                 }
                 else -> {
-                    recordCommand(Command.SCALE)
+                    recordCommand(Command.SCALE, targets = selection)
                     val rect = getSelectionRect()
                     val center =
                         if (rect == null || rect.minDimension >= 5_000)
@@ -776,6 +782,8 @@ class EditClusterViewModel(
         if (partialArgList?.isFull == true) {
             completeToolMode()
         }
+        if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect)
+            activeTool = EditClusterTool.Multiselect // haxx
         if (submode !is SubMode.FlowFill)
             submode = SubMode.None
     }
@@ -879,7 +887,7 @@ class EditClusterViewModel(
                         is SubMode.Scale -> {
                             val circle = circles[h.ix]
                             if (circle is Circle) {
-                                recordCommand(Command.CHANGE_RADIUS)
+                                recordCommand(Command.CHANGE_RADIUS, targets = listOf(h.ix))
                                 val center = sm.center
                                 val r = (c - center).getDistance()
                                 circles[h.ix] = circle.copy(radius = r.toDouble())
@@ -888,7 +896,7 @@ class EditClusterViewModel(
                         is SubMode.ScaleViaSlider -> {
                             val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
                             if (sm.sliderPercentage != newPercentage) {
-                                recordCommand(Command.SCALE)
+                                recordCommand(Command.SCALE, targets = listOf(h.ix))
                                 val circle = circles[h.ix]
                                 val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
                                 circles[h.ix] = circle.scale(sm.center, scaleFactor)
@@ -896,7 +904,7 @@ class EditClusterViewModel(
                             }
                         }
                         is SubMode.Rotate -> {
-                            recordCommand(Command.ROTATE)
+                            recordCommand(Command.ROTATE, targets = listOf(h.ix))
                             val center = sm.center
                             val centerToCurrent = c - center
                             val centerToPreviousHandle = centerToCurrent - pan
@@ -910,7 +918,7 @@ class EditClusterViewModel(
                 is HandleConfig.SeveralCircles -> {
                     when (val sm = submode) {
                         is SubMode.Scale -> {
-                            recordCommand(Command.SCALE)
+                            recordCommand(Command.SCALE, targets = selection)
                             getSelectionRect()?.let { rect ->
                                 val scaleHandlePosition = rect.topRight
                                 val center = rect.center
@@ -925,7 +933,7 @@ class EditClusterViewModel(
                         is SubMode.ScaleViaSlider -> {
                             val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
                             if (sm.sliderPercentage != newPercentage) {
-                                recordCommand(Command.SCALE)
+                                recordCommand(Command.SCALE, targets = selection)
                                 val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
                                 for (ix in selection) {
                                     circles[ix] = circles[ix].scale(sm.center, scaleFactor)
@@ -934,7 +942,7 @@ class EditClusterViewModel(
                             }
                         }
                         is SubMode.Rotate -> {
-                            recordCommand(Command.ROTATE)
+                            recordCommand(Command.ROTATE, targets = selection)
                             val center = sm.center
                             val centerToCurrent = c - center
                             val centerToPreviousHandle = centerToCurrent - pan
@@ -977,7 +985,7 @@ class EditClusterViewModel(
             }
         } else if (mode == SelectionMode.Drag && selection.isNotEmpty() && showCircles) {
             // move + scale radius
-            recordCommand(Command.MOVE)
+            recordCommand(Command.MOVE, targets = selection)
             val ix = selection.single()
             when (val circle = circles[ix]) {
                 is Circle ->
@@ -987,7 +995,7 @@ class EditClusterViewModel(
             }
         } else if (mode == SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
             if (selection.size == 1) { // move + scale radius
-                recordCommand(Command.MOVE)
+                recordCommand(Command.MOVE, targets = selection)
                 val ix = selection.single()
                 when (val circle = circles[ix]) {
                     is Circle ->
@@ -996,7 +1004,7 @@ class EditClusterViewModel(
                         circles[ix] = circle.translate(pan)
                 }
             } else if (selection.size > 1) { // scale radius & position
-                recordCommand(Command.MOVE)
+                recordCommand(Command.MOVE, targets = selection)
                 for (ix in selection) {
                     circles[ix] = circles[ix].rotate(c, rotationAngle).scale(c, zoom).translate(pan)
                 }
@@ -1295,7 +1303,17 @@ enum class Command {
     ROTATE,
     DUPLICATE, DELETE,
     CREATE,
-    SELECT_REGION,
+    FILL_REGION,
     /** records canvas translations and scaling */
-    CHANGE_POV,
+//    CHANGE_POV,
+    ;
+
+    /** Used to distinguish/conflate [Command]s depending on their targets */
+    sealed interface Tag {
+        data class Targets(val targets: List<Ix> = emptyList()) : Tag
+        class Unique : Tag {
+            override fun equals(other: Any?): Boolean =
+                false
+        }
+    }
 }

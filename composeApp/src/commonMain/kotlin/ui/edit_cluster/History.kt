@@ -2,7 +2,7 @@ package ui.edit_cluster
 
 
 // TODO: create tests
-// TODO: conflation algo with tags by cmd targets
+// MAYBE: reset lastCommandTag every VM.onUp
 // s_i := [past][[i]],
 // s_k+1 := current state (saveState())
 // s_k+i := future[i-2]
@@ -16,6 +16,7 @@ class History<S>(
 ) {
     // tagged & grouped gap buffer with 'attention'/recency
     private var lastCommand: Command? = null
+    private var lastCommandTag: Command.Tag? = null
     // we group history by commands and record it only when the new command differs from the previous one
     // past -> now -> future
     private val past = ArrayDeque<S>(HISTORY_SIZE)
@@ -31,13 +32,17 @@ class History<S>(
     /** Use BEFORE modifying the state by the [command]!
      * let s_i := history[[i]], c_i := commands[[i]]
      * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ... */
-    fun recordCommand(command: Command) {
-        if (command != lastCommand) {
+    fun recordCommand(command: Command, tag: Command.Tag? = null) {
+        if (lastCommand == null ||
+            command != lastCommand ||
+            tag != null && lastCommandTag != null && tag != lastCommandTag
+        ) {
             if (past.size == HISTORY_SIZE) {
-                past.removeAt(1) // preserve the original
+                past.removeAt(1) // preserve the original @ 0
             }
             past.addLast(saveState())
             lastCommand = command
+            lastCommandTag = tag
         }
         future.clear()
     }
@@ -53,6 +58,7 @@ class History<S>(
             // NOTE: future cannot overflow since its size is the same as that of past
             future.addFirst(currentState)
             lastCommand = null
+            lastCommandTag = null
             loadState(previousState)
         }
     }
@@ -68,6 +74,7 @@ class History<S>(
             //  and conflation cannot happen at this stage too (structurally)
             past.addLast(currentState)
             lastCommand = null
+            lastCommandTag = null
             loadState(nextState)
         }
     }
@@ -76,6 +83,7 @@ class History<S>(
         past.clear()
         future.clear()
         lastCommand = null
+        lastCommandTag = null
     }
 
     companion object {
