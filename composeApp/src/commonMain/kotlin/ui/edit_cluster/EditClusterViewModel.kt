@@ -127,6 +127,7 @@ class EditClusterViewModel(
     var submode: SubMode by mutableStateOf(SubMode.None)
         private set
 
+    // NOTE: history doesn't survive background app kill
     private val history = History<UiState>(
         saveState = { UiState.save(this) },
         loadState = { state -> loadUiState(state) }
