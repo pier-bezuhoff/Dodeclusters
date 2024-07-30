@@ -46,13 +46,13 @@
         <item>The circle with respect to which we are inverting</item>
     </string-array>
     <string name="circle_interpolation_name">Circle interpolation</string>
-    <string name="circle_interpolation_description">Generate interjacent circles in between 2 given ones</string>
+    <string name="circle_interpolation_description">Interpolate: generate interjacent circles in between 2 given ones</string>
     <string-array name="circle_interpolation_arg_descriptions">
         <item>Start-circle</item>
         <item>End-circle</item>
     </string-array>
     <string name="circle_extrapolation_name">Circle extrapolation</string>
-    <string name="circle_extrapolation_description">Generate circles via inversions of 2 given ones</string>
+    <string name="circle_extrapolation_description">Extrapolate: generate circles via inversions of 2 given ones</string>
     <string-array name="circle_extrapolation_arg_descriptions">
         <item>Start-circle</item>
         <item>End-circle</item>
