@@ -6,6 +6,7 @@ import data.PartialArgList
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
+import dodeclusters.composeapp.generated.resources.chessboard
 import dodeclusters.composeapp.generated.resources.circle
 import dodeclusters.composeapp.generated.resources.circle_3_points
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_arg_descriptions
@@ -15,6 +16,12 @@ import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_a
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_description
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_name
 import dodeclusters.composeapp.generated.resources.circle_center_and_radius_point
+import dodeclusters.composeapp.generated.resources.circle_extrapolation_arg_descriptions
+import dodeclusters.composeapp.generated.resources.circle_extrapolation_description
+import dodeclusters.composeapp.generated.resources.circle_extrapolation_name
+import dodeclusters.composeapp.generated.resources.circle_interpolation_arg_descriptions
+import dodeclusters.composeapp.generated.resources.circle_interpolation_description
+import dodeclusters.composeapp.generated.resources.circle_interpolation_name
 import dodeclusters.composeapp.generated.resources.circle_inversion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_inversion_description
 import dodeclusters.composeapp.generated.resources.circle_inversion_name
@@ -32,6 +39,7 @@ import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
 import dodeclusters.composeapp.generated.resources.drag_name
 import dodeclusters.composeapp.generated.resources.duplicate_description
 import dodeclusters.composeapp.generated.resources.duplicate_name
+import dodeclusters.composeapp.generated.resources.extrapolate_lines
 import dodeclusters.composeapp.generated.resources.filled_circle
 import dodeclusters.composeapp.generated.resources.flow_fill_description
 import dodeclusters.composeapp.generated.resources.flow_fill_name
@@ -41,6 +49,7 @@ import dodeclusters.composeapp.generated.resources.full_screen_cross
 import dodeclusters.composeapp.generated.resources.hide_layers
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_description
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_name
+import dodeclusters.composeapp.generated.resources.interpolate_lines
 import dodeclusters.composeapp.generated.resources.invisible
 import dodeclusters.composeapp.generated.resources.line_2_points
 import dodeclusters.composeapp.generated.resources.line_by_2_points_arg_descriptions
@@ -62,6 +71,7 @@ import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
 import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
+import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_description
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_name
 import dodeclusters.composeapp.generated.resources.toggle_select_all_description
@@ -134,6 +144,11 @@ sealed class EditClusterTool(
         Res.string.flow_fill_description,
         Res.drawable.two_of_three_circles_connected
     )
+    data object FillChessboardPattern: Switch(
+        Res.string.stub,
+        Res.string.stub,
+        Res.drawable.chessboard
+    )
     data object RestrictRegionToSelection: Switch(
         Res.string.restrict_region_to_selection_name,
         Res.string.restrict_region_to_selection_description,
@@ -170,6 +185,7 @@ sealed class EditClusterTool(
         Res.drawable.paint_splash, // tint=color should be applied
     )
 
+    // these 2 are unused
     data object Duplicate: Action(
         Res.string.duplicate_name,
         Res.string.duplicate_description,
@@ -190,6 +206,20 @@ sealed class EditClusterTool(
         Res.string.circle_inversion_description,
         Res.array.circle_inversion_arg_descriptions,
         Res.drawable.circle_inversion_v2
+    )
+    data object CircleInterpolation: MultiArg(
+        PartialArgList.SIGNATURE_2_CIRCLES,
+        Res.string.circle_interpolation_name,
+        Res.string.circle_interpolation_description,
+        Res.array.circle_interpolation_arg_descriptions,
+        Res.drawable.interpolate_lines
+    )
+    data object CircleExtrapolation: MultiArg(
+        PartialArgList.SIGNATURE_2_CIRCLES,
+        Res.string.circle_extrapolation_name,
+        Res.string.circle_extrapolation_description,
+        Res.array.circle_extrapolation_arg_descriptions,
+        Res.drawable.extrapolate_lines
     )
 
     // MAYBE: add partial argument icon(s)

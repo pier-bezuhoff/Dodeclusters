@@ -41,6 +41,18 @@
         <item>Инвертируемый объект</item>
         <item>Окружность, относительно которой мы инвертируем</item>
     </string-array>
+    <string name="circle_interpolation_name">Интерполяция окружностей</string>
+    <string name="circle_interpolation_description">Построить промежуточные окружности между двумя данными</string>
+    <string-array name="circle_interpolation_arg_descriptions">
+        <item>Стартовая окружность</item>
+        <item>Конечная окружность</item>
+    </string-array>
+    <string name="circle_extrapolation_name">Экстраполяция окружностей</string>
+    <string name="circle_extrapolation_description">Постороить окружности с помощью инверсий двух данных окружностей</string>
+    <string-array name="circle_extrapolation_arg_descriptions">
+        <item>Стартовая окружность</item>
+        <item>Конечная окружность</item>
+    </string-array>
     <string name="circle_by_center_and_radius_name">Окружность по центру и радиусу</string>
     <string name="circle_by_center_and_radius_description">Построить окружность по центру и точке на ней</string>
     <string-array name="circle_by_center_and_radius_arg_descriptions">

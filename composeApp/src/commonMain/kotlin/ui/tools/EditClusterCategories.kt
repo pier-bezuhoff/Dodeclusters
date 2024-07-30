@@ -36,10 +36,7 @@ sealed class EditClusterCategory(
             EditClusterTool.ToggleSelectAll,
         )
     ) { // ~mode-like
-
-        // submode1: select-by-click
-        // submode1: flow-select
-
+        // potentially add:
         // submode2: xor selection logic
         // submode2: add selection logic
         // submode2: subtract selection logic
@@ -49,9 +46,9 @@ sealed class EditClusterCategory(
         listOf(
             EditClusterTool.Region,
             EditClusterTool.FlowFill,
-            EditClusterTool.RestrictRegionToSelection,
+//            EditClusterTool.RestrictRegionToSelection,
             EditClusterTool.DeleteAllParts,
-            // EditClusterTool.AppliedColor are auto-added
+            // EditClusterTool.AppliedColor's are auto-added
         )
     ) { // ~mode-like
         // button/switch: chessboard pattern
@@ -73,13 +70,15 @@ sealed class EditClusterCategory(
     }
     data object Transform : EditClusterCategory(
         Res.string.transform_category_name,
-        listOf(EditClusterTool.CircleInversion),
-        defaultables = listOf(0),
+        listOf(
+            EditClusterTool.CircleInversion,
+            EditClusterTool.CircleInterpolation,
+            EditClusterTool.CircleExtrapolation,
+        ),
+        defaultables = listOf(0, 1, 2),
         icon = Res.drawable.circled_tool
     ) { // ~mode-like
-        // button: scale -> slider or some other interface
-        // button: rotate -> slider, manual angle, etc
-        // + invert, kaleidoscopic reflection, etc
+        // button: kaleidoscopic reflection
     }
     data object Create : EditClusterCategory(
         Res.string.create_category_name,
@@ -92,10 +91,8 @@ sealed class EditClusterCategory(
         defaultables = listOf(0, 1, 2)
     ) { // ~mode-like
         // mode: bezier-like arc path
-        // mode: line by 2 points
         // mode: rectangle by top-left & bottom-right
         // mode: polygon
-        // button: insert centered cross
         // toggle: enable point-to-circle snapping
     }
 }

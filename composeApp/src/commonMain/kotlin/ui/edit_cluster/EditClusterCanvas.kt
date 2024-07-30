@@ -86,7 +86,8 @@ fun BoxScope.EditClusterCanvas(
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
     val scaleIcon = painterResource(Res.drawable.zoom_in)
-    val scaleIconColor = // MaterialTheme.colorScheme.secondary
+    val scaleIconColor =
+//         MaterialTheme.colorScheme.secondary
         DodeclustersColors.skyBlue
     val iconDim = with (LocalDensity.current) { 24.dp.toPx() }
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
@@ -96,7 +97,9 @@ fun BoxScope.EditClusterCanvas(
     val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
 
     val circleColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f) // MAYBE: black for light scheme
-    val selectedCircleColor = DodeclustersColors.strongSalad
+    val selectedCircleColor =
+//        MaterialTheme.colorScheme.primary
+        DodeclustersColors.strongSalad
     val clusterPathAlpha = 0.7f
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
@@ -348,52 +351,45 @@ private fun DrawScope.drawPartialConstructs(
     creationPointRadius: Float = handleRadius * 3/4,
     creationPrototypeColor: Color = DodeclustersColors.green,
 ) {
-    when (viewModel.mode) {
-        ToolMode.CIRCLE_INVERSION -> viewModel.partialArgList!!.args.let { args ->
-            if (args.isNotEmpty()) {
-                val targetCircles = (args[0] as PartialArgList.Arg.SelectedCircles)
-                    .indices
-                    .map { viewModel.circles[it] }
-                for (targetCircle in targetCircles)
-                    drawCircleOrLine(targetCircle, visibleRect, creationPrototypeColor, style = circleStroke)
-            }
-            if (args.size == 2) {
-                val invertingCircle = viewModel.circles[(args[1] as PartialArgList.Arg.CircleIndex).index]
-                drawCircleOrLine(invertingCircle, visibleRect, creationPrototypeColor, alpha = 0.6f, style = circleStroke)
-            }
-        }
-        ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> viewModel.partialArgList!!.args.let { args ->
-            if (args.isNotEmpty()) {
-                val center = (args[0] as PartialArgList.Arg.XYPoint).toOffset()
-                drawCircle(
-                    color = creationPrototypeColor,
-                    radius = creationPointRadius,
-                    center = center
-                )
-                if (args.size == 2) {
-                    val radiusPoint = (args[1] as PartialArgList.Arg.XYPoint).toOffset()
+    // generic display for selected tool args
+    viewModel.partialArgList?.args?.let { args ->
+        for (arg in args)
+            when (arg) {
+                is PartialArgList.Arg.CircleIndex ->
+                    drawCircleOrLine(
+                        viewModel.circles[arg.index],
+                        visibleRect, creationPrototypeColor, style = circleStroke
+                    )
+                is PartialArgList.Arg.SelectedCircles ->
+                    for (ix in arg.indices)
+                        drawCircleOrLine(
+                            viewModel.circles[ix],
+                            visibleRect, creationPrototypeColor, style = circleStroke
+                        )
+                is PartialArgList.Arg.XYPoint ->
                     drawCircle(
                         color = creationPrototypeColor,
                         radius = creationPointRadius,
-                        center = radiusPoint
+                        center = arg.toOffset()
                     )
-                    drawCircle(
-                        color = creationPrototypeColor,
-                        style = circleStroke,
-                        radius = (radiusPoint - center).getDistance(),
-                        center = center
-                    )
-                }
+            }
+    }
+    // custom previews for some tools
+    when (viewModel.mode) {
+        ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> viewModel.partialArgList!!.args.let { args ->
+            if (args.size == 2) {
+                val center = (args[0] as PartialArgList.Arg.XYPoint).toOffset()
+                val radiusPoint = (args[1] as PartialArgList.Arg.XYPoint).toOffset()
+                drawCircle(
+                    color = creationPrototypeColor,
+                    style = circleStroke,
+                    radius = (radiusPoint - center).getDistance(),
+                    center = center
+                )
             }
         }
         ToolMode.CIRCLE_BY_3_POINTS -> viewModel.partialArgList!!.args.let { args ->
             val points = args.map { (it as PartialArgList.Arg.XYPoint).toOffset() }
-            for (point in points)
-                drawCircle(
-                    color = creationPrototypeColor,
-                    radius = creationPointRadius,
-                    center = point
-                )
             if (args.size == 2) {
                 val (p1, p2) = points
                 val maxDim = size.maxDimension
@@ -420,12 +416,6 @@ private fun DrawScope.drawPartialConstructs(
         }
         ToolMode.LINE_BY_2_POINTS -> viewModel.partialArgList!!.args.let { args ->
             val points = args.map { (it as PartialArgList.Arg.XYPoint).toOffset() }
-            for (point in points)
-                drawCircle(
-                    color = creationPrototypeColor,
-                    radius = creationPointRadius,
-                    center = point
-                )
             if (args.size == 2) {
                 val (p1, p2) = points
                 val maxDim = size.maxDimension
@@ -590,8 +580,8 @@ fun DrawScope.drawSelectionControls(
     iconDim: Float,
     rotateIcon: Painter,
 ) {
-    val carcassStyle = Stroke(0.7f*iconDim, cap = StrokeCap.Round)
-    val buttonBackdropRadius = 1.0f * iconDim
+    val carcassStyle = Stroke(0.7f * iconDim, cap = StrokeCap.Round)
+    val buttonBackdropRadius = 0.8f * iconDim
     val iconSize = Size(iconDim, iconDim)
     val (w, h) = viewModel.canvasSize
     val positions = SelectionControlsPositions(w, h)

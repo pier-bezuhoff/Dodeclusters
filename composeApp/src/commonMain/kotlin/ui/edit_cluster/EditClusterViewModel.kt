@@ -25,6 +25,7 @@ import data.OldCluster
 import data.PartialArgList
 import data.compressPartToEssentials
 import data.geometry.CircleOrLine
+import data.geometry.GeneralizedCircle
 import data.geometry.Line
 import data.geometry.Point
 import data.io.Ddc
@@ -582,6 +583,7 @@ class EditClusterViewModel(
 
     fun activateFlowSelect() {
         switchToMode(SelectionMode.Multiselect)
+        selection.clear()
         submode = SubMode.FlowSelect()
     }
 
@@ -1101,6 +1103,8 @@ class EditClusterViewModel(
             ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
             ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
+            ToolMode.CIRCLE_INTERPOLATION -> completeCircleInterpolation()
+            ToolMode.CIRCLE_EXTRAPOLATION -> completeCircleExtrapolation()
         }
     }
 
@@ -1170,6 +1174,53 @@ class EditClusterViewModel(
         partialArgList = PartialArgList(argList.signature)
     }
 
+    private fun completeCircleInterpolation() {
+        val argList = partialArgList!!
+        val startCircleIx = (argList.args[0] as PartialArgList.Arg.CircleIndex).index
+        val start = GeneralizedCircle.fromGCircle(circles[startCircleIx])
+        val endCircleIx = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
+        val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
+        val k = 3
+        val n = k + 2
+        val newCircles = (1 until n).map { i ->
+            val interjacent = start.affineCombination(end, i.toDouble()/n)
+            interjacent.toGCircle() as CircleOrLine
+            // BUG: returns ImaginaryCircle in hyperbolic pencils (side-by-side case)
+        }
+        createNewCircles(newCircles)
+        partialArgList = PartialArgList(argList.signature)
+    }
+
+    private fun completeCircleExtrapolation() {
+        val argList = partialArgList!!
+        val startCircleIx = (argList.args[0] as PartialArgList.Arg.CircleIndex).index
+        val start = GeneralizedCircle.fromGCircle(circles[startCircleIx])
+        val endCircleIx = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
+        val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
+        val newGeneralizedCircles = mutableListOf<GeneralizedCircle>()
+        val nL = 1 // start = L[eft]
+        val nR = 3 // end = R[ight]
+        var a = start
+        var b = end
+        var c: GeneralizedCircle
+        repeat(nL) { // <-c-a-b
+            c = a.applyTo(b)
+            newGeneralizedCircles.add(c)
+            b = a
+            a = c
+        }
+        a = start
+        b = end
+        repeat(nR) { // a-b-c->
+            c = b.applyTo(a)
+            newGeneralizedCircles.add(c)
+            a = b
+            b = c
+        }
+        createNewCircles(newGeneralizedCircles.map { it.toGCircle() as CircleOrLine })
+        partialArgList = PartialArgList(argList.signature)
+    }
+
     fun toolAction(tool: EditClusterTool) {
 //        println("toolAction($tool)")
         when (tool) {
@@ -1179,6 +1230,7 @@ class EditClusterViewModel(
             EditClusterTool.ToggleSelectAll -> toggleSelectAll()
             EditClusterTool.Region -> switchToMode(SelectionMode.Region)
             EditClusterTool.FlowFill -> activateFlowFill()
+            EditClusterTool.FillChessboardPattern -> TODO()
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             EditClusterTool.DeleteAllParts -> deleteAllParts()
             EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selected circles only

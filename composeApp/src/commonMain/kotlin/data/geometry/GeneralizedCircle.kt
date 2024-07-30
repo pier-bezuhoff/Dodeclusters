@@ -124,6 +124,10 @@ data class GeneralizedCircle(
             }
     }
 
+    // NOTE: Let C:= 0.5 * A.normalized + 0.5 * B.normalized;
+    //  the resulting bisector C will NOT be normalized
+    /** Even though the inputs are pre-normalized before combining,
+     * the output is NOT normalized */
     fun affineCombination(other: GeneralizedCircle, k: Double): GeneralizedCircle =
         this.normalized()*k + other.normalized()*(1 - k)
 
