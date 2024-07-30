@@ -45,6 +45,7 @@ import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import kotlin.math.pow
+import kotlin.math.sign
 
 /** circle index in vm.circles or cluster.circles */
 typealias Ix = Int
@@ -1174,32 +1175,33 @@ class EditClusterViewModel(
         partialArgList = PartialArgList(argList.signature)
     }
 
+    // TODO: implement dialog for choosing k and direction for elliptic pencil
     private fun completeCircleInterpolation() {
+        val k = 3
         val argList = partialArgList!!
         val startCircleIx = (argList.args[0] as PartialArgList.Arg.CircleIndex).index
         val start = GeneralizedCircle.fromGCircle(circles[startCircleIx])
         val endCircleIx = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
         val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
-        val k = 3
         val n = k + 2
         val newCircles = (1 until n).map { i ->
-            val interjacent = start.affineCombination(end, i.toDouble()/n)
+            val interjacent = start.bisector(end, nOfSections = n, index = i)
             interjacent.toGCircle() as CircleOrLine
-            // BUG: returns ImaginaryCircle in hyperbolic pencils (side-by-side case)
         }
         createNewCircles(newCircles)
         partialArgList = PartialArgList(argList.signature)
     }
 
+    // TODO: this works but implement dialog for choosing nL & nR
     private fun completeCircleExtrapolation() {
+        val nL = 1 // start = L[eft]
+        val nR = 3 // end = R[ight]
         val argList = partialArgList!!
         val startCircleIx = (argList.args[0] as PartialArgList.Arg.CircleIndex).index
         val start = GeneralizedCircle.fromGCircle(circles[startCircleIx])
         val endCircleIx = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
         val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
         val newGeneralizedCircles = mutableListOf<GeneralizedCircle>()
-        val nL = 1 // start = L[eft]
-        val nR = 3 // end = R[ight]
         var a = start
         var b = end
         var c: GeneralizedCircle
@@ -1217,7 +1219,10 @@ class EditClusterViewModel(
             a = b
             b = c
         }
-        createNewCircles(newGeneralizedCircles.map { it.toGCircle() as CircleOrLine })
+        createNewCircles(
+            newGeneralizedCircles
+                .map { it.toGCircle() as CircleOrLine }
+        )
         partialArgList = PartialArgList(argList.signature)
     }
 

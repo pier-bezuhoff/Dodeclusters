@@ -111,8 +111,8 @@ data class GeneralizedCircle(
         else this * (1/n)
     }
 
-    // NOTE: -X != X, sign represents direction
     //  X == k*X where k>0
+    // NOTE: ignores direction since it uses .normalized()
     infix fun homogenousEquals(other: GeneralizedCircle): Boolean {
         val (wxyz1, wxyz2) = listOf(
             this.normalized(),
@@ -129,7 +129,7 @@ data class GeneralizedCircle(
     /** Even though the inputs are pre-normalized before combining,
      * the output is NOT normalized */
     fun affineCombination(other: GeneralizedCircle, k: Double): GeneralizedCircle =
-        this.normalized()*k + other.normalized()*(1 - k)
+        this.normalizedPreservingDirection()*k + other.normalizedPreservingDirection()*(1 - k)
 
     fun applyTo(target: GeneralizedCircle): GeneralizedCircle {
         val (w0,x0,y0,z0) = target
@@ -152,26 +152,49 @@ data class GeneralizedCircle(
     }
 
     /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
-     * counting from [this] circle's side */
+     * counting from [this] circle's side. [index]=0 being [this] circle. */
     fun bisector(other: GeneralizedCircle, nOfSections: Int = 2, index: Int = 1): GeneralizedCircle {
         require(nOfSections >= 1)
-        return affineCombination(other, (nOfSections - index).toDouble()/nOfSections)
+        // signifies relative direction of [this] wrt. [other]
+        val sign = this.scalarProduct(other).let {
+            if (it >= 0) +1
+            else -1
+        }
+        val a0 = this.normalizedPreservingDirection()
+        val b0 = other.normalizedPreservingDirection()*sign
+        val k = (nOfSections - index).toDouble()/nOfSections
+        return a0*k + b0*(1.0-k)
     }
 
-    // = affineCombination(other, infinity)
-    fun altBisector(other: GeneralizedCircle): GeneralizedCircle =
-        this.normalized() - other.normalized()
+    /**
+     * `abs < 1` => 2 intersection points;
+     * `abs = 1` => they touch, 1 intersection point;
+     * `abs > 1` => 0 intersection points;
+     *
+     * `0` => perpendicular,
+     * `<0` => anti-parallel
+     *
+     *  Not to be confused with "inversive angle", that is `acos(inversiveDistance)` and
+     *  in case of intersecting circles is simply the oriented angle between them
+     * */
+    fun inversiveDistance(other: GeneralizedCircle): Double =
+        this.normalizedPreservingDirection() scalarProduct other.normalizedPreservingDirection()
 
-    // in non-elliptic pencils subdivide+out is meaningless
+    // in non-elliptic pencils subdivide+out is hardly applicable
+    // in particular, in hyperbolic pencil it returns imaginary circles or points
+    // and in parabolic pencil it loses meaning (i think)
     fun calculatePencilType(other: GeneralizedCircle): CirclePencilType? =
         if (this homogenousEquals other) {
             null
         } else {
-            val s = this.normalized() scalarProduct other.normalized()
+            // sign of the scalar product is relative direction of [this] wrt. to [other]
+            val d = inversiveDistance(other)
+            val d0 = abs(d)
             when {
-                abs(s) < EPSILON -> CirclePencilType.PARABOLIC
-                s > 0 -> CirclePencilType.ELLIPTIC
-                s < 0 -> CirclePencilType.HYPERBOLIC
+                abs(1 - d0) < EPSILON -> CirclePencilType.PARABOLIC
+                // s0 = 0 => they are perpendicular
+                d0 < 1.0 -> CirclePencilType.ELLIPTIC
+                d0 > 1.0 -> CirclePencilType.HYPERBOLIC
                 else -> throw IllegalStateException("Never")
             }
         }
