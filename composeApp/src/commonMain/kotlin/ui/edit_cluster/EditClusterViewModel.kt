@@ -613,6 +613,11 @@ class EditClusterViewModel(
         restrictRegionsToSelection = !restrictRegionsToSelection
     }
 
+    fun applyChessboardPatter() {
+        // make second application shift all 0->1 and 1->0
+        TODO()
+    }
+
     fun selectRegionColor(color: Color) {
         showColorPickerDialog = false
         regionColor = color
@@ -1235,7 +1240,7 @@ class EditClusterViewModel(
             EditClusterTool.ToggleSelectAll -> toggleSelectAll()
             EditClusterTool.Region -> switchToMode(SelectionMode.Region)
             EditClusterTool.FlowFill -> activateFlowFill()
-            EditClusterTool.FillChessboardPattern -> TODO()
+            EditClusterTool.FillChessboardPattern -> applyChessboardPatter()
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             EditClusterTool.DeleteAllParts -> deleteAllParts()
             EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selected circles only

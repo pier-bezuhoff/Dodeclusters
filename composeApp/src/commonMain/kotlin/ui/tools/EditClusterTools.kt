@@ -144,7 +144,7 @@ sealed class EditClusterTool(
         Res.string.flow_fill_description,
         Res.drawable.two_of_three_circles_connected
     )
-    data object FillChessboardPattern: Switch(
+    data object FillChessboardPattern: Action(
         Res.string.stub,
         Res.string.stub,
         Res.drawable.chessboard

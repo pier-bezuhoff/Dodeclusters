@@ -19,6 +19,8 @@
     <string name="region_description">Режим выбора областей между окружностями для заливки</string>
     <string name="flow_fill_name">Свайп-заливка</string>
     <string name="flow_fill_description">Режим заливки областей проводя курсором через них</string>
+    <string name="fill_chessboard_pattern_name">Узор шахматной доски</string>
+    <string name="fill_chessboard_pattern_description">Шахматная доска: залить области через одну</string>
     <string name="restrict_region_to_selection_name">Ограничить области выделением</string>
     <string name="restrict_region_to_selection_description">Ограничить области только окружностями из выделения</string>
     <string name="delete_all_parts_name">Очистить все области</string>
