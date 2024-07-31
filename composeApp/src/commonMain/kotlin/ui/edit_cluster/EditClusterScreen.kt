@@ -179,7 +179,24 @@ fun EditClusterScreen(
         CircleInterpolationDialog(
             circles[0], circles[1],
             onDismissRequest = { viewModel.resetCircleInterpolation() },
-            onConfirm = { viewModel.completeCircleInterpolation(it) }
+            onConfirm = { k, inBetween ->
+                viewModel.completeCircleInterpolation(k, inBetween)
+            },
+            defaults = viewModel.defaultInterpolationParameters
+        )
+    }
+    if (viewModel.showCircleExtrapolationDialog && viewModel.partialArgList?.isFull == true) {
+        val circles = viewModel.partialArgList!!.args
+            .map {
+                viewModel.circles[(it as PartialArgList.Arg.CircleIndex).index]
+            }
+        CircleExtrapolationDialog(
+            circles[0], circles[1],
+            onDismissRequest = { viewModel.resetCircleExtrapolation() },
+            onConfirm = { nLeft, nRight ->
+                viewModel.completeCircleExtrapolation(nLeft, nRight)
+            },
+            defaults = viewModel.defaultExtrapolationParameters
         )
     }
     coroutineScope.launch {

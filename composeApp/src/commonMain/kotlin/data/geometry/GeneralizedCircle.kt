@@ -148,20 +148,27 @@ data class GeneralizedCircle(
 //            2*x*y*y0 + x0*(x*x - y*y) - 2*(x*w0 - x0*w)*z - 2*x*z0*w,
 //            2*x*x0*y + y0*(y*y - x*x) - 2*(y*w0 - y0*w)*z - 2*y*z0*w,
 //            2*(x*x0 + y*y0)*z - (x*x + y*y)*z0 - 2*z*z*w0
-        )
+        ).normalizedPreservingDirection() // to avoid cumulative overflow
     }
 
     /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
      * counting from [this] circle's side. [index]=0 being [this] circle. */
-    fun bisector(other: GeneralizedCircle, nOfSections: Int = 2, index: Int = 1): GeneralizedCircle {
+    fun bisector(
+        other: GeneralizedCircle,
+        nOfSections: Int = 2,
+        index: Int = 1,
+        inBetween: Boolean = true
+    ): GeneralizedCircle {
         require(nOfSections >= 1)
         // signifies relative direction of [this] wrt. [other]
         val sign = this.scalarProduct(other).let {
             if (it >= 0) +1
             else -1
         }
+        // BUG: inBetween doesn't work
+        val inOutSign = if (inBetween) +1 else -1
         val a0 = this.normalizedPreservingDirection()
-        val b0 = other.normalizedPreservingDirection()*sign
+        val b0 = other.normalizedPreservingDirection()*sign*inOutSign
         val k = (nOfSections - index).toDouble()/nOfSections
         return a0*k + b0*(1.0-k)
     }
@@ -205,7 +212,7 @@ data class GeneralizedCircle(
             isRealCircle -> Circle(x / w, y / w, sqrt(r2))
             isPoint -> Point(x / w, y / w)
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
-            else -> throw IllegalStateException("Never")
+            else -> throw IllegalStateException("Never. $this")
         }
     }
 

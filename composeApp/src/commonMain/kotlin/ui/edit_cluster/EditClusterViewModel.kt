@@ -45,7 +45,6 @@ import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import kotlin.math.pow
-import kotlin.math.sign
 
 /** circle index in vm.circles or cluster.circles */
 typealias Ix = Int
@@ -135,6 +134,11 @@ class EditClusterViewModel(
     )
     var undoIsEnabled by mutableStateOf(false) // = history is not empty
     var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
+
+    var defaultInterpolationParameters = DefaultInterpolationParameters()
+        private set
+    var defaultExtrapolationParameters = DefaultExtrapolationParameters()
+        private set
 
     private val _circleAnimations = MutableSharedFlow<CircleAnimation>()
     val circleAnimations = _circleAnimations.asSharedFlow()
@@ -423,6 +427,8 @@ class EditClusterViewModel(
             }
             showCircles = true
             partialArgList = PartialArgList(newMode.signature)
+        } else {
+            partialArgList = null
         }
         mode = newMode
         submode = SubMode.None
@@ -1112,7 +1118,7 @@ class EditClusterViewModel(
             ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
             ToolMode.CIRCLE_INTERPOLATION -> showCircleInterpolationDialog = true
-            ToolMode.CIRCLE_EXTRAPOLATION -> completeCircleExtrapolation()
+            ToolMode.CIRCLE_EXTRAPOLATION -> showCircleExtrapolationDialog = true
         }
     }
 
@@ -1182,8 +1188,7 @@ class EditClusterViewModel(
         partialArgList = PartialArgList(argList.signature)
     }
 
-    // TODO: implement dialog for choosing k and direction for elliptic pencil
-    fun completeCircleInterpolation(nInterjacents: Int) {
+    fun completeCircleInterpolation(nInterjacents: Int, inBetween: Boolean = true) {
         showCircleInterpolationDialog = false
         val argList = partialArgList!!
         val startCircleIx = (argList.args[0] as PartialArgList.Arg.CircleIndex).index
@@ -1192,11 +1197,12 @@ class EditClusterViewModel(
         val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
         val n = nInterjacents + 1
         val newCircles = (1 until n).map { i ->
-            val interjacent = start.bisector(end, nOfSections = n, index = i)
+            val interjacent = start.bisector(end, nOfSections = n, index = i, inBetween = inBetween)
             interjacent.toGCircle() as CircleOrLine
         }
         createNewCircles(newCircles)
         partialArgList = PartialArgList(argList.signature)
+        defaultInterpolationParameters = DefaultInterpolationParameters(nInterjacents, inBetween)
     }
 
     fun resetCircleInterpolation() {
@@ -1204,10 +1210,11 @@ class EditClusterViewModel(
         partialArgList = PartialArgList(EditClusterTool.CircleInterpolation.signature)
     }
 
-    // TODO: this works but implement dialog for choosing nL & nR
-    private fun completeCircleExtrapolation() {
-        val nL = 1 // start = L[eft]
-        val nR = 3 // end = R[ight]
+    fun completeCircleExtrapolation(
+        nLeft: Int, // start = Left
+        nRight: Int, // end = Right
+    ) {
+        showCircleExtrapolationDialog = false
         val argList = partialArgList!!
         val startCircleIx = (argList.args[0] as PartialArgList.Arg.CircleIndex).index
         val start = GeneralizedCircle.fromGCircle(circles[startCircleIx])
@@ -1217,7 +1224,7 @@ class EditClusterViewModel(
         var a = start
         var b = end
         var c: GeneralizedCircle
-        repeat(nL) { // <-c-a-b
+        repeat(nLeft) { // <-c-a-b
             c = a.applyTo(b)
             newGeneralizedCircles.add(c)
             b = a
@@ -1225,7 +1232,7 @@ class EditClusterViewModel(
         }
         a = start
         b = end
-        repeat(nR) { // a-b-c->
+        repeat(nRight) { // a-b-c->
             c = b.applyTo(a)
             newGeneralizedCircles.add(c)
             a = b
@@ -1236,6 +1243,12 @@ class EditClusterViewModel(
                 .map { it.toGCircle() as CircleOrLine }
         )
         partialArgList = PartialArgList(argList.signature)
+        defaultExtrapolationParameters = DefaultExtrapolationParameters(nLeft, nRight)
+    }
+
+    fun resetCircleExtrapolation() {
+        showCircleExtrapolationDialog = false
+        partialArgList = PartialArgList(EditClusterTool.CircleExtrapolation.signature)
     }
 
     fun toolAction(tool: EditClusterTool) {
