@@ -140,6 +140,8 @@ class EditClusterViewModel(
     val circleAnimations = _circleAnimations.asSharedFlow()
 
     var showColorPickerDialog by mutableStateOf(false)
+    var showCircleInterpolationDialog by mutableStateOf(false)
+    var showCircleExtrapolationDialog by mutableStateOf(false)
 
     var canvasSize by mutableStateOf(IntSize.Zero) // used when saving best-center
     private val selectionControlsPositions by derivedStateOf {
@@ -1102,14 +1104,14 @@ class EditClusterViewModel(
     private fun completeToolMode() {
         val toolMode = mode
         val argList = partialArgList
-        require(argList != null && argList.isFull && argList.isValid && argList.lastArgIsConfirmed)
-        require(toolMode is ToolMode && toolMode.signature == argList.signature)
+        require(argList != null && argList.isFull && argList.isValid && argList.lastArgIsConfirmed) { "Invalid partialArgList $argList" }
+        require(toolMode is ToolMode && toolMode.signature == argList.signature) { "Invalid signature: $toolMode's ${(toolMode as ToolMode).signature} != ${argList.signature}" }
         when (toolMode) {
             ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> completeCircleByCenterAndRadius()
             ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
             ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
-            ToolMode.CIRCLE_INTERPOLATION -> completeCircleInterpolation()
+            ToolMode.CIRCLE_INTERPOLATION -> showCircleInterpolationDialog = true
             ToolMode.CIRCLE_EXTRAPOLATION -> completeCircleExtrapolation()
         }
     }
@@ -1181,20 +1183,25 @@ class EditClusterViewModel(
     }
 
     // TODO: implement dialog for choosing k and direction for elliptic pencil
-    private fun completeCircleInterpolation() {
-        val k = 3
+    fun completeCircleInterpolation(nInterjacents: Int) {
+        showCircleInterpolationDialog = false
         val argList = partialArgList!!
         val startCircleIx = (argList.args[0] as PartialArgList.Arg.CircleIndex).index
         val start = GeneralizedCircle.fromGCircle(circles[startCircleIx])
         val endCircleIx = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
         val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
-        val n = k + 2
+        val n = nInterjacents + 1
         val newCircles = (1 until n).map { i ->
             val interjacent = start.bisector(end, nOfSections = n, index = i)
             interjacent.toGCircle() as CircleOrLine
         }
         createNewCircles(newCircles)
         partialArgList = PartialArgList(argList.signature)
+    }
+
+    fun resetCircleInterpolation() {
+        showCircleInterpolationDialog = false
+        partialArgList = PartialArgList(EditClusterTool.CircleInterpolation.signature)
     }
 
     // TODO: this works but implement dialog for choosing nL & nR

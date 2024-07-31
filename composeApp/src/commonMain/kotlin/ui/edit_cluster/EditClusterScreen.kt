@@ -171,6 +171,17 @@ fun EditClusterScreen(
             onConfirm = viewModel::selectRegionColor
         )
     }
+    if (viewModel.showCircleInterpolationDialog && viewModel.partialArgList?.isFull == true) {
+        val circles = viewModel.partialArgList!!.args
+            .map {
+                viewModel.circles[(it as PartialArgList.Arg.CircleIndex).index]
+            }
+        CircleInterpolationDialog(
+            circles[0], circles[1],
+            onDismissRequest = { viewModel.resetCircleInterpolation() },
+            onConfirm = { viewModel.completeCircleInterpolation(it) }
+        )
+    }
     coroutineScope.launch {
         if (ddcContent != null) {
             println("loading external ddc")
