@@ -140,7 +140,7 @@ data class Line(
                 val l1 = this.normalized()
                 val l2 = circle.normalized()
                 l1.a == l2.a && l1.b == l2.b && l1.c <= l2.c // MAYBE: use epsilon eq here
-                // || l1.a == -l2.a && l1.b == -l2.b && l1.c <= -l2.c
+                // NOTE: anti-parallel line (l' == -l) cannot define a half-plane that is fully inside
             }
         }
 
@@ -150,7 +150,7 @@ data class Line(
             is Line -> {
                 val l1 = this.normalized()
                 val l2 = circle.normalized()
-                l1.a == -l2.a && l1.b == -l2.b && l1.c >= -l2.c // MAYBE: use epsilon eq here
+                l1.a == -l2.a && l1.b == -l2.b && l1.c <= -l2.c // MAYBE: use epsilon eq here
             }
         }
 

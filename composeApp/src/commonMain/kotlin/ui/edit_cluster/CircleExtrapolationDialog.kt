@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -32,6 +31,7 @@ data class DefaultExtrapolationParameters(
     val nRight: Int = 1,
 )
 
+// TODO: localization
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CircleExtrapolationDialog(
@@ -41,17 +41,18 @@ fun CircleExtrapolationDialog(
     onConfirm: (nLeft: Int, nRight: Int) -> Unit,
     defaults: DefaultExtrapolationParameters = DefaultExtrapolationParameters(),
 ) {
+    val maxCount = 10
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val leftSliderState = remember { SliderState(
         value = defaults.nLeft.toFloat(),
-        steps = 11,
-        valueRange = 0f..10f
+        steps = maxCount + 1,
+        valueRange = 0f..maxCount.toFloat()
     ) }
     val rightSliderState = remember { SliderState(
         value = defaults.nRight.toFloat(),
-        steps = 11,
-        valueRange = 0f..10f
+        steps = maxCount + 1,
+        valueRange = 0f..maxCount.toFloat()
     ) }
     Dialog(
         onDismissRequest = onDismissRequest

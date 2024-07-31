@@ -97,17 +97,17 @@ data class Circle(
 
     override fun isInside(circle: CircleOrLine): Boolean =
         when (circle) {
-            is Circle ->
+            is Circle -> // "⭗" case
                 (center - circle.center).getDistance() + radius <= circle.radius
-            is Line ->
+            is Line -> // " o |" case
                 circle.hasInside(center) && circle.distanceFrom(center) >= radius
         }
 
     override fun isOutside(circle: CircleOrLine): Boolean =
         when (circle) {
-            is Circle ->
+            is Circle -> // "o o" case
                 (center - circle.center).getDistance() >= circle.radius + radius
-            is Line ->
+            is Line -> // "| o" case
                 circle.hasOutside(center) && circle.distanceFrom(center) >= radius
         }
 

@@ -479,43 +479,39 @@ class EditClusterViewModel(
                 selection.add(ix)
         }
 
+    // BUG: with many lines
     /** -> (compressed part, verbose part involving all circles) surrounding clicked position */
     private fun selectPartAt(visiblePosition: Offset, boundingCircles: List<Ix>? = null): Pair<Cluster.Part, Cluster.Part> {
         val position = absolute(visiblePosition)
         val delimiters = boundingCircles ?: circles.indices
         val ins = delimiters // NOTE: doesn't include circles that the point lies on
             .filter { ix -> circles[ix].hasInside(position) }
-            .sortedBy { ix ->
-                when (val circle = circles[ix]) {
-                    is Circle -> circle.radius
-                    is Line -> Double.POSITIVE_INFINITY
-                }
-            }
         val outs = delimiters
             .filter { ix -> circles[ix].hasOutside(position) }
-            .sortedByDescending { ix ->
-                when (val circle = circles[ix]) {
-                    is Circle -> circle.radius
-                    is Line -> Double.POSITIVE_INFINITY
-                }
-            }
         // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
-        val excessiveIns = ins.indices.filter { j -> // NOTE: tbh idt these can occur naturally
-            val inJ = ins[j]
-            (0 until j).any { smallerRJ -> // being inside imposes constraint on radii, so we pre-sort by radius
-                circles[ins[smallerRJ]] isInside circles[inJ]
-            } || outs.any { ix -> circles[inJ] isInside circles[ix] } // if an 'in' isInside an 'out' it does nothing
-        }. map { ins[it] }
-        val excessiveOuts = outs.indices.filter { j ->
-            val outJ = outs[j]
-            (0 until j).any { largerRJ ->
-                circles[outJ] isInside circles[outs[largerRJ]]
-            } || ins.any { ix -> circles[outJ] isOutside circles[ix] } // if an 'out' isOutside an 'in' it does nothing
-        }.map { outs[it] }
+        val excessiveIns = ins.filter { inJ -> // NOTE: tbh idt these can occur naturally
+            val circle = circles[inJ]
+            ins.any { otherIn ->
+                otherIn != inJ && circles[otherIn] isInside circle // we only leave the smallest 'in'
+            } || outs.any { otherOut ->
+                circle isInside circles[otherOut] // if an 'in' isInside an 'out' it is empty
+            }
+        }
+        val excessiveOuts = outs.filter { outJ ->
+            val circle = circles[outJ]
+            outs.any { otherOut ->
+                otherOut != outJ && circle isInside circles[otherOut] // we only leave the biggest 'out'
+            } || ins.any { otherIn ->
+                circle isOutside circles[otherIn] // if an 'out' isOutside an 'in' it is empty
+            }
+        }
+        println("ins $ins - $excessiveIns")
+        println("outs $outs - $excessiveOuts")
         val sievedIns = ins.minus(excessiveIns.toSet())
         val sievedOuts = outs.minus(excessiveOuts.toSet())
-        val (essentialInsIxs, essentialOutsIxs) =
+        val (essentialInsIxs, essentialOutsIxs, points) =
             compressPartToEssentials(sievedIns.map { circles[it] }, sievedOuts.map { circles[it] })
+        _points = points
         val essentialIns = essentialInsIxs.map { sievedIns[it] }
         val essentialOuts = essentialOutsIxs.map { sievedOuts[it] }
         val part0 = Cluster.Part(ins.toSet(), outs.toSet(), regionColor)

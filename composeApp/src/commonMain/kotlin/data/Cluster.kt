@@ -64,10 +64,12 @@ data class OldCluster(
     val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
 )
 
+// BUG: with "[" shape
 fun compressPartToEssentials(
     ins: List<CircleOrLine>,
     outs: List<CircleOrLine>,
-): Pair<List<Ix>, List<Ix>> {
+): Triple<List<Ix>, List<Ix>, List<Point>> {
+//    ): Pair<List<Ix>, List<Ix>> {
 
     fun testIfPointFitsOurRequirements(point: Point): Boolean =
         ins.all { it.checkPositionEpsilon(point) <= 0 } && // inside or bordering ins
@@ -77,6 +79,7 @@ fun compressPartToEssentials(
     val n = allCircles.size
     val nIns = ins.size
     val intersections = mutableListOf<Point>()
+    val _intersections = mutableListOf<Point>()
     // circle ix -> ip ixs
     val circle2points: List<MutableSet<Int>> =
         allCircles.indices.map { mutableSetOf() }
@@ -86,6 +89,7 @@ fun compressPartToEssentials(
             val c2 = allCircles[j]
             val ips = Circle.calculateIntersectionPoints(c1, c2)
             for (ip in ips) {
+//                _intersections.add(ip)
                 val repeatIx = intersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
                 if (repeatIx == -1) { // new ip
                     val itFits = testIfPointFitsOurRequirements(ip)
@@ -110,6 +114,7 @@ fun compressPartToEssentials(
         val m = orderedIPs.size
         if (m == 0) {
             val mid = c.order2point(0.0) // no ips, checking random point on c
+            _intersections.add(mid)
             val itFits = testIfPointFitsOurRequirements(mid)
             if (itFits) {
                 if (i < nIns)
@@ -132,6 +137,7 @@ fun compressPartToEssentials(
                         val ip2 = orderedIPs[k]
                         c.pointInBetween(ip1, ip2)
                     }
+                _intersections.add(mid)
                 val itFits = testIfPointFitsOurRequirements(mid)
                 if (itFits) {
                     if (i < nIns)
@@ -154,5 +160,6 @@ fun compressPartToEssentials(
                 }
             }.index
         )
-    return Pair(essentialIns, essentialOuts)
+//    return Pair(essentialIns, essentialOuts)
+    return Triple(essentialIns, essentialOuts, _intersections)
 }
