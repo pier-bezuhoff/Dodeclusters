@@ -168,7 +168,7 @@ data class GeneralizedCircle(
         // BUG: inBetween doesn't work
         val inOutSign = if (inBetween) +1 else -1
         val a0 = this.normalizedPreservingDirection()
-        val b0 = other.normalizedPreservingDirection()*sign*inOutSign
+        val b0 = other.normalizedPreservingDirection()*sign//*inOutSign
         val k = (nOfSections - index).toDouble()/nOfSections
         return a0*k + b0*(1.0-k)
     }

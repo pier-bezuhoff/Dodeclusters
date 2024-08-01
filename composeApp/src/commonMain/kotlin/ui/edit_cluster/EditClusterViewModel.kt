@@ -505,8 +505,8 @@ class EditClusterViewModel(
                 circle isOutside circles[otherIn] // if an 'out' isOutside an 'in' it is empty
             }
         }
-        println("ins $ins - $excessiveIns")
-        println("outs $outs - $excessiveOuts")
+//        println("ins $ins - $excessiveIns")
+//        println("outs $outs - $excessiveOuts")
         val sievedIns = ins.minus(excessiveIns.toSet())
         val sievedOuts = outs.minus(excessiveOuts.toSet())
         val (essentialInsIxs, essentialOutsIxs, points) =

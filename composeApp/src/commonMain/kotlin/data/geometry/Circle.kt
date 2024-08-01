@@ -61,14 +61,12 @@ data class Circle(
             +1
     }
 
+    /** CCW order starting from the East: ENWS */
     override fun point2order(point: Point): Double =
         // NOTE: atan2 uses CCW y-top, x-right coordinates
         //  so we negate y for CCW direction
         atan2(-point.y + y, point.x - x)
 
-    // Constraints:
-    // order2point(point2order(p)) === p
-    // point2order(order2point(o)) === o
     override fun order2point(order: Double) =
         Point(
             x + radius*cos(order),
@@ -295,13 +293,17 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
     fun distanceFrom(point: Offset): Double
     /** <0 = inside, 0 on the circle, >0 = outside */
     fun checkPosition(point: Offset): Int
-    /** same as [checkPosition] but additionally
-     * returns 0 when the distance in (-[EPSILON]; +[EPSILON]) */
+    /** -1 = inside, 0 on the circle, +1 = outside; also
+     * returns 0 when the distance is in (-[EPSILON]; +[EPSILON]) */
     fun checkPositionEpsilon(point: Point): Int
     fun hasInside(point: Offset): Boolean =
         checkPosition(point) < 0
     fun hasOutside(point: Offset): Boolean =
         checkPosition(point) > 0
+    fun hasInsideEpsilon(point: Point): Boolean =
+        checkPositionEpsilon(point) < 0
+    fun hasOutsideEpsilon(point: Point): Boolean =
+        checkPositionEpsilon(point) > 0
     /** semiorder ⊆ on circles' insides (⭗) */
     infix fun isInside(circle: CircleOrLine): Boolean
     /** semiorder ⊇ on circles, includes side-by-side (oo) but not encapsulating (⭗) case */
@@ -314,6 +316,9 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
 
 /** Represents totally ordered set of points equivalent to R or S1 */
 sealed interface LocusWithOrder {
+    // Constraints:
+    // order2point(point2order(p)) === p
+    // point2order(order2point(o)) === o
     fun point2order(point: Point): Double
     fun order2point(order: Double): Point
     fun orderInBetween(order1: Double, order2: Double): Double

@@ -85,6 +85,7 @@ data class Line(
             +1
     }
 
+    // conf_inf < projection along line direction; order 0 = project(0,0)
     override fun point2order(point: Point): Double {
         return if (point == Point.CONFORMAL_INFINITY)
             Double.NEGATIVE_INFINITY

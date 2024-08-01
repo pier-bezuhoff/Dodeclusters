@@ -1,7 +1,6 @@
 package data
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
 import data.geometry.CircleOrLine
@@ -11,7 +10,6 @@ import data.geometry.Point
 import data.io.Ddc
 import kotlinx.serialization.Serializable
 import ui.edit_cluster.Ix
-import kotlin.math.abs
 
 @Serializable
 @Immutable
@@ -79,7 +77,7 @@ fun compressPartToEssentials(
     val n = allCircles.size
     val nIns = ins.size
     val intersections = mutableListOf<Point>()
-    val _intersections = mutableListOf<Point>()
+//    val _intersections = mutableListOf<Point>()
     // circle ix -> ip ixs
     val circle2points: List<MutableSet<Int>> =
         allCircles.indices.map { mutableSetOf() }
@@ -114,9 +112,9 @@ fun compressPartToEssentials(
         val m = orderedIPs.size
         if (m == 0) {
             val mid = c.order2point(0.0) // no ips, checking random point on c
-            _intersections.add(mid)
             val itFits = testIfPointFitsOurRequirements(mid)
             if (itFits) {
+//                _intersections.add(mid)
                 if (i < nIns)
                     essentialIns.add(i)
                 else
@@ -124,9 +122,9 @@ fun compressPartToEssentials(
             }
         } else {
             for (k in 0 until m) {
+                val ip2 = orderedIPs[k]
                 val mid: Point =
-                    if (k == 0 && c is Line) {
-                        val ip2 = orderedIPs[k]
+                    if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY) {
                         c.pointInBetween(Point.CONFORMAL_INFINITY, ip2)
                     } else {
                         val prevK =
@@ -134,12 +132,11 @@ fun compressPartToEssentials(
                                 m - 1
                             else k - 1
                         val ip1 = orderedIPs[prevK]
-                        val ip2 = orderedIPs[k]
                         c.pointInBetween(ip1, ip2)
                     }
-                _intersections.add(mid)
                 val itFits = testIfPointFitsOurRequirements(mid)
                 if (itFits) {
+//                    _intersections.add(mid)
                     if (i < nIns)
                         essentialIns.add(i)
                     else
@@ -149,17 +146,100 @@ fun compressPartToEssentials(
             }
         }
     }
-    // salvaging all-concave (not strictly convex) parts
-    val allConcave = essentialIns.none { ins[it] is Circle }
-    if (allConcave && ins.isNotEmpty())
-        essentialIns.add(
-            ins.withIndex().minBy { (ix, circle) ->
-                when (circle) {
-                    is Line -> Double.POSITIVE_INFINITY
-                    is Circle -> abs(circle.radius)
+
+    fun partitionOf(circle: CircleOrLine): Partition =
+        intersections.indices.groupBy { i ->
+            circle.checkPositionEpsilon(intersections[i])
+        }.let {
+            Partition(emptySet(), emptySet(), emptySet())
+//            Partition(it[-1]!!.toSet(), it[0]?.toSet() ?: emptySet(), it[+1]!!.toSet())
+        }
+
+    val allEssentialCircles = essentialIns.map { ins[it] } + essentialOuts.map { outs[it] }
+    val essentialIntersections = mutableListOf<Point>()
+    for (i in allEssentialCircles.indices) {
+        for (j in (i+1) until allEssentialCircles.size) {
+            val c1 = allEssentialCircles[i]
+            val c2 = allEssentialCircles[j]
+            val ips = Circle.calculateIntersectionPoints(c1, c2)
+            for (ip in ips) {
+                val repeatIx = essentialIntersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
+                if (repeatIx == -1) { // new ip
+                    val itFits =
+                        essentialIns.all { ins[it].checkPositionEpsilon(ip) <= 0 } && // inside or bordering ins
+                        essentialOuts.all { outs[it].checkPositionEpsilon(ip) >= 0 } // outside or bordering outs
+                    if (itFits)
+                        essentialIntersections.add(ip)
                 }
-            }.index
-        )
+            }
+        }
+    }
+    println(essentialIntersections)
+
+    // leave only those with unique in-border-out ips partitions
+    val nonEdgeInsSeparators = (ins.indices - essentialIns.toSet()).filter { inIx ->
+        essentialIntersections.any { ip -> ins[inIx].hasInsideEpsilon(ip) } &&
+        essentialIntersections.any { ip -> ins[inIx].hasOutsideEpsilon(ip) }
+    }
+    val nonEdgeOutsSeparators = (outs.indices - essentialOuts.toSet()).filter { outIx ->
+        essentialIntersections.any { ip -> outs[outIx].hasInsideEpsilon(ip) } &&
+        essentialIntersections.any { ip -> outs[outIx].hasOutsideEpsilon(ip) }
+    }
+
+    val a = mutableMapOf<Ix, Partition>()
+    if (nonEdgeInsSeparators.isNotEmpty()) {
+        val i0 = nonEdgeInsSeparators.first()
+        val p0 = partitionOf(ins[i0])
+        a[i0] = p0
+        for (i in nonEdgeInsSeparators.drop(1)) {
+            val p = partitionOf(ins[i])
+            if (a.values.none { it.isCongruentTo(p) || it.isCongruentTo(p.inverted()) })
+                a[i] = p
+        }
+    }
+    val b = mutableMapOf<Ix, Partition>()
+    if (nonEdgeOutsSeparators.isNotEmpty()) {
+        val i0 = nonEdgeOutsSeparators.first()
+        val p0 = partitionOf(outs[i0])
+        b[i0] = p0
+        for (i in nonEdgeOutsSeparators.drop(1)) {
+            val p = partitionOf(outs[i])
+            if (a.values.none { it.isCongruentTo(p) || it.isCongruentTo(p.inverted()) } &&
+                b.values.none { it.isCongruentTo(p) || it.isCongruentTo(p.inverted()) }
+            )
+                b[i] = p
+        }
+    }
+    println(a.entries)
+    println(b.entries)
+    essentialIns.addAll(a.keys)
+    essentialOuts.addAll(b.keys)
+    // salvaging all-concave (not strictly convex) parts
+//    val allConcave = essentialIns.none { ins[it] is Circle }
+//    if (allConcave && ins.isNotEmpty())
+//        essentialIns.add(
+//            ins.withIndex().minBy { (ix, circle) ->
+//                when (circle) {
+//                    is Line -> Double.POSITIVE_INFINITY
+//                    is Circle -> abs(circle.radius)
+//                }
+//            }.index
+//        )
 //    return Pair(essentialIns, essentialOuts)
-    return Triple(essentialIns, essentialOuts, _intersections)
+    return Triple(essentialIns, essentialOuts, essentialIntersections)
+}
+
+internal data class Partition(
+    val ins: Set<Ix>,
+    val border: Set<Ix>,
+    val outs: Set<Ix>
+) {
+    fun inverted(): Partition =
+        Partition(outs, border, ins)
+
+    infix fun isCongruentTo(other: Partition): Boolean =
+        (ins + border).containsAll(other.ins) &&
+        (other.ins + other.border).containsAll(ins) &&
+        (outs + border).containsAll(other.outs) &&
+        (other.outs + other.border).containsAll(outs)
 }
