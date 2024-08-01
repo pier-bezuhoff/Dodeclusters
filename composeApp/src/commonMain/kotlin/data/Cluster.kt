@@ -156,64 +156,80 @@ fun compressPartToEssentials(
         }
 
     val allEssentialCircles = essentialIns.map { ins[it] } + essentialOuts.map { outs[it] }
-    val essentialIntersections = mutableListOf<Point>()
+    val extendedIntersections = mutableListOf<Point>()
     for (i in allEssentialCircles.indices) {
         for (j in (i+1) until allEssentialCircles.size) {
             val c1 = allEssentialCircles[i]
             val c2 = allEssentialCircles[j]
             val ips = Circle.calculateIntersectionPoints(c1, c2)
             for (ip in ips) {
-                val repeatIx = essentialIntersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
+                val repeatIx = extendedIntersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
                 if (repeatIx == -1) { // new ip
                     val itFits =
                         essentialIns.all { ins[it].checkPositionEpsilon(ip) <= 0 } && // inside or bordering ins
                         essentialOuts.all { outs[it].checkPositionEpsilon(ip) >= 0 } // outside or bordering outs
                     if (itFits)
-                        essentialIntersections.add(ip)
+                        extendedIntersections.add(ip)
                 }
             }
         }
     }
-    println(essentialIntersections)
-
+    val unwantedIntersections = extendedIntersections.toSet() - intersections.toSet()
+    if (unwantedIntersections.isNotEmpty()) {
+        println(unwantedIntersections)
+        val inSeparator = (ins.indices - essentialIns.toSet()).firstOrNull { inIx ->
+            unwantedIntersections.all { ins[inIx].hasOutsideEpsilon(it) }
+        }
+        if (inSeparator != null) {
+            essentialIns.add(inSeparator)
+        } else {
+            val outSeparator =
+                (outs.indices - essentialOuts.toSet()).firstOrNull { outIx ->
+                    unwantedIntersections.all { outs[outIx].hasInsideEpsilon(it) }
+                }
+            if (outSeparator != null) {
+                essentialOuts.add(outSeparator)
+            } // MAYBE: else maybe artificially add a befitting separator
+        }
+    }
     // leave only those with unique in-border-out ips partitions
-    val nonEdgeInsSeparators = (ins.indices - essentialIns.toSet()).filter { inIx ->
-        essentialIntersections.any { ip -> ins[inIx].hasInsideEpsilon(ip) } &&
-        essentialIntersections.any { ip -> ins[inIx].hasOutsideEpsilon(ip) }
-    }
-    val nonEdgeOutsSeparators = (outs.indices - essentialOuts.toSet()).filter { outIx ->
-        essentialIntersections.any { ip -> outs[outIx].hasInsideEpsilon(ip) } &&
-        essentialIntersections.any { ip -> outs[outIx].hasOutsideEpsilon(ip) }
-    }
-
-    val a = mutableMapOf<Ix, Partition>()
-    if (nonEdgeInsSeparators.isNotEmpty()) {
-        val i0 = nonEdgeInsSeparators.first()
-        val p0 = partitionOf(ins[i0])
-        a[i0] = p0
-        for (i in nonEdgeInsSeparators.drop(1)) {
-            val p = partitionOf(ins[i])
-            if (a.values.none { it.isCongruentTo(p) || it.isCongruentTo(p.inverted()) })
-                a[i] = p
-        }
-    }
-    val b = mutableMapOf<Ix, Partition>()
-    if (nonEdgeOutsSeparators.isNotEmpty()) {
-        val i0 = nonEdgeOutsSeparators.first()
-        val p0 = partitionOf(outs[i0])
-        b[i0] = p0
-        for (i in nonEdgeOutsSeparators.drop(1)) {
-            val p = partitionOf(outs[i])
-            if (a.values.none { it.isCongruentTo(p) || it.isCongruentTo(p.inverted()) } &&
-                b.values.none { it.isCongruentTo(p) || it.isCongruentTo(p.inverted()) }
-            )
-                b[i] = p
-        }
-    }
-    println(a.entries)
-    println(b.entries)
-    essentialIns.addAll(a.keys)
-    essentialOuts.addAll(b.keys)
+//    val nonEdgeInsSeparators = (ins.indices - essentialIns.toSet()).filter { inIx ->
+//        extendedIntersections.any { ip -> ins[inIx].hasInsideEpsilon(ip) } &&
+//        extendedIntersections.any { ip -> ins[inIx].hasOutsideEpsilon(ip) }
+//    }
+//    val nonEdgeOutsSeparators = (outs.indices - essentialOuts.toSet()).filter { outIx ->
+//        extendedIntersections.any { ip -> outs[outIx].hasInsideEpsilon(ip) } &&
+//        extendedIntersections.any { ip -> outs[outIx].hasOutsideEpsilon(ip) }
+//    }
+//
+//    val a = mutableMapOf<Ix, Partition>()
+//    if (nonEdgeInsSeparators.isNotEmpty()) {
+//        val i0 = nonEdgeInsSeparators.first()
+//        val p0 = partitionOf(ins[i0])
+//        a[i0] = p0
+//        for (i in nonEdgeInsSeparators.drop(1)) {
+//            val p = partitionOf(ins[i])
+//            if (a.values.none { it.isCongruentTo(p) || it.isCongruentTo(p.inverted()) })
+//                a[i] = p
+//        }
+//    }
+//    val b = mutableMapOf<Ix, Partition>()
+//    if (nonEdgeOutsSeparators.isNotEmpty()) {
+//        val i0 = nonEdgeOutsSeparators.first()
+//        val p0 = partitionOf(outs[i0])
+//        b[i0] = p0
+//        for (i in nonEdgeOutsSeparators.drop(1)) {
+//            val p = partitionOf(outs[i])
+//            if (a.values.none { it.isCongruentTo(p) || it.isCongruentTo(p.inverted()) } &&
+//                b.values.none { it.isCongruentTo(p) || it.isCongruentTo(p.inverted()) }
+//            )
+//                b[i] = p
+//        }
+//    }
+//    println(a.entries)
+//    println(b.entries)
+//    essentialIns.addAll(a.keys)
+//    essentialOuts.addAll(b.keys)
     // salvaging all-concave (not strictly convex) parts
 //    val allConcave = essentialIns.none { ins[it] is Circle }
 //    if (allConcave && ins.isNotEmpty())
@@ -226,7 +242,7 @@ fun compressPartToEssentials(
 //            }.index
 //        )
 //    return Pair(essentialIns, essentialOuts)
-    return Triple(essentialIns, essentialOuts, essentialIntersections)
+    return Triple(essentialIns, essentialOuts, extendedIntersections)
 }
 
 internal data class Partition(
