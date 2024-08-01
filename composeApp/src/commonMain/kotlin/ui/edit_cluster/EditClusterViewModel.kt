@@ -479,9 +479,11 @@ class EditClusterViewModel(
                 selection.add(ix)
         }
 
-    // BUG: with many lines
     /** -> (compressed part, verbose part involving all circles) surrounding clicked position */
-    private fun selectPartAt(visiblePosition: Offset, boundingCircles: List<Ix>? = null): Pair<Cluster.Part, Cluster.Part> {
+    private fun selectPartAt(
+        visiblePosition: Offset,
+        boundingCircles: List<Ix>? = null
+    ): Pair<Cluster.Part, Cluster.Part> {
         val position = absolute(visiblePosition)
         val delimiters = boundingCircles ?: circles.indices
         val ins = delimiters // NOTE: doesn't include circles that the point lies on
@@ -505,13 +507,10 @@ class EditClusterViewModel(
                 circle isOutside circles[otherIn] // if an 'out' isOutside an 'in' it is empty
             }
         }
-//        println("ins $ins - $excessiveIns")
-//        println("outs $outs - $excessiveOuts")
         val sievedIns = ins.minus(excessiveIns.toSet())
         val sievedOuts = outs.minus(excessiveOuts.toSet())
-        val (essentialInsIxs, essentialOutsIxs, points) =
+        val (essentialInsIxs, essentialOutsIxs) =
             compressPartToEssentials(sievedIns.map { circles[it] }, sievedOuts.map { circles[it] })
-        _points = points
         val essentialIns = essentialInsIxs.map { sievedIns[it] }
         val essentialOuts = essentialOutsIxs.map { sievedOuts[it] }
         val part0 = Cluster.Part(ins.toSet(), outs.toSet(), regionColor)

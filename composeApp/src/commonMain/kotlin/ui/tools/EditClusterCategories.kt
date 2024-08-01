@@ -46,10 +46,11 @@ sealed class EditClusterCategory(
         listOf(
             EditClusterTool.Region,
             EditClusterTool.FlowFill,
-//            EditClusterTool.RestrictRegionToSelection,
+            EditClusterTool.RestrictRegionToSelection,
             EditClusterTool.DeleteAllParts,
             // EditClusterTool.AppliedColor's are auto-added
-        )
+        ),
+        defaultables = listOf(0)
     ) { // ~mode-like
         // button/switch: chessboard pattern
     }
