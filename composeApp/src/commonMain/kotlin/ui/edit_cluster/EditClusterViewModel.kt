@@ -220,7 +220,7 @@ class EditClusterViewModel(
         }
     }
 
-    private fun moveToDdcCenter(bestCenterX: Float?, bestCenterY: Float?) {
+    fun moveToDdcCenter(bestCenterX: Float?, bestCenterY: Float?) {
         translation = -Offset(
             bestCenterX?.let { it - canvasSize.width/2f } ?: 0f,
             bestCenterY?.let { it - canvasSize.height/2f } ?: 0f
@@ -255,7 +255,7 @@ class EditClusterViewModel(
         }
     }
 
-    private fun loadCluster(cluster: Cluster) {
+    fun loadCluster(cluster: Cluster) {
         displayChessboardPattern = false
         translation = Offset.Zero
         selection.clear()

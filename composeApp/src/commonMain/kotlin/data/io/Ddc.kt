@@ -143,6 +143,15 @@ data class Ddc(
         val DEFAULT_CIRCLE_FILL_COLOR: Color = Color.Black
         val DEFAULT_CIRCLE_BORDER_COLOR: Color? = null
         val DEFAULT_CIRCLE_RULE = emptyList<Int>()
+
+        val SAMPLE = Ddc(
+            name = "circle",
+            bestCenterX = 0f,
+            bestCenterY = 0f,
+            content = listOf(
+                Token.Circle(0, 0.0, 0.0, 200.0, filled = true)
+            )
+        )
     }
 }
 

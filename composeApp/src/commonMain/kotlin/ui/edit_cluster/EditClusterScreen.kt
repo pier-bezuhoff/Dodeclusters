@@ -52,8 +52,10 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import data.Cluster
 import data.ClusterRepository
 import data.PartialArgList
+import data.geometry.Circle
 import data.io.Ddc
 import data.io.OpenFileButton
 import data.io.SaveData
@@ -80,6 +82,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import ui.theme.DodeclustersColors
+import ui.theme.primaryDark
+import ui.theme.secondaryDark
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import ui.tools.Tool
@@ -209,6 +213,16 @@ fun EditClusterScreen(
                     viewModel.loadFromYaml(content)
                 }
             }
+        } else {
+            viewModel.loadCluster(Cluster(
+                listOf(Circle(0.0, 0.0, 200.0)),
+                parts = listOf(Cluster.Part(
+                    insides = setOf(0),
+                    outsides = emptySet(),
+                    fillColor = primaryDark
+                ))
+            ))
+            viewModel.moveToDdcCenter(0f, 0f)
         }
     }
 }
