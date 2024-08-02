@@ -7,6 +7,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
 import dodeclusters.composeapp.generated.resources.chessboard
+import dodeclusters.composeapp.generated.resources.chessboard_reflected
 import dodeclusters.composeapp.generated.resources.circle
 import dodeclusters.composeapp.generated.resources.circle_3_points
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_arg_descriptions
@@ -40,6 +41,8 @@ import dodeclusters.composeapp.generated.resources.drag_name
 import dodeclusters.composeapp.generated.resources.duplicate_description
 import dodeclusters.composeapp.generated.resources.duplicate_name
 import dodeclusters.composeapp.generated.resources.extrapolate_lines
+import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_description
+import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_name
 import dodeclusters.composeapp.generated.resources.filled_circle
 import dodeclusters.composeapp.generated.resources.flow_fill_description
 import dodeclusters.composeapp.generated.resources.flow_fill_name
@@ -144,10 +147,11 @@ sealed class EditClusterTool(
         Res.string.flow_fill_description,
         Res.drawable.two_of_three_circles_connected
     )
-    data object FillChessboardPattern: Action(
-        Res.string.stub,
-        Res.string.stub,
-        Res.drawable.chessboard
+    data object FillChessboardPattern: Switch(
+        Res.string.fill_chessboard_pattern_name,
+        Res.string.fill_chessboard_pattern_description,
+        Res.drawable.chessboard,
+        Res.drawable.chessboard_reflected,
     )
     data object RestrictRegionToSelection: Switch(
         Res.string.restrict_region_to_selection_name,

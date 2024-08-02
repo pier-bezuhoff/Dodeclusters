@@ -62,10 +62,10 @@ data class OldCluster(
     val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
 )
 
+/** Filters out all unused 'in' and 'out' separators */
 fun compressPartToEssentials(
     ins: List<CircleOrLine>,
     outs: List<CircleOrLine>,
-//): Triple<List<Ix>, List<Ix>, List<Point>> {
 ): Pair<List<Ix>, List<Ix>> {
 
     fun testIfPointFitsOurRequirements(point: Point): Boolean =
@@ -76,17 +76,16 @@ fun compressPartToEssentials(
     val n = allCircles.size
     val nIns = ins.size
     val intersections = mutableListOf<Point>()
-//    val _intersections = mutableListOf<Point>()
     // circle ix -> ip ixs
     val circle2points: List<MutableSet<Int>> =
         allCircles.indices.map { mutableSetOf() }
+    // compute all distinct intersections bordering our region, noting which circles they belong to
     for (i in 0 until n) {
         for (j in (i+1) until n) {
             val c1 = allCircles[i]
             val c2 = allCircles[j]
             val ips = Circle.calculateIntersectionPoints(c1, c2)
             for (ip in ips) {
-//                _intersections.add(ip)
                 val repeatIx = intersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
                 if (repeatIx == -1) { // new ip
                     val itFits = testIfPointFitsOurRequirements(ip)
@@ -105,6 +104,7 @@ fun compressPartToEssentials(
     }
     val essentialIns = mutableListOf<Ix>()
     val essentialOuts = mutableListOf<Ix>()
+    // find all the circles arcs of which define the edges of our region
     for (i in 0 until n) {
         val c = allCircles[i]
         val orderedIPs = c.orderPoints(circle2points[i].map { intersections[it] })
@@ -113,7 +113,6 @@ fun compressPartToEssentials(
             val mid = c.order2point(0.0) // no ips, checking random point on c
             val itFits = testIfPointFitsOurRequirements(mid)
             if (itFits) {
-//                _intersections.add(mid)
                 if (i < nIns)
                     essentialIns.add(i)
                 else
@@ -135,7 +134,6 @@ fun compressPartToEssentials(
                     }
                 val itFits = testIfPointFitsOurRequirements(mid)
                 if (itFits) {
-//                    _intersections.add(mid)
                     if (i < nIns)
                         essentialIns.add(i)
                     else
@@ -145,7 +143,7 @@ fun compressPartToEssentials(
             }
         }
     }
-
+    // compute extra intersections formed only by the edges
     val allEssentialCircles = essentialIns.map { ins[it] } + essentialOuts.map { outs[it] }
     val extendedIntersections = mutableListOf<Point>()
     for (i in allEssentialCircles.indices) {
@@ -166,6 +164,7 @@ fun compressPartToEssentials(
         }
     }
     val unwantedIntersections = extendedIntersections.toSet() - intersections.toSet()
+    // find the one additional circle isolating unwanted intersections
     if (unwantedIntersections.isNotEmpty()) {
         val inSeparator = (ins.indices - essentialIns.toSet()).firstOrNull { inIx ->
             unwantedIntersections.all { ins[inIx].hasOutsideEpsilon(it) }
@@ -183,5 +182,4 @@ fun compressPartToEssentials(
         }
     }
     return Pair(essentialIns, essentialOuts)
-//    return Triple(essentialIns, essentialOuts, extendedIntersections)
 }

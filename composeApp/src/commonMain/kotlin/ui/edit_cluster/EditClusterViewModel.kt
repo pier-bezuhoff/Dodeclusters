@@ -105,6 +105,10 @@ class EditClusterViewModel(
      * only use circles present in the [selection] to determine which parts to fill */
     var restrictRegionsToSelection by mutableStateOf(false)
         private set
+    var displayChessboardPattern by mutableStateOf(false)
+        private set
+    var invertChessboard by mutableStateOf(false)
+        private set
 
     val circleSelectionIsActive by derivedStateOf {
         showCircles && selection.isNotEmpty() && mode.isSelectingCircles()
@@ -252,6 +256,7 @@ class EditClusterViewModel(
     }
 
     private fun loadCluster(cluster: Cluster) {
+        displayChessboardPattern = false
         translation = Offset.Zero
         selection.clear()
         parts.clear()
@@ -529,6 +534,7 @@ class EditClusterViewModel(
         boundingCircles: List<Ix>? = null,
         setSelectionToRegionBounds: Boolean = false
     ) {
+        displayChessboardPattern = false
         val (part, part0) = selectPartAt(visiblePosition, boundingCircles)
         val outerParts = parts.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
         if (outerParts.isEmpty()) {
@@ -617,8 +623,15 @@ class EditClusterViewModel(
     }
 
     fun applyChessboardPatter() {
-        // make second application shift all 0->1 and 1->0
-        TODO()
+        if (!displayChessboardPattern) {
+            displayChessboardPattern = true
+            invertChessboard = false
+        } else if (!invertChessboard) {
+            invertChessboard = true
+        } else {
+            displayChessboardPattern = false
+            invertChessboard = false
+        }
     }
 
     fun selectRegionColor(color: Color) {
@@ -1278,6 +1291,7 @@ class EditClusterViewModel(
             EditClusterTool.ToggleSelectAll -> selection.containsAll(circles.indices.toSet())
             EditClusterTool.Region -> mode == SelectionMode.Region && submode !is SubMode.FlowFill
             EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
+            EditClusterTool.FillChessboardPattern -> !invertChessboard
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes

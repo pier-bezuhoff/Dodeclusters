@@ -2,6 +2,7 @@ package ui
 
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.PathOperation
 import data.geometry.Circle
 import data.Cluster
@@ -58,6 +59,26 @@ fun halfPlanePath(line: Line, visibleRect: Rect): Path {
     return path
 }
 
+fun chessboardPath(
+    circles: List<CircleOrLine>,
+    visibleRect: Rect,
+    inverted: Boolean = false
+): Path {
+    val path = Path()
+    circles.forEach {
+        val p = when (it) {
+            is Circle -> circle2path(it)
+            is Line -> visibleHalfPlanePath(it, visibleRect)
+        }
+        path.op(path, p, PathOperation.Xor)
+    }
+    if (inverted) {
+        val visiblePath = Path().apply { addRect(visibleRect.inflate(100f)) }
+        path.op(visiblePath, path, PathOperation.Difference)
+    }
+    return path
+}
+
 // NOTE: to create proper reduce(xor):
 // 2^(# circles) -> binary -> filter even number of 1 -> to parts
 // MAYBE: move to Cluster methods
@@ -103,7 +124,6 @@ fun part2path(
                 is Circle -> circle2path(circleOutside)
                 is Line -> halfPlanePath(circleOutside, visibleRect)
             }
-            // BUG: this can fail, in particular when scaling/rotating magnet-problems.yml
             acc.op(acc, path, PathOperation.Difference)
             acc
         }

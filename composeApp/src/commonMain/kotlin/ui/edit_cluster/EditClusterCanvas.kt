@@ -59,6 +59,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import ui.chessboardPath
 import ui.circle2path
 import ui.part2path
 import ui.reactiveCanvas
@@ -331,14 +332,23 @@ private fun DrawScope.drawParts(
     clusterPathAlpha: Float,
     circleStroke: DrawStyle,
 ) {
-    for (part in viewModel.parts) {
-        val path = part2path(viewModel.circles, part, visibleRect)
+    if (viewModel.displayChessboardPattern) {
         drawPath(
-            path,
-            color = part.fillColor,
+            chessboardPath(viewModel.circles, visibleRect, inverted = viewModel.invertChessboard),
+            color = viewModel.regionColor,
             alpha = clusterPathAlpha,
             style = if (viewModel.showWireframes) circleStroke else Fill,
         )
+    } else {
+        for (part in viewModel.parts) {
+            val path = part2path(viewModel.circles, part, visibleRect)
+            drawPath(
+                path,
+                color = part.fillColor,
+                alpha = clusterPathAlpha,
+                style = if (viewModel.showWireframes) circleStroke else Fill,
+            )
+        }
     }
 }
 
