@@ -43,7 +43,9 @@ import androidx.compose.ui.unit.dp
 import data.PartialArgList
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.GeneralizedCircle
 import data.geometry.Line
+import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_forever
@@ -382,6 +384,21 @@ private fun DrawScope.drawPartialConstructs(
                         radius = creationPointRadius,
                         center = arg.toOffset()
                     )
+                is PartialArgList.Arg.GeneralizedCircle ->
+                    when (val gCircle = arg.gCircle) {
+                        is CircleOrLine ->
+                            drawCircleOrLine(
+                                gCircle,
+                                visibleRect, creationPrototypeColor, style = circleStroke
+                            )
+                        is Point ->
+                            drawCircle(
+                                color = creationPrototypeColor,
+                                radius = creationPointRadius,
+                                center = gCircle.toOffset()
+                            )
+                        else -> {}
+                    }
             }
     }
     // custom previews for some tools
@@ -399,43 +416,38 @@ private fun DrawScope.drawPartialConstructs(
             }
         }
         ToolMode.CIRCLE_BY_3_POINTS -> viewModel.partialArgList!!.args.let { args ->
-            val points = args.map { (it as PartialArgList.Arg.XYPoint).toOffset() }
+            val gCircles = args.map { (it as PartialArgList.Arg.GeneralizedCircle).gCircle }
             if (args.size == 2) {
-                val (p1, p2) = points
-                val maxDim = size.maxDimension
-                val far = (p2 - p1)/(p2 - p1).getDistance()*maxDim
-                drawLine(
-                    color = creationPrototypeColor,
-                    start = p1 - far,
-                    end = p2 + far,
-                    strokeWidth = strokeWidth
-                )
+                val line = GeneralizedCircle.perp3(
+                    GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
+                    GeneralizedCircle.fromGCircle(gCircles[0]),
+                    GeneralizedCircle.fromGCircle(gCircles[1]),
+                )?.toGCircle() as? Line
+                if (line != null)
+                    drawCircleOrLine(line, visibleRect, creationPrototypeColor, style = circleStroke)
             } else if (args.size == 3) {
-                try {
-                    val c = Circle.by3Points(points[0], points[1], points[2])
-                    drawCircle(
-                        color = creationPrototypeColor,
-                        radius = c.radius.toFloat(),
-                        center = c.center,
-                        style = circleStroke,
-                    )
-                } catch (e: NumberFormatException) {
-                    e.printStackTrace()
-                }
+                val circle = GeneralizedCircle.perp3(
+                    GeneralizedCircle.fromGCircle(gCircles[0]),
+                    GeneralizedCircle.fromGCircle(gCircles[1]),
+                    GeneralizedCircle.fromGCircle(gCircles[2]),
+                )?.toGCircle() as? CircleOrLine
+                if (circle != null)
+                    drawCircleOrLine(circle, visibleRect, creationPrototypeColor, style = circleStroke)
             }
         }
         ToolMode.LINE_BY_2_POINTS -> viewModel.partialArgList!!.args.let { args ->
-            val points = args.map { (it as PartialArgList.Arg.XYPoint).toOffset() }
             if (args.size == 2) {
-                val (p1, p2) = points
-                val maxDim = size.maxDimension
-                val far = (p2 - p1)/(p2 - p1).getDistance()*maxDim
-                drawLine(
-                    color = creationPrototypeColor,
-                    start = p1 - far,
-                    end = p2 + far,
-                    strokeWidth = strokeWidth
-                )
+                val gCircles = args.map { (it as PartialArgList.Arg.GeneralizedCircle).gCircle }
+                val line = GeneralizedCircle.perp3(
+                    GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
+                    GeneralizedCircle.fromGCircle(gCircles[0]),
+                    GeneralizedCircle.fromGCircle(gCircles[1]),
+                )?.toGCircle() as? Line
+                if (line != null)
+                    drawCircleOrLine(
+                        line,
+                        visibleRect, creationPrototypeColor, style = circleStroke
+                    )
             }
         }
         else -> {}

@@ -235,14 +235,14 @@ sealed class EditClusterTool(
         Res.drawable.circle_center_and_radius_point,
     )
     data object ConstructCircleBy3Points: MultiArg(
-        PartialArgList.SIGNATURE_3_POINTS,
+        PartialArgList.SIGNATURE_3_GENERALIZED_CIRCLE,
         Res.string.circle_by_3_points_name,
         Res.string.circle_by_3_points_description,
         Res.array.circle_by_3_points_arg_descriptions,
         Res.drawable.circle_3_points
     )
     data object ConstructLineBy2Points: MultiArg(
-        PartialArgList.SIGNATURE_2_POINTS,
+        PartialArgList.SIGNATURE_2_GENERALIZED_CIRCLE,
         Res.string.line_by_2_points_name,
         Res.string.line_by_2_points_description,
         Res.array.line_by_2_points_arg_descriptions,

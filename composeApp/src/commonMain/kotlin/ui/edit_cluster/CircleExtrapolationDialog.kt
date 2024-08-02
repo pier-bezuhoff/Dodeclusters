@@ -41,7 +41,7 @@ fun CircleExtrapolationDialog(
     onConfirm: (nLeft: Int, nRight: Int) -> Unit,
     defaults: DefaultExtrapolationParameters = DefaultExtrapolationParameters(),
 ) {
-    val maxCount = 10
+    val maxCount = 20
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val leftSliderState = remember { SliderState(

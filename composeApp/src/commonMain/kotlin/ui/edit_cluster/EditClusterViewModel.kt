@@ -316,7 +316,6 @@ class EditClusterViewModel(
 
     fun createNewCircles(
         newCircles: List<CircleOrLine>,
-        switchToSelectionMode: Boolean = false
     ) {
         val validNewCircles = newCircles.filter { newCircle ->
             newCircle is Circle && newCircle.radius > 0.0 || newCircle is Line
@@ -326,8 +325,6 @@ class EditClusterViewModel(
             showCircles = true
             val prevSize = circles.size
             circles.addAll(validNewCircles)
-            if (switchToSelectionMode && !mode.isSelectingCircles())
-                switchToMode(SelectionMode.Drag)
             selection.clear()
             selection.addAll(prevSize until circles.size)
             coroutineScope.launch {
@@ -794,6 +791,11 @@ class EditClusterViewModel(
                     }
                     is PartialArgList.Arg.CircleIndex -> null
                     is PartialArgList.Arg.SelectedCircles -> null
+                    is PartialArgList.Arg.GeneralizedCircle -> visiblePosition?.let {
+                        if (args.currentArg.gCircle is Point)
+                            PartialArgList.Arg.GeneralizedCircle(Point.fromOffset(absolute(it)))
+                        else null
+                    }
                     null -> null // in case prev onDown failed to select anything
                 }
                 partialArgList = if (newArg == null)
@@ -884,13 +886,28 @@ class EditClusterViewModel(
                         PartialArgList.ArgType.CircleIndex -> {
                             selectCircle(circles, visiblePosition)?.let { circleIndex ->
                                 val newArg = PartialArgList.Arg.CircleIndex(circleIndex)
-                                partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
+                                if (partialArgList!!.currentArg != newArg)
+                                    partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
                             }
                         }
                         PartialArgList.ArgType.SelectedCircles -> {
                             selectCircle(circles, visiblePosition)?.let { circleIndex ->
                                 val newArg = PartialArgList.Arg.SelectedCircles(listOf(circleIndex))
-                                partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
+                                if (partialArgList!!.currentArg != newArg)
+                                    partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
+                            }
+                        }
+                        PartialArgList.ArgType.GeneralizedCircle -> {
+                            val circleIndex = selectCircle(circles, visiblePosition)
+                            if (circleIndex != null) {
+                                val newArg = PartialArgList.Arg.GeneralizedCircle(circles[circleIndex])
+                                if (partialArgList!!.currentArg != newArg)
+                                    partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = false)
+                            } else {
+                                val newArg = PartialArgList.Arg.GeneralizedCircle(
+                                    Point.fromOffset(absolute(visiblePosition))
+                                )
+                                partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = false)
                             }
                         }
                         else -> {}
@@ -1039,6 +1056,12 @@ class EditClusterViewModel(
             ) {
                 val newArg = PartialArgList.Arg.XYPoint.fromOffset(c)
                 partialArgList = partialArgList!!.updateCurrentArg(newArg, confirmThisArg = false)
+            } else if (
+                mode is ToolMode &&
+                partialArgList!!.currentArgType == PartialArgList.ArgType.GeneralizedCircle
+            ) {
+                val newArg = PartialArgList.Arg.GeneralizedCircle(Point.fromOffset(c))
+                partialArgList = partialArgList!!.updateCurrentArg(newArg, confirmThisArg = false)
             } else {
 //                recordCommand(Command.CHANGE_POV)
                 translation = translation + pan // navigate canvas
@@ -1139,45 +1162,39 @@ class EditClusterViewModel(
             center,
             radius = (radiusPoint - center).getDistance()
         )
-        createNewCircles(listOf(newCircle), switchToSelectionMode = false)
+        createNewCircles(listOf(newCircle))
         partialArgList = PartialArgList(argList.signature)
     }
 
     private fun completeCircleBy3Points() {
         val argList = partialArgList!!
-        val points = argList.args.map {
-            (it as PartialArgList.Arg.XYPoint).toOffset()
+        val gCircles = argList.args.map {
+            (it as PartialArgList.Arg.GeneralizedCircle).gCircle
         }
-        try {
-            val eps = 1e-3
-            if ((points[1] - points[0]).getDistance() < eps) {
-                val newLine = Line.by2Points(points[0], points[2])
-                createNewCircles(listOf(newLine), switchToSelectionMode = false)
-            } else if ((points[2] - points[1]).getDistance() < eps || (points[2] - points[0]).getDistance() < eps) {
-                val newLine = Line.by2Points(points[0], points[1])
-                createNewCircles(listOf(newLine), switchToSelectionMode = false)
-            } else {
-                val newCircle = Circle.by3Points(
-                    points[0], points[1], points[2]
-                )
-                createNewCircles(listOf(newCircle), switchToSelectionMode = false)
-            }
-        } catch (e: NumberFormatException) {
-            e.printStackTrace()
-        } finally {
-            partialArgList = PartialArgList(argList.signature)
+        val result = GeneralizedCircle.perp3(
+            GeneralizedCircle.fromGCircle(gCircles[0]),
+            GeneralizedCircle.fromGCircle(gCircles[1]),
+            GeneralizedCircle.fromGCircle(gCircles[2]),
+        )?.toGCircle() as? CircleOrLine
+        if (result != null) {
+            createNewCircles(listOf(result))
         }
+        partialArgList = PartialArgList(argList.signature)
     }
 
     private fun completeLineBy2Points() {
         val argList = partialArgList!!
-        val points = argList.args.map {
-            (it as PartialArgList.Arg.XYPoint).toOffset()
+        val gCircles = argList.args.map {
+            (it as PartialArgList.Arg.GeneralizedCircle).gCircle
         }
-        val newLine = Line.by2Points(
-            points[0], points[1]
-        )
-        createNewCircles(listOf(newLine), switchToSelectionMode = false)
+        val result = GeneralizedCircle.perp3(
+            GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
+            GeneralizedCircle.fromGCircle(gCircles[0]),
+            GeneralizedCircle.fromGCircle(gCircles[1]),
+        )?.toGCircle() as? Line
+        if (result != null) {
+            createNewCircles(listOf(result))
+        }
         partialArgList = PartialArgList(argList.signature)
     }
 
@@ -1191,7 +1208,7 @@ class EditClusterViewModel(
             val newCircle = Circle.invert(invertingCircle, targetCircle) as CircleOrLine
             newCircle
         }
-        createNewCircles(newCircles, switchToSelectionMode = false)
+        createNewCircles(newCircles)
         copyParts(targetCirclesIxs, ((circles.size - newCircles.size) until circles.size).toList())
         partialArgList = PartialArgList(argList.signature)
     }

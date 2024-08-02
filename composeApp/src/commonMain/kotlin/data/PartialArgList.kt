@@ -2,6 +2,8 @@ package data
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import data.geometry.GCircle
+import data.geometry.GeneralizedCircle
 import kotlinx.serialization.Serializable
 import ui.Indices
 
@@ -15,6 +17,7 @@ data class PartialArgList(
         XYPoint,
         CircleIndex,
         SelectedCircles,
+        GeneralizedCircle, // primarily point/circle for the perp3 instrument
     }
 
     @Immutable
@@ -32,6 +35,7 @@ data class PartialArgList(
         }
         data class CircleIndex(val index: Int) : Arg(ArgType.CircleIndex)
         data class SelectedCircles(val indices: Indices) : Arg(ArgType.SelectedCircles)
+        data class GeneralizedCircle(val gCircle: GCircle) : Arg(ArgType.GeneralizedCircle)
     }
 
     // TODO: creation tool -> signature mapping
@@ -75,7 +79,7 @@ data class PartialArgList(
         )
     }
 
-    // MAYBE: smarter currying, when arg types resolve uniquely regardless of order
+    // MAYBE: smarter currying, when arg types resolve uniquely regardless of order if applicable
     fun addArg(arg: Arg, confirmThisArg: Boolean = false): PartialArgList {
         require(!isFull) { "The $this is already full" }
         require(arg.argType == nextArgType) { "Invalid arg type, expected: $nextArgType, actual: $arg" }
@@ -91,5 +95,7 @@ data class PartialArgList(
         val SIGNATURE_3_POINTS = Signature(ArgType.XYPoint, ArgType.XYPoint, ArgType.XYPoint)
         val SIGNATURE_2_CIRCLES = Signature(ArgType.CircleIndex, ArgType.CircleIndex)
         val SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE = Signature(ArgType.SelectedCircles, ArgType.CircleIndex)
+        val SIGNATURE_2_GENERALIZED_CIRCLE = Signature(ArgType.GeneralizedCircle, ArgType.GeneralizedCircle)
+        val SIGNATURE_3_GENERALIZED_CIRCLE = Signature(ArgType.GeneralizedCircle, ArgType.GeneralizedCircle, ArgType.GeneralizedCircle)
     }
 }

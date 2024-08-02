@@ -62,17 +62,17 @@
         <item>Точку на окружности</item>
     </string-array>
     <string name="circle_by_3_points_name">Окружность по трём точкам</string>
-    <string name="circle_by_3_points_description">Построить окружность по трём точкам, лежащим на ней</string>
+    <string name="circle_by_3_points_description">Построить окружность по трём точкам, лежащим на ней, или по трём объектам, перпендикулярным ей</string>
     <string-array name="circle_by_3_points_arg_descriptions">
-        <item>1-ую точку на окружности</item>
-        <item>2-ую точку на окружности</item>
-        <item>3-ью точку на окружности</item>
+        <item>1-ую точку / перпендикулярный объект</item>
+        <item>2-ую точку / перпендикулярный объект</item>
+        <item>3-ью точку / перпендикулярный объект</item>
     </string-array>
     <string name="line_by_2_points_name">Прямая по двум точкам</string>
-    <string name="line_by_2_points_description">Провести прямую через две заданные точки</string>
+    <string name="line_by_2_points_description">Провести прямую через две заданные точки, или по двум объектам, перпендикулярным ей</string>
     <string-array name="line_by_2_points_arg_descriptions">
-        <item>1-ую точку на прямой</item>
-        <item>2-ую точку на прямой</item>
+        <item>1-ую точку / перпендикулярный объект</item>
+        <item>2-ую точку / перпендикулярный объект</item>
     </string-array>
     <string name="insert_centered_cross_name">Вставить крест по центру</string>
     <string name="insert_centered_cross_description">Вставить крест по центру</string>

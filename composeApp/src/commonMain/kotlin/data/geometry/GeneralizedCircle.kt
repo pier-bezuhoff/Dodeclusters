@@ -90,8 +90,12 @@ data class GeneralizedCircle(
 
     fun normalized(): GeneralizedCircle {
         val n = norm
-        if (n == 0.0)
-            return this * (1/w)
+        if (n == 0.0) {
+            return if (w == 0.0)
+                this * (1/z)
+            else
+                this * (1/w)
+        }
         val a = this * (1/norm)
         return  if (
             a.w < 0 ||
@@ -106,9 +110,14 @@ data class GeneralizedCircle(
 
     fun normalizedPreservingDirection(): GeneralizedCircle {
         val n = norm
-        return if (n == 0.0)
-            this * (1/abs(w)) // n=0 => w!=0
-        else this * (1/n)
+        return if (n == 0.0) {
+            if (w == 0.0)
+                this * (1/abs(z))
+            else
+                this * (1/abs(w))
+        } else {
+            this * (1/n)
+        }
     }
 
     //  X == k*X where k>0
@@ -208,6 +217,7 @@ data class GeneralizedCircle(
 
     fun toGCircle(): GCircle {
         return when {
+            w == 0.0 && x == 0.0 && y == 0.0 -> Point.CONFORMAL_INFINITY
             isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
             isRealCircle -> Circle(x / w, y / w, sqrt(r2))
             isPoint -> Point(x / w, y / w)
@@ -227,16 +237,33 @@ data class GeneralizedCircle(
                 // a*x + b*y + c = 0
                 // -> a*e_x + b*e_y + c*e_inf
                 is Line -> GeneralizedCircle(0.0, gCircle.a, gCircle.b, -gCircle.c).normalized()
+                Point.CONFORMAL_INFINITY -> GeneralizedCircle(0.0, 0.0, 0.0, 1.0)
                 is Point -> GeneralizedCircle(
                     1.0,
                     gCircle.x, gCircle.y,
-                    (gCircle.x.pow(2) + gCircle.y.pow(2))
+                    (gCircle.x.pow(2) + gCircle.y.pow(2))/2
                 )
                 is ImaginaryCircle -> GeneralizedCircle(
                     1.0, gCircle.x, gCircle.y,
                     (gCircle.x.pow(2) + gCircle.y.pow(2) + gCircle.radius.pow(2))/2
                 )
             }
+
+        /** Construct GC perpendicular to the given 3, includes circle by 3 points, etc.
+         * In CGA: `!( (!c1) ^ (!c2) ^ (!c3) )` */
+        fun perp3(c1: GeneralizedCircle, c2: GeneralizedCircle, c3: GeneralizedCircle): GeneralizedCircle? {
+            val (w1, x1, y1, z1) = c1
+            val (w2, x2, y2, z2) = c2
+            val (w3, x3, y3, z3) = c3
+            // det-like totally antisymmetric product
+            val w = w1*x2*y3 - w1*x3*y2 - w2*x1*y3 + w2*x3*y1 + w3*x1*y2 - w3*x2*y1
+            val x = -w1*y2*z3 + w1*y3*z2 + w2*y1*z3 - w2*y3*z1 - w3*y1*z2 + w3*y2*z1
+            val y = w1*x2*z3 - w1*x3*z2 - w2*x1*z3 + w2*x3*z1 + w3*x1*z2 - w3*x2*z1
+            val z = -x1*y2*z3 + x1*y3*z2 + x2*y1*z3 - x2*y3*z1 - x3*y1*z2 + x3*y2*z1
+            if (w == 0.0 && x == 0.0 && y == 0.0 && z == 0.0)
+                return null
+            return GeneralizedCircle(w, x, y, z).normalizedPreservingDirection()
+        }
     }
 }
 
