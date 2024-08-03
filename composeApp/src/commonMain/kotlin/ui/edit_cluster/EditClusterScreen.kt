@@ -76,6 +76,7 @@ import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_pro
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
@@ -213,15 +214,15 @@ fun EditClusterScreen(
         } else {
             viewModel.loadCluster(Cluster(
                 listOf(
-//                    Circle(0.0, 0.0, 200.0),
-                    Line(1.0, 0.0, 0.0)
+                    Circle(0.0, 0.0, 200.0),
                 ),
-//                parts = listOf(Cluster.Part(
-//                    insides = setOf(0),
-//                    outsides = emptySet(),
-//                    fillColor = DodeclustersColors.primaryDark
-//                ))
+                parts = listOf(Cluster.Part(
+                    insides = setOf(0),
+                    outsides = emptySet(),
+                    fillColor = DodeclustersColors.primaryDark
+                ))
             ))
+            delay(10)
             viewModel.moveToDdcCenter(0f, 0f)
         }
     }
