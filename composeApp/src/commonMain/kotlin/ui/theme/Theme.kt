@@ -12,11 +12,11 @@ fun DodeclustersTheme(
     content: @Composable () -> Unit
 ) {
     val scheme = when (colorTheme) {
-        ColorTheme.LIGHT -> dodeclustersLightScheme
-        ColorTheme.DARK -> dodeclustersDarkScheme
+        ColorTheme.LIGHT -> DodeclustersColors.lightScheme
+        ColorTheme.DARK -> DodeclustersColors.darkScheme
         ColorTheme.AUTO ->
-            if (isSystemInDarkTheme()) dodeclustersDarkScheme
-            else dodeclustersLightScheme
+            if (isSystemInDarkTheme()) DodeclustersColors.darkScheme
+            else DodeclustersColors.lightScheme
     }
     MaterialTheme(
         colorScheme = scheme,

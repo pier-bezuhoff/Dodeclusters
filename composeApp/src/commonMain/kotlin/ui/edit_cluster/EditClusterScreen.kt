@@ -56,6 +56,7 @@ import data.Cluster
 import data.ClusterRepository
 import data.PartialArgList
 import data.geometry.Circle
+import data.geometry.Line
 import data.io.Ddc
 import data.io.OpenFileButton
 import data.io.SaveData
@@ -72,18 +73,14 @@ import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import ui.theme.DodeclustersColors
-import ui.theme.primaryDark
-import ui.theme.secondaryDark
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import ui.tools.Tool
@@ -215,12 +212,15 @@ fun EditClusterScreen(
             }
         } else {
             viewModel.loadCluster(Cluster(
-                listOf(Circle(0.0, 0.0, 200.0)),
-                parts = listOf(Cluster.Part(
-                    insides = setOf(0),
-                    outsides = emptySet(),
-                    fillColor = primaryDark
-                ))
+                listOf(
+//                    Circle(0.0, 0.0, 200.0),
+                    Line(1.0, 0.0, 0.0)
+                ),
+//                parts = listOf(Cluster.Part(
+//                    insides = setOf(0),
+//                    outsides = emptySet(),
+//                    fillColor = DodeclustersColors.primaryDark
+//                ))
             ))
             viewModel.moveToDdcCenter(0f, 0f)
         }

@@ -1,5 +1,6 @@
 package ui.edit_cluster
 
+import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
@@ -18,12 +19,12 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
-import data.geometry.Circle
 import data.Cluster
 import data.OffsetSerializer
 import data.OldCluster
 import data.PartialArgList
 import data.compressPartToEssentials
+import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
 import data.geometry.Line
@@ -94,7 +95,7 @@ class EditClusterViewModel(
         private set
 
     /** currently selected color */
-    var regionColor by mutableStateOf(DodeclustersColors.purple)
+    var regionColor by mutableStateOf(DodeclustersColors.primaryDark) // DodeclustersColors.purple)
         private set
     var showCircles by mutableStateOf(true)
         private set
@@ -950,8 +951,13 @@ class EditClusterViewModel(
                             val centerToCurrent = c - center
                             val centerToPreviousHandle = centerToCurrent - pan
                             val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
-                            circles[h.ix] = circles[h.ix].rotate(center, angle)
-                            submode = sm.copy(angle = sm.angle + angle)
+                            val newAngle = sm.angle + angle
+                            val snappedAngle =
+                                if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
+                                else newAngle
+                            val angle1 = snappedAngle - sm.snappedAngle
+                            circles[h.ix] = circles[h.ix].rotate(center, angle1.toFloat())
+                            submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
                         }
                         else -> {}
                     }
@@ -988,10 +994,15 @@ class EditClusterViewModel(
                             val centerToCurrent = c - center
                             val centerToPreviousHandle = centerToCurrent - pan
                             val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
+                            val newAngle = sm.angle + angle
+                            val snappedAngle =
+                                if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
+                                else newAngle
+                            val angle1 = snappedAngle - sm.snappedAngle
                             for (ix in selection) {
-                                circles[ix] = circles[ix].rotate(sm.center, angle)
+                                circles[ix] = circles[ix].rotate(sm.center, angle1.toFloat())
                             }
-                            submode = sm.copy(angle = sm.angle + angle)
+                            submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
                         }
                         else -> Unit
                     }
@@ -1382,6 +1393,7 @@ class EditClusterViewModel(
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val HISTORY_SIZE = 100
         const val FAST_CENTERED_CIRCLE = true
+        const val ENABLE_ANGLE_SNAPPING = true
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)
