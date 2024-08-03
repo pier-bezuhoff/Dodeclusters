@@ -41,6 +41,7 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -201,7 +202,7 @@ fun EditClusterScreen(
             defaults = viewModel.defaultExtrapolationParameters
         )
     }
-    coroutineScope.launch {
+    LaunchedEffect(Unit) {
         if (ddcContent != null) {
             println("loading external ddc")
             viewModel.loadFromYaml(ddcContent)
@@ -214,7 +215,7 @@ fun EditClusterScreen(
         } else {
             viewModel.loadCluster(Cluster(
                 listOf(
-                    Circle(0.0, 0.0, 200.0),
+                    Circle(0.0, 5_000.0, 200.0),
                 ),
                 parts = listOf(Cluster.Part(
                     insides = setOf(0),
@@ -222,8 +223,8 @@ fun EditClusterScreen(
                     fillColor = DodeclustersColors.primaryDark
                 ))
             ))
-            delay(10) // we want to know VM.canvasSize before centering
-            viewModel.moveToDdcCenter(0f, 0f)
+            delay(5) // we want to know VM.canvasSize before centering
+            viewModel.moveToDdcCenter(0f, 5_000f)
         }
     }
 }
