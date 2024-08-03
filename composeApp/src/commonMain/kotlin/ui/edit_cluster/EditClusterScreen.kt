@@ -222,7 +222,7 @@ fun EditClusterScreen(
                     fillColor = DodeclustersColors.primaryDark
                 ))
             ))
-            delay(10)
+            delay(10) // we want to know VM.canvasSize before centering
             viewModel.moveToDdcCenter(0f, 0f)
         }
     }

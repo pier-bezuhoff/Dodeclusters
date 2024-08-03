@@ -33,8 +33,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import data.io.readDdcFromUri
-import ui.theme.dodeclustersDarkScheme
-import ui.theme.dodeclustersLightScheme
+import ui.theme.DodeclustersColors
 import java.io.FileNotFoundException
 
 class MainActivity : ComponentActivity() {
@@ -98,7 +97,9 @@ class MainActivity : ComponentActivity() {
             }
             val view = LocalView.current
             val isDarkTheme = isSystemInDarkTheme()
-            val scheme = if (isDarkTheme) dodeclustersDarkScheme else dodeclustersLightScheme
+            val scheme =
+                if (isDarkTheme) DodeclustersColors.darkScheme
+                else DodeclustersColors.lightScheme
             val statusBarColor = scheme.primary.toArgb()
             if (!view.isInEditMode) {
                 SideEffect {
