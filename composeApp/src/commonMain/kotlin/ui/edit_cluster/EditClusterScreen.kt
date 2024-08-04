@@ -223,7 +223,7 @@ fun EditClusterScreen(
                     fillColor = DodeclustersColors.primaryDark
                 ))
             ))
-            delay(5) // we want to know VM.canvasSize before centering
+            delay(10) // we want to know VM.canvasSize before centering
             viewModel.moveToDdcCenter(0f, 5_000f)
         }
     }
@@ -364,7 +364,10 @@ fun EditClusterTopBar(
                     saveDataProvider = {
                         SaveData(
                             Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION
-                        ) { viewModel.saveAsYaml(it) }
+                        ) {
+//                            viewModel.exportAsSvg(it)
+                            viewModel.saveAsYaml(it)
+                        }
                     },
                     modifier = iconModifier
                 ) {

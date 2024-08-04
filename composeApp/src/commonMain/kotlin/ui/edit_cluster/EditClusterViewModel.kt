@@ -31,6 +31,7 @@ import data.geometry.Line
 import data.geometry.Point
 import data.io.Ddc
 import data.io.OldDdc
+import data.io.cluster2svg
 import data.io.parseDdc
 import data.io.parseOldDdc
 import domain.angleDeg
@@ -45,6 +46,7 @@ import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
+import kotlin.math.abs
 import kotlin.math.pow
 
 /** circle index in vm.circles or cluster.circles */
@@ -182,6 +184,19 @@ class EditClusterViewModel(
             ddc = ddc.copy(bestCenterX = center.x, bestCenterY = center.y)
         }
         return ddc.encode()
+    }
+
+    fun exportAsSvg(name: String = Ddc.DEFAULT_NAME): String {
+        val cluster = Cluster(
+            circles.toList(), parts.toList()
+        )
+        val start = absolute(Offset.Zero)
+        return cluster2svg(
+            cluster,
+            backgroundColor = null,
+            start.x, start.y,
+            canvasSize.width.toFloat(), canvasSize.height.toFloat()
+        )
     }
 
     private fun computeAbsoluteCenter(): Offset? =

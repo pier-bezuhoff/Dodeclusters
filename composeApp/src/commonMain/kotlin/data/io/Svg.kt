@@ -1,10 +1,14 @@
 package data.io
 
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import data.Cluster
 import data.ColorCssSerializer
+import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.Line
 import kotlinx.serialization.json.Json
+import kotlin.math.hypot
 
 // NOTE: ksvg doesn't support wasm yet + my use case is relatively formulaic
 
@@ -27,44 +31,103 @@ import kotlinx.serialization.json.Json
 // </svg>
 
 // NOTE: "For reliable results cross-browser, use numbers with no more
-//  than 2 digits after the decimal and four digits before it."
+//  than 2 digits after the decimal and four digits before it." -- im gonna ignore this
 fun cluster2svg(
     cluster: Cluster,
     backgroundColor: Color?,
     startX: Float, startY: Float,
-    width: Float, height: Float
+    width: Float, height: Float,
+    encodeAllCircles: Boolean = false,
 ): String {
-    val partClipsAndMasks = cluster.parts.withIndex().map { (i, part) ->
-        partMask(cluster.circles, i, part)
-    }.joinToString("\n")
+    val visibleRect = Rect(startX, startY, startX + width, startY + height)
+    val partClipsAndMasks = cluster.parts.withIndex().joinToString("\n") { (i, part) ->
+        partMask(cluster.circles, i, part, visibleRect)
+    }
     val bgRect = backgroundColor?.let {
         val bg = Json.encodeToString(ColorCssSerializer, it)
-        "<rect width=\"100%\" height=\"100%\" fill=\"$bg\">"
+        "<rect x=\"${visibleRect.left}\" y=\"${visibleRect.top}\" width=\"100%\" height=\"100%\" fill=$bg/>"
     } ?: ""
-    // when only-border:
-    // `stroke="color"`
-    // when filled:
-    // `fill="color"`
+    val colorAttribute =
+        if (cluster.filled) "fill"
+        else "stroke"
     val partRects = cluster.parts.withIndex().map { (i, part) ->
         val fill = Json.encodeToString(ColorCssSerializer, part.fillColor)
-        "<rect width=\"100%\" height=\"100%\" mask=\"url(#mask-part$i)\" fill=\"$fill\">"
+        "<rect x=\"${visibleRect.left}\" y=\"${visibleRect.top}\" width=\"100%\" height=\"100%\" mask=\"url(#mask-part$i)\" fill=$fill/>"
     }.joinToString("\n")
     return """
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="$startX $startY $width $height">
-          <defs>
-            $partClipsAndMasks
-          </defs>
-          $bgRect
-          $partRects
-        </svg>
-    """.trimIndent()
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="$startX $startY $width $height">
+<defs>
+$partClipsAndMasks
+</defs>
+$bgRect
+$partRects
+</svg>
+""".trimIndent()
 }
 
 fun partMask(
     circles: List<CircleOrLine>,
     partIndex: Int,
-    part: Cluster.Part
+    part: Cluster.Part,
+    visibleRect: Rect
 ): String {
-    return ""
+    fun format(circle: CircleOrLine, postfix: String = ""): String =
+        when (circle) {
+            is Circle -> "<circle cx=\"${circle.x}\" cy=\"${circle.y}\" r=\"${circle.radius}\" $postfix/>"
+            is Line -> {
+                val pointClosestToScreenCenter = circle.project(visibleRect.center)
+                val direction =  circle.directionVector
+                val normal = circle.normalVector
+                val diag = hypot(visibleRect.width, visibleRect.height)
+                val farBack = pointClosestToScreenCenter - direction * diag
+                val farForward = pointClosestToScreenCenter + direction * diag
+                val farForwardIn = farForward + normal * diag
+                val farBackIn = farBack + normal * diag
+                val d = "M ${farBack.x} ${farBack.y} " +
+                        "L ${farForward.x} ${farForward.y} " +
+                        "L ${farForwardIn.x} ${farForwardIn.y} " +
+                        "L ${farBackIn.x} ${farBackIn.y} " +
+                        "z"
+                "<path d=\"$d\" $postfix/>"
+            }
+        }
+
+    val insides = part.insides.map { circles[it] }
+    val outsides = part.outsides.map { circles[it] }
+    val firstClipPath =
+        if (insides.size >= 2) """
+<clipPath id="clip-part$partIndex-0">
+${format(insides[0])}
+</clipPath>""".trimIndent()
+        else ""
+    val clipPaths = insides
+        .drop(1)
+        .dropLast(1)
+        .withIndex()
+        .joinToString("\n") { (j, c) ->
+            val inJ = j + 1 // index of the circle in the list of part.insides
+"""<clipPath id="clip-part$partIndex-$inJ">
+${format(c, "clip-path=\"url(#clip-part$partIndex-$j)\"")}
+</clipPath>""".trimIndent()
+        }
+    val insidesInMask =
+        when (part.insides.size) {
+            0 -> "<rect x=\"${visibleRect.left}\" y=\"${visibleRect.top}\" width=\"100%\" height=\"100%\" fill=\"white\"/>"
+            1 -> format(insides.last(), "fill=\"white\"")
+            else -> format(insides.last(), "clip-path=\"url(#clip-part$partIndex-${part.insides.size - 2})\" fill=\"white\"")
+        }
+    val outsidesInMask = outsides.joinToString("\n") {
+        format(it, "fill=\"black\"")
+    }
+    val mask = """
+
+$firstClipPath
+$clipPaths
+<mask id="mask-part$partIndex">
+$insidesInMask
+$outsidesInMask
+</mask>
+""".trimIndent()
+    return mask
 }
 
