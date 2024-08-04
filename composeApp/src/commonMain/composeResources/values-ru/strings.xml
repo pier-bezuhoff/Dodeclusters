@@ -90,10 +90,24 @@
     <string name="attributes_category_name">Удаление/дублирование</string>
     <string name="transform_category_name">Преобразования</string>
     <string name="create_category_name">Создание</string>
-    <!-- color picker -->
+    <!-- color picker dialog -->
     <string name="color_picker_title">Выберите цвет</string>
     <string name="hex_name">hex</string>
     <string name="cancel_name">Отмена</string>
     <string name="ok_name">OK</string>
     <string name="ok_description">Подтвердить</string>
+    <!-- circle interpolation dialog -->
+    <string name="circle_interpolation_title">Выберите число шагов интерполяции</string>
+    <string name="circle_interpolation_prompt">Число промежуточных окружностей</string>
+    <!-- circle extrapolation dialog -->
+    <string name="circle_extrapolation_title">Выберите число шагов экстраполяции</string>
+    <string name="circle_extrapolation_left_prompt1">Число новых окружностей</string>
+    <string name="circle_extrapolation_left_prompt2">слева от первой выбранной</string>
+    <string name="circle_extrapolation_right_prompt1">Число новых окружностей</string>
+    <string name="circle_extrapolation_right_prompt2">справа от второй выбранной</string>
+    <!-- file dialog -->
+    <string name="save_cluster_title">Сохранить кластер</string>
+    <string name="choose_name">Выберите название</string>
+    <string name="name">Название</string>
+
 </resources>

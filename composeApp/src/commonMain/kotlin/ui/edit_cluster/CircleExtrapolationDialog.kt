@@ -24,6 +24,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
+import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.circle_extrapolation_left_prompt1
+import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_prompt1
+import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_prompt2
+import dodeclusters.composeapp.generated.resources.circle_extrapolation_title
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 data class DefaultExtrapolationParameters(
@@ -66,20 +72,20 @@ fun CircleExtrapolationDialog(
                 horizontalAlignment = Alignment.Start
             ) {
                 Text(
-                    text = "Pick the number of extrapolation steps",
+                    text = stringResource(Res.string.circle_extrapolation_title),
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp),
                     style = MaterialTheme.typography.titleLarge,
                 )
                 Text(
                     buildAnnotatedString {
-                        append("Number of circles to the ")
+                        append(stringResource(Res.string.circle_extrapolation_left_prompt1))
                         withStyle(
                             SpanStyle(
                                 color = MaterialTheme.colorScheme.secondary,
 //                                fontStyle = FontStyle.Italic
                             )
                         ) {
-                            append("left of the first one")
+                            append(stringResource(Res.string.circle_extrapolation_left_prompt1))
                         }
                         append(":  ")
                         withStyle(
@@ -99,14 +105,14 @@ fun CircleExtrapolationDialog(
                 Slider(leftSliderState)
                 Text(
                     buildAnnotatedString {
-                        append("Number of circles to the ")
+                        append(stringResource(Res.string.circle_extrapolation_right_prompt1))
                         withStyle(
                             SpanStyle(
                                 color = MaterialTheme.colorScheme.secondary,
 //                                fontStyle = FontStyle.Italic
                             )
                         ) {
-                            append("right of the second one")
+                            append(stringResource(Res.string.circle_extrapolation_right_prompt2))
                         }
                         append(":  ")
                         withStyle(

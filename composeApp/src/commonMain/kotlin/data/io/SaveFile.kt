@@ -18,7 +18,8 @@ data class SaveData(
 expect fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
-    saveDataProvider: () -> SaveData,
+    saveData: SaveData,
+    exportSvgData: SaveData,
     modifier: Modifier = Modifier,
     onSaved: (successful: Boolean) -> Unit = { }
 )

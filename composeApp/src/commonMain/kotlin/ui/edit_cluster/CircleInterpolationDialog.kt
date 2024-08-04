@@ -30,6 +30,10 @@ import androidx.compose.ui.window.Dialog
 import data.geometry.CircleOrLine
 import data.geometry.CirclePencilType
 import data.geometry.GeneralizedCircle
+import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
+import dodeclusters.composeapp.generated.resources.circle_interpolation_title
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 data class DefaultInterpolationParameters(
@@ -70,13 +74,14 @@ fun CircleInterpolationDialog(
                 horizontalAlignment = Alignment.Start
             ) {
                 Text(
-                    text = "Pick the number of interpolation steps",
+                    text = stringResource(Res.string.circle_interpolation_title),
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp),
                     style = MaterialTheme.typography.titleLarge,
                 )
                 Text(
                     buildAnnotatedString {
-                        append("Number of circles in-between:  ")
+                        append(stringResource(Res.string.circle_interpolation_prompt))
+                        append(":  ")
                         withStyle(SpanStyle(
                             color = MaterialTheme.colorScheme.primary,
                             fontSize = 30.sp,
@@ -90,20 +95,20 @@ fun CircleInterpolationDialog(
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Slider(sliderState)
-                Text(
-                    buildAnnotatedString {
-                        append("Subdividing along ")
-                        withStyle(SpanStyle(
-                            color = MaterialTheme.colorScheme.secondary,
-                            fontStyle = FontStyle.Italic
-                        )) {
-                            append("$pencilType")
-                        }
-                        append(" pencil")
-                    },
-                    Modifier.padding(8.dp).padding(top = 16.dp),
-                    style = MaterialTheme.typography.bodyLarge
-                )
+//                Text(
+//                    buildAnnotatedString {
+//                        append("Subdividing along ")
+//                        withStyle(SpanStyle(
+//                            color = MaterialTheme.colorScheme.secondary,
+//                            fontStyle = FontStyle.Italic
+//                        )) {
+//                            append("$pencilType")
+//                        }
+//                        append(" pencil")
+//                    },
+//                    Modifier.padding(8.dp).padding(top = 16.dp),
+//                    style = MaterialTheme.typography.bodyLarge
+//                )
                 if (showInsideOutsideToggle)
                     Row(
                         modifier = Modifier.padding(horizontal = 8.dp),

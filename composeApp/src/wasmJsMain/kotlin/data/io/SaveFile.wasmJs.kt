@@ -25,9 +25,15 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.choose_name
+import dodeclusters.composeapp.generated.resources.name
+import dodeclusters.composeapp.generated.resources.ok_description
+import dodeclusters.composeapp.generated.resources.ok_name
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.w3c.dom.HTMLAnchorElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.url.URL
@@ -38,7 +44,8 @@ import org.w3c.files.BlobPropertyBag
 actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
-    saveDataProvider: () -> SaveData,
+    saveData: SaveData,
+    exportSvgData: SaveData,
     modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
@@ -53,9 +60,9 @@ actual fun SaveFileButton(
     fun onConfirm() {
         openDialog = false
         coroutineScope.launch {
-            val saveData = saveDataProvider().copy(name = ddcName.text)
+            val data = saveData.copy(name = ddcName.text)
             try {
-                downloadTextFile3(saveData.filename, saveData.content(ddcName.text))
+                downloadTextFile3(data.filename, data.content(ddcName.text))
                 onSaved(true)
             } catch (e: Exception) {
                 onSaved(false)
@@ -76,16 +83,15 @@ actual fun SaveFileButton(
             onDismissRequest = { openDialog = false },
             confirmButton = {
                 TextButton(onClick = ::onConfirm) {
-                    Text("Confirm")
+                    Text(stringResource(Res.string.ok_description))
                 }
             },
-            //            dismissButton = {},
-            title = { Text("Choose a name") },
+            title = { Text(stringResource(Res.string.choose_name)) },
             text = {
                 OutlinedTextField(
                     value = ddcName,
                     onValueChange = { ddcName = it },
-                    label = { Text("Name") },
+                    label = { Text(stringResource(Res.string.name)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions( // smart ass enter capturing
                         imeAction = ImeAction.Done

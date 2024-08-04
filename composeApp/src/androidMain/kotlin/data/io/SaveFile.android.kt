@@ -21,7 +21,8 @@ import java.io.IOException
 actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
-    saveDataProvider: () -> SaveData,
+    saveData: SaveData,
+    exportSvgData: SaveData,
     modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
@@ -50,7 +51,6 @@ actual fun SaveFileButton(
                     }
                     context.contentResolver.openFileDescriptor(uri, "w")?.use { parcelFileDescriptor ->
                         FileOutputStream(parcelFileDescriptor.fileDescriptor).use { outputStream ->
-                            val saveData = saveDataProvider()
                             val content = saveData.content(name ?: Ddc.DEFAULT_NAME)
                             outputStream.write(content.toByteArray())
                             onSaved(true)
@@ -70,7 +70,6 @@ actual fun SaveFileButton(
     IconButton(
         onClick = {
             coroutineScope.launch {
-                val saveData = saveDataProvider()
                 launcher.launch(saveData.filename)
             }
         },

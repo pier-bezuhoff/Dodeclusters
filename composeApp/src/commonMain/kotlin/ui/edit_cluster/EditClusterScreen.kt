@@ -57,7 +57,6 @@ import data.Cluster
 import data.ClusterRepository
 import data.PartialArgList
 import data.geometry.Circle
-import data.geometry.Line
 import data.io.Ddc
 import data.io.OpenFileButton
 import data.io.SaveData
@@ -78,7 +77,6 @@ import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -361,13 +359,15 @@ fun EditClusterTopBar(
                 SaveFileButton(
                     painterResource(Res.drawable.save),
                     stringResource(Res.string.save_cluster_name),
-                    saveDataProvider = {
-                        SaveData(
-                            Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION
-                        ) {
-//                            viewModel.exportAsSvg(it)
-                            viewModel.saveAsYaml(it)
-                        }
+                    saveData = SaveData(
+                        Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION
+                    ) { name ->
+                        viewModel.saveAsYaml(name)
+                    },
+                    exportSvgData = SaveData(
+                        Ddc.DEFAULT_NAME, "svg"
+                    ) { name ->
+                        viewModel.exportAsSvg(name)
                     },
                     modifier = iconModifier
                 ) {

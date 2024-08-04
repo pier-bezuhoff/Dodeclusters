@@ -11,8 +11,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.window.AwtWindow
+import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.save_cluster_title
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -22,7 +25,8 @@ import java.io.IOException
 actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
-    saveDataProvider: () -> SaveData,
+    saveData: SaveData,
+    exportSvgData: SaveData,
     modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
@@ -38,7 +42,6 @@ actual fun SaveFileButton(
         Icon(iconPainter, contentDescription, modifier)
     }
     if (fileDialogIsOpen) {
-        val saveData = saveDataProvider()
         SaveFileDialog(
             defaultDir = lastDir,
             defaultFilename = saveData.filename,
@@ -90,25 +93,28 @@ private fun SaveFileDialog(
     defaultDir: String? = null,
     defaultFilename: String,
     onCloseRequest: (directory: String?, filename: String?) -> Unit
-) = AwtWindow(
-    create = {
-        // MAYBE: use JFileChooser instead
-        object : FileDialog(parent, "Save this cluster", SAVE) {
-            init {
-                directory = defaultDir
-                file = defaultFilename
-                setFilenameFilter { dir, name ->
-                    name.endsWith(".ddc") || name.endsWith(".yml") || name.endsWith(".yaml")
+) {
+    val title = stringResource(Res.string.save_cluster_title)
+    AwtWindow(
+        create = {
+            // MAYBE: use JFileChooser instead
+            object : FileDialog(parent, title, SAVE) {
+                init {
+                    directory = defaultDir
+                    file = defaultFilename
+                    setFilenameFilter { dir, name ->
+                        name.endsWith(".ddc") || name.endsWith(".yml") || name.endsWith(".yaml")
+                    }
                 }
-            }
 
-            override fun setVisible(value: Boolean) {
-                super.setVisible(value)
-                if (value) {
-                    onCloseRequest(directory, file)
+                override fun setVisible(value: Boolean) {
+                    super.setVisible(value)
+                    if (value) {
+                        onCloseRequest(directory, file)
+                    }
                 }
             }
-        }
-    },
-    dispose = FileDialog::dispose
-)
+        },
+        dispose = FileDialog::dispose
+    )
+}
