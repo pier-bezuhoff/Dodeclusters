@@ -360,15 +360,18 @@ fun EditClusterTopBar(
                     painterResource(Res.drawable.save),
                     stringResource(Res.string.save_cluster_name),
                     saveData = SaveData(
-                        Ddc.DEFAULT_NAME, Ddc.DEFAULT_EXTENSION
+                        Ddc.DEFAULT_NAME,
+                        extension = Ddc.DEFAULT_EXTENSION, // yml
+                        otherDisplayedExtensions = setOf("yaml", "ddc"),
+                        mimeType = "application/yaml",
                     ) { name ->
                         viewModel.saveAsYaml(name)
                     },
-                    exportSvgData = SaveData(
-                        Ddc.DEFAULT_NAME, "svg"
-                    ) { name ->
-                        viewModel.exportAsSvg(name)
-                    },
+//                    exportSvgData = SaveData(
+//                        Ddc.DEFAULT_NAME, "svg"
+//                    ) { name ->
+//                        viewModel.exportAsSvg(name)
+//                    },
                     modifier = iconModifier
                 ) {
                     println(if (it) "saved" else "not saved")

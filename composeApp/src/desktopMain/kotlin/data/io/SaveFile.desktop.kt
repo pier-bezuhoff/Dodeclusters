@@ -26,7 +26,6 @@ actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
     saveData: SaveData,
-    exportSvgData: SaveData,
     modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
@@ -45,6 +44,7 @@ actual fun SaveFileButton(
         SaveFileDialog(
             defaultDir = lastDir,
             defaultFilename = saveData.filename,
+            displayedExtensions = setOf(saveData.extension) + saveData.otherDisplayedExtensions
         ) { directory, filename ->
             fileDialogIsOpen = false
             coroutineScope.launch(Dispatchers.IO) {
@@ -92,6 +92,7 @@ private fun SaveFileDialog(
     parent: Frame? = null,
     defaultDir: String? = null,
     defaultFilename: String,
+    displayedExtensions: Set<String>,
     onCloseRequest: (directory: String?, filename: String?) -> Unit
 ) {
     val title = stringResource(Res.string.save_cluster_title)
@@ -103,7 +104,7 @@ private fun SaveFileDialog(
                     directory = defaultDir
                     file = defaultFilename
                     setFilenameFilter { dir, name ->
-                        name.endsWith(".ddc") || name.endsWith(".yml") || name.endsWith(".yaml")
+                        displayedExtensions.any { ext -> name.lowercase().endsWith(".$ext") }
                     }
                 }
 

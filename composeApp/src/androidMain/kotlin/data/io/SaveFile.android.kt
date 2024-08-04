@@ -22,7 +22,6 @@ actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
     saveData: SaveData,
-    exportSvgData: SaveData,
     modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
@@ -30,9 +29,7 @@ actual fun SaveFileButton(
     val context = LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(
-//        contract = ActivityResultContracts.CreateDocument("text/plain") // forces .txt extension; when used with filename ending in .txt creates empty file
-//        contract = ActivityResultContracts.CreateDocument("*/*")
-        contract = ActivityResultContracts.CreateDocument("application/yaml")
+        contract = ActivityResultContracts.CreateDocument(saveData.mimeType)
     ) { uri ->
         coroutineScope.launch(Dispatchers.IO) {
             try {
@@ -44,7 +41,6 @@ actual fun SaveFileButton(
                         name = File(cursor.getString(nameIndex)).nameWithoutExtension
                     }
                     if (name == null) {
-//                        uri.path?.substringAfterLast('/')?.let { filename ->
                         uri.lastPathSegment?.let { filename ->
                             name = File(filename).nameWithoutExtension
                         }

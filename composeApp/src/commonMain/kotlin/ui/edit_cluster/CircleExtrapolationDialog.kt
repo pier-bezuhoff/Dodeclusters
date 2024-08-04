@@ -26,6 +26,7 @@ import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_left_prompt1
+import dodeclusters.composeapp.generated.resources.circle_extrapolation_left_prompt2
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_prompt1
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_prompt2
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_title
@@ -79,13 +80,14 @@ fun CircleExtrapolationDialog(
                 Text(
                     buildAnnotatedString {
                         append(stringResource(Res.string.circle_extrapolation_left_prompt1))
+                        append(" ")
                         withStyle(
                             SpanStyle(
                                 color = MaterialTheme.colorScheme.secondary,
 //                                fontStyle = FontStyle.Italic
                             )
                         ) {
-                            append(stringResource(Res.string.circle_extrapolation_left_prompt1))
+                            append(stringResource(Res.string.circle_extrapolation_left_prompt2))
                         }
                         append(":  ")
                         withStyle(
@@ -97,8 +99,7 @@ fun CircleExtrapolationDialog(
                         ) {
                             append("${leftSliderState.value.roundToInt()}")
                         }
-                    }
-                    ,
+                    },
                     Modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
                     style = MaterialTheme.typography.bodyLarge
                 )
@@ -106,6 +107,7 @@ fun CircleExtrapolationDialog(
                 Text(
                     buildAnnotatedString {
                         append(stringResource(Res.string.circle_extrapolation_right_prompt1))
+                        append(" ")
                         withStyle(
                             SpanStyle(
                                 color = MaterialTheme.colorScheme.secondary,
@@ -124,8 +126,7 @@ fun CircleExtrapolationDialog(
                         ) {
                             append("${rightSliderState.value.roundToInt()}")
                         }
-                    }
-                    ,
+                    },
                     Modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
                     style = MaterialTheme.typography.bodyLarge
                 )

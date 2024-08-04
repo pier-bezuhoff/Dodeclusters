@@ -142,7 +142,7 @@ fun BoxScope.EditClusterCanvas(
 //                onLongDragEnd = viewModel::onLongDragEnd,
             )
             .onSizeChanged { size ->
-                viewModel.canvasSize = size
+                viewModel.changeCanvasSize(size)
             }
             .fillMaxSize()
             .graphicsLayer(
@@ -194,9 +194,6 @@ private fun SelectionsCanvas(
 ) {
     Canvas(
         modifier.fillMaxSize()
-            .onSizeChanged { size ->
-                viewModel.canvasSize = size
-            }
             // selection hatching lines, 45° SE
             .drawBehind {
                 val (w, h) = size

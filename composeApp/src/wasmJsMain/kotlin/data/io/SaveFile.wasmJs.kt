@@ -45,7 +45,6 @@ actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
     saveData: SaveData,
-    exportSvgData: SaveData,
     modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
@@ -137,6 +136,7 @@ fun downloadTextFile2(content: String) {
 fun downloadTextFile3(filename: String, content: String) {
     val blobContent = JsArray<JsAny?>()
     blobContent[0] = content.toJsString()
+    // Q: why text/plain and not yaml mime or smth else?
     val file = Blob(blobContent, BlobPropertyBag("text/plain"))
     (document.createElement("a") as? HTMLAnchorElement)?.let { a ->
         val url = URL.Companion.createObjectURL(file)

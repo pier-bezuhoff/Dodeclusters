@@ -17,6 +17,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import data.Cluster
@@ -154,11 +155,12 @@ class EditClusterViewModel(
     var showCircleInterpolationDialog by mutableStateOf(false)
     var showCircleExtrapolationDialog by mutableStateOf(false)
 
-    var canvasSize by mutableStateOf(IntSize.Zero) // used when saving best-center
+    var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
+        private set
     private val selectionControlsPositions by derivedStateOf {
         SelectionControlsPositions(canvasSize)
     }
-    // MAYBE: keep track of the center instead
+    // MAYBE: keep track of the center in addition
     var translation by mutableStateOf(Offset.Zero) // pre-scale offset
 //    val scale = mutableStateOf(1f)
 
@@ -171,9 +173,15 @@ class EditClusterViewModel(
         }
     }
 
-    // navigation
-    fun saveAndGoBack() {}
-    fun cancelAndGoBack() {}
+    fun changeCanvasSize(newCanvasSize: IntSize) {
+//        println(newCanvasSize)
+        if (canvasSize != IntSize.Zero) {
+            val prevCenter = Offset(canvasSize.width/2f, canvasSize.height/2f)
+            val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
+            translation = translation + (newCenter - prevCenter)
+        }
+        canvasSize = newCanvasSize
+    }
 
     fun saveAsYaml(name: String = Ddc.DEFAULT_NAME): String {
         val cluster = Cluster(

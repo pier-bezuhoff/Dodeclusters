@@ -64,14 +64,14 @@
         <item>Any point on the circle</item>
     </string-array>
     <string name="circle_by_3_points_name">Circle by 3 points</string>
-    <string name="circle_by_3_points_description">Construct a circle by 3 points lying on it or by 3 objects perpendicular to it</string>
+    <string name="circle_by_3_points_description">Construct a circle by 3 points or by 3 objects perpendicular to it</string>
     <string-array name="circle_by_3_points_arg_descriptions">
         <item>The 1st point / perpendicular object</item>
         <item>The 2nd point / perpendicular object</item>
         <item>The 3rd point / perpendicular object</item>
     </string-array>
     <string name="line_by_2_points_name">Line by 2 points</string>
-    <string name="line_by_2_points_description">Construct a line by 2 points lying on it or by objects perpendicular to it</string>
+    <string name="line_by_2_points_description">Construct a line by 2 points or by objects perpendicular to it</string>
     <string-array name="line_by_2_points_arg_descriptions">
         <item>The 1st point / perpendicular object</item>
         <item>The 2nd point / perpendicular object</item>

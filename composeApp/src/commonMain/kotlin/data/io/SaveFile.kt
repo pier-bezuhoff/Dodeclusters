@@ -9,6 +9,8 @@ data class SaveData(
     val name: String,
     /** no leading dot, empty string if no extension */
     val extension: String,
+    val otherDisplayedExtensions: Set<String> = emptySet(),
+    val mimeType: String = "*/*",
     val content: (name: String) -> String,
 ) {
     val filename: String = if (extension.isBlank()) name else "$name.$extension"
@@ -19,7 +21,6 @@ expect fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
     saveData: SaveData,
-    exportSvgData: SaveData,
     modifier: Modifier = Modifier,
     onSaved: (successful: Boolean) -> Unit = { }
 )
