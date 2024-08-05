@@ -69,7 +69,6 @@ import ui.theme.DodeclustersColors
 import kotlin.math.max
 import kotlin.math.min
 
-@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun BoxScope.EditClusterCanvas(
     viewModel: EditClusterViewModel,

@@ -2,6 +2,7 @@
     <!-- top toolbar -->
     <string name="edit_cluster_title">Редактирование кластера</string>
     <string name="save_cluster_name">Сохранить текущий кластер</string>
+    <string name="svg_export_name">Эксопртировать текущий кластер как SVG</string>
     <string name="open_file_name">Открыть Dodeclusters файл</string>
     <string name="undo_name">Отменить действие</string>
     <string name="redo_name">Повторить действие</string>

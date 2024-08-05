@@ -160,7 +160,6 @@ class EditClusterViewModel(
     private val selectionControlsPositions by derivedStateOf {
         SelectionControlsPositions(canvasSize)
     }
-    // MAYBE: keep track of the center in addition
     var translation by mutableStateOf(Offset.Zero) // pre-scale offset
 //    val scale = mutableStateOf(1f)
 

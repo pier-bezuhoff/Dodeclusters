@@ -73,9 +73,12 @@ import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
+import dodeclusters.composeapp.generated.resources.stub
+import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
+import dodeclusters.composeapp.generated.resources.upload
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
@@ -274,7 +277,7 @@ fun ToolDescription(
             ) {
                 val argDescription = argDescriptions[currentNumber]
                 val selectionAsArgPrompt = stringResource(Res.string.set_selection_as_tool_arg_prompt)
-                if (currentShowPrompt)
+                if (currentShowPrompt) {
                     Button(
                         onClick = setSelectionAsArg,
                         Modifier.padding(8.dp),
@@ -296,26 +299,7 @@ fun ToolDescription(
                             Modifier.padding(start = 8.dp)
                         )
                     }
-//                    Row(
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Text(
-//                            "$selectionAsArgPrompt: $argDescription",
-//                            Modifier.padding(24.dp, 4.dp),
-//                            color = MaterialTheme.colorScheme.primary,
-//                            textDecoration = TextDecoration.Underline,
-//                            style = MaterialTheme.typography.titleMedium,
-//                        )
-//                        IconButton(
-//                            onClick = setSelectionAsArg,
-//                            Modifier.padding(8.dp),
-//                            colors = IconButtonDefaults.iconButtonColors()
-//                                .copy(contentColor = MaterialTheme.colorScheme.primary)
-//                        ) {
-//                            Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_name))
-//                        }
-//                    }
-                else
+                } else {
                     Text(
                         "$inputPrompt: $argDescription",
                         Modifier.padding(24.dp, 4.dp),
@@ -323,6 +307,7 @@ fun ToolDescription(
                         textDecoration = TextDecoration.Underline,
                         style = MaterialTheme.typography.titleSmall,
                     )
+                }
             }
         }
     }
@@ -362,19 +347,30 @@ fun EditClusterTopBar(
                     saveData = SaveData(
                         Ddc.DEFAULT_NAME,
                         extension = Ddc.DEFAULT_EXTENSION, // yml
-                        otherDisplayedExtensions = setOf("yaml", "ddc"),
+                        otherDisplayedExtensions = setOf("yaml", "ddc", "ddu"),
                         mimeType = "application/yaml",
                     ) { name ->
                         viewModel.saveAsYaml(name)
                     },
-//                    exportSvgData = SaveData(
-//                        Ddc.DEFAULT_NAME, "svg"
-//                    ) { name ->
-//                        viewModel.exportAsSvg(name)
-//                    },
                     modifier = iconModifier
                 ) {
                     println(if (it) "saved" else "not saved")
+                }
+            }
+            WithTooltip(stringResource(Res.string.svg_export_name)) {
+                SaveFileButton(
+                    painterResource(Res.drawable.upload),
+                    stringResource(Res.string.svg_export_name),
+                    saveData = SaveData(
+                        Ddc.DEFAULT_NAME,
+                        extension = "svg",
+                        mimeType = "image/svg+xml", // apparently this is highly contested (since svg can contain js)
+                    ) { name ->
+                        viewModel.exportAsSvg(name)
+                    },
+                    modifier = iconModifier
+                ) {
+                    println(if (it) "exported" else "not exported")
                 }
             }
             WithTooltip(stringResource(Res.string.open_file_name)) {

@@ -4,6 +4,7 @@
     <!-- top toolbar -->
     <string name="edit_cluster_title">Cluster editing</string>
     <string name="save_cluster_name">Save this cluster</string>
+    <string name="svg_export_name">Export this cluster as SVG</string>
     <string name="open_file_name">Open Dodeclusters file</string>
     <string name="undo_name">Undo</string>
     <string name="redo_name">Redo</string>

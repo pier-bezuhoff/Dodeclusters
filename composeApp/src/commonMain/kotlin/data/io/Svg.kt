@@ -8,6 +8,7 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
 import kotlinx.serialization.json.Json
+import ui.theme.DodeclustersColors
 import kotlin.math.hypot
 
 // NOTE: ksvg doesn't support wasm yet + my use case is relatively formulaic
@@ -32,6 +33,8 @@ import kotlin.math.hypot
 
 // NOTE: "For reliable results cross-browser, use numbers with no more
 //  than 2 digits after the decimal and four digits before it." -- im gonna ignore this
+// NOTE: this intersection-based way of rendering svg is quite slow for larger clusters
+//  consider fusing part.insides into <path d="a.."/> instead of nested clipPath's
 fun cluster2svg(
     cluster: Cluster,
     backgroundColor: Color?,
@@ -47,13 +50,16 @@ fun cluster2svg(
         val bg = Json.encodeToString(ColorCssSerializer, it)
         "<rect x=\"${visibleRect.left}\" y=\"${visibleRect.top}\" width=\"100%\" height=\"100%\" fill=$bg/>"
     } ?: ""
-    val colorAttribute =
-        if (cluster.filled) "fill"
-        else "stroke"
-    val partRects = cluster.parts.withIndex().map { (i, part) ->
+    val partRects = cluster.parts.withIndex().joinToString("\n") { (i, part) ->
         val fill = Json.encodeToString(ColorCssSerializer, part.fillColor)
         "<rect x=\"${visibleRect.left}\" y=\"${visibleRect.top}\" width=\"100%\" height=\"100%\" mask=\"url(#mask-part$i)\" fill=$fill/>"
-    }.joinToString("\n")
+    }
+    val golden = Json.encodeToString(ColorCssSerializer, DodeclustersColors.tertiaryDark)
+    val circles =
+        if (encodeAllCircles) cluster.circles.joinToString("\n") { circle ->
+            formatCircleOrLine(circle, visibleRect, "stroke=$golden fill=\"none\"")
+        }
+        else ""
     return """
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="$startX $startY $width $height">
 <defs>
@@ -61,6 +67,7 @@ $partClipsAndMasks
 </defs>
 $bgRect
 $partRects
+$circles
 </svg>
 """.trimIndent()
 }
@@ -71,33 +78,12 @@ fun partMask(
     part: Cluster.Part,
     visibleRect: Rect
 ): String {
-    fun format(circle: CircleOrLine, postfix: String = ""): String =
-        when (circle) {
-            is Circle -> "<circle cx=\"${circle.x}\" cy=\"${circle.y}\" r=\"${circle.radius}\" $postfix/>"
-            is Line -> {
-                val pointClosestToScreenCenter = circle.project(visibleRect.center)
-                val direction =  circle.directionVector
-                val normal = circle.normalVector
-                val diag = hypot(visibleRect.width, visibleRect.height)
-                val farBack = pointClosestToScreenCenter - direction * diag
-                val farForward = pointClosestToScreenCenter + direction * diag
-                val farForwardIn = farForward + normal * diag
-                val farBackIn = farBack + normal * diag
-                val d = "M ${farBack.x} ${farBack.y} " +
-                        "L ${farForward.x} ${farForward.y} " +
-                        "L ${farForwardIn.x} ${farForwardIn.y} " +
-                        "L ${farBackIn.x} ${farBackIn.y} " +
-                        "z"
-                "<path d=\"$d\" $postfix/>"
-            }
-        }
-
     val insides = part.insides.map { circles[it] }
     val outsides = part.outsides.map { circles[it] }
     val firstClipPath =
         if (insides.size >= 2) """
 <clipPath id="clip-part$partIndex-0">
-${format(insides[0])}
+${formatCircleOrLine(insides[0], visibleRect)}
 </clipPath>""".trimIndent()
         else ""
     val clipPaths = insides
@@ -107,17 +93,17 @@ ${format(insides[0])}
         .joinToString("\n") { (j, c) ->
             val inJ = j + 1 // index of the circle in the list of part.insides
 """<clipPath id="clip-part$partIndex-$inJ">
-${format(c, "clip-path=\"url(#clip-part$partIndex-$j)\"")}
+${formatCircleOrLine(c, visibleRect, "clip-path=\"url(#clip-part$partIndex-$j)\"")}
 </clipPath>""".trimIndent()
         }
     val insidesInMask =
         when (part.insides.size) {
             0 -> "<rect x=\"${visibleRect.left}\" y=\"${visibleRect.top}\" width=\"100%\" height=\"100%\" fill=\"white\"/>"
-            1 -> format(insides.last(), "fill=\"white\"")
-            else -> format(insides.last(), "clip-path=\"url(#clip-part$partIndex-${part.insides.size - 2})\" fill=\"white\"")
+            1 -> formatCircleOrLine(insides.last(), visibleRect, "fill=\"white\"")
+            else -> formatCircleOrLine(insides.last(), visibleRect, "clip-path=\"url(#clip-part$partIndex-${part.insides.size - 2})\" fill=\"white\"")
         }
     val outsidesInMask = outsides.joinToString("\n") {
-        format(it, "fill=\"black\"")
+        formatCircleOrLine(it, visibleRect, "fill=\"black\"")
     }
     val mask = """
 
@@ -130,4 +116,25 @@ $outsidesInMask
 """.trimIndent()
     return mask
 }
+
+fun formatCircleOrLine(circle: CircleOrLine, visibleRect: Rect, postfix: String = ""): String =
+    when (circle) {
+        is Circle -> "<circle cx=\"${circle.x}\" cy=\"${circle.y}\" r=\"${circle.radius}\" $postfix/>"
+        is Line -> {
+            val pointClosestToScreenCenter = circle.project(visibleRect.center)
+            val direction =  circle.directionVector
+            val normal = circle.normalVector
+            val diag = hypot(visibleRect.width, visibleRect.height)
+            val farBack = pointClosestToScreenCenter - direction * diag
+            val farForward = pointClosestToScreenCenter + direction * diag
+            val farForwardIn = farForward + normal * diag
+            val farBackIn = farBack + normal * diag
+            val d = "M ${farBack.x} ${farBack.y} " +
+                    "L ${farForward.x} ${farForward.y} " +
+                    "L ${farForwardIn.x} ${farForwardIn.y} " +
+                    "L ${farBackIn.x} ${farBackIn.y} " +
+                    "z"
+            "<path d=\"$d\" $postfix/>"
+        }
+    }
 
