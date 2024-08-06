@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import data.geometry.CircleOrLine
 import data.geometry.CirclePencilType
 import data.geometry.GeneralizedCircle
@@ -69,6 +71,7 @@ fun CircleInterpolationDialog(
             modifier = Modifier
                 .padding(16.dp)
             ,
+            shape = RoundedCornerShape(24.dp)
         ) {
             Column(
                 horizontalAlignment = Alignment.Start
@@ -91,10 +94,10 @@ fun CircleInterpolationDialog(
                         }
                     }
                     ,
-                    Modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
+                    Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyLarge
                 )
-                Slider(sliderState)
+                Slider(sliderState, Modifier.padding(16.dp))
 //                Text(
 //                    buildAnnotatedString {
 //                        append("Subdividing along ")

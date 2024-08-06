@@ -100,7 +100,7 @@ fun ColorPickerDialog(
                 modifier = Modifier
 //                    .fillMaxHeight()
                     .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(24.dp),
             ) {
                 Column(
                     modifier = Modifier.fillMaxHeight(0.8f),

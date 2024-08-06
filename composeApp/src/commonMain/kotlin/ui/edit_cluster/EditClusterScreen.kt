@@ -73,7 +73,6 @@ import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.undo
@@ -216,7 +215,7 @@ fun EditClusterScreen(
         } else {
             viewModel.loadCluster(Cluster(
                 listOf(
-                    Circle(0.0, 5_000.0, 200.0),
+                    Circle(0.0, 0.0, 200.0),
                 ),
                 parts = listOf(Cluster.Part(
                     insides = setOf(0),
@@ -224,8 +223,7 @@ fun EditClusterScreen(
                     fillColor = DodeclustersColors.primaryDark
                 ))
             ))
-            delay(10) // we want to know VM.canvasSize before centering
-            viewModel.moveToDdcCenter(0f, 5_000f)
+            viewModel.moveToDdcCenter(0f, 0f)
         }
     }
 }
@@ -313,6 +311,7 @@ fun ToolDescription(
     }
 }
 
+// TODO: test how it looks on mobile
 @Composable
 fun EditClusterTopBar(
     viewModel: EditClusterViewModel,

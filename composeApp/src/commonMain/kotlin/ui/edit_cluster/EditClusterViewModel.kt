@@ -1,6 +1,5 @@
 package ui.edit_cluster
 
-import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
@@ -17,7 +16,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import data.Cluster
@@ -47,7 +45,6 @@ import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
-import kotlin.math.abs
 import kotlin.math.pow
 
 /** circle index in vm.circles or cluster.circles */
@@ -174,11 +171,9 @@ class EditClusterViewModel(
 
     fun changeCanvasSize(newCanvasSize: IntSize) {
 //        println(newCanvasSize)
-        if (canvasSize != IntSize.Zero) {
-            val prevCenter = Offset(canvasSize.width/2f, canvasSize.height/2f)
-            val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
-            translation = translation + (newCenter - prevCenter)
-        }
+        val prevCenter = Offset(canvasSize.width/2f, canvasSize.height/2f)
+        val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
+        translation = translation + (newCenter - prevCenter)
         canvasSize = newCanvasSize
     }
 
@@ -1254,9 +1249,9 @@ class EditClusterViewModel(
         val endCircleIx = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
         val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
         val n = nInterjacents + 1
-        val newCircles = (1 until n).map { i ->
+        val newCircles = (1 until n).mapNotNull { i ->
             val interjacent = start.bisector(end, nOfSections = n, index = i, inBetween = inBetween)
-            interjacent.toGCircle() as CircleOrLine
+            interjacent.toGCircle() as? CircleOrLine
         }
         createNewCircles(newCircles)
         partialArgList = PartialArgList(argList.signature)
@@ -1298,7 +1293,7 @@ class EditClusterViewModel(
         }
         createNewCircles(
             newGeneralizedCircles
-                .map { it.toGCircle() as CircleOrLine }
+                .mapNotNull { it.toGCircle() as? CircleOrLine }
         )
         partialArgList = PartialArgList(argList.signature)
         defaultExtrapolationParameters = DefaultExtrapolationParameters(nLeft, nRight)

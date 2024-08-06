@@ -219,8 +219,8 @@ data class GeneralizedCircle(
         return when {
             w == 0.0 && x == 0.0 && y == 0.0 -> Point.CONFORMAL_INFINITY
             isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
-            isRealCircle -> Circle(x / w, y / w, sqrt(r2))
             isPoint -> Point(x / w, y / w)
+            isRealCircle -> Circle(x / w, y / w, sqrt(r2))
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
             else -> throw IllegalStateException("Never. $this")
         }
