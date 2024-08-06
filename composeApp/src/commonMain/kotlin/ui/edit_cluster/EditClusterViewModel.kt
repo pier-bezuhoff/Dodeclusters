@@ -1231,9 +1231,9 @@ class EditClusterViewModel(
         val targetCirclesIxs = (argList.args[0] as PartialArgList.Arg.SelectedCircles).indices
         val invertingCircleIndex = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
         val invertingCircle = circles[invertingCircleIndex]
-        val newCircles = targetCirclesIxs.map { targetIx ->
+        val newCircles = targetCirclesIxs.mapNotNull { targetIx ->
             val targetCircle = circles[targetIx]
-            val newCircle = Circle.invert(invertingCircle, targetCircle) as CircleOrLine
+            val newCircle = Circle.invert(invertingCircle, targetCircle) as? CircleOrLine
             newCircle
         }
         createNewCircles(newCircles)
