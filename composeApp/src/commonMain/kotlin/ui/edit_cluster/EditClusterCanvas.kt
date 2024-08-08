@@ -331,7 +331,7 @@ private fun DrawScope.drawParts(
 ) {
     if (viewModel.displayChessboardPattern) {
         drawPath(
-            chessboardPath(viewModel.circles, visibleRect, inverted = viewModel.invertChessboard),
+            chessboardPath(viewModel.circles, visibleRect, inverted = viewModel.invertedChessboard),
             color = viewModel.regionColor,
             alpha = clusterPathAlpha,
             style = if (viewModel.showWireframes) circleStroke else Fill,

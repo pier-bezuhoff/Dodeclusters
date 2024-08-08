@@ -20,6 +20,9 @@ data class Cluster(
     /** fill regions inside / wireframe */
     val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
 ) {
+    // NOTE: we can alternatively use 1 BooleanArray[circles.size] to specify part bounds
+    //  out of the circles, and another BooleanArray[insides.size + outsides.size] to specify
+    //  which are in and which are out
     /** intersection of insides and outside of circles of a cluster */
     @Serializable
     @Immutable
@@ -62,8 +65,50 @@ data class OldCluster(
     val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
 )
 
-/** Filters out all unused 'in' and 'out' separators */
-fun compressPartToEssentials(
+
+fun compressPart(
+    circles: List<CircleOrLine>,
+    ins: List<Ix>,
+    outs: List<Ix>,
+): Pair<Set<Ix>, Set<Ix>> {
+    val (sievedIns, sievedOuts) =
+        compressPartByRelativeContainment(circles, ins, outs)
+    val (essentialInsIxs, essentialOutsIxs) =
+        compressPartByIntersectionPoints(sievedIns.map { circles[it] }, sievedOuts.map { circles[it] })
+    val essentialIns = essentialInsIxs.map { sievedIns[it] }
+    val essentialOuts = essentialOutsIxs.map { sievedOuts[it] }
+    return Pair(essentialIns.toSet(), essentialOuts.toSet())
+}
+
+fun compressPartByRelativeContainment(
+    circles: List<CircleOrLine>,
+    ins: List<Ix>,
+    outs: List<Ix>,
+): Pair<List<Ix>, List<Ix>> {
+    // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
+    val excessiveIns = ins.filter { inJ -> // NOTE: tbh idt these can occur naturally
+        val circle = circles[inJ]
+        ins.any { otherIn ->
+            otherIn != inJ && circles[otherIn] isInside circle // we only leave the smallest 'in'
+        } || outs.any { otherOut ->
+            circle isInside circles[otherOut] // if an 'in' isInside an 'out' it is empty
+        }
+    }
+    val excessiveOuts = outs.filter { outJ ->
+        val circle = circles[outJ]
+        outs.any { otherOut ->
+            otherOut != outJ && circle isInside circles[otherOut] // we only leave the biggest 'out'
+        } || ins.any { otherIn ->
+            circle isOutside circles[otherIn] // if an 'out' isOutside an 'in' it is empty
+        }
+    }
+    val sievedIns = ins.minus(excessiveIns.toSet())
+    val sievedOuts = outs.minus(excessiveOuts.toSet())
+    return Pair(sievedIns, sievedOuts)
+}
+
+/** Filters out all unused 'in' and 'out' separators by checking intersection points */
+fun compressPartByIntersectionPoints(
     ins: List<CircleOrLine>,
     outs: List<CircleOrLine>,
 ): Pair<List<Ix>, List<Ix>> {

@@ -22,7 +22,8 @@ import data.Cluster
 import data.OffsetSerializer
 import data.OldCluster
 import data.PartialArgList
-import data.compressPartToEssentials
+import data.combinations
+import data.compressPart
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
@@ -33,6 +34,7 @@ import data.io.OldDdc
 import data.io.cluster2svg
 import data.io.parseDdc
 import data.io.parseOldDdc
+import data.partitionIndices
 import domain.angleDeg
 import getPlatform
 import kotlinx.coroutines.CoroutineScope
@@ -108,7 +110,7 @@ class EditClusterViewModel(
         private set
     var displayChessboardPattern by mutableStateOf(false)
         private set
-    var invertChessboard by mutableStateOf(false)
+    var invertedChessboard by mutableStateOf(false)
         private set
 
     val circleSelectionIsActive by derivedStateOf {
@@ -510,35 +512,13 @@ class EditClusterViewModel(
             .filter { ix -> circles[ix].hasInside(position) }
         val outs = delimiters
             .filter { ix -> circles[ix].hasOutside(position) }
-        // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
-        val excessiveIns = ins.filter { inJ -> // NOTE: tbh idt these can occur naturally
-            val circle = circles[inJ]
-            ins.any { otherIn ->
-                otherIn != inJ && circles[otherIn] isInside circle // we only leave the smallest 'in'
-            } || outs.any { otherOut ->
-                circle isInside circles[otherOut] // if an 'in' isInside an 'out' it is empty
-            }
-        }
-        val excessiveOuts = outs.filter { outJ ->
-            val circle = circles[outJ]
-            outs.any { otherOut ->
-                otherOut != outJ && circle isInside circles[otherOut] // we only leave the biggest 'out'
-            } || ins.any { otherIn ->
-                circle isOutside circles[otherIn] // if an 'out' isOutside an 'in' it is empty
-            }
-        }
-        val sievedIns = ins.minus(excessiveIns.toSet())
-        val sievedOuts = outs.minus(excessiveOuts.toSet())
-        val (essentialInsIxs, essentialOutsIxs) =
-            compressPartToEssentials(sievedIns.map { circles[it] }, sievedOuts.map { circles[it] })
-        val essentialIns = essentialInsIxs.map { sievedIns[it] }
-        val essentialOuts = essentialOutsIxs.map { sievedOuts[it] }
+        val (essentialIns, essentialOuts) = compressPart(circles, ins, outs)
         val part0 = Cluster.Part(ins.toSet(), outs.toSet(), regionColor)
         val part = Cluster.Part(
 //            insides = sievedIns.toSet(),
 //            outsides = sievedOuts.toSet(),
-            insides = essentialIns.toSet(),
-            outsides = essentialOuts.toSet(),
+            insides = essentialIns,
+            outsides = essentialOuts,
             fillColor = regionColor
         )
         return Pair(part, part0)
@@ -637,16 +617,46 @@ class EditClusterViewModel(
         restrictRegionsToSelection = !restrictRegionsToSelection
     }
 
-    fun applyChessboardPatter() {
+    fun _applyChessboardPatter() {
         if (!displayChessboardPattern) {
             displayChessboardPattern = true
-            invertChessboard = false
-        } else if (!invertChessboard) {
-            invertChessboard = true
+            invertedChessboard = false
+        } else if (!invertedChessboard) {
+            invertedChessboard = true
         } else {
             displayChessboardPattern = false
-            invertChessboard = false
+            invertedChessboard = false
         }
+    }
+
+    fun applyChessboardPatter() {
+        val allCircles = circles.toList()
+        val allIndices = allCircles.indices
+        val n = allCircles.size
+        val startPhase = if (invertedChessboard) 1 else 0
+        // "atomic" (fully compressed) parts
+        val newParts = mutableSetOf<Cluster.Part>()
+        for (kIns in startPhase..n step 2) {
+            for (ins in combinations(n, kIns)) {
+                val outs = allIndices.minus(ins.toSet())
+                // if any less precise atomic part is already in, we don't need to bother
+                val itIsNew = newParts.none { (ins0, outs0) ->
+                    ins.containsAll(ins0) &&
+                    outs.containsAll(outs0)
+                }
+                if (itIsNew) {
+                    val (compressedIns, compressedOuts) = compressPart(circles, ins, outs)
+                    if (compressedIns.isNotEmpty() || compressedOuts.isNotEmpty()) { // lotsa will be empty
+                        val part = Cluster.Part(compressedIns, compressedOuts, regionColor)
+                        newParts.add(part)
+                    }
+                }
+            }
+        }
+        recordCommand(Command.FILL_REGION, unique = true)
+        parts.clear()
+        parts.addAll(newParts)
+        invertedChessboard = !invertedChessboard
     }
 
     fun selectRegionColor(color: Color) {
@@ -1336,7 +1346,7 @@ class EditClusterViewModel(
             EditClusterTool.ToggleSelectAll -> selection.containsAll(circles.indices.toSet())
             EditClusterTool.Region -> mode == SelectionMode.Region && submode !is SubMode.FlowFill
             EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
-            EditClusterTool.FillChessboardPattern -> !invertChessboard
+            EditClusterTool.FillChessboardPattern -> !invertedChessboard
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
