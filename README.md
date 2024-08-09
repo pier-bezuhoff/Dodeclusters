@@ -1,7 +1,8 @@
 # Dodeclusters
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-Conformal vector graphics editor: treating points, circles and straight lines equally (WIP)  
+## Conformal vector graphics editor: treating points, circles and straight lines equally
+
 ![Dodeclusters](docs/02inf-art.png)
 
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform), targeting
@@ -18,7 +19,7 @@ and specific type of animations ~ [Möbius transformations](https://en.wikipedia
 
 ## Installation
 [Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
-Binaries for Linux, Window and Android are stored [here](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=drive_link).
+Binaries for Linux, Window and Android can be found in assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
 
 
 ## Build and run via Gradle
