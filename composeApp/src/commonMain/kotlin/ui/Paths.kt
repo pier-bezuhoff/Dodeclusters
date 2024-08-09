@@ -2,10 +2,9 @@ package ui
 
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.PathOperation
-import data.geometry.Circle
 import data.Cluster
+import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
 
@@ -59,6 +58,7 @@ fun halfPlanePath(line: Line, visibleRect: Rect): Path {
     return path
 }
 
+// BUG: random glitches on big clusters (e.g. D-bug-android)
 fun chessboardPath(
     circles: List<CircleOrLine>,
     visibleRect: Rect,

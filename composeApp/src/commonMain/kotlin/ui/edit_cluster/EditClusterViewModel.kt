@@ -617,7 +617,7 @@ class EditClusterViewModel(
         restrictRegionsToSelection = !restrictRegionsToSelection
     }
 
-    fun _applyChessboardPatter() {
+    fun applyChessboardPatter() {
         if (!displayChessboardPattern) {
             displayChessboardPattern = true
             invertedChessboard = false
@@ -629,36 +629,6 @@ class EditClusterViewModel(
         }
     }
 
-    fun applyChessboardPatter() {
-        val allCircles = circles.toList()
-        val allIndices = allCircles.indices
-        val n = allCircles.size
-        val startPhase = if (invertedChessboard) 1 else 0
-        // "atomic" (fully compressed) parts
-        val newParts = mutableSetOf<Cluster.Part>()
-        for (kIns in startPhase..n step 2) {
-            for (ins in combinations(n, kIns)) {
-                val outs = allIndices.minus(ins.toSet())
-                // if any less precise atomic part is already in, we don't need to bother
-                val itIsNew = newParts.none { (ins0, outs0) ->
-                    ins.containsAll(ins0) &&
-                    outs.containsAll(outs0)
-                }
-                if (itIsNew) {
-                    val (compressedIns, compressedOuts) = compressPart(circles, ins, outs)
-                    if (compressedIns.isNotEmpty() || compressedOuts.isNotEmpty()) { // lotsa will be empty
-                        val part = Cluster.Part(compressedIns, compressedOuts, regionColor)
-                        newParts.add(part)
-                    }
-                }
-            }
-        }
-        recordCommand(Command.FILL_REGION, unique = true)
-        parts.clear()
-        parts.addAll(newParts)
-        invertedChessboard = !invertedChessboard
-    }
-
     fun selectRegionColor(color: Color) {
         showColorPickerDialog = false
         regionColor = color
@@ -666,7 +636,7 @@ class EditClusterViewModel(
 //        showPanel = true
     }
     
-    // TODO: in the future replace with select-all->delete in invisible-circles part manipulation mode
+    // MAYBE: replace with select-all->delete in invisible-circles part manipulation mode
     fun deleteAllParts() {
         recordCommand(Command.DELETE, unique = true)
         parts.clear()

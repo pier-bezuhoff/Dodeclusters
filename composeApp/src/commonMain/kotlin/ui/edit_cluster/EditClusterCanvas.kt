@@ -330,6 +330,10 @@ private fun DrawScope.drawParts(
     circleStroke: DrawStyle,
 ) {
     if (viewModel.displayChessboardPattern) {
+        // does not scale well, slows down significantly + breaks on line
+//        for (circle in viewModel.circles) {
+//            drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor)
+//        }
         drawPath(
             chessboardPath(viewModel.circles, visibleRect, inverted = viewModel.invertedChessboard),
             color = viewModel.regionColor,

@@ -1,13 +1,15 @@
 # Dodeclusters
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-Conformal vector image editor: using only circles (WIP)  
-<insert 0-inf banner here>  
+Conformal vector graphics editor: treating points, circles and straight lines equally (WIP)  
+![Dodeclusters](docs/02inf-art.png)
+
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform), targeting
 - [x] Desktop (Windows, Linux)
 - [x] Android 7.0+ (SDK 24+)
 - [x] Web (via [Wasm](#Web-Wasm-compatibility))
-- [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries), for now only works as a web app thru Chrome/Firefox
+- [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries), for now 
+  only works as a web app thru Chrome/Firefox
 
 ## End goal
 Combine interactive designs ~ Geogebra  
@@ -17,34 +19,6 @@ and specific type of animations ~ [Möbius transformations](https://en.wikipedia
 ## Installation
 [Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
 Binaries for Linux, Window and Android are stored [here](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=drive_link).
-
-
-## Roadmap:
-
-Cluster = circles + union of intersections of some of these circles (their insides or outsides)  
-
-* Cluster editor
-  - [x] drag, select, copy, create & delete circles
-  - [x] move & scale circles
-  - [x] select/deselect intersection regions
-  - [x] fill regions with diff colors
-  - [ ] select binary interlacing even/odd regions (like chessboard coloring)
-  - [x] load/save individual clusters as .ddc/.yml (based on yaml)
-  - [x] additional context-dependent toolbar to group categories of tools (a-la bucket fill + gradient)
-  - [x] tools: circle by center & radius, by 3 points; maybe line by 2 points
-  - [ ] bezier-like pathing tool
-  - [ ] maybe finer control over angles/distances
-* Multi-cluster editor
-  - drag, select, copy, create & delete clusters
-  - move, scale & rotate clusters
-  - change color, border color, fill/wireframe
-  - re-order / sidebar layer-like interface
-  - create and apply Möbius transforms as animations
-* Other
-  - [x] history: undo + redo
-  - [x] New cluster-based format to supercede `.ddu`, YAML subset
-  - [ ] read `.ddu`
-  - [ ] maybe export as `.svg`
 
 
 ## Build and run via Gradle

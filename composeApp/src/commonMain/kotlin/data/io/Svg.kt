@@ -12,6 +12,7 @@ import ui.theme.DodeclustersColors
 import kotlin.math.hypot
 
 // NOTE: ksvg doesn't support wasm yet + my use case is relatively formulaic
+// NOTE: Path.toSvg is coming soon (tm) to compose.ui.graphics
 // NOTE: "For reliable results cross-browser, use numbers with no more
 //  than 2 digits after the decimal and four digits before it." -- im gonna ignore this
 // NOTE: this intersection-based way of rendering svg is quite slow for larger clusters
