@@ -13,7 +13,7 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
 
 ## End goal
 Combine interactive designs ~ Geogebra  
-with graphical vector editor ~ Inkscape  
+with vector graphics editor ~ Inkscape  
 and specific type of animations ~ [Möbius transformations](https://en.wikipedia.org/wiki/M%C3%B6bius_transformation) and possibly [Lie sphere geometry](https://en.wikipedia.org/wiki/Lie_sphere_geometry)  
 
 ## Installation
