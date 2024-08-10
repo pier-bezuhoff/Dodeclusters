@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -180,13 +181,13 @@ data class GeneralizedCircle(
         val a = this.normalizedPreservingDirection()
         val b = other.normalizedPreservingDirection()//*sign//*inOutSign
 //        val k = (nOfSections - index).toDouble()/nOfSections
-        val k = index.toDouble()/nOfSections
+        val k = PI/2 // index.toDouble()/nOfSections
 //        return a*k + b*(1.0-k)
 //        val rotor = Rotor.fromBivectorInterpolation(this, other, k)
         // exp(-k/2 * (a^b)) >>> a
         val bivector = Rotor.fromOuterProduct(a, b)
         val rotor = (bivector * (-k/2)).exp()
-        val result =  rotor.applyTo(a)
+        val result = rotor.applyTo(a)
         println("k=$k, a = $a, b = $b")
         println("bivector = $bivector")
         println("bivector.norm2 = ${bivector.norm2}")
