@@ -111,7 +111,7 @@ data class GeneralizedCircle(
     fun normalizedPreservingDirection(): GeneralizedCircle {
         val n = norm
         return if (n == 0.0) {
-            if (w == 0.0)
+            if (w == 0.0) // conformal infinity
                 this * (1/abs(z))
             else
                 this * (1/abs(w))
@@ -160,6 +160,7 @@ data class GeneralizedCircle(
         ).normalizedPreservingDirection() // to avoid cumulative overflow
     }
 
+    // BUG: apparently for non-parabolic non-lines (doesn't take into account radius variation)
     /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
      * counting from [this] circle's side. [index]=0 being [this] circle. */
     fun bisector(
@@ -176,10 +177,23 @@ data class GeneralizedCircle(
         }
         // BUG: inBetween doesn't work
         val inOutSign = if (inBetween) +1 else -1
-        val a0 = this.normalizedPreservingDirection()
-        val b0 = other.normalizedPreservingDirection()*sign//*inOutSign
-        val k = (nOfSections - index).toDouble()/nOfSections
-        return a0*k + b0*(1.0-k)
+        val a = this.normalizedPreservingDirection()
+        val b = other.normalizedPreservingDirection()//*sign//*inOutSign
+//        val k = (nOfSections - index).toDouble()/nOfSections
+        val k = index.toDouble()/nOfSections
+//        return a*k + b*(1.0-k)
+//        val rotor = Rotor.fromBivectorInterpolation(this, other, k)
+        // exp(-k/2 * (a^b)) >>> a
+        val bivector = Rotor.fromOuterProduct(a, b)
+        val rotor = (bivector * (-k/2)).exp()
+        val result =  rotor.applyTo(a)
+        println("k=$k, a = $a, b = $b")
+        println("bivector = $bivector")
+        println("bivector.norm2 = ${bivector.norm2}")
+        println("rotor = $rotor")
+        println("rotor.norm2 = ${bivector.norm2}")
+        println("result = $result")
+        return result
     }
 
     /**

@@ -100,7 +100,7 @@ fun EditClusterScreen(
 //    if (windowSizeClass.heightSizeClass < WindowHeightSizeClass.Expanded &&
 //        windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 //    )
-    println(windowSizeClass) // TODO: vertical left-side toolbar instead
+//    println(windowSizeClass) // TODO: vertical left-side toolbar instead
 
     val coroutineScope = rememberCoroutineScope()
     val clusterRepository = remember { ClusterRepository() }

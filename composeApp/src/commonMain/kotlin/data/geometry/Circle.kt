@@ -19,6 +19,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 const val EPSILON: Double = 1e-6
+const val EPSILON2: Double = EPSILON*EPSILON
 
 @SerialName("circle")
 @Serializable

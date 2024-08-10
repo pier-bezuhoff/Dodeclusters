@@ -1,7 +1,7 @@
 # Dodeclusters
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-## Conformal vector graphics editor: treating points, circles and straight lines equally
+### Conformal vector graphics editor: treating points, circles and straight lines equally *(WIP)*
 
 ![Dodeclusters](docs/02inf-art.png)
 
