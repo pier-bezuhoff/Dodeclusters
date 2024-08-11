@@ -290,13 +290,23 @@ class EditClusterViewModel(
     }
 
     fun undo() {
+        val currentSelection = selection.toList()
+        switchToMode(mode) // clears up stuff
+        selection.clear()
         history.undo()
+        selection.clear()
+        selection.addAll(currentSelection.filter { it < circles.size })
         undoIsEnabled = history.undoIsEnabled
         redoIsEnabled = history.redoIsEnabled
     }
 
     fun redo() {
+        // MAYBE: keep prev selection but be careful about extra stuff
+        val currentSelection = selection.toList()
+        switchToMode(mode)
         history.redo()
+        selection.clear()
+        selection.addAll(currentSelection.filter { it < circles.size })
         undoIsEnabled = history.undoIsEnabled
         redoIsEnabled = history.redoIsEnabled
     }
@@ -1156,7 +1166,7 @@ class EditClusterViewModel(
             ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
             ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
-            ToolMode.CIRCLE_INTERPOLATION -> showCircleInterpolationDialog = true
+            ToolMode.CIRCLE_INTERPOLATION -> completeCircleInterpolation(9) // showCircleInterpolationDialog = true
             ToolMode.CIRCLE_EXTRAPOLATION -> showCircleExtrapolationDialog = true
         }
     }
@@ -1213,7 +1223,7 @@ class EditClusterViewModel(
         val invertingCircle = circles[invertingCircleIndex]
         val newCircles = targetCirclesIxs.mapNotNull { targetIx ->
             val targetCircle = circles[targetIx]
-            val newCircle = Circle.invert(invertingCircle, targetCircle) as? CircleOrLine
+            val newCircle = Circle.invert(invertingCircle, targetCircle).also { println(it) } as? CircleOrLine
             newCircle
         }
         createNewCircles(newCircles)

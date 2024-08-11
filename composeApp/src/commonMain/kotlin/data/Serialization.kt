@@ -14,6 +14,8 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /** use as a type param `Json.encodeToString<ColorAsCss>(color)` */
 typealias ColorAsCss = @Serializable(ColorCssSerializer::class) Color
@@ -63,4 +65,13 @@ object OffsetSerializer : KSerializer<Offset> {
         val long = decoder.decodeSerializableValue(Long.serializer())
         return Offset(unpackFloat1(long), unpackFloat2(long))
     }
+}
+
+// we unironically need Prelude for kotlin...
+/** [decimalDigits] = digits after the decimal point */
+fun Number.round(decimalDigits: Int): Double {
+    val x = this.toDouble()
+    val factor = 10.0.pow(decimalDigits)
+    val rounded = (x * factor).roundToInt()/factor
+    return rounded
 }

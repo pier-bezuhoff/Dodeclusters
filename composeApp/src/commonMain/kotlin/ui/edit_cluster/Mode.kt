@@ -54,7 +54,7 @@ enum class ToolMode(
 @Immutable
 /** Additional mode accompanying [Mode] and
  * carrying [SubMode]-specific relevant data, also
- * they have specific behavior for [onPanZoom] */
+ * they have specific behavior for VM.[onPanZoom] */
 sealed interface SubMode {
     data object None : SubMode
     // center uses absolute positioning

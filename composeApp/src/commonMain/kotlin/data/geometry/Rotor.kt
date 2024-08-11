@@ -35,6 +35,19 @@ data class Rotor(
     val norm2 get() =
         s.pow(2) - xy.pow(2) - xp.pow(2) + xm.pow(2) - yp.pow(2) + ym.pow(2) + pm.pow(2)
 
+    fun normalized(): Rotor {
+        val n2 = norm2
+        return if (n2 != 0.0) {
+            this*(1.0/sqrt(abs(n2)))
+        } else {
+            val n = listOf(s, xy, xp, xm, yp, ym, pm).firstOrNull { it != 0.0 }
+            if (n == null)
+                this
+            else
+                this * (1.0/abs(n))
+        }
+    }
+
     operator fun times(k: Double): Rotor =
         Rotor(s*k, xy*k, xp*k, xm*k, yp*k, ym*k, pm*k)
 
@@ -43,6 +56,8 @@ data class Rotor(
 
     // reference: "Geometric Algebra for Computer Science", page 185
     fun exp(): Rotor {
+        if (setOf(s, xy, xp, xm, yp, ym, pm).all { it == 0.0 })
+            return Rotor(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
         require(s == 0.0) { "Exponentiation requires pure grade=2 bivector" }
         val n2 = this.norm2
         val n = sqrt(abs(n2))
@@ -66,12 +81,12 @@ data class Rotor(
         val y1 = pm.pow(2)*y + pm*w*ym + pm*w*yp - 2*pm*ym*z + 2*pm*yp*z - s.pow(2)*y + s*w*ym + s*w*yp + 2*s*x*xy + 2*s*ym*z - 2*s*yp*z - w*xm*xy - w*xp*xy - 2*x*xm*ym + 2*x*xp*yp + xm.pow(2)*y - 2*xm*xy*z - xp.pow(2)*y + 2*xp*xy*z + xy.pow(2)*y - y*ym.pow(2) + y*yp.pow(2)
         val plus = pm.pow(2)*w/2 - pm.pow(2)*z + pm*s*w + 2*pm*s*z - 2*pm*x*xm - 2*pm*y*ym + s.pow(2)*w/2 - s.pow(2)*z + 2*s*x*xp + 2*s*y*yp - w*xm.pow(2)/2 - w*xm*xp - w*xp.pow(2)/2 + w*xy.pow(2)/2 - w*ym.pow(2)/2 - w*ym*yp - w*yp.pow(2)/2 - 2*x*xy*yp + xm.pow(2)*z - 2*xm*xp*z + xp.pow(2)*z + 2*xp*xy*y - xy.pow(2)*z + ym.pow(2)*z - 2*ym*yp*z + yp.pow(2)*z
         val minus = -pm.pow(2)*w/2 - pm.pow(2)*z - pm*s*w + 2*pm*s*z - 2*pm*x*xp - 2*pm*y*yp - s.pow(2)*w/2 - s.pow(2)*z + 2*s*x*xm + 2*s*y*ym - w*xm.pow(2)/2 - w*xm*xp - w*xp.pow(2)/2 - w*xy.pow(2)/2 - w*ym.pow(2)/2 - w*ym*yp - w*yp.pow(2)/2 - 2*x*xy*ym - xm.pow(2)*z + 2*xm*xp*z + 2*xm*xy*y - xp.pow(2)*z - xy.pow(2)*z - ym.pow(2)*z + 2*ym*yp*z - yp.pow(2)*z
-        return GeneralizedCircle(
-            (minus - plus)/2,
+        return -GeneralizedCircle(
+            (minus - plus),
             x1,
             y1,
-            plus + minus
-        )//.normalizedPreservingDirection()
+            (plus + minus)/2
+        ).normalizedPreservingDirection()
     }
 
     companion object {

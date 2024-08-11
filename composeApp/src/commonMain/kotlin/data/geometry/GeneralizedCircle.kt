@@ -1,9 +1,13 @@
 package data.geometry
 
 import androidx.compose.runtime.Immutable
+import data.round
 import kotlinx.serialization.Serializable
-import kotlin.math.PI
+import ui.colorpicker.toDegree
 import kotlin.math.abs
+import kotlin.math.acos
+import kotlin.math.acosh
+import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -39,9 +43,9 @@ data class GeneralizedCircle(
     }
 
     val ePlusProjection: Double get() =
-        (z - 2*w)/2
+        -w/2 + z
     val eMinusProjection: Double get() =
-        (2*w + z)/2
+        w/2 + z
 
     val norm2: Double get() =
         x*x + y*y - 2*w*z
@@ -50,9 +54,13 @@ data class GeneralizedCircle(
     val norm: Double get() =
         sqrt(abs(norm2))
 
+    val isConformalInfinity: Boolean get() =
+        this.normalized().run {
+            w < EPSILON && x < EPSILON && y < EPSILON
+        }
+
     val isLine: Boolean get() =
-        w == 0.0 ||
-        abs(this.normalized().w) < EPSILON
+        !isConformalInfinity && (w == 0.0 || abs(this.normalized().w) < EPSILON)
 
     /** Radius squared */
     val r2: Double get() =
@@ -60,8 +68,8 @@ data class GeneralizedCircle(
         else norm2/(w*w)
 //        else (x/w).pow(2) + (y/w).pow(2) - 2*z/w
 
-    val isPoint: Boolean get() =
-        !isLine && abs(norm) < EPSILON
+    val isPoint: Boolean get() = // includes conformal infinity
+        !isLine && abs(norm2) < EPSILON2
 
     val isRealCircle: Boolean get() =
         !isLine && r2 >= EPSILON
@@ -141,27 +149,20 @@ data class GeneralizedCircle(
     fun affineCombination(other: GeneralizedCircle, k: Double): GeneralizedCircle =
         this.normalizedPreservingDirection()*k + other.normalizedPreservingDirection()*(1 - k)
 
+    /**
+     * Apply reflect [target] with respect to [this]
+     *
+     * = [this].dual * [target].dual * [this].dual */
     fun applyTo(target: GeneralizedCircle): GeneralizedCircle {
         val (w0,x0,y0,z0) = target
         return GeneralizedCircle(
-//            (x*x0 + y*y0 - 2*w*z0)*w + (w*x0 - w0*x)*x + (w*y0 - w0*y)*y,
-//            (x*x0 + y*y0 - 2*w0*z)*x + (x*y0 - x0*y)*y - 2*(x*z0 - x0*z)*w,
-//            (x*x0 + y*y0 - 2*w0*z)*y - (x*y0 - x0*y)*x - 2*(y*z0 - y0*z)*w,
-//            (x*x0 + y*y0 - 2*w0*z)*z - (x*z0 - x0*z)*x - (y*z0 - y0*z)*y
-
             -2*w*w*z0 + 2*w*x*x0 + 2*w*y*y0 - w0*x*x - w0*y*y,
             -2*w*x*z0 + 2*w*x0*z - 2*w0*x*z + x*x*x0 + 2*x*y*y0 - x0*y*y,
             -2*w*y*z0 + 2*w*y0*z - 2*w0*y*z - x*x*y0 + 2*x*x0*y + y*y*y0,
             -2*w0*z*z - x*x*z0 + 2*x*x0*z - y*y*z0 + 2*y*y0*z,
-
-//            2*(x*x0 + y*y0)*w - (x*x + y*y)*w0 - 2*z0*w*w,
-//            2*x*y*y0 + x0*(x*x - y*y) - 2*(x*w0 - x0*w)*z - 2*x*z0*w,
-//            2*x*x0*y + y0*(y*y - x*x) - 2*(y*w0 - y0*w)*z - 2*y*z0*w,
-//            2*(x*x0 + y*y0)*z - (x*x + y*y)*z0 - 2*z*z*w0
         ).normalizedPreservingDirection() // to avoid cumulative overflow
     }
 
-    // BUG: apparently for non-parabolic non-lines (doesn't take into account radius variation)
     /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
      * counting from [this] circle's side. [index]=0 being [this] circle. */
     fun bisector(
@@ -176,24 +177,53 @@ data class GeneralizedCircle(
             if (it >= 0) +1
             else -1
         }
-        // BUG: inBetween doesn't work
         val inOutSign = if (inBetween) +1 else -1
         val a = this.normalizedPreservingDirection()
-        val b = other.normalizedPreservingDirection()//*sign//*inOutSign
-//        val k = (nOfSections - index).toDouble()/nOfSections
-        val k = PI/2 // index.toDouble()/nOfSections
-//        return a*k + b*(1.0-k)
-//        val rotor = Rotor.fromBivectorInterpolation(this, other, k)
+        val b = other.normalizedPreservingDirection()
+        val d = a scalarProduct b
+        // some problems with lines
+        val maxInterpolationParameter = when (a.calculatePencilType(b)) {
+            CirclePencilType.PARABOLIC -> when {
+                a.isLine && b.isLine -> {
+                    // tis wrong
+//                    val la = a.toGCircle() as Line
+//                    val lb = b.toGCircle() as Line
+//                    val pb = lb.project(0.0, 0.0)
+//                    abs(la.a*pb.x + la.b*pb.y + la.c)/norm // distance
+                    abs(a.z - b.z)
+                }
+                a.isLine && b.isRealCircle -> 1.0/sqrt(b.r2)
+                a.isRealCircle && b.isLine -> 1.0/sqrt(a.r2)
+                a.isRealCircle && b.isRealCircle -> {
+                    // TODO: test inverse radii cases
+                    val ca = a.toGCircle() as Circle
+                    val cb = b.toGCircle() as Circle
+                    if (hypot(ca.x - cb.x, ca.y - cb.y) > abs(ca.radius - cb.radius) + EPSILON)
+                        1.0/ca.radius + 1.0/cb.radius
+                    else
+                        abs(1.0/cb.radius - 1.0/ca.radius)
+                }
+                else -> 0.0
+            }
+            CirclePencilType.ELLIPTIC -> acos(d).also { println("maxK = ${it.toDegree().round(2)}°") }
+            CirclePencilType.HYPERBOLIC -> acosh(abs(d))
+            null -> 0.0
+        }
+        val k = sign * inOutSign * index.toDouble()/nOfSections * maxInterpolationParameter
         // exp(-k/2 * (a^b)) >>> a
-        val bivector = Rotor.fromOuterProduct(a, b)
+        val bivector = Rotor.fromOuterProduct(a, b).normalized()
+        println("pencil: ${a.calculatePencilType(b)}")
+        println("maxK = $maxInterpolationParameter")
+        println("k = $k, $index/$nOfSections")
+//        println("a = $a, plus=${a.ePlusProjection}, minus=${a.eMinusProjection}")
+//        println("b = $b, plus=${b.ePlusProjection}, minus=${b.eMinusProjection}")
+        println("bivector = $bivector")
         val rotor = (bivector * (-k/2)).exp()
         val result = rotor.applyTo(a)
-        println("k=$k, a = $a, b = $b")
-        println("bivector = $bivector")
-        println("bivector.norm2 = ${bivector.norm2}")
+//        println("bivector.norm2 = ${bivector.norm2}")
         println("rotor = $rotor")
-        println("rotor.norm2 = ${bivector.norm2}")
-        println("result = $result")
+//        println("rotor.norm2 = ${bivector.norm2}")
+        println("result = $result, plus=${result.ePlusProjection}, minus=${result.eMinusProjection}")
         return result
     }
 
