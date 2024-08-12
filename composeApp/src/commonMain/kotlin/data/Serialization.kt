@@ -66,12 +66,3 @@ object OffsetSerializer : KSerializer<Offset> {
         return Offset(unpackFloat1(long), unpackFloat2(long))
     }
 }
-
-// we unironically need Prelude for kotlin...
-/** [decimalDigits] = digits after the decimal point */
-fun Number.round(decimalDigits: Int): Double {
-    val x = this.toDouble()
-    val factor = 10.0.pow(decimalDigits)
-    val rounded = (x * factor).roundToInt()/factor
-    return rounded
-}

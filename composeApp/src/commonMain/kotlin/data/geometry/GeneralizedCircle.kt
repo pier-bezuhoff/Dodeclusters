@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import data.round
+import data.signNonZero
 import kotlinx.serialization.Serializable
 import ui.colorpicker.toDegree
 import kotlin.math.abs
@@ -9,6 +10,7 @@ import kotlin.math.acos
 import kotlin.math.acosh
 import kotlin.math.hypot
 import kotlin.math.pow
+import kotlin.math.sign
 import kotlin.math.sqrt
 
 /** A circle, line, imaginary circle or point */
@@ -69,13 +71,13 @@ data class GeneralizedCircle(
 //        else (x/w).pow(2) + (y/w).pow(2) - 2*z/w
 
     val isPoint: Boolean get() = // includes conformal infinity
-        !isLine && abs(norm2) < EPSILON2
+        !isLine && abs(r2) < EPSILON2
 
     val isRealCircle: Boolean get() =
-        !isLine && r2 >= EPSILON
+        !isLine && r2 >= EPSILON2
 
     val isImaginaryCircle: Boolean get() =
-        !isLine && r2 <= -EPSILON
+        !isLine && r2 <= -EPSILON2
 
     operator fun times(a: Number): GeneralizedCircle {
         val a0 = a.toDouble()
@@ -92,10 +94,7 @@ data class GeneralizedCircle(
         GeneralizedCircle(w - other.w, x - other.x, y - other.y, z - other.z)
 
     infix fun scalarProduct(other: GeneralizedCircle): Double =
-        x*other.x +
-        y*other.y +
-        (z - w/2)*(other.z - other.w/2) - // e_plus part
-        (z + w/2)*(other.z + other.w/2) // e_minus part
+        x*other.x + y*other.y - z*other.w - other.z*w
 
     fun normalized(): GeneralizedCircle {
         val n = norm
@@ -173,56 +172,33 @@ data class GeneralizedCircle(
     ): GeneralizedCircle {
         require(nOfSections >= 1)
         // signifies relative direction of [this] wrt. [other]
-        val sign = this.scalarProduct(other).let {
-            if (it >= 0) +1
-            else -1
-        }
+        val sign = signNonZero(this.scalarProduct(other))
         val inOutSign = if (inBetween) +1 else -1
         val a = this.normalizedPreservingDirection()
         val b = other.normalizedPreservingDirection()
         val d = a scalarProduct b
-        // some problems with lines
         val maxInterpolationParameter = when (a.calculatePencilType(b)) {
-            CirclePencilType.PARABOLIC -> when {
-                a.isLine && b.isLine -> {
-                    // tis wrong
-//                    val la = a.toGCircle() as Line
-//                    val lb = b.toGCircle() as Line
-//                    val pb = lb.project(0.0, 0.0)
-//                    abs(la.a*pb.x + la.b*pb.y + la.c)/norm // distance
-                    abs(a.z - b.z)
-                }
-                a.isLine && b.isRealCircle -> 1.0/sqrt(b.r2)
-                a.isRealCircle && b.isLine -> 1.0/sqrt(a.r2)
-                a.isRealCircle && b.isRealCircle -> {
-                    // TODO: test inverse radii cases
-                    val ca = a.toGCircle() as Circle
-                    val cb = b.toGCircle() as Circle
-                    if (hypot(ca.x - cb.x, ca.y - cb.y) > abs(ca.radius - cb.radius) + EPSILON)
-                        1.0/ca.radius + 1.0/cb.radius
-                    else
-                        abs(1.0/cb.radius - 1.0/ca.radius)
-                }
-                else -> 0.0
-            }
+            CirclePencilType.PARABOLIC -> 1.0
             CirclePencilType.ELLIPTIC -> acos(d).also { println("maxK = ${it.toDegree().round(2)}°") }
             CirclePencilType.HYPERBOLIC -> acosh(abs(d))
             null -> 0.0
         }
         val k = sign * inOutSign * index.toDouble()/nOfSections * maxInterpolationParameter
         // exp(-k/2 * (a^b)) >>> a
-        val bivector = Rotor.fromOuterProduct(a, b).normalized()
+        val bivector = Rotor.fromOuterProduct(a, b)
+//            .also { println("bivector pre-norm: $it, n2=${it.norm2}") }
+            .normalized()
         println("pencil: ${a.calculatePencilType(b)}")
         println("maxK = $maxInterpolationParameter")
         println("k = $k, $index/$nOfSections")
-//        println("a = $a, plus=${a.ePlusProjection}, minus=${a.eMinusProjection}")
-//        println("b = $b, plus=${b.ePlusProjection}, minus=${b.eMinusProjection}")
+        println("a = $a, plus=${a.ePlusProjection}, minus=${a.eMinusProjection}")
+        println("b = $b, plus=${b.ePlusProjection}, minus=${b.eMinusProjection}")
         println("bivector = $bivector")
         val rotor = (bivector * (-k/2)).exp()
         val result = rotor.applyTo(a)
-//        println("bivector.norm2 = ${bivector.norm2}")
+        println("bivector.norm2 = ${bivector.norm2}")
         println("rotor = $rotor")
-//        println("rotor.norm2 = ${bivector.norm2}")
+        println("rotor.norm2 = ${bivector.norm2}")
         println("result = $result, plus=${result.ePlusProjection}, minus=${result.eMinusProjection}")
         return result
     }
@@ -240,6 +216,41 @@ data class GeneralizedCircle(
      * */
     fun inversiveDistance(other: GeneralizedCircle): Double =
         this.normalizedPreservingDirection() scalarProduct other.normalizedPreservingDirection()
+
+    fun inversiveAngle(other: GeneralizedCircle): Double {
+        val a = this.normalizedPreservingDirection()
+        val b = other.normalizedPreservingDirection()
+        val d = a scalarProduct b
+        return when (a.calculatePencilType(b)) {
+            CirclePencilType.PARABOLIC ->
+                sign(d)
+//                when {
+//                    a.isLine && b.isLine -> {
+//                        // tis wrong
+////                    val la = a.toGCircle() as Line
+////                    val lb = b.toGCircle() as Line
+////                    val pb = lb.project(0.0, 0.0)
+////                    abs(la.a*pb.x + la.b*pb.y + la.c)/norm // distance
+//                        abs(a.z - b.z) // since both are normalized dz is the distance between them
+//                    }
+//                    a.isLine && b.isRealCircle -> 1.0/sqrt(b.r2)
+//                    a.isRealCircle && b.isLine -> 1.0/sqrt(a.r2)
+//                    a.isRealCircle && b.isRealCircle -> {
+//                        // TODO: test inverse radii cases
+//                        val ca = a.toGCircle() as Circle
+//                        val cb = b.toGCircle() as Circle
+//                        if (hypot(ca.x - cb.x, ca.y - cb.y) > abs(ca.radius - cb.radius) + EPSILON)
+//                            1.0/ca.radius + 1.0/cb.radius
+//                        else
+//                            abs(1.0/cb.radius - 1.0/ca.radius)
+//                    }
+//                    else -> 0.0
+//                }
+            CirclePencilType.ELLIPTIC -> acos(d)
+            CirclePencilType.HYPERBOLIC -> acosh(abs(d))
+            null -> 0.0
+        }
+    }
 
     // in non-elliptic pencils subdivide+out is hardly applicable
     // in particular, in hyperbolic pencil it returns imaginary circles or points

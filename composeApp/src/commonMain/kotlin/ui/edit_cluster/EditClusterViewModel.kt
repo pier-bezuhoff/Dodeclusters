@@ -1239,6 +1239,7 @@ class EditClusterViewModel(
         val endCircleIx = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
         val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
         val n = nInterjacents + 1
+//        val newCircles = (0 until n+1).mapNotNull { i ->
         val newCircles = (1 until n).mapNotNull { i ->
             val interjacent = start.bisector(end, nOfSections = n, index = i, inBetween = inBetween)
             interjacent.toGCircle() as? CircleOrLine
