@@ -63,6 +63,10 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.kaml) // NOTE: kaml on wasm is experimental for now, maybe test it
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
 
