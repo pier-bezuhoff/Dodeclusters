@@ -217,11 +217,11 @@ fun EditClusterScreen(
                 listOf(
                     Circle(0.0, 0.0, 200.0),
                 ),
-//                parts = listOf(Cluster.Part(
-//                    insides = setOf(0),
-//                    outsides = emptySet(),
-//                    fillColor = DodeclustersColors.primaryDark
-//                ))
+                parts = listOf(Cluster.Part(
+                    insides = setOf(0),
+                    outsides = emptySet(),
+                    fillColor = DodeclustersColors.primaryDark
+                ))
             ))
             viewModel.moveToDdcCenter(0f, 0f)
         }

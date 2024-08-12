@@ -37,15 +37,10 @@ data class Rotor(
 
     fun normalized(): Rotor {
         val n2 = norm2
-        return if (n2 > EPSILON2) {
+        return if (abs(n2) > EPSILON2) {
             this*(1.0/sqrt(abs(n2)))
         } else {
             this
-//            val n = listOf(s, xy, xp, xm, yp, ym, pm).firstOrNull { it != 0.0 }
-//            if (n == null)
-//                this
-//            else
-//                this * (1.0/abs(n))
         }
     }
 

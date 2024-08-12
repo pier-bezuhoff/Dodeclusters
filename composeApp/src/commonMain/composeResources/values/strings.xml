@@ -102,6 +102,10 @@
     <!-- circle interpolation dialog -->
     <string name="circle_interpolation_title">Pick the number of interpolation steps</string>
     <string name="circle_interpolation_prompt">Number of circles in-between</string>
+    <string name="circle_interpolation_in_between_prompt1">Interpolate</string>
+    <string name="circle_interpolation_in_between_prompt2_variant1">in between</string>
+    <string name="circle_interpolation_in_between_prompt2_variant2">outside</string>
+    <string name="circle_interpolation_in_between_prompt3">the circles</string>
     <!-- circle extrapolation dialog -->
     <string name="circle_extrapolation_title">Pick the number of extrapolation steps</string>
     <string name="circle_extrapolation_left_prompt1">The number of new circles to the</string>

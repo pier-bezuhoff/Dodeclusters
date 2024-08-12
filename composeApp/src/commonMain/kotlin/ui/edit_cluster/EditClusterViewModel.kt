@@ -1166,7 +1166,7 @@ class EditClusterViewModel(
             ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
             ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
-            ToolMode.CIRCLE_INTERPOLATION -> completeCircleInterpolation(9) // showCircleInterpolationDialog = true
+            ToolMode.CIRCLE_INTERPOLATION -> showCircleInterpolationDialog = true
             ToolMode.CIRCLE_EXTRAPOLATION -> showCircleExtrapolationDialog = true
         }
     }
@@ -1223,7 +1223,8 @@ class EditClusterViewModel(
         val invertingCircle = circles[invertingCircleIndex]
         val newCircles = targetCirclesIxs.mapNotNull { targetIx ->
             val targetCircle = circles[targetIx]
-            val newCircle = Circle.invert(invertingCircle, targetCircle).also { println(it) } as? CircleOrLine
+            val newCircle = Circle.invert(invertingCircle, targetCircle)
+                .also { println("Circle inversion result: $it") } as? CircleOrLine
             newCircle
         }
         createNewCircles(newCircles)
@@ -1239,7 +1240,6 @@ class EditClusterViewModel(
         val endCircleIx = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
         val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
         val n = nInterjacents + 1
-//        val newCircles = (0 until n+1).mapNotNull { i ->
         val newCircles = (1 until n).mapNotNull { i ->
             val interjacent = start.bisector(end, nOfSections = n, index = i, inBetween = inBetween)
             interjacent.toGCircle() as? CircleOrLine

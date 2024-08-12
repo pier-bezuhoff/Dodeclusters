@@ -1,14 +1,12 @@
 package data.geometry
 
 import androidx.compose.runtime.Immutable
-import data.round
 import data.signNonZero
 import kotlinx.serialization.Serializable
-import ui.colorpicker.toDegree
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.acosh
-import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.sign
 import kotlin.math.sqrt
@@ -179,27 +177,28 @@ data class GeneralizedCircle(
         val d = a scalarProduct b
         val maxInterpolationParameter = when (a.calculatePencilType(b)) {
             CirclePencilType.PARABOLIC -> 1.0
-            CirclePencilType.ELLIPTIC -> acos(d).also { println("maxK = ${it.toDegree().round(2)}°") }
+            CirclePencilType.ELLIPTIC ->
+                if (inBetween) acos(abs(d))
+                else PI - acos(abs(d))
             CirclePencilType.HYPERBOLIC -> acosh(abs(d))
             null -> 0.0
         }
         val k = sign * inOutSign * index.toDouble()/nOfSections * maxInterpolationParameter
-        // exp(-k/2 * (a^b)) >>> a
+        // exp(-k/2 * (a^b).normalized) >>> a
         val bivector = Rotor.fromOuterProduct(a, b)
-//            .also { println("bivector pre-norm: $it, n2=${it.norm2}") }
             .normalized()
-        println("pencil: ${a.calculatePencilType(b)}")
-        println("maxK = $maxInterpolationParameter")
-        println("k = $k, $index/$nOfSections")
-        println("a = $a, plus=${a.ePlusProjection}, minus=${a.eMinusProjection}")
-        println("b = $b, plus=${b.ePlusProjection}, minus=${b.eMinusProjection}")
-        println("bivector = $bivector")
-        val rotor = (bivector * (-k/2)).exp()
+//        println("pencil: ${a.calculatePencilType(b)}")
+//        println("maxK = $maxInterpolationParameter")
+//        println("k = $k, $index/$nOfSections")
+//        println("a = $a, plus=${a.ePlusProjection}, minus=${a.eMinusProjection}")
+//        println("b = $b, plus=${b.ePlusProjection}, minus=${b.eMinusProjection}")
+//        println("bivector = $bivector")
+//        println("bivector.norm2 = ${bivector.norm2}")
+        val rotor = (bivector * (-k/2.0)).exp()
         val result = rotor.applyTo(a)
-        println("bivector.norm2 = ${bivector.norm2}")
-        println("rotor = $rotor")
-        println("rotor.norm2 = ${bivector.norm2}")
-        println("result = $result, plus=${result.ePlusProjection}, minus=${result.eMinusProjection}")
+//        println("rotor = $rotor")
+//        println("rotor.norm2 = ${bivector.norm2}")
+//        println("result = $result, plus=${result.ePlusProjection}, minus=${result.eMinusProjection}")
         return result
     }
 

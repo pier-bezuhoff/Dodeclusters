@@ -33,6 +33,10 @@ import data.geometry.CircleOrLine
 import data.geometry.CirclePencilType
 import data.geometry.GeneralizedCircle
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt1
+import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt2_variant1
+import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt2_variant2
+import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt3
 import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.circle_interpolation_title
 import org.jetbrains.compose.resources.stringResource
@@ -62,7 +66,8 @@ fun CircleInterpolationDialog(
         valueRange = 1f..20f
     ) }
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
-    val showInsideOutsideToggle = false // broken
+    val showInsideOutsideToggle = //false
+        pencilType == CirclePencilType.ELLIPTIC
 //        pencilType in setOf(CirclePencilType.ELLIPTIC, CirclePencilType.PARABOLIC)
     Dialog(
         onDismissRequest = onDismissRequest
@@ -124,15 +129,21 @@ fun CircleInterpolationDialog(
                         )
                         Text(
                             buildAnnotatedString {
-                                append("Interpolate ")
+                                append(stringResource(Res.string.circle_interpolation_in_between_prompt1))
+                                append(" ")
                                 withStyle(SpanStyle(
                                     color = MaterialTheme.colorScheme.primary,
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold
                                 )) {
-                                    append(if (interpolateInBetween) "in between" else "outside")
+                                    append(
+                                        if (interpolateInBetween)
+                                            stringResource(Res.string.circle_interpolation_in_between_prompt2_variant1)
+                                        else
+                                            stringResource(Res.string.circle_interpolation_in_between_prompt2_variant2))
                                 }
-                                append(" the circles")
+                                append(" ")
+                                append(stringResource(Res.string.circle_interpolation_in_between_prompt3))
                             },
                             modifier = Modifier.padding(8.dp),
                             style = MaterialTheme.typography.labelLarge
@@ -143,7 +154,11 @@ fun CircleInterpolationDialog(
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
                     CancelButton(onDismissRequest = onDismissRequest)
-                    OkButton(onConfirm = { onConfirm(sliderState.value.roundToInt(), interpolateInBetween) })
+                    OkButton(onConfirm = { onConfirm(
+                        sliderState.value.roundToInt(),
+                        if (showInsideOutsideToggle) interpolateInBetween
+                        else true
+                    ) })
                 }
             }
         }
