@@ -66,9 +66,8 @@ fun CircleInterpolationDialog(
         valueRange = 1f..20f
     ) }
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
-    val showInsideOutsideToggle = //false
+    val showInsideOutsideToggle =
         pencilType == CirclePencilType.ELLIPTIC
-//        pencilType in setOf(CirclePencilType.ELLIPTIC, CirclePencilType.PARABOLIC)
     Dialog(
         onDismissRequest = onDismissRequest
     ) {
@@ -157,7 +156,7 @@ fun CircleInterpolationDialog(
                     OkButton(onConfirm = { onConfirm(
                         sliderState.value.roundToInt(),
                         if (showInsideOutsideToggle) interpolateInBetween
-                        else true
+                        else DefaultInterpolationParameters().inBetween
                     ) })
                 }
             }
