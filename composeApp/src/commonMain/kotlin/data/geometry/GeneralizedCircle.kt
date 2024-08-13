@@ -134,15 +134,24 @@ data class GeneralizedCircle(
         }
     }
 
-    //  X == k*X where k!=0
-    // xNOTE: ignores direction since it uses .normalized()
+    //  X == k*X where k>0
     fun homogenousEquals(other: GeneralizedCircle, epsilon: Double = EPSILON): Boolean {
         val (w1,x1,y1,z1) = this.normalizedPreservingDirection()
         val (w2,x2,y2,z2) = other.normalizedPreservingDirection()
-        return abs(w1 - w2) < epsilon &&
-                abs(x1 - x2) < epsilon &&
-                abs(y1 - y2) < epsilon &&
-                abs(z1 - z2) < epsilon
+        return (w2 == 0.0 && abs(w1) < epsilon || abs(w1/w2 - 1.0) < epsilon) &&
+                (x2 == 0.0 && abs(x1) < epsilon || abs(x1/x2 - 1.0) < epsilon) &&
+                (y2 == 0.0 && abs(y1) < epsilon || abs(y1/y2 - 1.0) < epsilon) &&
+                (z2 == 0.0 && abs(z1) < epsilon || abs(z1/z2 - 1.0) < epsilon)
+    }
+
+    //  X == k*X where k!=0
+    fun homogenousEqualsNonOriented(other: GeneralizedCircle, epsilon: Double = EPSILON): Boolean {
+        val (w1,x1,y1,z1) = this.normalized()
+        val (w2,x2,y2,z2) = other.normalized()
+        return (w2 == 0.0 && abs(w1) < epsilon || abs(w1/w2 - 1.0) < epsilon) &&
+                (x2 == 0.0 && abs(x1) < epsilon || abs(x1/x2 - 1.0) < epsilon) &&
+                (y2 == 0.0 && abs(y1) < epsilon || abs(y1/y2 - 1.0) < epsilon) &&
+                (z2 == 0.0 && abs(z1) < epsilon || abs(z1/z2 - 1.0) < epsilon)
     }
 
     // NOTE: Let C:= 0.5 * A.normalized + 0.5 * B.normalized;
