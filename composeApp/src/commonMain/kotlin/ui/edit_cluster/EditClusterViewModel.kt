@@ -16,7 +16,9 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
 import data.Cluster
 import data.OffsetSerializer
@@ -701,9 +703,8 @@ class EditClusterViewModel(
     }
 
     fun scaleSelection(zoom: Float) {
-        if (circleSelectionIsActive)
+        if (circleSelectionIsActive) {
             when (selection.size) {
-                0 -> Unit
                 1 -> {
                     recordCommand(Command.CHANGE_RADIUS, targets = selection)
                     val ix = selection.single()
@@ -713,18 +714,27 @@ class EditClusterViewModel(
                         else -> {}
                     }
                 }
+
                 else -> {
                     recordCommand(Command.SCALE, targets = selection)
                     val rect = getSelectionRect()
                     val center =
                         if (rect == null || rect.minDimension >= 5_000)
-                            absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
+                            absolute(canvasSize.center.toOffset())
                         else rect.center
                     for (ix in selection) {
                         circles[ix] = circles[ix].scale(center, zoom)
                     }
                 }
             }
+        } else {
+            val allIndices = circles.indices
+            recordCommand(Command.SCALE, targets = allIndices)
+            val center = absolute(canvasSize.center.toOffset())
+            for (ix in allIndices) {
+                circles[ix] = circles[ix].scale(center, zoom)
+            }
+        }
     }
 
     // pointer input callbacks

@@ -186,11 +186,11 @@ data class GeneralizedCircle(
         require(nOfSections >= 1)
         // signifies relative direction of [this] wrt. [other]
         val sign = signNonZero(this.scalarProduct(other))
-        val inOutSign = if (inBetween) +1 else -1
         val a = this.normalizedPreservingDirection()
         val b = other.normalizedPreservingDirection()
         val d = a scalarProduct b
-        val maxInterpolationParameter = when (a.calculatePencilType(b)) {
+        val pencilType = a.calculatePencilType(b)
+        val maxInterpolationParameter = when (pencilType) {
             CirclePencilType.PARABOLIC -> 1.0
             CirclePencilType.ELLIPTIC ->
                 if (inBetween) acos(abs(d))
@@ -198,6 +198,7 @@ data class GeneralizedCircle(
             CirclePencilType.HYPERBOLIC -> acosh(abs(d))
             null -> 0.0
         }
+        val inOutSign = if (inBetween || pencilType != CirclePencilType.ELLIPTIC) +1 else -1
         val k = sign * inOutSign * index.toDouble()/nOfSections * maxInterpolationParameter
         // exp(-k/2 * (a^b).normalized) >>> a
         val bivector = Rotor.fromOuterProduct(a, b)
@@ -237,7 +238,7 @@ data class GeneralizedCircle(
         val d = a scalarProduct b
         return when (a.calculatePencilType(b)) {
             CirclePencilType.PARABOLIC ->
-                sign(d)
+                0.0
 //                when {
 //                    a.isLine && b.isLine -> {
 //                        // tis wrong
@@ -250,7 +251,6 @@ data class GeneralizedCircle(
 //                    a.isLine && b.isRealCircle -> 1.0/sqrt(b.r2)
 //                    a.isRealCircle && b.isLine -> 1.0/sqrt(a.r2)
 //                    a.isRealCircle && b.isRealCircle -> {
-//                        // TODO: test inverse radii cases
 //                        val ca = a.toGCircle() as Circle
 //                        val cb = b.toGCircle() as Circle
 //                        if (hypot(ca.x - cb.x, ca.y - cb.y) > abs(ca.radius - cb.radius) + EPSILON)
