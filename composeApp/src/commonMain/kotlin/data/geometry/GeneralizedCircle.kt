@@ -47,6 +47,7 @@ data class GeneralizedCircle(
     val eMinusProjection: Double get() =
         w/2 + z
 
+    // norm=0 for points
     val norm2: Double get() =
         x*x + y*y - 2*w*z
 //        this scalarProduct this
@@ -56,7 +57,7 @@ data class GeneralizedCircle(
 
     val isConformalInfinity: Boolean get() =
         this.normalized().run {
-            w < EPSILON && x < EPSILON && y < EPSILON
+            abs(w) < EPSILON && abs(x) < EPSILON && abs(y) < EPSILON
         }
 
     val isLine: Boolean get() =
@@ -64,7 +65,8 @@ data class GeneralizedCircle(
 
     /** Radius squared */
     val r2: Double get() =
-        if (isLine) Double.POSITIVE_INFINITY
+        if (isConformalInfinity) 0.0
+        else if (isLine) Double.POSITIVE_INFINITY
         else norm2/(w*w)
 //        else (x/w).pow(2) + (y/w).pow(2) - 2*z/w
 
@@ -96,13 +98,17 @@ data class GeneralizedCircle(
 
     fun normalized(): GeneralizedCircle {
         val n = norm
-        if (n == 0.0) {
-            return if (w == 0.0)
+        if (abs(n) < EPSILON) {
+            return if (n == 0.0 && abs(w) < EPSILON || n != 0.0 && abs(w/n) < EPSILON) // is conformal infinity?
                 this * (1/z)
             else
                 this * (1/w)
         }
-        val a = this * (1/norm)
+        val a = if (abs(w/n) < EPSILON) {
+            this.copy(w = 0.0) * (1/n)
+        } else {
+            this * (1/n)
+        }
         return  if (
             a.w < 0 ||
             a.w == 0.0 && a.x < 0 ||
@@ -116,27 +122,27 @@ data class GeneralizedCircle(
 
     fun normalizedPreservingDirection(): GeneralizedCircle {
         val n = norm
-        return if (n == 0.0) {
-            if (w == 0.0) // conformal infinity
-                this * (1/abs(z))
+        return if (abs(n) < EPSILON) {
+            if (n == 0.0 && abs(w) < EPSILON || n != 0.0 && abs(w/n) < EPSILON) // is conformal infinity?
+                GeneralizedCircle(0.0, 0.0, 0.0, if (w == 0.0) sign(z) else sign(w*z))
             else
                 this * (1/abs(w))
+        } else if (abs(w/n) < EPSILON) {
+            this.copy(w = 0.0) * (1/n)
         } else {
             this * (1/n)
         }
     }
 
-    //  X == k*X where k>0
-    // NOTE: ignores direction since it uses .normalized()
-    infix fun homogenousEquals(other: GeneralizedCircle): Boolean {
-        val (wxyz1, wxyz2) = listOf(
-            this.normalized(),
-            other.normalized()
-        ).map { listOf(it.w, it.x, it.y, it.z) }
-        return wxyz1.zip(wxyz2)
-            .all { (a1, a2) ->
-                abs(a1 - a2) < EPSILON
-            }
+    //  X == k*X where k!=0
+    // xNOTE: ignores direction since it uses .normalized()
+    fun homogenousEquals(other: GeneralizedCircle, epsilon: Double = EPSILON): Boolean {
+        val (w1,x1,y1,z1) = this.normalizedPreservingDirection()
+        val (w2,x2,y2,z2) = other.normalizedPreservingDirection()
+        return abs(w1 - w2) < epsilon &&
+                abs(x1 - x2) < epsilon &&
+                abs(y1 - y2) < epsilon &&
+                abs(z1 - z2) < epsilon
     }
 
     // NOTE: Let C:= 0.5 * A.normalized + 0.5 * B.normalized;
@@ -255,7 +261,7 @@ data class GeneralizedCircle(
     // in particular, in hyperbolic pencil it returns imaginary circles or points
     // and in parabolic pencil it loses meaning (i think)
     fun calculatePencilType(other: GeneralizedCircle): CirclePencilType? =
-        if (this homogenousEquals other) {
+        if (this.homogenousEquals(other)) {
             null
         } else {
             // sign of the scalar product is relative direction of [this] wrt. to [other]
@@ -288,20 +294,22 @@ data class GeneralizedCircle(
                     1.0,
                     gCircle.x, gCircle.y,
                     (gCircle.x.pow(2) + gCircle.y.pow(2) - gCircle.radius.pow(2))/2
-                )
+                ).normalizedPreservingDirection()
                 // a*x + b*y + c = 0
                 // -> a*e_x + b*e_y + c*e_inf
-                is Line -> GeneralizedCircle(0.0, gCircle.a, gCircle.b, -gCircle.c).normalized()
+                is Line ->
+                    GeneralizedCircle(0.0, gCircle.a, gCircle.b, -gCircle.c)
+                        .normalizedPreservingDirection()
                 Point.CONFORMAL_INFINITY -> GeneralizedCircle(0.0, 0.0, 0.0, 1.0)
                 is Point -> GeneralizedCircle(
                     1.0,
                     gCircle.x, gCircle.y,
                     (gCircle.x.pow(2) + gCircle.y.pow(2))/2
-                )
+                ).normalizedPreservingDirection()
                 is ImaginaryCircle -> GeneralizedCircle(
                     1.0, gCircle.x, gCircle.y,
                     (gCircle.x.pow(2) + gCircle.y.pow(2) + gCircle.radius.pow(2))/2
-                )
+                ).normalizedPreservingDirection()
             }
 
         /** Construct GC perpendicular to the given 3, includes circle by 3 points, etc.

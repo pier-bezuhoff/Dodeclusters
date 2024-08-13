@@ -1,3 +1,4 @@
+import org.gradle.kotlin.dsl.support.kotlinCompilerOptions
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
@@ -9,6 +10,7 @@ plugins {
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlinSerialization)
+//    alias(libs.plugins.kotest.multiplatform)
 }
 
 kotlin {
@@ -32,6 +34,13 @@ kotlin {
     }
 
     jvm("desktop")
+
+//    tasks.withType<Test>().configureEach {
+//        compilerOptions {
+//            jvmToolchain(17)
+//        }
+//        useJUnitPlatform()
+//    }
 
     sourceSets {
         all {
@@ -66,6 +75,13 @@ kotlin {
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+//            implementation(kotlin("test-common"))
+            implementation(kotlin("test-annotations-common"))
+//            implementation(libs.kotest.runner.junit5)
+//            implementation(libs.kotest.assertions.core)
+//            implementation(libs.kotest.framework.engine)
+//            implementation(libs.kotest.property)
+//            implementation(libs.kotest.framework.datatest)
         }
     }
 }
