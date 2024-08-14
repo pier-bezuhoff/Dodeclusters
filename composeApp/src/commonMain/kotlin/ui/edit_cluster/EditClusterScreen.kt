@@ -38,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -96,11 +97,8 @@ fun EditClusterScreen(
     sampleIndex: Int? = null,
     ddcContent: String? = null,
 ) {
-    val windowSizeClass = calculateWindowSizeClass()
-//    if (windowSizeClass.heightSizeClass < WindowHeightSizeClass.Expanded &&
-//        windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
-//    )
-//    println(windowSizeClass) // TODO: vertical left-side toolbar instead
+    val (widthClass, heightClass) = calculateWindowSizeClass()
+//    println(windowSizeClass) // TODO: vertical left-side toolbar instead for landscape
 
     val coroutineScope = rememberCoroutineScope()
     val clusterRepository = remember { ClusterRepository() }

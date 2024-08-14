@@ -112,6 +112,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // BUG: doesn't handle implicit intents from gdrive anymore
     /** check AndroidManifest for inputs */
     private fun getContentFromExternalImplicitIntent(
         uri: Uri,

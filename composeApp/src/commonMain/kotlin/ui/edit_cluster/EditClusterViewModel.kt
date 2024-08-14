@@ -495,7 +495,7 @@ class EditClusterViewModel(
             .filter { (_, distance) -> distance <= tapDistance }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
-            ?.also { println("select circle #$it") }
+            ?.also { println("select circle #$it ${circles[it]}") }
     }
 
     fun reselectCircleAt(visiblePosition: Offset) {
@@ -1092,6 +1092,9 @@ class EditClusterViewModel(
                 partialArgList = partialArgList!!.updateCurrentArg(newArg, confirmThisArg = false)
             } else {
 //                recordCommand(Command.CHANGE_POV)
+                if (zoom != 1f) {
+                    scaleSelection(zoom)
+                }
                 translation = translation + pan // navigate canvas
             }
         }

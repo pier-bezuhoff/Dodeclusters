@@ -13,6 +13,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,8 +50,7 @@ data class DefaultInterpolationParameters(
     val inBetween: Boolean = true,
 )
 
-// TODO: localization
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun CircleInterpolationDialog(
     startCircle: CircleOrLine,
@@ -68,6 +70,7 @@ fun CircleInterpolationDialog(
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
     val showInsideOutsideToggle =
         pencilType == CirclePencilType.ELLIPTIC
+    val (widthClass, heightClass) = calculateWindowSizeClass()
     Dialog(
         onDismissRequest = onDismissRequest
     ) {
@@ -102,20 +105,6 @@ fun CircleInterpolationDialog(
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Slider(sliderState, Modifier.padding(16.dp))
-//                Text(
-//                    buildAnnotatedString {
-//                        append("Subdividing along ")
-//                        withStyle(SpanStyle(
-//                            color = MaterialTheme.colorScheme.secondary,
-//                            fontStyle = FontStyle.Italic
-//                        )) {
-//                            append("$pencilType")
-//                        }
-//                        append(" pencil")
-//                    },
-//                    Modifier.padding(8.dp).padding(top = 16.dp),
-//                    style = MaterialTheme.typography.bodyLarge
-//                )
                 if (showInsideOutsideToggle)
                     Row(
                         modifier = Modifier.padding(horizontal = 8.dp),
@@ -149,11 +138,15 @@ fun CircleInterpolationDialog(
                         )
                     }
                 Row(
-                    Modifier.fillMaxWidth().padding(16.dp),
+                    Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    CancelButton(onDismissRequest = onDismissRequest)
-                    OkButton(onConfirm = { onConfirm(
+                    val fontSize =
+                        if (widthClass == WindowWidthSizeClass.Compact)
+                            18.sp
+                        else 24.sp
+                    CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
+                    OkButton(fontSize = fontSize, onConfirm = { onConfirm(
                         sliderState.value.roundToInt(),
                         if (showInsideOutsideToggle) interpolateInBetween
                         else DefaultInterpolationParameters().inBetween

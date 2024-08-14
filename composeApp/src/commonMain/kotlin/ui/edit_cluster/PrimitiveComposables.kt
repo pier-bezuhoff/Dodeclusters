@@ -15,6 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
+import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -142,3 +145,9 @@ fun WithTooltip(
         content()
     }
 }
+
+operator fun WindowSizeClass.component1(): WindowWidthSizeClass =
+    widthSizeClass
+
+operator fun WindowSizeClass.component2(): WindowHeightSizeClass =
+    heightSizeClass

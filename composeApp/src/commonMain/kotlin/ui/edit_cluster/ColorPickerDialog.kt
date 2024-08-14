@@ -2,6 +2,7 @@ package ui.edit_cluster
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,6 +47,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -74,16 +76,11 @@ fun ColorPickerDialog(
     onDismissRequest: () -> Unit,
     onConfirm: (Color) -> Unit,
 ) {
-    fun computeHex(clr: State<HsvColor>): TextFieldValue {
-        val c = clr.value.toColor()
-        val s = RGB(c.red, c.green, c.blue).toHex(withNumberSign = false, renderAlpha = RenderCondition.NEVER)
-        return TextFieldValue(s, TextRange(s.length))
-    }
     val color = rememberSaveable(stateSaver = HsvColor.Saver) {
         mutableStateOf(HsvColor.from(initialColor))
     }
-    val hex = mutableStateOf(computeHex(color)) // need to be MANUALLY updated on every color change
-    val windowSizeClass = calculateWindowSizeClass()
+    val hex = mutableStateOf(computeHex(color)) // NOTE: need to be MANUALLY updated on every color change
+    val (widthClass, heightClass) = calculateWindowSizeClass()
     Dialog(
         onDismissRequest = {
 //        onDismissRequest()
@@ -91,79 +88,149 @@ fun ColorPickerDialog(
         },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded &&
-            windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Expanded ||
-            windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium &&
-            windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Medium
+        if (widthClass == WindowWidthSizeClass.Expanded &&
+            heightClass <= WindowHeightSizeClass.Expanded ||
+            widthClass == WindowWidthSizeClass.Medium &&
+            heightClass <= WindowHeightSizeClass.Medium
         ) { // landscape
-            Surface(
-                modifier = Modifier
-//                    .fillMaxHeight()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(24.dp),
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxHeight(0.8f),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.Start,
-                ) {
-                    ColorPickerTitle(Modifier
-                        .align(Alignment.CenterHorizontally)
-                    )
-                    ColorPickerDisplay(color, Modifier.fillMaxHeight(0.7f)) {
-                        hex.value = computeHex(color)
-                    }
-                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        HexInput(color, hex) {
-                            onConfirm(color.value.toColor())
-                        }
-                        CancelButton { onDismissRequest() }
-                        OkButton { onConfirm(color.value.toColor()) }
-                    }
-                }
-            }
+            if (heightClass <= WindowHeightSizeClass.Compact) // for mobile phones
+                ColorPickerHorizontalCompact(color, hex, onDismissRequest, onConfirm)
+            else
+                ColorPickerHorizontal(color, hex, onDismissRequest, onConfirm)
         } else { // portrait
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(0.95f),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
+            ColorPickerVertical(color, hex, onDismissRequest, onConfirm)
+        }
+    }
+}
+
+@Composable
+private fun ColorPickerHorizontalCompact(
+    color: MutableState<HsvColor>,
+    hex: MutableState<TextFieldValue>,
+    onDismissRequest: () -> Unit,
+    onConfirm: (Color) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+//                    .fillMaxHeight()
+            .padding(16.dp),
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Row(Modifier.fillMaxHeight(0.9f)) {
+            ColorPickerDisplay(color, Modifier.fillMaxHeight()) {
+                hex.value = computeHex(color)
+            }
+            Box(Modifier.fillMaxHeight()) {
+                ColorPickerTitle(Modifier.align(Alignment.TopCenter))
+                HexInput(color, hex, Modifier.align(Alignment.CenterStart)) {
+                    onConfirm(color.value.toColor())
+                }
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                    ,
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ColorPickerTitle()
-                    ColorPickerDisplay(color, Modifier
-                        .align(Alignment.Start)
-                        .fillMaxHeight(0.7f)
-                    ) {
-                        hex.value = computeHex(color)
-                    }
-                    HexInput(color, hex, Modifier.align(Alignment.Start)) {
-                        onConfirm(color.value.toColor())
-                    }
-                    Row(
-                        modifier = Modifier
-                            .defaultMinSize(minHeight = 48.dp)
-                            .fillMaxWidth()
-                            .padding(top = 16.dp)
-                        ,
-                        horizontalArrangement = Arrangement.SpaceAround,
-                    ) {
-                        CancelButton { onDismissRequest() }
-                        OkButton { onConfirm(color.value.toColor()) }
-                    }
+                    CancelButton { onDismissRequest() }
+                    OkButton { onConfirm(color.value.toColor()) }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ColorPickerHorizontal(
+    color: MutableState<HsvColor>,
+    hex: MutableState<TextFieldValue>,
+    onDismissRequest: () -> Unit,
+    onConfirm: (Color) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+//                    .fillMaxHeight()
+            .padding(16.dp),
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxHeight(0.8f),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Start,
+        ) {
+            ColorPickerTitle(Modifier
+                .align(Alignment.CenterHorizontally)
+            )
+            ColorPickerDisplay(color, Modifier.fillMaxHeight(0.7f)) {
+                hex.value = computeHex(color)
+            }
+            Row(
+//                        modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HexInput(color, hex) {
+                    onConfirm(color.value.toColor())
+                }
+                CancelButton { onDismissRequest() }
+                OkButton { onConfirm(color.value.toColor()) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColorPickerVertical(
+    color: MutableState<HsvColor>,
+    hex: MutableState<TextFieldValue>,
+    onDismissRequest: () -> Unit,
+    onConfirm: (Color) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .padding(16.dp),
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(0.95f),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            ColorPickerTitle()
+            ColorPickerDisplay(color, Modifier
+                .align(Alignment.Start)
+                .fillMaxHeight(0.7f)
+            ) {
+                hex.value = computeHex(color)
+            }
+            HexInput(color, hex, Modifier.align(Alignment.Start)) {
+                onConfirm(color.value.toColor())
+            }
+            Row(
+                modifier = Modifier
+                    .defaultMinSize(minHeight = 48.dp)
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                ,
+                horizontalArrangement = Arrangement.SpaceAround,
+            ) {
+                CancelButton { onDismissRequest() }
+                OkButton { onConfirm(color.value.toColor()) }
+            }
+        }
+    }
+}
+
+fun computeHex(clr: State<HsvColor>): TextFieldValue {
+    val c = clr.value.toColor()
+    val s = RGB(c.red, c.green, c.blue).toHex(withNumberSign = false, renderAlpha = RenderCondition.NEVER)
+    return TextFieldValue(s, TextRange(s.length))
 }
 
 @Composable
@@ -244,6 +311,7 @@ fun HexInput(
 
 @Composable
 fun OkButton(
+    fontSize: TextUnit = 24.sp,
     modifier: Modifier = Modifier,
     onConfirm: () -> Unit,
 ) {
@@ -255,12 +323,13 @@ fun OkButton(
     ) {
         Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-        Text(stringResource(Res.string.ok_name), fontSize = 24.sp)
+        Text(stringResource(Res.string.ok_name), fontSize = fontSize)
     }
 }
 
 @Composable
 fun CancelButton(
+    fontSize: TextUnit = 24.sp,
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
 ) {
@@ -272,6 +341,6 @@ fun CancelButton(
     ) {
         Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel_name))
         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-        Text(stringResource(Res.string.cancel_name), fontSize = 24.sp)
+        Text(stringResource(Res.string.cancel_name), fontSize = fontSize)
     }
 }

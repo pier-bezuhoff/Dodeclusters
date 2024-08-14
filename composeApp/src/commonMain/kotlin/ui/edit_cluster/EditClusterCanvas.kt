@@ -242,6 +242,8 @@ private fun DrawScope.drawCircleOrLine(
     blendMode: BlendMode = DrawScope.DefaultBlendMode
 ) {
     when (circle) {
+        // TODO: when the radius is exceedingly high, circles disappear
+        //  so we need to approx them with lines
         is Circle -> drawCircle(
             color, circle.radius.toFloat(), circle.center, alpha, style, blendMode = blendMode
         )
@@ -329,8 +331,9 @@ private fun DrawScope.drawParts(
     clusterPathAlpha: Float,
     circleStroke: DrawStyle,
 ) {
+    // NOTE: buggy on extreme zoom-in
     if (viewModel.displayChessboardPattern) {
-        // does not scale well, slows down significantly + breaks on line
+        // does not scale well with 20+ circles, slows down significantly + breaks on line
 //        for (circle in viewModel.circles) {
 //            drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor)
 //        }
