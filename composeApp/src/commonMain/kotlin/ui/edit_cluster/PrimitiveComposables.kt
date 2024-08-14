@@ -2,6 +2,12 @@ package ui.edit_cluster
 
 import androidx.compose.foundation.BasicTooltipDefaults
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -9,6 +15,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconToggleButton
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
@@ -22,7 +29,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.cancel
+import dodeclusters.composeapp.generated.resources.cancel_name
+import dodeclusters.composeapp.generated.resources.confirm
+import dodeclusters.composeapp.generated.resources.ok_description
+import dodeclusters.composeapp.generated.resources.ok_name
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 // MAYBE: pass a Modifier
 @Composable
@@ -145,6 +162,48 @@ fun WithTooltip(
         content()
     }
 }
+
+@Composable
+fun OkButton(
+    fontSize: TextUnit = 24.sp,
+    modifier: Modifier = Modifier,
+    onConfirm: () -> Unit,
+) {
+    Button(
+        onClick = { onConfirm() },
+        modifier = modifier.padding(8.dp),
+        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+        shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
+    ) {
+        Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
+        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+        Text(stringResource(Res.string.ok_name), fontSize = fontSize)
+    }
+}
+
+@Composable
+fun CancelButton(
+    fontSize: TextUnit = 24.sp,
+    modifier: Modifier = Modifier,
+    onDismissRequest: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = { onDismissRequest() },
+        modifier = modifier.padding(8.dp),
+        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+        shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
+    ) {
+        Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel_name))
+        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+        Text(stringResource(Res.string.cancel_name), fontSize = fontSize)
+    }
+}
+
+val WindowSizeClass.isLandscape: Boolean get() =
+    widthSizeClass == WindowWidthSizeClass.Expanded &&
+    heightSizeClass <= WindowHeightSizeClass.Expanded ||
+    widthSizeClass == WindowWidthSizeClass.Medium &&
+    heightSizeClass <= WindowHeightSizeClass.Medium
 
 operator fun WindowSizeClass.component1(): WindowWidthSizeClass =
     widthSizeClass

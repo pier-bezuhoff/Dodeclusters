@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package ui.edit_cluster
 
 import androidx.compose.foundation.layout.Arrangement
@@ -24,9 +26,11 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
 import dodeclusters.composeapp.generated.resources.Res
@@ -65,23 +69,20 @@ fun CircleExtrapolationDialog(
         steps = maxCount + 1,
         valueRange = 0f..maxCount.toFloat()
     ) }
-    val (widthClass, heightClass) = calculateWindowSizeClass()
-    val compactWidth = widthClass == WindowWidthSizeClass.Compact
+    val windowSizeClass = calculateWindowSizeClass()
+    val compactWidth = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+    val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
+    println(windowSizeClass)
     Dialog(
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = !compactHeight)
     ) {
         Surface(
-            modifier = Modifier
-                .padding(16.dp)
-            ,
+            modifier = Modifier.padding(16.dp),
             shape = RoundedCornerShape(24.dp)
         ) {
-            if (widthClass == WindowWidthSizeClass.Expanded &&
-                heightClass <= WindowHeightSizeClass.Expanded ||
-                widthClass == WindowWidthSizeClass.Medium &&
-                heightClass <= WindowHeightSizeClass.Medium
-            ) { // landscape
-                if (heightClass <= WindowHeightSizeClass.Compact) // for mobile phones
+            if (windowSizeClass.isLandscape) {
+                if (windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Compact) // for mobile phones
                     CircleExtrapolationHorizontalCompact(leftSliderState, rightSliderState, onDismissRequest, onConfirm)
                 else
                     CircleExtrapolationHorizontal(leftSliderState, rightSliderState, onDismissRequest, onConfirm)
@@ -102,81 +103,24 @@ private fun CircleExtrapolationHorizontalCompact(
     modifier: Modifier = Modifier
 ) {
     Column(
-        Modifier.padding(8.dp),
+        modifier.padding(8.dp),
         horizontalAlignment = Alignment.Start
     ) {
-        Text(
-            text = stringResource(Res.string.circle_extrapolation_title),
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp),
-            style = MaterialTheme.typography.titleLarge,
-        )
-        Text(
-            buildAnnotatedString {
-                append(stringResource(Res.string.circle_extrapolation_left_prompt1))
-                append(" ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.secondary,
-//                                fontStyle = FontStyle.Italic
-                    )
-                ) {
-                    append(stringResource(Res.string.circle_extrapolation_left_prompt2))
-                }
-                append(":  ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                ) {
-                    append("${leftSliderState.value.roundToInt()}")
-                }
-            },
-            Modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
-        Slider(leftSliderState)
-        Text(
-            buildAnnotatedString {
-                append(stringResource(Res.string.circle_extrapolation_right_prompt1))
-                append(" ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.secondary,
-//                                fontStyle = FontStyle.Italic
-                    )
-                ) {
-                    append(stringResource(Res.string.circle_extrapolation_right_prompt2))
-                }
-                append(":  ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                ) {
-                    append("${rightSliderState.value.roundToInt()}")
-                }
-            },
-            Modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
-        Slider(rightSliderState)
-        Row(
-            Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceAround
+        Title(smallerFont = true, Modifier.align(Alignment.CenterHorizontally))
+        Row(Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.Top
         ) {
-            val fontSize = 24.sp
-            CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
-            OkButton(fontSize = fontSize, onConfirm = {
-                onConfirm(
-                    leftSliderState.value.roundToInt(),
-                    rightSliderState.value.roundToInt()
-                )
-            })
+            Column(Modifier.fillMaxWidth(0.5f)) {
+                LeftSliderText(leftSliderState)
+                Slider(leftSliderState)
+            }
+            Column() {
+                RightSliderText(leftSliderState)
+                Slider(rightSliderState)
+            }
         }
+        CancelOkRow(leftSliderState, rightSliderState, onDismissRequest, onConfirm)
     }
 }
 
@@ -190,81 +134,15 @@ private fun CircleExtrapolationHorizontal(
     modifier: Modifier = Modifier
 ) {
     Column(
-        Modifier.padding(8.dp),
+        modifier.padding(8.dp),
         horizontalAlignment = Alignment.Start
     ) {
-        Text(
-            text = stringResource(Res.string.circle_extrapolation_title),
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp),
-            style = MaterialTheme.typography.titleLarge,
-        )
-        Text(
-            buildAnnotatedString {
-                append(stringResource(Res.string.circle_extrapolation_left_prompt1))
-                append(" ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.secondary,
-//                                fontStyle = FontStyle.Italic
-                    )
-                ) {
-                    append(stringResource(Res.string.circle_extrapolation_left_prompt2))
-                }
-                append(":  ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                ) {
-                    append("${leftSliderState.value.roundToInt()}")
-                }
-            },
-            Modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
+        Title(modifier = Modifier.align(Alignment.CenterHorizontally))
+        LeftSliderText(leftSliderState)
         Slider(leftSliderState)
-        Text(
-            buildAnnotatedString {
-                append(stringResource(Res.string.circle_extrapolation_right_prompt1))
-                append(" ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.secondary,
-//                                fontStyle = FontStyle.Italic
-                    )
-                ) {
-                    append(stringResource(Res.string.circle_extrapolation_right_prompt2))
-                }
-                append(":  ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                ) {
-                    append("${rightSliderState.value.roundToInt()}")
-                }
-            },
-            Modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
+        RightSliderText(leftSliderState)
         Slider(rightSliderState)
-        Row(
-            Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceAround
-        ) {
-            val fontSize = 24.sp
-            CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
-            OkButton(fontSize = fontSize, onConfirm = {
-                onConfirm(
-                    leftSliderState.value.roundToInt(),
-                    rightSliderState.value.roundToInt()
-                )
-            })
-        }
+        CancelOkRow(leftSliderState, rightSliderState, onDismissRequest, onConfirm)
     }
 }
 
@@ -278,84 +156,119 @@ private fun CircleExtrapolationVertical(
     compactWidth: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val fontSize =
+        if (compactWidth)
+            14.sp
+        else 24.sp
     Column(
-        Modifier.padding(8.dp),
+        modifier.padding(8.dp),
         horizontalAlignment = Alignment.Start
     ) {
-        Text(
-            text = stringResource(Res.string.circle_extrapolation_title),
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp),
-            style = MaterialTheme.typography.titleLarge,
-        )
-        Text(
-            buildAnnotatedString {
-                append(stringResource(Res.string.circle_extrapolation_left_prompt1))
-                append(" ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.secondary,
-//                                fontStyle = FontStyle.Italic
-                    )
-                ) {
-                    append(stringResource(Res.string.circle_extrapolation_left_prompt2))
-                }
-                append(":  ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                ) {
-                    append("${leftSliderState.value.roundToInt()}")
-                }
-            },
-            Modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
+        Title(modifier = Modifier.align(Alignment.CenterHorizontally))
+        LeftSliderText(leftSliderState)
         Slider(leftSliderState)
-        Text(
-            buildAnnotatedString {
-                append(stringResource(Res.string.circle_extrapolation_right_prompt1))
-                append(" ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.secondary,
-//                                fontStyle = FontStyle.Italic
-                    )
-                ) {
-                    append(stringResource(Res.string.circle_extrapolation_right_prompt2))
-                }
-                append(":  ")
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                ) {
-                    append("${rightSliderState.value.roundToInt()}")
-                }
-            },
-            Modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
+        RightSliderText(leftSliderState)
         Slider(rightSliderState)
-        Row(
-            Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceAround
-        ) {
-            val fontSize =
-                if (compactWidth)
-                    14.sp
-                else 24.sp
-            CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
-            OkButton(fontSize = fontSize, onConfirm = {
-                onConfirm(
-                    leftSliderState.value.roundToInt(),
-                    rightSliderState.value.roundToInt()
+        CancelOkRow(leftSliderState, rightSliderState, onDismissRequest, onConfirm, fontSize)
+    }
+}
+
+@Composable
+private fun Title(smallerFont: Boolean = false, modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(Res.string.circle_extrapolation_title),
+        modifier = modifier.padding(16.dp),
+        style =
+            if (smallerFont) MaterialTheme.typography.titleMedium
+            else MaterialTheme.typography.titleLarge,
+    )
+}
+
+@Composable
+private fun LeftSliderText(
+    leftSliderState: SliderState,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        buildAnnotatedString {
+            append(stringResource(Res.string.circle_extrapolation_left_prompt1))
+            append(" ")
+            withStyle(
+                SpanStyle(
+                    color = MaterialTheme.colorScheme.secondary,
+//                                fontStyle = FontStyle.Italic
                 )
-            })
-        }
+            ) {
+                append(stringResource(Res.string.circle_extrapolation_left_prompt2))
+            }
+            append(":  ")
+            withStyle(
+                SpanStyle(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append("${leftSliderState.value.roundToInt()}")
+            }
+        },
+        modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
+        style = MaterialTheme.typography.bodyLarge
+    )
+}
+
+@Composable
+private fun RightSliderText(
+    rightSliderState: SliderState,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        buildAnnotatedString {
+            append(stringResource(Res.string.circle_extrapolation_right_prompt1))
+            append(" ")
+            withStyle(
+                SpanStyle(
+                    color = MaterialTheme.colorScheme.secondary,
+//                                fontStyle = FontStyle.Italic
+                )
+            ) {
+                append(stringResource(Res.string.circle_extrapolation_right_prompt2))
+            }
+            append(":  ")
+            withStyle(
+                SpanStyle(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append("${rightSliderState.value.roundToInt()}")
+            }
+        },
+        modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
+        style = MaterialTheme.typography.bodyLarge
+    )
+}
+
+@Composable
+private fun CancelOkRow(
+    leftSliderState: SliderState,
+    rightSliderState: SliderState,
+    onDismissRequest: () -> Unit,
+    onConfirm: (nLeft: Int, nRight: Int) -> Unit,
+    fontSize: TextUnit = 24.sp,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier.fillMaxWidth().padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
+        OkButton(fontSize = fontSize, onConfirm = {
+            onConfirm(
+                leftSliderState.value.roundToInt(),
+                rightSliderState.value.roundToInt()
+            )
+        })
     }
 }

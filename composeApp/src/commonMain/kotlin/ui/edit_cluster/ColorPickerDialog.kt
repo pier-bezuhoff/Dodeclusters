@@ -80,7 +80,7 @@ fun ColorPickerDialog(
         mutableStateOf(HsvColor.from(initialColor))
     }
     val hex = mutableStateOf(computeHex(color)) // NOTE: need to be MANUALLY updated on every color change
-    val (widthClass, heightClass) = calculateWindowSizeClass()
+    val windowSizeClass = calculateWindowSizeClass()
     Dialog(
         onDismissRequest = {
 //        onDismissRequest()
@@ -88,12 +88,8 @@ fun ColorPickerDialog(
         },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        if (widthClass == WindowWidthSizeClass.Expanded &&
-            heightClass <= WindowHeightSizeClass.Expanded ||
-            widthClass == WindowWidthSizeClass.Medium &&
-            heightClass <= WindowHeightSizeClass.Medium
-        ) { // landscape
-            if (heightClass <= WindowHeightSizeClass.Compact) // for mobile phones
+        if (windowSizeClass.isLandscape) {
+            if (windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Compact) // for mobile phones
                 ColorPickerHorizontalCompact(color, hex, onDismissRequest, onConfirm)
             else
                 ColorPickerHorizontal(color, hex, onDismissRequest, onConfirm)
@@ -227,14 +223,14 @@ private fun ColorPickerVertical(
     }
 }
 
-fun computeHex(clr: State<HsvColor>): TextFieldValue {
+private fun computeHex(clr: State<HsvColor>): TextFieldValue {
     val c = clr.value.toColor()
     val s = RGB(c.red, c.green, c.blue).toHex(withNumberSign = false, renderAlpha = RenderCondition.NEVER)
     return TextFieldValue(s, TextRange(s.length))
 }
 
 @Composable
-fun ColorPickerTitle(modifier: Modifier = Modifier) {
+private fun ColorPickerTitle(modifier: Modifier = Modifier) {
     Text(
         text = stringResource(Res.string.color_picker_title),
         modifier = modifier.padding(16.dp),
@@ -243,7 +239,7 @@ fun ColorPickerTitle(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ColorPickerDisplay(
+private fun ColorPickerDisplay(
     color: MutableState<HsvColor>,
     modifier: Modifier = Modifier,
     onColorChanged: () -> Unit
@@ -261,7 +257,7 @@ fun ColorPickerDisplay(
 }
 
 @Composable
-fun HexInput(
+private fun HexInput(
     color: MutableState<HsvColor>,
     hex: MutableState<TextFieldValue>,
     modifier: Modifier = Modifier,
@@ -307,40 +303,4 @@ fun HexInput(
 //        colors = OutlinedTextFieldDefaults.colors()
 //            .copy(unfocusedContainerColor = color.value.toColor())
     )
-}
-
-@Composable
-fun OkButton(
-    fontSize: TextUnit = 24.sp,
-    modifier: Modifier = Modifier,
-    onConfirm: () -> Unit,
-) {
-    Button(
-        onClick = { onConfirm() },
-        modifier = modifier.padding(8.dp),
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-        shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
-    ) {
-        Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
-        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-        Text(stringResource(Res.string.ok_name), fontSize = fontSize)
-    }
-}
-
-@Composable
-fun CancelButton(
-    fontSize: TextUnit = 24.sp,
-    modifier: Modifier = Modifier,
-    onDismissRequest: () -> Unit,
-) {
-    OutlinedButton(
-        onClick = { onDismissRequest() },
-        modifier = modifier.padding(8.dp),
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-        shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
-    ) {
-        Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel_name))
-        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-        Text(stringResource(Res.string.cancel_name), fontSize = fontSize)
-    }
 }

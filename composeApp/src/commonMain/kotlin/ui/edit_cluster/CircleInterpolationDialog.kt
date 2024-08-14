@@ -1,5 +1,8 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package ui.edit_cluster
 
+import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +17,7 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
@@ -25,9 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -71,8 +75,19 @@ fun CircleInterpolationDialog(
     val showInsideOutsideToggle =
         pencilType == CirclePencilType.ELLIPTIC
     val (widthClass, heightClass) = calculateWindowSizeClass()
+    val compactHeight = heightClass == WindowHeightSizeClass.Compact
+    val okFontSize =
+        if (widthClass == WindowWidthSizeClass.Compact)
+            18.sp
+        else 24.sp
+    val onConfirm0 = { onConfirm(
+        sliderState.value.roundToInt(),
+        if (showInsideOutsideToggle) interpolateInBetween
+        else DefaultInterpolationParameters().inBetween
+    ) }
     Dialog(
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = !compactHeight),
     ) {
         Surface(
             modifier = Modifier
@@ -80,79 +95,156 @@ fun CircleInterpolationDialog(
             ,
             shape = RoundedCornerShape(24.dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    text = stringResource(Res.string.circle_interpolation_title),
-                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp),
-                    style = MaterialTheme.typography.titleLarge,
+            if (heightClass == WindowHeightSizeClass.Compact) {
+                CircleInterpolationHorizontalCompact(
+                    sliderState, showInsideOutsideToggle, interpolateInBetween,
+                    setInterpolateInBetween = { interpolateInBetween = it },
+                    onDismissRequest = onDismissRequest,
+                    onConfirm = onConfirm0
                 )
-                Text(
-                    buildAnnotatedString {
-                        append(stringResource(Res.string.circle_interpolation_prompt))
-                        append(":  ")
-                        withStyle(SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 30.sp,
-                            fontWeight = FontWeight.Bold
-                        )) {
-                            append("${sliderState.value.roundToInt()}")
-                        }
-                    }
-                    ,
-                    Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Slider(sliderState, Modifier.padding(16.dp))
-                if (showInsideOutsideToggle)
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Switch(
-                            checked = interpolateInBetween,
-                            onCheckedChange = { interpolateInBetween = it },
-                            modifier = Modifier.padding(8.dp)
-                        )
-                        Text(
-                            buildAnnotatedString {
-                                append(stringResource(Res.string.circle_interpolation_in_between_prompt1))
-                                append(" ")
-                                withStyle(SpanStyle(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )) {
-                                    append(
-                                        if (interpolateInBetween)
-                                            stringResource(Res.string.circle_interpolation_in_between_prompt2_variant1)
-                                        else
-                                            stringResource(Res.string.circle_interpolation_in_between_prompt2_variant2))
-                                }
-                                append(" ")
-                                append(stringResource(Res.string.circle_interpolation_in_between_prompt3))
-                            },
-                            modifier = Modifier.padding(8.dp),
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceAround
+            } else {
+                Column(
+                    horizontalAlignment = Alignment.Start
                 ) {
-                    val fontSize =
-                        if (widthClass == WindowWidthSizeClass.Compact)
-                            18.sp
-                        else 24.sp
-                    CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
-                    OkButton(fontSize = fontSize, onConfirm = { onConfirm(
-                        sliderState.value.roundToInt(),
-                        if (showInsideOutsideToggle) interpolateInBetween
-                        else DefaultInterpolationParameters().inBetween
-                    ) })
+                    Title(smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
+                    SliderText(sliderState)
+                    Slider(sliderState, Modifier.padding(16.dp))
+                    if (showInsideOutsideToggle)
+                        InsideOutsideToggle(
+                            interpolateInBetween,
+                            setInterpolateInBetween = {
+                                interpolateInBetween = it
+                            }
+                        )
+                    CancelOkRow(
+                        onDismissRequest = onDismissRequest,
+                        onConfirm = onConfirm0,
+                        fontSize = okFontSize
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CircleInterpolationHorizontalCompact(
+    sliderState: SliderState,
+    showInsideOutsideToggle: Boolean,
+    interpolateInBetween: Boolean,
+    setInterpolateInBetween: (Boolean) -> Unit,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.Start
+    ) {
+        Title(smallerFont = true, Modifier.align(Alignment.CenterHorizontally))
+        if (showInsideOutsideToggle) {
+            Row(Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth(0.5f)) {
+                    SliderText(sliderState)
+                    Slider(sliderState, Modifier.padding(
+                        top = 16.dp,
+                        start = 16.dp,
+                        end = 16.dp
+                    ))
+                }
+                Column() {
+                    InsideOutsideToggle(interpolateInBetween, setInterpolateInBetween)
+                }
+            }
+        } else {
+            SliderText(sliderState)
+            Slider(sliderState, Modifier.padding(16.dp))
+        }
+        CancelOkRow(onDismissRequest, onConfirm, fontSize = 18.sp)
+    }
+}
+
+@Composable
+private fun Title(smallerFont: Boolean, modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(Res.string.circle_interpolation_title),
+        modifier = modifier.padding(16.dp),
+        style =
+            if (smallerFont) MaterialTheme.typography.titleMedium
+            else MaterialTheme.typography.titleLarge,
+    )
+}
+
+@Composable
+private fun SliderText(sliderState: SliderState, modifier: Modifier = Modifier) {
+    Text(
+        buildAnnotatedString {
+            append(stringResource(Res.string.circle_interpolation_prompt))
+            append(":  ")
+            withStyle(SpanStyle(
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold
+            )) {
+                append("${sliderState.value.roundToInt()}")
+            }
+        }
+        ,
+        Modifier.padding(16.dp),
+        style = MaterialTheme.typography.bodyLarge
+    )
+}
+
+@Composable
+private fun InsideOutsideToggle(
+    interpolateInBetween: Boolean,
+    setInterpolateInBetween: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = Modifier.padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Switch(
+            checked = interpolateInBetween,
+            onCheckedChange = { setInterpolateInBetween(it) },
+            modifier = Modifier.padding(8.dp)
+        )
+        Text(
+            buildAnnotatedString {
+                append(stringResource(Res.string.circle_interpolation_in_between_prompt1))
+                append(" ")
+                withStyle(SpanStyle(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )) {
+                    append(
+                        if (interpolateInBetween)
+                            stringResource(Res.string.circle_interpolation_in_between_prompt2_variant1)
+                        else
+                            stringResource(Res.string.circle_interpolation_in_between_prompt2_variant2))
+                }
+                append(" ")
+                append(stringResource(Res.string.circle_interpolation_in_between_prompt3))
+            },
+            modifier = Modifier.padding(8.dp),
+            style = MaterialTheme.typography.labelLarge
+        )
+    }
+}
+
+@Composable
+private fun CancelOkRow(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    fontSize: TextUnit = 24.sp,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
+        OkButton(fontSize = fontSize, onConfirm = onConfirm)
     }
 }
