@@ -87,16 +87,14 @@ fun BoxScope.EditClusterCanvas(
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
     val scaleIcon = painterResource(Res.drawable.zoom_in)
-    val scaleIconColor =
-//         MaterialTheme.colorScheme.secondary
-        DodeclustersColors.skyBlue
+    val scaleIconColor = MaterialTheme.colorScheme.secondary
+    val scaleIndicatorColor = DodeclustersColors.skyBlue
     val iconDim = with (LocalDensity.current) { 24.dp.toPx() }
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
     val rotateIconColor = MaterialTheme.colorScheme.secondary
     val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
     val sliderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
     val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
-
     val circleColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f) // MAYBE: black for light scheme
     val selectedCircleColor =
 //        MaterialTheme.colorScheme.primary
@@ -169,7 +167,7 @@ fun BoxScope.EditClusterCanvas(
                 }
             }
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
-            drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
+            drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, scaleIndicatorColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
         }
         if (viewModel.circleSelectionIsActive)
             drawSelectionControls(viewModel, sliderColor, jCarcassColor, rotateIconColor, handleRadius, iconDim, rotateIcon)
@@ -461,6 +459,7 @@ private fun DrawScope.drawHandles(
     visibleRect: Rect,
     selectionMarkingsColor: Color, // for selection rect
     scaleIconColor: Color,
+    scaleIndicatorColor: Color,
     rotateIconColor: Color,
     rotationIndicatorColor: Color,
     handleRadius: Float,
@@ -477,12 +476,12 @@ private fun DrawScope.drawHandles(
                 if (selectedCircle is Circle) {
                     val right = selectedCircle.center + Offset(selectedCircle.radius.toFloat(), 0f)
                     drawLine( // radius marker
-                        color = selectionMarkingsColor,
+                        color = scaleIndicatorColor,
                         start = selectedCircle.center,
                         end = right,
                     )
                     drawCircle( // radius handle
-                        color = scaleIconColor,
+                        color = scaleIndicatorColor,
                         radius = handleRadius,
                         center = right
                     )

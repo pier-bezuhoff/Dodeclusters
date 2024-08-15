@@ -24,7 +24,6 @@ import data.Cluster
 import data.OffsetSerializer
 import data.OldCluster
 import data.PartialArgList
-import data.combinations
 import data.compressPart
 import data.geometry.Circle
 import data.geometry.CircleOrLine
@@ -36,7 +35,6 @@ import data.io.OldDdc
 import data.io.cluster2svg
 import data.io.parseDdc
 import data.io.parseOldDdc
-import data.partitionIndices
 import domain.angleDeg
 import getPlatform
 import kotlinx.coroutines.CoroutineScope
@@ -278,6 +276,7 @@ class EditClusterViewModel(
     }
 
     fun loadCluster(cluster: Cluster) {
+        showPromptToSetActiveSelectionAsToolArg = false
         displayChessboardPattern = false
         translation = Offset.Zero
         selection.clear()
@@ -287,8 +286,7 @@ class EditClusterViewModel(
         parts.addAll(cluster.parts)
         // reset history on load
         history.clear()
-        undoIsEnabled = history.undoIsEnabled
-        redoIsEnabled = history.redoIsEnabled
+        resetTransients()
     }
 
     fun undo() {
@@ -298,8 +296,7 @@ class EditClusterViewModel(
         history.undo()
         selection.clear()
         selection.addAll(currentSelection.filter { it < circles.size })
-        undoIsEnabled = history.undoIsEnabled
-        redoIsEnabled = history.redoIsEnabled
+        resetTransients()
     }
 
     fun redo() {
@@ -309,8 +306,7 @@ class EditClusterViewModel(
         history.redo()
         selection.clear()
         selection.addAll(currentSelection.filter { it < circles.size })
-        undoIsEnabled = history.undoIsEnabled
-        redoIsEnabled = history.redoIsEnabled
+        resetTransients()
     }
 
     private fun loadUiState(state: UiState) {
@@ -322,6 +318,13 @@ class EditClusterViewModel(
         parts.addAll(state.parts)
         selection.clear() // switch can populate it
         selection.addAll(state.selection)
+    }
+
+    private fun resetTransients() {
+        showPromptToSetActiveSelectionAsToolArg = false
+        submode = SubMode.None
+        undoIsEnabled = history.undoIsEnabled
+        redoIsEnabled = history.redoIsEnabled
     }
 
     /** Use BEFORE modifying the state by the [command]!
