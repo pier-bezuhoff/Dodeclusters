@@ -99,7 +99,8 @@ fun BoxScope.EditClusterCanvas(
     val selectedCircleColor =
 //        MaterialTheme.colorScheme.primary
         DodeclustersColors.strongSalad
-    val clusterPathAlpha = 0.7f
+    val clusterPathAlpha = 1f
+        //0.7f
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
     val maxDecayAlpha = 0.2f

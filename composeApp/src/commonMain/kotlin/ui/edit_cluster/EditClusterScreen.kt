@@ -22,12 +22,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -39,7 +42,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -55,6 +57,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import data.Cluster
 import data.ClusterRepository
 import data.PartialArgList
@@ -67,6 +70,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.confirm
+import dodeclusters.composeapp.generated.resources.ku
 import dodeclusters.composeapp.generated.resources.ok_name
 import dodeclusters.composeapp.generated.resources.open_file
 import dodeclusters.composeapp.generated.resources.open_file_name
@@ -90,17 +94,17 @@ import ui.tools.Tool
 import kotlin.math.max
 import kotlin.math.min
 
-// TODO: left & right toolbar for landscape orientation instead of top & bottom
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun EditClusterScreen(
     sampleIndex: Int? = null,
     ddcContent: String? = null,
 ) {
-    val (widthClass, heightClass) = calculateWindowSizeClass()
-//    println(windowSizeClass) // TODO: vertical left-side toolbar instead for landscape
-    val compactHeight = heightClass == WindowHeightSizeClass.Compact
-    val compact = widthClass == WindowWidthSizeClass.Compact || heightClass == WindowHeightSizeClass.Compact
+    val windowSizeClass = calculateWindowSizeClass()
+//    println(windowSizeClass)
+    val isLandscape = windowSizeClass.isLandscape
+    val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
+    val compact = windowSizeClass.isCompact
     val coroutineScope = rememberCoroutineScope()
     val clusterRepository = remember { ClusterRepository() }
     val saver = remember { EditClusterViewModel.Saver(coroutineScope) }
@@ -120,8 +124,9 @@ fun EditClusterScreen(
                     viewModel.switchToCategory(category, togglePanel = true)
                 },
                 modifier =
-                    if (compactHeight)
-                        Modifier.size(40.dp).offset(y = 8.dp)
+                    if (compactHeight) Modifier
+                        .size(48.dp)
+                        .offset(x = 8.dp, y = 16.dp)
                     else Modifier
                 ,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -138,6 +143,7 @@ fun EditClusterScreen(
                 )
             }
         },
+        floatingActionButtonPosition = if (isLandscape) FabPosition.Start else FabPosition.End
     ) {
         Surface {
             Box {
@@ -145,30 +151,17 @@ fun EditClusterScreen(
                 ToolDescription(
                     viewModel.activeTool,
                     viewModel.partialArgList,
+                    isLandscape,
                     compact,
                     viewModel.showPromptToSetActiveSelectionAsToolArg,
                     viewModel::setActiveSelectionAsToolArg,
                     Modifier.align(Alignment.TopStart)
                 )
                 EditClusterTopBar(viewModel, compact, Modifier.align(Alignment.TopEnd))
-                Column(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.Bottom,
-                ) {
-                    AnimatedContent(
-                        Pair(viewModel.activeCategory, viewModel.showPanel),
-                        transitionSpec = {
-                            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End)
-                                .togetherWith(slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start))
-                        }
-                    ) { (activeCategory, showPanel) ->
-                        if (showPanel)
-                            Panel(viewModel, activeCategory, compact, Modifier.align(Alignment.Start))
-                    }
-                    BottomToolbar(viewModel, compact, Modifier.align(Alignment.Start))
-                }
+                if (isLandscape)
+                    ToolbarLandscape(viewModel, compact, Modifier.align(Alignment.CenterStart))
+                else
+                    ToolbarPortrait(viewModel, compact, Modifier.align(Alignment.BottomStart))
             }
         }
     }
@@ -225,7 +218,7 @@ fun EditClusterScreen(
                 parts = listOf(Cluster.Part(
                     insides = setOf(0),
                     outsides = emptySet(),
-                    fillColor = DodeclustersColors.primaryDark
+                    fillColor = DodeclustersColors.secondaryDark//primaryDark
                 ))
             ))
             viewModel.moveToDdcCenter(0f, 0f)
@@ -237,6 +230,7 @@ fun EditClusterScreen(
 fun ToolDescription(
     tool: EditClusterTool,
     partialArgList: PartialArgList?,
+    isLandscape: Boolean,
     compact: Boolean,
     showSelectionAsArgPrompt: Boolean,
     setSelectionAsArg: () -> Unit,
@@ -246,9 +240,9 @@ fun ToolDescription(
         if (compact) MaterialTheme.typography.bodySmall
         else MaterialTheme.typography.titleMedium
     Column(
-        modifier.fillMaxWidth(
-            if (compact) 0.45f else 0.5f
-        ) // we cant specify max text length, so im doing this
+        modifier
+            .offset(x = if (isLandscape) 100.dp else 0.dp) // offsetting left toolbar
+            .fillMaxWidth(if (compact) 0.45f else 0.5f) // we cant specify max text length, so im doing this
     ) {
         Crossfade(tool) { currentTool ->
             Text(
@@ -417,7 +411,49 @@ fun EditClusterTopBar(
 }
 
 @Composable
-fun BottomToolbar(
+private fun ToolbarPortrait(viewModel: EditClusterViewModel, compact: Boolean, modifier: Modifier = Modifier) {
+    Column(
+        modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.Bottom,
+    ) {
+        AnimatedContent(
+            Pair(viewModel.activeCategory, viewModel.showPanel),
+            transitionSpec = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End)
+                    .togetherWith(slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start))
+            }
+        ) { (activeCategory, showPanel) ->
+            if (showPanel)
+                HorizontalPanel(viewModel, activeCategory, compact, Modifier.align(Alignment.Start))
+        }
+        BottomToolbar(viewModel, compact, Modifier.align(Alignment.Start))
+    }
+}
+
+@Composable
+private fun ToolbarLandscape(viewModel: EditClusterViewModel, compact: Boolean, modifier: Modifier = Modifier) {
+    Row(modifier,
+        horizontalArrangement = Arrangement.Start
+    ) {
+        LeftToolbar(viewModel, compact, Modifier
+//            .zIndex(1f)
+            .align(Alignment.CenterVertically)
+        )
+        AnimatedContent(
+            Pair(viewModel.activeCategory, viewModel.showPanel),
+            transitionSpec = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End)
+                    .togetherWith(slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start))
+            }
+        ) { (activeCategory, showPanel) ->
+            if (showPanel)
+                VerticalPanel(viewModel, activeCategory, compact, Modifier.align(Alignment.Top))
+        }
+    }
+}
+
+@Composable
+private fun BottomToolbar(
     viewModel: EditClusterViewModel,
     compact: Boolean,
     modifier: Modifier = Modifier
@@ -425,7 +461,7 @@ fun BottomToolbar(
 //    val scrollState = rememberScrollState()
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
-    val toolbarHeight =
+    val toolbarSize =
         if (compact) 48.dp
         else 64.dp
     Row(modifier
@@ -437,7 +473,7 @@ fun BottomToolbar(
             )
         )
         .fillMaxWidth()
-        .height(toolbarHeight),
+        .height(toolbarSize),
         Arrangement.Start,
         Alignment.CenterVertically
     ) {
@@ -458,6 +494,53 @@ fun BottomToolbar(
 }
 
 @Composable
+private fun LeftToolbar(
+    viewModel: EditClusterViewModel,
+    compact: Boolean,
+    modifier: Modifier = Modifier
+) {
+//    val scrollState = rememberScrollState()
+    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val contentColor = MaterialTheme.colorScheme.onSurface
+    val toolbarSize =
+        if (compact) 48.dp
+        else 64.dp
+    val cornerRadius = 24.dp
+    Column(
+        modifier
+//            .offset(x = -cornerRadius)
+            .background(
+                Brush.horizontalGradient(
+                    0f to backgroundColor,
+                    1f to backgroundColor.copy(alpha = 0.7f),
+                ),
+                RoundedCornerShape(cornerRadius)
+            )
+//            .padding(start = cornerRadius)
+            .width(toolbarSize)
+        ,
+        Arrangement.Top,
+        Alignment.CenterHorizontally
+    ) {
+        CompositionLocalProvider(LocalContentColor provides contentColor) {
+            Spacer(Modifier.height(4.dp))
+            CategoryButton(viewModel, EditClusterCategory.Drag, compact = compact)
+            CategoryButton(viewModel, EditClusterCategory.Multiselect, compact = compact)
+            CategoryButton(viewModel, EditClusterCategory.Region, compact = compact)
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(Modifier
+                .fillMaxWidth(0.7f)
+                .align(Alignment.CenterHorizontally)
+            )
+            CategoryButton(viewModel, EditClusterCategory.Visibility, compact = compact)
+            CategoryButton(viewModel, EditClusterCategory.Colors, compact = compact)
+            CategoryButton(viewModel, EditClusterCategory.Transform, compact = compact)
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
 fun CategoryButton(
     viewModel: EditClusterViewModel,
     category: EditClusterCategory,
@@ -467,7 +550,7 @@ fun CategoryButton(
     val defaultTool = category.tools[viewModel.categoryDefaults[i]]
 //    val icon = category.icon ?: defaultTool.icon
     if (!compact)
-        Spacer(Modifier.size(12.dp, 0.dp))
+        Spacer(Modifier.size(12.dp, 12.dp))
     Crossfade(defaultTool) {
         ToolButton(
             viewModel,
@@ -487,7 +570,7 @@ fun CategoryButton(
 // MAYBE: hoist VM upwards with callbacks
 // MAYBE: just make individual panel for every category instead of generalization
 @Composable
-fun Panel(
+private fun HorizontalPanel(
     viewModel: EditClusterViewModel,
     activeCategory: EditClusterCategory,
     compact: Boolean,
@@ -548,6 +631,68 @@ fun Panel(
 //    LaunchedEffect(viewModel.activeTool) {
 //        scrollState.animateScrollTo(viewModel.activeCategory.tools) // probs?
 //    }
+}
+
+@Composable
+private fun VerticalPanel(
+    viewModel: EditClusterViewModel,
+    activeCategory: EditClusterCategory,
+    compact: Boolean,
+    modifier: Modifier = Modifier
+) {
+    // shown on the top of the bottom toolbar
+    // scrollable lazy row, w = wrap content
+    // can be shown or hidden with a collapse button at the end
+    require(activeCategory.tools.size > 1)
+    val toolModifier =
+        if (compact) Modifier.padding(4.dp).size(30.dp)
+        else Modifier
+    // scrollable row + highlight selected tool
+    val scrollState = rememberScrollState()
+    Column(
+        modifier
+            .padding(start = 8.dp)
+            .verticalScroll(scrollState)
+            .background(
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                RoundedCornerShape(24.dp)
+            )
+        ,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(4.dp))
+        for (tool in activeCategory.tools) {
+            ToolButton(viewModel, tool, toolModifier)
+        }
+        if (activeCategory is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
+            HorizontalDivider(Modifier
+                .width(40.dp)
+                .padding(vertical = 8.dp)
+                .align(Alignment.CenterHorizontally)
+            )
+            val colorsByMostUsed = viewModel.parts
+                .flatMap { part ->
+                    part.borderColor?.let { listOf(part.fillColor, it) } ?: listOf(part.fillColor)
+                }
+                .groupingBy { it }
+                .eachCount()
+                .entries
+                .sortedByDescending { (_, count) -> count }
+                .map { (color, _) -> color }
+            for (color in colorsByMostUsed) {
+                ToolButton(viewModel, EditClusterTool.AppliedColor(color), toolModifier)
+            }
+        }
+        // hide panel button
+        WithTooltip(stringResource(Res.string.collapse)) {
+            SimpleButton(
+                painterResource(Res.drawable.ku),
+                stringResource(Res.string.collapse),
+                toolModifier.padding(4.dp),
+                onClick = { viewModel.showPanel = false }
+            )
+        }
+    }
 }
 
 @Composable
@@ -656,12 +801,5 @@ fun PaletteButton(
             contentDescription = stringResource(EditClusterTool.Palette.name),
             modifier = modifier,
         )
-//        Icon(
-//            painterResource(EditClusterTool.Palette.colorOutlineIcon),
-//            contentDescription = stringResource(EditClusterCategory.Colors.name),
-//            modifier = Modifier.size(64.dp), // nantoka nare (default icon size should be 48.dp),
-//            // looks awkward & small in the browser & android
-//            tint = selectedColor
-//        )
     }
 }

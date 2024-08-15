@@ -20,6 +20,7 @@ class ClusterRepository {
     }
 
     companion object {
+        // TODO: add more built-in samples
         val SAMPLE_PATHS = listOf("files/m-portrait.yml")
     }
 }

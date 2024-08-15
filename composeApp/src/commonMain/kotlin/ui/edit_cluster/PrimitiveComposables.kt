@@ -205,6 +205,10 @@ val WindowSizeClass.isLandscape: Boolean get() =
     widthSizeClass == WindowWidthSizeClass.Medium &&
     heightSizeClass <= WindowHeightSizeClass.Medium
 
+val WindowSizeClass.isCompact: Boolean get() =
+    widthSizeClass == WindowWidthSizeClass.Compact ||
+    heightSizeClass == WindowHeightSizeClass.Compact
+
 operator fun WindowSizeClass.component1(): WindowWidthSizeClass =
     widthSizeClass
 

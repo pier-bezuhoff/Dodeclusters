@@ -654,6 +654,7 @@ class EditClusterViewModel(
     // MAYBE: replace with select-all->delete in invisible-circles part manipulation mode
     fun deleteAllParts() {
         recordCommand(Command.DELETE, unique = true)
+        displayChessboardPattern = false
         parts.clear()
     }
 
@@ -1415,7 +1416,6 @@ class EditClusterViewModel(
         const val LOW_ACCURACY_FACTOR = 1.5f
         const val ZOOM_INCREMENT = 1.05f // == +5%
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
-        const val HISTORY_SIZE = 100
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
 
