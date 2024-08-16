@@ -1,12 +1,15 @@
-package data.io
+package domain.io
 
 import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
 import data.Cluster
 import kotlinx.serialization.json.Json
-import data.ColorCssSerializer
-import data.ColorULongSerializer
+import domain.ColorCssSerializer
+import domain.ColorULongSerializer
 import data.geometry.Line
+import domain.io.Ddc
+import domain.io.OldDdc
+import domain.io.Shape
 
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
 actual fun parseDdc(content: String): Ddc {

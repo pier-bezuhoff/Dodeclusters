@@ -1,4 +1,4 @@
-package data.io
+package domain.io
 
 import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
@@ -7,7 +7,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import data.ColorCssSerializer
+import domain.ColorCssSerializer
 import data.geometry.CircleOrLine
 import data.geometry.Line
 import ui.theme.DodeclustersColors
@@ -36,13 +36,15 @@ data class Ddc(
         } ?: 0
 
     constructor(cluster: Cluster) : this(
-        content = listOf(Token.Cluster(
-            if (cluster.circles.isEmpty()) emptyList()
-            else listOf(0, cluster.circles.size - 1),
-            cluster.circles,
-            cluster.parts,
-            cluster.filled
-        ))
+        content = listOf(
+            Token.Cluster(
+                if (cluster.circles.isEmpty()) emptyList()
+                else listOf(0, cluster.circles.size - 1),
+                cluster.circles,
+                cluster.parts,
+                cluster.filled
+            )
+        )
     )
 
     @Serializable
@@ -177,13 +179,15 @@ data class OldDdc(
         } ?: 0
 
     constructor(cluster: Cluster) : this(
-        content = listOf(Token.Cluster(
-            if (cluster.circles.isEmpty()) emptyList()
-            else listOf(0, cluster.circles.size - 1),
-            cluster.circles.filterIsInstance<Circle>(),
-            cluster.parts,
-            cluster.filled
-        ))
+        content = listOf(
+            Token.Cluster(
+                if (cluster.circles.isEmpty()) emptyList()
+                else listOf(0, cluster.circles.size - 1),
+                cluster.circles.filterIsInstance<Circle>(),
+                cluster.parts,
+                cluster.filled
+            )
+        )
     )
 
     @Serializable

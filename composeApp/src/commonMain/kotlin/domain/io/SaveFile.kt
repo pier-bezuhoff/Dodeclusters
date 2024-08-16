@@ -1,4 +1,4 @@
-package data.io
+package domain.io
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

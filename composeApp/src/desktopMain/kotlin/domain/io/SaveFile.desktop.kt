@@ -1,4 +1,4 @@
-package data.io
+package domain.io
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.window.AwtWindow
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.save_cluster_title
+import domain.io.SaveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource

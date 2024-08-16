@@ -1,4 +1,4 @@
-package data
+package domain
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -14,8 +14,6 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlin.math.pow
-import kotlin.math.roundToInt
 
 /** use as a type param `Json.encodeToString<ColorAsCss>(color)` */
 typealias ColorAsCss = @Serializable(ColorCssSerializer::class) Color

@@ -1,9 +1,9 @@
-package data.io
+package domain.io
 
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import data.Cluster
-import data.ColorCssSerializer
+import domain.ColorCssSerializer
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line

@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
+import kotlin.math.atan2
 import kotlin.math.hypot
 
 @Serializable
@@ -32,4 +33,16 @@ data class Point(
         fun fromOffset(offset: Offset): Point =
             Point(offset.x.toDouble(), offset.y.toDouble())
     }
+}
+
+/** CCW angle from [start] to [end] */
+fun calculateAngle(center: Point, start: Point, end: Point): Double {
+    val v1x = start.x - center.x
+    val v1y = start.y - center.y
+    val v2x = end.x - center.x
+    val v2y = end.y - center.y
+    return atan2(
+        v1x*v2y - v1y*v2x,
+        v1x*v2x + v1y*v2y
+    )
 }

@@ -32,7 +32,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import data.io.readDdcFromUri
+import domain.io.readDdcFromUri
 import ui.theme.DodeclustersColors
 import java.io.FileNotFoundException
 

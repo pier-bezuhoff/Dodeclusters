@@ -1,4 +1,4 @@
-package data
+package domain
 
 fun <T> Iterable<T>.filterIndices(
     predicate: (T) -> Boolean

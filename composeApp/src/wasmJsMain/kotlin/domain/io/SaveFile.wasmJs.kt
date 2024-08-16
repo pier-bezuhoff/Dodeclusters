@@ -1,4 +1,4 @@
-package data.io
+package domain.io
 
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,7 +29,8 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.choose_name
 import dodeclusters.composeapp.generated.resources.name
 import dodeclusters.composeapp.generated.resources.ok_description
-import dodeclusters.composeapp.generated.resources.ok_name
+import domain.io.Ddc
+import domain.io.SaveData
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.launch

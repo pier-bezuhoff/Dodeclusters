@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
 import data.Cluster
-import data.OffsetSerializer
+import domain.OffsetSerializer
 import data.OldCluster
 import data.PartialArgList
 import data.compressPart
@@ -30,11 +30,11 @@ import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
 import data.geometry.Line
 import data.geometry.Point
-import data.io.Ddc
-import data.io.OldDdc
-import data.io.cluster2svg
-import data.io.parseDdc
-import data.io.parseOldDdc
+import domain.io.Ddc
+import domain.io.OldDdc
+import domain.io.cluster2svg
+import domain.io.parseDdc
+import domain.io.parseOldDdc
 import domain.angleDeg
 import getPlatform
 import kotlinx.coroutines.CoroutineScope

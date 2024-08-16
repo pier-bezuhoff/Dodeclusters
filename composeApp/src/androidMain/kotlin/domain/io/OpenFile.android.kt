@@ -1,4 +1,4 @@
-package data.io
+package domain.io
 
 import android.content.Context
 import android.net.Uri

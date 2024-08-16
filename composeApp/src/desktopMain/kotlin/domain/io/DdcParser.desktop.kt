@@ -1,4 +1,4 @@
-package data.io
+package domain.io
 
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
@@ -6,6 +6,8 @@ import com.charleskorn.kaml.YamlConfiguration
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
+import domain.io.Ddc
+import domain.io.OldDdc
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
@@ -29,6 +31,7 @@ actual fun parseDdc(content: String): Ddc {
     )
     return Yaml(module, config).decodeFromString(Ddc.serializer(), content)
 }
+
 actual fun parseOldDdc(content: String): OldDdc {
     val module = SerializersModule { // shoudnt be necessary cuz it's closed/sealed polymorphism
         polymorphic(OldDdc.Token::class) {

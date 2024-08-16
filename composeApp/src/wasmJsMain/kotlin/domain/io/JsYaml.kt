@@ -1,6 +1,6 @@
 @file:JsModule("js-yaml")
 
-package data.io
+package domain.io
 
 // NOTE: js-yaml is imported by default, check yarn.lock
 // reference: https://github.com/nodeca/js-yaml

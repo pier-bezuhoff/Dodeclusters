@@ -1,4 +1,4 @@
-package data.io
+package domain.io
 
 expect fun parseDdc(content: String): Ddc
 

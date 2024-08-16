@@ -1,7 +1,7 @@
 package data.geometry
 
 import androidx.compose.runtime.Immutable
-import data.signNonZero
+import domain.signNonZero
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
 import kotlin.math.abs

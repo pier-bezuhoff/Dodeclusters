@@ -1,4 +1,4 @@
-package data.io
+package domain.io
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
@@ -22,7 +22,7 @@ class Ddu(
     var drawTrace: Boolean? = null,
     var bestCenter: Offset? = null, // cross-(screen size)
     var shape: Shape = DEFAULT_SHAPE,
-    var circles: List<Ddu.Circle> = emptyList(),
+    var circles: List<Circle> = emptyList(),
     var name: String? = null
 ) {
     data class Circle(
