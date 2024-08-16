@@ -21,6 +21,10 @@ data class Point(
                 hypot(point.x - x, point.y - y)
         }
 
+    fun middle(point: Point): Point =
+        if (this == CONFORMAL_INFINITY || point == CONFORMAL_INFINITY) CONFORMAL_INFINITY
+        else Point(x + point.x, y + point.y)
+
     companion object {
         /** All lines pass through this point, it's a stereographic projection of the North pole */
         val CONFORMAL_INFINITY = Point(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)

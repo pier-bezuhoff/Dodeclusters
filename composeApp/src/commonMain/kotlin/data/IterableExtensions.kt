@@ -42,3 +42,6 @@ fun combinations(n: Int, r: Int): Sequence<List<Int>> = sequence {
         yield(indices.toList())
     }
 }
+
+fun <T> Iterable<T>.updated(index: Int, newElement: T): List<T> =
+    this.toMutableList().apply { this[index] = newElement }
