@@ -1,6 +1,5 @@
-package ui.edit_cluster
+package ui
 
-import androidx.compose.foundation.BasicTooltipDefaults
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding

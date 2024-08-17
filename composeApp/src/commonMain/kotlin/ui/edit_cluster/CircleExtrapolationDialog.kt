@@ -40,6 +40,9 @@ import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_pr
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_prompt2
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_title
 import org.jetbrains.compose.resources.stringResource
+import ui.CancelButton
+import ui.OkButton
+import ui.isLandscape
 import kotlin.math.roundToInt
 
 data class DefaultExtrapolationParameters(

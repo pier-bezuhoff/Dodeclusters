@@ -10,7 +10,7 @@ fun snapAngle(
 ): Double {
     if (abs(angleDeg) <= snapMarkDeg/2)
         return angleDeg // no snapping to 0
-    val mod = angleDeg.mod(snapMarkDeg) // mod is >= 0 always
+    val mod = angleDeg.mod(snapMarkDeg) // mod is always >= 0
     val div = (angleDeg - mod)/snapMarkDeg
     val threshold = snapMarkDeg*angleSnapPercent/100
     return if (mod < threshold) {

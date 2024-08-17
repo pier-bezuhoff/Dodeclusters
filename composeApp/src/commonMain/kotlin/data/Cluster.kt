@@ -108,6 +108,7 @@ fun compressPartByRelativeContainment(
     return Pair(sievedIns, sievedOuts)
 }
 
+// TODO: skip extremely small arcs (they can lead to display artifacts)
 /** Filters out all unused 'in' and 'out' separators by checking intersection points */
 fun compressPartByIntersectionPoints(
     ins: List<CircleOrLine>,
@@ -166,6 +167,7 @@ fun compressPartByIntersectionPoints(
             }
         } else {
             for (k in 0 until m) {
+                // TODO: keep track of 'order' and calculate arc length to skip extremely small arcs
                 val ip2 = orderedIPs[k]
                 val mid: Point =
                     if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY) {

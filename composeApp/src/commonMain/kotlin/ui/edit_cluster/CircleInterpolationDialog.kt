@@ -2,7 +2,6 @@
 
 package ui.edit_cluster
 
-import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,6 +46,8 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_in_betwe
 import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.circle_interpolation_title
 import org.jetbrains.compose.resources.stringResource
+import ui.CancelButton
+import ui.OkButton
 import kotlin.math.roundToInt
 
 data class DefaultInterpolationParameters(

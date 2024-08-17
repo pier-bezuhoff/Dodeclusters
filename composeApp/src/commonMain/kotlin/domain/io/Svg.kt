@@ -11,6 +11,8 @@ import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import kotlin.math.hypot
 
+// TODO: make a dialog with encodeCircles + other options and
+//  a disclaimer about chessboard and border-only export being unimplemented
 // NOTE: ksvg doesn't support wasm yet + my use case is relatively formulaic
 // NOTE: Path.toSvg is coming soon (tm) to compose.ui.graphics
 // NOTE: "For reliable results cross-browser, use numbers with no more

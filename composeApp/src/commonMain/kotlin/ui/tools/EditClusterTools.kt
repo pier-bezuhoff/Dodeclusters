@@ -6,6 +6,9 @@ import data.PartialArgList
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
+import dodeclusters.composeapp.generated.resources.arc_path_arg_descriptions
+import dodeclusters.composeapp.generated.resources.arc_path_description
+import dodeclusters.composeapp.generated.resources.arc_path_name
 import dodeclusters.composeapp.generated.resources.chessboard
 import dodeclusters.composeapp.generated.resources.chessboard_reflected
 import dodeclusters.composeapp.generated.resources.circle
@@ -73,6 +76,7 @@ import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_name
 import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
+import dodeclusters.composeapp.generated.resources.shark_fin_3_points
 import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
 import dodeclusters.composeapp.generated.resources.stub
@@ -253,6 +257,13 @@ sealed class EditClusterTool(
         Res.string.insert_centered_cross_name,
         Res.string.insert_centered_cross_description,
         Res.drawable.full_screen_cross
+    )
+    data object ConstructArcPath: MultiArg(
+        PartialArgList.SIGNATURE_3_GENERALIZED_CIRCLE,
+        Res.string.arc_path_name,
+        Res.string.arc_path_description,
+        Res.array.arc_path_arg_descriptions,
+        Res.drawable.shark_fin_3_points
     )
     // insert rect/square
 }

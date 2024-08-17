@@ -32,6 +32,9 @@ data class Circle(
     val center: Offset get() =
         Offset(x.toFloat(), y.toFloat())
 
+    val centerPoint: Point get() =
+        Point(x, y)
+
     val r2: Double get() =
         radius * radius
 

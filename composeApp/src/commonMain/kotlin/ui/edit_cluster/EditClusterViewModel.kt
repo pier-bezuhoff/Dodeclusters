@@ -731,7 +731,7 @@ class EditClusterViewModel(
                     }
                 }
             }
-        } else {
+        } else { // NOTE: scaling everything instead of canvas can produce more artifacts
             val allIndices = circles.indices
             recordCommand(Command.SCALE, targets = allIndices)
             val center = absolute(canvasSize.center.toOffset())

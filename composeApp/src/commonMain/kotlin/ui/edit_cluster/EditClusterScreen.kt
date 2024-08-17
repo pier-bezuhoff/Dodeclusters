@@ -86,6 +86,13 @@ import dodeclusters.composeapp.generated.resources.upload
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
+import ui.DisableableButton
+import ui.OnOffButton
+import ui.SimpleButton
+import ui.TwoIconButton
+import ui.WithTooltip
+import ui.isCompact
+import ui.isLandscape
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
@@ -93,6 +100,7 @@ import ui.tools.Tool
 import kotlin.math.max
 import kotlin.math.min
 
+// TODO: preload all the icons for smoother experience
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun EditClusterScreen(
@@ -522,7 +530,7 @@ private fun LeftToolbar(
         Alignment.CenterHorizontally
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
             CategoryButton(viewModel, EditClusterCategory.Drag, compact = compact)
             CategoryButton(viewModel, EditClusterCategory.Multiselect, compact = compact)
             CategoryButton(viewModel, EditClusterCategory.Region, compact = compact)
@@ -659,7 +667,7 @@ private fun VerticalPanel(
         ,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(8.dp))
         for (tool in activeCategory.tools) {
             ToolButton(viewModel, tool, toolModifier)
         }

@@ -60,6 +60,7 @@ import domain.rotateBy
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import ui.SimpleButton
 import ui.chessboardPath
 import ui.circle2path
 import ui.part2path

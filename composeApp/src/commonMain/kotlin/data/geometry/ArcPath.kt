@@ -1,9 +1,8 @@
 package data.geometry
 
-import androidx.compose.ui.geometry.Offset
+import domain.TAU
 import domain.signNonZero
 import domain.updated
-import domain.angleDeg
 import kotlin.math.atan2
 import kotlin.math.hypot
 
@@ -177,11 +176,13 @@ private fun calculateStartAngle(start: Point, circle: Circle): Double {
 }
 
 private fun calculateSweepAngle(start: Point, midpoint: Point, end: Point, circle: Circle): Double {
-    val x1 = circle.x - start.x
-    val y1 = circle.y - start.y
-    val xm = circle.x - midpoint.x
-    val ym = circle.y - midpoint.y
-    val x2 = circle.x - end.x
-    val y2 = circle.y - end.y
-    return 0.0
+    val angle = calculateAngle(circle.centerPoint, start, end)
+    val midAngle = calculateAngle(circle.centerPoint, start, midpoint)
+    val angle1 = (angle + TAU) % TAU // in [0; TAU)
+    val midAngle1 = (midAngle + TAU) % TAU
+    val otherArc = midAngle1 > angle1
+    return if (otherArc)
+        TAU - angle1
+    else
+        angle1
 }
