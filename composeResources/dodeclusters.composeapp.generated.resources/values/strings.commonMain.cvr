@@ -1,4 +1,5 @@
 version:0
+string-array|arc_path_arg_descriptions|QW4gYW5jaG9yIHBvaW50
 string-array|circle_by_3_points_arg_descriptions|VGhlIDFzdCBwb2ludCAvIHBlcnBlbmRpY3VsYXIgb2JqZWN0,VGhlIDJuZCBwb2ludCAvIHBlcnBlbmRpY3VsYXIgb2JqZWN0,VGhlIDNyZCBwb2ludCAvIHBlcnBlbmRpY3VsYXIgb2JqZWN0
 string-array|circle_by_center_and_radius_arg_descriptions|VGhlIGNlbnRlciBvZiB0aGUgY2lyY2xl,QW55IHBvaW50IG9uIHRoZSBjaXJjbGU=
 string-array|circle_extrapolation_arg_descriptions|U3RhcnQtY2lyY2xl,RW5kLWNpcmNsZQ==
@@ -9,6 +10,8 @@ string-array|str_arr|aXRlbSAx,aXRlbSAy,aXRlbSAz
 string|app_name|RG9kZWNsdXN0ZXJz
 string|applied_color_description|U3dpdGNoIHRvIHRoaXMgcmVjZW50bHkgdXNlZCBjb2xvcg==
 string|applied_color_name|QXBwbGllZCBjb2xvcg==
+string|arc_path_description|Q29uc3RydWN0IGEgY2xvc2VkIGFyYy1wYXRoIChsaWtlIGEgcG9seWdvbik=
+string|arc_path_name|QXJjLXBhdGg=
 string|attributes_category_name|RGVsZXRlL0R1cGxpY2F0ZQ==
 string|cancel_name|Q2FuY2Vs
 string|choose_name|Q2hvb3NlIGEgbmFtZQ==
