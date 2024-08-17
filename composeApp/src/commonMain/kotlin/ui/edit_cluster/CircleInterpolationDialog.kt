@@ -48,6 +48,8 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_title
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.OkButton
+import ui.component1
+import ui.component2
 import kotlin.math.roundToInt
 
 data class DefaultInterpolationParameters(
