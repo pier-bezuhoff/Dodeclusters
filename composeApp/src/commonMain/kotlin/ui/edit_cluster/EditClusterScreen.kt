@@ -51,6 +51,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -69,6 +71,9 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.confirm
+import dodeclusters.composeapp.generated.resources.copy
+import dodeclusters.composeapp.generated.resources.delete_forever
+import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.ku
 import dodeclusters.composeapp.generated.resources.ok_name
 import dodeclusters.composeapp.generated.resources.open_file
@@ -78,11 +83,14 @@ import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
+import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.upload
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -106,6 +114,7 @@ import kotlin.math.min
 fun EditClusterScreen(
     sampleIndex: Int? = null,
     ddcContent: String? = null,
+    keyboardActions: Flow<KeyboardAction>? = null,
 ) {
     val windowSizeClass = calculateWindowSizeClass()
 //    println(windowSizeClass)
@@ -123,7 +132,11 @@ fun EditClusterScreen(
     Scaffold(
         // MAYBE: potentially lift it to window-level (desktop)
         // BUG: unfocused at the start on desktop
-        modifier = Modifier.handleKeyboardActions(viewModel::processKeyboardAction),
+        modifier =
+            if (keyboardActions == null)
+                Modifier
+                    .handleKeyboardActions(viewModel::processKeyboardAction)
+            else Modifier,
         floatingActionButton = {
             val category = EditClusterCategory.Create
             FloatingActionButton(
@@ -172,6 +185,7 @@ fun EditClusterScreen(
             }
         }
     }
+    preloadIcons()
     if (viewModel.showColorPickerDialog) {
         ColorPickerDialog(
             initialColor = viewModel.regionColor,
@@ -231,6 +245,34 @@ fun EditClusterScreen(
             viewModel.moveToDdcCenter(0f, 0f)
         }
     }
+    keyboardActions?.let {
+        coroutineScope.launch {
+            keyboardActions.collect { action ->
+                viewModel.processKeyboardAction(action)
+            }
+        }
+    }
+}
+
+/** Otherwise icons only start being loaded when the corresponding category panel is open,
+ * which is noticeable */
+@Composable
+fun preloadIcons() {
+    for (category in listOf(EditClusterCategory.Create, EditClusterCategory.Drag, EditClusterCategory.Multiselect, EditClusterCategory.Region, EditClusterCategory.Transform, EditClusterCategory.Visibility)) {
+        for (tool in category.tools) {
+            painterResource(tool.icon)
+            if (tool is Tool.BinaryToggle) {
+                tool.disabledIcon?.let {
+                    painterResource(it)
+                }
+            }
+        }
+    }
+    for (resource in listOf(
+        Res.drawable.collapse_down, Res.drawable.ku,
+        Res.drawable.expand, Res.drawable.shrink, Res.drawable.copy, Res.drawable.delete_forever // from canvas HUD
+    ))
+        painterResource(resource)
 }
 
 @Composable

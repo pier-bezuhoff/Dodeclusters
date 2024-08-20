@@ -84,14 +84,14 @@ sealed class EditClusterCategory(
     data object Create : EditClusterCategory(
         Res.string.create_category_name,
         listOf(
+            EditClusterTool.ConstructArcPath,
             EditClusterTool.ConstructCircleByCenterAndRadius,
             EditClusterTool.ConstructCircleBy3Points,
             EditClusterTool.ConstructLineBy2Points,
             EditClusterTool.InsertCenteredCross,
         ),
-        defaultables = listOf(0, 1, 2)
+        defaultables = listOf(0, 1, 2, 3)
     ) { // ~mode-like
-        // mode: bezier-like arc path
         // mode: rectangle by top-left & bottom-right
         // mode: polygon
         // toggle: enable point-to-circle snapping

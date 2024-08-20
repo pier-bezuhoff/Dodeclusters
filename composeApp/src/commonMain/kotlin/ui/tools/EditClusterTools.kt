@@ -77,6 +77,7 @@ import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_
 import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
 import dodeclusters.composeapp.generated.resources.shark_fin_3_points
+import dodeclusters.composeapp.generated.resources.shark_fin_3_points_striped
 import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
 import dodeclusters.composeapp.generated.resources.stub
@@ -259,11 +260,11 @@ sealed class EditClusterTool(
         Res.drawable.full_screen_cross
     )
     data object ConstructArcPath: MultiArg(
-        PartialArgList.SIGNATURE_3_GENERALIZED_CIRCLE,
+        PartialArgList.SIGNATURE_N_POINTS_PLACEHOLDER,
         Res.string.arc_path_name,
         Res.string.arc_path_description,
         Res.array.arc_path_arg_descriptions,
-        Res.drawable.shark_fin_3_points
+        Res.drawable.shark_fin_3_points_striped
     )
     // insert rect/square
 }

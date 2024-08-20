@@ -38,7 +38,6 @@ data class PartialArgList(
         data class GeneralizedCircle(val gCircle: GCircle) : Arg(ArgType.GeneralizedCircle)
     }
 
-    // TODO: creation tool -> signature mapping
     @Serializable
     data class Signature(val argTypes: List<ArgType>) {
         constructor(vararg argTypes: ArgType) : this(argTypes.toList())
@@ -97,5 +96,6 @@ data class PartialArgList(
         val SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE = Signature(ArgType.SelectedCircles, ArgType.CircleIndex)
         val SIGNATURE_2_GENERALIZED_CIRCLE = Signature(ArgType.GeneralizedCircle, ArgType.GeneralizedCircle)
         val SIGNATURE_3_GENERALIZED_CIRCLE = Signature(ArgType.GeneralizedCircle, ArgType.GeneralizedCircle, ArgType.GeneralizedCircle)
+        val SIGNATURE_N_POINTS_PLACEHOLDER = Signature(ArgType.XYPoint)
     }
 }

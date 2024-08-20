@@ -334,6 +334,8 @@ data class GeneralizedCircle(
             val z = -x1*y2*z3 + x1*y3*z2 + x2*y1*z3 - x2*y3*z1 - x3*y1*z2 + x3*y2*z1
             if (w == 0.0 && x == 0.0 && y == 0.0 && z == 0.0)
                 return null
+            if (listOf(w,x,y,z).any { it.isNaN() || it.isInfinite() })
+                return null
             return GeneralizedCircle(w, x, y, z).normalizedPreservingDirection()
         }
     }

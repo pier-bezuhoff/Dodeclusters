@@ -24,7 +24,7 @@ data class Point(
 
     fun middle(point: Point): Point =
         if (this == CONFORMAL_INFINITY || point == CONFORMAL_INFINITY) CONFORMAL_INFINITY
-        else Point(x + point.x, y + point.y)
+        else Point((x + point.x)/2, (y + point.y)/2)
 
     companion object {
         /** All lines pass through this point, it's a stereographic projection of the North pole */

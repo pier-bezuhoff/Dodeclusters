@@ -25,6 +25,7 @@ import domain.OffsetSerializer
 import data.OldCluster
 import data.PartialArgList
 import data.compressPart
+import data.geometry.ArcPath
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
@@ -153,6 +154,9 @@ class EditClusterViewModel(
     var showColorPickerDialog by mutableStateOf(false)
     var showCircleInterpolationDialog by mutableStateOf(false)
     var showCircleExtrapolationDialog by mutableStateOf(false)
+
+    var arcPathUnderConstruction by mutableStateOf<ArcPath?>(null)
+        private set
 
     var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
         private set
@@ -462,8 +466,12 @@ class EditClusterViewModel(
             } else {
                 selection.clear()
             }
-            showCircles = true
-            partialArgList = PartialArgList(newMode.signature)
+            if (newMode == ToolMode.ARC_PATH) {
+                partialArgList = null
+            } else {
+                showCircles = true
+                partialArgList = PartialArgList(newMode.signature)
+            }
         } else {
             partialArgList = null
         }
@@ -741,101 +749,6 @@ class EditClusterViewModel(
         }
     }
 
-    // pointer input callbacks
-    // onDown -> onTap
-    fun onTap(position: Offset) {
-        // select circle(s)/region
-        if (showCircles) {
-            when (mode) {
-                SelectionMode.Drag -> {
-                    reselectCircleAt(position)
-                }
-                SelectionMode.Multiselect -> {
-                    // (re)-select part
-                    val selectedCircleIx = reselectCirclesAt(position)
-                    if (selectedCircleIx == null) { // try to select bounding circles of the selected part
-                        val (part, part0) = selectPartAt(position)
-                        if (part0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
-                            toggleSelectAll()
-                        } else {
-                            parts
-                                .withIndex()
-                                .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
-                                .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }
-                                ?.let { (i, existingPart) ->
-                                    println("existing bound of $existingPart")
-                                    val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
-                                    if (bounds != selection.toSet()) {
-                                        selection.clear()
-                                        selection.addAll(bounds)
-                                    } else selection.clear()
-                                } ?: run { // select bound of a non-existent part
-                                println("bounds of $part")
-                                val bounds: Set<Ix> = part.insides + part.outsides
-                                if (bounds != selection.toSet()) {
-                                    selection.clear()
-                                    selection.addAll(bounds)
-                                } else selection.clear()
-                            }
-                        }
-                    }
-                }
-                SelectionMode.Region -> {
-                    if (submode !is SubMode.FlowFill) {
-                        if (restrictRegionsToSelection && selection.isNotEmpty()) {
-                            val restriction = selection.toList()
-                            reselectRegionAt(position, restriction)
-                        } else {
-                            reselectRegionAt(position)
-                        }
-                    }
-                }
-                ToolMode.CIRCLE_BY_CENTER_AND_RADIUS ->
-                    if (FAST_CENTERED_CIRCLE && partialArgList!!.lastArgIsConfirmed) {
-                        partialArgList = partialArgList!!.copy(
-                            args = partialArgList!!.args.dropLast(1)
-                        )
-                    }
-                else -> {}
-            }
-        }
-    }
-
-    fun onUp(visiblePosition: Offset?) {
-        cancelSelectionAsToolArgPrompt()
-        when (mode) {
-            is ToolMode -> {
-                // we only confirm args in onUp, they are created in onDown etc.
-                val args = partialArgList!! // ToolMode implies non-null partialArgList
-                val newArg = when (args.currentArg) {
-                    is PartialArgList.Arg.XYPoint -> visiblePosition?.let {
-                        PartialArgList.Arg.XYPoint.fromOffset(absolute(it))
-                    }
-                    is PartialArgList.Arg.CircleIndex -> null
-                    is PartialArgList.Arg.SelectedCircles -> null
-                    is PartialArgList.Arg.GeneralizedCircle -> visiblePosition?.let {
-                        if (args.currentArg.gCircle is Point)
-                            PartialArgList.Arg.GeneralizedCircle(Point.fromOffset(absolute(it)))
-                        else null
-                    }
-                    null -> null // in case prev onDown failed to select anything
-                }
-                partialArgList = if (newArg == null)
-                    args.copy(lastArgIsConfirmed = true)
-                else
-                    args.updateCurrentArg(newArg, confirmThisArg = true)
-            }
-            else -> {}
-        }
-        if (partialArgList?.isFull == true) {
-            completeToolMode()
-        }
-        if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect)
-            activeTool = EditClusterTool.Multiselect // haxx
-        if (submode !is SubMode.FlowFill)
-            submode = SubMode.None
-    }
-
     fun onDown(visiblePosition: Offset) {
         // reset grabbed thingies
         if (showCircles) {
@@ -893,7 +806,7 @@ class EditClusterViewModel(
                         reselectRegionAt(visiblePosition)
                     }
                 } else if (mode is ToolMode) {
-                    when (partialArgList!!.nextArgType) {
+                    when (partialArgList?.nextArgType) {
                         PartialArgList.ArgType.XYPoint -> {
                             if (FAST_CENTERED_CIRCLE && mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS && partialArgList!!.currentArg == null) {
                                 val newArg = PartialArgList.Arg.XYPoint.fromOffset(absolute(visiblePosition))
@@ -932,9 +845,100 @@ class EditClusterViewModel(
                                 partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = false)
                             }
                         }
-                        else -> {}
+                        else -> if (mode == ToolMode.ARC_PATH) {
+                            val arcPath = arcPathUnderConstruction
+                            arcPathUnderConstruction = if (arcPath == null) {
+                                ArcPath(
+                                    startPoint = Point.fromOffset(absolute(visiblePosition)),
+                                    focus = ArcPath.Focus.StartPoint
+                                )
+                            } else {
+                                if (isCloseEnoughToSelect(arcPath.startPoint.toOffset(), visiblePosition)) {
+                                    arcPath.copy(focus = ArcPath.Focus.StartPoint)
+                                } else {
+                                    val pointIx = arcPath.points.indexOfFirst {
+                                        isCloseEnoughToSelect(it.toOffset(), visiblePosition)
+                                    }
+                                    if (pointIx != -1) {
+                                        arcPath.copy(focus = ArcPath.Focus.Point(pointIx))
+                                    } else {
+                                        val midpointIx = arcPath.midpoints.indexOfFirst {
+                                            isCloseEnoughToSelect(it.toOffset(), visiblePosition)
+                                        }
+                                        if (midpointIx != -1) {
+                                            arcPath.copy(focus = ArcPath.Focus.MidPoint(pointIx))
+                                        } else {
+                                            arcPath.addNewPoint(
+                                                Point.fromOffset(absolute(visiblePosition))
+                                            ).copy(focus = ArcPath.Focus.Point(arcPath.points.size))
+                                                .also { println(it) }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
+            }
+        }
+    }
+
+    // pointer input callbacks
+    // onDown -> onTap
+    fun onTap(position: Offset) {
+        // select circle(s)/region
+        if (showCircles) {
+            when (mode) {
+                SelectionMode.Drag -> {
+                    reselectCircleAt(position)
+                }
+                SelectionMode.Multiselect -> {
+                    // (re)-select part
+                    val selectedCircleIx = reselectCirclesAt(position)
+                    if (selectedCircleIx == null) { // try to select bounding circles of the selected part
+                        val (part, part0) = selectPartAt(position)
+                        if (part0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
+                            toggleSelectAll()
+                        } else {
+                            parts
+                                .withIndex()
+                                .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
+                                .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }
+                                ?.let { (i, existingPart) ->
+                                    println("existing bound of $existingPart")
+                                    val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
+                                    if (bounds != selection.toSet()) {
+                                        selection.clear()
+                                        selection.addAll(bounds)
+                                    } else selection.clear()
+                                } ?: run { // select bound of a non-existent part
+                                    println("bounds of $part")
+                                    val bounds: Set<Ix> = part.insides + part.outsides
+                                    if (bounds != selection.toSet()) {
+                                        selection.clear()
+                                        selection.addAll(bounds)
+                                    } else selection.clear()
+                            }
+                        }
+                    }
+                }
+                SelectionMode.Region -> {
+                    if (submode !is SubMode.FlowFill) {
+                        if (restrictRegionsToSelection && selection.isNotEmpty()) {
+                            val restriction = selection.toList()
+                            reselectRegionAt(position, restriction)
+                        } else {
+                            reselectRegionAt(position)
+                        }
+                    }
+                }
+                ToolMode.CIRCLE_BY_CENTER_AND_RADIUS ->
+                    if (FAST_CENTERED_CIRCLE && partialArgList!!.lastArgIsConfirmed) {
+                        partialArgList = partialArgList!!.copy(
+                            args = partialArgList!!.args.dropLast(1)
+                        )
+                    }
+                else -> {}
             }
         }
     }
@@ -1038,7 +1042,7 @@ class EditClusterViewModel(
                 } else {
                     val diff =
                         (qualifiedPart.insides - newQualifiedPart.insides) union (newQualifiedPart.insides - qualifiedPart.insides) union
-                        (qualifiedPart.outsides - newQualifiedPart.outsides) union (newQualifiedPart.outsides - qualifiedPart.outsides)
+                                (qualifiedPart.outsides - newQualifiedPart.outsides) union (newQualifiedPart.outsides - qualifiedPart.outsides)
                     selection.addAll(diff.filter { it !in selection })
                 }
             } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
@@ -1084,13 +1088,15 @@ class EditClusterViewModel(
             }
         } else {
             if (mode is ToolMode &&
-                partialArgList!!.currentArgType == PartialArgList.ArgType.XYPoint
+                partialArgList?.currentArgType == PartialArgList.ArgType.XYPoint
             ) {
                 val newArg = PartialArgList.Arg.XYPoint.fromOffset(c)
                 partialArgList = partialArgList!!.updateCurrentArg(newArg, confirmThisArg = false)
+            } else if (mode == ToolMode.ARC_PATH) {
+                arcPathUnderConstruction = arcPathUnderConstruction?.moveFocused(Point.fromOffset(c))
             } else if (
                 mode is ToolMode &&
-                partialArgList!!.currentArgType == PartialArgList.ArgType.GeneralizedCircle
+                partialArgList?.currentArgType == PartialArgList.ArgType.GeneralizedCircle
             ) {
                 val newArg = PartialArgList.Arg.GeneralizedCircle(Point.fromOffset(c))
                 partialArgList = partialArgList!!.updateCurrentArg(newArg, confirmThisArg = false)
@@ -1102,6 +1108,45 @@ class EditClusterViewModel(
                 translation = translation + pan // navigate canvas
             }
         }
+    }
+
+    fun onUp(visiblePosition: Offset?) {
+        cancelSelectionAsToolArgPrompt()
+        when (mode) {
+            ToolMode.ARC_PATH -> {
+                arcPathUnderConstruction?.also {
+                    println(it)
+                }
+            }
+            is ToolMode -> {
+                // we only confirm args in onUp, they are created in onDown etc.
+                val newArg = when (val arg = partialArgList?.currentArg) {
+                    is PartialArgList.Arg.XYPoint -> visiblePosition?.let {
+                        PartialArgList.Arg.XYPoint.fromOffset(absolute(it))
+                    }
+                    is PartialArgList.Arg.CircleIndex -> null
+                    is PartialArgList.Arg.SelectedCircles -> null
+                    is PartialArgList.Arg.GeneralizedCircle -> visiblePosition?.let {
+                        if (arg.gCircle is Point)
+                            PartialArgList.Arg.GeneralizedCircle(Point.fromOffset(absolute(it)))
+                        else null
+                    }
+                    null -> null // in case prev onDown failed to select anything
+                }
+                partialArgList = if (newArg == null)
+                    partialArgList?.copy(lastArgIsConfirmed = true)
+                else
+                    partialArgList?.updateCurrentArg(newArg, confirmThisArg = true)
+            }
+            else -> {}
+        }
+        if (partialArgList?.isFull == true) {
+            completeToolMode()
+        }
+        if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect)
+            activeTool = EditClusterTool.Multiselect // haxx
+        if (submode !is SubMode.FlowFill)
+            submode = SubMode.None
     }
 
     fun onVerticalScroll(yDelta: Float) {
@@ -1185,6 +1230,7 @@ class EditClusterViewModel(
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
             ToolMode.CIRCLE_INTERPOLATION -> showCircleInterpolationDialog = true
             ToolMode.CIRCLE_EXTRAPOLATION -> showCircleExtrapolationDialog = true
+            ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
         }
     }
 
@@ -1310,6 +1356,12 @@ class EditClusterViewModel(
     fun resetCircleExtrapolation() {
         showCircleExtrapolationDialog = false
         partialArgList = PartialArgList(EditClusterTool.CircleExtrapolation.signature)
+    }
+
+    fun completeArcPath() {
+        require(arcPathUnderConstruction != null)
+        arcPathUnderConstruction = null
+        TODO()
     }
 
     fun toolAction(tool: EditClusterTool) {

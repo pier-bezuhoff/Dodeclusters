@@ -16,25 +16,33 @@ data class ArcPath(
     val circles: List<Circle?> = emptyList(),
     val startAngles: List<Double> = emptyList(),
     val sweepAngles: List<Double> = emptyList(),
+    val focus: Focus? = null,
 ) {
     val lastPoint: Point get() =
         points.lastOrNull() ?: startPoint
 
-    fun addNewPoint(newPoint: Point): ArcPath {
-        return ArcPath(
-            startPoint,
-            points + newPoint, midpoints + lastPoint.middle(newPoint),
-            length + 1,
-            circles + null,
-            startAngles + 0.0, sweepAngles + 0.0
-        )
+    val allAnchors: List<Point> get() =
+        listOf(startPoint) + points
+
+    sealed interface Focus {
+        data object StartPoint : Focus
+        data class Point(val index: Int) : Focus
+        data class MidPoint(val index: Int) : Focus
     }
+
+    fun addNewPoint(newPoint: Point): ArcPath = copy(
+        startPoint = startPoint,
+        points = points + newPoint, midpoints = midpoints + lastPoint.middle(newPoint),
+        length = length + 1,
+        circles = circles + null,
+        startAngles = startAngles + 0.0, sweepAngles = sweepAngles + 0.0
+    )
 
     // i=0 is startPoint
     fun updatePoint(i: Int, newPoint: Point): ArcPath =
         if (i == 0) {
             if (length == 1) {
-                ArcPath(newPoint)
+                copy(startPoint = newPoint)
             } else { // only forward
                 val point = startPoint
                 val nextPoint = points[0]
@@ -48,16 +56,16 @@ data class ArcPath(
                     if (newNextCircle != null)
                         calculateStartAngle(newPoint, newNextCircle)
                     else 0.0
-                ArcPath(
-                    newPoint, points,
-                    midpoints.updated(0, newMidpoint),
-                    length,
-                    circles.updated(0, newNextCircle),
-                    startAngles.updated(0, newNextStartAngle),
-                    sweepAngles // sweep angle stays the same
+                copy(
+                    startPoint = newPoint, points = points,
+                    midpoints = midpoints.updated(0, newMidpoint),
+                    length = length,
+                    circles = circles.updated(0, newNextCircle),
+                    startAngles = startAngles.updated(0, newNextStartAngle),
+                    sweepAngles = sweepAngles // sweep angle stays the same
                 )
             }
-        } else if (i == length) { // only backward
+        } else if (i == length - 1) { // only backward
             val j = i - 1
             val point = points[j]
             val previousPoint = if (j == 0) startPoint else points[j - 1]
@@ -71,13 +79,13 @@ data class ArcPath(
                 if (newPreviousCircle is Circle)
                     calculateStartAngle(previousPoint, newPreviousCircle)
                 else 0.0
-            ArcPath(
-                newPoint, points.updated(j, newPoint),
-                midpoints.updated(j, newMidpoint),
-                length,
-                circles.updated(j, newPreviousCircle),
-                startAngles.updated(j, newPreviousStartAngle),
-                sweepAngles // sweep angle stays the same
+            copy(
+                startPoint = newPoint, points = points.updated(j, newPoint),
+                midpoints = midpoints.updated(j, newMidpoint),
+                length = length,
+                circles = circles.updated(j, newPreviousCircle),
+                startAngles = startAngles.updated(j, newPreviousStartAngle),
+                sweepAngles = sweepAngles // sweep angle stays the same
             )
         } else { // backward + forward
             val j = i - 1
@@ -104,13 +112,13 @@ data class ArcPath(
                 if (newNextCircle is Circle)
                     calculateStartAngle(newPoint, newNextCircle)
                 else 0.0
-            ArcPath(
-                newPoint, points.updated(j, newPoint),
-                midpoints.updated(j, newPreviousMidpoint).updated(i, newNextMidpoint),
-                length,
-                circles.updated(j, newPreviousCircle).updated(i, newNextCircle),
-                startAngles.updated(j, newPreviousStartAngle).updated(i, newNextStartAngle),
-                sweepAngles // sweep angle stays the same
+            copy(
+                startPoint = newPoint, points = points.updated(j, newPoint),
+                midpoints = midpoints.updated(j, newPreviousMidpoint).updated(i, newNextMidpoint),
+                length = length,
+                circles = circles.updated(j, newPreviousCircle).updated(i, newNextCircle),
+                startAngles = startAngles.updated(j, newPreviousStartAngle).updated(i, newNextStartAngle),
+                sweepAngles = sweepAngles // sweep angle stays the same
             )
         }
 
@@ -135,6 +143,14 @@ data class ArcPath(
             sweepAngles = sweepAngles.updated(j, newSweepAngle)
         )
     }
+
+    fun moveFocused(newPoint: Point): ArcPath =
+        when (focus) {
+            Focus.StartPoint -> updatePoint(0, newPoint)
+            is Focus.Point -> updatePoint(focus.index + 1, newPoint)
+            is Focus.MidPoint -> updateMidpoint(focus.index, newPoint)
+            null -> this
+        }
 }
 
 /**
@@ -154,6 +170,8 @@ private fun updateMidpointFromMovingEnd(
     val vx = end.x - start.x
     val vy = end.y - start.y
     val vLength = hypot(vx, vy)
+    if (vLength < EPSILON)
+        return newStart.middle(end)
     val left = signNonZero(-vy*hx + vx*hy)
     val h = left* hypot(hx, hy)
     val newVx = newStart.x - newStart.x

@@ -2,6 +2,7 @@ package ui.edit_cluster
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -24,60 +25,66 @@ enum class KeyboardAction {
     CANCEL
 }
 
-// NOTE: doesn't work in browser (yet?)
-//  related? https://github.com/JetBrains/compose-multiplatform/issues/4673
+/** Iffy in browser, since the target composable often randomly loses focus */
 fun Modifier.handleKeyboardActions(
-    onAction: (KeyboardAction) -> Unit, // MAYBE: use Flow or smth instead of callback
-): Modifier =
-    onPreviewKeyEvent {
-        if (it.type == KeyEventType.KeyUp && !it.isAltPressed && !it.isMetaPressed) {
-            when (it.key) {
-                Key.Delete, Key.Backspace -> {
-                    onAction(KeyboardAction.DELETE)
-                    true
-                }
-                Key.Paste -> {
-                    onAction(KeyboardAction.PASTE)
-                    true
-                }
-                Key.ZoomIn -> {
-                    onAction(KeyboardAction.ZOOM_IN)
-                    true
-                }
-                Key.ZoomOut -> {
-                    onAction(KeyboardAction.ZOOM_OUT)
-                    true
-                }
-                Key.Escape -> {
-                    onAction(KeyboardAction.CANCEL)
-                    true
-                }
-                else -> if (it.isCtrlPressed) {
-                    when (it.key) {
-                        Key.V -> {
-                            onAction(KeyboardAction.PASTE)
-                            true
-                        }
-                        Key.A -> {
-                            onAction(KeyboardAction.SELECT_ALL)
-                            true
-                        }
-                        Key.Plus, Key.Equals -> {
-                            onAction(KeyboardAction.ZOOM_IN)
-                            true
-                        }
-                        Key.Minus -> {
-                            onAction(KeyboardAction.ZOOM_OUT)
-                            true
-                        }
-                        Key.Z -> {
-                            onAction(KeyboardAction.UNDO)
-                            true
-                        }
-                        Key.Y -> {
-                            onAction(KeyboardAction.REDO)
-                            true
-                        }
+    onAction: (KeyboardAction) -> Unit,
+): Modifier {
+    val callback = keyboardActionsHandler(onAction)
+    return Modifier.onPreviewKeyEvent(callback)
+}
+
+// NOTE: buggy in browser: https://github.com/JetBrains/compose-multiplatform/issues/4673
+fun keyboardActionsHandler(
+    onAction: (KeyboardAction) -> Unit,
+): (KeyEvent) -> Boolean = { event ->
+    if (event.type == KeyEventType.KeyUp && !event.isAltPressed && !event.isMetaPressed) {
+        when (event.key) {
+            Key.Delete, Key.Backspace -> {
+                onAction(KeyboardAction.DELETE)
+                true
+            }
+            Key.Paste -> {
+                onAction(KeyboardAction.PASTE)
+                true
+            }
+            Key.ZoomIn -> {
+                onAction(KeyboardAction.ZOOM_IN)
+                true
+            }
+            Key.ZoomOut -> {
+                onAction(KeyboardAction.ZOOM_OUT)
+                true
+            }
+            Key.Escape -> {
+                onAction(KeyboardAction.CANCEL)
+                true
+            }
+            else -> if (event.isCtrlPressed) {
+                when (event.key) {
+                    Key.V -> {
+                        onAction(KeyboardAction.PASTE)
+                        true
+                    }
+                    Key.A -> {
+                        onAction(KeyboardAction.SELECT_ALL)
+                        true
+                    }
+                    Key.Plus, Key.Equals -> {
+                        onAction(KeyboardAction.ZOOM_IN)
+                        true
+                    }
+                    Key.Minus -> {
+                        onAction(KeyboardAction.ZOOM_OUT)
+                        true
+                    }
+                    Key.Z -> {
+                        onAction(KeyboardAction.UNDO)
+                        true
+                    }
+                    Key.Y -> {
+                        onAction(KeyboardAction.REDO)
+                        true
+                    }
 //                        Key.S -> {
 //                            onAction(KeyboardAction.SAVE)
 //                            true
@@ -86,9 +93,9 @@ fun Modifier.handleKeyboardActions(
 //                            onAction(KeyboardAction.OPEN)
 //                            true
 //                        }
-                        else -> false
-                    }
-                } else false
-            }
-        } else false
-    }
+                    else -> false
+                }
+            } else false
+        }
+    } else false
+}

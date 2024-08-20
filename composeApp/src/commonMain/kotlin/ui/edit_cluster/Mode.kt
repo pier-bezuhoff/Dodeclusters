@@ -41,6 +41,7 @@ enum class ToolMode(
     CIRCLE_BY_CENTER_AND_RADIUS(EditClusterTool.ConstructCircleByCenterAndRadius),
     CIRCLE_BY_3_POINTS(EditClusterTool.ConstructCircleBy3Points),
     LINE_BY_2_POINTS(EditClusterTool.ConstructLineBy2Points),
+    ARC_PATH(EditClusterTool.ConstructArcPath),
     ;
 
     val signature: PartialArgList.Signature = tool.signature

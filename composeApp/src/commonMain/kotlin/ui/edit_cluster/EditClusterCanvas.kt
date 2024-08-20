@@ -154,20 +154,7 @@ fun BoxScope.EditClusterCanvas(
             drawParts(viewModel, visibleRect, clusterPathAlpha, circleStroke)
             if (viewModel.showCircles)
                 drawCircles(viewModel, visibleRect, circleColor, circleStroke)
-            if (viewModel.showCircles &&
-                (viewModel.circleSelectionIsActive ||
-                    viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection
-                )
-            ) {
-                val circles = viewModel.selection.map { viewModel.circles[it] }
-                for (circle in circles) {
-                    drawCircleOrLine(
-                        circle, visibleRect, selectedCircleColor,
-                        alpha = thiccSelectionCircleAlpha,
-                        style = circleThiccStroke
-                    )
-                }
-            }
+            drawSelectedCircles(viewModel, visibleRect, selectedCircleColor, thiccSelectionCircleAlpha, circleThiccStroke)
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, scaleIndicatorColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
         }
@@ -325,6 +312,28 @@ private fun DrawScope.drawCircles(
         drawCircle(Color.Red, 5f, point.toOffset())
 }
 
+private fun DrawScope.drawSelectedCircles(
+    viewModel: EditClusterViewModel,
+    visibleRect: Rect,
+    selectedCircleColor: Color,
+    thiccSelectionCircleAlpha: Float,
+    circleThiccStroke: Stroke,
+) {
+    if (viewModel.showCircles &&
+        (viewModel.circleSelectionIsActive ||
+        viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection)
+    ) {
+        val circles = viewModel.selection.map { viewModel.circles[it] }
+        for (circle in circles) {
+            drawCircleOrLine(
+                circle, visibleRect, selectedCircleColor,
+                alpha = thiccSelectionCircleAlpha,
+                style = circleThiccStroke
+            )
+        }
+    }
+}
+
 private fun DrawScope.drawParts(
     viewModel: EditClusterViewModel,
     visibleRect: Rect,
@@ -451,6 +460,41 @@ private fun DrawScope.drawPartialConstructs(
                         visibleRect, creationPrototypeColor, style = circleStroke
                     )
             }
+        }
+        ToolMode.ARC_PATH -> viewModel.arcPathUnderConstruction?.let { arcPath ->
+            drawCircle(
+                color = creationPrototypeColor,
+                radius = creationPointRadius,
+                center = arcPath.startPoint.toOffset()
+            )
+            val path = Path()
+            path.moveTo(arcPath.startPoint.x.toFloat(), arcPath.startPoint.y.toFloat())
+            for (i in arcPath.points.indices) {
+                val point = arcPath.points[i].toOffset()
+                val previousPoint = if (i == 0)
+                    arcPath.startPoint.toOffset()
+                else arcPath.points[i - 1].toOffset()
+                when (val circle = arcPath.circles[i]) {
+                    is Circle -> path.arcTo(
+                        Rect(circle.center, circle.radius.toFloat()),
+                        arcPath.startAngles[i].toFloat(),
+                        arcPath.sweepAngles[i].toFloat(),
+                        forceMoveTo = true
+                    )
+                    null -> path.lineTo(previousPoint.x, previousPoint.y)
+                }
+                drawCircle(
+                    color = creationPrototypeColor,
+                    radius = creationPointRadius,
+                    center = point
+                )
+                drawCircle(
+                    color = creationPrototypeColor,
+                    radius = creationPointRadius,
+                    center = arcPath.midpoints[i].toOffset()
+                )
+            }
+            drawPath(path, creationPrototypeColor, style = circleStroke)
         }
         else -> {}
     }
