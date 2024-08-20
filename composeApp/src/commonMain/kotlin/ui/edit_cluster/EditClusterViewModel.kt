@@ -739,6 +739,8 @@ class EditClusterViewModel(
                     }
                 }
             }
+        } else if (mode == ToolMode.ARC_PATH && arcPathUnderConstruction != null) {
+            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
         } else { // NOTE: scaling everything instead of canvas can produce more artifacts
             val allIndices = circles.indices
             recordCommand(Command.SCALE, targets = allIndices)
@@ -866,12 +868,11 @@ class EditClusterViewModel(
                                             isCloseEnoughToSelect(it.toOffset(), visiblePosition)
                                         }
                                         if (midpointIx != -1) {
-                                            arcPath.copy(focus = ArcPath.Focus.MidPoint(pointIx))
+                                            arcPath.copy(focus = ArcPath.Focus.MidPoint(midpointIx))
                                         } else {
                                             arcPath.addNewPoint(
                                                 Point.fromOffset(absolute(visiblePosition))
                                             ).copy(focus = ArcPath.Focus.Point(arcPath.points.size))
-                                                .also { println(it) }
                                         }
                                     }
                                 }
@@ -1115,7 +1116,6 @@ class EditClusterViewModel(
         when (mode) {
             ToolMode.ARC_PATH -> {
                 arcPathUnderConstruction?.also {
-                    println(it)
                 }
             }
             is ToolMode -> {
@@ -1211,7 +1211,10 @@ class EditClusterViewModel(
             KeyboardAction.UNDO -> undo()
             KeyboardAction.REDO -> redo()
             KeyboardAction.CANCEL -> when (mode) { // reset mode
-                is ToolMode -> partialArgList = PartialArgList(partialArgList!!.signature)
+                is ToolMode -> {
+                    partialArgList = partialArgList?.let { PartialArgList(it.signature) }
+                    arcPathUnderConstruction = null
+                }
                 is SelectionMode -> selection.clear()
                 else -> Unit
             }

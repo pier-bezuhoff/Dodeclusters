@@ -3,6 +3,7 @@ package data.geometry
 import domain.TAU
 import domain.signNonZero
 import domain.updated
+import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.hypot
 
@@ -10,8 +11,6 @@ data class ArcPath(
     val startPoint: Point,
     val points: List<Point> = emptyList(),
     val midpoints: List<Point> = emptyList(),
-    // dependent data
-    val length: Int = 1,
     // null Circle corresponds to a Line
     val circles: List<Circle?> = emptyList(),
     val startAngles: List<Double> = emptyList(),
@@ -33,7 +32,6 @@ data class ArcPath(
     fun addNewPoint(newPoint: Point): ArcPath = copy(
         startPoint = startPoint,
         points = points + newPoint, midpoints = midpoints + lastPoint.middle(newPoint),
-        length = length + 1,
         circles = circles + null,
         startAngles = startAngles + 0.0, sweepAngles = sweepAngles + 0.0
     )
@@ -41,7 +39,7 @@ data class ArcPath(
     // i=0 is startPoint
     fun updatePoint(i: Int, newPoint: Point): ArcPath =
         if (i == 0) {
-            if (length == 1) {
+            if (points.size == 0) {
                 copy(startPoint = newPoint)
             } else { // only forward
                 val point = startPoint
@@ -59,13 +57,12 @@ data class ArcPath(
                 copy(
                     startPoint = newPoint, points = points,
                     midpoints = midpoints.updated(0, newMidpoint),
-                    length = length,
                     circles = circles.updated(0, newNextCircle),
                     startAngles = startAngles.updated(0, newNextStartAngle),
                     sweepAngles = sweepAngles // sweep angle stays the same
                 )
             }
-        } else if (i == length - 1) { // only backward
+        } else if (i == points.size) { // only backward
             val j = i - 1
             val point = points[j]
             val previousPoint = if (j == 0) startPoint else points[j - 1]
@@ -80,9 +77,8 @@ data class ArcPath(
                     calculateStartAngle(previousPoint, newPreviousCircle)
                 else 0.0
             copy(
-                startPoint = newPoint, points = points.updated(j, newPoint),
+                startPoint = startPoint, points = points.updated(j, newPoint),
                 midpoints = midpoints.updated(j, newMidpoint),
-                length = length,
                 circles = circles.updated(j, newPreviousCircle),
                 startAngles = startAngles.updated(j, newPreviousStartAngle),
                 sweepAngles = sweepAngles // sweep angle stays the same
@@ -113,9 +109,8 @@ data class ArcPath(
                     calculateStartAngle(newPoint, newNextCircle)
                 else 0.0
             copy(
-                startPoint = newPoint, points = points.updated(j, newPoint),
+                startPoint = startPoint, points = points.updated(j, newPoint),
                 midpoints = midpoints.updated(j, newPreviousMidpoint).updated(i, newNextMidpoint),
-                length = length,
                 circles = circles.updated(j, newPreviousCircle).updated(i, newNextCircle),
                 startAngles = startAngles.updated(j, newPreviousStartAngle).updated(i, newNextStartAngle),
                 sweepAngles = sweepAngles // sweep angle stays the same
@@ -151,6 +146,9 @@ data class ArcPath(
             is Focus.MidPoint -> updateMidpoint(focus.index, newPoint)
             null -> this
         }
+
+    fun scale(zoom: Float): ArcPath =
+        TODO("Scale")
 }
 
 /**
@@ -165,17 +163,17 @@ private fun updateMidpointFromMovingEnd(
     midpoint: Point,
     newStart: Point
 ): Point {
-    val hx = midpoint.x - start.middle(newStart).x
-    val hy = midpoint.y - start.middle(newStart).y
+    val hx = midpoint.x - start.middle(end).x
+    val hy = midpoint.y - start.middle(end).y
     val vx = end.x - start.x
     val vy = end.y - start.y
     val vLength = hypot(vx, vy)
-    if (vLength < EPSILON)
+    if (vLength == 0.0)
         return newStart.middle(end)
     val left = signNonZero(-vy*hx + vx*hy)
-    val h = left* hypot(hx, hy)
-    val newVx = newStart.x - newStart.x
-    val newVy = newStart.y - newStart.y
+    val h = left * hypot(hx, hy)
+    val newVx = end.x - newStart.x
+    val newVy = end.y - newStart.y
     val newHx = -newVy*h/vLength
     val newHy = newVx*h/vLength
     return Point(
@@ -190,7 +188,7 @@ private fun calculateStartAngle(start: Point, circle: Circle): Double {
     val y = circle.y - start.y
 //    val eastX = circle.x + circle.radius
 //    val eastY = circle.y
-    return atan2(y, x) // CCW and reversed y-axis cancel each other
+    return PI + atan2(y, x) // CCW and reversed y-axis cancel each other
 }
 
 private fun calculateSweepAngle(start: Point, midpoint: Point, end: Point, circle: Circle): Double {
@@ -200,7 +198,7 @@ private fun calculateSweepAngle(start: Point, midpoint: Point, end: Point, circl
     val midAngle1 = (midAngle + TAU) % TAU
     val otherArc = midAngle1 > angle1
     return if (otherArc)
-        TAU - angle1
+        angle1 - TAU
     else
         angle1
 }

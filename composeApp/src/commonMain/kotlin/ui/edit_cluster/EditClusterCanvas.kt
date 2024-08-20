@@ -471,17 +471,14 @@ private fun DrawScope.drawPartialConstructs(
             path.moveTo(arcPath.startPoint.x.toFloat(), arcPath.startPoint.y.toFloat())
             for (i in arcPath.points.indices) {
                 val point = arcPath.points[i].toOffset()
-                val previousPoint = if (i == 0)
-                    arcPath.startPoint.toOffset()
-                else arcPath.points[i - 1].toOffset()
                 when (val circle = arcPath.circles[i]) {
-                    is Circle -> path.arcTo(
+                    is Circle -> path.arcToRad(
                         Rect(circle.center, circle.radius.toFloat()),
                         arcPath.startAngles[i].toFloat(),
                         arcPath.sweepAngles[i].toFloat(),
                         forceMoveTo = true
                     )
-                    null -> path.lineTo(previousPoint.x, previousPoint.y)
+                    null -> path.lineTo(point.x, point.y)
                 }
                 drawCircle(
                     color = creationPrototypeColor,
