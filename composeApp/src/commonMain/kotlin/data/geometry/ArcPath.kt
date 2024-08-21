@@ -15,6 +15,7 @@ data class ArcPath(
     val circles: List<Circle?> = emptyList(),
     val startAngles: List<Double> = emptyList(),
     val sweepAngles: List<Double> = emptyList(),
+    val closed: Boolean = false,
     val focus: Focus? = null,
 ) {
     val lastPoint: Point get() =
@@ -29,6 +30,10 @@ data class ArcPath(
         data class MidPoint(val index: Int) : Focus
     }
 
+    fun previousPoint(j: Int): Point =
+        if (j == 0) startPoint
+        else points[j - 1]
+
     fun addNewPoint(newPoint: Point): ArcPath = copy(
         startPoint = startPoint,
         points = points + newPoint, midpoints = midpoints + lastPoint.middle(newPoint),
@@ -38,6 +43,7 @@ data class ArcPath(
 
     // i=0 is startPoint
     fun updatePoint(i: Int, newPoint: Point): ArcPath =
+        // TODO: moving start or end when closed
         if (i == 0) {
             if (points.size == 0) {
                 copy(startPoint = newPoint)
@@ -65,7 +71,7 @@ data class ArcPath(
         } else if (i == points.size) { // only backward
             val j = i - 1
             val point = points[j]
-            val previousPoint = if (j == 0) startPoint else points[j - 1]
+            val previousPoint = previousPoint(j)
             val newMidpoint = updateMidpointFromMovingEnd(point, previousPoint, midpoints[j], newPoint)
             val newPreviousCircle = GeneralizedCircle.perp3(
                 GeneralizedCircle.fromGCircle(previousPoint),
@@ -86,7 +92,7 @@ data class ArcPath(
         } else { // backward + forward
             val j = i - 1
             val point = points[j]
-            val previousPoint = if (j == 0) startPoint else points[j - 1]
+            val previousPoint = previousPoint(j)
             val nextPoint = points[j + 1]
             val newPreviousMidpoint = updateMidpointFromMovingEnd(point, previousPoint, midpoints[j], newPoint)
             val newPreviousCircle = GeneralizedCircle.perp3(
@@ -118,7 +124,7 @@ data class ArcPath(
         }
 
     fun updateMidpoint(j: Int, newMidpoint: Point): ArcPath {
-        val start = if (j == 0) startPoint else points[j - 1]
+        val start = previousPoint(j)
         val end = points[j]
         val newCircle = GeneralizedCircle.perp3(
             GeneralizedCircle.fromGCircle(start),
@@ -146,6 +152,15 @@ data class ArcPath(
             is Focus.MidPoint -> updateMidpoint(focus.index, newPoint)
             null -> this
         }
+
+    fun closeLoop(): ArcPath =
+        addNewPoint(startPoint).copy(closed = true)
+
+    fun deletePoint(i: Int): ArcPath {
+        // rm point[i]
+        // and flatten 2 adjacent arcs
+        TODO()
+    }
 
     fun scale(zoom: Float): ArcPath =
         TODO("Scale")

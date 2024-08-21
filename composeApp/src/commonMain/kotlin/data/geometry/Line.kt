@@ -41,7 +41,7 @@ data class Line(
     val directionY: Double get() =
         -a/norm
 
-    // direction-preserving
+    /** Direction-preserving, ensures that `hypot(a, b) == 1` */
     fun normalized(): Line =
         Line(a/norm, b/norm, c/norm)
 
@@ -159,6 +159,13 @@ data class Line(
         fun by2Points(p1: Offset, p2: Offset): Line {
             val dy = p2.y.toDouble() - p1.y
             val dx = p2.x.toDouble() - p1.x
+            val c = p1.y*dx - p1.x*dy
+            return Line(dy, -dx, c).normalized()
+        }
+
+        fun by2Points(p1: Point, p2: Point): Line {
+            val dy = p2.y - p1.y
+            val dx = p2.x - p1.x
             val c = p1.y*dx - p1.x*dy
             return Line(dy, -dx, c).normalized()
         }

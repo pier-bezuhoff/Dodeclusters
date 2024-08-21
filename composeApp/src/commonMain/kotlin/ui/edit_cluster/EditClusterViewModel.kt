@@ -740,7 +740,7 @@ class EditClusterViewModel(
                 }
             }
         } else if (mode == ToolMode.ARC_PATH && arcPathUnderConstruction != null) {
-            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
+//            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
         } else { // NOTE: scaling everything instead of canvas can produce more artifacts
             val allIndices = circles.indices
             recordCommand(Command.SCALE, targets = allIndices)
@@ -1363,8 +1363,22 @@ class EditClusterViewModel(
 
     fun completeArcPath() {
         require(arcPathUnderConstruction != null)
+        // only add circles
+        // since `part`itioning in-arcpath region is rather involved
+        arcPathUnderConstruction?.let { arcPath ->
+            for ((j, circle) in arcPath.circles.withIndex()) {
+                when (circle) {
+                    is Circle -> circles.add(circle)
+                    null -> circles.add(
+                        Line.by2Points(
+                            arcPath.previousPoint(j),
+                            arcPath.points[j]
+                        )
+                    )
+                }
+            }
+        }
         arcPathUnderConstruction = null
-        TODO()
     }
 
     fun toolAction(tool: EditClusterTool) {

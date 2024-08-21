@@ -1,5 +1,9 @@
 package ui.edit_cluster
 
+import androidx.compose.ui.geometry.Offset
+import data.geometry.Circle
+import data.geometry.CircleOrLine
+import data.geometry.Point
 import kotlin.math.abs
 
 /** Snaps when to 45 degree marks [snapMarkDeg] when closer than 5% [angleSnapPercent] */
@@ -20,4 +24,16 @@ fun snapAngle(
     } else {
         angleDeg
     }
+}
+
+fun snapToCircles(point: Offset, circles: List<CircleOrLine>): Point {
+    // when several are close enough, intersect 2 closest ones
+    // and select the closest intersection
+    // otherwise just project onto the closest circle
+    TODO()
+}
+fun snapToCircles(circle: CircleOrLine, circles: List<CircleOrLine>): CircleOrLine {
+    // line2line: eq
+    // otherwise: touch
+    TODO()
 }
