@@ -42,6 +42,7 @@ import dodeclusters.composeapp.generated.resources.circle_extrapolation_title
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.OkButton
+import ui.hideSystemBars
 import ui.isLandscape
 import kotlin.math.roundToInt
 
@@ -75,11 +76,11 @@ fun CircleExtrapolationDialog(
     val windowSizeClass = calculateWindowSizeClass()
     val compactWidth = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
-    println(windowSizeClass)
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = !compactHeight)
     ) {
+        hideSystemBars()
         Surface(
             modifier = Modifier.padding(16.dp),
             shape = RoundedCornerShape(24.dp)

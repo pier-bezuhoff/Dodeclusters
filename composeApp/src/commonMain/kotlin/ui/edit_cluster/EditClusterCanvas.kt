@@ -334,6 +334,7 @@ private fun DrawScope.drawSelectedCircles(
     }
 }
 
+// TODO: draw fill+stroke for to avoid seams
 private fun DrawScope.drawParts(
     viewModel: EditClusterViewModel,
     visibleRect: Rect,

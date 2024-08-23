@@ -51,8 +51,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -129,9 +127,8 @@ fun EditClusterScreen(
         EditClusterViewModel.UiState.restore(coroutineScope, EditClusterViewModel.UiState.DEFAULT)
     }
     viewModel.setEpsilon(LocalDensity.current)
+//    SystemBarsHider()
     Scaffold(
-        // MAYBE: potentially lift it to window-level (desktop)
-        // BUG: unfocused at the start on desktop
         modifier =
             if (keyboardActions == null)
                 Modifier

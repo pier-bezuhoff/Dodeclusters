@@ -50,11 +50,13 @@ class MainActivity : ComponentActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { view, windowInsets ->
             if (windowInsets.isVisible(WindowInsetsCompat.Type.navigationBars())
                 || windowInsets.isVisible(WindowInsetsCompat.Type.statusBars())) {
-                if (false) { // when requested programmatically
+//                println("some insets are visible -> hide them")
+                if (true) { // when requested programmatically (ideally)
                     // Hide both the status bar and the navigation bar.
                     windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
                 }
             } else {
+//                println("no insets are visible")
                 if (false) { // when requested programmatically
                     // Show both the status bar and the navigation bar.
                     windowInsetsController.show(WindowInsetsCompat.Type.systemBars())

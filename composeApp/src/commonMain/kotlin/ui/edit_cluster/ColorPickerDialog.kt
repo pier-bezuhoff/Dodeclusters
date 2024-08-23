@@ -50,6 +50,7 @@ import dodeclusters.composeapp.generated.resources.hex_name
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.OkButton
+import ui.hideSystemBars
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.isLandscape
@@ -75,6 +76,7 @@ fun ColorPickerDialog(
         },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        hideSystemBars()
         if (windowSizeClass.isLandscape) {
             if (windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Compact) // for mobile phones
                 ColorPickerHorizontalCompact(color, hex, onDismissRequest, onConfirm)

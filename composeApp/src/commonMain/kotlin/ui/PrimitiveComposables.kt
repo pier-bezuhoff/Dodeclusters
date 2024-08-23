@@ -202,7 +202,8 @@ val WindowSizeClass.isLandscape: Boolean get() =
     widthSizeClass == WindowWidthSizeClass.Expanded &&
     heightSizeClass <= WindowHeightSizeClass.Expanded ||
     widthSizeClass == WindowWidthSizeClass.Medium &&
-    heightSizeClass <= WindowHeightSizeClass.Medium
+    heightSizeClass < WindowHeightSizeClass.Medium
+// (Medium, Medium) is the size in portrait tablet browser
 
 val WindowSizeClass.isCompact: Boolean get() =
     widthSizeClass == WindowWidthSizeClass.Compact ||
