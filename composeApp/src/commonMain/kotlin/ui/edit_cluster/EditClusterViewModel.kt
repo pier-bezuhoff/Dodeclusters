@@ -1401,6 +1401,9 @@ class EditClusterViewModel(
             EditClusterTool.InsertCenteredCross -> insertCenteredCross()
             is EditClusterTool.AppliedColor -> selectRegionColor(tool.color)
             is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
+            EditClusterTool.Undo -> undo()
+            EditClusterTool.Redo -> redo()
+            is EditClusterTool.CustomAction -> {} // custom handlers
         }
     }
 

@@ -65,15 +65,21 @@ import dodeclusters.composeapp.generated.resources.line_by_2_points_name
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
 import dodeclusters.composeapp.generated.resources.multiselect_name
+import dodeclusters.composeapp.generated.resources.open_file
+import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.open_region
 import dodeclusters.composeapp.generated.resources.paint_splash
 import dodeclusters.composeapp.generated.resources.palette
 import dodeclusters.composeapp.generated.resources.palette_description
 import dodeclusters.composeapp.generated.resources.palette_name
+import dodeclusters.composeapp.generated.resources.redo
+import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.region_description
 import dodeclusters.composeapp.generated.resources.region_name
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_description
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_name
+import dodeclusters.composeapp.generated.resources.save
+import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
 import dodeclusters.composeapp.generated.resources.shark_fin_3_points
@@ -81,12 +87,17 @@ import dodeclusters.composeapp.generated.resources.shark_fin_3_points_striped
 import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
 import dodeclusters.composeapp.generated.resources.stub
+import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_description
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_name
 import dodeclusters.composeapp.generated.resources.toggle_select_all_description
 import dodeclusters.composeapp.generated.resources.toggle_select_all_name
 import dodeclusters.composeapp.generated.resources.two_of_three_circles_connected
+import dodeclusters.composeapp.generated.resources.undo
+import dodeclusters.composeapp.generated.resources.undo_name
+import dodeclusters.composeapp.generated.resources.upload
 import dodeclusters.composeapp.generated.resources.visible
+import domain.io.Ddc
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
 import org.jetbrains.compose.resources.StringResource
@@ -120,7 +131,50 @@ sealed class EditClusterTool(
         icon: DrawableResource,
     ) : EditClusterTool(name, description, icon), Tool.InstantAction
 
+    sealed class CustomAction(
+        name: StringResource,
+        description: StringResource,
+        icon: DrawableResource,
+    ) : Action(name, description, icon)
 
+
+    // top toolbar
+    data object SaveCluster: CustomAction(
+        Res.string.save_cluster_name,
+        Res.string.save_cluster_name,
+        Res.drawable.save
+    ) {
+        const val defaultName = Ddc.DEFAULT_NAME
+        const val extension = Ddc.DEFAULT_EXTENSION // yml
+        val otherDisplayedExtensions = setOf("yaml", "ddc", "ddu")
+        const val mimeType = "application/yaml"
+    }
+    data object SvgExport: CustomAction(
+        Res.string.svg_export_name,
+        Res.string.svg_export_name,
+        Res.drawable.upload
+    ) {
+        const val defaultName = Ddc.DEFAULT_NAME
+        const val extension = "svg"
+        const val mimeType = "image/svg+xml" // apparently this is highly contested (since svg can contain js)
+    }
+    data object OpenFile: CustomAction(
+        Res.string.open_file_name,
+        Res.string.open_file_name,
+        Res.drawable.open_file
+    )
+    data object Undo: Action(
+        Res.string.undo_name,
+        Res.string.undo_name,
+        Res.drawable.undo
+    )
+    data object Redo: Action(
+        Res.string.redo_name,
+        Res.string.redo_name,
+        Res.drawable.redo
+    )
+
+    // bottom/left toolbar
     data object Drag: Switch(
         Res.string.drag_name,
         Res.string.drag_description,

@@ -74,19 +74,9 @@ import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.ku
 import dodeclusters.composeapp.generated.resources.ok_name
-import dodeclusters.composeapp.generated.resources.open_file
-import dodeclusters.composeapp.generated.resources.open_file_name
-import dodeclusters.composeapp.generated.resources.redo
-import dodeclusters.composeapp.generated.resources.redo_name
-import dodeclusters.composeapp.generated.resources.save
-import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.shrink
-import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
-import dodeclusters.composeapp.generated.resources.undo
-import dodeclusters.composeapp.generated.resources.undo_name
-import dodeclusters.composeapp.generated.resources.upload
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -390,15 +380,16 @@ fun EditClusterTopBar(
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             Spacer(Modifier.width(16.dp))
-            WithTooltip(stringResource(Res.string.save_cluster_name)) {
+            val saveCluster = EditClusterTool.SaveCluster
+            WithTooltip(stringResource(saveCluster.description)) {
                 SaveFileButton(
-                    painterResource(Res.drawable.save),
-                    stringResource(Res.string.save_cluster_name),
+                    painterResource(saveCluster.icon),
+                    stringResource(saveCluster.name),
                     saveData = SaveData(
-                        Ddc.DEFAULT_NAME,
-                        extension = Ddc.DEFAULT_EXTENSION, // yml
-                        otherDisplayedExtensions = setOf("yaml", "ddc", "ddu"),
-                        mimeType = "application/yaml",
+                        name = saveCluster.defaultName,
+                        extension = saveCluster.extension, // yml
+                        otherDisplayedExtensions = saveCluster.otherDisplayedExtensions,
+                        mimeType = saveCluster.mimeType,
                     ) { name ->
                         viewModel.saveAsYaml(name)
                     },
@@ -407,14 +398,15 @@ fun EditClusterTopBar(
                     println(if (it) "saved" else "not saved")
                 }
             }
-            WithTooltip(stringResource(Res.string.svg_export_name)) {
+            val svgExport = EditClusterTool.SvgExport
+            WithTooltip(stringResource(svgExport.description)) {
                 SaveFileButton(
-                    painterResource(Res.drawable.upload),
-                    stringResource(Res.string.svg_export_name),
+                    painterResource(svgExport.icon),
+                    stringResource(svgExport.name),
                     saveData = SaveData(
-                        Ddc.DEFAULT_NAME,
-                        extension = "svg",
-                        mimeType = "image/svg+xml", // apparently this is highly contested (since svg can contain js)
+                        name = svgExport.defaultName,
+                        extension = svgExport.extension,
+                        mimeType = svgExport.mimeType,
                     ) { name ->
                         viewModel.exportAsSvg(name)
                     },
@@ -423,10 +415,10 @@ fun EditClusterTopBar(
                     println(if (it) "exported" else "not exported")
                 }
             }
-            WithTooltip(stringResource(Res.string.open_file_name)) {
+            WithTooltip(stringResource(EditClusterTool.OpenFile.description)) {
                 OpenFileButton(
-                    painterResource(Res.drawable.open_file),
-                    stringResource(Res.string.open_file_name),
+                    painterResource(EditClusterTool.OpenFile.icon),
+                    stringResource(EditClusterTool.OpenFile.name),
                     iconModifier
                 ) { content ->
                     content?.let {
@@ -434,19 +426,19 @@ fun EditClusterTopBar(
                     }
                 }
             }
-            WithTooltip(stringResource(Res.string.undo_name)) {
+            WithTooltip(stringResource(EditClusterTool.Undo.description)) {
                 DisableableButton(
-                    painterResource(Res.drawable.undo),
-                    stringResource(Res.string.undo_name),
+                    painterResource(EditClusterTool.Undo.icon),
+                    stringResource(EditClusterTool.Undo.name),
                     viewModel.undoIsEnabled,
                     iconModifier,
                     viewModel::undo
                 )
             }
-            WithTooltip(stringResource(Res.string.redo_name)) {
+            WithTooltip(stringResource(EditClusterTool.Redo.description)) {
                 DisableableButton(
-                    painterResource(Res.drawable.redo),
-                    stringResource(Res.string.redo_name),
+                    painterResource(EditClusterTool.Redo.icon),
+                    stringResource(EditClusterTool.Redo.name),
                     viewModel.redoIsEnabled,
                     iconModifier,
                     viewModel::redo
