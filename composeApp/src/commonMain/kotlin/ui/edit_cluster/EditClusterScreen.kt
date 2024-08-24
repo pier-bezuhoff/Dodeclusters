@@ -745,7 +745,7 @@ fun ToolButton(
     val description = stringResource(tool.description)
     WithTooltip(description) {
         when (tool) {
-            EditClusterTool.Delete -> {
+            EditClusterTool.Delete -> { // unused
                 IconButton(
                     onClick = onClick,
                     modifier = modifier,

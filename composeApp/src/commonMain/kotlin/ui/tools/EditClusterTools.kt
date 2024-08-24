@@ -249,21 +249,6 @@ sealed class EditClusterTool(
         Res.drawable.paint_splash, // tint=color should be applied
     )
 
-    // these 2 are unused
-    data object Duplicate: Action(
-        Res.string.duplicate_name,
-        Res.string.duplicate_description,
-        Res.drawable.copy
-    ), Tool.ActionOnSelection
-    // MAYBE: eraser-like mode
-    data object Delete: Action(
-        Res.string.delete_name,
-        Res.string.delete_description,
-        Res.drawable.delete_forever
-    ), Tool.ActionOnSelection {
-        val tint = DodeclustersColors.pinkish
-    }
-
     data object CircleInversion: MultiArg(
         PartialArgList.SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE,
         Res.string.circle_inversion_name,
@@ -321,4 +306,19 @@ sealed class EditClusterTool(
         Res.drawable.shark_fin_3_points_striped
     )
     // insert rect/square
+
+    // these 2 are inlined into canvas HUD
+    data object Duplicate: Action(
+        Res.string.duplicate_name,
+        Res.string.duplicate_description,
+        Res.drawable.copy
+    ), Tool.ActionOnSelection
+    // MAYBE: eraser-like mode
+    data object Delete: Action(
+        Res.string.delete_name,
+        Res.string.delete_description,
+        Res.drawable.delete_forever
+    ), Tool.ActionOnSelection {
+        val tint = DodeclustersColors.pinkish
+    }
 }
