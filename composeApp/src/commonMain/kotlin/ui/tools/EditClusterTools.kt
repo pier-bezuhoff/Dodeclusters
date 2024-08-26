@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import data.PartialArgList
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.add_image
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
 import dodeclusters.composeapp.generated.resources.arc_path_arg_descriptions
@@ -32,6 +33,8 @@ import dodeclusters.composeapp.generated.resources.circle_inversion_name
 import dodeclusters.composeapp.generated.resources.circle_inversion_v2
 import dodeclusters.composeapp.generated.resources.circle_inversion_v3
 import dodeclusters.composeapp.generated.resources.circled_region
+import dodeclusters.composeapp.generated.resources.complete_arc_path
+import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_all_parts_description
 import dodeclusters.composeapp.generated.resources.delete_all_parts_name
@@ -44,6 +47,8 @@ import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
 import dodeclusters.composeapp.generated.resources.drag_name
 import dodeclusters.composeapp.generated.resources.duplicate_description
 import dodeclusters.composeapp.generated.resources.duplicate_name
+import dodeclusters.composeapp.generated.resources.expand
+import dodeclusters.composeapp.generated.resources.expand_name
 import dodeclusters.composeapp.generated.resources.extrapolate_lines
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_description
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_name
@@ -86,6 +91,8 @@ import dodeclusters.composeapp.generated.resources.shark_fin_3_points
 import dodeclusters.composeapp.generated.resources.shark_fin_3_points_striped
 import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
+import dodeclusters.composeapp.generated.resources.shrink
+import dodeclusters.composeapp.generated.resources.shrink_name
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_description
@@ -106,34 +113,36 @@ import ui.theme.DodeclustersColors
 @Immutable
 sealed class EditClusterTool(
     override val name: StringResource,
-    override val description: StringResource,
+    override val description: StringResource = name,
     override val icon: DrawableResource,
 ) : Tool {
     sealed class Switch(
         name: StringResource,
-        description: StringResource,
+        description: StringResource = name,
         icon: DrawableResource,
         final override val disabledIcon: DrawableResource? = null
     ) : EditClusterTool(name, description, icon), Tool.BinaryToggle
-
     sealed class MultiArg(
         final override val signature: PartialArgList.Signature,
         name: StringResource,
-        description: StringResource,
+        description: StringResource = name,
         final override val argDescriptions: StringArrayResource,
         icon: DrawableResource,
         final override val disabledIcon: DrawableResource? = null,
     ) : EditClusterTool(name, description, icon), Tool.BinaryToggle, Tool.MultiArg
-
     sealed class Action(
         name: StringResource,
-        description: StringResource,
+        description: StringResource = name,
         icon: DrawableResource,
     ) : EditClusterTool(name, description, icon), Tool.InstantAction
-
+    sealed class ContextAction(
+        name: StringResource,
+        description: StringResource = name,
+        icon: DrawableResource,
+    ) : Action(name, description, icon), Tool.ContextAction
     sealed class CustomAction(
         name: StringResource,
-        description: StringResource,
+        description: StringResource = name,
         icon: DrawableResource,
     ) : Action(name, description, icon)
 
@@ -141,8 +150,7 @@ sealed class EditClusterTool(
     // top toolbar
     data object SaveCluster: CustomAction(
         Res.string.save_cluster_name,
-        Res.string.save_cluster_name,
-        Res.drawable.save
+        icon = Res.drawable.save
     ) {
         const val defaultName = Ddc.DEFAULT_NAME
         const val extension = Ddc.DEFAULT_EXTENSION // yml
@@ -151,8 +159,7 @@ sealed class EditClusterTool(
     }
     data object SvgExport: CustomAction(
         Res.string.svg_export_name,
-        Res.string.svg_export_name,
-        Res.drawable.upload
+        icon = Res.drawable.upload
     ) {
         const val defaultName = Ddc.DEFAULT_NAME
         const val extension = "svg"
@@ -160,18 +167,15 @@ sealed class EditClusterTool(
     }
     data object OpenFile: CustomAction(
         Res.string.open_file_name,
-        Res.string.open_file_name,
-        Res.drawable.open_file
+        icon = Res.drawable.open_file
     )
     data object Undo: Action(
         Res.string.undo_name,
-        Res.string.undo_name,
-        Res.drawable.undo
+        icon = Res.drawable.undo
     )
     data object Redo: Action(
         Res.string.redo_name,
-        Res.string.redo_name,
-        Res.drawable.redo
+        icon = Res.drawable.redo
     )
 
     // bottom/left toolbar
@@ -237,13 +241,18 @@ sealed class EditClusterTool(
         Res.drawable.filled_circle,
         Res.drawable.circle
     )
+    data object AddBackgroundImage: Action(
+        Res.string.stub,
+        Res.string.stub,
+        Res.drawable.add_image
+    )
 
     data object Palette: Action(
         Res.string.palette_name,
         Res.string.palette_description,
         Res.drawable.palette
     )
-    data class AppliedColor(val color: Color) : Action(
+    data class AppliedColor(val color: Color): Action(
         Res.string.applied_color_name,
         Res.string.applied_color_description,
         Res.drawable.paint_splash, // tint=color should be applied
@@ -307,18 +316,31 @@ sealed class EditClusterTool(
     )
     // insert rect/square
 
-    // these 2 are inlined into canvas HUD
-    data object Duplicate: Action(
+    data object CompleteArcPath: ContextAction(
+        Res.string.complete_arc_path,
+        icon = Res.drawable.confirm
+    )
+
+    // these are inlined into canvas HUD
+    data object Expand: ContextAction(
+        Res.string.expand_name,
+        icon = Res.drawable.expand
+    )
+    data object Shrink: ContextAction(
+        Res.string.shrink_name,
+        icon = Res.drawable.shrink
+    )
+    data object Duplicate: ContextAction(
         Res.string.duplicate_name,
         Res.string.duplicate_description,
         Res.drawable.copy
-    ), Tool.ActionOnSelection
+    )
     // MAYBE: eraser-like mode
-    data object Delete: Action(
+    data object Delete: ContextAction(
         Res.string.delete_name,
         Res.string.delete_description,
         Res.drawable.delete_forever
-    ), Tool.ActionOnSelection {
+    ) {
         val tint = DodeclustersColors.pinkish
     }
 }

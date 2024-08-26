@@ -23,8 +23,12 @@ sealed interface Tool {
     /** Action with no preserved internal state, in contrast to [BinaryToggle] */
     sealed interface InstantAction : Action
 
-    /** Can only be applied to non-empty active selection */
-    sealed interface ActionOnSelection : InstantAction
+    /** [InstantAction] that is available only in certain contexts */
+    sealed interface ContextAction : InstantAction
+
+    /** [InstantAction] that can only be applied to non-empty active selection
+     * and is only available whenever it is present */
+    sealed interface ActionOnSelection : ContextAction
 
     /** Tool that prompts selecting several items, described by MultiArgN<...> dependent types, to perform an action */
     sealed interface MultiArg : Tool {

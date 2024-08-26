@@ -66,6 +66,7 @@ import ui.circle2path
 import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
+import ui.tools.EditClusterTool
 import kotlin.math.max
 import kotlin.math.min
 
@@ -591,12 +592,11 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
 //        stringResource(Res.string.stub),
 //        Modifier.align(Alignment.CenterStart)
 //    ) {}
-
     with (LocalDensity.current) {
         // expand & shrink buttons
         SimpleButton(
-            painterResource(Res.drawable.expand),
-            stringResource(Res.string.stub),
+            painterResource(EditClusterTool.Expand.icon),
+            stringResource(EditClusterTool.Expand.name),
             Modifier
                 .align(Alignment.TopStart)
                 .offset(
@@ -604,37 +604,36 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
                     y = positions.top.toDp() - halfSize
                 ),
             tint = MaterialTheme.colorScheme.secondary
-        ) { viewModel.scaleSelection(1.1f) }
+        ) { viewModel.toolAction(EditClusterTool.Expand) }
         SimpleButton(
-            painterResource(Res.drawable.shrink),
-            stringResource(Res.string.stub),
+            painterResource(EditClusterTool.Shrink.icon),
+            stringResource(EditClusterTool.Shrink.name),
             Modifier.offset(
                 x = positions.right.toDp() - halfSize,
                 y = positions.scaleSliderBottom.toDp() - halfSize
             ),
             tint = MaterialTheme.colorScheme.secondary
-        ) { viewModel.scaleSelection(1/1.1f) }
+        ) { viewModel.toolAction(EditClusterTool.Shrink) }
         // BUG: in browser after using "<url>?sample=0" shrink & copy button icons randomly disappear
-
         // duplicate & delete buttons
         SimpleButton(
-            painterResource(Res.drawable.copy),
-            stringResource(Res.string.duplicate_name),
+            painterResource(EditClusterTool.Duplicate.icon),
+            stringResource(EditClusterTool.Duplicate.name),
             Modifier.offset(
                 x = positions.right.toDp() - halfSize,
                 y = positions.topUnderScaleSlider.toDp() - halfSize
             ),
             tint = DodeclustersColors.skyBlue.copy(alpha = 0.9f)
-        ) { viewModel.duplicateCircles() }
+        ) { viewModel.toolAction(EditClusterTool.Duplicate) }
         SimpleButton(
-            painterResource(Res.drawable.delete_forever),
-            stringResource(Res.string.delete_name),
+            painterResource(EditClusterTool.Delete.icon),
+            stringResource(EditClusterTool.Delete.name),
             Modifier.offset(
                 x = positions.left.toDp() - halfSize,
                 y = positions.bottom.toDp() - halfSize
             ),
             tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
-        ) { viewModel.deleteCircles() }
+        ) { viewModel.toolAction(EditClusterTool.Delete) }
     }
 }
 

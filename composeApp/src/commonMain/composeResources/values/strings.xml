@@ -36,6 +36,8 @@
     <string name="palette_description">Pick colors</string>
     <string name="applied_color_name">Applied color</string>
     <string name="applied_color_description">Switch to this recently used color</string>
+    <string name="expand_name">Expand</string>
+    <string name="shrink_name">Shrink</string>
     <string name="duplicate_name">Duplicate</string>
     <string name="duplicate_description">Duplicate selected circles</string>
     <string name="delete_name">Delete</string>
@@ -84,6 +86,7 @@
     <string-array name="arc_path_arg_descriptions">
         <item>An anchor point</item>
     </string-array>
+    <string name="complete_arc_path">Complete arc-path</string>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
     <string name="tool_arg_input_prompt">Please specify</string>

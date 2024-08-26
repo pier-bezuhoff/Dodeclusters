@@ -96,7 +96,6 @@ import ui.tools.Tool
 import kotlin.math.max
 import kotlin.math.min
 
-// TODO: preload all the icons for smoother experience
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun EditClusterScreen(
@@ -105,7 +104,6 @@ fun EditClusterScreen(
     keyboardActions: Flow<KeyboardAction>? = null,
 ) {
     val windowSizeClass = calculateWindowSizeClass()
-//    println(windowSizeClass)
     val isLandscape = windowSizeClass.isLandscape
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
     val compact = windowSizeClass.isCompact
@@ -117,7 +115,6 @@ fun EditClusterScreen(
         EditClusterViewModel.UiState.restore(coroutineScope, EditClusterViewModel.UiState.DEFAULT)
     }
     viewModel.setEpsilon(LocalDensity.current)
-//    SystemBarsHider()
     Scaffold(
         modifier =
             if (keyboardActions == null)
@@ -155,6 +152,7 @@ fun EditClusterScreen(
         Surface {
             Box {
                 EditClusterCanvas(viewModel)
+                // TODO: show arc-path completion prompt
                 ToolDescription(
                     viewModel.activeTool,
                     viewModel.partialArgList,

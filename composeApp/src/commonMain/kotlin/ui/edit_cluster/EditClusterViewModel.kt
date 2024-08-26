@@ -1206,8 +1206,8 @@ class EditClusterViewModel(
             }
             KeyboardAction.DELETE -> deleteCircles()
             KeyboardAction.PASTE -> duplicateCircles()
-            KeyboardAction.ZOOM_IN -> scaleSelection(ZOOM_INCREMENT)
-            KeyboardAction.ZOOM_OUT -> scaleSelection(1/ZOOM_INCREMENT)
+            KeyboardAction.ZOOM_IN -> scaleSelection(KEYBOARD_ZOOM_INCREMENT)
+            KeyboardAction.ZOOM_OUT -> scaleSelection(1/KEYBOARD_ZOOM_INCREMENT)
             KeyboardAction.UNDO -> undo()
             KeyboardAction.REDO -> redo()
             KeyboardAction.CANCEL -> when (mode) { // reset mode
@@ -1396,14 +1396,18 @@ class EditClusterViewModel(
             EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selected circles only
             EditClusterTool.ToggleFilledOrOutline -> showWireframes = !showWireframes
             EditClusterTool.Palette -> showColorPickerDialog = true
-            EditClusterTool.Delete -> deleteCircles()
+            EditClusterTool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
+            EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
             EditClusterTool.Duplicate -> duplicateCircles()
+            EditClusterTool.Delete -> deleteCircles()
             EditClusterTool.InsertCenteredCross -> insertCenteredCross()
             is EditClusterTool.AppliedColor -> selectRegionColor(tool.color)
             is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
             EditClusterTool.Undo -> undo()
             EditClusterTool.Redo -> redo()
             is EditClusterTool.CustomAction -> {} // custom handlers
+            EditClusterTool.AddBackgroundImage -> TODO()
+            EditClusterTool.CompleteArcPath -> TODO()
         }
     }
 
@@ -1486,7 +1490,8 @@ class EditClusterViewModel(
         /** min tap/grab distance to select an object in dp */
         const val TAP_DISTANCE = 10f
         const val LOW_ACCURACY_FACTOR = 1.5f
-        const val ZOOM_INCREMENT = 1.05f // == +5%
+        const val HUD_ZOOM_INCREMENT = 1.1f // == +10%
+        const val KEYBOARD_ZOOM_INCREMENT = 1.05f // == +5%
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true

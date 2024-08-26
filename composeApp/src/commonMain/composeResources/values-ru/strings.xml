@@ -77,6 +77,12 @@
     </string-array>
     <string name="insert_centered_cross_name">Вставить крест по центру</string>
     <string name="insert_centered_cross_description">Вставить крест по центру</string>
+    <string name="arc_path_name">Контур из дуг</string>
+    <string name="arc_path_description">Построить замкнутый контур из дуг</string>
+    <string-array name="arc_path_arg_descriptions">
+        <item>Точку-якорь</item>
+    </string-array>
+    <string name="complete_arc_path">Завершить редактирование контура</string>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
     <string name="tool_arg_input_prompt">Пожалуйста, укажите</string>
