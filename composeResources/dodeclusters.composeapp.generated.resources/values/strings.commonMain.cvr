@@ -39,6 +39,7 @@ string|circle_inversion_name|Q2lyY2xlIGludmVyc2lvbg==
 string|collapse|Q29sbGFwc2U=
 string|color_picker_title|UGljayBhIGNvbG9y
 string|colors_category_name|Q29sb3Jz
+string|complete_arc_path|Q29tcGxldGUgYXJjLXBhdGg=
 string|create_category_name|Q3JlYXRl
 string|delete_all_parts_description|Q2xlYXIgYWxsIGZpbGxlZCByZWdpb25z
 string|delete_all_parts_name|RGVsZXRlIGFsbCBwYXJ0cw==
@@ -50,6 +51,7 @@ string|drag_name|RHJhZw==
 string|duplicate_description|RHVwbGljYXRlIHNlbGVjdGVkIGNpcmNsZXM=
 string|duplicate_name|RHVwbGljYXRl
 string|edit_cluster_title|Q2x1c3RlciBlZGl0aW5n
+string|expand_name|RXhwYW5k
 string|fill_chessboard_pattern_description|Q2hlc3Nib2FyZCBwYXR0ZXJuOiBmaWxsIGV2ZXJ5IG90aGVyIHJlZ2lvbg==
 string|fill_chessboard_pattern_name|Q2hlc3Nib2FyZCBwYXR0ZXJu
 string|flow_fill_description|RmlsbCByZWdpb25zIGJ5IHN3aXBpbmcgdGhyb3VnaCB0aGVt
@@ -83,6 +85,7 @@ string|save_cluster_title|U2F2ZSB0aGlzIGNsdXN0ZXI=
 string|set_selection_as_tool_arg_prompt|VXNlIGFjdGl2ZSBzZWxlY3Rpb24gYXM=
 string|show_circles_description|U2hvdy9oaWRlIGNpcmNsZXM=
 string|show_circles_name|U2hvdyBjaXJjbGVz
+string|shrink_name|U2hyaW5r
 string|str_template|SGVsbG8sICUxJHMhIFlvdSBoYXZlICUyJGQgbmV3IG1lc3NhZ2VzLg==
 string|stub|VEJE
 string|svg_export_name|RXhwb3J0IHRoaXMgY2x1c3RlciBhcyBTVkc=
