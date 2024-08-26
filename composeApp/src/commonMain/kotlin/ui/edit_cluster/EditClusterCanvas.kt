@@ -649,7 +649,7 @@ fun BoxScope.ArcPathContextActions(viewModel: EditClusterViewModel) {
     }
     Button(
         onClick = { viewModel.toolAction(EditClusterTool.CompleteArcPath) },
-        Modifier
+        Modifier // NOTE: this position is not optimal, especially for desktop
             .align(Alignment.BottomEnd)
             .offset(y = -verticalMargin)
         ,

@@ -16,12 +16,13 @@ import org.w3c.files.get
 actual fun OpenFileButton(
     iconPainter: Painter,
     contentDescription: String,
+    lookupData: LookupData,
     modifier: Modifier,
     onOpen: (content: String?) -> Unit
 ) {
     IconButton(
         onClick = {
-            queryFile { file ->
+            queryFile(lookupData) { file ->
                 file?.let {
                     val reader = FileReader()
                     reader.readAsText(file, "UTF-8")
@@ -38,10 +39,10 @@ actual fun OpenFileButton(
     }
 }
 
-fun queryFile(callback: (file: File?) -> Unit) {
+fun queryFile(lookupData: LookupData, callback: (file: File?) -> Unit) {
     val input = document.createElement("input") as HTMLInputElement
     input.type = "file"
-    input.accept = ".ddc, .yml, .yaml, .json|application/yaml, application/json"
+    input.accept = lookupData.htmlFileInputAccept
     input.onchange = { event ->
         val file = input.files?.get(0)
 //        val file = extractFileFromEvent(event)

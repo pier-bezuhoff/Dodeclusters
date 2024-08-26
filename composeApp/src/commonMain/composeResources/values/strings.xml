@@ -124,6 +124,7 @@
     <string name="save_cluster_title">Save this cluster</string>
     <string name="choose_name">Choose a name</string>
     <string name="name">Name</string>
+    <string name="open_file">Open file</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

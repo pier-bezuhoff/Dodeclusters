@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 actual fun OpenFileButton(
     iconPainter: Painter,
     contentDescription: String,
+    lookupData: LookupData,
     modifier: Modifier,
     onOpen: (content: String?) -> Unit
 ) {
@@ -29,7 +30,8 @@ actual fun OpenFileButton(
     IconButton(
         onClick = {
             // NOTE: "text/plain" doesnt work for custom extensions it seems
-            launcher.launch("application/*") // casts a wide net, including .ddc, .yaml, ..., pdf..
+            launcher.launch(lookupData.androidMimeType)
+//            launcher.launch("application/*") // casts a wide net, including .ddc, .yaml, ..., pdf..
 //        launcher.launch("application/yaml")
         },
         modifier = modifier

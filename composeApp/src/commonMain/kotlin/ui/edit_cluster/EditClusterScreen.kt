@@ -77,6 +77,7 @@ import dodeclusters.composeapp.generated.resources.ok_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
+import domain.io.LookupData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -152,7 +153,6 @@ fun EditClusterScreen(
         Surface {
             Box {
                 EditClusterCanvas(viewModel)
-                // TODO: show arc-path completion prompt
                 ToolDescription(
                     viewModel.activeTool,
                     viewModel.partialArgList,
@@ -417,6 +417,11 @@ fun EditClusterTopBar(
                 OpenFileButton(
                     painterResource(EditClusterTool.OpenFile.icon),
                     stringResource(EditClusterTool.OpenFile.name),
+                    LookupData(
+                        extensions = setOf("yaml", "yml", "ddc", "json"),
+                        htmlFileInputAccept = ".ddc, .yml, .yaml, .json|application/yaml, application/json",
+                        androidMimeType = "application/*"
+                    ),
                     iconModifier
                 ) { content ->
                     content?.let {

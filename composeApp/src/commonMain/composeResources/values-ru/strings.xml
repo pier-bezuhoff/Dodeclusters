@@ -120,5 +120,6 @@
     <string name="save_cluster_title">Сохранить кластер</string>
     <string name="choose_name">Выберите название</string>
     <string name="name">Название</string>
+    <string name="open_file">Открыть файл</string>
 
 </resources>
