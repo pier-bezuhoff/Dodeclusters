@@ -6,9 +6,15 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -47,14 +53,7 @@ import data.geometry.GeneralizedCircle
 import data.geometry.Line
 import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
-import dodeclusters.composeapp.generated.resources.copy
-import dodeclusters.composeapp.generated.resources.delete_forever
-import dodeclusters.composeapp.generated.resources.delete_name
-import dodeclusters.composeapp.generated.resources.duplicate_name
-import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
-import dodeclusters.composeapp.generated.resources.shrink
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.rotateBy
 import kotlinx.coroutines.launch
@@ -163,7 +162,12 @@ fun BoxScope.EditClusterCanvas(
             drawSelectionControls(viewModel, sliderColor, jCarcassColor, rotateIconColor, handleRadius, iconDim, rotateIcon)
     }
     if (viewModel.circleSelectionIsActive) {
-        HUD(viewModel)
+        SelectionContextActions(viewModel)
+    } else if (
+        viewModel.mode == ToolMode.ARC_PATH &&
+        viewModel.arcPathUnderConstruction?.nArcs?.let { it >= 1 } == true
+    ) {
+        ArcPathContextActions(viewModel)
     }
 }
 
@@ -581,7 +585,7 @@ private fun DrawScope.drawHandles(
 }
 
 @Composable
-fun BoxScope.HUD(viewModel: EditClusterViewModel) {
+fun BoxScope.SelectionContextActions(viewModel: EditClusterViewModel) {
     val (w, h) = viewModel.canvasSize
     val positions = SelectionControlsPositions(w, h)
     val halfSize = (48/2).dp
@@ -634,6 +638,36 @@ fun BoxScope.HUD(viewModel: EditClusterViewModel) {
             ),
             tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
         ) { viewModel.toolAction(EditClusterTool.Delete) }
+    }
+}
+
+@Composable
+fun BoxScope.ArcPathContextActions(viewModel: EditClusterViewModel) {
+    val (w, h) = viewModel.canvasSize
+    val verticalMargin = with (LocalDensity.current) {
+        (h*SelectionControlsPositions.RELATIVE_VERTICAL_MARGIN).toDp()
+    }
+    Button(
+        onClick = { viewModel.toolAction(EditClusterTool.CompleteArcPath) },
+        Modifier
+            .align(Alignment.BottomEnd)
+            .offset(y = -verticalMargin)
+        ,
+        colors = ButtonDefaults.buttonColors()
+            .copy(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+    ) {
+        Icon(
+            painterResource(EditClusterTool.CompleteArcPath.icon),
+            stringResource(EditClusterTool.CompleteArcPath.name),
+        )
+        Spacer(Modifier.width(16.dp))
+        Text(
+            stringResource(EditClusterTool.CompleteArcPath.description),
+            style = MaterialTheme.typography.titleSmall
+        )
     }
 }
 

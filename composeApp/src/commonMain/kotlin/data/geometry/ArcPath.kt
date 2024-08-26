@@ -24,6 +24,9 @@ data class ArcPath(
     val allAnchors: List<Point> get() =
         listOf(startPoint) + points
 
+    val nArcs: Int get() =
+        points.size
+
     sealed interface Focus {
         data object StartPoint : Focus
         data class Point(val index: Int) : Focus

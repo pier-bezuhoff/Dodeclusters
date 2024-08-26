@@ -38,6 +38,10 @@ data class Circle(
     val r2: Double get() =
         radius * radius
 
+    init {
+        require(radius > 0.0) // points and imaginary circle should not be mixed in
+    }
+
     constructor(center: Offset, radius: Double) :
         this(center.x.toDouble(), center.y.toDouble(), radius)
 

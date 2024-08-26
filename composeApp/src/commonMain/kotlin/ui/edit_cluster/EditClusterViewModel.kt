@@ -251,6 +251,7 @@ class EditClusterViewModel(
         )
     }
 
+    // backwards compatibility
     fun saveAsJson(): String {
         val cluster = Cluster(
             circles.toList(), parts.toList(), filled = true
@@ -258,13 +259,14 @@ class EditClusterViewModel(
         return Json.encodeToString(Cluster.serializer(), cluster)
     }
 
+    // backwards compatibility
     fun loadFromJson(json: String) {
         try {
             val permissiveJson = Json {
                 isLenient = true
                 ignoreUnknownKeys = true // enables backward compatibility to a certain level
             }
-            val cluster = permissiveJson.decodeFromString(OldCluster.serializer(), json)
+            val cluster: OldCluster = permissiveJson.decodeFromString(OldCluster.serializer(), json)
             loadCluster(Cluster(
                 cluster.circles,
                 cluster.parts,
@@ -333,7 +335,10 @@ class EditClusterViewModel(
 
     /** Use BEFORE modifying the state by the [command]!
      * let s_i := history[[i]], c_i := commands[[i]]
-     * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ... */
+     * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ...
+     *
+     * [unique] flag guarantees snapshotting new state for [history]
+     * */
     private fun recordCommand(
         command: Command,
         targets: Iterable<Ix>? = null,
@@ -346,13 +351,14 @@ class EditClusterViewModel(
         history.recordCommand(command, tag)
         undoIsEnabled = history.undoIsEnabled
         redoIsEnabled = history.redoIsEnabled
-        if (command != Command.ROTATE)
+        if (command != Command.ROTATE) // erm
             submode.let {
                 if (it is SubMode.Rotate)
                     submode = SubMode.None
             }
     }
 
+    /** Append [newCircles] to [circles] and queue circle entrance animation */
     fun createNewCircles(
         newCircles: List<CircleOrLine>,
     ) {
@@ -477,6 +483,7 @@ class EditClusterViewModel(
         }
         mode = newMode
         submode = SubMode.None
+        arcPathUnderConstruction = null
     }
 
     fun absolute(visiblePosition: Offset): Offset =
@@ -1366,17 +1373,18 @@ class EditClusterViewModel(
         // only add circles
         // since `part`itioning in-arcpath region is rather involved
         arcPathUnderConstruction?.let { arcPath ->
-            for ((j, circle) in arcPath.circles.withIndex()) {
-                when (circle) {
-                    is Circle -> circles.add(circle)
-                    null -> circles.add(
-                        Line.by2Points(
+            val newCircles: List<CircleOrLine> = arcPath.circles
+                .mapIndexed { j, circle ->
+                    when (circle) {
+                        is Circle -> circle
+                        null -> Line.by2Points(
                             arcPath.previousPoint(j),
                             arcPath.points[j]
                         )
-                    )
+                        else -> throw IllegalStateException("Never")
+                    }
                 }
-            }
+            createNewCircles(newCircles)
         }
         arcPathUnderConstruction = null
     }
@@ -1406,8 +1414,8 @@ class EditClusterViewModel(
             EditClusterTool.Undo -> undo()
             EditClusterTool.Redo -> redo()
             is EditClusterTool.CustomAction -> {} // custom handlers
+            EditClusterTool.CompleteArcPath -> completeArcPath()
             EditClusterTool.AddBackgroundImage -> TODO()
-            EditClusterTool.CompleteArcPath -> TODO()
         }
     }
 
