@@ -417,11 +417,7 @@ fun EditClusterTopBar(
                 OpenFileButton(
                     painterResource(EditClusterTool.OpenFile.icon),
                     stringResource(EditClusterTool.OpenFile.name),
-                    LookupData(
-                        extensions = setOf("yaml", "yml", "ddc", "json"),
-                        htmlFileInputAccept = ".ddc, .yml, .yaml, .json|application/yaml, application/json",
-                        androidMimeType = "application/*"
-                    ),
+                    LookupData.YAML,
                     iconModifier
                 ) { content ->
                     content?.let {

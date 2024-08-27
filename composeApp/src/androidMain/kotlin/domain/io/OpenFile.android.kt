@@ -45,6 +45,7 @@ fun readDdcFromUri(context: Context, uri: Uri): String? {
     // NOTE: uncomment the following ONLY for ACTION_OPEN_DOCUMENT (ACTION_GET_CONTENT is NOT for persistable Uri's, only for temporary ones)
     // context.contentResolver.takePersistableUriPermission(uri, takeFlags)
     return context.contentResolver.openInputStream(uri)?.use { inputStream ->
-        inputStream.bufferedReader().readText()
+        inputStream.bufferedReader()
+            .readText()
     }
 }
