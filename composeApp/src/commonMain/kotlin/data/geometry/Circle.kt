@@ -48,6 +48,21 @@ data class Circle(
     constructor(center: Offset, radius: Float) :
         this(center.x.toDouble(), center.y.toDouble(), radius.toDouble())
 
+    override fun project(point: Point): Point {
+        val (x1, y1) = point
+        if (x == x1 && y == y1 || point == Point.CONFORMAL_INFINITY) {
+            println("bad projection")
+            return order2point(0.0)
+        }
+        val vx = x - x1
+        val vy = y - y1
+        val vLength = hypot(vx, vy)
+        return Point(
+            x + (vx/vLength)*radius,
+            y + (vy/vLength)*radius
+        )
+    }
+
     override fun distanceFrom(point: Offset): Double =
         abs((point - center).getDistance() - radius)
 
@@ -178,7 +193,7 @@ data class Circle(
 //                        val n0 = inverting.normalVector
 //                        val n1 = theOneBeingInverted.normalVector
 //                        val n2 = n1 - n0 * (2 * (n0.x*n1.x + n0.y*n1.y))
-                        theOneBeingInverted
+                        TODO()
                     }
                     is Circle -> {
                         val c = theOneBeingInverted.center
@@ -189,13 +204,13 @@ data class Circle(
                 }
                 is Circle -> when (theOneBeingInverted) {
                     is Line -> {
-                        theOneBeingInverted
+                        TODO()
                     }
                     is Circle -> {
                         val (x, y, r) = inverting
                         val (x0, y0, r0) = theOneBeingInverted
                         when {
-                            r == Double.POSITIVE_INFINITY -> // return a line somehow
+                            r == Double.POSITIVE_INFINITY -> // return a line
                                 throw NumberFormatException("Not a circle")
                             x == x0 && y == y0 ->
                                 Circle(x, y, r*r / r0)
@@ -239,7 +254,7 @@ data class Circle(
                 }
                 circle1 is Line && circle2 is Circle -> {
                     val (cx, cy, r) = circle2
-                    val (px, py) = circle1.project(cx, cy)
+                    val (px, py) = circle1.project(Point(cx, cy))
                     val distance = hypot(px - cx, py - cy)
                     if (distance > r + EPSILON) {
                         emptyList()
@@ -298,6 +313,7 @@ data class Circle(
 @Serializable
 @Immutable
 sealed interface CircleOrLine : GCircle, LocusWithOrder {
+    fun project(point: Point): Point
     fun distanceFrom(point: Offset): Double
     /** <0 = inside, 0 on the circle, >0 = outside */
     fun checkPosition(point: Offset): Int

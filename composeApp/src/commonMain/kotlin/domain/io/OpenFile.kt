@@ -24,6 +24,7 @@ data class LookupData(
     }
 }
 
+/** Open text file button */
 @Composable
 expect fun OpenFileButton(
     iconPainter: Painter,

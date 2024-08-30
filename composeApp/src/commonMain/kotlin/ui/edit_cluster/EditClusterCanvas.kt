@@ -641,6 +641,7 @@ fun BoxScope.SelectionContextActions(viewModel: EditClusterViewModel) {
     }
 }
 
+// TODO: move it somewhere else, this location is bad
 @Composable
 fun BoxScope.ArcPathContextActions(viewModel: EditClusterViewModel) {
     val (w, h) = viewModel.canvasSize

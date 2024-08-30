@@ -32,7 +32,7 @@ actual fun OpenFileButton(
             // NOTE: "text/plain" doesnt work for custom extensions it seems
             launcher.launch(lookupData.androidMimeType)
 //            launcher.launch("application/*") // casts a wide net, including .ddc, .yaml, ..., pdf..
-//        launcher.launch("application/yaml")
+//        launcher.launch("application/yaml") // bugged
         },
         modifier = modifier
     ) {
@@ -45,7 +45,8 @@ fun readDdcFromUri(context: Context, uri: Uri): String? {
     // NOTE: uncomment the following ONLY for ACTION_OPEN_DOCUMENT (ACTION_GET_CONTENT is NOT for persistable Uri's, only for temporary ones)
     // context.contentResolver.takePersistableUriPermission(uri, takeFlags)
     return context.contentResolver.openInputStream(uri)?.use { inputStream ->
-        inputStream.bufferedReader()
-            .readText()
+        inputStream.bufferedReader().use { reader ->
+                reader.readText()
+            }
     }
 }

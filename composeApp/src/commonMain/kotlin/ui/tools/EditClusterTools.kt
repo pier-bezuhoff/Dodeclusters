@@ -245,7 +245,7 @@ sealed class EditClusterTool(
         Res.string.stub,
         Res.string.stub,
         Res.drawable.add_image
-    )
+    ) // NOTE: critical multiplatform image decoding is in compose-multiplatform-1.7.0-alpha03
 
     data object Palette: Action(
         Res.string.palette_name,
@@ -314,12 +314,11 @@ sealed class EditClusterTool(
         Res.array.arc_path_arg_descriptions,
         Res.drawable.shark_fin_3_points_striped
     )
-    // insert rect/square
-
     data object CompleteArcPath: ContextAction(
         Res.string.complete_arc_path,
         icon = Res.drawable.confirm
     )
+    // insert rect/square
 
     // these are inlined into canvas HUD
     data object Expand: ContextAction(

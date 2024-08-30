@@ -48,7 +48,8 @@ fun Offset.angleSin(other: Offset): Double {
 fun Offset.toComplex(): Complex =
     Complex(x, y)
 
-@JvmName("averageOfOffset") fun Iterable<Offset>.average(): Offset {
+@JvmName("averageOfOffset")
+fun Iterable<Offset>.average(): Offset {
     var n = 0
     var sumX = 0f
     var sumY = 0f

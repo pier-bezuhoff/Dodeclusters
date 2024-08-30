@@ -28,7 +28,7 @@ kotlin {
     androidTarget {
         tasks.withType<KotlinJvmCompile>().configureEach {
             compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_1_8)
+                jvmTarget.set(JvmTarget.JVM_11) //JVM_1_8)
             }
         }
     }
@@ -112,8 +112,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11 //VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_11 //VERSION_1_8
     }
     dependencies {
         debugImplementation(libs.compose.ui.tooling)

@@ -119,8 +119,7 @@ fun EditClusterScreen(
     Scaffold(
         modifier =
             if (keyboardActions == null)
-                Modifier
-                    .handleKeyboardActions(viewModel::processKeyboardAction)
+                Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
             else Modifier,
         floatingActionButton = {
             val category = EditClusterCategory.Create

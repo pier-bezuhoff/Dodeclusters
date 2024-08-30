@@ -15,8 +15,6 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.open_file
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.getSystemResourceEnvironment
-import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.resources.stringResource
 import java.awt.FileDialog
 import java.awt.Frame
@@ -32,9 +30,6 @@ actual fun OpenFileButton(
     modifier: Modifier,
     onOpen: (content: String?) -> Unit
 ) {
-    val b = byteArrayOf()
-//    imageResource()
-
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
     IconButton(

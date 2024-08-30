@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.math.abs
 import kotlin.math.hypot
+import kotlin.math.sign
 
 /** [a]*x + [b]*y + [c] = 0
  *
@@ -45,6 +46,20 @@ data class Line(
     fun normalized(): Line =
         Line(a/norm, b/norm, c/norm)
 
+    /** First non-zero coordinate is positive and ensures that `hypot(a, b) == 1` */
+    fun normalizedNoDirection(): Line {
+        val sign =
+            if (a == 0.0) sign(b) // b != 0
+            else sign(a)
+        return Line(sign*a / norm, sign*b / norm, sign*c / norm)
+    }
+
+    infix fun isCollinearTo(line: Line): Boolean {
+        val (a,b) = this.normalized()
+        val (a1,b1) = line.normalized()
+        return abs(a*b1 - a1*b) < EPSILON
+    }
+
     /** Project [point] down onto this line */
     // reference: https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_an_equation
     fun project(point: Offset): Offset {
@@ -57,7 +72,8 @@ data class Line(
     }
 
     /** Project Point([x], [y]) down onto this line */
-    fun project(x: Double, y: Double): Point {
+    override fun project(point: Point): Point {
+        val (x, y) = point
         val t = b*x - a*y
         val n2 = a*a + b*b
         return Point(
@@ -96,7 +112,7 @@ data class Line(
     override fun order2point(order: Double): Point {
         if (order == Double.NEGATIVE_INFINITY)
             Point.CONFORMAL_INFINITY
-        val p0 = project(0.0, 0.0)
+        val p0 = project(Point(0.0, 0.0))
         return Point(
             p0.x + directionX*order,
             p0.y + directionY*order

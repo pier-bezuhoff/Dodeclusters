@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import kotlinx.browser.document
 import org.jetbrains.compose.resources.rememberResourceEnvironment
+import org.khronos.webgl.ArrayBuffer
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.Event
 import org.w3c.files.File
@@ -26,11 +27,11 @@ actual fun OpenFileButton(
             queryFile(lookupData) { file ->
                 file?.let {
                     val reader = FileReader()
-                    reader.readAsText(file, "UTF-8")
                     reader.onload = {
                         val content = reader.result?.toString()
                         onOpen(content)
                     }
+                    reader.readAsText(file, "UTF-8")
                 } ?: onOpen(null)
             }
         },
