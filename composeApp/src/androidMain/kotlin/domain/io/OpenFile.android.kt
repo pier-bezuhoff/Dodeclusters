@@ -22,6 +22,7 @@ actual fun OpenFileButton(
     val context = LocalContext.current
     // MAYBE: use OpenDocument instead of GetContent for persistent files only (no cloud etc)
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
+        // Q: use launch as coroutine instead?
         val content: String? = uri?.let {
             readDdcFromUri(context, uri)
         }

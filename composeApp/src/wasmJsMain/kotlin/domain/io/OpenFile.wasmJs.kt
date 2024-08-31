@@ -6,8 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import kotlinx.browser.document
-import org.jetbrains.compose.resources.rememberResourceEnvironment
-import org.khronos.webgl.ArrayBuffer
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.Event
 import org.w3c.files.File
