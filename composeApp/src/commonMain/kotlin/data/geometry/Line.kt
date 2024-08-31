@@ -46,7 +46,8 @@ data class Line(
     fun normalized(): Line =
         Line(a/norm, b/norm, c/norm)
 
-    /** First non-zero coordinate is positive and ensures that `hypot(a, b) == 1` */
+    /** First non-zero coordinate is guaranteed to be positive and
+     * `hypot(a, b) == 1` */
     fun normalizedNoDirection(): Line {
         val sign =
             if (a == 0.0) sign(b) // b != 0
@@ -83,6 +84,9 @@ data class Line(
     }
 
     override fun distanceFrom(point: Offset): Double =
+        abs(a*point.x + b*point.y + c)/norm
+
+    override fun distanceFrom(point: Point): Double =
         abs(a*point.x + b*point.y + c)/norm
 
     /** <0 = inside, 0 on the line, >0 = outside */

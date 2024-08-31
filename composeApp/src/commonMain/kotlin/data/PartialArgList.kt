@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
+import data.geometry.Point
 import kotlinx.serialization.Serializable
 import ui.Indices
 
@@ -25,6 +26,8 @@ data class PartialArgList(
         // MAYBE: float coords instead?
         //  idk, i set double for now for accurate c-intersections & future snapping
         data class XYPoint(val x: Double, val y: Double) : Arg(ArgType.XYPoint) {
+            constructor(point: Point) : this(point.x, point.y)
+
             fun toOffset(): Offset =
                 Offset(x.toFloat(), y.toFloat())
 

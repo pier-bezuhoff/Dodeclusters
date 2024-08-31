@@ -9,6 +9,7 @@ import domain.rotateBy
 import domain.toComplex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import ui.edit_cluster.distance
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -54,8 +55,8 @@ data class Circle(
             println("bad projection")
             return order2point(0.0)
         }
-        val vx = x - x1
-        val vy = y - y1
+        val vx = x1 - x
+        val vy = y1 - y
         val vLength = hypot(vx, vy)
         return Point(
             x + (vx/vLength)*radius,
@@ -65,6 +66,9 @@ data class Circle(
 
     override fun distanceFrom(point: Offset): Double =
         abs((point - center).getDistance() - radius)
+
+    override fun distanceFrom(point: Point): Double =
+        abs(hypot(point.x - x, point.y - y) - radius)
 
     /** <0 = inside, 0 on the circle, >0 = outside */
     override fun checkPosition(point: Offset): Int {
@@ -314,7 +318,9 @@ data class Circle(
 @Immutable
 sealed interface CircleOrLine : GCircle, LocusWithOrder {
     fun project(point: Point): Point
-    fun distanceFrom(point: Offset): Double
+    fun distanceFrom(point: Point): Double
+    fun distanceFrom(point: Offset): Double =
+        distanceFrom(Point.fromOffset(point))
     /** <0 = inside, 0 on the circle, >0 = outside */
     fun checkPosition(point: Offset): Int
     /** -1 = inside, 0 on the circle, +1 = outside; also
