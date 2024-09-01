@@ -29,7 +29,8 @@ object DodeclustersColors {
     val surfaceVariantLight = Color(0xFFECDFE8)
     val onSurfaceVariantLight = Color(0xFF4D444C)
     val outlineLight = Color(0xFF7E747D)
-    val outlineVariantLight = Color(0xFFD0C3CC)
+    val outlineVariantLight = Color(0xFF7E747D)
+//    val outlineVariantLight = Color(0xFFD0C3CC) // too low contrast for dividers on white/light-gray
     val scrimLight = Color(0xFF000000)
     val inverseSurfaceLight = Color(0xFF352F34)
     val inverseOnSurfaceLight = Color(0xFFF9EEF5)

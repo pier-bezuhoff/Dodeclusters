@@ -68,11 +68,13 @@ fun DisableableButton(
     name: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    tint: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
     IconButton(
         onClick = onClick,
         modifier = modifier,
+        colors = IconButtonDefaults.iconButtonColors().copy(contentColor = tint),
         enabled = enabled,
     ) {
         Icon(
@@ -90,6 +92,7 @@ fun TwoIconButton(
     name: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    tint: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
     IconToggleButton(
@@ -97,7 +100,7 @@ fun TwoIconButton(
         onCheckedChange = { onClick() },
         modifier = modifier,
         colors = IconButtonDefaults.iconToggleButtonColors(
-            checkedContentColor = LocalContentColor.current // no need for color variation since we have a diff icon
+            checkedContentColor = tint // no need for color variation since we have a diff icon
         )
     ) {
         Icon(
@@ -115,6 +118,7 @@ fun OnOffButton(
     name: String,
     isOn: Boolean,
     modifier: Modifier = Modifier,
+    tint: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
     OutlinedIconToggleButton(
@@ -123,7 +127,7 @@ fun OnOffButton(
         modifier = modifier,
         colors = IconButtonDefaults.outlinedIconToggleButtonColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            contentColor = tint,//MaterialTheme.colorScheme.onSurfaceVariant,
             checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
             checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
@@ -132,7 +136,7 @@ fun OnOffButton(
         Icon(
             iconPainter,
             contentDescription = name,
-            modifier = modifier
+            modifier = modifier,
         )
     }
 }

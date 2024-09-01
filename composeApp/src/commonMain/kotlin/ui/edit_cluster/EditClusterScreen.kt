@@ -10,6 +10,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -122,29 +123,30 @@ fun EditClusterScreen(
                 Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
             else Modifier,
         floatingActionButton = {
-            val category = EditClusterCategory.Create
-            FloatingActionButton(
-                onClick = {
-                    viewModel.switchToCategory(category, togglePanel = true)
-                },
-                modifier =
+            if (!isLandscape) { // inline in the LeftToolbar in landscape
+                val category = EditClusterCategory.Create
+                FloatingActionButton(
+                    onClick = {
+                        viewModel.switchToCategory(category, togglePanel = true)
+                    },
+                    modifier =
                     if (compactHeight) Modifier
                         .size(48.dp)
                         .offset(x = 8.dp, y = 16.dp)
-                    else Modifier
-                ,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation()
-            ) {
-                Icon(
-                    Icons.Filled.Add,
-                    stringResource(category.name),
-                    Modifier
-                        .padding(4.dp)
-                        .size(40.dp)
-                )
+                    else Modifier,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    shape = CircleShape,
+                    elevation = FloatingActionButtonDefaults.elevation()
+                ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        stringResource(category.name),
+                        Modifier
+                            .padding(4.dp)
+                            .size(40.dp)
+                    )
+                }
             }
         },
         floatingActionButtonPosition = if (isLandscape) FabPosition.Start else FabPosition.End
@@ -430,7 +432,7 @@ fun EditClusterTopBar(
                     stringResource(EditClusterTool.Undo.name),
                     viewModel.undoIsEnabled,
                     iconModifier,
-                    viewModel::undo
+                    onClick = viewModel::undo
                 )
             }
             WithTooltip(stringResource(EditClusterTool.Redo.description)) {
@@ -439,7 +441,7 @@ fun EditClusterTopBar(
                     stringResource(EditClusterTool.Redo.name),
                     viewModel.redoIsEnabled,
                     iconModifier,
-                    viewModel::redo
+                    onClick = viewModel::redo
                 )
             }
         }
@@ -558,20 +560,35 @@ private fun LeftToolbar(
         Arrangement.Top,
         Alignment.CenterHorizontally
     ) {
+        val dividerPaddings =
+            if (compact) PaddingValues(vertical = 6.dp)
+            else PaddingValues(top = 12.dp) // every CategoryButton already has 12dp high spacer on the top
         CompositionLocalProvider(LocalContentColor provides contentColor) {
-            Spacer(Modifier.height(2.dp))
+            if (compact)
+                Spacer(Modifier.height(6.dp))
             CategoryButton(viewModel, EditClusterCategory.Drag, compact = compact)
             CategoryButton(viewModel, EditClusterCategory.Multiselect, compact = compact)
             CategoryButton(viewModel, EditClusterCategory.Region, compact = compact)
-            Spacer(Modifier.height(12.dp))
             HorizontalDivider(Modifier
+                .padding(dividerPaddings)
                 .fillMaxWidth(0.7f)
                 .align(Alignment.CenterHorizontally)
             )
             CategoryButton(viewModel, EditClusterCategory.Visibility, compact = compact)
             CategoryButton(viewModel, EditClusterCategory.Colors, compact = compact)
             CategoryButton(viewModel, EditClusterCategory.Transform, compact = compact)
-            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(Modifier
+                .padding(dividerPaddings)
+                .fillMaxWidth(0.7f)
+                .align(Alignment.CenterHorizontally)
+            )
+            CategoryButton(
+                viewModel, EditClusterCategory.Create, compact = compact,
+//                tint = MaterialTheme.colorScheme.secondary
+            )
+            Spacer(Modifier.height(
+                if (compact) 6.dp else 12.dp
+            ))
         }
     }
 }
@@ -580,7 +597,9 @@ private fun LeftToolbar(
 fun CategoryButton(
     viewModel: EditClusterViewModel,
     category: EditClusterCategory,
-    compact: Boolean = false
+    compact: Boolean = false,
+    modifier: Modifier = Modifier,
+    tint: Color = LocalContentColor.current,
 ) {
     val i = viewModel.categories.indexOf(category)
     val defaultTool = category.tools[viewModel.categoryDefaults[i]]
@@ -591,12 +610,14 @@ fun CategoryButton(
         ToolButton(
             viewModel,
             defaultTool,
-            Modifier
+            modifier
                 .padding(4.dp)
                 .size(
                     if (compact) 36.dp
                     else 40.dp
                 )
+            ,
+            tint
         ) {
             viewModel.selectTool(defaultTool, togglePanel = true)
         }
@@ -736,6 +757,7 @@ fun ToolButton(
     viewModel: EditClusterViewModel,
     tool: EditClusterTool,
     modifier: Modifier = Modifier.padding(4.dp),
+    tint: Color = LocalContentColor.current,
     onClick: () -> Unit = { viewModel.selectTool(tool) }
 ) {
     val icon = painterResource(tool.icon)
@@ -782,12 +804,13 @@ fun ToolButton(
                     icon, name,
                     enabled = viewModel.circleSelectionIsActive,
                     modifier,
+                    tint,
                     onClick
                 )
             }
 
             is Tool.InstantAction -> {
-                SimpleButton(icon, name, modifier, onClick = onClick)
+                SimpleButton(icon, name, modifier, tint, onClick = onClick)
             }
 
             is Tool.BinaryToggle -> {
@@ -796,6 +819,7 @@ fun ToolButton(
                         icon, name,
                         isOn = viewModel.toolPredicate(tool),
                         modifier = modifier,
+                        tint = tint,
                         onClick = onClick
                     )
                 } else {
@@ -805,6 +829,7 @@ fun ToolButton(
                         name,
                         enabled = viewModel.toolPredicate(tool),
                         modifier,
+                        tint,
                         onClick
                     )
                 }
