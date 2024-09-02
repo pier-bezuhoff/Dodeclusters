@@ -51,11 +51,13 @@ import ui.OkButton
 import ui.hideSystemBars
 import ui.component1
 import ui.component2
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 data class DefaultInterpolationParameters(
     val nInterjacents: Int = 1,
     val inBetween: Boolean = true,
+    val maxCircleCount: Int = 20
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
@@ -70,10 +72,11 @@ fun CircleInterpolationDialog(
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val pencilType = start.calculatePencilType(end)
+    val maxCount = defaults.maxCircleCount
     val sliderState = remember { SliderState(
         value = defaults.nInterjacents.toFloat(),
-        steps = 20,
-        valueRange = 1f..20f
+        steps = maxCount - 2, // only counts intermediates
+        valueRange = 1f..maxCount.toFloat()
     ) }
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
     val showInsideOutsideToggle =
@@ -113,7 +116,6 @@ fun CircleInterpolationDialog(
                 ) {
                     Title(smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
                     SliderText(sliderState)
-                    // BUG: no clue why but 5->5->6 slider transition is bugged *shrug*
                     Slider(sliderState, Modifier.padding(16.dp))
                     if (showInsideOutsideToggle)
                         InsideOutsideToggle(
