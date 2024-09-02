@@ -208,7 +208,7 @@ fun EditClusterScreen(
             defaults = viewModel.defaultExtrapolationParameters
         )
     }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(ddcContent, sampleIndex) {
         if (ddcContent != null) {
             println("loading external ddc")
             viewModel.loadFromYaml(ddcContent)
