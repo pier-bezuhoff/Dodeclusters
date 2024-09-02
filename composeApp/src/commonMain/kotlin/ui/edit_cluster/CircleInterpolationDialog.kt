@@ -113,6 +113,7 @@ fun CircleInterpolationDialog(
                 ) {
                     Title(smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
                     SliderText(sliderState)
+                    // BUG: no clue why but 5->5->6 slider transition is bugged *shrug*
                     Slider(sliderState, Modifier.padding(16.dp))
                     if (showInsideOutsideToggle)
                         InsideOutsideToggle(

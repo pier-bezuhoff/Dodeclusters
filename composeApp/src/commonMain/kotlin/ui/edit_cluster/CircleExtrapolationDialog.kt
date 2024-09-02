@@ -120,7 +120,7 @@ private fun CircleExtrapolationHorizontalCompact(
                 Slider(leftSliderState)
             }
             Column() {
-                RightSliderText(leftSliderState)
+                RightSliderText(rightSliderState)
                 Slider(rightSliderState)
             }
         }
@@ -144,7 +144,7 @@ private fun CircleExtrapolationHorizontal(
         Title(modifier = Modifier.align(Alignment.CenterHorizontally))
         LeftSliderText(leftSliderState)
         Slider(leftSliderState)
-        RightSliderText(leftSliderState)
+        RightSliderText(rightSliderState)
         Slider(rightSliderState)
         CancelOkRow(leftSliderState, rightSliderState, onDismissRequest, onConfirm)
     }
@@ -171,7 +171,7 @@ private fun CircleExtrapolationVertical(
         Title(modifier = Modifier.align(Alignment.CenterHorizontally))
         LeftSliderText(leftSliderState)
         Slider(leftSliderState)
-        RightSliderText(leftSliderState)
+        RightSliderText(rightSliderState)
         Slider(rightSliderState)
         CancelOkRow(leftSliderState, rightSliderState, onDismissRequest, onConfirm, fontSize)
     }

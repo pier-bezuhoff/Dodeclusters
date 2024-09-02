@@ -124,6 +124,7 @@ fun EditClusterScreen(
             else Modifier,
         floatingActionButton = {
             if (!isLandscape) { // inline in the LeftToolbar in landscape
+                // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
                 val category = EditClusterCategory.Create
                 FloatingActionButton(
                     onClick = {

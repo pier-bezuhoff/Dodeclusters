@@ -843,8 +843,15 @@ class EditClusterViewModel(
                         PartialArgList.ArgType.CircleIndex -> {
                             selectCircle(circles, visiblePosition)?.let { circleIndex ->
                                 val newArg = PartialArgList.Arg.CircleIndex(circleIndex)
-                                if (partialArgList!!.currentArg != newArg)
+                                val previous = partialArgList?.currentArg
+                                if (previous == newArg ||
+                                    previous is PartialArgList.Arg.CircleIndex && previous.index == circleIndex ||
+                                    previous is PartialArgList.Arg.SelectedCircles && previous.indices == listOf(circleIndex)
+                                ) {
+                                    // ignore identical args
+                                } else {
                                     partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
+                                }
                             }
                         }
                         PartialArgList.ArgType.SelectedCircles -> {
