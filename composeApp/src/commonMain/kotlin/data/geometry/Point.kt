@@ -22,6 +22,15 @@ data class Point(
                 hypot(point.x - x, point.y - y)
         }
 
+    fun translate(vector: Offset): Point =
+        Point(x + vector.x, y + vector.y)
+
+    fun scale(focus: Offset, zoom: Float): Point =
+        if (this == CONFORMAL_INFINITY)
+            CONFORMAL_INFINITY
+        else
+            fromOffset((toOffset() - focus) * zoom + focus)
+
     fun middle(point: Point): Point =
         if (this == CONFORMAL_INFINITY || point == CONFORMAL_INFINITY) CONFORMAL_INFINITY
         else Point((x + point.x)/2, (y + point.y)/2)

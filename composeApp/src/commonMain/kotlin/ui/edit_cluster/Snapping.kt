@@ -84,7 +84,6 @@ fun snapPointToCircles(
 /** Construct a circle thru [p1] and [p2] that snaps to [circles] from
  * the initial circle `p1^p2^freePoint` */
 fun snapCircleThru3PointsToCircles(p1: Point, p2: Point, freePoint: Point, circles: List<CircleOrLine>): CircleOrLine {
-    // circle/line -> incident point
     // circle -> circle
     // line -> circle
     // circle -> line

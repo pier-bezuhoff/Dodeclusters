@@ -1,5 +1,6 @@
 package ui.edit_cluster
 
+import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
@@ -68,11 +69,16 @@ class EditClusterViewModel(
     // XYPoint uses absolute positioning
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
+    /** [Cluster.circles] */
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
+    /** helper anchor points for snapping; these are not saved into [Ddc] */
     val points = mutableStateListOf<Point>()
+    /** [Cluster.parts] */
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
-    /** indices of selected circles */
+    /** indices of selected [circles] */
     val selection = mutableStateListOf<Ix>() // MAYBE: when circles are hidden select parts instead
+    /** indices of selected [points] */
+    var selectedPoints by mutableStateOf(listOf<Ix>())
 
     val categories: List<EditClusterCategory> = listOf(
         EditClusterCategory.Drag,
@@ -116,6 +122,9 @@ class EditClusterViewModel(
 
     val circleSelectionIsActive by derivedStateOf {
         showCircles && selection.isNotEmpty() && mode.isSelectingCircles()
+    }
+    val pointSelectionIsActive by derivedStateOf {
+        showCircles && selectedPoints.isNotEmpty() && mode.isSelectingCircles()
     }
     val handleConfig by derivedStateOf { // depends on selectionMode & selection
         when (mode) {
@@ -286,6 +295,7 @@ class EditClusterViewModel(
         displayChessboardPattern = false
         translation = Offset.Zero
         selection.clear()
+        selectedPoints = emptyList()
         parts.clear()
         circles.clear()
         circles.addAll(cluster.circles)
@@ -299,6 +309,7 @@ class EditClusterViewModel(
         val currentSelection = selection.toList()
         switchToMode(mode) // clears up stuff
         selection.clear()
+        selectedPoints = emptyList()
         history.undo()
         selection.clear()
         selection.addAll(currentSelection.filter { it < circles.size })
@@ -311,6 +322,7 @@ class EditClusterViewModel(
         switchToMode(mode)
         history.redo()
         selection.clear()
+        selectedPoints = emptyList()
         selection.addAll(currentSelection.filter { it < circles.size })
         resetTransients()
     }
@@ -318,6 +330,7 @@ class EditClusterViewModel(
     private fun loadUiState(state: UiState) {
         submode = SubMode.None
         selection.clear()
+        selectedPoints = emptyList()
         parts.clear()
         circles.clear()
         circles.addAll(state.circles)
@@ -428,7 +441,13 @@ class EditClusterViewModel(
             }
             return re
         }
-        if (mode.isSelectingCircles()) {
+        val pointsLeft = points.indices
+            .minus(selectedPoints.toSet())
+            .map { points[it] }
+        points.clear()
+        points.addAll(pointsLeft)
+        selectedPoints = emptyList()
+        if (circleSelectionIsActive) {
             recordCommand(Command.DELETE, unique = true)
             val whatsGone = selection.toSet()
             val deletedCircles = whatsGone.map { circles[it] }
@@ -464,6 +483,7 @@ class EditClusterViewModel(
         // NOTE: these altering shortcuts are unused for now so that they don't confuse category-expand buttons
         if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
+        selectedPoints = emptyList()
         showPromptToSetActiveSelectionAsToolArg = false
         if (newMode is ToolMode) {
             if (selection.size > 1 &&
@@ -471,7 +491,8 @@ class EditClusterViewModel(
             ) {
                 showPromptToSetActiveSelectionAsToolArg = true
             } else {
-                selection.clear()
+                // keep selection for a bit in case we now switch to another mode that
+                // accepts selection as the first arg
             }
             if (newMode == ToolMode.ARC_PATH) {
                 partialArgList = null
@@ -498,12 +519,24 @@ class EditClusterViewModel(
         return (absolutePosition - position).getDistance() <= tapDistance * (if (lowAccuracy) LOW_ACCURACY_FACTOR else 1f)
     }
 
-    fun selectPoint(targets: List<Offset>, visiblePosition: Offset): Ix? {
+    fun selectPoint(targets: List<Point>, visiblePosition: Offset): Ix? {
         val position = absolute(visiblePosition)
-        return targets.mapIndexed { ix, offset -> ix to (offset - position).getDistance() }
+        val absolutePoint = Point.fromOffset(position)
+        return targets.mapIndexed { ix, point -> ix to point.distanceFrom(absolutePoint) }
             .filter { (_, distance) -> distance <= tapDistance }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
+    }
+
+    fun reselectPointAt(visiblePosition: Offset): Boolean {
+        val nearPointIndex = selectPoint(points, visiblePosition)
+        if (nearPointIndex == null) {
+            selectedPoints = listOf()
+            return false
+        } else {
+            selectedPoints = listOf(nearPointIndex)
+            return true
+        }
     }
 
     fun selectCircle(targets: List<CircleOrLine>, visiblePosition: Offset): Ix? {
@@ -517,11 +550,15 @@ class EditClusterViewModel(
             ?.also { println("select circle #$it ${circles[it]}") }
     }
 
-    fun reselectCircleAt(visiblePosition: Offset) {
-        selectCircle(circles, visiblePosition)?.let { ix ->
-            selection.clear()
-            selection.add(ix)
-        } ?: selection.clear()
+    fun reselectCircleAt(visiblePosition: Offset): Boolean {
+        val nearCircleIndex = selectCircle(circles, visiblePosition)
+        selection.clear()
+        if (nearCircleIndex == null) {
+            return false
+        } else {
+            selection.add(nearCircleIndex)
+            return true
+        }
     }
 
     fun reselectCirclesAt(visiblePosition: Offset): Ix? =
@@ -617,13 +654,14 @@ class EditClusterViewModel(
         return Rect(left, top, right, bottom)
     }
 
-    fun snapped(absolutePosition: Offset): Point {
+    fun snapped(absolutePosition: Offset, excludePoints: Boolean = false): Point {
         // snap to: points > circles > circle contact
         val snapDistance = tapDistance.toDouble()
         val point = Point.fromOffset(absolutePosition)
-        val point2pointSnapping = mode != ToolMode.POINT
+        val point2pointSnapping = !excludePoints && mode != ToolMode.POINT
         if (point2pointSnapping) {
-            val point1 = snapPointToPoints(point, points, snapDistance)
+            val snappablePoints = points
+            val point1 = snapPointToPoints(point, snappablePoints, snapDistance)
             if (point1 != point)
                 return point1
         }
@@ -774,6 +812,9 @@ class EditClusterViewModel(
             for (ix in allIndices) {
                 circles[ix] = circles[ix].scale(center, zoom)
             }
+            for ((ix, point) in points.withIndex()) {
+                points[ix] = point.scale(center, zoom)
+            }
         }
     }
 
@@ -816,10 +857,18 @@ class EditClusterViewModel(
             }
             // NOTE: this enables drag-only behavior, you lose your selection when grabbing new circle
             if (mode == SelectionMode.Drag && submode is SubMode.None) {
-                val previouslySelected = selection.firstOrNull()
-                reselectCircleAt(visiblePosition)
-                if (previouslySelected != null && selection.isEmpty()) // this line requires deselecting first to navigate around canvas
-                    selection.add(previouslySelected)
+                val reselected = reselectPointAt(visiblePosition)
+                if (reselected) {
+                    selection.clear()
+                } else {
+                    val previouslySelectedCircle = selection.firstOrNull()
+                    reselectCircleAt(visiblePosition)
+                    if (previouslySelectedCircle != null && selection.isEmpty()) {
+                        selection.add(previouslySelectedCircle)
+                        // we keep previous selection in case we want to drag it
+                        // but it can still be discarded in onTap
+                    }
+                }
             } else {
                 if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
                     val (_, qualifiedPart) = selectPartAt(visiblePosition)
@@ -924,7 +973,11 @@ class EditClusterViewModel(
         if (showCircles) {
             when (mode) {
                 SelectionMode.Drag -> {
-                    reselectCircleAt(position)
+                    val pointReselected = reselectPointAt(position)
+                    if (pointReselected)
+                        selection.clear()
+                    else
+                        reselectCircleAt(position)
                 }
                 SelectionMode.Multiselect -> {
                     // (re)-select part
@@ -1104,6 +1157,10 @@ class EditClusterViewModel(
                 is Line ->
                     circles[ix] = circle.translate(pan)
             }
+        } else if (mode == SelectionMode.Drag && selectedPoints.isNotEmpty() && showCircles) {
+            // no history upd ig
+            val ix = selectedPoints.first()
+            points[ix] = snapped(c, excludePoints = true)
         } else if (mode == SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
             if (selection.size == 1) { // move + scale radius
                 recordCommand(Command.MOVE, targets = selection)
@@ -1251,7 +1308,10 @@ class EditClusterViewModel(
                     partialArgList = partialArgList?.let { PartialArgList(it.signature) }
                     arcPathUnderConstruction = null
                 }
-                is SelectionMode -> selection.clear()
+                is SelectionMode -> {
+                    selection.clear()
+                    selectedPoints = emptyList()
+                }
                 else -> Unit
             }
         }

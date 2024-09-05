@@ -102,6 +102,7 @@ fun BoxScope.EditClusterCanvas(
     val selectedCircleColor =
 //        MaterialTheme.colorScheme.primary
         DodeclustersColors.strongSalad
+    val selectedPointColor = selectedCircleColor
     val clusterPathAlpha = 1f
         //0.7f
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
@@ -156,7 +157,7 @@ fun BoxScope.EditClusterCanvas(
             drawParts(viewModel, visibleRect, clusterPathAlpha, circleStroke)
             if (viewModel.showCircles)
                 drawCircles(viewModel, visibleRect, circleColor, circleStroke, pointColor, pointRadius)
-            drawSelectedCircles(viewModel, visibleRect, selectedCircleColor, thiccSelectionCircleAlpha, circleThiccStroke)
+            drawSelectedCircles(viewModel, visibleRect, selectedCircleColor, thiccSelectionCircleAlpha, circleThiccStroke, selectedPointColor, pointRadius)
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, scaleIndicatorColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
         }
@@ -164,7 +165,9 @@ fun BoxScope.EditClusterCanvas(
             drawSelectionControls(viewModel, sliderColor, jCarcassColor, rotateIconColor, handleRadius, iconDim, rotateIcon)
     }
     if (viewModel.circleSelectionIsActive) {
-        SelectionContextActions(viewModel)
+        CircleSelectionContextActions(viewModel)
+    } else if (viewModel.pointSelectionIsActive) {
+        PointSelectionContextActions(viewModel)
     } else if (
         viewModel.mode == ToolMode.ARC_PATH &&
         viewModel.arcPathUnderConstruction?.nArcs?.let { it >= 1 } == true
@@ -317,8 +320,14 @@ private fun DrawScope.drawCircles(
             drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
         }
     }
-    for (point in viewModel.points)
-        drawCircle(pointColor, pointRadius, point.toOffset())
+    if (viewModel.pointSelectionIsActive) {
+        for ((ix, point) in viewModel.points.withIndex())
+            if (ix !in viewModel.selectedPoints)
+                drawCircle(pointColor, pointRadius, point.toOffset())
+    } else {
+        for (point in viewModel.points)
+            drawCircle(pointColor, pointRadius, point.toOffset())
+    }
 }
 
 private fun DrawScope.drawSelectedCircles(
@@ -327,6 +336,8 @@ private fun DrawScope.drawSelectedCircles(
     selectedCircleColor: Color,
     thiccSelectionCircleAlpha: Float,
     circleThiccStroke: Stroke,
+    selectedPointColor: Color,
+    pointRadius: Float
 ) {
     if (viewModel.showCircles &&
         (viewModel.circleSelectionIsActive ||
@@ -339,6 +350,12 @@ private fun DrawScope.drawSelectedCircles(
                 alpha = thiccSelectionCircleAlpha,
                 style = circleThiccStroke
             )
+        }
+    }
+    if (viewModel.pointSelectionIsActive) {
+        val points = viewModel.selectedPoints.map { viewModel.points[it] }
+        for (point in points) {
+            drawCircle(selectedPointColor, pointRadius, point.toOffset())
         }
     }
 }
@@ -589,7 +606,7 @@ private fun DrawScope.drawHandles(
 }
 
 @Composable
-fun BoxScope.SelectionContextActions(viewModel: EditClusterViewModel) {
+fun BoxScope.CircleSelectionContextActions(viewModel: EditClusterViewModel) {
     val (w, h) = viewModel.canvasSize
     val positions = SelectionControlsPositions(w, h)
     val halfSize = (48/2).dp
@@ -638,6 +655,25 @@ fun BoxScope.SelectionContextActions(viewModel: EditClusterViewModel) {
             stringResource(EditClusterTool.Delete.name),
             Modifier.offset(
                 x = positions.left.toDp() - halfSize,
+                y = positions.bottom.toDp() - halfSize
+            ),
+            tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
+        ) { viewModel.toolAction(EditClusterTool.Delete) }
+    }
+}
+
+@Composable
+fun BoxScope.PointSelectionContextActions(viewModel: EditClusterViewModel) {
+    val (w, h) = viewModel.canvasSize
+    val positions = SelectionControlsPositions(w, h)
+    val halfSize = (48/2).dp
+    with (LocalDensity.current) {
+        // duplicate & delete buttons
+        SimpleButton(
+            painterResource(EditClusterTool.Delete.icon),
+            stringResource(EditClusterTool.Delete.name),
+            Modifier.offset(
+                x = positions.right.toDp() - halfSize,
                 y = positions.bottom.toDp() - halfSize
             ),
             tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
