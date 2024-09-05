@@ -43,8 +43,8 @@ fun snapPointToPoints(
 /** Project [point] onto the closest circle among [circles] that
  * are closer than [snapDistance] from it.
  *
- * @param[intersectionTolerance] how much easier it is to snap to the intersection than
- * to the individual circle
+ * @param[intersectionTolerance] how much easier it is to snap to an intersection than
+ * to an individual circle
  * */
 fun snapPointToCircles(
     point: Point,
