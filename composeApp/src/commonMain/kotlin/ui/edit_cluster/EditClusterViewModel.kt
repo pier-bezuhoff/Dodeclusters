@@ -69,8 +69,7 @@ class EditClusterViewModel(
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
     val circles = mutableStateListOf(*cluster.circles.toTypedArray())
-    var _points by mutableStateOf(emptyList<Point>())
-        private set
+    val points = mutableStateListOf<Point>()
     val parts = mutableStateListOf(*cluster.parts.toTypedArray())
     /** indices of selected circles */
     val selection = mutableStateListOf<Ix>() // MAYBE: when circles are hidden select parts instead
@@ -95,7 +94,7 @@ class EditClusterViewModel(
         private set
     private val panelNeedsToBeShown by derivedStateOf { activeCategory.tools.size > 1 }
     var showPanel by mutableStateOf(panelNeedsToBeShown)
-    var showPromptToSetActiveSelectionAsToolArg by mutableStateOf(false)
+    var showPromptToSetActiveSelectionAsToolArg by mutableStateOf(false) // to be updated manually
         private set
 
     /** currently selected color */
@@ -465,6 +464,7 @@ class EditClusterViewModel(
         // NOTE: these altering shortcuts are unused for now so that they don't confuse category-expand buttons
         if (selection.size > 1 && newMode == SelectionMode.Drag)
             selection.clear()
+        showPromptToSetActiveSelectionAsToolArg = false
         if (newMode is ToolMode) {
             if (selection.size > 1 &&
                 newMode.signature.argTypes.first() == PartialArgList.ArgType.SelectedCircles
@@ -619,11 +619,18 @@ class EditClusterViewModel(
 
     fun snapped(absolutePosition: Offset): Point {
         // snap to: points > circles > circle contact
+        val snapDistance = tapDistance.toDouble()
         val point = Point.fromOffset(absolutePosition)
-        if (!showCircles) // no snapping to invisibles
+        val point2pointSnapping = mode != ToolMode.POINT
+        if (point2pointSnapping) {
+            val point1 = snapPointToPoints(point, points, snapDistance)
+            if (point1 != point)
+                return point1
+        }
+        val point2circleSnapping = showCircles
+        if (!point2circleSnapping) // no snapping to invisibles
             return point
         val visibleCircles = circles
-        val snapDistance = tapDistance.toDouble()
         val point2 = snapPointToCircles(point, visibleCircles, snapDistance)
         return point2
     }
@@ -1263,6 +1270,7 @@ class EditClusterViewModel(
             ToolMode.CIRCLE_INTERPOLATION -> showCircleInterpolationDialog = true
             ToolMode.CIRCLE_EXTRAPOLATION -> showCircleExtrapolationDialog = true
             ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
+            ToolMode.POINT -> completePoint()
         }
     }
 
@@ -1414,6 +1422,16 @@ class EditClusterViewModel(
         arcPathUnderConstruction = null
     }
 
+    private fun completePoint() {
+        val argList = partialArgList!!
+        val args = argList.args.map {
+            (it as PartialArgList.Arg.XYPoint).toPoint()
+        }
+        val newPoint = args[0]
+        points.add(newPoint)
+        partialArgList = PartialArgList(argList.signature)
+    }
+
     fun toolAction(tool: EditClusterTool) {
 //        println("toolAction($tool)")
         when (tool) {
@@ -1440,7 +1458,7 @@ class EditClusterViewModel(
             EditClusterTool.Redo -> redo()
             is EditClusterTool.CustomAction -> {} // custom handlers
             EditClusterTool.CompleteArcPath -> completeArcPath()
-            EditClusterTool.AddBackgroundImage -> TODO()
+            EditClusterTool.AddBackgroundImage -> TODO("issues..")
         }
     }
 

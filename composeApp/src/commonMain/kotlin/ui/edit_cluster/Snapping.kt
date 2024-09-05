@@ -1,6 +1,5 @@
 package ui.edit_cluster
 
-import androidx.compose.ui.geometry.Offset
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
@@ -29,6 +28,17 @@ fun snapAngle(
         angleDeg
     }
 }
+
+fun snapPointToPoints(
+    point: Point,
+    points: List<Point>,
+    snapDistance: Double
+): Point =
+    points
+        .map { it to it.distanceFrom(point) }
+        .filter { (_, d) -> d <= snapDistance }
+        .minByOrNull { (_, d) -> d }
+        ?.first ?: point
 
 /** Project [point] onto the closest circle among [circles] that
  * are closer than [snapDistance] from it.
@@ -74,6 +84,7 @@ fun snapPointToCircles(
 /** Construct a circle thru [p1] and [p2] that snaps to [circles] from
  * the initial circle `p1^p2^freePoint` */
 fun snapCircleThru3PointsToCircles(p1: Point, p2: Point, freePoint: Point, circles: List<CircleOrLine>): CircleOrLine {
+    // circle/line -> incident point
     // circle -> circle
     // line -> circle
     // circle -> line

@@ -88,6 +88,7 @@ sealed class EditClusterCategory(
             EditClusterTool.ConstructCircleBy3Points,
             EditClusterTool.ConstructArcPath,
             EditClusterTool.ConstructLineBy2Points,
+            EditClusterTool.AddPoint,
             EditClusterTool.InsertCenteredCross,
         ),
         defaultables = listOf(0, 1, 2, 3)

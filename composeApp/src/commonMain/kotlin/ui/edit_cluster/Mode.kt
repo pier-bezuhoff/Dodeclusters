@@ -24,11 +24,14 @@ enum class SelectionMode : Mode {
     Region,
 }
 
-/** sub-modes of [SelectionMode.Multiselect] related to how new selection is combined */
+/** intersection-modes of [SelectionMode.Multiselect] related to how new selection is combined */
 enum class MultiselectLogic {
     ADD, REPLACE, SUBTRACT, SYMMETRIC_DIFFERENCE,
 }
 
+// MAYBE: associate function(constants, variables) -> circles
+//  with each tool and update the result when any variable changes
+//  + potentially save these functional dependencies to ddc
 @Serializable
 enum class ToolMode(
     @Transient
@@ -42,6 +45,7 @@ enum class ToolMode(
     CIRCLE_BY_3_POINTS(EditClusterTool.ConstructCircleBy3Points),
     LINE_BY_2_POINTS(EditClusterTool.ConstructLineBy2Points),
     ARC_PATH(EditClusterTool.ConstructArcPath),
+    POINT(EditClusterTool.AddPoint),
     ;
 
     val signature: PartialArgList.Signature = tool.signature

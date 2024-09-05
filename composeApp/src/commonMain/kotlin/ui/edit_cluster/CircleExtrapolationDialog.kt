@@ -49,6 +49,7 @@ import kotlin.math.roundToInt
 data class DefaultExtrapolationParameters(
     val nLeft: Int = 1,
     val nRight: Int = 1,
+    val minCircleCount: Int = 0,
     val maxCircleCount: Int = 20
 )
 
@@ -61,18 +62,19 @@ fun CircleExtrapolationDialog(
     onConfirm: (nLeft: Int, nRight: Int) -> Unit,
     defaults: DefaultExtrapolationParameters = DefaultExtrapolationParameters(),
 ) {
+    val minCount = defaults.minCircleCount
     val maxCount = defaults.maxCircleCount
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val leftSliderState = remember { SliderState(
         value = defaults.nLeft.toFloat(),
-        steps = maxCount - 1, // only counts intermediates
-        valueRange = 0f..maxCount.toFloat()
+        steps = maxCount - minCount - 1, // only counts intermediates
+        valueRange = minCount.toFloat()..maxCount.toFloat()
     ) }
     val rightSliderState = remember { SliderState(
         value = defaults.nRight.toFloat(),
-        steps = maxCount - 1,
-        valueRange = 0f..maxCount.toFloat()
+        steps = maxCount - minCount - 1,
+        valueRange = minCount.toFloat()..maxCount.toFloat()
     ) }
     val windowSizeClass = calculateWindowSizeClass()
     val compactWidth = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact

@@ -5,6 +5,9 @@ import androidx.compose.ui.graphics.Color
 import data.PartialArgList
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.add_image
+import dodeclusters.composeapp.generated.resources.add_point_arg_descriptions
+import dodeclusters.composeapp.generated.resources.add_point_description
+import dodeclusters.composeapp.generated.resources.add_point_name
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
 import dodeclusters.composeapp.generated.resources.arc_path_arg_descriptions
@@ -30,7 +33,6 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_name
 import dodeclusters.composeapp.generated.resources.circle_inversion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_inversion_description
 import dodeclusters.composeapp.generated.resources.circle_inversion_name
-import dodeclusters.composeapp.generated.resources.circle_inversion_v2
 import dodeclusters.composeapp.generated.resources.circle_inversion_v3
 import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.complete_arc_path
@@ -53,6 +55,7 @@ import dodeclusters.composeapp.generated.resources.extrapolate_lines
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_description
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_name
 import dodeclusters.composeapp.generated.resources.filled_circle
+import dodeclusters.composeapp.generated.resources.flagged_point
 import dodeclusters.composeapp.generated.resources.flow_fill_description
 import dodeclusters.composeapp.generated.resources.flow_fill_name
 import dodeclusters.composeapp.generated.resources.flow_multiselect_description
@@ -87,7 +90,6 @@ import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
-import dodeclusters.composeapp.generated.resources.shark_fin_3_points
 import dodeclusters.composeapp.generated.resources.shark_fin_3_points_striped
 import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
@@ -317,6 +319,13 @@ sealed class EditClusterTool(
     data object CompleteArcPath: ContextAction(
         Res.string.complete_arc_path,
         icon = Res.drawable.confirm
+    )
+    data object AddPoint: MultiArg(
+        PartialArgList.SIGNATURE_1_POINT,
+        Res.string.add_point_name,
+        Res.string.add_point_description,
+        Res.array.add_point_arg_descriptions,
+        Res.drawable.flagged_point
     )
     // insert rect/square
 

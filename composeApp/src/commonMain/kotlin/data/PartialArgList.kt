@@ -3,7 +3,6 @@ package data
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import data.geometry.GCircle
-import data.geometry.GeneralizedCircle
 import data.geometry.Point
 import kotlinx.serialization.Serializable
 import ui.Indices
@@ -30,6 +29,9 @@ data class PartialArgList(
 
             fun toOffset(): Offset =
                 Offset(x.toFloat(), y.toFloat())
+
+            fun toPoint(): Point =
+                Point(x, y)
 
             companion object {
                 fun fromOffset(offset: Offset): XYPoint =
@@ -93,6 +95,7 @@ data class PartialArgList(
     }
 
     companion object {
+        val SIGNATURE_1_POINT = Signature(ArgType.XYPoint)
         val SIGNATURE_2_POINTS = Signature(ArgType.XYPoint, ArgType.XYPoint)
         val SIGNATURE_3_POINTS = Signature(ArgType.XYPoint, ArgType.XYPoint, ArgType.XYPoint)
         val SIGNATURE_2_CIRCLES = Signature(ArgType.CircleIndex, ArgType.CircleIndex)

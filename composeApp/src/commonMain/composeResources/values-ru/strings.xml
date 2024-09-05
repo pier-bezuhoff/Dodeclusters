@@ -83,6 +83,11 @@
         <item>Точку-якорь</item>
     </string-array>
     <string name="complete_arc_path">Завершить редактирование контура</string>
+    <string name="add_point_name">Добавить точку</string>
+    <string name="add_point_description">Создать точку-якорь</string>
+    <string-array name="add_point_arg_descriptions">
+        <item>Точку-якорь</item>
+    </string-array>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
     <string name="tool_arg_input_prompt">Пожалуйста, укажите</string>

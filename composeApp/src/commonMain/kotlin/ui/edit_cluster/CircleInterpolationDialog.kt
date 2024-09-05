@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
@@ -48,15 +48,15 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_title
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.OkButton
-import ui.hideSystemBars
 import ui.component1
 import ui.component2
-import kotlin.math.max
+import ui.hideSystemBars
 import kotlin.math.roundToInt
 
 data class DefaultInterpolationParameters(
     val nInterjacents: Int = 1,
     val inBetween: Boolean = true,
+    val minCircleCount: Int = 1,
     val maxCircleCount: Int = 20
 )
 
@@ -72,11 +72,12 @@ fun CircleInterpolationDialog(
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val pencilType = start.calculatePencilType(end)
+    val minCount = defaults.minCircleCount
     val maxCount = defaults.maxCircleCount
     val sliderState = remember { SliderState(
         value = defaults.nInterjacents.toFloat(),
-        steps = maxCount - 2, // only counts intermediates
-        valueRange = 1f..maxCount.toFloat()
+        steps = maxCount - minCount - 1, // only counts intermediates
+        valueRange = minCount.toFloat()..maxCount.toFloat()
     ) }
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
     val showInsideOutsideToggle =

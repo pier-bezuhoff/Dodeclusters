@@ -87,6 +87,11 @@
         <item>An anchor point</item>
     </string-array>
     <string name="complete_arc_path">Complete arc-path</string>
+    <string name="add_point_name">Add point</string>
+    <string name="add_point_description">Create an anchor point</string>
+    <string-array name="add_point_arg_descriptions">
+        <item>An anchor point</item>
+    </string-array>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
     <string name="tool_arg_input_prompt">Please specify</string>

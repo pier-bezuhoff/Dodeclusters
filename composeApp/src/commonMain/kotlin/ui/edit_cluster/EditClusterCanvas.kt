@@ -87,6 +87,7 @@ fun BoxScope.EditClusterCanvas(
     ) }
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
+    val pointRadius = 5f
     val scaleIcon = painterResource(Res.drawable.zoom_in)
     val scaleIconColor = MaterialTheme.colorScheme.secondary
     val scaleIndicatorColor = DodeclustersColors.skyBlue
@@ -97,6 +98,7 @@ fun BoxScope.EditClusterCanvas(
     val sliderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
     val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
     val circleColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f) // MAYBE: black for light scheme
+    val pointColor = circleColor
     val selectedCircleColor =
 //        MaterialTheme.colorScheme.primary
         DodeclustersColors.strongSalad
@@ -153,7 +155,7 @@ fun BoxScope.EditClusterCanvas(
             drawAnimation(animations, visibleRect)
             drawParts(viewModel, visibleRect, clusterPathAlpha, circleStroke)
             if (viewModel.showCircles)
-                drawCircles(viewModel, visibleRect, circleColor, circleStroke)
+                drawCircles(viewModel, visibleRect, circleColor, circleStroke, pointColor, pointRadius)
             drawSelectedCircles(viewModel, visibleRect, selectedCircleColor, thiccSelectionCircleAlpha, circleThiccStroke)
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, scaleIndicatorColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
@@ -302,6 +304,8 @@ private fun DrawScope.drawCircles(
     visibleRect: Rect,
     circleColor: Color,
     circleStroke: DrawStyle,
+    pointColor: Color,
+    pointRadius: Float
 ) {
     if (viewModel.circleSelectionIsActive) {
         for ((ix, circle) in viewModel.circles.withIndex()) {
@@ -313,8 +317,8 @@ private fun DrawScope.drawCircles(
             drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
         }
     }
-    for (point in viewModel._points)
-        drawCircle(Color.Red, 5f, point.toOffset())
+    for (point in viewModel.points)
+        drawCircle(pointColor, pointRadius, point.toOffset())
 }
 
 private fun DrawScope.drawSelectedCircles(
