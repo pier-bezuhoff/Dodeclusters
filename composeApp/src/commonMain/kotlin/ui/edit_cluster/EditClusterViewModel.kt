@@ -1,6 +1,5 @@
 package ui.edit_cluster
 
-import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
@@ -156,6 +155,8 @@ class EditClusterViewModel(
         private set
     var defaultExtrapolationParameters = DefaultExtrapolationParameters()
         private set
+    var defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters()
+        private set
 
     private val _circleAnimations = MutableSharedFlow<CircleAnimation>()
     val circleAnimations = _circleAnimations.asSharedFlow()
@@ -163,6 +164,7 @@ class EditClusterViewModel(
     var showColorPickerDialog by mutableStateOf(false)
     var showCircleInterpolationDialog by mutableStateOf(false)
     var showCircleExtrapolationDialog by mutableStateOf(false)
+    var showLoxodromicMotionDialog by mutableStateOf(false)
 
     var arcPathUnderConstruction by mutableStateOf<ArcPath?>(null)
         private set
@@ -1329,6 +1331,7 @@ class EditClusterViewModel(
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
             ToolMode.CIRCLE_INTERPOLATION -> showCircleInterpolationDialog = true
             ToolMode.CIRCLE_EXTRAPOLATION -> showCircleExtrapolationDialog = true
+            ToolMode.LOXODROMIC_MOTION -> showLoxodromicMotionDialog = true
             ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
             ToolMode.POINT -> completePoint()
         }
@@ -1459,6 +1462,41 @@ class EditClusterViewModel(
     fun resetCircleExtrapolation() {
         showCircleExtrapolationDialog = false
         partialArgList = PartialArgList(EditClusterTool.CircleExtrapolation.signature)
+    }
+
+    /**
+     * @param[angleShift] signed total angle delta in radians, can be more than 360 (several turns)
+     * @param[hyperbolicShift] total `log(R/r)`
+     * @param[nSteps] number of intermediate steps
+     * */
+    fun completeLoxodromicMotion(
+        params: LoxodromicMotionParameters,
+    ) {
+        showLoxodromicMotionDialog = false
+        val argList = partialArgList!!
+        val args = argList.args
+        val targetIndices = (args[0] as PartialArgList.Arg.SelectedCircles).indices
+        val divergencePoint = (args[1] as PartialArgList.Arg.XYPoint).toPoint()
+        val convergencePoint = (args[2] as PartialArgList.Arg.XYPoint).toPoint()
+        val newCircles = mutableListOf<GeneralizedCircle>()
+        println("loxodromic($targetIndices) $divergencePoint -> $convergencePoint, via $params")
+        repeat(params.nSteps) { i ->
+            for (j in targetIndices) {
+                val target = circles[j]
+                // move it
+            }
+        }
+        // create new ones
+        // copy parts
+        partialArgList = PartialArgList(argList.signature)
+        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
+            params.angleShift, params.hyperbolicShift, params.nSteps
+        )
+    }
+
+    fun resetLoxodromicMotion() {
+        showLoxodromicMotionDialog = false
+        partialArgList = PartialArgList(EditClusterTool.LoxodromicMotion.signature)
     }
 
     fun completeArcPath() {

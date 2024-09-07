@@ -207,6 +207,19 @@ fun EditClusterScreen(
             defaults = viewModel.defaultExtrapolationParameters
         )
     }
+    if (viewModel.showLoxodromicMotionDialog && viewModel.partialArgList?.isFull == true) {
+        val (divergencePoint, convergencePoint) = viewModel.partialArgList!!.args
+            .drop(1)
+            .map { (it as PartialArgList.Arg.XYPoint).toPoint() }
+        LoxodromicMotionDialog(
+            divergencePoint, convergencePoint,
+            onDismissRequest = { viewModel.resetCircleExtrapolation() },
+            onConfirm = { params ->
+                viewModel.completeLoxodromicMotion(params)
+            },
+            defaults = viewModel.defaultLoxodromicMotionParameters
+        )
+    }
     LaunchedEffect(ddcContent, sampleIndex) {
         if (ddcContent != null) {
             println("loading external ddc")

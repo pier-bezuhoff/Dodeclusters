@@ -73,10 +73,11 @@ sealed class EditClusterCategory(
         Res.string.transform_category_name,
         listOf(
             EditClusterTool.CircleInversion,
+            EditClusterTool.LoxodromicMotion,
             EditClusterTool.CircleInterpolation,
             EditClusterTool.CircleExtrapolation,
         ),
-        defaultables = listOf(0, 1, 2),
+        defaultables = listOf(0, 1, 2, 3),
         icon = Res.drawable.circled_tool
     ) { // ~mode-like
         // button: kaleidoscopic reflection

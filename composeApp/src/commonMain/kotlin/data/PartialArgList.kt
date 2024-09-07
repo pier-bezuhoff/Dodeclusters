@@ -102,6 +102,7 @@ data class PartialArgList(
         val SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE = Signature(ArgType.SelectedCircles, ArgType.CircleIndex)
         val SIGNATURE_2_GENERALIZED_CIRCLE = Signature(ArgType.GeneralizedCircle, ArgType.GeneralizedCircle)
         val SIGNATURE_3_GENERALIZED_CIRCLE = Signature(ArgType.GeneralizedCircle, ArgType.GeneralizedCircle, ArgType.GeneralizedCircle)
+        val SIGNATURE_SELECTED_CIRCLES_AND_2_POINTS = Signature(ArgType.SelectedCircles, ArgType.XYPoint, ArgType.XYPoint)
         val SIGNATURE_N_POINTS_PLACEHOLDER = Signature(ArgType.XYPoint)
     }
 }

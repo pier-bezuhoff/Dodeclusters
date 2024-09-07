@@ -70,6 +70,9 @@ import dodeclusters.composeapp.generated.resources.line_2_points
 import dodeclusters.composeapp.generated.resources.line_by_2_points_arg_descriptions
 import dodeclusters.composeapp.generated.resources.line_by_2_points_description
 import dodeclusters.composeapp.generated.resources.line_by_2_points_name
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_arg_descriptions
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_description
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_name
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
 import dodeclusters.composeapp.generated.resources.multiselect_name
@@ -95,6 +98,7 @@ import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_name
+import dodeclusters.composeapp.generated.resources.spiral
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_description
@@ -280,6 +284,13 @@ sealed class EditClusterTool(
         Res.string.circle_extrapolation_description,
         Res.array.circle_extrapolation_arg_descriptions,
         Res.drawable.extrapolate_lines
+    )
+    data object LoxodromicMotion: MultiArg(
+        PartialArgList.SIGNATURE_SELECTED_CIRCLES_AND_2_POINTS,
+        Res.string.loxodromic_motion_name,
+        Res.string.loxodromic_motion_description,
+        Res.array.loxodromic_motion_arg_descriptions,
+        Res.drawable.spiral
     )
 
     // MAYBE: add partial argument icon(s)

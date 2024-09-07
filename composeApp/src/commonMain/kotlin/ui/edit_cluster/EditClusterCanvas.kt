@@ -668,10 +668,11 @@ fun BoxScope.PointSelectionContextActions(viewModel: EditClusterViewModel) {
     val positions = SelectionControlsPositions(w, h)
     val halfSize = (48/2).dp
     with (LocalDensity.current) {
-        // duplicate & delete buttons
+        // delete buttons
         SimpleButton(
             painterResource(EditClusterTool.Delete.icon),
             stringResource(EditClusterTool.Delete.name),
+            // awkward position tbh
             Modifier.offset(
                 x = positions.right.toDp() - halfSize,
                 y = positions.bottom.toDp() - halfSize
@@ -797,6 +798,7 @@ fun DrawScope.drawSelectionControls(
 //        ____J
 //      [x]   . R  [rotation handle]
 //            .
+// TODO: remove/decrease bottom margin when in landscape
 @Immutable
 data class SelectionControlsPositions(
     val width: Int,
