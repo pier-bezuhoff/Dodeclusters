@@ -213,7 +213,7 @@ fun EditClusterScreen(
             .map { (it as PartialArgList.Arg.XYPoint).toPoint() }
         LoxodromicMotionDialog(
             divergencePoint, convergencePoint,
-            onDismissRequest = { viewModel.resetCircleExtrapolation() },
+            onDismissRequest = { viewModel.resetLoxodromicMotion() },
             onConfirm = { params ->
                 viewModel.completeLoxodromicMotion(params)
             },

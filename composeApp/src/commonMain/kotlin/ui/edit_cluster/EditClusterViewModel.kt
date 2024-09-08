@@ -1464,11 +1464,6 @@ class EditClusterViewModel(
         partialArgList = PartialArgList(EditClusterTool.CircleExtrapolation.signature)
     }
 
-    /**
-     * @param[angleShift] signed total angle delta in radians, can be more than 360 (several turns)
-     * @param[hyperbolicShift] total `log(R/r)`
-     * @param[nSteps] number of intermediate steps
-     * */
     fun completeLoxodromicMotion(
         params: LoxodromicMotionParameters,
     ) {
@@ -1478,19 +1473,32 @@ class EditClusterViewModel(
         val targetIndices = (args[0] as PartialArgList.Arg.SelectedCircles).indices
         val divergencePoint = (args[1] as PartialArgList.Arg.XYPoint).toPoint()
         val convergencePoint = (args[2] as PartialArgList.Arg.XYPoint).toPoint()
+        val start = GeneralizedCircle.fromGCircle(divergencePoint)
+        val end = GeneralizedCircle.fromGCircle(convergencePoint)
+        val totalAngle = params.angle
+        val totalDilation = params.dilation
+        val n = params.nSteps + 1
         val newCircles = mutableListOf<GeneralizedCircle>()
         println("loxodromic($targetIndices) $divergencePoint -> $convergencePoint, via $params")
-        repeat(params.nSteps) { i ->
+        repeat(n) { i ->
+            val progress = (i + 1).toDouble() / n
+            val angle = progress * totalAngle
+            val dilation = progress * totalDilation
+            // BUG: noticeable artifacts with lerp
             for (j in targetIndices) {
-                val target = circles[j]
-                // move it
+                val target = GeneralizedCircle.fromGCircle(circles[j])
+                newCircles.add(
+                    target.loxodromicShift(start, end, angle, dilation)
+                )
             }
         }
-        // create new ones
+        createNewCircles(
+            newCircles.mapNotNull { it.toGCircle() as? CircleOrLine }
+        )
         // copy parts
         partialArgList = PartialArgList(argList.signature)
         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
-            params.angleShift, params.hyperbolicShift, params.nSteps
+            params.angle, params.dilation, params.nSteps
         )
     }
 

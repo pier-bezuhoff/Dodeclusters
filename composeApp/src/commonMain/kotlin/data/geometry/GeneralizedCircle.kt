@@ -218,6 +218,19 @@ data class GeneralizedCircle(
         return result
     }
 
+    fun loxodromicShift(
+        start: GeneralizedCircle, end: GeneralizedCircle,
+        angle: Double, logDilation: Double
+    ): GeneralizedCircle {
+        val a = this.normalizedPreservingDirection()
+        val pencil = Rotor.fromOuterProduct(start, end).normalized()
+        val perpPencil = pencil.dual()
+        val rotation = (perpPencil * (-angle/2.0)).exp()
+        val dilation = (pencil * (-logDilation/2.0)).exp()
+        val result = dilation.applyTo(rotation.applyTo(a))
+        return result
+    }
+
     /**
      * `abs < 1` => 2 intersection points;
      * `abs = 1` => they touch, 1 intersection point;

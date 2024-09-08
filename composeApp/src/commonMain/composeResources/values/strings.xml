@@ -135,7 +135,7 @@
     <!-- loxodromic motion dialog -->
     <string name="loxodromic_motion_title">Configure loxodromic motion</string>
     <string name="loxodromic_motion_angle_prompt">Total angular rotation</string>
-    <string name="loxodromic_motion_hyperbolic_prompt">Total hyperbolic shift</string>
+    <string name="loxodromic_motion_hyperbolic_prompt">Total logarithmic dilation</string>
     <string name="loxodromic_motion_steps_prompt">Number of intermediate steps</string>
     <!-- file dialog -->
     <string name="save_cluster_title">Save this cluster</string>

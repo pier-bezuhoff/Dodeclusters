@@ -17,6 +17,8 @@ import kotlin.math.sqrt
  * [xy] * e_x ^ e_y + [xp] * e_x ^ e_plus + [xm] * e_x ^ e_minus +
  * [yp] * e_y ^ e_plus + [ym] * e_y ^ e_minus + [pm] * e_plus ^ e_minus +
  * 0 * e_x ^ e_y ^ e_plus ^ e_minus
+ *
+ * NB: can be not normalized, but `R*R.reversed = scalar`
  * */
 @Serializable
 @Immutable
@@ -49,6 +51,20 @@ data class Rotor(
 
     fun reversed(): Rotor =
         times(-1.0).copy(s = this.s)
+
+    /** `A.dual = A*I` where
+     * `I = e_x * e_y * e_plus * e_minus` */
+    fun dual(): Rotor {
+        require(s == 0.0) {
+            "since we don't store the pseudo-scalar component," +
+            "we can only dualize *pure* bivectors. But $this contains non-zero scalar part"
+        }
+        return Rotor(
+            0.0,
+            pm, -ym, -yp,
+            xm, xp, -xy
+        )
+    }
 
     // reference: "Geometric Algebra for Computer Science", page 185
     fun exp(): Rotor {

@@ -20,6 +20,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -36,7 +37,6 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_promp
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_hyperbolic_prompt
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_steps_prompt
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
-import dodeclusters.composeapp.generated.resources.stub
 import domain.TAU
 import domain.formatDecimals
 import org.jetbrains.compose.resources.stringResource
@@ -46,24 +46,29 @@ import ui.hideSystemBars
 import kotlin.math.PI
 import kotlin.math.roundToInt
 
+/**
+ * @param[angle] total rotation angle in radians
+ * @param[dilation] total `ln(R/r)`
+ * @param[nSteps] number of intermediate steps (0 = result only)
+ * */
 data class LoxodromicMotionParameters(
-    val angleShift: Float,
-    val hyperbolicShift: Float,
+    val angle: Float,
+    val dilation: Float,
     val nSteps: Int,
 )
 
 data class DefaultLoxodromicMotionParameters(
-    val angleShift: Float = TAU.toFloat(),
-    val hyperbolicShift: Float = 2.0f,
+    val angle: Float = TAU.toFloat(),
+    val dilation: Float = 2.0f,
     val nSteps: Int = 5,
     val minAngle: Float = -TAU.toFloat(),
     val maxAngle: Float = TAU.toFloat(),
-    val minHyperbolicShift: Float = 0f,
-    val maxHyperbolicShift: Float = 10f,
+    val minDilation: Float = 0f,
+    val maxDilation: Float = 7f,
     val minNSteps: Int = 0,
-    val maxNSteps: Int = 10,
+    val maxNSteps: Int = 20,
 ) {
-    val params: LoxodromicMotionParameters = LoxodromicMotionParameters(angleShift, hyperbolicShift, nSteps)
+    val params: LoxodromicMotionParameters = LoxodromicMotionParameters(angle, dilation, nSteps)
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
@@ -82,14 +87,14 @@ fun LoxodromicMotionDialog(
     // hyperbolic slider + field
     // n steps slider
     val angleSliderState = remember { SliderState(
-        value = defaults.angleShift,
+        value = defaults.angle,
         steps = 0,
         valueRange = defaults.minAngle .. defaults.maxAngle
     ) }
     val hyperbolicSliderState = remember { SliderState(
-        value = defaults.hyperbolicShift,
+        value = defaults.dilation,
         steps = 0,
-        valueRange = defaults.minHyperbolicShift .. defaults.maxHyperbolicShift
+        valueRange = defaults.minDilation .. defaults.maxDilation
     ) }
     val stepsSliderState = remember { SliderState(
         value = defaults.nSteps.toFloat(),
@@ -111,7 +116,10 @@ fun LoxodromicMotionDialog(
             val fontSize =
                 if (compactWidth) 14.sp
                 else 24.sp
-            Column {
+            Column(
+                Modifier.padding(8.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
                 Title()
                 // TODO: modify into kbd editable fields
                 // TODO: split sign from angle into CW/CCW switch
