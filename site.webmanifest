@@ -1,6 +1,7 @@
 {
-    "name": "",
-    "short_name": "",
+    "short_name": "Dodeclusters",
+    "name": "Dodeclusters Web App",
+    "description": "Conformal editor: vector graphics using only circles",
     "icons": [
         {
             "src": "android-chrome-192x192.png",
