@@ -31,6 +31,12 @@ data class Point(
         else
             fromOffset((toOffset() - focus) * zoom + focus)
 
+    fun scale(focusX: Double, focusY: Double, zoom: Double): Point {
+        val newX = (x - focusX) * zoom + focusX
+        val newY = (y - focusY) * zoom + focusY
+        return Point(newX, newY)
+    }
+
     fun middle(point: Point): Point =
         if (this == CONFORMAL_INFINITY || point == CONFORMAL_INFINITY) CONFORMAL_INFINITY
         else Point((x + point.x)/2, (y + point.y)/2)

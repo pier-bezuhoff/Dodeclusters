@@ -115,6 +115,12 @@ data class Circle(
         return Circle(newOffset, zoom * radius)
     }
 
+    override fun scale(focusX: Double, focusY: Double, zoom: Double): Circle {
+        val newX = (x - focusX) * zoom + focusX
+        val newY = (y - focusY) * zoom + focusY
+        return Circle(newX, newY, zoom * radius)
+    }
+
     override fun rotate(focus: Offset, angleDeg: Float): Circle {
         val newOffset = (center - focus).rotateBy(angleDeg) + focus
         return Circle(newOffset, radius)
@@ -341,6 +347,7 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
     /** sort points on the circle in the order they lie on it (starting from wherever) */
     fun translate(vector: Offset): CircleOrLine
     fun scale(focus: Offset, zoom: Float): CircleOrLine
+    fun scale(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
     fun rotate(focus: Offset, angleDeg: Float): CircleOrLine
 }
 
@@ -360,7 +367,8 @@ sealed interface LocusWithOrder {
         order2point(orderInBetween(point2order(point1), point2order(point2)))
 }
 
-// idk if i'll ever use it, technically it is also represented by GeneralizedCircle
+sealed interface DirectedCircleOrLine
+
 @Serializable
 data class DirectedCircle(
     val x: Double,
@@ -368,4 +376,7 @@ data class DirectedCircle(
     val radius: Double,
     /** Circle direction, inside/outside ~ counterclockwise/clockwise */
     val inside: Boolean,
-)
+) :DirectedCircleOrLine {
+    fun toCircle(): Circle =
+        Circle(x, y, radius)
+}

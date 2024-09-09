@@ -23,7 +23,7 @@ data class Line(
     val a: Double,
     val b: Double,
     val c: Double
-) : GCircle, CircleOrLine {
+) : GCircle, CircleOrLine, DirectedCircleOrLine {
 
     @Transient
     val norm: Double =
@@ -143,6 +143,12 @@ data class Line(
     override fun scale(focus: Offset, zoom: Float): Line {
         // dist1 -> zoom * dist 1
         val newC = zoom*(a*focus.x + b*focus.y + c) - a*focus.x - b*focus.y
+        return Line(a, b, newC)
+    }
+
+    override fun scale(focusX: Double, focusY: Double, zoom: Double): Line {
+        // dist1 -> zoom * dist 1
+        val newC = zoom*(a*focusX + b*focusY + c) - a*focusX - b*focusY
         return Line(a, b, newC)
     }
 

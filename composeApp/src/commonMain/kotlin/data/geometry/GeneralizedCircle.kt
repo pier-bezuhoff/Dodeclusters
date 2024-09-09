@@ -218,6 +218,7 @@ data class GeneralizedCircle(
         return result
     }
 
+    /** Recommended to pre-scale inputs in -10..10 range, cuz we are working with dimension cubed often */
     fun loxodromicShift(
         start: GeneralizedCircle, end: GeneralizedCircle,
         angle: Double, logDilation: Double
@@ -226,7 +227,8 @@ data class GeneralizedCircle(
         val pencil = Rotor.fromOuterProduct(start, end).normalized()
         val perpPencil = pencil.dual()
         val rotation = (perpPencil * (-angle/2.0)).exp()
-        val dilation = (pencil * (-logDilation/2.0)).exp()
+        val dilation = (pencil * (logDilation/2.0)).exp()
+        // rotation and dilation commute by construction
         val result = dilation.applyTo(rotation.applyTo(a))
         return result
     }
@@ -298,8 +300,8 @@ data class GeneralizedCircle(
             }
         }
 
-    fun toGCircle(): GCircle {
-        return when {
+    fun toGCircle(): GCircle =
+        when {
             w == 0.0 && x == 0.0 && y == 0.0 -> Point.CONFORMAL_INFINITY
             isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
             isPoint -> Point(x / w, y / w)
@@ -307,7 +309,19 @@ data class GeneralizedCircle(
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
             else -> throw IllegalStateException("Never. $this")
         }
-    }
+
+        fun toDirectedCircleOrLine(): DirectedCircleOrLine? =
+            when {
+                w == 0.0 && x == 0.0 && y == 0.0 -> null
+                isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
+                isPoint -> null
+                isRealCircle -> DirectedCircle(
+                    x / w, y / w, sqrt(r2),
+                    inside = sign(w) > 0
+                )
+                isImaginaryCircle -> null
+                else -> throw IllegalStateException("Never. $this")
+            }
 
     companion object {
         fun fromGCircle(gCircle: GCircle): GeneralizedCircle =

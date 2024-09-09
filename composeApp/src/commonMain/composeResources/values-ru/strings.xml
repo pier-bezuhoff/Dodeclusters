@@ -121,6 +121,11 @@
     <string name="circle_extrapolation_left_prompt2">слева от первой выбранной</string>
     <string name="circle_extrapolation_right_prompt1">Число новых окружностей</string>
     <string name="circle_extrapolation_right_prompt2">справа от второй выбранной</string>
+    <!-- loxodromic motion dialog -->
+    <string name="loxodromic_motion_title">Параметры локсодромического движения</string>
+    <string name="loxodromic_motion_angle_prompt">Угол крутящей компоненты</string>
+    <string name="loxodromic_motion_hyperbolic_prompt">Логорифм коэффициента сжатия/раздутия</string>
+    <string name="loxodromic_motion_steps_prompt">Число промежуточных шагов</string>
     <!-- file dialog -->
     <string name="save_cluster_title">Сохранить кластер</string>
     <string name="choose_name">Выберите название</string>

@@ -58,8 +58,8 @@ data class LoxodromicMotionParameters(
 )
 
 data class DefaultLoxodromicMotionParameters(
-    val angle: Float = TAU.toFloat(),
-    val dilation: Float = 2.0f,
+    val angle: Float = TAU.toFloat()/2,
+    val dilation: Float = 1.0f,
     val nSteps: Int = 5,
     val minAngle: Float = -TAU.toFloat(),
     val maxAngle: Float = TAU.toFloat(),

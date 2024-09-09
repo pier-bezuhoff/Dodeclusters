@@ -27,6 +27,7 @@ import data.compressPart
 import data.geometry.ArcPath
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.DirectedCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.Line
 import data.geometry.Point
@@ -413,18 +414,41 @@ class EditClusterViewModel(
         }
     }
 
+    /**
+     * @param[orientationFlips] for every index from [newIndices] this flag indicates
+     * that it is a circle that flipped it's orientation inside <-> outside
+     * */
     private fun copyParts(
         oldIndices: List<Ix>,
-        newIndices: List<Ix>
+        newIndices: List<Ix>,
+        orientationFlips: List<Boolean> = newIndices.map { false }
     ) {
-        require(oldIndices.size == newIndices.size)
+        // TODO: line -> circle flipping
+        require(oldIndices.size == newIndices.size && oldIndices.size == orientationFlips.size)
         val old2new = oldIndices.zip(newIndices).toMap()
+        val new2flip = newIndices.zip(orientationFlips).toMap()
         val newParts = parts.filter {
             oldIndices.containsAll(it.insides) && oldIndices.containsAll(it.outsides)
         }.map { part ->
+            val newInsides = mutableSetOf<Ix>()
+            val newOutsides = mutableSetOf<Ix>()
+            for (i in part.insides) {
+                val new = old2new[i]!!
+                if (new2flip[new]!!)
+                    newOutsides.add(new)
+                else
+                    newInsides.add(new)
+            }
+            for (i in part.outsides) {
+                val new = old2new[i]!!
+                if (new2flip[new]!!)
+                    newInsides.add(new)
+                else
+                    newOutsides.add(new)
+            }
             Cluster.Part(
-                insides = part.insides.map { old2new[it]!! }.toSet(),
-                outsides = part.outsides.map { old2new[it]!! }.toSet(),
+                insides = newInsides,
+                outsides = newOutsides,
                 fillColor = part.fillColor
             )
         }
@@ -1390,12 +1414,22 @@ class EditClusterViewModel(
         val invertingCircle = circles[invertingCircleIndex]
         val newCircles = targetCirclesIxs.mapNotNull { targetIx ->
             val targetCircle = circles[targetIx]
-            val newCircle = Circle.invert(invertingCircle, targetCircle)
-                .also { println("Circle inversion result: $it") } as? CircleOrLine
-            newCircle
+            val engine = GeneralizedCircle.fromGCircle(invertingCircle).normalized()
+            val target = GeneralizedCircle.fromGCircle(targetCircle).normalized()
+            val result = engine.applyTo(target).normalized()
+            when (val newCircle = result.toDirectedCircleOrLine()) {
+                is DirectedCircle -> newCircle.toCircle() to !newCircle.inside
+                is Line -> newCircle to false
+                else -> null
+            }
         }
-        createNewCircles(newCircles)
-        copyParts(targetCirclesIxs, ((circles.size - newCircles.size) until circles.size).toList())
+        // FIX: doesn't account for inside-out region spilling
+        createNewCircles(newCircles.map { (c, _) -> c })
+        copyParts(
+            targetCirclesIxs,
+            ((circles.size - newCircles.size) until circles.size).toList(),
+//            newCircles.map { (_, flip) -> flip }
+        )
         partialArgList = PartialArgList(argList.signature)
     }
 
@@ -1473,29 +1507,37 @@ class EditClusterViewModel(
         val targetIndices = (args[0] as PartialArgList.Arg.SelectedCircles).indices
         val divergencePoint = (args[1] as PartialArgList.Arg.XYPoint).toPoint()
         val convergencePoint = (args[2] as PartialArgList.Arg.XYPoint).toPoint()
-        val start = GeneralizedCircle.fromGCircle(divergencePoint)
-        val end = GeneralizedCircle.fromGCircle(convergencePoint)
+        // NOTE: without downscaling it visibly diverges
+        val downscaling = 400.0
+        val start = GeneralizedCircle.fromGCircle(divergencePoint.scale(0.0, 0.0, 1/downscaling))
+        val end = GeneralizedCircle.fromGCircle(convergencePoint.scale(0.0, 0.0, 1/downscaling))
         val totalAngle = params.angle
         val totalDilation = params.dilation
         val n = params.nSteps + 1
         val newCircles = mutableListOf<GeneralizedCircle>()
-        println("loxodromic($targetIndices) $divergencePoint -> $convergencePoint, via $params")
         repeat(n) { i ->
             val progress = (i + 1).toDouble() / n
             val angle = progress * totalAngle
             val dilation = progress * totalDilation
-            // BUG: noticeable artifacts with lerp
             for (j in targetIndices) {
-                val target = GeneralizedCircle.fromGCircle(circles[j])
+                val circle = circles[j].scale(0.0, 0.0, 1/downscaling)
+                val target = GeneralizedCircle.fromGCircle(circle)
                 newCircles.add(
                     target.loxodromicShift(start, end, angle, dilation)
                 )
             }
         }
+        val size0 = circles.size
+        val k = targetIndices.size
         createNewCircles(
             newCircles.mapNotNull { it.toGCircle() as? CircleOrLine }
+                .map { it.scale(0.0, 0.0, downscaling) }
         )
-        // copy parts
+        repeat(n) { i ->
+            val m = size0 + i * k // first index of this batch
+            // FIX: doesn't account for inside-out region spilling
+            copyParts(targetIndices, (m until m+k).toList())
+        }
         partialArgList = PartialArgList(argList.signature)
         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
             params.angle, params.dilation, params.nSteps
