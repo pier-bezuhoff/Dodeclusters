@@ -347,7 +347,7 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
     /** sort points on the circle in the order they lie on it (starting from wherever) */
     fun translate(vector: Offset): CircleOrLine
     fun scale(focus: Offset, zoom: Float): CircleOrLine
-    fun scale(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
+    override fun scale(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
     fun rotate(focus: Offset, angleDeg: Float): CircleOrLine
 }
 

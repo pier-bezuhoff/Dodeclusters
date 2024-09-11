@@ -13,7 +13,9 @@ import kotlin.math.sqrt
 
 /** A circle, line, imaginary circle or point */
 @Immutable
-sealed interface GCircle
+sealed interface GCircle {
+    fun scale(focusX: Double, focusY: Double, zoom: Double): GCircle
+}
 
 // TODO: Clifford algebra (geometric product + other operations)
 /**

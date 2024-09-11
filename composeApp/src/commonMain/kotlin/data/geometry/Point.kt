@@ -31,7 +31,7 @@ data class Point(
         else
             fromOffset((toOffset() - focus) * zoom + focus)
 
-    fun scale(focusX: Double, focusY: Double, zoom: Double): Point {
+    override fun scale(focusX: Double, focusY: Double, zoom: Double): Point {
         val newX = (x - focusX) * zoom + focusX
         val newY = (y - focusY) * zoom + focusY
         return Point(newX, newY)

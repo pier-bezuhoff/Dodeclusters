@@ -28,6 +28,7 @@ import data.geometry.ArcPath
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.DirectedCircle
+import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.Line
 import data.geometry.Point
@@ -839,6 +840,8 @@ class EditClusterViewModel(
                 circles[ix] = circles[ix].scale(center, zoom)
             }
             for ((ix, point) in points.withIndex()) {
+                // FIX: isn't saved in history
+                //  so this gets messed up on undo
                 points[ix] = point.scale(center, zoom)
             }
         }
@@ -1381,12 +1384,12 @@ class EditClusterViewModel(
             (it as PartialArgList.Arg.GeneralizedCircle).gCircle
         }
         val result = GeneralizedCircle.perp3(
-            GeneralizedCircle.fromGCircle(args[0]),
-            GeneralizedCircle.fromGCircle(args[1]),
-            GeneralizedCircle.fromGCircle(args[2]),
+            GeneralizedCircle.fromGCircle(args[0].downscale()),
+            GeneralizedCircle.fromGCircle(args[1].downscale()),
+            GeneralizedCircle.fromGCircle(args[2].downscale()),
         )?.toGCircle() as? CircleOrLine
         if (result != null) {
-            createNewCircles(listOf(result))
+            createNewCircles(listOf(result.upscale()))
         }
         partialArgList = PartialArgList(argList.signature)
     }
@@ -1414,8 +1417,8 @@ class EditClusterViewModel(
         val invertingCircle = circles[invertingCircleIndex]
         val newCircles = targetCirclesIxs.mapNotNull { targetIx ->
             val targetCircle = circles[targetIx]
-            val engine = GeneralizedCircle.fromGCircle(invertingCircle).normalized()
-            val target = GeneralizedCircle.fromGCircle(targetCircle).normalized()
+            val engine = GeneralizedCircle.fromGCircle(invertingCircle.downscale()).normalized()
+            val target = GeneralizedCircle.fromGCircle(targetCircle.downscale()).normalized()
             val result = engine.applyTo(target).normalized()
             when (val newCircle = result.toDirectedCircleOrLine()) {
                 is DirectedCircle -> newCircle.toCircle() to !newCircle.inside
@@ -1424,7 +1427,7 @@ class EditClusterViewModel(
             }
         }
         // FIX: doesn't account for inside-out region spilling
-        createNewCircles(newCircles.map { (c, _) -> c })
+        createNewCircles(newCircles.map { (c, _) -> c.upscale() })
         copyParts(
             targetCirclesIxs,
             ((circles.size - newCircles.size) until circles.size).toList(),
@@ -1439,13 +1442,13 @@ class EditClusterViewModel(
         val args = argList.args.map { it as PartialArgList.Arg.CircleIndex }
         val startCircleIx = args[0].index
         val endCircleIx = args[1].index
-        val start = GeneralizedCircle.fromGCircle(circles[startCircleIx])
-        val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
+        val start = GeneralizedCircle.fromGCircle(circles[startCircleIx].downscale())
+        val end = GeneralizedCircle.fromGCircle(circles[endCircleIx].downscale())
         val n = nInterjacents + 1
         val newCircles = (1 until n).mapNotNull { i ->
             val interjacent = start.bisector(end, nOfSections = n, index = i, inBetween = inBetween)
             interjacent.toGCircle() as? CircleOrLine
-        }
+        }.map { it.upscale() }
         createNewCircles(newCircles)
         partialArgList = PartialArgList(argList.signature)
         defaultInterpolationParameters = DefaultInterpolationParameters(nInterjacents, inBetween)
@@ -1465,8 +1468,8 @@ class EditClusterViewModel(
         val args = argList.args.map { it as PartialArgList.Arg.CircleIndex }
         val startCircleIx = args[0].index
         val endCircleIx = args[1].index
-        val start = GeneralizedCircle.fromGCircle(circles[startCircleIx])
-        val end = GeneralizedCircle.fromGCircle(circles[endCircleIx])
+        val start = GeneralizedCircle.fromGCircle(circles[startCircleIx].downscale())
+        val end = GeneralizedCircle.fromGCircle(circles[endCircleIx].downscale())
         val newGeneralizedCircles = mutableListOf<GeneralizedCircle>()
         var a = start
         var b = end
@@ -1488,6 +1491,7 @@ class EditClusterViewModel(
         createNewCircles(
             newGeneralizedCircles
                 .mapNotNull { it.toGCircle() as? CircleOrLine }
+                .map { it.upscale() }
         )
         partialArgList = PartialArgList(argList.signature)
         defaultExtrapolationParameters = DefaultExtrapolationParameters(nLeft, nRight)
@@ -1508,9 +1512,8 @@ class EditClusterViewModel(
         val divergencePoint = (args[1] as PartialArgList.Arg.XYPoint).toPoint()
         val convergencePoint = (args[2] as PartialArgList.Arg.XYPoint).toPoint()
         // NOTE: without downscaling it visibly diverges
-        val downscaling = 400.0
-        val start = GeneralizedCircle.fromGCircle(divergencePoint.scale(0.0, 0.0, 1/downscaling))
-        val end = GeneralizedCircle.fromGCircle(convergencePoint.scale(0.0, 0.0, 1/downscaling))
+        val start = GeneralizedCircle.fromGCircle(divergencePoint.downscale())
+        val end = GeneralizedCircle.fromGCircle(convergencePoint.downscale())
         val totalAngle = params.angle
         val totalDilation = params.dilation
         val n = params.nSteps + 1
@@ -1520,8 +1523,8 @@ class EditClusterViewModel(
             val angle = progress * totalAngle
             val dilation = progress * totalDilation
             for (j in targetIndices) {
-                val circle = circles[j].scale(0.0, 0.0, 1/downscaling)
-                val target = GeneralizedCircle.fromGCircle(circle)
+                val circle = circles[j]
+                val target = GeneralizedCircle.fromGCircle(circle.downscale())
                 newCircles.add(
                     target.loxodromicShift(start, end, angle, dilation)
                 )
@@ -1531,7 +1534,7 @@ class EditClusterViewModel(
         val k = targetIndices.size
         createNewCircles(
             newCircles.mapNotNull { it.toGCircle() as? CircleOrLine }
-                .map { it.scale(0.0, 0.0, downscaling) }
+                .map { it.upscale() }
         )
         repeat(n) { i ->
             val m = size0 + i * k // first index of this batch
@@ -1694,9 +1697,19 @@ class EditClusterViewModel(
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
+        /** [Double] arithmetic is best in range that is closer to 0 */
+        const val UPSCALING_FACTOR = 400.0
+        const val DOWNSCALING_FACTOR = 1/UPSCALING_FACTOR
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)
+
+        fun GCircle.downscale(): GCircle = scale(0.0, 0.0, DOWNSCALING_FACTOR)
+        fun GCircle.upscale(): GCircle = scale(0.0, 0.0, UPSCALING_FACTOR)
+        fun CircleOrLine.downscale(): CircleOrLine = scale(0.0, 0.0, DOWNSCALING_FACTOR)
+        fun CircleOrLine.upscale(): CircleOrLine = scale(0.0, 0.0, UPSCALING_FACTOR)
+        fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)
+        fun Point.upscale(): Point = scale(0.0, 0.0, UPSCALING_FACTOR)
     }
 }
 
@@ -1734,6 +1747,9 @@ enum class Command {
         class Unique : Tag {
             override fun equals(other: Any?): Boolean =
                 false
+            override fun hashCode(): Int {
+                return this::class.hashCode()
+            }
         }
     }
 }
