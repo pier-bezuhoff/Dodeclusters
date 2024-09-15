@@ -264,6 +264,7 @@ sealed class EditClusterTool(
         Res.drawable.paint_splash, // tint=color should be applied
     )
 
+    // TODO: anchor-point as input
     data object CircleInversion: MultiArg(
         PartialArgList.SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE,
         Res.string.circle_inversion_name,

@@ -17,6 +17,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconToggleButton
 import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderColors
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -27,7 +31,11 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -200,6 +208,40 @@ fun CancelButton(
         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
         Text(stringResource(Res.string.cancel_name), fontSize = fontSize)
     }
+}
+
+// reference: https://stackoverflow.com/a/71129399
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VerticalSlider(
+    sliderState: SliderState,
+    modifier: Modifier = Modifier, // often .weight(1f)
+    enabled: Boolean = true,
+    colors: SliderColors = SliderDefaults.colors(),
+) {
+    Slider(
+        sliderState,
+        modifier
+            .graphicsLayer {
+                rotationZ = 270f
+                transformOrigin = TransformOrigin(0f, 0f)
+            }.layout { measurable, constraints ->
+                val placeable = measurable.measure(
+                    Constraints(
+                        minWidth = constraints.minHeight,
+                        maxWidth = constraints.maxHeight,
+                        minHeight = constraints.minWidth,
+                        maxHeight = constraints.maxWidth,
+                    )
+                )
+                layout(placeable.height, placeable.width) {
+                    placeable.place(-placeable.width, 0)
+                }
+            } //.size(w,h)
+        ,
+        enabled = enabled,
+        colors = colors,
+    )
 }
 
 val WindowSizeClass.isLandscape: Boolean get() =

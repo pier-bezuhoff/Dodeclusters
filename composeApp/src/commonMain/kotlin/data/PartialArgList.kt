@@ -17,7 +17,7 @@ data class PartialArgList(
         XYPoint,
         CircleIndex,
         SelectedCircles,
-        GeneralizedCircle, // primarily point/circle for the perp3 instrument
+        GeneralizedCircle, // primarily point/circle/line for the perp3 instrument
     }
 
     @Immutable

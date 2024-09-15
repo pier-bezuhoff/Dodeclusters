@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import ui.edit_cluster.EditClusterViewModel.Companion.downscale
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
@@ -1426,6 +1427,12 @@ class EditClusterViewModel(
                 else -> null
             }
         }
+        newCircles
+            .mapIndexed { i, (_, flip) -> if (flip) i+circles.size else null }
+            .filterNotNull()
+            .let { ixs ->
+                println("flipped: $ixs")
+            }
         // FIX: doesn't account for inside-out region spilling
         createNewCircles(newCircles.map { (c, _) -> c.upscale() })
         copyParts(
@@ -1442,6 +1449,16 @@ class EditClusterViewModel(
         val args = argList.args.map { it as PartialArgList.Arg.CircleIndex }
         val startCircleIx = args[0].index
         val endCircleIx = args[1].index
+        val newCircles = computeCircleInterpolation(nInterjacents, inBetween, startCircleIx, endCircleIx)
+        createNewCircles(newCircles)
+        partialArgList = PartialArgList(argList.signature)
+        defaultInterpolationParameters = DefaultInterpolationParameters(nInterjacents, inBetween)
+    }
+
+    private fun computeCircleInterpolation(
+        nInterjacents: Int, inBetween: Boolean,
+        startCircleIx: Ix, endCircleIx: Ix
+    ): List<CircleOrLine> {
         val start = GeneralizedCircle.fromGCircle(circles[startCircleIx].downscale())
         val end = GeneralizedCircle.fromGCircle(circles[endCircleIx].downscale())
         val n = nInterjacents + 1
@@ -1449,9 +1466,7 @@ class EditClusterViewModel(
             val interjacent = start.bisector(end, nOfSections = n, index = i, inBetween = inBetween)
             interjacent.toGCircle() as? CircleOrLine
         }.map { it.upscale() }
-        createNewCircles(newCircles)
-        partialArgList = PartialArgList(argList.signature)
-        defaultInterpolationParameters = DefaultInterpolationParameters(nInterjacents, inBetween)
+        return newCircles
     }
 
     fun resetCircleInterpolation() {
@@ -1468,6 +1483,16 @@ class EditClusterViewModel(
         val args = argList.args.map { it as PartialArgList.Arg.CircleIndex }
         val startCircleIx = args[0].index
         val endCircleIx = args[1].index
+        val newCircles = computeCircleExtrapolation(nLeft, nRight, startCircleIx, endCircleIx)
+        createNewCircles(newCircles)
+        partialArgList = PartialArgList(argList.signature)
+        defaultExtrapolationParameters = DefaultExtrapolationParameters(nLeft, nRight)
+    }
+
+    private fun computeCircleExtrapolation(
+        nLeft: Int, nRight: Int,
+        startCircleIx: Ix, endCircleIx: Ix,
+    ): List<CircleOrLine> {
         val start = GeneralizedCircle.fromGCircle(circles[startCircleIx].downscale())
         val end = GeneralizedCircle.fromGCircle(circles[endCircleIx].downscale())
         val newGeneralizedCircles = mutableListOf<GeneralizedCircle>()
@@ -1488,13 +1513,9 @@ class EditClusterViewModel(
             a = b
             b = c
         }
-        createNewCircles(
-            newGeneralizedCircles
-                .mapNotNull { it.toGCircle() as? CircleOrLine }
-                .map { it.upscale() }
-        )
-        partialArgList = PartialArgList(argList.signature)
-        defaultExtrapolationParameters = DefaultExtrapolationParameters(nLeft, nRight)
+        return newGeneralizedCircles
+            .mapNotNull { it.toGCircle() as? CircleOrLine }
+            .map { it.upscale() }
     }
 
     fun resetCircleExtrapolation() {
@@ -1511,6 +1532,26 @@ class EditClusterViewModel(
         val targetIndices = (args[0] as PartialArgList.Arg.SelectedCircles).indices
         val divergencePoint = (args[1] as PartialArgList.Arg.XYPoint).toPoint()
         val convergencePoint = (args[2] as PartialArgList.Arg.XYPoint).toPoint()
+        val newCircles = computeLoxodromicMotion(params, targetIndices, divergencePoint, convergencePoint)
+        createNewCircles(newCircles)
+        val size0 = circles.size
+        val k = targetIndices.size
+        repeat(params.nSteps + 1) { i ->
+            val m = size0 + i * k // first index of this batch
+            // FIX: doesn't account for inside-out region spilling
+            copyParts(targetIndices, (m until m+k).toList())
+        }
+        partialArgList = PartialArgList(argList.signature)
+        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
+            params.angle, params.dilation, params.nSteps
+        )
+    }
+
+    private fun computeLoxodromicMotion(
+        params: LoxodromicMotionParameters,
+        targetIndices: List<Int>,
+        divergencePoint: Point, convergencePoint: Point,
+    ): List<CircleOrLine> {
         // NOTE: without downscaling it visibly diverges
         val start = GeneralizedCircle.fromGCircle(divergencePoint.downscale())
         val end = GeneralizedCircle.fromGCircle(convergencePoint.downscale())
@@ -1530,21 +1571,9 @@ class EditClusterViewModel(
                 )
             }
         }
-        val size0 = circles.size
-        val k = targetIndices.size
-        createNewCircles(
-            newCircles.mapNotNull { it.toGCircle() as? CircleOrLine }
-                .map { it.upscale() }
-        )
-        repeat(n) { i ->
-            val m = size0 + i * k // first index of this batch
-            // FIX: doesn't account for inside-out region spilling
-            copyParts(targetIndices, (m until m+k).toList())
-        }
-        partialArgList = PartialArgList(argList.signature)
-        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
-            params.angle, params.dilation, params.nSteps
-        )
+        return newCircles
+            .mapNotNull { it.toGCircle() as? CircleOrLine }
+            .map { it.upscale() }
     }
 
     fun resetLoxodromicMotion() {
