@@ -1,7 +1,7 @@
 # Dodeclusters
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-### Conformal vector graphics editor: treating points, circles and straight lines equally *(WIP)*
+### Conformal vector graphics editor: treating points, circles and straight lines equally
 
 ![Dodeclusters](docs/02inf-art.png)
 
@@ -17,20 +17,36 @@ Combine interactive designs ~ Geogebra
 with vector graphics editor ~ Inkscape  
 and specific type of animations ~ [Möbius transformations](https://en.wikipedia.org/wiki/M%C3%B6bius_transformation) and possibly [Lie sphere geometry](https://en.wikipedia.org/wiki/Lie_sphere_geometry)  
 
-## Installation
-[Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
-Binaries for Linux, Window and Android can be found in assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
+> [!NOTE]
+> This project is in beta
 
-### Windows installation
+## Installation
+[Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch.  
+Executables for Linux, Window and Android can be found in assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
+
+### Windows
 1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/tag/v0.2.0) find `assets` and download `windows.zip`
 2. Unarchive it
-3. In folder `com.pierbezuhoff.dodeclusters` find file named `com.pierbezuhoff.dodeclusters.exe`
+3. In folder `com.pierbezuhoff.dodeclusters` find file `com.pierbezuhoff.dodeclusters.exe`
 4. Run it! That's it~ (it is bundled with JVM)
 
-Note: bundled binaries are likely behind Live web version
+### Linux
+1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/) find `assets` and download `linux.zip`
+2. Unarchive it
+3. Go into folder `com.pierbezuhoff.dodeclusters/bin`, you'll find executable file `com.pierbezuhoff.dodeclusters`
+4. `chmod +x` it and you can run it as `./com.pierbezuhoff.dodeclusters`
+
+### Android
+You can find the apk in assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
+
+> [!NOTE]
+> Bundled binaries are likely behind Live web version
 
 
 ## Build and run via Gradle
+
+> [!IMPORTANT]
+> Requires JDK 17
 
 ### Run desktop app
 `./gradlew :composeApp:run`  
