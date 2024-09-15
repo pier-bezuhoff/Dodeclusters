@@ -21,6 +21,14 @@ and specific type of animations ~ [Möbius transformations](https://en.wikipedia
 [Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch  
 Binaries for Linux, Window and Android can be found in assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
 
+### Windows installation
+1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/tag/v0.2.0) find `assets` and download `windows.zip`
+2. Unarchive it
+3. In folder `com.pierbezuhoff.dodeclusters` find file named `com.pierbezuhoff.dodeclusters.exe`
+4. Run it! That's it~ (it is bundled with JVM)
+
+Note: bundled binaries are likely behind Live web version
+
 
 ## Build and run via Gradle
 
