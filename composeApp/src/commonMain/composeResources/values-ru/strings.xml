@@ -56,6 +56,13 @@
         <item>Стартовую окружность</item>
         <item>Конечную окружность</item>
     </string-array>
+    <string name="loxodromic_motion_name">Локсодромическое движение</string>
+    <string name="loxodromic_motion_description">Применить несколько шагов движения по локсодромической спирали</string>
+    <string-array name="loxodromic_motion_arg_descriptions">
+        <item>Объект, на который мы действуем</item>
+        <item>Начальную точку</item>
+        <item>Конечную точку</item>
+    </string-array>
     <string name="circle_by_center_and_radius_name">Окружность по центру и радиусу</string>
     <string name="circle_by_center_and_radius_description">Построить окружность по центру и точке на ней</string>
     <string-array name="circle_by_center_and_radius_arg_descriptions">
