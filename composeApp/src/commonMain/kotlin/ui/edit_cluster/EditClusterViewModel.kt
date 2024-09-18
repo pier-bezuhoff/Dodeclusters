@@ -32,6 +32,7 @@ import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.Line
 import data.geometry.Point
+import domain.Ix
 import domain.OffsetSerializer
 import domain.angleDeg
 import domain.io.Ddc
@@ -47,15 +48,11 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import ui.edit_cluster.EditClusterViewModel.Companion.downscale
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import kotlin.math.hypot
 import kotlin.math.pow
-
-/** circle index in vm.circles or cluster.circles */
-typealias Ix = Int
 
 // NOTE: waiting for decompose 3.0-stable for a real VM impl
 // MAYBE: use UiState functional pattern instead this mess
@@ -714,11 +711,14 @@ class EditClusterViewModel(
 
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
-        if (!selection.containsAll(circles.indices.toSet())) {
+        val notEverythingIsSelected = !selection.containsAll(circles.indices.toSet())
+        if (notEverythingIsSelected) {
             selection.clear()
             selection.addAll(circles.indices)
+            selectedPoints = points.indices.toList()
         } else {
             selection.clear()
+            selectedPoints = emptyList()
         }
     }
 
@@ -1209,13 +1209,15 @@ class EditClusterViewModel(
             }
         } else {
             val absolutePoint = snapped(c)
-            if (mode is ToolMode &&
+            if (mode == ToolMode.ARC_PATH) {
+                // TODO: if last with n>=3, snap to start
+                arcPathUnderConstruction = arcPathUnderConstruction?.moveFocused(absolutePoint)
+            } else if (
+                mode is ToolMode &&
                 partialArgList?.currentArgType == PartialArgList.ArgType.XYPoint
             ) {
                 val newArg = PartialArgList.Arg.XYPoint(absolutePoint)
                 partialArgList = partialArgList!!.updateCurrentArg(newArg, confirmThisArg = false)
-            } else if (mode == ToolMode.ARC_PATH) {
-                arcPathUnderConstruction = arcPathUnderConstruction?.moveFocused(absolutePoint)
             } else if (
                 mode is ToolMode &&
                 partialArgList?.currentArgType == PartialArgList.ArgType.GeneralizedCircle
@@ -1545,6 +1547,10 @@ class EditClusterViewModel(
         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
             params.angle, params.dilation, params.nSteps
         )
+        if (points.none { it == divergencePoint })
+            points.add(divergencePoint)
+        if (points.none { it == convergencePoint })
+            points.add(convergencePoint)
     }
 
     private fun computeLoxodromicMotion(

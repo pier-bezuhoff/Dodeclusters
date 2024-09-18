@@ -10,6 +10,9 @@ import kotlin.math.roundToInt
 /** 2*[PI], 1 whole turn */
 const val TAU: Double = 2*PI
 
+/** Index */
+typealias Ix = Int
+
 /** [fractionalDigits] = digits after the decimal point */
 fun Number.round(fractionalDigits: Int): Double {
     val x = this.toDouble()

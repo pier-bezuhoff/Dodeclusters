@@ -7,10 +7,10 @@ import data.geometry.CircleOrLine
 import data.geometry.EPSILON
 import data.geometry.Line
 import data.geometry.Point
-import domain.io.Ddc
 import domain.ColorCssSerializer
+import domain.Ix
+import domain.io.Ddc
 import kotlinx.serialization.Serializable
-import ui.edit_cluster.Ix
 
 @Serializable
 @Immutable

@@ -4,10 +4,28 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
 import data.geometry.Point
+import domain.Ix
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+
+sealed class PointSnapResult(open val result: Point) {
+    data class Free(override val result: Point) : PointSnapResult(result)
+    data class Incidence(
+        override val result: Point,
+        val index: Ix
+    ) : PointSnapResult(result)
+    data class Intersection(
+        override val result: Point,
+        val index1: Ix,
+        val index2: Ix
+    ) : PointSnapResult(result) {
+        init {
+            require(index1 != index2)
+        }
+    }
+}
 
 /** Snaps when to 45 degree marks [snapMarkDeg] when closer than 5% [angleSnapPercent] */
 fun snapAngle(

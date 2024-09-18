@@ -8,8 +8,8 @@ import androidx.compose.ui.graphics.PathOperation
 import com.github.ajalt.colormath.model.RGB
 import com.github.ajalt.colormath.transform.interpolate
 import data.Cluster
+import domain.Ix
 import domain.io.Ddc
-import ui.edit_cluster.Ix
 import kotlin.math.exp
 
 /** indices */

@@ -54,6 +54,7 @@ import dodeclusters.composeapp.generated.resources.expand_name
 import dodeclusters.composeapp.generated.resources.extrapolate_lines
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_description
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_name
+import dodeclusters.composeapp.generated.resources.fill_swiped_circles
 import dodeclusters.composeapp.generated.resources.filled_circle
 import dodeclusters.composeapp.generated.resources.flagged_point
 import dodeclusters.composeapp.generated.resources.flow_fill_description
@@ -215,7 +216,7 @@ sealed class EditClusterTool(
     data object FlowFill: Switch(
         Res.string.flow_fill_name,
         Res.string.flow_fill_description,
-        Res.drawable.two_of_three_circles_connected
+        Res.drawable.fill_swiped_circles
     )
     data object FillChessboardPattern: Switch(
         Res.string.fill_chessboard_pattern_name,
