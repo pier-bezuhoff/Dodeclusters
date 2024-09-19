@@ -66,6 +66,7 @@ import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterTool
+import ui.visibleHalfPlanePath
 import kotlin.math.max
 import kotlin.math.min
 
@@ -236,7 +237,8 @@ private fun DrawScope.drawCircleOrLine(
     color: Color,
     alpha: Float = 1f,
     style: DrawStyle = Fill,
-    blendMode: BlendMode = DrawScope.DefaultBlendMode
+    blendMode: BlendMode = DrawScope.DefaultBlendMode,
+    drawHalfPlanesForLines: Boolean = false
 ) {
     when (circle) {
         // TODO: when the radius is exceedingly high, circles disappear
@@ -251,9 +253,9 @@ private fun DrawScope.drawCircleOrLine(
             val farBack = pointClosestToScreenCenter - direction * maxDim
             val farForward = pointClosestToScreenCenter + direction * maxDim
             when (style) {
-                Fill -> {
-//                    val halfPlanePath = visibleHalfPlanePath(circle, visibleRect)
-//                    drawPath(halfPlanePath, color, alpha, style, blendMode = blendMode)
+                Fill -> if (drawHalfPlanesForLines) {
+                    val halfPlanePath = visibleHalfPlanePath(circle, visibleRect)
+                    drawPath(halfPlanePath, color, alpha, style, blendMode = blendMode)
                 }
                 is Stroke -> {
                     drawLine(
@@ -369,16 +371,25 @@ private fun DrawScope.drawParts(
 ) {
     // NOTE: buggy on extreme zoom-in
     if (viewModel.displayChessboardPattern) {
-        // does not scale well with 20+ circles, slows down significantly + breaks on line
-//        for (circle in viewModel.circles) {
-//            drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor)
-//        }
-        drawPath(
-            chessboardPath(viewModel.circles, visibleRect, inverted = viewModel.invertedChessboard),
-            color = viewModel.regionColor,
-            alpha = clusterPathAlpha,
-            style = if (viewModel.showWireframes) circleStroke else Fill,
-        )
+        if (viewModel.showWireframes) {
+            for (circle in viewModel.circles)
+                drawCircleOrLine(circle, visibleRect, viewModel.regionColor, style = circleStroke)
+        } else if (true) {
+            // slows down significantly + breaks on line
+            if (viewModel.invertedChessboard)
+                drawRect(viewModel.regionColor, visibleRect.topLeft, visibleRect.size)
+            for (circle in viewModel.circles) {
+                drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
+            }
+        } else {
+            // works but slower, can be used for svg generation in the future
+            drawPath(
+                chessboardPath(viewModel.circles, visibleRect, inverted = viewModel.invertedChessboard),
+                color = viewModel.regionColor,
+                alpha = clusterPathAlpha,
+                style = Fill,
+            )
+        }
     } else {
         for (part in viewModel.parts) {
             val path = part2path(viewModel.circles, part, visibleRect)

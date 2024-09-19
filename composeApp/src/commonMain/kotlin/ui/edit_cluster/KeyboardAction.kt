@@ -22,7 +22,7 @@ enum class KeyboardAction {
     UNDO, REDO,
 //    SAVE, OPEN,
     /** Cancel ongoing action (partial constructions, etc) */
-    CANCEL
+    CANCEL,
 }
 
 /** Iffy in browser, since the target composable often randomly loses focus */

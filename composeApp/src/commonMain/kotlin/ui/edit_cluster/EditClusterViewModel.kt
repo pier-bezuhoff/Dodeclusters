@@ -715,6 +715,7 @@ class EditClusterViewModel(
 
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
+        showCircles = true
         val notEverythingIsSelected = !selection.containsAll(circles.indices.toSet())
         if (notEverythingIsSelected) {
             selection.clear()
@@ -1336,7 +1337,7 @@ class EditClusterViewModel(
                 toggleSelectAll()
             }
             KeyboardAction.DELETE -> deleteCircles()
-            KeyboardAction.PASTE -> duplicateCircles()
+            KeyboardAction.PASTE -> duplicateCircles() // sometimes bugged with Ctrl-V?
             KeyboardAction.ZOOM_IN -> scaleSelection(KEYBOARD_ZOOM_INCREMENT)
             KeyboardAction.ZOOM_OUT -> scaleSelection(1/KEYBOARD_ZOOM_INCREMENT)
             KeyboardAction.UNDO -> undo()

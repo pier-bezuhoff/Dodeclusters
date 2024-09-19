@@ -42,6 +42,15 @@ You can find the apk in assets [attached to the latest release](https://github.c
 > [!NOTE]
 > Bundled binaries are likely behind Live web version
 
+## Keyboard shortcuts
+- `Ctrl + A`: quickly select/deselect everything
+- `Delete`, `Backspace`: delete selected objects
+- `Ctrl + V`: duplicate selected objects
+- `Ctrl + +`, `Ctrl + =`; `Ctrl + -`; mouse wheel: scale up/down selected objects
+- `Ctrl + Z`: undo last action
+- `Ctrl + Y`: redo last action
+- `Esc`: cancel current action
+
 
 ## Build and run via Gradle
 
