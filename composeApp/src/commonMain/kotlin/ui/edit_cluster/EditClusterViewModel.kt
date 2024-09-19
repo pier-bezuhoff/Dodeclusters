@@ -1328,7 +1328,7 @@ class EditClusterViewModel(
     }
 
     fun processKeyboardAction(action: KeyboardAction) {
-//        println("processing $action")
+        println("processing $action")
         when (action) {
             KeyboardAction.SELECT_ALL -> {
                 if (!mode.isSelectingCircles() || !showCircles) // more intuitive behavior

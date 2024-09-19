@@ -118,9 +118,9 @@ fun EditClusterScreen(
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(
         modifier =
-            if (keyboardActions == null)
-                Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
-            else Modifier,
+        if (keyboardActions == null)
+            Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
+        else Modifier,
         floatingActionButton = {
             if (!isLandscape) { // inline in the LeftToolbar in landscape
                 // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
@@ -240,8 +240,8 @@ fun EditClusterScreen(
             viewModel.moveToDdcCenter(0f, 0f)
         }
     }
-    keyboardActions?.let {
-        coroutineScope.launch {
+    LaunchedEffect(keyboardActions) {
+        keyboardActions?.let {
             keyboardActions.collect { action ->
                 viewModel.processKeyboardAction(action)
             }

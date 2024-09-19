@@ -374,21 +374,13 @@ private fun DrawScope.drawParts(
         if (viewModel.showWireframes) {
             for (circle in viewModel.circles)
                 drawCircleOrLine(circle, visibleRect, viewModel.regionColor, style = circleStroke)
-        } else if (true) {
+        } else {
             // slows down significantly + breaks on line
             if (viewModel.invertedChessboard)
                 drawRect(viewModel.regionColor, visibleRect.topLeft, visibleRect.size)
             for (circle in viewModel.circles) {
                 drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
             }
-        } else {
-            // works but slower, can be used for svg generation in the future
-            drawPath(
-                chessboardPath(viewModel.circles, visibleRect, inverted = viewModel.invertedChessboard),
-                color = viewModel.regionColor,
-                alpha = clusterPathAlpha,
-                style = Fill,
-            )
         }
     } else {
         for (part in viewModel.parts) {

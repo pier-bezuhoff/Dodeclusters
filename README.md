@@ -47,9 +47,9 @@ You can find the apk in the assets [attached to the latest release](https://gith
 - `Delete`, `Backspace`: delete selected objects
 - `Ctrl + V`: duplicate selected objects
 - `Ctrl + +`, `Ctrl + =`; `Ctrl + -`; mouse wheel: enlarge/shrink selected objects
-- `Ctrl + Z`: undo the last action
-- `Ctrl + Y`: redo the last undone action
-- `Esc`: cancel all ongoing actions
+- `Ctrl + Z`: undo
+- `Ctrl + Y`: redo
+- `Esc`: cancel any ongoing constructions
 
 
 ## Build and run via Gradle
