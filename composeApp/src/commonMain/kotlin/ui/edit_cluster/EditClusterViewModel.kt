@@ -54,7 +54,7 @@ import ui.tools.EditClusterTool
 import kotlin.math.hypot
 import kotlin.math.pow
 
-// NOTE: waiting for decompose 3.0-stable for a real VM impl
+// TODO: migrate to Decompose 3.0 for a real VM impl
 // MAYBE: use UiState functional pattern instead this mess
 // this class is obviously too big
 @Stable
@@ -339,6 +339,8 @@ class EditClusterViewModel(
         parts.addAll(state.parts)
         selection.clear() // switch can populate it
         selection.addAll(state.selection)
+        points.clear()
+        points.addAll(state.points)
     }
 
     private fun resetTransients() {
@@ -466,14 +468,16 @@ class EditClusterViewModel(
             }
             return re
         }
+        val thereAreSelectedCirclesToDelete = circleSelectionIsActive
         val pointsLeft = points.indices
             .minus(selectedPoints.toSet())
             .map { points[it] }
+        if (selectedPoints.isNotEmpty() || thereAreSelectedCirclesToDelete)
+            recordCommand(Command.DELETE, unique = true)
         points.clear()
         points.addAll(pointsLeft)
         selectedPoints = emptyList()
-        if (circleSelectionIsActive) {
-            recordCommand(Command.DELETE, unique = true)
+        if (thereAreSelectedCirclesToDelete) {
             val whatsGone = selection.toSet()
             val deletedCircles = whatsGone.map { circles[it] }
             val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
@@ -1188,8 +1192,8 @@ class EditClusterViewModel(
                     circles[ix] = circle.translate(pan)
             }
         } else if (mode == SelectionMode.Drag && selectedPoints.isNotEmpty() && showCircles) {
-            // no history upd ig
             val ix = selectedPoints.first()
+            recordCommand(Command.MOVE, targets = listOf(-ix)) // have to distinguish from circle indices ig
             points[ix] = snapped(c, excludePoints = true)
         } else if (mode == SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
             if (selection.size == 1) { // move + scale radius
@@ -1326,7 +1330,9 @@ class EditClusterViewModel(
 //        println("processing $action")
         when (action) {
             KeyboardAction.SELECT_ALL -> {
-                switchToCategory(EditClusterCategory.Multiselect) // BUG: weird inconsistent behavior
+                if (!mode.isSelectingCircles() || !showCircles) // more intuitive behavior
+                    selection.clear() // forces to select all instead of toggling
+                switchToCategory(EditClusterCategory.Multiselect)
                 toggleSelectAll()
             }
             KeyboardAction.DELETE -> deleteCircles()
@@ -1614,6 +1620,7 @@ class EditClusterViewModel(
             (it as PartialArgList.Arg.XYPoint).toPoint()
         }
         val newPoint = args[0]
+        recordCommand(Command.CREATE, unique = true)
         points.add(newPoint)
         partialArgList = PartialArgList(argList.signature)
     }
@@ -1670,6 +1677,7 @@ class EditClusterViewModel(
     @Immutable
     data class UiState(
         val circles: List<CircleOrLine>,
+        val points: List<Point>,
         val parts: List<Cluster.Part>,
         val selection: List<Ix>, // circle indices
         @Serializable(OffsetSerializer::class)
@@ -1683,6 +1691,7 @@ class EditClusterViewModel(
                     Circle(200.0, 250.0, 100.0),
                     Circle(250.0, 250.0, 100.0),
                 ),
+                points = emptyList(),
                 parts = listOf(Cluster.Part(setOf(0), setOf(1,2,3))),
                 selection = listOf(0),
                 // NOTE: hardcoded default is bad, much better would be to specify the center but oh well
@@ -1698,12 +1707,13 @@ class EditClusterViewModel(
                         mode = SelectionMode.Multiselect
                     selection.addAll(uiState.selection)
                     translation = uiState.translation
+                    points.addAll(uiState.points)
                 }
 
             fun save(viewModel: EditClusterViewModel): UiState =
                 with (viewModel) {
                     UiState(
-                        circles.toList(), parts.toList(), selection.toList(),
+                        circles.toList(), points.toList(), parts.toList(), selection.toList(),
                         viewModel.translation
                     )
                 }
@@ -1762,29 +1772,4 @@ sealed interface CircleAnimation {
     data class Entrance(override val circles: List<CircleOrLine>) : CircleAnimation
     data class ReEntrance(override val circles: List<CircleOrLine>) : CircleAnimation
     data class Exit(override val circles: List<CircleOrLine>) : CircleAnimation
-}
-
-/** used for grouping UiState changes into batches for history keeping */
-enum class Command {
-    MOVE,
-    CHANGE_RADIUS, SCALE,
-    ROTATE,
-    DUPLICATE, DELETE,
-    CREATE,
-    FILL_REGION,
-    /** records canvas translations and scaling */
-//    CHANGE_POV,
-    ;
-
-    /** Used to distinguish/conflate [Command]s depending on their targets */
-    sealed interface Tag {
-        data class Targets(val targets: List<Ix> = emptyList()) : Tag
-        class Unique : Tag {
-            override fun equals(other: Any?): Boolean =
-                false
-            override fun hashCode(): Int {
-                return this::class.hashCode()
-            }
-        }
-    }
 }

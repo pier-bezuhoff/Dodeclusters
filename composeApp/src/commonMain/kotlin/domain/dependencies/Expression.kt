@@ -1,7 +1,6 @@
 package domain.dependencies
 
 import domain.Ix
-import ui.tools.EditClusterTool
 
 // associated with ToolMode and signature
 enum class Function {
@@ -30,6 +29,7 @@ data class Expression(
     val function: Function,
     val parameters: Parameters,
     val args: List<Arg>, // Arg can also be computed as an expression, making up Forest-like data structure
+    val outputIndex: Ix? = null,
 ) {
 }
 

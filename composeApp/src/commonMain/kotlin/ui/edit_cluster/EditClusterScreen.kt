@@ -249,7 +249,8 @@ fun EditClusterScreen(
     }
 }
 
-/** Otherwise icons only start being loaded when the corresponding category panel is open,
+/** Loads all tool icons and caches them.
+ * Otherwise icons only start being loaded when the corresponding category panel is open,
  * which is noticeable */
 @Composable
 fun preloadIcons() {
