@@ -22,34 +22,34 @@ and specific type of animations ~ [Möbius transformations](https://en.wikipedia
 
 ## Installation
 [Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch.  
-Executables for Linux, Window and Android can be found in assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
+Executables for Linux, Window and Android can be found in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
 
 ### Windows
-1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/tag/v0.2.0) find `assets` and download `windows.zip`
+1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/tag/v0.2.0) go to `assets` and download `windows.zip`
 2. Unarchive it
 3. In folder `com.pierbezuhoff.dodeclusters` find file `com.pierbezuhoff.dodeclusters.exe`
 4. Run it! That's it~ (it is bundled with JVM)
 
 ### Linux
-1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/) find `assets` and download `linux.zip`
+1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/) go to `assets` and download `linux.zip`
 2. Unarchive it
 3. Go into folder `com.pierbezuhoff.dodeclusters/bin`, you'll find executable file `com.pierbezuhoff.dodeclusters`
 4. `chmod +x` it and you can run it as `./com.pierbezuhoff.dodeclusters`
 
 ### Android
-You can find the apk in assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
+You can find the apk in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
 
 > [!NOTE]
-> Bundled binaries are likely behind Live web version
+> Bundled binaries are likely behind the web version
 
 ## Keyboard shortcuts
 - `Ctrl + A`: quickly select/deselect everything
 - `Delete`, `Backspace`: delete selected objects
 - `Ctrl + V`: duplicate selected objects
-- `Ctrl + +`, `Ctrl + =`; `Ctrl + -`; mouse wheel: scale up/down selected objects
-- `Ctrl + Z`: undo last action
-- `Ctrl + Y`: redo last action
-- `Esc`: cancel current action
+- `Ctrl + +`, `Ctrl + =`; `Ctrl + -`; mouse wheel: enlarge/shrink selected objects
+- `Ctrl + Z`: undo the last action
+- `Ctrl + Y`: redo the last undone action
+- `Esc`: cancel all ongoing actions
 
 
 ## Build and run via Gradle
