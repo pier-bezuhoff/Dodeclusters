@@ -12,6 +12,8 @@ const val TAU: Double = 2*PI
 
 /** Index */
 typealias Ix = Int
+/** indices */
+typealias Indices = List<Int>
 
 /** [fractionalDigits] = digits after the decimal point */
 fun Number.round(fractionalDigits: Int): Double {

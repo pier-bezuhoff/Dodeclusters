@@ -517,7 +517,7 @@ class EditClusterViewModel(
         showPromptToSetActiveSelectionAsToolArg = false
         if (newMode is ToolMode) {
             if (selection.size > 1 &&
-                newMode.signature.argTypes.first() == PartialArgList.ArgType.SelectedCircles
+                newMode.signature.argTypes.first() == PartialArgList.ArgType.CircleAndPointIndices
             ) {
                 showPromptToSetActiveSelectionAsToolArg = true
             } else {
@@ -775,12 +775,15 @@ class EditClusterViewModel(
         activeTool.let { tool ->
             require(
                 tool is EditClusterTool.MultiArg &&
-                tool.signature.argTypes.first() == PartialArgList.ArgType.SelectedCircles &&
+                tool.signature.argTypes.first() == PartialArgList.ArgType.CircleAndPointIndices &&
                 selection.isNotEmpty()
             )
         }
         partialArgList = partialArgList!!.addArg(
-            PartialArgList.Arg.SelectedCircles(selection.toList()),
+            PartialArgList.Arg.CircleAndPointIndices(
+                circleIndices = selection.toList(),
+                pointIndices = selectedPoints,
+            ),
             confirmThisArg = true
         )
         cancelSelectionAsToolArgPrompt()
@@ -938,17 +941,27 @@ class EditClusterViewModel(
                                 val previous = partialArgList?.currentArg
                                 if (previous == newArg ||
                                     previous is PartialArgList.Arg.CircleIndex && previous.index == circleIndex ||
-                                    previous is PartialArgList.Arg.SelectedCircles && previous.indices == listOf(circleIndex)
+                                    previous is PartialArgList.Arg.CircleAndPointIndices && previous.circleIndices == listOf(circleIndex)
                                 ) {
-                                    // ignore identical args
+                                    // we ignore identical args (tho there can be a reason not to)
                                 } else {
                                     partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
                                 }
                             }
                         }
-                        PartialArgList.ArgType.SelectedCircles -> {
+                        PartialArgList.ArgType.CircleAndPointIndices -> {
                             selectCircle(circles, visiblePosition)?.let { circleIndex ->
-                                val newArg = PartialArgList.Arg.SelectedCircles(listOf(circleIndex))
+                                val newArg = PartialArgList.Arg.CircleAndPointIndices(
+                                    circleIndices = listOf(circleIndex),
+                                    pointIndices = emptyList()
+                                )
+                                if (partialArgList!!.currentArg != newArg)
+                                    partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
+                            } ?: selectPoint(points, visiblePosition)?.let { pointIndex ->
+                                val newArg = PartialArgList.Arg.CircleAndPointIndices(
+                                    circleIndices = emptyList(),
+                                    pointIndices = listOf(pointIndex)
+                                )
                                 if (partialArgList!!.currentArg != newArg)
                                     partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
                             }
@@ -1255,7 +1268,7 @@ class EditClusterViewModel(
                         PartialArgList.Arg.XYPoint(absolutePoint)
                     }
                     is PartialArgList.Arg.CircleIndex -> null
-                    is PartialArgList.Arg.SelectedCircles -> null
+                    is PartialArgList.Arg.CircleAndPointIndices -> null
                     is PartialArgList.Arg.GeneralizedCircle -> visiblePosition?.let {
                         if (arg.gCircle is Point) {
                             val absolutePoint = snapped(absolute(visiblePosition))
@@ -1423,11 +1436,13 @@ class EditClusterViewModel(
 
     private fun completeCircleInversion() {
         val argList = partialArgList!!
-        val targetCirclesIxs = (argList.args[0] as PartialArgList.Arg.SelectedCircles).indices
+        val objArg = argList.args[0] as PartialArgList.Arg.CircleAndPointIndices
+        val targetCircleIxs = objArg.circleIndices
+        val targetPointIxs = objArg.pointIndices
         val invertingCircleIndex = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
         val invertingCircle = circles[invertingCircleIndex]
-        val newCircles = targetCirclesIxs.mapNotNull { targetIx ->
-            val targetCircle = circles[targetIx]
+        val newCircles = targetCircleIxs.mapNotNull { circleIx ->
+            val targetCircle = circles[circleIx]
             val engine = GeneralizedCircle.fromGCircle(invertingCircle.downscale()).normalized()
             val target = GeneralizedCircle.fromGCircle(targetCircle.downscale()).normalized()
             val result = engine.applyTo(target).normalized()
@@ -1436,6 +1451,13 @@ class EditClusterViewModel(
                 is Line -> newCircle to false
                 else -> null
             }
+        }
+        val newPoints = targetPointIxs.mapNotNull { pointIx ->
+            val targetPoint = points[pointIx]
+            val engine = GeneralizedCircle.fromGCircle(invertingCircle.downscale()).normalized()
+            val target = GeneralizedCircle.fromGCircle(targetPoint.downscale()).normalized()
+            val result = engine.applyTo(target).normalized()
+            result.toGCircle() as? Point
         }
         newCircles
             .mapIndexed { i, (_, flip) -> if (flip) i+circles.size else null }
@@ -1446,10 +1468,11 @@ class EditClusterViewModel(
         // FIX: doesn't account for inside-out region spilling
         createNewCircles(newCircles.map { (c, _) -> c.upscale() })
         copyParts(
-            targetCirclesIxs,
+            targetCircleIxs,
             ((circles.size - newCircles.size) until circles.size).toList(),
 //            newCircles.map { (_, flip) -> flip }
         )
+        points.addAll(newPoints.map { it.upscale() })
         partialArgList = PartialArgList(argList.signature)
     }
 
@@ -1539,17 +1562,21 @@ class EditClusterViewModel(
         showLoxodromicMotionDialog = false
         val argList = partialArgList!!
         val args = argList.args
-        val targetIndices = (args[0] as PartialArgList.Arg.SelectedCircles).indices
+        val objArg = args[0] as PartialArgList.Arg.CircleAndPointIndices
+        val targetCircleIndices = objArg.circleIndices
+        val targetPointsIndices = objArg.pointIndices
         val divergencePoint = (args[1] as PartialArgList.Arg.XYPoint).toPoint()
         val convergencePoint = (args[2] as PartialArgList.Arg.XYPoint).toPoint()
-        val newCircles = computeLoxodromicMotion(params, targetIndices, divergencePoint, convergencePoint)
+        val (newCircles, newPoints) =
+            computeLoxodromicMotion(params, targetCircleIndices, targetPointsIndices, divergencePoint, convergencePoint)
         createNewCircles(newCircles)
+        points.addAll(newPoints)
         val size0 = circles.size
-        val k = targetIndices.size
+        val k = targetCircleIndices.size
         repeat(params.nSteps + 1) { i ->
             val m = size0 + i * k // first index of this batch
             // FIX: doesn't account for inside-out region spilling
-            copyParts(targetIndices, (m until m+k).toList())
+            copyParts(targetCircleIndices, (m until m+k).toList())
         }
         partialArgList = PartialArgList(argList.signature)
         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
@@ -1563,9 +1590,10 @@ class EditClusterViewModel(
 
     private fun computeLoxodromicMotion(
         params: LoxodromicMotionParameters,
-        targetIndices: List<Int>,
+        targetCircleIndices: List<Int>,
+        targetPointIndices: List<Int>,
         divergencePoint: Point, convergencePoint: Point,
-    ): List<CircleOrLine> {
+    ): Pair<List<CircleOrLine>, List<Point>> {
         // NOTE: without downscaling it visibly diverges
         val start = GeneralizedCircle.fromGCircle(divergencePoint.downscale())
         val end = GeneralizedCircle.fromGCircle(convergencePoint.downscale())
@@ -1573,21 +1601,35 @@ class EditClusterViewModel(
         val totalDilation = params.dilation
         val n = params.nSteps + 1
         val newCircles = mutableListOf<GeneralizedCircle>()
+        val newPoints = mutableListOf<GeneralizedCircle>()
         repeat(n) { i ->
             val progress = (i + 1).toDouble() / n
             val angle = progress * totalAngle
             val dilation = progress * totalDilation
-            for (j in targetIndices) {
+            for (j in targetCircleIndices) {
                 val circle = circles[j]
                 val target = GeneralizedCircle.fromGCircle(circle.downscale())
                 newCircles.add(
                     target.loxodromicShift(start, end, angle, dilation)
                 )
             }
+            for (j in targetPointIndices) {
+                val point = points[j]
+                val target = GeneralizedCircle.fromGCircle(point.downscale())
+                newPoints.add(
+                    target.loxodromicShift(start, end, angle, dilation)
+                )
+            }
         }
-        return newCircles
-            .mapNotNull { it.toGCircle() as? CircleOrLine }
-            .map { it.upscale() }
+        return Pair(
+            newCircles
+                .mapNotNull { it.toGCircle() as? CircleOrLine }
+                .map { it.upscale() }
+            ,
+            newPoints
+                .mapNotNull { it.toGCircle() as? Point }
+                .map { it.upscale() }
+        )
     }
 
     fun resetLoxodromicMotion() {

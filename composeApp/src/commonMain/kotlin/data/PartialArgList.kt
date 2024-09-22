@@ -4,8 +4,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import data.geometry.GCircle
 import data.geometry.Point
+import domain.Indices
 import kotlinx.serialization.Serializable
-import ui.Indices
 
 @Immutable
 data class PartialArgList(
@@ -16,8 +16,8 @@ data class PartialArgList(
     enum class ArgType {
         XYPoint,
         CircleIndex,
-        SelectedCircles,
         GeneralizedCircle, // primarily point/circle/line for the perp3 instrument
+        CircleAndPointIndices,
     }
 
     @Immutable
@@ -39,8 +39,11 @@ data class PartialArgList(
             }
         }
         data class CircleIndex(val index: Int) : Arg(ArgType.CircleIndex)
-        data class SelectedCircles(val indices: Indices) : Arg(ArgType.SelectedCircles)
         data class GeneralizedCircle(val gCircle: GCircle) : Arg(ArgType.GeneralizedCircle)
+        data class CircleAndPointIndices(
+            val circleIndices: Indices,
+            val pointIndices: Indices = emptyList()
+        ) : Arg(ArgType.CircleAndPointIndices)
     }
 
     @Serializable
@@ -99,10 +102,10 @@ data class PartialArgList(
         val SIGNATURE_2_POINTS = Signature(ArgType.XYPoint, ArgType.XYPoint)
         val SIGNATURE_3_POINTS = Signature(ArgType.XYPoint, ArgType.XYPoint, ArgType.XYPoint)
         val SIGNATURE_2_CIRCLES = Signature(ArgType.CircleIndex, ArgType.CircleIndex)
-        val SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE = Signature(ArgType.SelectedCircles, ArgType.CircleIndex)
+        val SIGNATURE_INDEXED_AND_CIRCLE = Signature(ArgType.CircleAndPointIndices, ArgType.CircleIndex)
         val SIGNATURE_2_GENERALIZED_CIRCLE = Signature(ArgType.GeneralizedCircle, ArgType.GeneralizedCircle)
         val SIGNATURE_3_GENERALIZED_CIRCLE = Signature(ArgType.GeneralizedCircle, ArgType.GeneralizedCircle, ArgType.GeneralizedCircle)
-        val SIGNATURE_SELECTED_CIRCLES_AND_2_POINTS = Signature(ArgType.SelectedCircles, ArgType.XYPoint, ArgType.XYPoint)
+        val SIGNATURE_INDEXED_AND_2_POINTS = Signature(ArgType.CircleAndPointIndices, ArgType.XYPoint, ArgType.XYPoint)
         val SIGNATURE_N_POINTS_PLACEHOLDER = Signature(ArgType.XYPoint)
     }
 }

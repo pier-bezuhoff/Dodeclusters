@@ -92,7 +92,7 @@ sealed class EditClusterCategory(
             EditClusterTool.AddPoint,
             EditClusterTool.InsertCenteredCross,
         ),
-        defaultables = listOf(0, 1, 2, 3)
+        defaultables = listOf(0, 1, 2, 3, 4)
     ) { // ~mode-like
         // mode: rectangle by top-left & bottom-right
         // mode: polygon

@@ -265,9 +265,9 @@ sealed class EditClusterTool(
         Res.drawable.paint_splash, // tint=color should be applied
     )
 
-    // TODO: anchor-point as input
     data object CircleInversion: MultiArg(
-        PartialArgList.SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE,
+        PartialArgList.SIGNATURE_INDEXED_AND_CIRCLE,
+//        PartialArgList.SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE,
         Res.string.circle_inversion_name,
         Res.string.circle_inversion_description,
         Res.array.circle_inversion_arg_descriptions,
@@ -288,7 +288,7 @@ sealed class EditClusterTool(
         Res.drawable.extrapolate_lines
     )
     data object LoxodromicMotion: MultiArg(
-        PartialArgList.SIGNATURE_SELECTED_CIRCLES_AND_2_POINTS,
+        PartialArgList.SIGNATURE_INDEXED_AND_2_POINTS,
         Res.string.loxodromic_motion_name,
         Res.string.loxodromic_motion_description,
         Res.array.loxodromic_motion_arg_descriptions,

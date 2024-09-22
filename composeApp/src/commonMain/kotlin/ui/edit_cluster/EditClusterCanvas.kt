@@ -412,12 +412,6 @@ private fun DrawScope.drawPartialConstructs(
                         viewModel.circles[arg.index],
                         visibleRect, creationPrototypeColor, style = circleStroke
                     )
-                is PartialArgList.Arg.SelectedCircles ->
-                    for (ix in arg.indices)
-                        drawCircleOrLine(
-                            viewModel.circles[ix],
-                            visibleRect, creationPrototypeColor, style = circleStroke
-                        )
                 is PartialArgList.Arg.XYPoint ->
                     drawCircle(
                         color = creationPrototypeColor,
@@ -439,6 +433,19 @@ private fun DrawScope.drawPartialConstructs(
                             )
                         else -> {}
                     }
+                is PartialArgList.Arg.CircleAndPointIndices -> {
+                    for (ix in arg.circleIndices)
+                        drawCircleOrLine(
+                            viewModel.circles[ix],
+                            visibleRect, creationPrototypeColor, style = circleStroke
+                        )
+                    for (ix in arg.pointIndices)
+                        drawCircle(
+                            color = creationPrototypeColor,
+                            radius = creationPointRadius,
+                            center = viewModel.points[ix].toOffset()
+                        )
+                }
             }
     }
     // custom previews for some tools

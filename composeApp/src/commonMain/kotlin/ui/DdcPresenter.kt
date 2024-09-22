@@ -8,12 +8,10 @@ import androidx.compose.ui.graphics.PathOperation
 import com.github.ajalt.colormath.model.RGB
 import com.github.ajalt.colormath.transform.interpolate
 import data.Cluster
+import domain.Indices
 import domain.Ix
 import domain.io.Ddc
 import kotlin.math.exp
-
-/** indices */
-typealias Indices = List<Int>
 
 // naked top-level circle = cluster with 1 part = [this circle]
 // Analogue to Dodeca Meditation's CircleGroup

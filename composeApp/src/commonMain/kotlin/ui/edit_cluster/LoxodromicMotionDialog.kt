@@ -63,8 +63,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * @param[angle] total rotation angle in dergees
- * @param[dilation] total `ln(R/r)`
+ * @param[angle] total rotation angle in degrees
+ * @param[dilation] total hyperbolic angle `ln(R/r)`
  * @param[nSteps] number of intermediate steps (0 = result only)
  * */
 data class LoxodromicMotionParameters(
