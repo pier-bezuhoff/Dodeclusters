@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package ui.edit_cluster
 
 import androidx.compose.foundation.layout.Arrangement
@@ -10,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -45,8 +42,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_ccw
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_cw
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_prompt1
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_prompt2
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_placeholder
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_prompt
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_suffix
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_dilation_placeholder
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_hyperbolic_prompt
+import dodeclusters.composeapp.generated.resources.loxodromic_motion_n_steps_placeholder
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_steps_prompt
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
 import domain.formatDecimals
@@ -86,7 +91,7 @@ data class DefaultLoxodromicMotionParameters(
     val stepsRange = minNSteps.toFloat() .. maxNSteps.toFloat()
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun LoxodromicMotionDialog(
     divergencePoint: Point,
@@ -96,6 +101,8 @@ fun LoxodromicMotionDialog(
     defaults: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
 ) {
     // MAYBE: add turn fraction conversion field
+    // TODO: make onConfirm read all fields
+    //  possibly by hoisting all TFValues and updates here
     var angle by remember(defaults) { mutableStateOf(abs(defaults.angle)) }
     // true = CCW
     var angleDirection by remember(defaults) { mutableStateOf(defaults.angle >= 0.0) }
@@ -120,24 +127,24 @@ fun LoxodromicMotionDialog(
                 Modifier.padding(8.dp),
                 horizontalAlignment = Alignment.Start
             ) {
-                Title()
+                Title(smallerFont = compactWidth)
                 Row {
-                    AngleSliderPrefix()
+                    AngleSliderPrefix(smallerFont = compactWidth)
                     AngleTextField(angle, { angle = it })
                 }
                 Slider(angle, { angle = it },
                     valueRange = defaults.angleRange
                 )
-                RotationDirectionToggle(angleDirection, { angleDirection = it })
+                RotationDirectionToggle(angleDirection, { angleDirection = it }, smallerFont = compactWidth)
                 Row {
-                    DilationPrefix()
+                    DilationPrefix(smallerFont = compactWidth)
                     DilationTextField(dilation, { dilation = it })
                 }
                 Slider(dilation.toFloat(), { dilation = it.toDouble() },
                     valueRange = defaults.dilationRange
                 )
                 Row {
-                    StepsPrefix()
+                    StepsPrefix(smallerFont = compactWidth)
                     StepsTextField(nSteps, { nSteps = it })
                 }
                 Slider(nSteps.toFloat(), { nSteps = it.roundToInt() },
@@ -156,13 +163,14 @@ private fun Title(smallerFont: Boolean = false, modifier: Modifier = Modifier) {
         text = stringResource(Res.string.loxodromic_motion_title),
         modifier = modifier.padding(16.dp),
         style =
-        if (smallerFont) MaterialTheme.typography.titleMedium
-        else MaterialTheme.typography.titleLarge,
+            if (smallerFont) MaterialTheme.typography.titleMedium
+            else MaterialTheme.typography.titleLarge,
     )
 }
 
 @Composable
 private fun AngleSliderPrefix(
+    smallerFont: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Text(
@@ -171,7 +179,9 @@ private fun AngleSliderPrefix(
             append(":  ")
         },
         modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-        style = MaterialTheme.typography.bodyLarge
+        style =
+            if (smallerFont) MaterialTheme.typography.bodyMedium
+            else MaterialTheme.typography.bodyLarge
     )
 }
 
@@ -205,8 +215,8 @@ private fun AngleTextField(
             }
         ,
         textStyle = MaterialTheme.typography.bodyLarge,
-        placeholder = { Text("<angle in degrees>") },
-        suffix = { Text("°") },
+        placeholder = { Text(stringResource(Res.string.loxodromic_motion_angle_placeholder)) },
+        suffix = { Text(stringResource(Res.string.loxodromic_motion_angle_suffix)) },
         keyboardOptions = KeyboardOptions(
             imeAction = ImeAction.Done
         ),
@@ -222,6 +232,7 @@ private fun RotationDirectionToggle(
     /** true = CCW, false = CW */
     direction: Boolean,
     setDirection: (Boolean) -> Unit,
+    smallerFont: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -235,7 +246,7 @@ private fun RotationDirectionToggle(
         )
         Text(
             buildAnnotatedString {
-                append("Rotate")
+                append(stringResource(Res.string.loxodromic_motion_angle_direction_prompt1))
                 append(" ")
                 withStyle(SpanStyle(
                     color = MaterialTheme.colorScheme.primary,
@@ -244,22 +255,25 @@ private fun RotationDirectionToggle(
                 )) {
                     append(
                         if (direction)
-                            "counterclockwise"
+                            stringResource(Res.string.loxodromic_motion_angle_direction_ccw)
                         else
-                            "clockwise"
+                            stringResource(Res.string.loxodromic_motion_angle_direction_cw)
                     )
                 }
                 append(" ")
-                append("from the 1st point")
+                append(stringResource(Res.string.loxodromic_motion_angle_direction_prompt2))
             },
             modifier = Modifier.padding(8.dp),
-            style = MaterialTheme.typography.labelLarge
+            style =
+                if (smallerFont) MaterialTheme.typography.labelMedium
+                else MaterialTheme.typography.labelLarge
         )
     }
 }
 
 @Composable
 private fun DilationPrefix(
+    smallerFont: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Text(
@@ -268,7 +282,9 @@ private fun DilationPrefix(
             append(":  ")
         },
         modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-        style = MaterialTheme.typography.bodyLarge
+        style =
+            if (smallerFont) MaterialTheme.typography.bodyMedium
+            else MaterialTheme.typography.bodyLarge
     )
 }
 
@@ -302,7 +318,7 @@ private fun DilationTextField(
             }
         ,
         textStyle = MaterialTheme.typography.bodyLarge,
-        placeholder = { Text("<dilation>") },
+        placeholder = { Text(stringResource(Res.string.loxodromic_motion_dilation_placeholder)) },
         keyboardOptions = KeyboardOptions(
             imeAction = ImeAction.Done
         ),
@@ -315,6 +331,7 @@ private fun DilationTextField(
 
 @Composable
 private fun StepsPrefix(
+    smallerFont: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Text(
@@ -323,7 +340,9 @@ private fun StepsPrefix(
             append(":  ")
         },
         modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-        style = MaterialTheme.typography.bodyLarge
+        style =
+            if (smallerFont) MaterialTheme.typography.bodySmall
+            else MaterialTheme.typography.bodyLarge
     )
 }
 
@@ -357,7 +376,7 @@ private fun StepsTextField(
             }
         ,
         textStyle = MaterialTheme.typography.bodyLarge,
-        placeholder = { Text("<number of steps>") },
+        placeholder = { Text(stringResource(Res.string.loxodromic_motion_n_steps_placeholder)) },
         keyboardOptions = KeyboardOptions(
             imeAction = ImeAction.Done
         ),

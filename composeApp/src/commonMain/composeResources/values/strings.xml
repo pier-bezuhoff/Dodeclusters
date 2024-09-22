@@ -137,6 +137,14 @@
     <string name="loxodromic_motion_angle_prompt">Total rotation angle</string>
     <string name="loxodromic_motion_hyperbolic_prompt">Total logarithmic dilation</string>
     <string name="loxodromic_motion_steps_prompt">Number of intermediate steps</string>
+    <string name="loxodromic_motion_angle_placeholder">&lt;angle in degrees&gt;</string>
+    <string name="loxodromic_motion_angle_suffix">°</string>
+    <string name="loxodromic_motion_angle_direction_prompt1">Rotate</string>
+    <string name="loxodromic_motion_angle_direction_ccw">counterclockwise</string>
+    <string name="loxodromic_motion_angle_direction_cw">clockwise</string>
+    <string name="loxodromic_motion_angle_direction_prompt2">from the 1st point</string>
+    <string name="loxodromic_motion_dilation_placeholder">&lt;dilation&gt;</string>
+    <string name="loxodromic_motion_n_steps_placeholder">&lt;number of steps&gt;</string>
     <!-- file dialog -->
     <string name="save_cluster_title">Save this cluster</string>
     <string name="choose_name">Choose a name</string>

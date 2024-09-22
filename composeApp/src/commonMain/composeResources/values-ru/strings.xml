@@ -131,8 +131,17 @@
     <!-- loxodromic motion dialog -->
     <string name="loxodromic_motion_title">Параметры локсодромического движения</string>
     <string name="loxodromic_motion_angle_prompt">Угол крутящей компоненты</string>
-    <string name="loxodromic_motion_hyperbolic_prompt">Логорифм коэффициента сжатия/раздутия</string>
+    <string name="loxodromic_motion_hyperbolic_prompt">Коэффициент сжатия/раздутия</string>
     <string name="loxodromic_motion_steps_prompt">Число промежуточных шагов</string>
+
+    <string name="loxodromic_motion_angle_placeholder">&lt;угол в градусах&gt;</string>
+    <string name="loxodromic_motion_angle_suffix">°</string>
+    <string name="loxodromic_motion_angle_direction_prompt1">Вращать</string>
+    <string name="loxodromic_motion_angle_direction_ccw">против часовой стрелки</string>
+    <string name="loxodromic_motion_angle_direction_cw">по часовой стрелке</string>
+    <string name="loxodromic_motion_angle_direction_prompt2">вокруг 1ой точки</string>
+    <string name="loxodromic_motion_dilation_placeholder">&lt;деформация размера&gt;</string>
+    <string name="loxodromic_motion_n_steps_placeholder">&lt;число шагов&gt;</string>
     <!-- file dialog -->
     <string name="save_cluster_title">Сохранить кластер</string>
     <string name="choose_name">Выберите название</string>
