@@ -2,7 +2,7 @@ package ui.edit_cluster
 
 import domain.Ix
 
-/** used for grouping UiState changes into batches for history keeping */
+/** used for grouping VM.UiState changes into batches for history keeping */
 enum class Command {
     MOVE,
     CHANGE_RADIUS, SCALE,

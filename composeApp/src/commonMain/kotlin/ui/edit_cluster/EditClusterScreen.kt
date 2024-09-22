@@ -240,7 +240,7 @@ fun EditClusterScreen(
             viewModel.moveToDdcCenter(0f, 0f)
         }
     }
-    LaunchedEffect(keyboardActions) {
+    LaunchedEffect(keyboardActions, viewModel) {
         keyboardActions?.let {
             keyboardActions.collect { action ->
                 viewModel.processKeyboardAction(action)

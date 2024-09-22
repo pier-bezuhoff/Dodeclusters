@@ -51,6 +51,7 @@ import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
+import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.pow
 
@@ -1194,7 +1195,7 @@ class EditClusterViewModel(
             }
         } else if (mode == SelectionMode.Drag && selectedPoints.isNotEmpty() && showCircles) {
             val ix = selectedPoints.first()
-            recordCommand(Command.MOVE, targets = listOf(-ix)) // have to distinguish from circle indices ig
+            recordCommand(Command.MOVE, targets = listOf(-ix-1)) // have to distinguish from circle indices ig
             points[ix] = snapped(c, excludePoints = true)
         } else if (mode == SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
             if (selection.size == 1) { // move + scale radius
@@ -1328,7 +1329,7 @@ class EditClusterViewModel(
     }
 
     fun processKeyboardAction(action: KeyboardAction) {
-        println("processing $action")
+//        println("processing $action")
         when (action) {
             KeyboardAction.SELECT_ALL -> {
                 if (!mode.isSelectingCircles() || !showCircles) // more intuitive behavior
@@ -1337,7 +1338,7 @@ class EditClusterViewModel(
                 toggleSelectAll()
             }
             KeyboardAction.DELETE -> deleteCircles()
-            KeyboardAction.PASTE -> duplicateCircles() // sometimes bugged with Ctrl-V?
+            KeyboardAction.PASTE -> duplicateCircles()
             KeyboardAction.ZOOM_IN -> scaleSelection(KEYBOARD_ZOOM_INCREMENT)
             KeyboardAction.ZOOM_OUT -> scaleSelection(1/KEYBOARD_ZOOM_INCREMENT)
             KeyboardAction.UNDO -> undo()
@@ -1568,7 +1569,7 @@ class EditClusterViewModel(
         // NOTE: without downscaling it visibly diverges
         val start = GeneralizedCircle.fromGCircle(divergencePoint.downscale())
         val end = GeneralizedCircle.fromGCircle(convergencePoint.downscale())
-        val totalAngle = params.angle
+        val totalAngle = params.angle * PI/180
         val totalDilation = params.dilation
         val n = params.nSteps + 1
         val newCircles = mutableListOf<GeneralizedCircle>()

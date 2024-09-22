@@ -210,7 +210,7 @@ private fun InsideOutsideToggle(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier.padding(horizontal = 8.dp),
+        modifier = modifier.padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Switch(

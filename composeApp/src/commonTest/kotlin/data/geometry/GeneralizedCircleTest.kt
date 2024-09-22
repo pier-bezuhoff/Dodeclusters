@@ -140,27 +140,27 @@ fun randomPointCircleOrLine(): GeneralizedCircle =
         else -> randomCircle()
     }
 
-fun randomCircle(): GeneralizedCircle {
-    val x = Random.nextDouble(-1000.0, 1000.0)
-    val y = Random.nextDouble(-1000.0, 1000.0)
-    val r = Random.nextDouble(0.01, 1000.0)
+fun randomCircle(maxAmplitude: Double = 16.0): GeneralizedCircle {
+    val x = Random.nextDouble(-maxAmplitude, maxAmplitude)
+    val y = Random.nextDouble(-maxAmplitude, maxAmplitude)
+    val r = Random.nextDouble(0.01, maxAmplitude)
     return GeneralizedCircle.fromGCircle(Circle(x, y, r))
 }
 
-fun randomLine(): GeneralizedCircle {
-    val a = Random.nextDouble(-1000.0, 1000.0)
-    val b = Random.nextDouble(-1000.0, 1000.0)
-    val c = Random.nextDouble(-1000.0, 1000.0)
+fun randomLine(maxAmplitude: Double = 16.0): GeneralizedCircle {
+    val a = Random.nextDouble(-maxAmplitude, 1000.0)
+    val b = Random.nextDouble(-maxAmplitude, maxAmplitude)
+    val c = Random.nextDouble(-maxAmplitude, maxAmplitude)
     return if (a == 0.0 && b == 0.0)
         GeneralizedCircle.fromGCircle(Line(1.0, 0.0, 0.0))
     else
         GeneralizedCircle.fromGCircle(Line(a, b, c))
 }
 
-fun randomPoint(): GeneralizedCircle {
+fun randomPoint(maxAmplitude: Double = 16.0): GeneralizedCircle {
     val isConformalInf = Random.nextInt(0..10) == 0
-    val a = Random.nextDouble(-1000.0, 1000.0)
-    val b = Random.nextDouble(-1000.0, 1000.0)
+    val a = Random.nextDouble(-maxAmplitude, maxAmplitude)
+    val b = Random.nextDouble(-maxAmplitude, maxAmplitude)
     return GeneralizedCircle.fromGCircle(
         if (isConformalInf) Point.CONFORMAL_INFINITY
         else Point(a, b)
