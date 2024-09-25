@@ -1,9 +1,12 @@
-package domain.dependencies
+package domain.expressions
 
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
 import domain.Ix
+import ui.edit_cluster.ExtrapolationParameters
+import ui.edit_cluster.InterpolationParameters
+import ui.edit_cluster.LoxodromicMotionParameters
 
 // circles: [CircleOrLine?]
 // points: [Point?]
@@ -11,20 +14,26 @@ import domain.Ix
 // pointExpressions: [Ix] -> Expression
 
 // associated with ToolMode and signature
-enum class Function {
-    CIRCLE_BY_CENTER_AND_RADIUS,
-    CIRCLE_BY_3_POINTS,
-    LINE_BY_2_POINTS,
-    CIRCLE_INVERSION,
-    // indexed output
-    CIRCLE_INTERPOLATION,
-    CIRCLE_EXTRAPOLATION,
-    LOXODROMIC_MOTION,
-    INTERSECTION,
-    INCIDENCE, // from point-circle snapping
+sealed interface Function {
+    enum class OneToOne : Function {
+        CIRCLE_BY_CENTER_AND_RADIUS,
+        CIRCLE_BY_3_POINTS,
+        LINE_BY_2_POINTS,
+        CIRCLE_INVERSION,
+        INCIDENCE, // from point-circle snapping, saved as obj + perp line thru the point
+    }
+    enum class OneToMany : Function {
+        CIRCLE_INTERPOLATION,
+        CIRCLE_EXTRAPOLATION,
+        LOXODROMIC_MOTION,
+        INTERSECTION,
+    }
 }
 
-sealed interface Parameters // numeric values used, from the dialog or somewhere else
+// numeric values used, from the dialog or somewhere else
+interface Parameters {
+    data object None : Parameters
+}
 
 sealed interface Arg {
     sealed interface Indexed : Arg {
@@ -36,7 +45,8 @@ sealed interface Arg {
 data class Expression(
     val function: Function,
     val parameters: Parameters,
-    val args: List<Arg.Indexed>, // Arg can also be computed as an expression, making up Forest-like data structure
+    // Arg can also be computed as an expression, making up Forest-like data structure
+    val args: List<Arg.Indexed>,
 )
 
 sealed interface Expr {
@@ -48,8 +58,54 @@ sealed interface Expr {
         val outputIndex: Ix
     ) : Expr
 
+    // MAYBE: use polymorphism instead for stronger type enforcement
+    // indexed args -> VM.circles&points -> VM.downscale -> eval -> VM.upscale
     fun eval(circles: List<CircleOrLine>, points: List<Point>): List<GCircle> {
-        TODO()
+        val fn = expression.function
+        val args = expression.args.map { when (it) {
+            is Arg.Indexed.CircleOrLine -> circles[it.index]
+            is Arg.Indexed.Point -> points[it.index]
+        } }
+        when (this) {
+            is Just -> {
+                require(fn is Function.OneToOne)
+                val result: GCircle? = when (fn) {
+                    Function.OneToOne.CIRCLE_BY_CENTER_AND_RADIUS ->
+                        computeCircleByCenterAndRadius(args[0] as Point, args[1] as Point)
+                    Function.OneToOne.CIRCLE_BY_3_POINTS -> computeCircleBy3Points(args[0], args[1], args[2])
+                    Function.OneToOne.LINE_BY_2_POINTS -> computeLineBy2Points(args[0], args[1])
+                    Function.OneToOne.CIRCLE_INVERSION -> computeCircleInversion(args[0], args[1])
+                    Function.OneToOne.INCIDENCE -> computeIncidence(args[0] as CircleOrLine, TODO())
+                }
+                return listOfNotNull(result)
+            }
+            is OneOf -> {
+                require(fn is Function.OneToMany)
+                return when (fn) {
+                    Function.OneToMany.INTERSECTION ->
+                        computeIntersection(args[0] as CircleOrLine, args[1] as CircleOrLine)
+                    Function.OneToMany.CIRCLE_INTERPOLATION ->
+                        computeCircleInterpolation(
+                            expression.parameters as InterpolationParameters,
+                            args[0] as CircleOrLine,
+                            args[1] as CircleOrLine,
+                        )
+                    Function.OneToMany.CIRCLE_EXTRAPOLATION ->
+                        computeCircleExtrapolation(
+                            expression.parameters as ExtrapolationParameters,
+                            args[0] as CircleOrLine,
+                            args[1] as CircleOrLine,
+                        )
+                    Function.OneToMany.LOXODROMIC_MOTION ->
+                        computeLoxodromicMotion(
+                            expression.parameters as LoxodromicMotionParameters,
+                            args[0] as Point,
+                            args[1] as Point,
+                            args[2]
+                        )
+                }
+            }
+        }
     }
 }
 

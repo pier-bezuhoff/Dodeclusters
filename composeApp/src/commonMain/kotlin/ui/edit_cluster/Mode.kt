@@ -24,6 +24,7 @@ enum class SelectionMode : Mode {
     Region,
 }
 
+// presently unused
 /** intersection-modes of [SelectionMode.Multiselect] related to how new selection is combined */
 enum class MultiselectLogic {
     ADD, REPLACE, SUBTRACT, SYMMETRIC_DIFFERENCE,

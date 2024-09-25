@@ -32,13 +32,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import data.geometry.CircleOrLine
-import data.geometry.GeneralizedCircle
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_left_prompt1
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_left_prompt2
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_prompt1
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_prompt2
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_title
+import domain.expressions.Parameters
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.OkButton
@@ -46,12 +46,19 @@ import ui.hideSystemBars
 import ui.isLandscape
 import kotlin.math.roundToInt
 
+data class ExtrapolationParameters(
+    val nLeft: Int,
+    val nRight: Int,
+) : Parameters
+
 data class DefaultExtrapolationParameters(
     val nLeft: Int = 1,
     val nRight: Int = 1,
     val minCircleCount: Int = 0,
     val maxCircleCount: Int = 20
-)
+) {
+    val params = ExtrapolationParameters(nLeft, nRight)
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -59,13 +66,13 @@ fun CircleExtrapolationDialog(
     startCircle: CircleOrLine,
     endCircle: CircleOrLine,
     onDismissRequest: () -> Unit,
-    onConfirm: (nLeft: Int, nRight: Int) -> Unit,
+    onConfirm: (ExtrapolationParameters) -> Unit,
     defaults: DefaultExtrapolationParameters = DefaultExtrapolationParameters(),
 ) {
     val minCount = defaults.minCircleCount
     val maxCount = defaults.maxCircleCount
-    val start = GeneralizedCircle.fromGCircle(startCircle)
-    val end = GeneralizedCircle.fromGCircle(endCircle)
+//    val start = GeneralizedCircle.fromGCircle(startCircle)
+//    val end = GeneralizedCircle.fromGCircle(endCircle)
     val leftSliderState = remember { SliderState(
         value = defaults.nLeft.toFloat(),
         steps = maxCount - minCount - 1, // only counts intermediates
@@ -106,7 +113,7 @@ private fun CircleExtrapolationHorizontalCompact(
     leftSliderState: SliderState,
     rightSliderState: SliderState,
     onDismissRequest: () -> Unit,
-    onConfirm: (nLeft: Int, nRight: Int) -> Unit,
+    onConfirm: (ExtrapolationParameters) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -137,7 +144,7 @@ private fun CircleExtrapolationHorizontal(
     leftSliderState: SliderState,
     rightSliderState: SliderState,
     onDismissRequest: () -> Unit,
-    onConfirm: (nLeft: Int, nRight: Int) -> Unit,
+    onConfirm: (ExtrapolationParameters) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -159,7 +166,7 @@ private fun CircleExtrapolationVertical(
     leftSliderState: SliderState,
     rightSliderState: SliderState,
     onDismissRequest: () -> Unit,
-    onConfirm: (nLeft: Int, nRight: Int) -> Unit,
+    onConfirm: (ExtrapolationParameters) -> Unit,
     compactWidth: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -262,7 +269,7 @@ private fun CancelOkRow(
     leftSliderState: SliderState,
     rightSliderState: SliderState,
     onDismissRequest: () -> Unit,
-    onConfirm: (nLeft: Int, nRight: Int) -> Unit,
+    onConfirm: (ExtrapolationParameters) -> Unit,
     fontSize: TextUnit = 24.sp,
     modifier: Modifier = Modifier
 ) {
@@ -273,8 +280,10 @@ private fun CancelOkRow(
         CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
         OkButton(fontSize = fontSize, onConfirm = {
             onConfirm(
-                leftSliderState.value.roundToInt(),
-                rightSliderState.value.roundToInt()
+                ExtrapolationParameters(
+                    leftSliderState.value.roundToInt(),
+                    rightSliderState.value.roundToInt()
+                )
             )
         })
     }

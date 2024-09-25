@@ -374,7 +374,7 @@ private fun DrawScope.drawParts(
             for (circle in viewModel.circles)
                 drawCircleOrLine(circle, visibleRect, viewModel.regionColor, style = circleStroke)
         } else {
-            if (viewModel.chessboardPatternStartWhite)
+            if (viewModel.chessboardPatternStartsWhite)
                 drawRect(viewModel.regionColor, visibleRect.topLeft, visibleRect.size)
             for (circle in viewModel.circles) { // it used to work poorly but is good now for some reason
                 drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)

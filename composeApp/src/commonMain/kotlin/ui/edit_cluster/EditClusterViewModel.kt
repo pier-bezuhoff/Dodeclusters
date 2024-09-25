@@ -117,7 +117,7 @@ class EditClusterViewModel(
         private set
     var displayChessboardPattern by mutableStateOf(false)
         private set
-    var chessboardPatternStartWhite by mutableStateOf(true)
+    var chessboardPatternStartsWhite by mutableStateOf(true)
         private set
 
     val circleSelectionIsActive by derivedStateOf {
@@ -202,7 +202,7 @@ class EditClusterViewModel(
         var ddc = Ddc(cluster).copy(
             name = name,
             chessboardPattern = displayChessboardPattern,
-            chessboardPatternStartsWhite = chessboardPatternStartWhite,
+            chessboardPatternStartsWhite = chessboardPatternStartsWhite,
         )
         computeAbsoluteCenter()?.let { center ->
             ddc = ddc.copy(bestCenterX = center.x, bestCenterY = center.y)
@@ -241,7 +241,7 @@ class EditClusterViewModel(
             loadCluster(cluster)
             moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
             displayChessboardPattern = ddc.chessboardPattern
-            chessboardPatternStartWhite = ddc.chessboardPatternStartsWhite
+            chessboardPatternStartsWhite = ddc.chessboardPatternStartsWhite
         } catch (e: Exception) {
             println("Failed to parse yaml")
             e.printStackTrace()
@@ -302,7 +302,7 @@ class EditClusterViewModel(
     fun loadCluster(cluster: Cluster) {
         showPromptToSetActiveSelectionAsToolArg = false
         displayChessboardPattern = false
-        chessboardPatternStartWhite = true
+        chessboardPatternStartsWhite = true
         translation = Offset.Zero
         selection.clear()
         selectedPoints = emptyList()
@@ -748,12 +748,12 @@ class EditClusterViewModel(
     fun applyChessboardPatter() {
         if (!displayChessboardPattern) {
             displayChessboardPattern = true
-            chessboardPatternStartWhite = true
-        } else if (chessboardPatternStartWhite) {
-            chessboardPatternStartWhite = false
+            chessboardPatternStartsWhite = true
+        } else if (chessboardPatternStartsWhite) {
+            chessboardPatternStartsWhite = false
         } else {
             displayChessboardPattern = false
-            chessboardPatternStartWhite = true
+            chessboardPatternStartsWhite = true
         }
     }
 
@@ -1563,6 +1563,7 @@ class EditClusterViewModel(
         partialArgList = PartialArgList(EditClusterTool.CircleExtrapolation.signature)
     }
 
+    // TODO: inf point input
     fun completeLoxodromicMotion(
         params: LoxodromicMotionParameters,
     ) {
@@ -1715,7 +1716,7 @@ class EditClusterViewModel(
             EditClusterTool.ToggleSelectAll -> selection.containsAll(circles.indices.toSet())
             EditClusterTool.Region -> mode == SelectionMode.Region && submode !is SubMode.FlowFill
             EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
-            EditClusterTool.FillChessboardPattern -> chessboardPatternStartWhite
+            EditClusterTool.FillChessboardPattern -> chessboardPatternStartsWhite
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes

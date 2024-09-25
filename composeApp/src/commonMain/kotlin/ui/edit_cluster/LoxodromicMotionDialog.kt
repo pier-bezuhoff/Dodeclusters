@@ -54,6 +54,7 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_hyperbolic_
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_n_steps_placeholder
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_steps_prompt
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
+import domain.expressions.Parameters
 import domain.formatDecimals
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
@@ -71,7 +72,7 @@ data class LoxodromicMotionParameters(
     val angle: Float,
     val dilation: Double,
     val nSteps: Int,
-)
+) : Parameters
 
 data class DefaultLoxodromicMotionParameters(
     /** in degrees */

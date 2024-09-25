@@ -45,6 +45,7 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_in_betwe
 import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt3
 import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.circle_interpolation_title
+import domain.expressions.Parameters
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.OkButton
@@ -53,12 +54,19 @@ import ui.component2
 import ui.hideSystemBars
 import kotlin.math.roundToInt
 
+data class InterpolationParameters(
+    val nInterjacents: Int,
+    val inBetween: Boolean,
+) : Parameters
+
 data class DefaultInterpolationParameters(
     val nInterjacents: Int = 1,
     val inBetween: Boolean = true,
     val minCircleCount: Int = 1,
     val maxCircleCount: Int = 20
-)
+) {
+    val params = InterpolationParameters(nInterjacents, inBetween)
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -66,7 +74,7 @@ fun CircleInterpolationDialog(
     startCircle: CircleOrLine,
     endCircle: CircleOrLine,
     onDismissRequest: () -> Unit,
-    onConfirm: (nInterjacents: Int, interpolateInBetween: Boolean) -> Unit,
+    onConfirm: (InterpolationParameters) -> Unit,
     defaults: DefaultInterpolationParameters = DefaultInterpolationParameters(),
 ) {
     val start = GeneralizedCircle.fromGCircle(startCircle)
@@ -89,9 +97,11 @@ fun CircleInterpolationDialog(
             18.sp
         else 24.sp
     val onConfirm0 = { onConfirm(
-        sliderState.value.roundToInt(),
-        if (showInsideOutsideToggle) interpolateInBetween
-        else DefaultInterpolationParameters().inBetween
+        InterpolationParameters(
+            sliderState.value.roundToInt(),
+            if (showInsideOutsideToggle) interpolateInBetween
+            else DefaultInterpolationParameters().inBetween
+        )
     ) }
     Dialog(
         onDismissRequest = onDismissRequest,

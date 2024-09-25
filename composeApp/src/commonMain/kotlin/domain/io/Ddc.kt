@@ -26,7 +26,7 @@ data class Ddc(
     val drawTrace: Boolean = DEFAULT_DRAW_TRACE,
     /** indicates using all-circle chessboard pattern coloring, ignoring parts */
     val chessboardPattern: Boolean = DEFAULT_CHESSBOARD_PATTERN,
-    /** one of two possible starting chessboard phases (black or white) */
+    /** one of two possible starting chessboard phases, true=white=bg filled with color */
     val chessboardPatternStartsWhite: Boolean = DEFAULT_CHESSBOARD_PATTERN_STARTS_WHITE,
     val content: List<Token>,
 ) {
