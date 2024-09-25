@@ -1,6 +1,7 @@
 package domain.dependencies
 
 import data.geometry.CircleOrLine
+import data.geometry.GCircle
 import data.geometry.Point
 import domain.Ix
 
@@ -36,8 +37,20 @@ data class Expression(
     val function: Function,
     val parameters: Parameters,
     val args: List<Arg.Indexed>, // Arg can also be computed as an expression, making up Forest-like data structure
-    val outputIndex: Ix? = null,
-) {
+)
+
+sealed interface Expr {
+    val expression: Expression
+
+    data class Just(override val expression: Expression) : Expr
+    data class OneOf(
+        override val expression: Expression,
+        val outputIndex: Ix
+    ) : Expr
+
+    fun eval(circles: List<CircleOrLine>, points: List<Point>): List<GCircle> {
+        TODO()
+    }
 }
 
 private interface Circles {

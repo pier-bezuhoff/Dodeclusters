@@ -24,6 +24,10 @@ data class Ddc(
     val bestCenterY: Float? = DEFAULT_BEST_CENTER_Y,
     val shape: Shape = DEFAULT_SHAPE,
     val drawTrace: Boolean = DEFAULT_DRAW_TRACE,
+    /** indicates using all-circle chessboard pattern coloring, ignoring parts */
+    val chessboardPattern: Boolean = DEFAULT_CHESSBOARD_PATTERN,
+    /** one of two possible starting chessboard phases (black or white) */
+    val chessboardPatternStartsWhite: Boolean = DEFAULT_CHESSBOARD_PATTERN_STARTS_WHITE,
     val content: List<Token>,
 ) {
     val nCircles: Int
@@ -112,6 +116,12 @@ data class Ddc(
                 encode("bestCenterY", bestCenterY.toString()),
                 encodeOptional("shape", if (shape != DEFAULT_SHAPE) Json.encodeToString(shape) else null),
                 encode("drawTrace", drawTrace.toString()),
+                encodeOptional("chessboardPattern",
+                    if (chessboardPattern != DEFAULT_CHESSBOARD_PATTERN) chessboardPattern else null
+                ),
+                encodeOptional("chessboardPatternStartsWhite",
+                    if (chessboardPattern) chessboardPatternStartsWhite else null
+                ),
                 encode("content:"),
             )
             val body = content.map {
@@ -133,6 +143,8 @@ data class Ddc(
         val DEFAULT_BEST_CENTER_Y: Float? = null
         val DEFAULT_SHAPE = Shape.CIRCLE
         const val DEFAULT_DRAW_TRACE = true
+        const val DEFAULT_CHESSBOARD_PATTERN = false
+        const val DEFAULT_CHESSBOARD_PATTERN_STARTS_WHITE = true
 
         const val DEFAULT_CLUSTER_FILLED = true
         const val DEFAULT_CLUSTER_VISIBLE = true

@@ -60,7 +60,6 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.SimpleButton
-import ui.chessboardPath
 import ui.circle2path
 import ui.part2path
 import ui.reactiveCanvas
@@ -375,7 +374,7 @@ private fun DrawScope.drawParts(
             for (circle in viewModel.circles)
                 drawCircleOrLine(circle, visibleRect, viewModel.regionColor, style = circleStroke)
         } else {
-            if (viewModel.invertedChessboard)
+            if (viewModel.chessboardPatternStartWhite)
                 drawRect(viewModel.regionColor, visibleRect.topLeft, visibleRect.size)
             for (circle in viewModel.circles) { // it used to work poorly but is good now for some reason
                 drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
