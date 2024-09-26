@@ -59,6 +59,7 @@ sealed class EditClusterCategory(
         listOf(
             EditClusterTool.ShowCircles,
             EditClusterTool.ToggleFilledOrOutline,
+            // MAYBE: hide ui for 30s button
         )
     ) { // ~button/switch-like
     }

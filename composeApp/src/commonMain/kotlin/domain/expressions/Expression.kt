@@ -42,78 +42,116 @@ sealed interface Arg {
     }
 }
 
-data class Expression(
+sealed class Expr(
     val function: Function,
-    val parameters: Parameters,
+    open val parameters: Parameters,
     // Arg can also be computed as an expression, making up Forest-like data structure
     val args: List<Arg.Indexed>,
-)
+) {
+    sealed class OneToOne(
+        function: Function.OneToOne,
+        parameters: Parameters,
+        args: List<Arg.Indexed>,
+    ) : Expr(function, parameters, args)
+    sealed class OneToMany(
+        function: Function.OneToMany,
+        parameters: Parameters,
+        args: List<Arg.Indexed>,
+    ) : Expr(function, parameters, args)
 
-sealed interface Expr {
-    val expression: Expression
+    data class Incidence(
+        val point: Arg.Indexed.Point,
+        val carrier: Arg.Indexed.CircleOrLine,
+    ) : OneToOne(Function.OneToOne.INCIDENCE, Parameters.None, listOf(point, carrier))
+    data class CircleByCenterAndRadius(
+        val center: Arg.Indexed.Point,
+        val radiusPoint: Arg.Indexed.Point
+    ) : OneToOne(Function.OneToOne.CIRCLE_BY_CENTER_AND_RADIUS, Parameters.None, listOf(center, radiusPoint))
+    data class CircleBy3Points(
+        val point1: Arg.Indexed,
+        val point2: Arg.Indexed,
+        val point3: Arg.Indexed,
+    ) : OneToOne(Function.OneToOne.CIRCLE_BY_3_POINTS, Parameters.None, listOf(point1, point2, point3))
+    data class LineBy2Points(
+        val point1: Arg.Indexed,
+        val point2: Arg.Indexed,
+    ) : OneToOne(Function.OneToOne.LINE_BY_2_POINTS, Parameters.None, listOf(point1, point2))
+    data class CircleInversion(
+        val target: Arg.Indexed,
+        val engine: Arg.Indexed.CircleOrLine,
+    ) : OneToOne(Function.OneToOne.CIRCLE_INVERSION, Parameters.None, listOf(target, engine))
 
-    data class Just(override val expression: Expression) : Expr
-    data class OneOf(
-        override val expression: Expression,
-        val outputIndex: Ix
-    ) : Expr
+    data class Intersection(
+        val circle1: Arg.Indexed.CircleOrLine,
+        val circle2: Arg.Indexed.CircleOrLine,
+    ) : OneToMany(Function.OneToMany.INTERSECTION, Parameters.None, listOf(circle1, circle2))
+    data class CircleInterpolation(
+        override val parameters: InterpolationParameters,
+        val startCircle: Arg.Indexed.CircleOrLine,
+        val endCircle: Arg.Indexed.CircleOrLine,
+    ) : OneToMany(Function.OneToMany.CIRCLE_INTERPOLATION, parameters, listOf(startCircle, endCircle))
+    data class CircleExtrapolation(
+        override val parameters: ExtrapolationParameters,
+        val startCircle: Arg.Indexed.CircleOrLine,
+        val endCircle: Arg.Indexed.CircleOrLine,
+    ) : OneToMany(Function.OneToMany.CIRCLE_EXTRAPOLATION, parameters, listOf(startCircle, endCircle))
+    data class LoxodromicMotion(
+        override val parameters: LoxodromicMotionParameters,
+        val divergencePoint: Arg.Indexed.Point,
+        val convergencePoint: Arg.Indexed.Point,
+        val target: Arg.Indexed,
+    ) : OneToMany(Function.OneToMany.LOXODROMIC_MOTION, parameters, listOf(divergencePoint, convergencePoint, target))
 
-    // MAYBE: use polymorphism instead for stronger type enforcement
     // indexed args -> VM.circles&points -> VM.downscale -> eval -> VM.upscale
-    fun eval(circles: List<CircleOrLine>, points: List<Point>): List<GCircle> {
-        val fn = expression.function
-        val args = expression.args.map { when (it) {
-            is Arg.Indexed.CircleOrLine -> circles[it.index]
-            is Arg.Indexed.Point -> points[it.index]
-        } }
-        when (this) {
-            is Just -> {
-                require(fn is Function.OneToOne)
-                val result: GCircle? = when (fn) {
-                    Function.OneToOne.CIRCLE_BY_CENTER_AND_RADIUS ->
-                        computeCircleByCenterAndRadius(args[0] as Point, args[1] as Point)
-                    Function.OneToOne.CIRCLE_BY_3_POINTS -> computeCircleBy3Points(args[0], args[1], args[2])
-                    Function.OneToOne.LINE_BY_2_POINTS -> computeLineBy2Points(args[0], args[1])
-                    Function.OneToOne.CIRCLE_INVERSION -> computeCircleInversion(args[0], args[1])
-                    Function.OneToOne.INCIDENCE -> computeIncidence(args[0] as CircleOrLine, TODO())
-                }
-                return listOfNotNull(result)
+    fun eval(
+        p: (Arg.Indexed.Point) -> Point,
+        c: (Arg.Indexed.CircleOrLine) -> CircleOrLine
+    ): List<GCircle> {
+        fun g(arg: Arg.Indexed): GCircle =
+            when (arg) {
+                is Arg.Indexed.Point -> p(arg)
+                is Arg.Indexed.CircleOrLine -> c(arg)
             }
-            is OneOf -> {
-                require(fn is Function.OneToMany)
-                return when (fn) {
-                    Function.OneToMany.INTERSECTION ->
-                        computeIntersection(args[0] as CircleOrLine, args[1] as CircleOrLine)
-                    Function.OneToMany.CIRCLE_INTERPOLATION ->
-                        computeCircleInterpolation(
-                            expression.parameters as InterpolationParameters,
-                            args[0] as CircleOrLine,
-                            args[1] as CircleOrLine,
-                        )
-                    Function.OneToMany.CIRCLE_EXTRAPOLATION ->
-                        computeCircleExtrapolation(
-                            expression.parameters as ExtrapolationParameters,
-                            args[0] as CircleOrLine,
-                            args[1] as CircleOrLine,
-                        )
-                    Function.OneToMany.LOXODROMIC_MOTION ->
-                        computeLoxodromicMotion(
-                            expression.parameters as LoxodromicMotionParameters,
-                            args[0] as Point,
-                            args[1] as Point,
-                            args[2]
-                        )
+        // idt it's worth to polymorphism eval
+        return when (this) {
+            is OneToOne -> {
+                val result = when (this) {
+                    is Incidence -> computeIncidence(p(point), c(carrier))
+                    is CircleByCenterAndRadius -> computeCircleByCenterAndRadius(p(center), p(radiusPoint))
+                    is CircleBy3Points -> computeCircleBy3Points(g(point1), g(point2), g(point3))
+                    is LineBy2Points -> computeLineBy2Points(g(point1), g(point2))
+                    is CircleInversion -> computeCircleInversion(g(target), g(engine))
                 }
+                listOfNotNull(result)
             }
+            is Intersection -> computeIntersection(c(circle1), c(circle2))
+            is CircleInterpolation -> computeCircleInterpolation(parameters, c(startCircle), c(endCircle))
+            is CircleExtrapolation -> computeCircleExtrapolation(parameters, c(startCircle), c(endCircle))
+            is LoxodromicMotion -> computeLoxodromicMotion(parameters, p(divergencePoint), p(convergencePoint), g(target))
         }
     }
 }
 
+sealed interface Expression {
+    val expr: Expr
+
+    data class Just(override val expr: Expr.OneToOne) : Expression
+    data class OneOf(
+        override val expr: Expr.OneToMany,
+        val outputIndex: Ix
+    ) : Expression
+}
+
+// prototype of VM
 private interface Circles {
+    // im thinking of nullable in case moving parts changes number of outputs which would mess up indexing
     val circles: List<CircleOrLine?> // null's correspond to unrealized outputs of multi-functions
-    val circleExpressions: List<Expression?> // null's correspond to free objects
+    val circleExpressions: List<Expr?> // null's correspond to free objects
     val points: List<Point?>
-    val pointExpressions: List<Expression?>
+    val pointExpressions: List<Expr?>
+
+    fun p(arg: Arg.Indexed.Point): Point
+    fun c(arg: Arg.Indexed.CircleOrLine): CircleOrLine
 
     // recompute when adding/removing circles or points
     fun computeTiers(): Pair<List<Int>, List<Int>> {

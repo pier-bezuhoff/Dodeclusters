@@ -51,12 +51,8 @@ fun computeCircleInversion(
     return result.toGCircle()
 }
 
-// idk, i want it to follow translation/rotation/scaling
 // MAYBE: just repeat obj transformations for incident points
 fun computeIncidence(
-    obj: CircleOrLine,
-    //directedPerpendicular: Line
-    order: Double
-): Point {
-    TODO()
-}
+    point: Point,
+    carrier: CircleOrLine,
+): Point = point
