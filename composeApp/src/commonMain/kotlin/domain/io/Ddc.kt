@@ -14,6 +14,7 @@ import ui.theme.DodeclustersColors
 
 // MIME type: application/yaml or text/plain
 // extension: .ddc or .yaml/.yml
+// NOTE: do not forget to update js version JsDdc correspondingly
 /** Dodeclusters' format. Aiming for a nicely-formatted, readable & extensible YAML subset */
 @Serializable
 data class Ddc(

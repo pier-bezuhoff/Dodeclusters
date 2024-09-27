@@ -1,15 +1,12 @@
 package domain.io
 
 import androidx.compose.ui.graphics.Color
-import data.geometry.Circle
 import data.Cluster
-import kotlinx.serialization.json.Json
+import data.geometry.Circle
+import data.geometry.Line
 import domain.ColorCssSerializer
 import domain.ColorULongSerializer
-import data.geometry.Line
-import domain.io.Ddc
-import domain.io.OldDdc
-import domain.io.Shape
+import kotlinx.serialization.json.Json
 
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
 actual fun parseDdc(content: String): Ddc {
@@ -22,6 +19,8 @@ actual fun parseDdc(content: String): Ddc {
         bestCenterY = jsDdc.bestCenterY ?: Ddc.DEFAULT_BEST_CENTER_Y,
         shape = jsDdc.shape.parseShape() ?: Ddc.DEFAULT_SHAPE,
         drawTrace = jsDdc.drawTrace ?: Ddc.DEFAULT_DRAW_TRACE,
+        chessboardPattern = jsDdc.chessboardPattern ?: Ddc.DEFAULT_CHESSBOARD_PATTERN,
+        chessboardPatternStartsWhite = jsDdc.chessboardPatternStartsWhite ?: Ddc.DEFAULT_CHESSBOARD_PATTERN_STARTS_WHITE,
         content = jsDdc.content.map { jsFigure ->
             when {
                 isCircleObject(jsFigure) -> {
@@ -193,6 +192,8 @@ external interface JsDdc : JsAny {
     val bestCenterY: Float?
     val shape: JsString?
     val drawTrace: Boolean?
+    val chessboardPattern: Boolean?
+    val chessboardPatternStartsWhite: Boolean?
     val content: JsArray<JsFigure>
 }
 
