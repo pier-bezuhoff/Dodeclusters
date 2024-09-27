@@ -3,10 +3,12 @@ package domain.expressions
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
+import domain.Indices
 import domain.Ix
 import ui.edit_cluster.ExtrapolationParameters
 import ui.edit_cluster.InterpolationParameters
 import ui.edit_cluster.LoxodromicMotionParameters
+import kotlin.math.exp
 
 // circles: [CircleOrLine?]
 // points: [Point?]
@@ -36,9 +38,11 @@ interface Parameters {
 }
 
 sealed interface Arg {
+    // potential optimization: represent point indices as
+    // -(i+1) while circle indices are +i
     sealed interface Indexed : Arg {
-        data class Point(val index: Ix) : Indexed
         data class CircleOrLine(val index: Ix) : Indexed
+        data class Point(val index: Ix) : Indexed
     }
 }
 
@@ -85,6 +89,7 @@ sealed class Expr(
         val circle1: Arg.Indexed.CircleOrLine,
         val circle2: Arg.Indexed.CircleOrLine,
     ) : OneToMany(Function.OneToMany.INTERSECTION, Parameters.None, listOf(circle1, circle2))
+    // TODO: point-point line interpolation
     data class CircleInterpolation(
         override val parameters: InterpolationParameters,
         val startCircle: Arg.Indexed.CircleOrLine,
@@ -104,9 +109,9 @@ sealed class Expr(
 
     // indexed args -> VM.circles&points -> VM.downscale -> eval -> VM.upscale
     fun eval(
+        c: (Arg.Indexed.CircleOrLine) -> CircleOrLine,
         p: (Arg.Indexed.Point) -> Point,
-        c: (Arg.Indexed.CircleOrLine) -> CircleOrLine
-    ): List<GCircle> {
+    ): List<GCircle?> {
         fun g(arg: Arg.Indexed): GCircle =
             when (arg) {
                 is Arg.Indexed.Point -> p(arg)
@@ -122,7 +127,7 @@ sealed class Expr(
                     is LineBy2Points -> computeLineBy2Points(g(point1), g(point2))
                     is CircleInversion -> computeCircleInversion(g(target), g(engine))
                 }
-                listOfNotNull(result)
+                listOf(result)
             }
             is Intersection -> computeIntersection(c(circle1), c(circle2))
             is CircleInterpolation -> computeCircleInterpolation(parameters, c(startCircle), c(endCircle))
@@ -143,47 +148,204 @@ sealed interface Expression {
 }
 
 // prototype of VM
-private interface Circles {
-    // im thinking of nullable in case moving parts changes number of outputs which would mess up indexing
-    val circles: List<CircleOrLine?> // null's correspond to unrealized outputs of multi-functions
-    val circleExpressions: List<Expr?> // null's correspond to free objects
-    val points: List<Point?>
-    val pointExpressions: List<Expr?>
+abstract class ExpessionForest(
+    initialCircleExpressions: List<Expression?>,
+    initialPointExpressions: List<Expression?>,
+) {
+    // for the circles list null's correspond to unrealized outputs of multi-functions
+    // null's correspond to free objects
+    val circleExpressions: MutableList<Expression?> = initialCircleExpressions.toMutableList()
+    val pointExpressions: MutableList<Expression?> = initialPointExpressions.toMutableList()
 
-    fun p(arg: Arg.Indexed.Point): Point
-    fun c(arg: Arg.Indexed.CircleOrLine): CircleOrLine
+    // circle index -> tier
+    private val c2tier: MutableList<Int> = MutableList(circleExpressions.size) { -1 }
+    private val p2tier: MutableList<Int> = MutableList(pointExpressions.size) { -1 }
+    // tier -> circle indices
+    private val tier2cs: MutableList<Indices>
+    private val tier2ps: MutableList<Indices>
 
-    // recompute when adding/removing circles or points
-    fun computeTiers(): Pair<List<Int>, List<Int>> {
-        val c2tier = MutableList(circles.size) { -1 }
-        val p2tier = MutableList(points.size) { -1 }
-        for (ix in circles.indices) {
+    init {
+        computeTiers()
+        tier2cs = c2tier.withIndex()
+            .groupBy { (_, t) -> t }
+            .mapValues { (_, v) -> v.map { (ix, _) -> ix } }
+            .entries
+            .sortedBy { (t, _) -> t }
+            .map { (_, cs) -> cs }
+            .toMutableList()
+        tier2ps = p2tier.withIndex()
+            .groupBy { (_, t) -> t }
+            .mapValues { (_, v) -> v.map { (ix, _) -> ix } }
+            .entries
+            .sortedBy { (t, _) -> t }
+            .map { (_, ps) -> ps }
+            .toMutableList()
+    }
+
+    // find indexed args -> downscale them -> eval expr -> upscale result
+    abstract fun Expr.eval(): List<GCircle?>
+//        = this.eval(::c, ::p).map { upscale(it) }
+
+    fun addSoloExpression(isPoint: Boolean, expr: Expr.OneToOne): GCircle? {
+        if (isPoint) {
+            val ix = pointExpressions.size
+            pointExpressions.add(Expression.Just(expr))
+            val tier = computeTier(Arg.Indexed.Point(ix))
+            p2tier.add(tier)
+            if (tier < tier2ps.size) {
+                tier2ps[tier] = tier2ps[tier] + ix
+            } else { // no hopping over tiers, we good
+                tier2ps.add(listOf(ix))
+            }
+        } else {
+            val ix = circleExpressions.size
+            circleExpressions.add(Expression.Just(expr))
+            val tier = computeTier(Arg.Indexed.CircleOrLine(ix))
+            c2tier.add(tier)
+            if (tier < tier2cs.size) {
+                tier2cs[tier] = tier2cs[tier] + ix
+            } else { // no hopping over tiers, we good
+                tier2cs.add(listOf(ix))
+            }
+        }
+        return expr.eval().firstOrNull()
+    }
+
+    fun addMultiExpression(isPoint: Boolean, expr: Expr.OneToMany): List<GCircle?> {
+        val result = expr.eval()
+        if (isPoint) {
+            val ix0 = pointExpressions.size
+            val tier = computeTier(Arg.Indexed.Point(ix0))
+            repeat(result.size) { i ->
+                val ix = ix0 + i
+                pointExpressions.add(Expression.OneOf(expr, i))
+                p2tier.add(tier)
+                if (tier < tier2ps.size) {
+                    tier2ps[tier] = tier2ps[tier] + ix
+                } else { // no hopping over tiers, we good
+                    tier2ps.add(listOf(ix))
+                }
+            }
+        } else {
+            val ix0 = circleExpressions.size
+            val tier = computeTier(Arg.Indexed.CircleOrLine(ix0))
+            repeat(result.size) { i ->
+                val ix = ix0 + i
+                circleExpressions.add(Expression.OneOf(expr, i))
+                c2tier.add(tier)
+                if (tier < tier2cs.size) {
+                    tier2cs[tier] = tier2cs[tier] + ix
+                } else { // no hopping over tiers, we good
+                    tier2cs.add(listOf(ix))
+                }
+            }
+        }
+        return result
+    }
+
+    fun deleteExpression(arg: Arg.Indexed) {
+        // delete expr and shift all indices
+        // (or set it to null)
+        // remove it from both tiers
+        when (arg) {
+            is Arg.Indexed.CircleOrLine -> {
+                1
+            }
+            is Arg.Indexed.Point -> {
+                2
+            }
+        }
+        TODO()
+    }
+
+    fun propagateChange(
+        changedArgs: List<Arg.Indexed>,
+        // deltas (translation, rotation, zoom) to apply to immediate carried objects
+    ) {
+        // changed := changedFreeNodes
+        // for node in changed.dependents
+        //   changed += node
+        // notChanged = all - changed
+        // known = changedFreeNodes + notChanged
+        // toBeUpdated = changed - changedFreeNodes
+        // length2group = toBeUpdated.groupBy { min arg-path length to known }
+        // for i in length.keys.sorted
+        //   group = length2group[i]
+        //   for node in group
+        //     updatedNode = recompute node given known
+        //     known.add(updatedNode)
+        // given that there is no circular dep cycles it should succeed properly
+        TODO()
+    }
+
+    fun reEval(
+        circles: MutableList<CircleOrLine?>,
+        points: MutableList<Point?>
+    ) {
+        val deps = tier2cs.zip(tier2ps).drop(1)
+        for ((cs, ps) in deps) { // no need to calc for tier 0
+            for (c in cs) {
+                val result = when (val expression = circleExpressions[c]) {
+                    null -> circles[c]
+                    is Expression.Just ->
+                        expression.expr.eval().firstOrNull()
+                    is Expression.OneOf -> {
+                        // un-cache or eval
+                        val results = expression.expr.eval()
+                        results[expression.outputIndex]
+                    }
+                }
+                circles[c] = result as? CircleOrLine
+            }
+            for (p in ps) {
+                val result = when (val expression = pointExpressions[p]) {
+                    null -> points[p]
+                    is Expression.Just ->
+                        expression.expr.eval().firstOrNull()
+                    is Expression.OneOf -> {
+                        // un-cache or eval
+                        val results = expression.expr.eval()
+                        results[expression.outputIndex]
+                    }
+                }
+                points[p] = result as? Point
+            }
+        }
+    }
+
+    /**
+     * tier 0 = free from deps, tier 1 = all deps are tier 0 at max...
+     * tier k = all deps are tier (k-1) at max
+     * @return (circle index -> expr tier, point index -> expr tier)
+     **/
+    private fun computeTiers() {
+        for (ix in circleExpressions.indices) {
             if (c2tier[ix] == -1) {
-                val tier = computeTier(Arg.Indexed.CircleOrLine(ix), c2tier, p2tier)
+                val tier = computeTier(Arg.Indexed.CircleOrLine(ix))
                 c2tier[ix] = tier
             }
         }
-        for (ix in points.indices) {
+        for (ix in pointExpressions.indices) {
             if (p2tier[ix] == -1) {
-                val tier = computeTier(Arg.Indexed.CircleOrLine(ix), c2tier, p2tier)
+                val tier = computeTier(Arg.Indexed.CircleOrLine(ix))
                 p2tier[ix] = tier
             }
         }
-        return Pair(c2tier, p2tier)
     }
 
     // no need for tailrec idt
-    fun computeTier(arg: Arg.Indexed, c2tier: MutableList<Int>, p2tier: MutableList<Int>): Int {
-        val expr = when (arg) {
+    private fun computeTier(arg: Arg.Indexed): Int {
+        val expression = when (arg) {
             is Arg.Indexed.CircleOrLine -> circleExpressions[arg.index]
             is Arg.Indexed.Point -> pointExpressions[arg.index]
         }
-        return if (expr == null) {
+        return if (expression == null) {
             0
         } else {
             val argTiers = mutableSetOf<Int>()
-            for (subArg in expr.args) {
-                val tier = computeTier(subArg, c2tier, p2tier)
+            val args = expression.expr.args
+            for (subArg in args) {
+                val tier = computeTier(subArg)
                 when (subArg) {
                     is Arg.Indexed.CircleOrLine ->
                         c2tier[subArg.index] = tier
@@ -195,22 +357,4 @@ private interface Circles {
             argTiers.maxByOrNull { it + 1 } ?: 0
         }
     }
-}
-
-fun propagateChange(
-    changedFreeNodes: List<Ix>,
-) {
-    // changed := changedFreeNodes
-    // for node in changed.dependents
-    //   changed += node
-    // notChanged = all - changed
-    // known = changedFreeNodes + notChanged
-    // toBeUpdated = changed - changedFreeNodes
-    // length2group = toBeUpdated.groupBy { min arg-path length to known }
-    // for i in length.keys.sorted
-    //   group = length2group[i]
-    //   for node in group
-    //     updatedNode = recompute node given known
-    //     known.add(updatedNode)
-    // given that there is no circular dep cycles it should succeed properly
 }

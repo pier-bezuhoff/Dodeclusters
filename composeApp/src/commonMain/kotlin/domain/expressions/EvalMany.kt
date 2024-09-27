@@ -22,22 +22,42 @@ fun computeCircleInterpolation(
     params: InterpolationParameters, // bad: using ui dep in domain
     startCircle: CircleOrLine,
     endCircle: CircleOrLine,
-): List<CircleOrLine> {
+): List<CircleOrLine?> {
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val n = params.nInterjacents + 1
-    val newCircles = (1 until n).mapNotNull { i ->
+    val newCircles = (1 until n).map { i ->
         val interjacent = start.bisector(end, nOfSections = n, index = i, inBetween = params.inBetween)
         interjacent.toGCircle() as? CircleOrLine
     }
     return newCircles
 }
 
+fun computePointInterpolation(
+    params: InterpolationParameters,
+    startPoint: Point,
+    endPoint: Point,
+): List<Point?> {
+    if (startPoint == Point.CONFORMAL_INFINITY ||
+        endPoint == Point.CONFORMAL_INFINITY ||
+        startPoint == endPoint
+    ) {
+        return List(params.nInterjacents) { null }
+    }
+    val start = GeneralizedCircle.fromGCircle(startPoint)
+    val end = GeneralizedCircle.fromGCircle(endPoint)
+    val n = params.nInterjacents + 1
+    val newPoint = (1 until n).map { i ->
+        start*i + end*(n - i)
+    }
+    return newPoint.map { it.toGCircle() as? Point }
+}
+
 fun computeCircleExtrapolation(
     params: ExtrapolationParameters,
     startCircle: CircleOrLine,
     endCircle: CircleOrLine,
-): List<CircleOrLine> {
+): List<CircleOrLine?> {
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val newGeneralizedCircles = mutableListOf<GeneralizedCircle>()
@@ -59,14 +79,14 @@ fun computeCircleExtrapolation(
         b = c
     }
     return newGeneralizedCircles
-        .mapNotNull { it.toGCircle() as? CircleOrLine }
+        .map { it.toGCircle() as? CircleOrLine }
 }
 
 fun computeLoxodromicMotion(
     params: LoxodromicMotionParameters,
     divergencePoint: Point, convergencePoint: Point,
     target: GCircle,
-): List<GCircle> {
+): List<GCircle?> {
     // NOTE: without downscaling it visibly diverges
     val start = GeneralizedCircle.fromGCircle(divergencePoint)
     val end = GeneralizedCircle.fromGCircle(convergencePoint)
