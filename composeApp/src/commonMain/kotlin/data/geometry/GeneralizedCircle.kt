@@ -355,7 +355,7 @@ data class GeneralizedCircle(
                 ).normalizedPreservingDirection()
             }
 
-        /** Construct GC perpendicular to the given 3, includes circle by 3 points, etc.
+        /** Construct the GC perpendicular to the given 3, includes circle by 3 points, etc.
          * In CGA: `!( (!c1) ^ (!c2) ^ (!c3) )` */
         fun perp3(c1: GeneralizedCircle, c2: GeneralizedCircle, c3: GeneralizedCircle): GeneralizedCircle? {
             val (w1, x1, y1, z1) = c1
@@ -366,12 +366,20 @@ data class GeneralizedCircle(
             val x = -w1*y2*z3 + w1*y3*z2 + w2*y1*z3 - w2*y3*z1 - w3*y1*z2 + w3*y2*z1
             val y = w1*x2*z3 - w1*x3*z2 - w2*x1*z3 + w2*x3*z1 + w3*x1*z2 - w3*x2*z1
             val z = -x1*y2*z3 + x1*y3*z2 + x2*y1*z3 - x2*y3*z1 - x3*y1*z2 + x3*y2*z1
-            if (w == 0.0 && x == 0.0 && y == 0.0 && z == 0.0)
+            if (is0000(w,x,y,z)) {
+                println("$w, $x, $y, $z")
                 return null
-            if (listOf(w,x,y,z).any { it.isNaN() || it.isInfinite() })
+            }
+            if (listOf(w,x,y,z).any { it.isNaN() || it.isInfinite() }) {
                 return null
+            }
             return GeneralizedCircle(w, x, y, z).normalizedPreservingDirection()
         }
+
+        // there was an attempt..
+        fun is0000(w: Double, x: Double, y: Double, z: Double): Boolean =
+            setOf(w,x,y,z).all { abs(it) < EPSILON2 } // NOTE: ehh, kinda risky
+//            w == 0.0 && x == 0.0 && y == 0.0 && z == 0.0
     }
 }
 

@@ -1,5 +1,6 @@
 package ui
 
+import androidx.compose.foundation.BasicTooltipDefaults
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -21,6 +22,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SliderState
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -47,6 +49,7 @@ import dodeclusters.composeapp.generated.resources.ok_description
 import dodeclusters.composeapp.generated.resources.ok_name
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration
 
 // MAYBE: pass a Modifier
 @Composable
@@ -149,17 +152,17 @@ fun OnOffButton(
     }
 }
 
+// BUG: on Android this triggers exit from the immersive mode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WithTooltip(
     description: String,
+    /** in milliseconds */
+    tooltipDuration: Long = 3_000, // 3s
     content: @Composable () -> Unit
 ) {
     // NOTE: ironically tooltips work much better on desktop/in browser than
     //  on android (since it requires hover vs long-press there)
-    // i want to increase tooltip screen time but
-    // it's hardcoded here: BasicTooltipDefaults.TooltipDuration
-    // but i'd have to manually rewrite TooltipState implementation to specify custom one
     TooltipBox(
         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
         tooltip = {
@@ -168,7 +171,7 @@ fun WithTooltip(
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
             ) { Text(description) }
         },
-        state = rememberTooltipState()
+        state = rememberMyTooltipState(tooltipDuration = tooltipDuration),
     ) {
         content()
     }

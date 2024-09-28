@@ -63,6 +63,8 @@ sealed class Expr(
         args: List<Arg.Indexed>,
     ) : Expr(function, parameters, args)
 
+    // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr
+    //  p' = f(Δ(f⁻¹(p)), where point p on dependent carrier f(<free>) moves to p' when <free> is affected by Δ
     data class Incidence(
         val point: Arg.Indexed.Point,
         val carrier: Arg.Indexed.CircleOrLine,
@@ -260,7 +262,7 @@ abstract class ExpessionForest(
 
     fun propagateChange(
         changedArgs: List<Arg.Indexed>,
-        // deltas (translation, rotation, zoom) to apply to immediate carried objects
+        // deltas (translation, rotation, scaling) to apply to immediate carried objects
     ) {
         // changed := changedFreeNodes
         // for node in changed.dependents
