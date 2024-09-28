@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
+import java.io.FileNotFoundException
 
 @Composable
 actual fun OpenFileButton(
@@ -45,9 +46,14 @@ fun readDdcFromUri(context: Context, uri: Uri): String? {
     //val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
     // NOTE: uncomment the following ONLY for ACTION_OPEN_DOCUMENT (ACTION_GET_CONTENT is NOT for persistable Uri's, only for temporary ones)
     // context.contentResolver.takePersistableUriPermission(uri, takeFlags)
-    return context.contentResolver.openInputStream(uri)?.use { inputStream ->
-        inputStream.bufferedReader().use { reader ->
+    try {
+        return context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            inputStream.bufferedReader().use { reader ->
                 reader.readText()
             }
+        }
+    } catch (e: FileNotFoundException) {
+        e.printStackTrace()
+        return null
     }
 }

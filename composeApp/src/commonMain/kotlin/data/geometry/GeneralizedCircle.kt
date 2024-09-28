@@ -125,8 +125,13 @@ data class GeneralizedCircle(
     fun normalizedPreservingDirection(): GeneralizedCircle {
         val n = norm
         return if (abs(n) < EPSILON) {
-            if (n == 0.0 && abs(w) < EPSILON || n != 0.0 && abs(w/n) < EPSILON) // is conformal infinity?
-                GeneralizedCircle(0.0, 0.0, 0.0, if (w == 0.0) sign(z) else sign(w*z))
+            if (n == 0.0 && abs(w) < EPSILON ||
+                n != 0.0 && abs(w/n) < EPSILON
+            ) // is conformal infinity?
+                GeneralizedCircle(
+                    0.0, 0.0, 0.0,
+                    z = if (w == 0.0) sign(z) else sign(w)*sign(z)
+                )
             else
                 this * (1/abs(w))
         } else if (abs(w/n) < EPSILON) {
