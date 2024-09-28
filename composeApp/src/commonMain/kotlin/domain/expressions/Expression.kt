@@ -5,6 +5,7 @@ import data.geometry.GCircle
 import data.geometry.Point
 import domain.Indices
 import domain.Ix
+import domain.filterIndices
 import kotlin.math.exp
 
 // circles: [CircleOrLine?]
@@ -38,8 +39,10 @@ sealed interface Arg {
     // potential optimization: represent point indices as
     // -(i+1) while circle indices are +i
     sealed interface Indexed : Arg {
-        data class CircleOrLine(val index: Ix) : Indexed
-        data class Point(val index: Ix) : Indexed
+        val index: Ix
+
+        data class CircleOrLine(override val index: Ix) : Indexed
+        data class Point(override val index: Ix) : Indexed
     }
 }
 
@@ -55,39 +58,45 @@ sealed interface Expression {
 
 // prototype of VM
 abstract class ExpessionForest(
-    initialCircleExpressions: List<Expression?>,
-    initialPointExpressions: List<Expression?>,
+    initialExpressions: Map<Arg.Indexed, Expression?>,
 ) {
     // for the circles list null's correspond to unrealized outputs of multi-functions
     // null's correspond to free objects
-    val circleExpressions: MutableList<Expression?> = initialCircleExpressions.toMutableList()
-    val pointExpressions: MutableList<Expression?> = initialPointExpressions.toMutableList()
+    val expressions: MutableMap<Arg.Indexed, Expression?> = initialExpressions.toMutableMap()
 
-    val children: MutableMap<Arg.Indexed, List<Arg.Indexed>> = mutableMapOf()
+    /** parent index -> set of all its children with *direct* dependency */
+    val children: MutableMap<Arg.Indexed, Set<Arg.Indexed>> = expressions
+        .keys
+        .associateWith { emptySet<Arg.Indexed>() }
+        .toMutableMap()
 
-    // circle index -> tier
-    private val c2tier: MutableList<Int> = MutableList(circleExpressions.size) { -1 }
-    private val p2tier: MutableList<Int> = MutableList(pointExpressions.size) { -1 }
-    // tier -> circle indices
-    private val tier2cs: MutableList<Indices>
-    private val tier2ps: MutableList<Indices>
+    /** index -> tier */
+    val ix2tier: MutableMap<Arg.Indexed, Int> = initialExpressions
+        .keys
+        .associateWith { -1 }
+        .toMutableMap()
+    /** tier -> indices */
+    val tier2ixs: MutableList<Set<Arg.Indexed>>
 
     init {
-        computeTiers()
-        tier2cs = c2tier.withIndex()
+        computeTiers() // computes ix2tier
+        tier2ixs = ix2tier
+            .entries
             .groupBy { (_, t) -> t }
-            .mapValues { (_, v) -> v.map { (ix, _) -> ix } }
+            .mapValues { (_, v) -> v.map { it.key } }
             .entries
             .sortedBy { (t, _) -> t }
-            .map { (_, cs) -> cs }
+            .map { (_, ixs) -> ixs.toSet() }
             .toMutableList()
-        tier2ps = p2tier.withIndex()
-            .groupBy { (_, t) -> t }
-            .mapValues { (_, v) -> v.map { (ix, _) -> ix } }
+        expressions
             .entries
-            .sortedBy { (t, _) -> t }
-            .map { (_, ps) -> ps }
-            .toMutableList()
+            .forEach { (ix, expression) ->
+                expression?.expr?.let { expr ->
+                    expr.args.forEach { childIx ->
+                        children[ix] = children[ix]!! + childIx
+                    }
+                }
+            }
     }
 
     // find indexed args -> downscale them -> eval expr -> upscale result
@@ -95,58 +104,62 @@ abstract class ExpessionForest(
 //        = this.eval(::c, ::p).map { upscale(it) }
 
     fun addSoloExpression(isPoint: Boolean, expr: Expr.OneToOne): ExprResult {
-        if (isPoint) {
-            val ix = pointExpressions.size
-            pointExpressions.add(Expression.Just(expr))
-            val tier = computeTier(Arg.Indexed.Point(ix))
-            p2tier.add(tier)
-            if (tier < tier2ps.size) {
-                tier2ps[tier] = tier2ps[tier] + ix
-            } else { // no hopping over tiers, we good
-                tier2ps.add(listOf(ix))
-            }
+        val ix: Arg.Indexed = if (isPoint) {
+            val i = expressions.keys
+                .filterIsInstance<Arg.Indexed.Point>()
+                .maxOfOrNull { it.index + 1 } ?: 0
+            Arg.Indexed.Point(i)
         } else {
-            val ix = circleExpressions.size
-            circleExpressions.add(Expression.Just(expr))
-            val tier = computeTier(Arg.Indexed.CircleOrLine(ix))
-            c2tier.add(tier)
-            if (tier < tier2cs.size) {
-                tier2cs[tier] = tier2cs[tier] + ix
-            } else { // no hopping over tiers, we good
-                tier2cs.add(listOf(ix))
-            }
+            val i = expressions.keys
+                .filterIsInstance<Arg.Indexed.CircleOrLine>()
+                .maxOfOrNull { it.index + 1 } ?: 0
+            Arg.Indexed.CircleOrLine(i)
+        }
+        expressions[ix] = Expression.Just(expr)
+        val tier = computeTier(ix)
+        ix2tier[ix] = tier
+        if (tier < tier2ixs.size) {
+            tier2ixs[tier] = tier2ixs[tier] + ix
+        } else { // no hopping over tiers, we good
+            tier2ixs.add(setOf(ix))
         }
         return expr.eval()
     }
 
     fun addMultiExpression(isPoint: Boolean, expr: Expr.OneToMany): ExprResult {
         val result = expr.eval()
-        if (isPoint) {
-            val ix0 = pointExpressions.size
-            val tier = computeTier(Arg.Indexed.Point(ix0))
-            repeat(result.size) { i ->
-                val ix = ix0 + i
-                pointExpressions.add(Expression.OneOf(expr, i))
-                p2tier.add(tier)
-                if (tier < tier2ps.size) {
-                    tier2ps[tier] = tier2ps[tier] + ix
+         if (isPoint) {
+            val i = expressions.keys
+                .filterIsInstance<Arg.Indexed.Point>()
+                .maxOfOrNull { it.index + 1 } ?: 0
+            val ix0 = Arg.Indexed.Point(i)
+            val tier = computeTier(ix0)
+            repeat(result.size) { outputIndex ->
+                val ix = Arg.Indexed.Point(ix0.index + outputIndex)
+                expressions[ix] = Expression.OneOf(expr, outputIndex)
+                ix2tier[ix] = tier
+                if (tier < tier2ixs.size) {
+                    tier2ixs[tier] = tier2ixs[tier] + ix
                 } else { // no hopping over tiers, we good
-                    tier2ps.add(listOf(ix))
+                    tier2ixs.add(setOf(ix))
                 }
             }
         } else {
-            val ix0 = circleExpressions.size
-            val tier = computeTier(Arg.Indexed.CircleOrLine(ix0))
-            repeat(result.size) { i ->
-                val ix = ix0 + i
-                circleExpressions.add(Expression.OneOf(expr, i))
-                c2tier.add(tier)
-                if (tier < tier2cs.size) {
-                    tier2cs[tier] = tier2cs[tier] + ix
-                } else { // no hopping over tiers, we good
-                    tier2cs.add(listOf(ix))
-                }
-            }
+            val i = expressions.keys
+                .filterIsInstance<Arg.Indexed.CircleOrLine>()
+                .maxOfOrNull { it.index + 1 } ?: 0
+            val ix0 = Arg.Indexed.CircleOrLine(i)
+             val tier = computeTier(ix0)
+             repeat(result.size) { outputIndex ->
+                 val ix = Arg.Indexed.CircleOrLine(ix0.index + outputIndex)
+                 expressions[ix] = Expression.OneOf(expr, outputIndex)
+                 ix2tier[ix] = tier
+                 if (tier < tier2ixs.size) {
+                     tier2ixs[tier] = tier2ixs[tier] + ix
+                 } else { // no hopping over tiers, we good
+                     tier2ixs.add(setOf(ix))
+                 }
+             }
         }
         return result
     }
@@ -191,11 +204,16 @@ abstract class ExpessionForest(
         points: MutableList<Point?>
     ) {
         val cache = mutableMapOf<Expr.OneToMany, ExprResult>()
-        val deps = tier2cs.zip(tier2ps).drop(1)
-        for ((cs, ps) in deps) { // no need to calc for tier 0
-            for (c in cs) {
-                val result = when (val expression = circleExpressions[c]) {
-                    null -> circles[c]
+        val deps = tier2ixs.drop(1)
+        for (ixs in deps) { // no need to calc for tier 0
+            for (ix in ixs) {
+                val result = when (val expression = expressions[ix]) {
+                    null -> {
+                        when (ix) {
+                            is Arg.Indexed.CircleOrLine -> circles[ix.index]
+                            is Arg.Indexed.Point -> points[ix.index]
+                        }
+                    }
                     is Expression.Just ->
                         expression.expr.eval().firstOrNull()
                     is Expression.OneOf -> {
@@ -203,19 +221,12 @@ abstract class ExpessionForest(
                         results[expression.outputIndex]
                     }
                 }
-                circles[c] = result as? CircleOrLine
-            }
-            for (p in ps) {
-                val result = when (val expression = pointExpressions[p]) {
-                    null -> points[p]
-                    is Expression.Just ->
-                        expression.expr.eval().firstOrNull()
-                    is Expression.OneOf -> {
-                        val results = cache.getOrPut(expression.expr) { expression.expr.eval() }
-                        results[expression.outputIndex]
-                    }
+                when (ix) {
+                    is Arg.Indexed.CircleOrLine ->
+                        circles[ix.index] = result as? CircleOrLine
+                    is Arg.Indexed.Point ->
+                        points[ix.index] = result as? Point
                 }
-                points[p] = result as? Point
             }
         }
     }
@@ -226,26 +237,17 @@ abstract class ExpessionForest(
      * @return (circle index -> expr tier, point index -> expr tier)
      **/
     private fun computeTiers() {
-        for (ix in circleExpressions.indices) {
-            if (c2tier[ix] == -1) {
-                val tier = computeTier(Arg.Indexed.CircleOrLine(ix))
-                c2tier[ix] = tier
-            }
-        }
-        for (ix in pointExpressions.indices) {
-            if (p2tier[ix] == -1) {
-                val tier = computeTier(Arg.Indexed.CircleOrLine(ix))
-                p2tier[ix] = tier
+        for (ix in expressions.keys) {
+            if (ix2tier[ix] == -1) {
+                val tier = computeTier(ix)
+                ix2tier[ix] = tier
             }
         }
     }
 
     // no need for tailrec idt
     private fun computeTier(arg: Arg.Indexed): Int {
-        val expression = when (arg) {
-            is Arg.Indexed.CircleOrLine -> circleExpressions[arg.index]
-            is Arg.Indexed.Point -> pointExpressions[arg.index]
-        }
+        val expression = expressions[arg]
         return if (expression == null) {
             0
         } else {
@@ -253,12 +255,7 @@ abstract class ExpessionForest(
             val args = expression.expr.args
             for (subArg in args) {
                 val tier = computeTier(subArg)
-                when (subArg) {
-                    is Arg.Indexed.CircleOrLine ->
-                        c2tier[subArg.index] = tier
-                    is Arg.Indexed.Point ->
-                        p2tier[subArg.index] = tier
-                }
+                ix2tier[subArg] = tier
                 argTiers.add(tier)
             }
             argTiers.maxByOrNull { it + 1 } ?: 0
