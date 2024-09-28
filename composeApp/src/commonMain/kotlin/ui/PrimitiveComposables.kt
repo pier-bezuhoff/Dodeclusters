@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.cancel_name
@@ -153,18 +154,22 @@ fun OnOffButton(
 }
 
 // BUG: on Android this triggers exit from the immersive mode
+//  because of popup realization, more here:
+// https://androidx.tech/artifacts/compose.material3/material3-android/1.3.0-source/androidMain/androidx/compose/material3/internal/BasicTooltip.android.kt.html
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WithTooltip(
     description: String,
     /** in milliseconds */
-    tooltipDuration: Long = 3_000, // 3s
+    tooltipDuration: Long = 5_000,
     content: @Composable () -> Unit
 ) {
     // NOTE: ironically tooltips work much better on desktop/in browser than
     //  on android (since it requires hover vs long-press there)
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(
+            8.dp
+        ),
         tooltip = {
             PlainTooltip(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
