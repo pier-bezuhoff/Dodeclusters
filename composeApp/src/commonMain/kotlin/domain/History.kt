@@ -1,5 +1,4 @@
-package ui.edit_cluster
-
+package domain
 
 // TODO: create tests
 // MAYBE: reset lastCommandTag every VM.onUp

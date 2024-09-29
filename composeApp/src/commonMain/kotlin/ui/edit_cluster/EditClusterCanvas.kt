@@ -55,6 +55,7 @@ import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
+import domain.Arg
 import domain.rotateBy
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -416,7 +417,7 @@ private fun DrawScope.drawPartialConstructs(
     viewModel.partialArgList?.args?.let { args ->
         for (arg in args)
             when (arg) {
-                is PartialArgList.Arg.CircleIndex -> {
+                is Arg.CircleIndex -> {
                     val circle = viewModel.circles[arg.index]
                     if (circle != null)
                         drawCircleOrLine(
@@ -424,28 +425,45 @@ private fun DrawScope.drawPartialConstructs(
                             visibleRect, creationPrototypeColor, style = circleStroke
                         )
                 }
-                is PartialArgList.Arg.XYPoint ->
+                is Arg.Point.Index -> {
+                    val center = viewModel.points[arg.index]
+                    if (center != null)
+                        drawCircle(
+                            color = creationPrototypeColor,
+                            radius = creationPointRadius,
+                            center = center.toOffset()
+                        )
+                }
+                is Arg.Point.XY ->
                     drawCircle(
                         color = creationPrototypeColor,
                         radius = creationPointRadius,
                         center = arg.toOffset()
                     )
-                is PartialArgList.Arg.CircleOrPoint ->
-                    when (val gCircle = arg.gCircle) {
-                        is CircleOrLine ->
-                            drawCircleOrLine(
-                                gCircle,
-                                visibleRect, creationPrototypeColor, style = circleStroke
-                            )
-                        is Point ->
-                            drawCircle(
-                                color = creationPrototypeColor,
-                                radius = creationPointRadius,
-                                center = gCircle.toOffset()
-                            )
-                        else -> {}
-                    }
-                is PartialArgList.Arg.CircleAndPointIndices -> {
+                is Arg.CircleOrPoint.Point.Index -> {
+                    val center = viewModel.points[arg.index]
+                    if (center != null)
+                        drawCircle(
+                            color = creationPrototypeColor,
+                            radius = creationPointRadius,
+                            center = center.toOffset()
+                        )
+                }
+                is Arg.CircleOrPoint.Point.XY ->
+                    drawCircle(
+                        color = creationPrototypeColor,
+                        radius = creationPointRadius,
+                        center = arg.toOffset()
+                    )
+                is Arg.CircleOrPoint.CircleIndex -> {
+                    val circle = viewModel.circles[arg.index]
+                    if (circle != null)
+                        drawCircleOrLine(
+                            circle,
+                            visibleRect, creationPrototypeColor, style = circleStroke
+                        )
+                }
+                is Arg.CircleAndPointIndices -> {
                     for (ix in arg.circleIndices) {
                         val circle = viewModel.circles[ix]
                         if (circle != null)
@@ -467,18 +485,20 @@ private fun DrawScope.drawPartialConstructs(
     when (viewModel.mode) {
         ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> viewModel.partialArgList!!.args.let { args ->
             if (args.size == 2) {
-                val center = (args[0] as PartialArgList.Arg.XYPoint).toOffset()
-                val radiusPoint = (args[1] as PartialArgList.Arg.XYPoint).toOffset()
+                val (center, radiusPoint) = args.map {
+                    viewModel.getArg(it as Arg.Point)!!
+                }
+                val radius = center.distanceFrom(radiusPoint)
                 drawCircle(
                     color = creationPrototypeColor,
                     style = circleStroke,
-                    radius = (radiusPoint - center).getDistance(),
-                    center = center
+                    radius = radius.toFloat(),
+                    center = center.toOffset()
                 )
             }
         }
         ToolMode.CIRCLE_BY_3_POINTS -> viewModel.partialArgList!!.args.let { args ->
-            val gCircles = args.map { (it as PartialArgList.Arg.CircleOrPoint).gCircle }
+            val gCircles = args.map { viewModel.getArg(it as Arg.CircleOrPoint)!! }
             if (args.size == 2) {
                 val line = GeneralizedCircle.perp3(
                     GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
@@ -499,7 +519,7 @@ private fun DrawScope.drawPartialConstructs(
         }
         ToolMode.LINE_BY_2_POINTS -> viewModel.partialArgList!!.args.let { args ->
             if (args.size == 2) {
-                val gCircles = args.map { (it as PartialArgList.Arg.CircleOrPoint).gCircle }
+                val gCircles = args.map { viewModel.getArg(it as Arg.CircleOrPoint)!! }
                 val line = GeneralizedCircle.perp3(
                     GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
                     GeneralizedCircle.fromGCircle(gCircles[0]),

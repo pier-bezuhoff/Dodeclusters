@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import data.Cluster
 import domain.PartialArgList
+import domain.Signature
 import kotlinx.serialization.Serializable
 import ui.tools.EditClusterTool
 import kotlin.jvm.Transient
@@ -50,7 +51,7 @@ enum class ToolMode(
     POINT(EditClusterTool.AddPoint),
     ;
 
-    val signature: PartialArgList.Signature = tool.signature
+    val signature: Signature = tool.signature
 
     companion object {
         fun correspondingTo(tool: EditClusterTool.MultiArg): ToolMode =

@@ -34,7 +34,8 @@ interface Parameters {
 sealed interface Indexed {
     val index: Ix
 
-    data class CircleOrLine(override val index: Ix) : Indexed
+    /** index for a circle or a line */
+    data class Circle(override val index: Ix) : Indexed
     data class Point(override val index: Ix) : Indexed
 }
 

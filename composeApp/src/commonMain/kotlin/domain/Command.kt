@@ -1,6 +1,4 @@
-package ui.edit_cluster
-
-import domain.Ix
+package domain
 
 /** used for grouping VM.UiState changes into batches for history keeping */
 enum class Command {

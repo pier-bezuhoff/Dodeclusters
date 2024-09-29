@@ -6,7 +6,8 @@ import androidx.compose.runtime.Immutable
 data class PartialArgList(
     val signature: Signature,
     val args: List<Arg> = emptyList(),
-    val lastArgIsConfirmed: Boolean = true
+    val lastArgIsConfirmed: Boolean = true,
+    val lastSnap: PointSnapResult? = null,
 ) {
 
     val isFull =

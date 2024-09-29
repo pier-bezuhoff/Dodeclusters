@@ -1,6 +1,6 @@
 package ui.tools
 
-import domain.PartialArgList
+import domain.Signature
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
 import org.jetbrains.compose.resources.StringResource
@@ -32,7 +32,7 @@ sealed interface Tool {
 
     /** Tool that prompts selecting several items, described by MultiArgN<...> dependent types, to perform an action */
     sealed interface MultiArg : Tool {
-        val signature: PartialArgList.Signature
+        val signature: Signature
         val argDescriptions: StringArrayResource
         val nArgs: Int
             get() = signature.argTypes.size

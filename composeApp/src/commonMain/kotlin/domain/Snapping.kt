@@ -1,10 +1,9 @@
-package ui.edit_cluster
+package domain
 
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
 import data.geometry.Point
-import domain.Ix
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max

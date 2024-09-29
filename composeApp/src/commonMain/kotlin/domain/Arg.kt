@@ -3,7 +3,6 @@ package domain
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import data.geometry.Point
-import domain.Arg.Point.XY
 import kotlinx.serialization.Serializable
 
 enum class ArgType {

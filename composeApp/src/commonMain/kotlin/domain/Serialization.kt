@@ -64,3 +64,4 @@ object OffsetSerializer : KSerializer<Offset> {
         return Offset(unpackFloat1(long), unpackFloat2(long))
     }
 }
+

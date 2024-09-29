@@ -30,7 +30,7 @@ sealed class Expr(
     //  p' = f(Δ(f⁻¹(p)), where point p on dependent carrier f(<free>) moves to p' when <free> is affected by Δ
     data class Incidence(
         override val parameters: IncidenceParameters,
-        val carrier: Indexed.CircleOrLine,
+        val carrier: Indexed.Circle,
     ) : OneToOne(Function.OneToOne.INCIDENCE, parameters, listOf(carrier))
     data class CircleByCenterAndRadius(
         val center: Indexed.Point,
@@ -51,23 +51,23 @@ sealed class Expr(
     ) : OneToOne(Function.OneToOne.LINE_BY_2_POINTS, Parameters.None, listOf(point1, point2))
     data class CircleInversion(
         val target: Indexed,
-        val engine: Indexed.CircleOrLine,
+        val engine: Indexed.Circle,
     ) : OneToOne(Function.OneToOne.CIRCLE_INVERSION, Parameters.None, listOf(target, engine))
 
     data class Intersection(
-        val circle1: Indexed.CircleOrLine,
-        val circle2: Indexed.CircleOrLine,
+        val circle1: Indexed.Circle,
+        val circle2: Indexed.Circle,
     ) : OneToMany(Function.OneToMany.INTERSECTION, Parameters.None, listOf(circle1, circle2))
     // TODO: point-point line interpolation
     data class CircleInterpolation(
         override val parameters: InterpolationParameters,
-        val startCircle: Indexed.CircleOrLine,
-        val endCircle: Indexed.CircleOrLine,
+        val startCircle: Indexed.Circle,
+        val endCircle: Indexed.Circle,
     ) : OneToMany(Function.OneToMany.CIRCLE_INTERPOLATION, parameters, listOf(startCircle, endCircle))
     data class CircleExtrapolation(
         override val parameters: ExtrapolationParameters,
-        val startCircle: Indexed.CircleOrLine,
-        val endCircle: Indexed.CircleOrLine,
+        val startCircle: Indexed.Circle,
+        val endCircle: Indexed.Circle,
     ) : OneToMany(Function.OneToMany.CIRCLE_EXTRAPOLATION, parameters, listOf(startCircle, endCircle))
     data class LoxodromicMotion(
         override val parameters: LoxodromicMotionParameters,
@@ -85,7 +85,7 @@ sealed class Expr(
         val g = { ix: Indexed ->
             get(ix) ?: throw NullPointerException() // i miss MonadError
         }
-        val c = { ix: Indexed.CircleOrLine ->
+        val c = { ix: Indexed.Circle ->
             get(ix) as? CircleOrLine ?: throw NullPointerException()
         }
         val p = { ix: Indexed.Point ->

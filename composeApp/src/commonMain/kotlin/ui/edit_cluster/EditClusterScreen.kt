@@ -74,6 +74,7 @@ import dodeclusters.composeapp.generated.resources.ok_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
+import domain.Arg
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveData
@@ -181,7 +182,7 @@ fun EditClusterScreen(
     if (viewModel.showCircleInterpolationDialog && viewModel.partialArgList?.isFull == true) {
         val (startCircle, endCircle) = viewModel.partialArgList!!.args
             .map {
-                viewModel.circles[(it as PartialArgList.Arg.CircleIndex).index]!!
+                viewModel.circles[(it as Arg.CircleIndex).index]!!
             }
         CircleInterpolationDialog(
             startCircle, endCircle,
@@ -195,7 +196,7 @@ fun EditClusterScreen(
     if (viewModel.showCircleExtrapolationDialog && viewModel.partialArgList?.isFull == true) {
         val (startCircle, endCircle) = viewModel.partialArgList!!.args
             .map {
-                viewModel.circles[(it as PartialArgList.Arg.CircleIndex).index]!!
+                viewModel.circles[(it as Arg.CircleIndex).index]!!
             }
         CircleExtrapolationDialog(
             startCircle, endCircle,
@@ -209,15 +210,21 @@ fun EditClusterScreen(
     if (viewModel.showLoxodromicMotionDialog && viewModel.partialArgList?.isFull == true) {
         val (divergencePoint, convergencePoint) = viewModel.partialArgList!!.args
             .drop(1)
-            .map { (it as PartialArgList.Arg.XYPoint).toPoint() }
-        LoxodromicMotionDialog(
-            divergencePoint, convergencePoint,
-            onDismissRequest = { viewModel.resetLoxodromicMotion() },
-            onConfirm = { params ->
-                viewModel.completeLoxodromicMotion(params)
-            },
-            defaults = viewModel.defaultLoxodromicMotionParameters
-        )
+            .map { it as Arg.Point }
+            .map { when (it) {
+                is Arg.Point.XY -> it.toPoint()
+                is Arg.Point.Index -> viewModel.points[it.index]
+            } }
+        if (divergencePoint != null && convergencePoint != null) {
+            LoxodromicMotionDialog(
+                divergencePoint, convergencePoint,
+                onDismissRequest = { viewModel.resetLoxodromicMotion() },
+                onConfirm = { params ->
+                    viewModel.completeLoxodromicMotion(params)
+                },
+                defaults = viewModel.defaultLoxodromicMotionParameters
+            )
+        }
     }
     LaunchedEffect(ddcContent, sampleIndex) {
         if (ddcContent != null) {
