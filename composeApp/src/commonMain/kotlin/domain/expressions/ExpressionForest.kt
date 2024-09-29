@@ -3,28 +3,28 @@ package domain.expressions
 import data.geometry.GCircle
 
 class ExpressionForest(
-    initialExpressions: Map<Arg.Indexed, Expression?>, // pls include all possible indices
+    initialExpressions: Map<Indexed, Expression?>, // pls include all possible indices
     // find indexed args -> downscale them -> eval expr -> upscale result
-    private val get: (Arg.Indexed) -> GCircle?,
-    private val set: (Arg.Indexed, GCircle?) -> Unit,
+    private val get: (Indexed) -> GCircle?,
+    private val set: (Indexed, GCircle?) -> Unit,
 ) {
     // for the circles list null's correspond to unrealized outputs of multi-functions
     // null's correspond to free objects
-    val expressions: MutableMap<Arg.Indexed, Expression?> = initialExpressions.toMutableMap()
+    val expressions: MutableMap<Indexed, Expression?> = initialExpressions.toMutableMap()
 
     /** parent index -> set of all its children with *direct* dependency */
-    val children: MutableMap<Arg.Indexed, Set<Arg.Indexed>> = expressions
+    val children: MutableMap<Indexed, Set<Indexed>> = expressions
         .keys
-        .associateWith { emptySet<Arg.Indexed>() }
+        .associateWith { emptySet<Indexed>() }
         .toMutableMap()
 
     /** index -> tier */
-    private val ix2tier: MutableMap<Arg.Indexed, Int> = initialExpressions
+    private val ix2tier: MutableMap<Indexed, Int> = initialExpressions
         .keys
         .associateWith { -1 }
         .toMutableMap()
     /** tier -> indices */
-    private val tier2ixs: MutableList<Set<Arg.Indexed>>
+    private val tier2ixs: MutableList<Set<Indexed>>
 
     init {
         computeTiers() // computes ix2tier
@@ -63,17 +63,20 @@ class ExpressionForest(
             }
         }
 
-    fun addSoloExpression(isPoint: Boolean, expr: Expr.OneToOne) {
-        val ix: Arg.Indexed = if (isPoint) {
+    fun addSoloExpression(
+        expr: Expr.OneToOne,
+        isPoint: Boolean,
+    ): GCircle? {
+        val ix: Indexed = if (isPoint) {
             val i = expressions.keys
-                .filterIsInstance<Arg.Indexed.Point>()
+                .filterIsInstance<Indexed.Point>()
                 .maxOfOrNull { it.index + 1 } ?: 0
-            Arg.Indexed.Point(i)
+            Indexed.Point(i)
         } else {
             val i = expressions.keys
-                .filterIsInstance<Arg.Indexed.CircleOrLine>()
+                .filterIsInstance<Indexed.CircleOrLine>()
                 .maxOfOrNull { it.index + 1 } ?: 0
-            Arg.Indexed.CircleOrLine(i)
+            Indexed.CircleOrLine(i)
         }
         expressions[ix] = Expression.Just(expr)
         expr.args.forEach { parentIx ->
@@ -87,19 +90,22 @@ class ExpressionForest(
             tier2ixs.add(setOf(ix))
         }
         val result = expr.eval(get)
-        set(ix, result.firstOrNull())
+        return result.firstOrNull()
     }
 
-    fun addMultiExpression(isPoint: Boolean, expr: Expr.OneToMany) {
+    fun addMultiExpression(
+        expr: Expr.OneToMany,
+        isPoint: Boolean,
+    ): ExprResult {
         val result = expr.eval(get)
          if (isPoint) {
             val i = expressions.keys
-                .filterIsInstance<Arg.Indexed.Point>()
+                .filterIsInstance<Indexed.Point>()
                 .maxOfOrNull { it.index + 1 } ?: 0
-            val ix0 = Arg.Indexed.Point(i)
+            val ix0 = Indexed.Point(i)
             val tier = computeTier(ix0)
             repeat(result.size) { outputIndex ->
-                val ix = Arg.Indexed.Point(ix0.index + outputIndex)
+                val ix = Indexed.Point(ix0.index + outputIndex)
                 expressions[ix] = Expression.OneOf(expr, outputIndex)
                 expr.args.forEach { parentIx ->
                     children[parentIx] = children[parentIx]!! + ix
@@ -110,16 +116,15 @@ class ExpressionForest(
                 } else { // no hopping over tiers, we good
                     tier2ixs.add(setOf(ix))
                 }
-                set(ix, result[outputIndex])
             }
         } else {
             val i = expressions.keys
-                .filterIsInstance<Arg.Indexed.CircleOrLine>()
+                .filterIsInstance<Indexed.CircleOrLine>()
                 .maxOfOrNull { it.index + 1 } ?: 0
-            val ix0 = Arg.Indexed.CircleOrLine(i)
+            val ix0 = Indexed.CircleOrLine(i)
              val tier = computeTier(ix0)
              repeat(result.size) { outputIndex ->
-                 val ix = Arg.Indexed.CircleOrLine(ix0.index + outputIndex)
+                 val ix = Indexed.CircleOrLine(ix0.index + outputIndex)
                  expressions[ix] = Expression.OneOf(expr, outputIndex)
                  expr.args.forEach { parentIx ->
                      children[parentIx] = children[parentIx]!! + ix
@@ -130,16 +135,16 @@ class ExpressionForest(
                  } else { // no hopping over tiers, we good
                      tier2ixs.add(setOf(ix))
                  }
-                 set(ix, result[outputIndex])
              }
         }
+        return result
     }
 
     /**
      * delete [ix] node and all of its children
      * @return all deleted nodes
      * */
-    fun deleteNode(ix: Arg.Indexed): Set<Arg.Indexed> {
+    fun deleteNode(ix: Indexed): Set<Indexed> {
         val deleted = mutableSetOf(ix)
         var lvl = listOf(ix)
         while (lvl.isNotEmpty()) {
@@ -163,7 +168,7 @@ class ExpressionForest(
     /** recursively re-evaluates expressions given that [changedIxs] have changed
      * and updates via [set] */
     fun update(
-        changedIxs: List<Arg.Indexed>,
+        changedIxs: List<Indexed>,
         // deltas (translation, rotation, scaling) to apply to immediate carried objects
     ) {
         val changed = changedIxs.toMutableSet()
@@ -210,8 +215,8 @@ class ExpressionForest(
     }
 
     // no need for tailrec idt
-    private fun computeTier(arg: Arg.Indexed): Int {
-        val expression = expressions[arg]
+    private fun computeTier(ix: Indexed): Int {
+        val expression = expressions[ix]
         return if (expression == null) {
             0
         } else {

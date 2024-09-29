@@ -46,7 +46,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import data.PartialArgList
+import domain.PartialArgList
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
@@ -430,7 +430,7 @@ private fun DrawScope.drawPartialConstructs(
                         radius = creationPointRadius,
                         center = arg.toOffset()
                     )
-                is PartialArgList.Arg.GeneralizedCircle ->
+                is PartialArgList.Arg.CircleOrPoint ->
                     when (val gCircle = arg.gCircle) {
                         is CircleOrLine ->
                             drawCircleOrLine(
@@ -478,7 +478,7 @@ private fun DrawScope.drawPartialConstructs(
             }
         }
         ToolMode.CIRCLE_BY_3_POINTS -> viewModel.partialArgList!!.args.let { args ->
-            val gCircles = args.map { (it as PartialArgList.Arg.GeneralizedCircle).gCircle }
+            val gCircles = args.map { (it as PartialArgList.Arg.CircleOrPoint).gCircle }
             if (args.size == 2) {
                 val line = GeneralizedCircle.perp3(
                     GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
@@ -499,7 +499,7 @@ private fun DrawScope.drawPartialConstructs(
         }
         ToolMode.LINE_BY_2_POINTS -> viewModel.partialArgList!!.args.let { args ->
             if (args.size == 2) {
-                val gCircles = args.map { (it as PartialArgList.Arg.GeneralizedCircle).gCircle }
+                val gCircles = args.map { (it as PartialArgList.Arg.CircleOrPoint).gCircle }
                 val line = GeneralizedCircle.perp3(
                     GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
                     GeneralizedCircle.fromGCircle(gCircles[0]),

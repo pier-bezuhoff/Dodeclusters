@@ -60,7 +60,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import data.Cluster
 import data.ClusterRepository
-import data.PartialArgList
+import domain.PartialArgList
 import data.geometry.Circle
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.collapse
@@ -79,7 +79,6 @@ import domain.io.OpenFileButton
 import domain.io.SaveData
 import domain.io.SaveFileButton
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource

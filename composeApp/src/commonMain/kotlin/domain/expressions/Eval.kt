@@ -54,7 +54,6 @@ fun computeCircleInversion(
 // MAYBE: just repeat obj transformations for tier=0 carrier incident points
 fun computeIncidence(
     params: IncidenceParameters,
-    point: Point,
     carrier: CircleOrLine,
 ): Point =
     carrier.order2point(params.order)

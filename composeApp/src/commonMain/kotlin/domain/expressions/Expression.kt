@@ -29,15 +29,13 @@ interface Parameters {
     data object None : Parameters
 }
 
-sealed interface Arg {
-    // potential optimization: represent point indices as
-    // -(i+1) while circle indices are +i
-    sealed interface Indexed : Arg {
-        val index: Ix
+// potential optimization: represent point indices as
+// -(i+1) while circle indices are +i
+sealed interface Indexed {
+    val index: Ix
 
-        data class CircleOrLine(override val index: Ix) : Indexed
-        data class Point(override val index: Ix) : Indexed
-    }
+    data class CircleOrLine(override val index: Ix) : Indexed
+    data class Point(override val index: Ix) : Indexed
 }
 
 sealed interface Expression {

@@ -12,11 +12,19 @@ import kotlin.math.PI
 
 // eval for one-to-many functions
 
+/** always returns size=2 list */
 fun computeIntersection(
     obj1: CircleOrLine,
     obj2: CircleOrLine,
-): List<Point> =
-    Circle.calculateIntersectionPoints(obj1, obj2)
+): List<Point?> {
+    val ips = Circle.calculateIntersectionPoints(obj1, obj2)
+    return when (ips.size) {
+        0 -> listOf(null, null)
+        1 -> ips + null
+        2 -> ips
+        else -> throw IllegalStateException("Never")
+    }
+}
 
 fun computeCircleInterpolation(
     params: InterpolationParameters, // bad: using ui dep in domain

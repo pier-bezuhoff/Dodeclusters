@@ -10,19 +10,24 @@ import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 
-sealed class PointSnapResult(open val result: Point) {
-    data class Free(override val result: Point) : PointSnapResult(result)
+sealed interface PointSnapResult {
+    val result: Point
+    sealed interface PointToPoint : PointSnapResult
+    sealed interface PointToCircle : PointSnapResult
+
+    data class Free(override val result: Point) : PointToPoint, PointToCircle
+    data class Eq(override val result: Point, val pointIndex: Ix) : PointToPoint
     data class Incidence(
         override val result: Point,
-        val index: Ix
-    ) : PointSnapResult(result)
+        val circleIndex: Ix
+    ) : PointToCircle
     data class Intersection(
         override val result: Point,
-        val index1: Ix,
-        val index2: Ix
-    ) : PointSnapResult(result) {
+        val circle1Index: Ix,
+        val circle2index: Ix
+    ) : PointToCircle {
         init {
-            require(index1 != index2)
+            require(circle1Index != circle2index)
         }
     }
 }
@@ -49,14 +54,21 @@ fun snapAngle(
 
 fun snapPointToPoints(
     point: Point,
-    points: List<Point>,
+    points: List<Point?>,
     snapDistance: Double
-): Point =
-    points
-        .map { it to it.distanceFrom(point) }
+): PointSnapResult.PointToPoint {
+    val ix = points
+        .mapIndexed { ix, p ->
+            ix to (p?.distanceFrom(point) ?: Double.POSITIVE_INFINITY)
+        }
         .filter { (_, d) -> d <= snapDistance }
         .minByOrNull { (_, d) -> d }
-        ?.first ?: point
+        ?.first
+    return if (ix == null)
+        PointSnapResult.Free(point)
+    else
+        PointSnapResult.Eq(points[ix]!!, pointIndex = ix)
+}
 
 /** Project [point] onto the closest circle among [circles] that
  * are closer than [snapDistance] from it.
@@ -66,34 +78,54 @@ fun snapPointToPoints(
  * */
 fun snapPointToCircles(
     point: Point,
-    circles: List<CircleOrLine>,
+    circles: List<CircleOrLine?>,
     snapDistance: Double,
     intersectionTolerance: Double = 1.5
-): Point {
-    val closestCircles = circles.asSequence()
-        .map { it to it.distanceFrom(point) }
+): PointSnapResult.PointToCircle {
+    val closestCircles: List<Ix> = circles.asSequence()
+        .mapIndexed { ix, p ->
+            ix to (p?.distanceFrom(point) ?: Double.POSITIVE_INFINITY)
+        }
         .filter { (_, d) -> d <= snapDistance }
         .sortedBy { (_, d) -> d }
         .take(2)
-        .map { (c, _) -> c }
+        .map { (ix, _) -> ix }
         .toList() // get 2 closest circles
-    return if (closestCircles.isEmpty())
-        point
-    else if (closestCircles.size == 1)
-        closestCircles.first().project(point)
-    else {
-        val (c1, c2) = closestCircles
+    return if (closestCircles.isEmpty()) {
+        PointSnapResult.Free(point)
+    } else if (closestCircles.size == 1) {
+        val ix = closestCircles.first()
+        val circle = circles[ix]!!
+        PointSnapResult.Incidence(
+            circle.project(point),
+            circleIndex = ix
+        )
+    } else {
+        val (ix1, ix2) = closestCircles
+        val c1 = circles[ix1]!!
+        val c2 = circles[ix2]!!
         val intersections = Circle.calculateIntersectionPoints(c1, c2)
-        if (intersections.isEmpty())
-            c1.project(point)
-        else {
+        if (intersections.isEmpty()) {
+            PointSnapResult.Incidence(
+                c1.project(point),
+                circleIndex = ix1
+            )
+        } else {
             val (closestIntersection, distance) = intersections
                 .map { it to point.distanceFrom(it) }
                 .minByOrNull { (_, d) -> d }!!
-            if (distance <= intersectionTolerance * snapDistance)
-                closestIntersection
-            else
-                c1.project(point)
+            if (distance <= intersectionTolerance * snapDistance) {
+                PointSnapResult.Intersection(
+                    closestIntersection,
+                    circle1Index = ix1,
+                    circle2index = ix2
+                )
+            } else {
+                PointSnapResult.Incidence(
+                    c1.project(point),
+                    circleIndex = ix1
+                )
+            }
         }
     }
 }

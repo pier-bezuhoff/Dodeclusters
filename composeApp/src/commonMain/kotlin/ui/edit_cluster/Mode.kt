@@ -3,7 +3,7 @@ package ui.edit_cluster
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import data.Cluster
-import data.PartialArgList
+import domain.PartialArgList
 import kotlinx.serialization.Serializable
 import ui.tools.EditClusterTool
 import kotlin.jvm.Transient

@@ -1,6 +1,6 @@
 package ui.tools
 
-import data.PartialArgList
+import domain.PartialArgList
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
 import org.jetbrains.compose.resources.StringResource

@@ -2,7 +2,6 @@ package ui.tools
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
-import data.PartialArgList
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.add_image
 import dodeclusters.composeapp.generated.resources.add_point_arg_descriptions
@@ -111,6 +110,16 @@ import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.upload
 import dodeclusters.composeapp.generated.resources.visible
+import domain.PartialArgList
+import domain.SIGNATURE_1_POINT
+import domain.SIGNATURE_2_CIRCLES
+import domain.SIGNATURE_2_GENERALIZED_CIRCLES
+import domain.SIGNATURE_2_POINTS
+import domain.SIGNATURE_3_GENERALIZED_CIRCLE
+import domain.SIGNATURE_INDEXED_AND_2_POINTS
+import domain.SIGNATURE_INDEXED_AND_CIRCLE
+import domain.SIGNATURE_N_POINTS_PLACEHOLDER
+import domain.Signature
 import domain.io.Ddc
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
@@ -130,7 +139,7 @@ sealed class EditClusterTool(
         final override val disabledIcon: DrawableResource? = null
     ) : EditClusterTool(name, description, icon), Tool.BinaryToggle
     sealed class MultiArg(
-        final override val signature: PartialArgList.Signature,
+        final override val signature: Signature,
         name: StringResource,
         description: StringResource = name,
         final override val argDescriptions: StringArrayResource,
@@ -266,7 +275,7 @@ sealed class EditClusterTool(
     )
 
     data object CircleInversion: MultiArg(
-        PartialArgList.SIGNATURE_INDEXED_AND_CIRCLE,
+        SIGNATURE_INDEXED_AND_CIRCLE,
 //        PartialArgList.SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE,
         Res.string.circle_inversion_name,
         Res.string.circle_inversion_description,
@@ -274,21 +283,21 @@ sealed class EditClusterTool(
         Res.drawable.circle_inversion_v3
     )
     data object CircleInterpolation: MultiArg(
-        PartialArgList.SIGNATURE_2_CIRCLES,
+        SIGNATURE_2_CIRCLES,
         Res.string.circle_interpolation_name,
         Res.string.circle_interpolation_description,
         Res.array.circle_interpolation_arg_descriptions,
         Res.drawable.interpolate_lines
     )
     data object CircleExtrapolation: MultiArg(
-        PartialArgList.SIGNATURE_2_CIRCLES,
+        SIGNATURE_2_CIRCLES,
         Res.string.circle_extrapolation_name,
         Res.string.circle_extrapolation_description,
         Res.array.circle_extrapolation_arg_descriptions,
         Res.drawable.extrapolate_lines
     )
     data object LoxodromicMotion: MultiArg(
-        PartialArgList.SIGNATURE_INDEXED_AND_2_POINTS,
+        SIGNATURE_INDEXED_AND_2_POINTS,
         Res.string.loxodromic_motion_name,
         Res.string.loxodromic_motion_description,
         Res.array.loxodromic_motion_arg_descriptions,
@@ -297,21 +306,21 @@ sealed class EditClusterTool(
 
     // MAYBE: add partial argument icon(s)
     data object ConstructCircleByCenterAndRadius: MultiArg(
-        PartialArgList.SIGNATURE_2_POINTS,
+        SIGNATURE_2_POINTS,
         Res.string.circle_by_center_and_radius_name,
         Res.string.circle_by_center_and_radius_description,
         Res.array.circle_by_center_and_radius_arg_descriptions,
         Res.drawable.circle_center_and_radius_point,
     )
     data object ConstructCircleBy3Points: MultiArg(
-        PartialArgList.SIGNATURE_3_GENERALIZED_CIRCLE,
+        SIGNATURE_3_GENERALIZED_CIRCLE,
         Res.string.circle_by_3_points_name,
         Res.string.circle_by_3_points_description,
         Res.array.circle_by_3_points_arg_descriptions,
         Res.drawable.circle_3_points
     )
     data object ConstructLineBy2Points: MultiArg(
-        PartialArgList.SIGNATURE_2_GENERALIZED_CIRCLE,
+        SIGNATURE_2_GENERALIZED_CIRCLES,
         Res.string.line_by_2_points_name,
         Res.string.line_by_2_points_description,
         Res.array.line_by_2_points_arg_descriptions,
@@ -323,7 +332,7 @@ sealed class EditClusterTool(
         Res.drawable.full_screen_cross
     )
     data object ConstructArcPath: MultiArg(
-        PartialArgList.SIGNATURE_N_POINTS_PLACEHOLDER,
+        SIGNATURE_N_POINTS_PLACEHOLDER,
         Res.string.arc_path_name,
         Res.string.arc_path_description,
         Res.array.arc_path_arg_descriptions,
@@ -334,7 +343,7 @@ sealed class EditClusterTool(
         icon = Res.drawable.confirm
     )
     data object AddPoint: MultiArg(
-        PartialArgList.SIGNATURE_1_POINT,
+        SIGNATURE_1_POINT,
         Res.string.add_point_name,
         Res.string.add_point_description,
         Res.array.add_point_arg_descriptions,
