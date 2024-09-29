@@ -212,7 +212,9 @@ private fun SelectionsCanvas(
                     viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection
                 )
             ) {
-                val circles = viewModel.selection.map { viewModel.circles[it] }
+                val circles = viewModel.selection
+                    .map { viewModel.circles[it] }
+                    .filterNotNull()
                 for (circle in circles) {
                     // alpha = where selection lines are shown
                     // dst out = erase the BG rectangle => show hatching thats drawn behind it
@@ -313,21 +315,23 @@ private fun DrawScope.drawCircles(
 ) {
     if (viewModel.circleSelectionIsActive) {
         for ((ix, circle) in viewModel.circles.withIndex()) {
-            if (ix !in viewModel.selection)
+            if (circle != null && ix !in viewModel.selection)
                 drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
         }
     } else {
         for (circle in viewModel.circles) {
-            drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
+            if (circle != null)
+                drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
         }
     }
     if (viewModel.pointSelectionIsActive) {
         for ((ix, point) in viewModel.points.withIndex())
-            if (ix !in viewModel.selectedPoints)
+            if (point != null && ix !in viewModel.selectedPoints)
                 drawCircle(pointColor, pointRadius, point.toOffset())
     } else {
         for (point in viewModel.points)
-            drawCircle(pointColor, pointRadius, point.toOffset())
+            if (point != null)
+                drawCircle(pointColor, pointRadius, point.toOffset())
     }
 }
 
@@ -344,7 +348,9 @@ private fun DrawScope.drawSelectedCircles(
         (viewModel.circleSelectionIsActive ||
         viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection)
     ) {
-        val circles = viewModel.selection.map { viewModel.circles[it] }
+        val circles = viewModel.selection
+            .map { viewModel.circles[it] }
+            .filterNotNull()
         for (circle in circles) {
             drawCircleOrLine(
                 circle, visibleRect, selectedCircleColor,
@@ -354,7 +360,9 @@ private fun DrawScope.drawSelectedCircles(
         }
     }
     if (viewModel.pointSelectionIsActive) {
-        val points = viewModel.selectedPoints.map { viewModel.points[it] }
+        val points = viewModel.selectedPoints
+            .map { viewModel.points[it] }
+            .filterNotNull()
         for (point in points) {
             drawCircle(selectedPointColor, pointRadius, point.toOffset())
         }
@@ -372,12 +380,14 @@ private fun DrawScope.drawParts(
     if (viewModel.displayChessboardPattern) {
         if (viewModel.showWireframes) {
             for (circle in viewModel.circles)
-                drawCircleOrLine(circle, visibleRect, viewModel.regionColor, style = circleStroke)
+                if (circle != null)
+                    drawCircleOrLine(circle, visibleRect, viewModel.regionColor, style = circleStroke)
         } else {
             if (viewModel.chessboardPatternStartsWhite)
                 drawRect(viewModel.regionColor, visibleRect.topLeft, visibleRect.size)
             for (circle in viewModel.circles) { // it used to work poorly but is good now for some reason
-                drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
+                if (circle != null)
+                    drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
             }
         }
     } else {
@@ -406,11 +416,14 @@ private fun DrawScope.drawPartialConstructs(
     viewModel.partialArgList?.args?.let { args ->
         for (arg in args)
             when (arg) {
-                is PartialArgList.Arg.CircleIndex ->
-                    drawCircleOrLine(
-                        viewModel.circles[arg.index],
-                        visibleRect, creationPrototypeColor, style = circleStroke
-                    )
+                is PartialArgList.Arg.CircleIndex -> {
+                    val circle = viewModel.circles[arg.index]
+                    if (circle != null)
+                        drawCircleOrLine(
+                            circle,
+                            visibleRect, creationPrototypeColor, style = circleStroke
+                        )
+                }
                 is PartialArgList.Arg.XYPoint ->
                     drawCircle(
                         color = creationPrototypeColor,
@@ -433,17 +446,20 @@ private fun DrawScope.drawPartialConstructs(
                         else -> {}
                     }
                 is PartialArgList.Arg.CircleAndPointIndices -> {
-                    for (ix in arg.circleIndices)
-                        drawCircleOrLine(
-                            viewModel.circles[ix],
-                            visibleRect, creationPrototypeColor, style = circleStroke
-                        )
-                    for (ix in arg.pointIndices)
-                        drawCircle(
-                            color = creationPrototypeColor,
-                            radius = creationPointRadius,
-                            center = viewModel.points[ix].toOffset()
-                        )
+                    for (ix in arg.circleIndices) {
+                        val circle = viewModel.circles[ix]
+                        if (circle != null)
+                            drawCircleOrLine(circle, visibleRect, creationPrototypeColor, style = circleStroke)
+                    }
+                    for (ix in arg.pointIndices) {
+                        val point = viewModel.points[ix]
+                        if (point != null)
+                            drawCircle(
+                                color = creationPrototypeColor,
+                                radius = creationPointRadius,
+                                center = point.toOffset()
+                            )
+                    }
                 }
             }
     }

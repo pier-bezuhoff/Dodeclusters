@@ -84,11 +84,11 @@ fun chessboardPath(
 // MAYBE: move to Cluster methods
 // MAYBE: add threading cuz it can be slow (esp. 100+ circles with xor)
 fun part2path(
-    circles: List<CircleOrLine>,
+    circles: List<CircleOrLine?>,
     part: Cluster.Part,
     visibleRect: Rect
 ): Path {
-    val circleInsides = part.insides.map { circles[it] }
+    val circleInsides = part.insides.mapNotNull { circles[it] }
     val insidePath: Path? = circleInsides
         .map {
             when (it) {
@@ -100,7 +100,7 @@ fun part2path(
             acc.op(acc, anotherPath, PathOperation.Intersect)
             acc
         }
-    val circleOutsides = part.outsides.map { circles[it] }
+    val circleOutsides = part.outsides.mapNotNull { circles[it] }
     return if (insidePath == null) {
         val invertedPath = circleOutsides.map {
             when (it) {

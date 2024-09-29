@@ -182,7 +182,7 @@ fun EditClusterScreen(
     if (viewModel.showCircleInterpolationDialog && viewModel.partialArgList?.isFull == true) {
         val (startCircle, endCircle) = viewModel.partialArgList!!.args
             .map {
-                viewModel.circles[(it as PartialArgList.Arg.CircleIndex).index]
+                viewModel.circles[(it as PartialArgList.Arg.CircleIndex).index]!!
             }
         CircleInterpolationDialog(
             startCircle, endCircle,
@@ -196,7 +196,7 @@ fun EditClusterScreen(
     if (viewModel.showCircleExtrapolationDialog && viewModel.partialArgList?.isFull == true) {
         val (startCircle, endCircle) = viewModel.partialArgList!!.args
             .map {
-                viewModel.circles[(it as PartialArgList.Arg.CircleIndex).index]
+                viewModel.circles[(it as PartialArgList.Arg.CircleIndex).index]!!
             }
         CircleExtrapolationDialog(
             startCircle, endCircle,

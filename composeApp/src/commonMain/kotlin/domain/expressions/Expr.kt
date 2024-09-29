@@ -29,9 +29,10 @@ sealed class Expr(
     // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr
     //  p' = f(Δ(f⁻¹(p)), where point p on dependent carrier f(<free>) moves to p' when <free> is affected by Δ
     data class Incidence(
+        override val parameters: IncidenceParameters,
         val point: Arg.Indexed.Point,
         val carrier: Arg.Indexed.CircleOrLine,
-    ) : OneToOne(Function.OneToOne.INCIDENCE, Parameters.None, listOf(point, carrier))
+    ) : OneToOne(Function.OneToOne.INCIDENCE, parameters, listOf(point, carrier))
     data class CircleByCenterAndRadius(
         val center: Arg.Indexed.Point,
         val radiusPoint: Arg.Indexed.Point
@@ -74,50 +75,81 @@ sealed class Expr(
         val divergencePoint: Arg.Indexed.Point,
         val convergencePoint: Arg.Indexed.Point,
         val target: Arg.Indexed,
-    ) : OneToMany(Function.OneToMany.LOXODROMIC_MOTION, parameters, listOf(divergencePoint, convergencePoint, target))
+    ) : OneToMany(
+        Function.OneToMany.LOXODROMIC_MOTION, parameters,
+        listOf(divergencePoint, convergencePoint, target)
+    )
 
-    // indexed args -> VM.circles&points -> VM.downscale -> eval -> VM.upscale
     fun eval(
-        c: (Arg.Indexed.CircleOrLine) -> CircleOrLine,
-        p: (Arg.Indexed.Point) -> Point,
+        get: (Arg.Indexed) -> GCircle?,
     ): ExprResult {
-        fun g(arg: Arg.Indexed): GCircle =
-            when (arg) {
-                is Arg.Indexed.Point -> p(arg)
-                is Arg.Indexed.CircleOrLine -> c(arg)
-            }
-        // idt it's worth to polymorphism eval
-        return when (this) {
-            is OneToOne -> {
-                val result = when (this) {
-                    is Incidence -> computeIncidence(p(point), c(carrier))
-                    is CircleByCenterAndRadius -> computeCircleByCenterAndRadius(
-                        p(center),
-                        p(radiusPoint)
-                    )
-                    is CircleBy3Points -> computeCircleBy3Points(g(point1), g(point2), g(point3))
-                    is LineBy2Points -> computeLineBy2Points(g(point1), g(point2))
-                    is CircleInversion -> computeCircleInversion(g(target), g(engine))
+        val g = { ix: Arg.Indexed ->
+            get(ix) ?: throw NullPointerException() // i miss MonadError
+        }
+        val c = { ix: Arg.Indexed.CircleOrLine ->
+            get(ix) as? CircleOrLine ?: throw NullPointerException()
+        }
+        val p = { ix: Arg.Indexed.Point ->
+            get(ix) as? Point ?: throw NullPointerException()
+        }
+        try {
+            // idt it's worth to polymorphism eval
+            return when (this) {
+                is OneToOne -> {
+                    val result = when (this) {
+                        is Incidence -> computeIncidence(
+                            parameters,
+                            p(point),
+                            c(carrier)
+                        )
+                        is CircleByCenterAndRadius -> computeCircleByCenterAndRadius(
+                            p(center),
+                            p(radiusPoint)
+                        )
+                        is CircleBy3Points -> computeCircleBy3Points(
+                            g(point1),
+                            g(point2),
+                            g(point3)
+                        )
+                        is LineBy2Points -> computeLineBy2Points(
+                            g(point1),
+                            g(point2)
+                        )
+                        is CircleInversion -> computeCircleInversion(
+                            g(target),
+                            g(engine)
+                        )
+                    }
+                    listOf(result)
                 }
-                listOf(result)
+                is Intersection -> computeIntersection(
+                    c(circle1),
+                    c(circle2)
+                )
+                is CircleInterpolation -> computeCircleInterpolation(
+                    parameters,
+                    c(startCircle),
+                    c(endCircle)
+                )
+                is CircleExtrapolation -> computeCircleExtrapolation(
+                    parameters,
+                    c(startCircle),
+                    c(endCircle)
+                )
+                is LoxodromicMotion -> computeLoxodromicMotion(
+                    parameters,
+                    p(divergencePoint),
+                    p(convergencePoint),
+                    g(target)
+                )
             }
-            is Intersection -> computeIntersection(c(circle1), c(circle2))
-            is CircleInterpolation -> computeCircleInterpolation(
-                parameters,
-                c(startCircle),
-                c(endCircle)
-            )
-            is CircleExtrapolation -> computeCircleExtrapolation(
-                parameters,
-                c(startCircle),
-                c(endCircle)
-            )
-            is LoxodromicMotion -> computeLoxodromicMotion(
-                parameters,
-                p(divergencePoint),
-                p(convergencePoint),
-                g(target)
-            )
+        } catch (e: NullPointerException) {
+            return emptyList()
         }
     }
 }
+
+data class IncidenceParameters(
+    val order: Double
+) : Parameters
+

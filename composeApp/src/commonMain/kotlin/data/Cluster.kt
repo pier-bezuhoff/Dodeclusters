@@ -67,40 +67,44 @@ data class OldCluster(
 )
 
 
+/** [ins] and [outs] delimiters must not contain `null` circles */
 fun compressPart(
-    circles: List<CircleOrLine>,
+    circles: List<CircleOrLine?>,
     ins: List<Ix>,
     outs: List<Ix>,
 ): Pair<Set<Ix>, Set<Ix>> {
     val (sievedIns, sievedOuts) =
         compressPartByRelativeContainment(circles, ins, outs)
     val (essentialInsIxs, essentialOutsIxs) =
-        compressPartByIntersectionPoints(sievedIns.map { circles[it] }, sievedOuts.map { circles[it] })
+        compressPartByIntersectionPoints(
+            sievedIns.map { circles[it]!! },
+            sievedOuts.map { circles[it]!! }
+        )
     val essentialIns = essentialInsIxs.map { sievedIns[it] }
     val essentialOuts = essentialOutsIxs.map { sievedOuts[it] }
     return Pair(essentialIns.toSet(), essentialOuts.toSet())
 }
 
 fun compressPartByRelativeContainment(
-    circles: List<CircleOrLine>,
+    circles: List<CircleOrLine?>,
     ins: List<Ix>,
     outs: List<Ix>,
 ): Pair<List<Ix>, List<Ix>> {
     // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
     val excessiveIns = ins.filter { inJ -> // NOTE: tbh idt these can occur naturally
-        val circle = circles[inJ]
+        val circle = circles[inJ]!!
         ins.any { otherIn ->
-            otherIn != inJ && circles[otherIn] isInside circle // we only leave the smallest 'in'
+            otherIn != inJ && circles[otherIn]!! isInside circle // we only leave the smallest 'in'
         } || outs.any { otherOut ->
-            circle isInside circles[otherOut] // if an 'in' isInside an 'out' it is empty
+            circle isInside circles[otherOut]!! // if an 'in' isInside an 'out' it is empty
         }
     }
     val excessiveOuts = outs.filter { outJ ->
-        val circle = circles[outJ]
+        val circle = circles[outJ]!!
         outs.any { otherOut ->
-            otherOut != outJ && circle isInside circles[otherOut] // we only leave the biggest 'out'
+            otherOut != outJ && circle isInside circles[otherOut]!! // we only leave the biggest 'out'
         } || ins.any { otherIn ->
-            circle isOutside circles[otherIn] // if an 'out' isOutside an 'in' it is empty
+            circle isOutside circles[otherIn]!! // if an 'out' isOutside an 'in' it is empty
         }
     }
     val sievedIns = ins.minus(excessiveIns.toSet())

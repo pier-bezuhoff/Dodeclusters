@@ -35,6 +35,9 @@ import data.geometry.Point
 import domain.Ix
 import domain.OffsetSerializer
 import domain.angleDeg
+import domain.expressions.Arg
+import domain.expressions.Expression
+import domain.expressions.ExpressionForest
 import domain.io.Ddc
 import domain.io.OldDdc
 import domain.io.cluster2svg
@@ -55,14 +58,19 @@ import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.pow
 
-// TODO: migrate to Decompose 3.0 for a real VM impl
+// TODO: migrate to Decompose 3 for a real VM impl
 // MAYBE: use UiState functional pattern instead this mess
 // this class is obviously too big
+// TODO: decopulate navigation & tools/categories
 @Stable
 class EditClusterViewModel(
     /** NOT a viewModelScope, just a rememberCS from the screen composable */
     private val coroutineScope: CoroutineScope,
-    cluster: Cluster = Cluster.SAMPLE
+    initialCircles: List<CircleOrLine?>,
+    initialParts: List<Cluster.Part>,
+    initialExpressions: Map<Arg.Indexed, Expression?> =
+        initialCircles.indices.associate { Arg.Indexed.CircleOrLine(it) to null }
+//    cluster: Cluster = Cluster.SAMPLE
 ) {
     var mode: Mode by mutableStateOf(SelectionMode.Drag)
         private set
@@ -70,11 +78,26 @@ class EditClusterViewModel(
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
     /** [Cluster.circles] */
-    val circles = mutableStateListOf(*cluster.circles.toTypedArray())
+    val circles: SnapshotStateList<CircleOrLine?> = initialCircles.toMutableStateList()
     /** helper anchor points for snapping; these are not saved into [Ddc] */
-    val points = mutableStateListOf<Point>()
+    val points: SnapshotStateList<Point?> = mutableStateListOf()
     /** [Cluster.parts] */
-    val parts = mutableStateListOf(*cluster.parts.toTypedArray())
+    val parts: SnapshotStateList<Cluster.Part> = initialParts.toMutableStateList()
+
+    val expressions: ExpressionForest = ExpressionForest(
+        initialExpressions = initialExpressions,
+        get = { when (it) {
+            is Arg.Indexed.CircleOrLine -> circles[it.index]?.downscale()
+            is Arg.Indexed.Point -> points[it.index]?.downscale()
+        } },
+        set = { ix, value -> when (ix) {
+            is Arg.Indexed.CircleOrLine ->
+                circles[ix.index] = (value as? CircleOrLine)?.upscale()
+            is Arg.Indexed.Point ->
+                points[ix.index] = (value as? Point)?.upscale()
+        } }
+    )
+
     /** indices of selected [circles] */
     val selection = mutableStateListOf<Ix>() // MAYBE: when circles are hidden select parts instead
     /** indices of selected [points] */
@@ -197,7 +220,7 @@ class EditClusterViewModel(
 
     fun saveAsYaml(name: String = Ddc.DEFAULT_NAME): String {
         val cluster = Cluster(
-            circles.toList(), parts.toList()
+            circles.filterNotNull(), parts.toList()
         )
         var ddc = Ddc(cluster).copy(
             name = name,
@@ -212,7 +235,7 @@ class EditClusterViewModel(
 
     fun exportAsSvg(name: String = Ddc.DEFAULT_NAME): String {
         val cluster = Cluster(
-            circles.toList(), parts.toList()
+            circles.filterNotNull(), parts.toList()
         )
         val start = absolute(Offset.Zero)
         return cluster2svg(
@@ -272,7 +295,7 @@ class EditClusterViewModel(
     // backwards compatibility
     fun saveAsJson(): String {
         val cluster = Cluster(
-            circles.toList(), parts.toList(), filled = true
+            circles.filterNotNull(), parts.toList(), filled = true
         )
         return Json.encodeToString(Cluster.serializer(), cluster)
     }
@@ -408,7 +431,7 @@ class EditClusterViewModel(
     fun duplicateCircles() {
         if (mode.isSelectingCircles()) {
             recordCommand(Command.DUPLICATE, selection)
-            val copiedCircles = selection.map { circles[it] } // preserves selection order
+            val copiedCircles = selection.mapNotNull { circles[it] } // preserves selection order
             val oldSize = circles.size
             circles.addAll(copiedCircles)
             val newIndices = oldSize until oldSize + copiedCircles.size
@@ -465,6 +488,7 @@ class EditClusterViewModel(
     }
 
     fun deleteCircles() {
+        TODO("remove reindexing")
         fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Ix>): Map<Ix, Ix> {
             val re = mutableMapOf<Ix, Ix>()
             var shift = 0
@@ -487,7 +511,7 @@ class EditClusterViewModel(
         selectedPoints = emptyList()
         if (thereAreSelectedCirclesToDelete) {
             val whatsGone = selection.toSet()
-            val deletedCircles = whatsGone.map { circles[it] }
+            val deletedCircles = whatsGone.mapNotNull { circles[it] }
             val whatsLeft = circles.filterIndexed { ix, _ -> ix !in whatsGone }
             val oldParts = parts.toList()
             val reindexing = reindexingMap(circles.indices, whatsGone)
@@ -556,11 +580,13 @@ class EditClusterViewModel(
         return (absolutePosition - position).getDistance() <= tapDistance * (if (lowAccuracy) LOW_ACCURACY_FACTOR else 1f)
     }
 
-    fun selectPoint(targets: List<Point>, visiblePosition: Offset): Ix? {
+    fun selectPoint(targets: List<Point?>, visiblePosition: Offset): Ix? {
         val position = absolute(visiblePosition)
         val absolutePoint = Point.fromOffset(position)
-        return targets.mapIndexed { ix, point -> ix to point.distanceFrom(absolutePoint) }
-            .filter { (_, distance) -> distance <= tapDistance }
+        return targets
+            .mapIndexed { ix, point ->
+                ix to (point?.distanceFrom(absolutePoint) ?: Double.POSITIVE_INFINITY)
+            }.filter { (_, distance) -> distance <= tapDistance }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
     }
@@ -576,10 +602,10 @@ class EditClusterViewModel(
         }
     }
 
-    fun selectCircle(targets: List<CircleOrLine>, visiblePosition: Offset): Ix? {
+    fun selectCircle(targets: List<CircleOrLine?>, visiblePosition: Offset): Ix? {
         val position = absolute(visiblePosition)
         return targets.mapIndexed { ix, circle ->
-            ix to circle.distanceFrom(position)
+            ix to (circle?.distanceFrom(position) ?: Double.POSITIVE_INFINITY)
         }
             .filter { (_, distance) -> distance <= tapDistance }
             .minByOrNull { (_, distance) -> distance }
@@ -614,9 +640,9 @@ class EditClusterViewModel(
         val position = absolute(visiblePosition)
         val delimiters = boundingCircles ?: circles.indices
         val ins = delimiters // NOTE: doesn't include circles that the point lies on
-            .filter { ix -> circles[ix].hasInside(position) }
+            .filter { ix -> circles[ix]?.hasInside(position) ?: false }
         val outs = delimiters
-            .filter { ix -> circles[ix].hasOutside(position) }
+            .filter { ix -> circles[ix]?.hasOutside(position) ?: false }
         val (essentialIns, essentialOuts) = compressPart(circles, ins, outs)
         val part0 = Cluster.Part(ins.toSet(), outs.toSet(), regionColor)
         val part = Cluster.Part(
@@ -697,7 +723,7 @@ class EditClusterViewModel(
         val point = Point.fromOffset(absolutePosition)
         val point2pointSnapping = !excludePoints && mode != ToolMode.POINT
         if (point2pointSnapping) {
-            val snappablePoints = points
+            val snappablePoints = points.filterNotNull()
             val point1 = snapPointToPoints(point, snappablePoints, snapDistance)
             if (point1 != point)
                 return point1
@@ -705,7 +731,7 @@ class EditClusterViewModel(
         val point2circleSnapping = showCircles
         if (!point2circleSnapping) // no snapping to invisibles
             return point
-        val visibleCircles = circles
+        val visibleCircles = circles.filterNotNull()
         val point2 = snapPointToCircles(point, visibleCircles, snapDistance)
         return point2
     }
@@ -843,7 +869,7 @@ class EditClusterViewModel(
                             absolute(canvasSize.center.toOffset())
                         else rect.center
                     for (ix in selection) {
-                        circles[ix] = circles[ix].scale(center, zoom)
+                        circles[ix] = circles[ix]?.scale(center, zoom)
                     }
                 }
             }
@@ -854,12 +880,12 @@ class EditClusterViewModel(
             recordCommand(Command.SCALE, targets = allIndices)
             val center = absolute(canvasSize.center.toOffset())
             for (ix in allIndices) {
-                circles[ix] = circles[ix].scale(center, zoom)
+                circles[ix] = circles[ix]?.scale(center, zoom)
             }
             for ((ix, point) in points.withIndex()) {
                 // FIX: isn't saved in history
                 //  so this gets messed up on undo
-                points[ix] = point.scale(center, zoom)
+                points[ix] = point?.scale(center, zoom)
             }
         }
     }
@@ -976,7 +1002,7 @@ class EditClusterViewModel(
                         PartialArgList.ArgType.GeneralizedCircle -> {
                             val circleIndex = selectCircle(circles, visiblePosition)
                             if (circleIndex != null) {
-                                val newArg = PartialArgList.Arg.GeneralizedCircle(circles[circleIndex])
+                                val newArg = PartialArgList.Arg.GeneralizedCircle(circles[circleIndex]!!)
                                 if (partialArgList!!.currentArg != newArg)
                                     partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = false)
                             } else {
@@ -1109,7 +1135,7 @@ class EditClusterViewModel(
                                 recordCommand(Command.SCALE, targets = listOf(h.ix))
                                 val circle = circles[h.ix]
                                 val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
-                                circles[h.ix] = circle.scale(sm.center, scaleFactor)
+                                circles[h.ix] = circle?.scale(sm.center, scaleFactor)
                                 submode = sm.copy(sliderPercentage = newPercentage)
                             }
                         }
@@ -1124,7 +1150,7 @@ class EditClusterViewModel(
                                 if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
                                 else newAngle
                             val angle1 = snappedAngle - sm.snappedAngle
-                            circles[h.ix] = circles[h.ix].rotate(center, angle1.toFloat())
+                            circles[h.ix] = circles[h.ix]?.rotate(center, angle1.toFloat())
                             submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
                         }
                         else -> {}
@@ -1141,7 +1167,7 @@ class EditClusterViewModel(
                                 val centerToCurrent = centerToHandle + pan
                                 val scaleFactor = centerToCurrent.getDistance()/centerToHandle.getDistance()
                                 for (ix in selection) {
-                                    circles[ix] = circles[ix].scale(center, scaleFactor)
+                                    circles[ix] = circles[ix]?.scale(center, scaleFactor)
                                 }
                             }
                         }
@@ -1151,7 +1177,7 @@ class EditClusterViewModel(
                                 recordCommand(Command.SCALE, targets = selection)
                                 val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
                                 for (ix in selection) {
-                                    circles[ix] = circles[ix].scale(sm.center, scaleFactor)
+                                    circles[ix] = circles[ix]?.scale(sm.center, scaleFactor)
                                 }
                                 submode = sm.copy(sliderPercentage = newPercentage)
                             }
@@ -1168,7 +1194,7 @@ class EditClusterViewModel(
                                 else newAngle
                             val angle1 = snappedAngle - sm.snappedAngle
                             for (ix in selection) {
-                                circles[ix] = circles[ix].rotate(sm.center, angle1.toFloat())
+                                circles[ix] = circles[ix]?.rotate(sm.center, angle1.toFloat())
                             }
                             submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
                         }
@@ -1184,8 +1210,10 @@ class EditClusterViewModel(
                     submode = SubMode.FlowSelect(newQualifiedPart)
                 } else {
                     val diff =
-                        (qualifiedPart.insides - newQualifiedPart.insides) union (newQualifiedPart.insides - qualifiedPart.insides) union
-                                (qualifiedPart.outsides - newQualifiedPart.outsides) union (newQualifiedPart.outsides - qualifiedPart.outsides)
+                        (qualifiedPart.insides - newQualifiedPart.insides) union
+                        (newQualifiedPart.insides - qualifiedPart.insides) union
+                        (qualifiedPart.outsides - newQualifiedPart.outsides) union
+                        (newQualifiedPart.outsides - qualifiedPart.outsides)
                     selection.addAll(diff.filter { it !in selection })
                 }
             } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
@@ -1212,6 +1240,7 @@ class EditClusterViewModel(
                     circles[ix] = circle.translate(pan).scale(circle.center, zoom)
                 is Line ->
                     circles[ix] = circle.translate(pan)
+                null -> {}
             }
         } else if (mode == SelectionMode.Drag && selectedPoints.isNotEmpty() && showCircles) {
             val ix = selectedPoints.first()
@@ -1226,11 +1255,15 @@ class EditClusterViewModel(
                         circles[ix] = circle.translate(pan).scale(circle.center, zoom)
                     is Line ->
                         circles[ix] = circle.translate(pan)
+                    null -> {}
                 }
             } else if (selection.size > 1) { // scale radius & position
                 recordCommand(Command.MOVE, targets = selection)
                 for (ix in selection) {
-                    circles[ix] = circles[ix].rotate(c, rotationAngle).scale(c, zoom).translate(pan)
+                    circles[ix] = circles[ix]
+                        ?.rotate(c, rotationAngle)
+                        ?.scale(c, zoom)
+                        ?.translate(pan)
                 }
             }
         } else {
@@ -1447,9 +1480,9 @@ class EditClusterViewModel(
         val targetCircleIxs = objArg.circleIndices
         val targetPointIxs = objArg.pointIndices
         val invertingCircleIndex = (argList.args[1] as PartialArgList.Arg.CircleIndex).index
-        val invertingCircle = circles[invertingCircleIndex]
+        val invertingCircle = circles[invertingCircleIndex]!!
         val newCircles = targetCircleIxs.mapNotNull { circleIx ->
-            val targetCircle = circles[circleIx]
+            val targetCircle = circles[circleIx]!!
             val engine = GeneralizedCircle.fromGCircle(invertingCircle.downscale()).normalized()
             val target = GeneralizedCircle.fromGCircle(targetCircle.downscale()).normalized()
             val result = engine.applyTo(target).normalized()
@@ -1460,7 +1493,7 @@ class EditClusterViewModel(
             }
         }
         val newPoints = targetPointIxs.mapNotNull { pointIx ->
-            val targetPoint = points[pointIx]
+            val targetPoint = points[pointIx]!!
             val engine = GeneralizedCircle.fromGCircle(invertingCircle.downscale()).normalized()
             val target = GeneralizedCircle.fromGCircle(targetPoint.downscale()).normalized()
             val result = engine.applyTo(target).normalized()
@@ -1499,8 +1532,8 @@ class EditClusterViewModel(
         nInterjacents: Int, inBetween: Boolean,
         startCircleIx: Ix, endCircleIx: Ix
     ): List<CircleOrLine> {
-        val start = GeneralizedCircle.fromGCircle(circles[startCircleIx].downscale())
-        val end = GeneralizedCircle.fromGCircle(circles[endCircleIx].downscale())
+        val start = GeneralizedCircle.fromGCircle(circles[startCircleIx]!!.downscale())
+        val end = GeneralizedCircle.fromGCircle(circles[endCircleIx]!!.downscale())
         val n = nInterjacents + 1
         val newCircles = (1 until n).mapNotNull { i ->
             val interjacent = start.bisector(end, nOfSections = n, index = i, inBetween = inBetween)
@@ -1533,8 +1566,8 @@ class EditClusterViewModel(
         nLeft: Int, nRight: Int,
         startCircleIx: Ix, endCircleIx: Ix,
     ): List<CircleOrLine> {
-        val start = GeneralizedCircle.fromGCircle(circles[startCircleIx].downscale())
-        val end = GeneralizedCircle.fromGCircle(circles[endCircleIx].downscale())
+        val start = GeneralizedCircle.fromGCircle(circles[startCircleIx]!!.downscale())
+        val end = GeneralizedCircle.fromGCircle(circles[endCircleIx]!!.downscale())
         val newGeneralizedCircles = mutableListOf<GeneralizedCircle>()
         var a = start
         var b = end
@@ -1615,14 +1648,14 @@ class EditClusterViewModel(
             val angle = progress * totalAngle
             val dilation = progress * totalDilation
             for (j in targetCircleIndices) {
-                val circle = circles[j]
+                val circle = circles[j]!!
                 val target = GeneralizedCircle.fromGCircle(circle.downscale())
                 newCircles.add(
                     target.loxodromicShift(start, end, angle, dilation)
                 )
             }
             for (j in targetPointIndices) {
-                val point = points[j]
+                val point = points[j]!!
                 val target = GeneralizedCircle.fromGCircle(point.downscale())
                 newPoints.add(
                     target.loxodromicShift(start, end, angle, dilation)
@@ -1728,9 +1761,10 @@ class EditClusterViewModel(
     @Serializable
     @Immutable
     data class UiState(
-        val circles: List<CircleOrLine>,
-        val points: List<Point>,
+        val circles: List<CircleOrLine?>,
+        val points: List<Point?>,
         val parts: List<Cluster.Part>,
+        val expressions: Map<Arg.Indexed, Expression?>,
         val selection: List<Ix>, // circle indices
         @Serializable(OffsetSerializer::class)
         val translation: Offset,
@@ -1745,6 +1779,7 @@ class EditClusterViewModel(
                 ),
                 points = emptyList(),
                 parts = listOf(Cluster.Part(setOf(0), setOf(1,2,3))),
+                expressions = (0..3).associate { Arg.Indexed.CircleOrLine(it) to null },
                 selection = listOf(0),
                 // NOTE: hardcoded default is bad, much better would be to specify the center but oh well
                 translation = Offset(225f, 225f) + Offset(400f, 0f)
@@ -1753,7 +1788,9 @@ class EditClusterViewModel(
             fun restore(coroutineScope: CoroutineScope, uiState: UiState): EditClusterViewModel =
                 EditClusterViewModel(
                     coroutineScope,
-                    Cluster(uiState.circles.toList(), uiState.parts.toList(), filled = true)
+                    uiState.circles,
+                    uiState.parts,
+                    uiState.expressions,
                 ).apply {
                     if (uiState.selection.size > 1)
                         mode = SelectionMode.Multiselect
@@ -1765,7 +1802,9 @@ class EditClusterViewModel(
             fun save(viewModel: EditClusterViewModel): UiState =
                 with (viewModel) {
                     UiState(
-                        circles.toList(), points.toList(), parts.toList(), selection.toList(),
+                        circles.toList(), points.toList(), parts.toList(),
+                        expressions.expressions,
+                        selection.toList(),
                         viewModel.translation
                     )
                 }
