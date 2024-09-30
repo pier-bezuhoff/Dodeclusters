@@ -5,9 +5,6 @@ import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.Point
-import ui.edit_cluster.ExtrapolationParameters
-import ui.edit_cluster.InterpolationParameters
-import ui.edit_cluster.LoxodromicMotionParameters
 import kotlin.math.PI
 
 // eval for one-to-many functions

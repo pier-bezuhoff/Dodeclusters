@@ -187,8 +187,8 @@ fun EditClusterScreen(
         CircleInterpolationDialog(
             startCircle, endCircle,
             onDismissRequest = { viewModel.resetCircleInterpolation() },
-            onConfirm = { (k, inBetween) ->
-                viewModel.completeCircleInterpolation(k, inBetween)
+            onConfirm = { params ->
+                viewModel.completeCircleInterpolation(params)
             },
             defaults = viewModel.defaultInterpolationParameters
         )
@@ -201,8 +201,8 @@ fun EditClusterScreen(
         CircleExtrapolationDialog(
             startCircle, endCircle,
             onDismissRequest = { viewModel.resetCircleExtrapolation() },
-            onConfirm = { (nLeft, nRight) ->
-                viewModel.completeCircleExtrapolation(nLeft, nRight)
+            onConfirm = { params ->
+                viewModel.completeCircleExtrapolation(params)
             },
             defaults = viewModel.defaultExtrapolationParameters
         )

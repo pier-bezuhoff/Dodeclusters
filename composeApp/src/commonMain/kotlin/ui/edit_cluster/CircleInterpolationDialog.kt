@@ -45,7 +45,7 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_in_betwe
 import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt3
 import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.circle_interpolation_title
-import domain.expressions.Parameters
+import domain.expressions.InterpolationParameters
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.OkButton
@@ -54,11 +54,6 @@ import ui.component2
 import ui.hideSystemBars
 import kotlin.math.roundToInt
 
-data class InterpolationParameters(
-    val nInterjacents: Int,
-    val inBetween: Boolean,
-) : Parameters
-
 data class DefaultInterpolationParameters(
     val nInterjacents: Int = 1,
     val inBetween: Boolean = true,
@@ -66,6 +61,11 @@ data class DefaultInterpolationParameters(
     val maxCircleCount: Int = 20
 ) {
     val params = InterpolationParameters(nInterjacents, inBetween)
+
+    constructor(parameters: InterpolationParameters) : this(
+        nInterjacents = parameters.nInterjacents,
+        inBetween = parameters.inBetween
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)

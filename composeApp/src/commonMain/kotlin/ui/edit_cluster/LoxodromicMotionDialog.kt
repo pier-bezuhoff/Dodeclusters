@@ -54,7 +54,7 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_hyperbolic_
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_n_steps_placeholder
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_steps_prompt
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
-import domain.expressions.Parameters
+import domain.expressions.LoxodromicMotionParameters
 import domain.formatDecimals
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
@@ -62,17 +62,6 @@ import ui.OkButton
 import ui.hideSystemBars
 import kotlin.math.abs
 import kotlin.math.roundToInt
-
-/**
- * @param[angle] total rotation angle in degrees
- * @param[dilation] total hyperbolic angle `ln(R/r)`
- * @param[nSteps] number of intermediate steps (0 = result only)
- * */
-data class LoxodromicMotionParameters(
-    val angle: Float,
-    val dilation: Double,
-    val nSteps: Int,
-) : Parameters
 
 data class DefaultLoxodromicMotionParameters(
     /** in degrees */
@@ -90,6 +79,12 @@ data class DefaultLoxodromicMotionParameters(
     val angleRange = minAngle .. maxAngle
     val dilationRange = minDilation.toFloat() .. maxDilation.toFloat()
     val stepsRange = minNSteps.toFloat() .. maxNSteps.toFloat()
+
+    constructor(parameters: LoxodromicMotionParameters) : this(
+        angle = parameters.angle,
+        dilation = parameters.dilation,
+        nSteps = parameters.nSteps
+    )
 }
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)

@@ -3,27 +3,32 @@ package domain.expressions
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
-import ui.edit_cluster.ExtrapolationParameters
-import ui.edit_cluster.InterpolationParameters
-import ui.edit_cluster.LoxodromicMotionParameters
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 typealias ExprResult = List<GCircle?>
 
+@Serializable
 sealed class Expr(
-    val function: Function,
+    @SerialName("function_0")
+    open val function: Function,
+    @SerialName("parameters_0")
     open val parameters: Parameters,
     // can also be computed as an expression, making up Forest-like data structure
-    val args: List<Indexed>,
+    @SerialName("args_0")
+    open val args: List<Indexed>,
 ) {
+    @Serializable
     sealed class OneToOne(
-        function: Function.OneToOne,
-        parameters: Parameters,
-        args: List<Indexed>,
+        override val function: Function.OneToOne,
+        override val parameters: Parameters,
+        override val args: List<Indexed>,
     ) : Expr(function, parameters, args)
+    @Serializable
     sealed class OneToMany(
-        function: Function.OneToMany,
-        parameters: Parameters,
-        args: List<Indexed>,
+        override val function: Function.OneToMany,
+        override val parameters: Parameters,
+        override val args: List<Indexed>,
     ) : Expr(function, parameters, args)
 
     // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr

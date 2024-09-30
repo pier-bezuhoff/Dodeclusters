@@ -38,18 +38,13 @@ import dodeclusters.composeapp.generated.resources.circle_extrapolation_left_pro
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_prompt1
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_prompt2
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_title
-import domain.expressions.Parameters
+import domain.expressions.ExtrapolationParameters
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.OkButton
 import ui.hideSystemBars
 import ui.isLandscape
 import kotlin.math.roundToInt
-
-data class ExtrapolationParameters(
-    val nLeft: Int,
-    val nRight: Int,
-) : Parameters
 
 data class DefaultExtrapolationParameters(
     val nLeft: Int = 1,
@@ -58,6 +53,11 @@ data class DefaultExtrapolationParameters(
     val maxCircleCount: Int = 20
 ) {
     val params = ExtrapolationParameters(nLeft, nRight)
+
+    constructor(parameters: ExtrapolationParameters) : this(
+        nLeft = parameters.nLeft,
+        nRight = parameters.nRight
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)

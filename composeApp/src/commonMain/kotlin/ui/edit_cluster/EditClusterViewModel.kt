@@ -41,8 +41,11 @@ import domain.angleDeg
 import domain.expressions.Expr
 import domain.expressions.Expression
 import domain.expressions.ExpressionForest
+import domain.expressions.ExtrapolationParameters
 import domain.expressions.IncidenceParameters
 import domain.expressions.Indexed
+import domain.expressions.InterpolationParameters
+import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeLineBy2Points
@@ -777,7 +780,11 @@ class EditClusterViewModel(
         return Rect(left, top, right, bottom)
     }
 
-    fun snapped(absolutePosition: Offset, excludePoints: Boolean = false): PointSnapResult {
+    fun snapped(
+        absolutePosition: Offset,
+        excludePoints: Boolean = false,
+        excludedCircles: Set<Ix> = emptySet(),
+    ): PointSnapResult {
         // snap to: points > circles > circle contact
         val snapDistance = tapDistance.toDouble()
         val point = Point.fromOffset(absolutePosition)
@@ -791,7 +798,10 @@ class EditClusterViewModel(
         val point2circleSnapping = showCircles
         if (!point2circleSnapping) // no snapping to invisibles
             return PointSnapResult.Free(point)
-        val visibleCircles = circles
+        val visibleCircles = circles.mapIndexed { ix, c ->
+            if (ix in excludedCircles) null
+            else c
+        }
         val p2cResult = snapPointToCircles(point, visibleCircles, snapDistance)
         return p2cResult
     }
@@ -1372,8 +1382,13 @@ class EditClusterViewModel(
             // TODO: do not snap point to its children
             val ix = selectedPoints.first()
             recordCommand(Command.MOVE, targets = listOf(-ix-1)) // have to distinguish from circle indices ig
-            points[ix] = snapped(c, excludePoints = true).result
-            // MAYBE: dragging a point can add deps to it
+            val excludedSnapTargets = expressions.children
+                .getOrElse(Indexed.Point(ix)) { emptySet() }
+                .filterIsInstance<Indexed.Circle>()
+                .map { it.index }
+                .toSet()
+            points[ix] = snapped(c, excludePoints = true, excludedCircles = excludedSnapTargets).result
+            // MAYBE: dragging a point can add deps to it?
             expressions.update(listOf(Indexed.Point(ix)))
         } else if (mode == SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
             if (selection.size == 1) { // move + scale radius
@@ -1714,7 +1729,7 @@ class EditClusterViewModel(
         partialArgList = PartialArgList(argList.signature)
     }
 
-    fun completeCircleInterpolation(nInterjacents: Int, inBetween: Boolean = true) {
+    fun completeCircleInterpolation(params: InterpolationParameters) {
         showCircleInterpolationDialog = false
         val argList = partialArgList!!
         val args = argList.args.map { it as Arg.CircleIndex }
@@ -1722,7 +1737,7 @@ class EditClusterViewModel(
         val endCircleIx = args[1].index
         val newCircles = expressions.addMultiExpression(
             Expr.CircleInterpolation(
-                InterpolationParameters(nInterjacents, inBetween),
+                params,
                 Indexed.Circle(startCircleIx),
                 Indexed.Circle(endCircleIx),
             ),
@@ -1730,7 +1745,7 @@ class EditClusterViewModel(
         ).map { if (it is CircleOrLine?) it?.upscale() else null }
         createNewCircles(newCircles)
         partialArgList = PartialArgList(argList.signature)
-        defaultInterpolationParameters = DefaultInterpolationParameters(nInterjacents, inBetween)
+        defaultInterpolationParameters = DefaultInterpolationParameters(params)
     }
 
     fun resetCircleInterpolation() {
@@ -1739,8 +1754,7 @@ class EditClusterViewModel(
     }
 
     fun completeCircleExtrapolation(
-        nLeft: Int, // start = Left
-        nRight: Int, // end = Right
+        params: ExtrapolationParameters,
     ) {
         showCircleExtrapolationDialog = false
         val argList = partialArgList!!
@@ -1749,7 +1763,7 @@ class EditClusterViewModel(
         val endCircleIx = args[1].index
         val newCircles = expressions.addMultiExpression(
             Expr.CircleExtrapolation(
-                ExtrapolationParameters(nLeft, nRight),
+                params,
                 Indexed.Circle(startCircleIx),
                 Indexed.Circle(endCircleIx),
             ),
@@ -1757,7 +1771,7 @@ class EditClusterViewModel(
         ).map { if (it is CircleOrLine?) it?.upscale() else null }
         createNewCircles(newCircles)
         partialArgList = PartialArgList(argList.signature)
-        defaultExtrapolationParameters = DefaultExtrapolationParameters(nLeft, nRight)
+        defaultExtrapolationParameters = DefaultExtrapolationParameters(params)
     }
 
     fun resetCircleExtrapolation() {
@@ -1780,7 +1794,9 @@ class EditClusterViewModel(
                 is Arg.Point.Index -> Indexed.Point(arg.index)
                 is Arg.Point.XY -> createNewFreePoint(arg.toPoint())
             } }
+        println(expressions.expressions)
         val allNewCircles = mutableListOf<CircleOrLine?>()
+        // BUG: points completely bug out lox
         val allNewPoints = mutableListOf<Point?>()
         for (circleIndex in targetCircleIndices) {
             val newCircles = expressions.addMultiExpression(
@@ -1814,9 +1830,8 @@ class EditClusterViewModel(
             copyParts(targetCircleIndices, (m until m+k).toList())
         }
         partialArgList = PartialArgList(argList.signature)
-        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
-            params.angle, params.dilation, params.nSteps
-        )
+        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params)
+//        println("parent->children: ${expressions.children}")
     }
 
     fun resetLoxodromicMotion() {
@@ -1851,8 +1866,7 @@ class EditClusterViewModel(
         val arg0 = args[0]
         if (arg0 is Arg.Point.XY) {
             val newPoint = arg0.toPoint()
-            recordCommand(Command.CREATE, unique = true)
-            points.add(newPoint)
+            createNewFreePoint(newPoint)
         } // it could have already done it with realized PSR.Eq, which results in Arg.Point.Index
         partialArgList = PartialArgList(argList.signature)
     }
@@ -1962,12 +1976,17 @@ class EditClusterViewModel(
         private val coroutineScope: CoroutineScope
     ) : androidx.compose.runtime.saveable.Saver<EditClusterViewModel, String> {
         override fun SaverScope.save(value: EditClusterViewModel): String =
-            Json.encodeToString(UiState.serializer(), UiState.save(value))
+            JSON.encodeToString(UiState.serializer(), UiState.save(value))
         override fun restore(value: String): EditClusterViewModel {
             return UiState.restore(
                 coroutineScope,
-                Json.decodeFromString(UiState.serializer(), value)
+                JSON.decodeFromString(UiState.serializer(), value)
             )
+        }
+        companion object {
+            val JSON = Json {
+                allowStructuredMapKeys = true
+            }
         }
     }
 
