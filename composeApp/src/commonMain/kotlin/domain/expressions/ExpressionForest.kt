@@ -116,7 +116,6 @@ class ExpressionForest(
         val result = expr.eval(get)
         return result.firstOrNull()
             .also {
-                println(expressions)
                 println("$ix -> $expr -> $result")
             }
     }

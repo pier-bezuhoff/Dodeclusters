@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 // circleExpressions: [Ix] -> Expression
 // pointExpressions: [Ix] -> Expression
 
-// associated with ToolMode and signature
+// not sure it is of use
 @Serializable
 sealed interface Function {
     @Serializable

@@ -10,8 +10,6 @@ typealias ExprResult = List<GCircle?>
 
 @Serializable
 sealed class Expr(
-    @SerialName("function_0")
-    open val function: Function,
     @SerialName("parameters_0")
     open val parameters: Parameters,
     // can also be computed as an expression, making up Forest-like data structure
@@ -20,67 +18,63 @@ sealed class Expr(
 ) {
     @Serializable
     sealed class OneToOne(
-        override val function: Function.OneToOne,
         override val parameters: Parameters,
         override val args: List<Indexed>,
-    ) : Expr(function, parameters, args)
+    ) : Expr(parameters, args)
     @Serializable
     sealed class OneToMany(
-        override val function: Function.OneToMany,
         override val parameters: Parameters,
         override val args: List<Indexed>,
-    ) : Expr(function, parameters, args)
+    ) : Expr(parameters, args)
 
     // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr
     //  p' = f(Δ(f⁻¹(p)), where point p on dependent carrier f(<free>) moves to p' when <free> is affected by Δ
     data class Incidence(
         override val parameters: IncidenceParameters,
         val carrier: Indexed.Circle,
-    ) : OneToOne(Function.OneToOne.INCIDENCE, parameters, listOf(carrier))
+    ) : OneToOne(parameters, listOf(carrier))
     data class CircleByCenterAndRadius(
         val center: Indexed.Point,
         val radiusPoint: Indexed.Point
     ) : OneToOne(
-        Function.OneToOne.CIRCLE_BY_CENTER_AND_RADIUS,
         Parameters.None, listOf(center, radiusPoint))
     data class CircleBy3Points(
         val point1: Indexed,
         val point2: Indexed,
         val point3: Indexed,
     ) : OneToOne(
-        Function.OneToOne.CIRCLE_BY_3_POINTS,
         Parameters.None, listOf(point1, point2, point3))
     data class LineBy2Points(
         val point1: Indexed,
         val point2: Indexed,
-    ) : OneToOne(Function.OneToOne.LINE_BY_2_POINTS, Parameters.None, listOf(point1, point2))
+    ) : OneToOne(Parameters.None, listOf(point1, point2))
     data class CircleInversion(
         val target: Indexed,
         val engine: Indexed.Circle,
-    ) : OneToOne(Function.OneToOne.CIRCLE_INVERSION, Parameters.None, listOf(target, engine))
+    ) : OneToOne(Parameters.None, listOf(target, engine))
 
     data class Intersection(
         val circle1: Indexed.Circle,
         val circle2: Indexed.Circle,
-    ) : OneToMany(Function.OneToMany.INTERSECTION, Parameters.None, listOf(circle1, circle2))
+    ) : OneToMany(Parameters.None, listOf(circle1, circle2))
     // TODO: point-point line interpolation
     data class CircleInterpolation(
         override val parameters: InterpolationParameters,
         val startCircle: Indexed.Circle,
         val endCircle: Indexed.Circle,
-    ) : OneToMany(Function.OneToMany.CIRCLE_INTERPOLATION, parameters, listOf(startCircle, endCircle))
+    ) : OneToMany(parameters, listOf(startCircle, endCircle))
     data class CircleExtrapolation(
         override val parameters: ExtrapolationParameters,
         val startCircle: Indexed.Circle,
         val endCircle: Indexed.Circle,
-    ) : OneToMany(Function.OneToMany.CIRCLE_EXTRAPOLATION, parameters, listOf(startCircle, endCircle))
+    ) : OneToMany(parameters, listOf(startCircle, endCircle))
     data class LoxodromicMotion(
         override val parameters: LoxodromicMotionParameters,
         val divergencePoint: Indexed.Point,
         val convergencePoint: Indexed.Point,
         val target: Indexed,
     ) : OneToMany(
-        Function.OneToMany.LOXODROMIC_MOTION, parameters,
+        parameters,
         listOf(divergencePoint, convergencePoint, target)
     )
 

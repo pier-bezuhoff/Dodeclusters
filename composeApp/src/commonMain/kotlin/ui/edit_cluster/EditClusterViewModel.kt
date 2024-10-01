@@ -54,6 +54,7 @@ import domain.io.OldDdc
 import domain.io.cluster2svg
 import domain.io.parseDdc
 import domain.io.parseOldDdc
+import domain.reindexingMap
 import domain.snapAngle
 import domain.snapPointToCircles
 import domain.snapPointToPoints
@@ -230,9 +231,17 @@ class EditClusterViewModel(
     }
 
     fun saveAsYaml(name: String = Ddc.DEFAULT_NAME): String {
-        TODO("we need to shift all part entries to account for nulls")
+        val nullCircles = circles.indices.filter { circles[it] == null }
+        val circleReindexing = reindexingMap(circles.indices, nullCircles.toSet())
+        val realCircles = circles.filterNotNull()
+        val reindexedParts = parts.map { part ->
+            part.copy(
+                insides = part.insides.map { circleReindexing[it]!! }.toSet(),
+                outsides = part.outsides.map { circleReindexing[it]!! }.toSet(),
+            )
+        }
         val cluster = Cluster(
-            circles.filterNotNull(), parts.toList()
+            realCircles, reindexedParts
         )
         var ddc = Ddc(cluster).copy(
             name = name,
@@ -246,9 +255,17 @@ class EditClusterViewModel(
     }
 
     fun exportAsSvg(name: String = Ddc.DEFAULT_NAME): String {
-        TODO("we need to shift all part entries to account for nulls")
+        val nullCircles = circles.indices.filter { circles[it] == null }
+        val circleReindexing = reindexingMap(circles.indices, nullCircles.toSet())
+        val realCircles = circles.filterNotNull()
+        val reindexedParts = parts.map { part ->
+            part.copy(
+                insides = part.insides.map { circleReindexing[it]!! }.toSet(),
+                outsides = part.outsides.map { circleReindexing[it]!! }.toSet(),
+            )
+        }
         val cluster = Cluster(
-            circles.filterNotNull(), parts.toList()
+            realCircles, reindexedParts
         )
         val start = absolute(Offset.Zero)
         return cluster2svg(
@@ -1794,9 +1811,7 @@ class EditClusterViewModel(
                 is Arg.Point.Index -> Indexed.Point(arg.index)
                 is Arg.Point.XY -> createNewFreePoint(arg.toPoint())
             } }
-        println(expressions.expressions)
         val allNewCircles = mutableListOf<CircleOrLine?>()
-        // BUG: points completely bug out lox
         val allNewPoints = mutableListOf<Point?>()
         for (circleIndex in targetCircleIndices) {
             val newCircles = expressions.addMultiExpression(
@@ -1831,7 +1846,6 @@ class EditClusterViewModel(
         }
         partialArgList = PartialArgList(argList.signature)
         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params)
-//        println("parent->children: ${expressions.children}")
     }
 
     fun resetLoxodromicMotion() {
