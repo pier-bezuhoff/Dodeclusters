@@ -838,7 +838,7 @@ class EditClusterViewModel(
             is PointSnapResult.Eq -> snapResult
             is PointSnapResult.Incidence -> {
                 val circle = circles[snapResult.circleIndex]!!
-                val order = circle.point2order(snapResult.result)
+                val order = circle.downscale().point2order(snapResult.result.downscale())
                 val expr = Expr.Incidence(
                     IncidenceParameters(order),
                     Indexed.Circle(snapResult.circleIndex)
