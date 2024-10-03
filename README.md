@@ -94,6 +94,7 @@ To run applications built with Kotlin/Wasm in a browser, you need a browser supp
   1. Open `about:config` in the browser.
   2. Enable **javascript.options.wasm_gc**.
   3. Refresh the page.  
-- For **Safari** it is _NOT_ implemented as of now (March 2024)
+- For **Safari** it is _NOT_ implemented as of now (October 2024), _but_ it has been previewed.
+- [Relevant Wasm compatibility table.](https://webassembly.org/features/#table-row-gc)
 
 For more information see https://kotl.in/wasm_help/.
