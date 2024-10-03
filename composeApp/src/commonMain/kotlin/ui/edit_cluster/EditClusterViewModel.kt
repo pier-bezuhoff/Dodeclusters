@@ -52,6 +52,7 @@ import domain.expressions.computeLineBy2Points
 import domain.io.Ddc
 import domain.io.OldDdc
 import domain.io.cluster2svg
+import domain.io.cluster2svgCheckPattern
 import domain.io.parseDdc
 import domain.io.parseOldDdc
 import domain.reindexingMap
@@ -268,12 +269,19 @@ class EditClusterViewModel(
             realCircles, reindexedParts
         )
         val start = absolute(Offset.Zero)
-        return cluster2svg(
-            cluster,
-            backgroundColor = null,
-            start.x, start.y,
-            canvasSize.width.toFloat(), canvasSize.height.toFloat()
-        )
+        return if (displayChessboardPattern)
+            cluster2svgCheckPattern(
+                cluster = cluster, backgroundColor = regionColor, chessboardPatternStartsWhite = chessboardPatternStartsWhite,
+                startX = start.x, startY = start.y,
+                width = canvasSize.width.toFloat(), height = canvasSize.height.toFloat()
+            )
+        else
+            cluster2svg(
+                cluster = cluster,
+                backgroundColor = null,
+                startX = start.x, startY = start.y,
+                width = canvasSize.width.toFloat(), height = canvasSize.height.toFloat()
+            )
     }
 
     private fun computeAbsoluteCenter(): Offset? =

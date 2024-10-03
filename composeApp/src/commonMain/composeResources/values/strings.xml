@@ -22,8 +22,8 @@
     <string name="region_description">Mode: Pick regions between circles to fill with color</string>
     <string name="flow_fill_name">Flow-fill</string>
     <string name="flow_fill_description">Fill regions by swiping through them</string>
-    <string name="fill_chessboard_pattern_name">Chessboard pattern</string>
-    <string name="fill_chessboard_pattern_description">Chessboard pattern: fill every other region</string>
+    <string name="fill_chessboard_pattern_name">Check pattern</string>
+    <string name="fill_chessboard_pattern_description">Check pattern: fill every other region</string>
     <string name="restrict_region_to_selection_name">Restrict region to selection</string>
     <string name="restrict_region_to_selection_description">Restrict region's bounding circles to only those present in the current selection</string>
     <string name="delete_all_parts_name">Delete all parts</string>
