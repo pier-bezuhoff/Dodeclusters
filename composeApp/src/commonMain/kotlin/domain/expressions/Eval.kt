@@ -51,6 +51,7 @@ fun computeCircleInversion(
     return result.toGCircle()
 }
 
+// BUG: with point-line incidence
 // MAYBE: just repeat obj transformations for tier=0 carrier incident points
 fun computeIncidence(
     params: IncidenceParameters,

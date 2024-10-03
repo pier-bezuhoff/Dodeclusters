@@ -15,6 +15,7 @@ import kotlin.math.hypot
 private const val INDENT = "  "
 private const val INDENT1 = INDENT
 private const val INDENT2 = INDENT + INDENT
+private const val desc = """<desc>Created in Dodeclusters.</desc>"""
 
 // TODO: make a dialog with encodeCircles + other options and
 //  a disclaimer about border-only export being unimplemented
@@ -54,16 +55,15 @@ fun cluster2svg(
             formatCircleOrLine(circle, visibleRect, "none", postfix = "stroke=$golden")
         }
         else ""
-    return """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0.0 0.0 $width $height">
+    return """<svg xmlns="http://www.w3.org/2000/svg" width="$width" height="$height" viewBox="0.0 0.0 $width $height">
+$desc
 <defs>
 $partClipsAndMasks
 </defs>
 $bgRect
 $partRects
 $allCircles
-</svg>
-""".trimIndent()
+</svg>"""
 }
 
 fun partMask(
@@ -154,11 +154,13 @@ private fun formatCircleOrLine(circle: CircleOrLine, visibleRect: Rect, fill: St
 // </svg>
 
 
+// small bug: sometimes some circles are slightly clipped with random rects, cmp dl/a.svg
 // beware of ram consumption spikes when zooming in
 fun cluster2svgCheckPattern(
     cluster: Cluster,
     backgroundColor: Color,
-    chessboardPatternStartsColored: Boolean = true,
+    chessboardPatternStartsColored: Boolean,
+//    fillInsides: Boolean = true,
     startX: Float, startY: Float,
     width: Float, height: Float,
 ): String {
@@ -189,7 +191,8 @@ fun cluster2svgCheckPattern(
     val lastOp =
         if (chessboardPatternStartsColored) "xor"
         else "in"
-    return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0.0 0.0 $width $height">
+    return """<svg xmlns="http://www.w3.org/2000/svg" width="$width" height="$height" viewBox="0.0 0.0 $width $height">
+$desc
 <defs>
 $circles
 $INDENT1<filter id="check-pattern">

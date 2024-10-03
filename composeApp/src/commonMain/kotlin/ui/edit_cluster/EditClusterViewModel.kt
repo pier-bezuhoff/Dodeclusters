@@ -960,7 +960,6 @@ class EditClusterViewModel(
     }
 
     fun insertCenteredCross() {
-        recordCommand(Command.CREATE, unique = true)
         val (midX, midY) = canvasSize.toSize()/2f
         val horizontalLine = Line.by2Points(
             absolute(Offset(0f, midY)),
@@ -971,16 +970,12 @@ class EditClusterViewModel(
             absolute(Offset(midX, 2*midY)),
         )
         showCircles = true
-        circles.add(horizontalLine)
-        circles.add(verticalLine)
+        createNewCircles(listOf(horizontalLine, verticalLine))
+        expressions.addFree(isPoint = false)
+        expressions.addFree(isPoint = false)
         switchToMode(SelectionMode.Multiselect)
         selection.clear()
         selection.addAll(listOf(circles.size - 2, circles.size - 1))
-        coroutineScope.launch { // NOTE: this animation looks bad for lines
-            _circleAnimations.emit(
-                CircleAnimation.Entrance(listOf(horizontalLine, verticalLine))
-            )
-        }
     }
 
     fun scaleSelection(zoom: Float) {
