@@ -27,8 +27,8 @@ data class Ddc(
     val drawTrace: Boolean = DEFAULT_DRAW_TRACE,
     /** indicates using all-circle chessboard pattern coloring, ignoring parts */
     val chessboardPattern: Boolean = DEFAULT_CHESSBOARD_PATTERN,
-    /** one of two possible starting chessboard phases, true=white=bg filled with color */
-    val chessboardPatternStartsWhite: Boolean = DEFAULT_CHESSBOARD_PATTERN_STARTS_WHITE,
+    /** one of two possible starting chessboard phases, true=colored=bg filled with color */
+    val chessboardPatternStartsColored: Boolean = DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED,
     val content: List<Token>,
 ) {
     val nCircles: Int
@@ -121,7 +121,7 @@ data class Ddc(
                     if (chessboardPattern != DEFAULT_CHESSBOARD_PATTERN) chessboardPattern else null
                 ),
                 encodeOptional("chessboardPatternStartsWhite",
-                    if (chessboardPattern) chessboardPatternStartsWhite else null
+                    if (chessboardPattern) chessboardPatternStartsColored else null
                 ),
                 encode("content:"),
             )
@@ -145,7 +145,7 @@ data class Ddc(
         val DEFAULT_SHAPE = Shape.CIRCLE
         const val DEFAULT_DRAW_TRACE = true
         const val DEFAULT_CHESSBOARD_PATTERN = false
-        const val DEFAULT_CHESSBOARD_PATTERN_STARTS_WHITE = true
+        const val DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED = true
 
         const val DEFAULT_CLUSTER_FILLED = true
         const val DEFAULT_CLUSTER_VISIBLE = true

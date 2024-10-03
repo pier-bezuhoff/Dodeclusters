@@ -46,7 +46,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import domain.PartialArgList
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
@@ -384,7 +383,7 @@ private fun DrawScope.drawParts(
                 if (circle != null)
                     drawCircleOrLine(circle, visibleRect, viewModel.regionColor, style = circleStroke)
         } else {
-            if (viewModel.chessboardPatternStartsWhite)
+            if (viewModel.chessboardPatternStartsColored)
                 drawRect(viewModel.regionColor, visibleRect.topLeft, visibleRect.size)
             for (circle in viewModel.circles) { // it used to work poorly but is good now for some reason
                 if (circle != null)

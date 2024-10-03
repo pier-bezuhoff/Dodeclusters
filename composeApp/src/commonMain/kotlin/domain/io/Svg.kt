@@ -158,14 +158,13 @@ private fun formatCircleOrLine(circle: CircleOrLine, visibleRect: Rect, fill: St
 fun cluster2svgCheckPattern(
     cluster: Cluster,
     backgroundColor: Color,
-    chessboardPatternStartsWhite: Boolean = false,
+    chessboardPatternStartsColored: Boolean = true,
     startX: Float, startY: Float,
     width: Float, height: Float,
 ): String {
     val circleNamePrefix = "circle"
     val visibleRect = Rect(0f, 0f, width, height)
     val bg = Json.encodeToString(ColorCssSerializer, backgroundColor).trim('"')
-    val bgRect = formatRect(visibleRect, bg)
     val n = cluster.circles.size
     val tr = Offset(-startX, -startY)
     val circles = cluster.circles
@@ -187,14 +186,16 @@ fun cluster2svgCheckPattern(
             val compoundName = "$circleNamePrefix$s"
             """$INDENT2<feComposite in="$compoundName" in2="$circleNamePrefix${i+1}" operator="xor" result="$compoundName${i+1}"/>"""
         }
-    val lastOp = if (true || chessboardPatternStartsWhite) "in" else "xor"
+    val lastOp =
+        if (chessboardPatternStartsColored) "xor"
+        else "in"
     return """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0.0 0.0 $width $height">
 <defs>
 $circles
 $INDENT1<filter id="check-pattern">
 $feImages
 $feComposites
-$INDENT2<feComposite in="$circleNamePrefix$s${n-1}" in2="SourceGraphics" operator="$lastOp"/>
+$INDENT2<feComposite in="$circleNamePrefix$s${n-1}" in2="SourceGraphic" operator="$lastOp"/>
 $INDENT1</filter>
 </defs>
 ${formatRect(visibleRect, bg, postfix = """filter="url(#check-pattern)"""")}
@@ -202,7 +203,7 @@ ${formatRect(visibleRect, bg, postfix = """filter="url(#check-pattern)"""")}
 }
 
 // check pattern example:
-// <svg width="400px" height="300px" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" >
+// <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" >
 // <defs>
 //   <circle id="c1" r="100" cx="200" cy="100"/>
 //   <circle id="c2" r="90" cx="150" cy="100"/>

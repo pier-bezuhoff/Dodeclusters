@@ -153,7 +153,8 @@ class EditClusterViewModel(
         private set
     var displayChessboardPattern by mutableStateOf(false)
         private set
-    var chessboardPatternStartsWhite by mutableStateOf(true)
+    /** true = background starts colored */
+    var chessboardPatternStartsColored by mutableStateOf(true)
         private set
 
     val circleSelectionIsActive by derivedStateOf {
@@ -247,7 +248,7 @@ class EditClusterViewModel(
         var ddc = Ddc(cluster).copy(
             name = name,
             chessboardPattern = displayChessboardPattern,
-            chessboardPatternStartsWhite = chessboardPatternStartsWhite,
+            chessboardPatternStartsColored = chessboardPatternStartsColored,
         )
         computeAbsoluteCenter()?.let { center ->
             ddc = ddc.copy(bestCenterX = center.x, bestCenterY = center.y)
@@ -271,7 +272,7 @@ class EditClusterViewModel(
         val start = absolute(Offset.Zero)
         return if (displayChessboardPattern)
             cluster2svgCheckPattern(
-                cluster = cluster, backgroundColor = regionColor, chessboardPatternStartsWhite = chessboardPatternStartsWhite,
+                cluster = cluster, backgroundColor = regionColor, chessboardPatternStartsColored = chessboardPatternStartsColored,
                 startX = start.x, startY = start.y,
                 width = canvasSize.width.toFloat(), height = canvasSize.height.toFloat()
             )
@@ -302,7 +303,7 @@ class EditClusterViewModel(
             loadCluster(cluster)
             moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
             displayChessboardPattern = ddc.chessboardPattern
-            chessboardPatternStartsWhite = ddc.chessboardPatternStartsWhite
+            chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
         } catch (e: Exception) {
             println("Failed to parse yaml")
             e.printStackTrace()
@@ -363,7 +364,7 @@ class EditClusterViewModel(
     fun loadCluster(cluster: Cluster) {
         showPromptToSetActiveSelectionAsToolArg = false
         displayChessboardPattern = false
-        chessboardPatternStartsWhite = true
+        chessboardPatternStartsColored = true
         translation = Offset.Zero
         selection.clear()
         selectedPoints = emptyList()
@@ -908,12 +909,12 @@ class EditClusterViewModel(
     fun applyChessboardPatter() {
         if (!displayChessboardPattern) {
             displayChessboardPattern = true
-            chessboardPatternStartsWhite = true
-        } else if (chessboardPatternStartsWhite) {
-            chessboardPatternStartsWhite = false
+            chessboardPatternStartsColored = true
+        } else if (chessboardPatternStartsColored) {
+            chessboardPatternStartsColored = false
         } else {
             displayChessboardPattern = false
-            chessboardPatternStartsWhite = true
+            chessboardPatternStartsColored = true
         }
     }
 
@@ -1932,7 +1933,7 @@ class EditClusterViewModel(
             EditClusterTool.ToggleSelectAll -> selection.containsAll(circles.indices.toSet())
             EditClusterTool.Region -> mode == SelectionMode.Region && submode !is SubMode.FlowFill
             EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
-            EditClusterTool.FillChessboardPattern -> chessboardPatternStartsWhite
+            EditClusterTool.FillChessboardPattern -> chessboardPatternStartsColored
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes

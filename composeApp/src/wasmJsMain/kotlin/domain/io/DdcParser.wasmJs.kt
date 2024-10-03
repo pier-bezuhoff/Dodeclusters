@@ -20,7 +20,7 @@ actual fun parseDdc(content: String): Ddc {
         shape = jsDdc.shape.parseShape() ?: Ddc.DEFAULT_SHAPE,
         drawTrace = jsDdc.drawTrace ?: Ddc.DEFAULT_DRAW_TRACE,
         chessboardPattern = jsDdc.chessboardPattern ?: Ddc.DEFAULT_CHESSBOARD_PATTERN,
-        chessboardPatternStartsWhite = jsDdc.chessboardPatternStartsWhite ?: Ddc.DEFAULT_CHESSBOARD_PATTERN_STARTS_WHITE,
+        chessboardPatternStartsColored = jsDdc.chessboardPatternStartsColored ?: Ddc.DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED,
         content = jsDdc.content.map { jsFigure ->
             when {
                 isCircleObject(jsFigure) -> {
@@ -193,7 +193,7 @@ external interface JsDdc : JsAny {
     val shape: JsString?
     val drawTrace: Boolean?
     val chessboardPattern: Boolean?
-    val chessboardPatternStartsWhite: Boolean?
+    val chessboardPatternStartsColored: Boolean?
     val content: JsArray<JsFigure>
 }
 
