@@ -678,17 +678,15 @@ class EditClusterViewModel(
         val absolutePoint = Point.fromOffset(position)
         return targets
             .mapIndexed { ix, point ->
+                val distance = point?.distanceFrom(absolutePoint) ?: Double.POSITIVE_INFINITY
+                ix to distance
+            }.filter { (_, distance) -> distance <= tapDistance }
+            .minByOrNull { (ix, distance) ->
                 val priority =
                     if (ix in priorityTargets) 100
                     else 1
-                val distance = if (point != null) {
-                    point.distanceFrom(absolutePoint)/priority.toDouble()
-                } else {
-                    Double.POSITIVE_INFINITY
-                }
-                ix to distance
-            }.filter { (_, distance) -> distance <= tapDistance }
-            .minByOrNull { (_, distance) -> distance }
+                distance / priority
+            }
             ?.let { (ix, _) -> ix }
     }
 
@@ -714,18 +712,16 @@ class EditClusterViewModel(
     ): Ix? {
         val position = absolute(visiblePosition)
         return targets.mapIndexed { ix, circle ->
-            val priority =
-                if (ix in priorityTargets) 100
-                else 1
-            val distance = if (circle != null) {
-                circle.distanceFrom(position)/priority.toDouble()
-            } else {
-                Double.POSITIVE_INFINITY
-            }
+            val distance = circle?.distanceFrom(position) ?: Double.POSITIVE_INFINITY
             ix to distance
         }
             .filter { (_, distance) -> distance <= tapDistance }
-            .minByOrNull { (_, distance) -> distance }
+            .minByOrNull { (ix, distance) ->
+                val priority =
+                    if (ix in priorityTargets) 100
+                    else 1
+                distance / priority
+            }
             ?.let { (ix, _) -> ix }
             ?.also { println("select circle #$it: ${circles[it]} <- ${expressions.expressions[Indexed.Circle(it)]}") }
     }
@@ -1974,6 +1970,7 @@ class EditClusterViewModel(
             else -> true
         }
 
+    /** Be careful to pass *only* strictly immutable args by __copying__ */
     @Serializable
     @Immutable
     data class UiState(
@@ -2019,7 +2016,7 @@ class EditClusterViewModel(
                 with (viewModel) {
                     UiState(
                         circles.toList(), points.toList(), parts.toList(),
-                        expressions.expressions,
+                        expressions.expressions.toMap(),
                         selection.toList(),
                         viewModel.translation
                     )
