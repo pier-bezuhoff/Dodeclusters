@@ -43,6 +43,8 @@ object DodeclustersColors {
     val surfaceContainerHighLight = Color(0xFFF0E5EC)
     val surfaceContainerHighestLight = // Color(0xFFEADFE6)
         Color(0xFFCCCCCC) // haxz
+    val accentLight = Color(0xFF_d09a3f)
+    val highAccentLight = Color(0xFF805610)
 
     val primaryDark = Color(0xFFEBB5ED)
     val onPrimaryDark = Color(0xFF48204E)
@@ -79,6 +81,8 @@ object DodeclustersColors {
     val surfaceContainerDark = Color(0xFF231E23)
     val surfaceContainerHighDark = Color(0xFF2E282D)
     val surfaceContainerHighestDark = Color(0xFF393338)
+    val accentDark = Color(0xFF_D4BE51)
+    val highAccentDark = Color(0xFF_F5BD6F)
 
     // M3
     val lightScheme = lightColorScheme(
@@ -120,8 +124,8 @@ object DodeclustersColors {
     )
 
     val extendedLightScheme = ExtendedColorScheme(
-        accentColor = tertiaryLight,
-        highAccentColor = tertiaryLight,
+        accentColor = accentLight,
+        highAccentColor = highAccentLight,
     )
 
     val darkScheme = darkColorScheme(
@@ -163,8 +167,8 @@ object DodeclustersColors {
     )
 
     val extendedDarkScheme = ExtendedColorScheme(
-        accentColor = Color(0xff_d4be51), //tertiaryDark,
-        highAccentColor = tertiaryDark,
+        accentColor = accentDark,
+        highAccentColor = highAccentDark,
     )
 
     // custom colors

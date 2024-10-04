@@ -1981,7 +1981,7 @@ class EditClusterViewModel(
         val selection: List<Ix>, // circle indices
         @Serializable(OffsetSerializer::class)
         val translation: Offset,
-    ) { // MAYBE: save translations & scaling and/or also keep such movements in history
+    ) {
         companion object {
             val SAMPLE = UiState(
                 circles = listOf(
