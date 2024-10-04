@@ -23,7 +23,8 @@ enum class KeyboardAction {
 //    SAVE, OPEN,
     /** Cancel ongoing action (partial constructions, etc) */
     CANCEL,
-    // MAYBE: mode shortcuts: D = drag, S = multiselect, R = region, V = visibility, P = palette, T = transform, C = create
+    // MAYBE: mode shortcuts: D/M = drag, S = multiselect, R = region, V = visibility, P = palette, T = transform, C = create
+    // TODO: arrow keys for finer movement
 }
 
 /** Iffy in browser, since the target composable often randomly loses focus */

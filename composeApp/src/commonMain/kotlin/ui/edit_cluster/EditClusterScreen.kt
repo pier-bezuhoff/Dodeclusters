@@ -113,7 +113,7 @@ fun EditClusterScreen(
     val saver = remember { EditClusterViewModel.Saver(coroutineScope) }
     // TODO: test bg kills more
     val viewModel = rememberSaveable(saver = saver) {
-        EditClusterViewModel.UiState.restore(coroutineScope, EditClusterViewModel.UiState.DEFAULT)
+        EditClusterViewModel.UiState.restore(coroutineScope, EditClusterViewModel.UiState.SAMPLE)
     }
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(

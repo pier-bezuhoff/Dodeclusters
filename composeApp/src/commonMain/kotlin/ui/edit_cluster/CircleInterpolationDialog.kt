@@ -55,7 +55,7 @@ import ui.hideSystemBars
 import kotlin.math.roundToInt
 
 data class DefaultInterpolationParameters(
-    val nInterjacents: Int = 1,
+    val nInterjacents: Int = 4,
     val inBetween: Boolean = true,
     val minCircleCount: Int = 1,
     val maxCircleCount: Int = 20

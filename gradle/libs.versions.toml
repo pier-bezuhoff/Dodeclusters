@@ -16,7 +16,7 @@ androidx-core-ktx = "1.13.1"
 kotlinx-serialization = "1.7.1"
 jetpack-compose = "1.6.8" # check github compose-multiplatform/release for the one compatible
 # https://github.com/JetBrains/compose-multiplatform/releases/tag/v1.6.11
-compose-plugin = "1.6.11" # aligns with compose-multiplatform version
+compose-plugin = "1.6.11" # aligns with compose-multiplatform version, try out 1.7.0-rc01 for Path.toSVG and stuff
 material3 = "1.6.11" # m3 version should match compose-plugin
 #compose-compiler = "1.5.14" # auto-determined post kt2.0
 window-size-klass = "0.5.0"

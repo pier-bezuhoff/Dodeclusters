@@ -119,6 +119,11 @@ object DodeclustersColors {
         surfaceContainerHighest = surfaceContainerHighestLight,
     )
 
+    val extendedLightScheme = ExtendedColorScheme(
+        accentColor = tertiaryLight,
+        highAccentColor = tertiaryLight,
+    )
+
     val darkScheme = darkColorScheme(
         primary = primaryDark,
         onPrimary = onPrimaryDark,
@@ -155,6 +160,11 @@ object DodeclustersColors {
         surfaceContainer = surfaceContainerDark,
         surfaceContainerHigh = surfaceContainerHighDark,
         surfaceContainerHighest = surfaceContainerHighestDark,
+    )
+
+    val extendedDarkScheme = ExtendedColorScheme(
+        accentColor = Color(0xff_d4be51), //tertiaryDark,
+        highAccentColor = tertiaryDark,
     )
 
     // custom colors

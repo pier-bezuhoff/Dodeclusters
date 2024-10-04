@@ -343,7 +343,6 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
     infix fun isInside(circle: CircleOrLine): Boolean
     /** semiorder ⊇ on circles, includes side-by-side (oo) but not encapsulating (⭗) case */
     infix fun isOutside(circle: CircleOrLine): Boolean
-    /** sort points on the circle in the order they lie on it (starting from wherever) */
     fun translate(vector: Offset): CircleOrLine
     fun scale(focus: Offset, zoom: Float): CircleOrLine
     override fun scale(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
@@ -355,6 +354,7 @@ sealed interface LocusWithOrder {
     // Constraints:
     // order2point(point2order(p)) === p
     // point2order(order2point(o)) === o
+    /** sort points on the circle in the order they lie on it (starting from wherever) */
     fun point2order(point: Point): Double
     fun order2point(order: Double): Point
     fun orderInBetween(order1: Double, order2: Double): Double

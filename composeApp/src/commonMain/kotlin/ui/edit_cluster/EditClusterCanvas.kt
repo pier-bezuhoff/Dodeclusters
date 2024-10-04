@@ -64,6 +64,7 @@ import ui.circle2path
 import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
+import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
 import ui.visibleHalfPlanePath
 import kotlin.math.max
@@ -97,8 +98,11 @@ fun BoxScope.EditClusterCanvas(
     val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
     val sliderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
     val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
-    val circleColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f) // MAYBE: black for light scheme
+    // MAYBE: black/dark grey for light scheme
+    val circleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
+    val freeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
     val pointColor = circleColor
+    val freePointColor = freeCircleColor
     val selectedCircleColor =
 //        MaterialTheme.colorScheme.primary
         DodeclustersColors.strongSalad
@@ -156,7 +160,7 @@ fun BoxScope.EditClusterCanvas(
             drawAnimation(animations, visibleRect)
             drawParts(viewModel, visibleRect, clusterPathAlpha, circleStroke)
             if (viewModel.showCircles)
-                drawCircles(viewModel, visibleRect, circleColor, circleStroke, pointColor, pointRadius)
+                drawCircles(viewModel, visibleRect, circleColor, freeCircleColor, circleStroke, pointColor, freePointColor, pointRadius)
             drawSelectedCircles(viewModel, visibleRect, selectedCircleColor, thiccSelectionCircleAlpha, circleThiccStroke, selectedPointColor, pointRadius)
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, scaleIndicatorColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
@@ -309,29 +313,39 @@ private fun DrawScope.drawCircles(
     viewModel: EditClusterViewModel,
     visibleRect: Rect,
     circleColor: Color,
+    freeCircleColor: Color,
     circleStroke: DrawStyle,
     pointColor: Color,
+    freePointColor: Color,
     pointRadius: Float
 ) {
     if (viewModel.circleSelectionIsActive) {
         for ((ix, circle) in viewModel.circles.withIndex()) {
-            if (circle != null && ix !in viewModel.selection)
-                drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
+            if (circle != null && ix !in viewModel.selection) {
+                val color = if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
+                drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
+            }
         }
     } else {
-        for (circle in viewModel.circles) {
-            if (circle != null)
-                drawCircleOrLine(circle, visibleRect, circleColor, style = circleStroke)
+        for ((ix, circle) in viewModel.circles.withIndex()) {
+            if (circle != null) {
+                val color = if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
+                drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
+            }
         }
     }
     if (viewModel.pointSelectionIsActive) {
         for ((ix, point) in viewModel.points.withIndex())
-            if (point != null && ix !in viewModel.selectedPoints)
-                drawCircle(pointColor, pointRadius, point.toOffset())
+            if (point != null && ix !in viewModel.selectedPoints) {
+                val color = if (viewModel.isFreeCircle(ix)) freePointColor else pointColor
+                drawCircle(color, pointRadius, point.toOffset())
+            }
     } else {
-        for (point in viewModel.points)
-            if (point != null)
-                drawCircle(pointColor, pointRadius, point.toOffset())
+        for ((ix, point) in viewModel.points.withIndex())
+            if (point != null) {
+                val color = if (viewModel.isFreeCircle(ix)) freePointColor else pointColor
+                drawCircle(color, pointRadius, point.toOffset())
+            }
     }
 }
 

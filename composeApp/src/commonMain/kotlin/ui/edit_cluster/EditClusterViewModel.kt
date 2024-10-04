@@ -669,19 +669,35 @@ class EditClusterViewModel(
         return (absolutePosition - position).getDistance() <= tapDistance * (if (lowAccuracy) LOW_ACCURACY_FACTOR else 1f)
     }
 
-    fun selectPoint(targets: List<Point?>, visiblePosition: Offset): Ix? {
+    fun selectPoint(
+        targets: List<Point?>,
+        visiblePosition: Offset,
+        priorityTargets: Set<Ix> = emptySet(),
+    ): Ix? {
         val position = absolute(visiblePosition)
         val absolutePoint = Point.fromOffset(position)
         return targets
             .mapIndexed { ix, point ->
-                ix to (point?.distanceFrom(absolutePoint) ?: Double.POSITIVE_INFINITY)
+                val priority =
+                    if (ix in priorityTargets) 100
+                    else 1
+                val distance = if (point != null) {
+                    point.distanceFrom(absolutePoint)/priority.toDouble()
+                } else {
+                    Double.POSITIVE_INFINITY
+                }
+                ix to distance
             }.filter { (_, distance) -> distance <= tapDistance }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
     }
 
     fun reselectPointAt(visiblePosition: Offset): Boolean {
-        val nearPointIndex = selectPoint(points, visiblePosition)
+        val nearPointIndex = selectPoint(points, visiblePosition,
+            priorityTargets = points.indices
+                .filter { expressions.expressions[Indexed.Point(it)] == null }
+                .toSet()
+        )
         if (nearPointIndex == null) {
             selectedPoints = listOf()
             return false
@@ -691,19 +707,35 @@ class EditClusterViewModel(
         }
     }
 
-    fun selectCircle(targets: List<CircleOrLine?>, visiblePosition: Offset): Ix? {
+    fun selectCircle(
+        targets: List<CircleOrLine?>,
+        visiblePosition: Offset,
+        priorityTargets: Set<Ix> = emptySet(),
+    ): Ix? {
         val position = absolute(visiblePosition)
         return targets.mapIndexed { ix, circle ->
-            ix to (circle?.distanceFrom(position) ?: Double.POSITIVE_INFINITY)
+            val priority =
+                if (ix in priorityTargets) 100
+                else 1
+            val distance = if (circle != null) {
+                circle.distanceFrom(position)/priority.toDouble()
+            } else {
+                Double.POSITIVE_INFINITY
+            }
+            ix to distance
         }
             .filter { (_, distance) -> distance <= tapDistance }
             .minByOrNull { (_, distance) -> distance }
             ?.let { (ix, _) -> ix }
-            ?.also { println("select circle #$it ${circles[it]}") }
+            ?.also { println("select circle #$it: ${circles[it]} <- ${expressions.expressions[Indexed.Circle(it)]}") }
     }
 
     fun reselectCircleAt(visiblePosition: Offset): Boolean {
-        val nearCircleIndex = selectCircle(circles, visiblePosition)
+        val nearCircleIndex = selectCircle(circles, visiblePosition,
+            priorityTargets = circles.indices
+                .filter { expressions.expressions[Indexed.Circle(it)] == null }
+                .toSet()
+        )
         selection.clear()
         if (nearCircleIndex == null) {
             return false
@@ -806,6 +838,11 @@ class EditClusterViewModel(
         return Rect(left, top, right, bottom)
     }
 
+    inline fun isFreeCircle(circleIndex: Ix): Boolean =
+        expressions.expressions[Indexed.Circle(circleIndex)] == null
+    inline fun isFreePoint(pointIndex: Ix): Boolean =
+        expressions.expressions[Indexed.Point(pointIndex)] == null
+
     fun snapped(
         absolutePosition: Offset,
         excludePoints: Boolean = false,
@@ -824,11 +861,11 @@ class EditClusterViewModel(
         val point2circleSnapping = showCircles
         if (!point2circleSnapping) // no snapping to invisibles
             return PointSnapResult.Free(point)
-        val visibleCircles = circles.mapIndexed { ix, c ->
+        val snappableCircles = circles.mapIndexed { ix, c ->
             if (ix in excludedCircles) null
             else c
         }
-        val p2cResult = snapPointToCircles(point, visibleCircles, snapDistance)
+        val p2cResult = snapPointToCircles(point, snappableCircles, snapDistance)
         return p2cResult
     }
 
@@ -838,6 +875,7 @@ class EditClusterViewModel(
             is PointSnapResult.Eq -> snapResult
             is PointSnapResult.Incidence -> {
                 val circle = circles[snapResult.circleIndex]!!
+                // NOTE: we have to downscale to measure order for lines properly
                 val order = circle.downscale().point2order(snapResult.result.downscale())
                 val expr = Expr.Incidence(
                     IncidenceParameters(order),
@@ -1400,7 +1438,6 @@ class EditClusterViewModel(
             }
             expressions.update(listOf(Indexed.Circle(ix)))
         } else if (mode == SelectionMode.Drag && selectedPoints.isNotEmpty() && showCircles) {
-            // TODO: do not snap point to its children
             val ix = selectedPoints.first()
             recordCommand(Command.MOVE, targets = listOf(-ix-1)) // have to distinguish from circle indices ig
             val excludedSnapTargets = expressions.children
@@ -1949,7 +1986,7 @@ class EditClusterViewModel(
         val translation: Offset,
     ) { // MAYBE: save translations & scaling and/or also keep such movements in history
         companion object {
-            val DEFAULT = UiState(
+            val SAMPLE = UiState(
                 circles = listOf(
                     Circle(200.0, 200.0, 100.0),
                     Circle(250.0, 200.0, 100.0),
@@ -2010,7 +2047,7 @@ class EditClusterViewModel(
 
     companion object {
         /** min tap/grab distance to select an object in dp */
-        const val TAP_DISTANCE = 10f
+        const val TAP_DISTANCE = 10f // TODO: increase for mobile
         const val LOW_ACCURACY_FACTOR = 1.5f
         const val HUD_ZOOM_INCREMENT = 1.1f // == +10%
         const val KEYBOARD_ZOOM_INCREMENT = 1.05f // == +5%
