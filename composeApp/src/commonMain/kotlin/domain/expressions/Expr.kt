@@ -12,7 +12,7 @@ typealias ExprResult = List<GCircle?>
 sealed class Expr(
     @SerialName("parameters_0")
     open val parameters: Parameters,
-    // can also be computed as an expression, making up Forest-like data structure
+    // each arg can in turn be computed as an expression, making up Forest-like data structure
     @SerialName("args_0")
     open val args: List<Indexed>,
 ) {

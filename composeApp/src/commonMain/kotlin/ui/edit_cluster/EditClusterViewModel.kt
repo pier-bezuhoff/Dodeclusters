@@ -216,11 +216,11 @@ class EditClusterViewModel(
 //    val scale = mutableStateOf(1f)
 
     /** min tap/grab distance to select an object */
-    private var tapDistance = TAP_DISTANCE
+    private var tapRadius = getPlatform().tapRadius
 
     fun setEpsilon(density: Density) {
         with (density) {
-            tapDistance = TAP_DISTANCE.dp.toPx()
+            tapRadius = getPlatform().tapRadius.dp.toPx()
         }
     }
 
@@ -666,7 +666,7 @@ class EditClusterViewModel(
 
     fun isCloseEnoughToSelect(absolutePosition: Offset, visiblePosition: Offset, lowAccuracy: Boolean = false): Boolean {
         val position = absolute(visiblePosition)
-        return (absolutePosition - position).getDistance() <= tapDistance * (if (lowAccuracy) LOW_ACCURACY_FACTOR else 1f)
+        return (absolutePosition - position).getDistance() <= tapRadius * (if (lowAccuracy) LOW_ACCURACY_FACTOR else 1f)
     }
 
     fun selectPoint(
@@ -680,7 +680,7 @@ class EditClusterViewModel(
             .mapIndexed { ix, point ->
                 val distance = point?.distanceFrom(absolutePoint) ?: Double.POSITIVE_INFINITY
                 ix to distance
-            }.filter { (_, distance) -> distance <= tapDistance }
+            }.filter { (_, distance) -> distance <= tapRadius }
             .minByOrNull { (ix, distance) ->
                 val priority =
                     if (ix in priorityTargets) 100
@@ -688,6 +688,7 @@ class EditClusterViewModel(
                 distance / priority
             }
             ?.let { (ix, _) -> ix }
+            ?.also { println("select point #$it: ${points[it]} <- ${expressions.expressions[Indexed.Point(it)]}") }
     }
 
     fun reselectPointAt(visiblePosition: Offset): Boolean {
@@ -715,7 +716,7 @@ class EditClusterViewModel(
             val distance = circle?.distanceFrom(position) ?: Double.POSITIVE_INFINITY
             ix to distance
         }
-            .filter { (_, distance) -> distance <= tapDistance }
+            .filter { (_, distance) -> distance <= tapRadius }
             .minByOrNull { (ix, distance) ->
                 val priority =
                     if (ix in priorityTargets) 100
@@ -845,7 +846,7 @@ class EditClusterViewModel(
         excludedCircles: Set<Ix> = emptySet(),
     ): PointSnapResult {
         // snap to: points > circles > circle contact
-        val snapDistance = tapDistance.toDouble()
+        val snapDistance = tapRadius.toDouble()
         val point = Point.fromOffset(absolutePosition)
         val point2pointSnapping = !excludePoints && mode != ToolMode.POINT
         if (point2pointSnapping) {
@@ -1843,7 +1844,7 @@ class EditClusterViewModel(
         val objArg = args[0] as Arg.CircleAndPointIndices
         val targetCircleIndices = objArg.circleIndices
         val targetPointsIndices = objArg.pointIndices
-        val (divergence, convergence) = args.drop(1)
+        val (divergence, convergence) = args.drop(1).take(2)
             .map { when (val arg = it as Arg.Point) {
                 is Arg.Point.Index -> Indexed.Point(arg.index)
                 is Arg.Point.XY -> createNewFreePoint(arg.toPoint())
@@ -1872,9 +1873,9 @@ class EditClusterViewModel(
             ).map { if (it is Point?) it?.upscale() else null }
             allNewPoints.addAll(newPoints)
         }
+        val size0 = circles.size
         createNewCircles(allNewCircles)
         points.addAll(allNewPoints)
-        val size0 = circles.size
         val k = targetCircleIndices.size
         repeat(params.nSteps + 1) { i ->
             val m = size0 + i * k // first index of this batch
@@ -2043,8 +2044,6 @@ class EditClusterViewModel(
     }
 
     companion object {
-        /** min tap/grab distance to select an object in dp */
-        const val TAP_DISTANCE = 10f // TODO: increase for mobile
         const val LOW_ACCURACY_FACTOR = 1.5f
         const val HUD_ZOOM_INCREMENT = 1.1f // == +10%
         const val KEYBOARD_ZOOM_INCREMENT = 1.05f // == +5%

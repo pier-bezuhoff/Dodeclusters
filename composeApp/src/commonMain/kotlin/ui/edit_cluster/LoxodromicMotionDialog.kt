@@ -65,7 +65,7 @@ import kotlin.math.roundToInt
 
 data class DefaultLoxodromicMotionParameters(
     /** in degrees */
-    val angle: Float = 90f,
+    val angle: Float = 270f,
     val dilation: Double = 1.0,
     val nSteps: Int = 10,
     val minAngle: Float = 0f,

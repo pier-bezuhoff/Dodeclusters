@@ -337,13 +337,13 @@ private fun DrawScope.drawCircles(
     if (viewModel.pointSelectionIsActive) {
         for ((ix, point) in viewModel.points.withIndex())
             if (point != null && ix !in viewModel.selectedPoints) {
-                val color = if (viewModel.isFreeCircle(ix)) freePointColor else pointColor
+                val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
     } else {
         for ((ix, point) in viewModel.points.withIndex())
             if (point != null) {
-                val color = if (viewModel.isFreeCircle(ix)) freePointColor else pointColor
+                val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
     }
