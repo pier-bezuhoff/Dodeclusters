@@ -32,6 +32,8 @@
     <string name="show_circles_description">Show/hide circles</string>
     <string name="toggle_filled_or_outline_name">Filled/outline</string>
     <string name="toggle_filled_or_outline_description">Switch between showing only region borders vs filled insides</string>
+    <string name="hide_ui_name">Hide UI</string>
+    <string name="hide_ui_description">Hide UI for 30s</string>
     <string name="palette_name">Palette</string>
     <string name="palette_description">Pick colors</string>
     <string name="applied_color_name">Applied color</string>

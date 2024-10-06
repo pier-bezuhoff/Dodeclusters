@@ -61,6 +61,7 @@ import domain.snapPointToCircles
 import domain.snapPointToPoints
 import getPlatform
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
@@ -71,9 +72,10 @@ import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import kotlin.math.pow
+import kotlin.time.Duration.Companion.seconds
 
 // TODO: migrate to Decompose 3 for a real VM impl
-// MAYBE: use UiState functional pattern instead this mess
+// MAYBE: use UiState functional pattern instead of this mess
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
 @Stable
@@ -138,6 +140,7 @@ class EditClusterViewModel(
     var showPanel by mutableStateOf(panelNeedsToBeShown)
     var showPromptToSetActiveSelectionAsToolArg by mutableStateOf(false) // to be updated manually
         private set
+    var showUI by mutableStateOf(true)
 
     /** currently selected color */
     var regionColor by mutableStateOf(DodeclustersColors.primaryDark) // DodeclustersColors.purple)
@@ -225,7 +228,6 @@ class EditClusterViewModel(
     }
 
     fun changeCanvasSize(newCanvasSize: IntSize) {
-//        println(newCanvasSize)
         val prevCenter = Offset(canvasSize.width/2f, canvasSize.height/2f)
         val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
         translation = translation + (newCenter - prevCenter)
@@ -935,6 +937,16 @@ class EditClusterViewModel(
         showCircles = !showCircles
         if (!showCircles && mode is ToolMode)
             switchToMode(SelectionMode.Drag)
+    }
+
+    fun hideUIFor30s() {
+        if (showUI) {
+            showUI = false
+            coroutineScope.launch {
+                delay(30.seconds)
+                showUI = true
+            }
+        }
     }
 
     fun toggleRestrictRegionsToSelection() {
@@ -1937,6 +1949,7 @@ class EditClusterViewModel(
             EditClusterTool.DeleteAllParts -> deleteAllParts()
             EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selected circles only
             EditClusterTool.ToggleFilledOrOutline -> showWireframes = !showWireframes
+            EditClusterTool.HideUI -> hideUIFor30s()
             EditClusterTool.Palette -> showColorPickerDialog = true
             EditClusterTool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
             EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)

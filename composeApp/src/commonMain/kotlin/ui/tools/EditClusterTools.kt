@@ -61,7 +61,10 @@ import dodeclusters.composeapp.generated.resources.flow_fill_name
 import dodeclusters.composeapp.generated.resources.flow_multiselect_description
 import dodeclusters.composeapp.generated.resources.flow_multiselect_name
 import dodeclusters.composeapp.generated.resources.full_screen_cross
+import dodeclusters.composeapp.generated.resources.fullscreen
 import dodeclusters.composeapp.generated.resources.hide_layers
+import dodeclusters.composeapp.generated.resources.hide_ui_description
+import dodeclusters.composeapp.generated.resources.hide_ui_name
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_description
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_name
 import dodeclusters.composeapp.generated.resources.interpolate_lines
@@ -256,6 +259,11 @@ sealed class EditClusterTool(
         Res.string.toggle_filled_or_outline_description,
         Res.drawable.filled_circle,
         Res.drawable.circle
+    ) // TODO: instead adjust it for every part
+    data object HideUI: Action(
+        Res.string.hide_ui_name,
+        Res.string.hide_ui_description,
+        Res.drawable.fullscreen
     )
     data object AddBackgroundImage: Action(
         Res.string.stub,

@@ -16,6 +16,8 @@
     <string name="flow_multiselect_description">Режим выделения окружностей проводя курсором по ним</string>
     <string name="toggle_select_all_name">Выделить всё/снять выделение</string>
     <string name="toggle_select_all_description">Выделить всё/снять выделение</string>
+    <string name="hide_ui_name">Скрыть интерфейс</string>
+    <string name="hide_ui_description">Скрыть интерфейс на 30с</string>
     <string name="region_name">Области</string>
     <string name="region_description">Режим выбора областей между окружностями для заливки</string>
     <string name="flow_fill_name">Свайп-заливка</string>

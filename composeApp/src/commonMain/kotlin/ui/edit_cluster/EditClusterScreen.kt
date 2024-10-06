@@ -122,7 +122,7 @@ fun EditClusterScreen(
             Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
         else Modifier,
         floatingActionButton = {
-            if (!isLandscape) { // inline in the LeftToolbar in landscape
+            if (!isLandscape && viewModel.showUI) {
                 // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
                 val category = EditClusterCategory.Create
                 FloatingActionButton(
@@ -149,25 +149,27 @@ fun EditClusterScreen(
                 }
             }
         },
-        floatingActionButtonPosition = if (isLandscape) FabPosition.Start else FabPosition.End
+        floatingActionButtonPosition = FabPosition.End
     ) {
         Surface {
             Box {
                 EditClusterCanvas(viewModel)
-                ToolDescription(
-                    viewModel.activeTool,
-                    viewModel.partialArgList,
-                    isLandscape,
-                    compact,
-                    viewModel.showPromptToSetActiveSelectionAsToolArg,
-                    viewModel::setActiveSelectionAsToolArg,
-                    Modifier.align(Alignment.TopStart)
-                )
-                EditClusterTopBar(viewModel, compact, Modifier.align(Alignment.TopEnd))
-                if (isLandscape)
-                    ToolbarLandscape(viewModel, compact, Modifier.align(Alignment.CenterStart))
-                else
-                    ToolbarPortrait(viewModel, compact, Modifier.align(Alignment.BottomStart))
+                if (viewModel.showUI) {
+                    ToolDescription(
+                        viewModel.activeTool,
+                        viewModel.partialArgList,
+                        isLandscape,
+                        compact,
+                        viewModel.showPromptToSetActiveSelectionAsToolArg,
+                        viewModel::setActiveSelectionAsToolArg,
+                        Modifier.align(Alignment.TopStart)
+                    )
+                    EditClusterTopBar(viewModel, compact, Modifier.align(Alignment.TopEnd))
+                    if (isLandscape)
+                        ToolbarLandscape(viewModel, compact, Modifier.align(Alignment.CenterStart))
+                    else
+                        ToolbarPortrait(viewModel, compact, Modifier.align(Alignment.BottomStart))
+                }
             }
         }
     }

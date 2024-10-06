@@ -7,6 +7,7 @@ import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.hypot
 
+// BUG: arcs often break when moving diff pts
 data class ArcPath(
     val startPoint: Point,
     val points: List<Point> = emptyList(),
