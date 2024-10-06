@@ -943,6 +943,7 @@ class EditClusterViewModel(
         if (showUI) {
             showUI = false
             coroutineScope.launch {
+                // MAYBE: also trigger fullscreen for desktop
                 delay(30.seconds)
                 showUI = true
             }

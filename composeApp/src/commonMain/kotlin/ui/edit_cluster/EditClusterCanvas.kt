@@ -217,8 +217,7 @@ private fun SelectionsCanvas(
                 )
             ) {
                 val circles = viewModel.selection
-                    .map { viewModel.circles[it] }
-                    .filterNotNull()
+                    .mapNotNull { viewModel.circles[it] }
                 for (circle in circles) {
                     // alpha = where selection lines are shown
                     // dst out = erase the BG rectangle => show hatching thats drawn behind it
@@ -246,11 +245,14 @@ private fun DrawScope.drawCircleOrLine(
     drawHalfPlanesForLines: Boolean = false
 ) {
     when (circle) {
-        // TODO: when the radius is exceedingly high, circles disappear
+        // MAYBE: when the radius is exceedingly high, circles disappear
         //  so we need to approx them with lines
-        is Circle -> drawCircle(
-            color, circle.radius.toFloat(), circle.center, alpha, style, blendMode = blendMode
-        )
+        is Circle -> {
+            val radius = circle.radius.toFloat()
+            drawCircle(
+                color, radius, circle.center, alpha, style, blendMode = blendMode
+            )
+        }
         is Line -> {
             val maxDim = visibleRect.maxDimension
             val pointClosestToScreenCenter = circle.project(visibleRect.center)
@@ -407,12 +409,27 @@ private fun DrawScope.drawParts(
     } else {
         for (part in viewModel.parts) {
             val path = part2path(viewModel.circles, part, visibleRect)
-            drawPath(
-                path,
-                color = part.fillColor,
-                alpha = clusterPathAlpha,
-                style = if (viewModel.showWireframes) circleStroke else Fill,
-            )
+            if (viewModel.showWireframes) {
+                drawPath(
+                    path,
+                    color = part.fillColor,
+                    alpha = clusterPathAlpha,
+                    style = circleStroke
+                )
+            } else {
+                drawPath( // drawing stroke+fill to prevent seams
+                    path,
+                    color = part.fillColor,
+                    alpha = clusterPathAlpha,
+                    style = circleStroke
+                )
+                drawPath(
+                    path,
+                    color = part.fillColor,
+                    alpha = clusterPathAlpha,
+                    style = Fill,
+                )
+            }
         }
     }
 }
