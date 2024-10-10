@@ -367,7 +367,7 @@ data class GeneralizedCircle(
             val y = w1*x2*z3 - w1*x3*z2 - w2*x1*z3 + w2*x3*z1 + w3*x1*z2 - w3*x2*z1
             val z = -x1*y2*z3 + x1*y3*z2 + x2*y1*z3 - x2*y3*z1 - x3*y1*z2 + x3*y2*z1
             if (is0000(w,x,y,z)) {
-                println("$w, $x, $y, $z")
+                println("perp3 -> ($w, $x, $y, $z) ~ 0")
                 return null
             }
             if (listOf(w,x,y,z).any { it.isNaN() || it.isInfinite() }) {

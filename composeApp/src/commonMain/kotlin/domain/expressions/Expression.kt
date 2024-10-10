@@ -2,6 +2,7 @@ package domain.expressions
 
 import domain.Ix
 import kotlinx.serialization.Serializable
+import kotlin.jvm.JvmInline
 
 // circles: [CircleOrLine?]
 // points: [Point?]
@@ -35,10 +36,12 @@ sealed interface Indexed {
     val index: Ix
 
     /** index for a circle or a line */
+    @JvmInline
     @Serializable
-    data class Circle(override val index: Ix) : Indexed
+    value class Circle(override val index: Ix) : Indexed
+    @JvmInline
     @Serializable
-    data class Point(override val index: Ix) : Indexed
+    value class Point(override val index: Ix) : Indexed
 }
 
 @Serializable

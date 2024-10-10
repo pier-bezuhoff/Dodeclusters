@@ -13,12 +13,16 @@ import kotlin.math.hypot
 fun computeCircleByCenterAndRadius(
     center: Point,
     radiusPoint: Point
-): Circle =
-    Circle(
-        center.x,
-        center.y,
-        hypot(radiusPoint.x - center.x, radiusPoint.y - center.y)
-    )
+): Circle? {
+    val radius = hypot(radiusPoint.x - center.x, radiusPoint.y - center.y)
+    return if (radius == 0.0) null
+    else
+        Circle(
+            center.x,
+            center.y,
+            hypot(radiusPoint.x - center.x, radiusPoint.y - center.y)
+        )
+}
 
 fun computeCircleBy3Points(
     point1: GCircle,

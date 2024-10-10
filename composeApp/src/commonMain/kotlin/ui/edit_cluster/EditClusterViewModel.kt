@@ -71,6 +71,7 @@ import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
+import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
@@ -433,10 +434,24 @@ class EditClusterViewModel(
                 is Indexed.Point -> points[it.index]?.downscale()
             } },
             set = { ix, value -> when (ix) {
-                is Indexed.Circle ->
+                is Indexed.Circle -> {
+                    if (ix.index >= circles.size) { // tryna catch some nasty bugs
+                        val msg = "set(bad circle index)\n" +
+                                "circles = $circles\n" +
+                                "expressions = ${expressions.expressions}"
+                        throw IllegalStateException(msg)
+                    }
                     circles[ix.index] = (value as? CircleOrLine)?.upscale()
-                is Indexed.Point ->
+                }
+                is Indexed.Point -> {
+                    if (ix.index >= points.size) {
+                        val msg = "set(bad point index)\n" +
+                                "points = $points\n" +
+                                "expressions = ${expressions.expressions}"
+                        throw IllegalStateException(msg)
+                    }
                     points[ix.index] = (value as? Point)?.upscale()
+                }
             } }
         )
     }
@@ -474,7 +489,7 @@ class EditClusterViewModel(
     }
 
     fun createNewCircle(newCircle: CircleOrLine?) =
-        createNewCircles(listOfNotNull(newCircle))
+        createNewCircles(listOf(newCircle))
 
     /** Append [newCircles] to [circles] and queue circle entrance animation */
     fun createNewCircles(
@@ -591,6 +606,7 @@ class EditClusterViewModel(
         if (circlesToBeDelete.isNotEmpty()) {
             val whatsGone = circlesToBeDelete.map { it.index }
                 .toSet()
+            // FIX: there's been an incident of select-all > delete > out-of-bounds 6/6 here
             val deletedCircles = whatsGone.mapNotNull { circles[it] }
             val oldParts = parts.toList()
             selection.clear()
@@ -1691,7 +1707,7 @@ class EditClusterViewModel(
             val newCircle = computeCircleByCenterAndRadius(
                 center = (args[0] as Arg.Point.XY).toPoint().downscale(),
                 radiusPoint = (args[1] as Arg.Point.XY).toPoint().downscale(),
-            ).upscale()
+            )?.upscale()
             createNewCircle(newCircle)
             expressions.addFree(isPoint = false)
         } else {
