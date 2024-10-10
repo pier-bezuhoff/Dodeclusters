@@ -1,6 +1,7 @@
 package data.geometry
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.isFinite
 import kotlinx.serialization.Serializable
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -11,7 +12,10 @@ data class Point(
     val y: Double
 ) : GCircle {
     fun toOffset(): Offset =
-        Offset(x.toFloat(), y.toFloat())
+        if (this == CONFORMAL_INFINITY)
+            Offset.Infinite
+        else
+            Offset(x.toFloat(), y.toFloat())
 
     fun distanceFrom(point: Point): Double =
         when {
@@ -34,7 +38,10 @@ data class Point(
     override fun scale(focusX: Double, focusY: Double, zoom: Double): Point {
         val newX = (x - focusX) * zoom + focusX
         val newY = (y - focusY) * zoom + focusY
-        return Point(newX, newY)
+        return if (this == CONFORMAL_INFINITY)
+            CONFORMAL_INFINITY
+        else
+            Point(newX, newY)
     }
 
     fun middle(point: Point): Point =
@@ -46,7 +53,9 @@ data class Point(
         val CONFORMAL_INFINITY = Point(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
         fun fromOffset(offset: Offset): Point =
-            Point(offset.x.toDouble(), offset.y.toDouble())
+            if (offset.isFinite)
+                Point(offset.x.toDouble(), offset.y.toDouble())
+            else CONFORMAL_INFINITY
     }
 }
 

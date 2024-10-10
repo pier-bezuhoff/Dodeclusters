@@ -6,8 +6,6 @@ import com.charleskorn.kaml.YamlConfiguration
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
-import domain.io.Ddc
-import domain.io.OldDdc
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass

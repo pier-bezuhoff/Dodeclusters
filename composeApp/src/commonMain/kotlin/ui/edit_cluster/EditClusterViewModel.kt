@@ -71,7 +71,6 @@ import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
-import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
@@ -436,8 +435,8 @@ class EditClusterViewModel(
             set = { ix, value -> when (ix) {
                 is Indexed.Circle -> {
                     if (ix.index >= circles.size) { // tryna catch some nasty bugs
-                        val msg = "set(bad circle index)\n" +
-                                "circles = $circles\n" +
+                        val msg = "set(bad circle index $ix)\n" +
+                                "circles = ${circles.toList()}\n" +
                                 "expressions = ${expressions.expressions}"
                         throw IllegalStateException(msg)
                     }
@@ -445,8 +444,8 @@ class EditClusterViewModel(
                 }
                 is Indexed.Point -> {
                     if (ix.index >= points.size) {
-                        val msg = "set(bad point index)\n" +
-                                "points = $points\n" +
+                        val msg = "set(bad point index $ix)\n" +
+                                "points = ${points.toList()}\n" +
                                 "expressions = ${expressions.expressions}"
                         throw IllegalStateException(msg)
                     }
@@ -912,7 +911,23 @@ class EditClusterViewModel(
                     Indexed.Circle(ix2)
                 )
                 // TODO: lookup if it already exists
-                expressions.expressions.filter { (_, e) -> e?.expr == expr }
+                val sameExpr = expressions.expressions.filter { (_, e) -> e?.expr == expr }
+                val output1Ix = sameExpr.entries
+                    .firstOrNull { (_, e) -> e is Expression.OneOf && e.outputIndex == 0 }
+                    ?.key as? Indexed.Point
+                val output2Ix = sameExpr.entries
+                    .firstOrNull { (_, e) -> e is Expression.OneOf && e.outputIndex == 1 }
+                    ?.key as? Indexed.Point
+                if (output1Ix != null && output2Ix != null) {
+                    // good
+                    // find closest and return
+                } else if (output1Ix == null && output2Ix != null) {
+                    // add 1st
+                } else if (output1Ix != null && output2Ix == null) {
+                    // add 2st
+                } else { // both are absent
+                    // add both
+                }
                 // check if both outputIndices are present
                 // if not, add the other
                 val j = points.size
