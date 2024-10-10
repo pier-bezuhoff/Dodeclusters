@@ -1,6 +1,8 @@
 package domain.expressions
 
+import data.geometry.CircleOrLine
 import data.geometry.GCircle
+import data.geometry.Point
 
 class ExpressionForest(
     initialExpressions: Map<Indexed, Expression?>, // pls include all possible indices
@@ -87,21 +89,13 @@ class ExpressionForest(
     }
 
     /** don't forget to upscale the result afterwards! */
-    fun addSoloExpression(
+    fun addSoloPointExpression(
         expr: Expr.OneToOne,
-        isPoint: Boolean,
-    ): GCircle? {
-        val ix: Indexed = if (isPoint) {
-            val i = expressions.keys
-                .filterIsInstance<Indexed.Point>()
-                .maxOfOrNull { it.index + 1 } ?: 0
-            Indexed.Point(i)
-        } else {
-            val i = expressions.keys
-                .filterIsInstance<Indexed.Circle>()
-                .maxOfOrNull { it.index + 1 } ?: 0
-            Indexed.Circle(i)
-        }
+    ): Point? {
+        val i = expressions.keys
+            .filterIsInstance<Indexed.Point>()
+            .maxOfOrNull { it.index + 1 } ?: 0
+        val ix: Indexed = Indexed.Point(i)
         expressions[ix] = Expression.Just(expr)
         expr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
@@ -114,7 +108,33 @@ class ExpressionForest(
             tier2ixs.add(setOf(ix))
         }
         val result = expr.eval(get)
-        return result.firstOrNull()
+        return (result.firstOrNull() as? Point)
+            .also {
+                println("$ix -> $expr -> $result")
+            }
+    }
+
+    /** don't forget to upscale the result afterwards! */
+    fun addSoloCircleExpression(
+        expr: Expr.OneToOne,
+    ): CircleOrLine? {
+        val i = expressions.keys
+            .filterIsInstance<Indexed.Circle>()
+            .maxOfOrNull { it.index + 1 } ?: 0
+        val ix: Indexed = Indexed.Circle(i)
+        expressions[ix] = Expression.Just(expr)
+        expr.args.forEach { parentIx ->
+            children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
+        }
+        val tier = computeTier(ix)
+        ix2tier[ix] = tier
+        if (tier < tier2ixs.size) {
+            tier2ixs[tier] = tier2ixs[tier] + ix
+        } else { // no hopping over tiers, we good
+            tier2ixs.add(setOf(ix))
+        }
+        val result = expr.eval(get)
+        return (result.firstOrNull() as? CircleOrLine)
             .also {
                 println("$ix -> $expr -> $result")
             }
@@ -170,6 +190,50 @@ class ExpressionForest(
         return result
     }
 
+    /** The new node still inherits its previous children */
+    fun changeToFree(ix: Indexed) {
+        if (expressions[ix] != null) {
+            expressions[ix]?.let { previousExpr ->
+                previousExpr.expr.args.forEach { parentIx ->
+                    children[parentIx] = (children[parentIx] ?: emptySet()) - ix
+                }
+            }
+            expressions[ix] = null
+            val previousTier = ix2tier[ix]!!
+            tier2ixs[previousTier] = tier2ixs[previousTier] - ix
+            tier2ixs[0] = tier2ixs[0] + ix
+            ix2tier[ix] = 0
+        }
+    }
+
+    /** The new node still inherits its previous children */
+    fun changeExpression(ix: Indexed, newExpr: Expr.OneToOne): GCircle? {
+        expressions[ix]?.let { previousExpr ->
+            previousExpr.expr.args.forEach { parentIx ->
+                children[parentIx] = (children[parentIx] ?: emptySet()) - ix
+            }
+        }
+        val previousTier = ix2tier[ix]!!
+        tier2ixs[previousTier] = tier2ixs[previousTier] - ix
+        ix2tier[ix] = -1
+        expressions[ix] = Expression.Just(newExpr)
+        newExpr.args.forEach { parentIx ->
+            children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
+        }
+        val tier = computeTier(ix)
+        ix2tier[ix] = tier
+        if (tier < tier2ixs.size) {
+            tier2ixs[tier] = tier2ixs[tier] + ix
+        } else { // no hopping over tiers, we good
+            tier2ixs.add(setOf(ix))
+        }
+        val result = newExpr.eval(get)
+        return result.firstOrNull()
+            .also {
+                println("change $ix -> $newExpr -> $result")
+            }
+    }
+
     /**
      * delete [ixs] nodes and all of their children
      * @return all the deleted nodes
@@ -185,8 +249,8 @@ class ExpressionForest(
             children.remove(d)
             ix2tier[d] = -1
         }
-        for ((parentIx, childs) in children)
-            children[parentIx] = childs - deleted
+        for ((parentIx, childIxs) in children)
+            children[parentIx] = childIxs - deleted
         for ((tier, tiered) in tier2ixs.withIndex())
             tier2ixs[tier] = tiered - deleted
         return deleted
@@ -198,7 +262,7 @@ class ExpressionForest(
         changedIxs: List<Indexed>,
         // deltas (translation, rotation, scaling) to apply to immediate carried objects
     ) {
-        val changed = changedIxs.toMutableSet()
+        val changed = mutableSetOf<Indexed>()
         var lvl = changedIxs
         while (lvl.isNotEmpty()) {
             lvl = lvl.flatMap { children[it] ?: emptySet() }
@@ -212,6 +276,12 @@ class ExpressionForest(
                 set(ix, expression.eval(cache))
             }
         }
+//        for (changedIx in changedIxs) {
+//            if (expressions[changedIx] != null && changedIx !in changed) {
+//                // we have moved a non-free node, but haven't touched its parents
+//                changeToFree(changedIx)
+//            }
+//        }
     }
 
     fun reEval() {

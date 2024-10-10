@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 
 typealias ExprResult = List<GCircle?>
 
+/** Whenever the order of [args] doesn't matter, enforce index-increasing order */
 @Serializable
 sealed class Expr(
     @SerialName("parameters_0")
@@ -38,13 +39,13 @@ sealed class Expr(
         val radiusPoint: Indexed.Point
     ) : OneToOne(
         Parameters.None, listOf(center, radiusPoint))
-    data class CircleBy3Points(
+    data class CircleBy3Points( // order-less
         val point1: Indexed,
         val point2: Indexed,
         val point3: Indexed,
     ) : OneToOne(
         Parameters.None, listOf(point1, point2, point3))
-    data class LineBy2Points(
+    data class LineBy2Points( // order-less
         val point1: Indexed,
         val point2: Indexed,
     ) : OneToOne(Parameters.None, listOf(point1, point2))
@@ -53,7 +54,7 @@ sealed class Expr(
         val engine: Indexed.Circle,
     ) : OneToOne(Parameters.None, listOf(target, engine))
 
-    data class Intersection(
+    data class Intersection( // order-less
         val circle1: Indexed.Circle,
         val circle2: Indexed.Circle,
     ) : OneToMany(Parameters.None, listOf(circle1, circle2))

@@ -91,7 +91,7 @@
     <string name="insert_centered_cross_name">Insert a centered cross</string>
     <string name="insert_centered_cross_description">Insert a centered cross</string>
     <string name="arc_path_name">Arc-path</string>
-    <string name="arc_path_description">Construct a closed arc-path (like a polygon)</string>
+    <string name="arc_path_description">Construct an arc-path</string>
     <string-array name="arc_path_arg_descriptions">
         <item>An anchor point</item>
     </string-array>

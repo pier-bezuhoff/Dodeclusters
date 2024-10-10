@@ -114,10 +114,11 @@ fun snapPointToCircles(
                 .map { it to point.distanceFrom(it) }
                 .minByOrNull { (_, d) -> d }!!
             if (distance <= intersectionTolerance * snapDistance) {
+                val sortedIxs = listOf(ix1, ix2).sorted()
                 PointSnapResult.Intersection(
                     closestIntersection,
-                    circle1Index = ix1,
-                    circle2index = ix2
+                    circle1Index = sortedIxs[0],
+                    circle2index = sortedIxs[1]
                 )
             } else {
                 PointSnapResult.Incidence(

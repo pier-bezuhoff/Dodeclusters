@@ -63,6 +63,7 @@ import data.ClusterRepository
 import domain.PartialArgList
 import data.geometry.Circle
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.confirm
@@ -273,7 +274,8 @@ fun preloadIcons() {
         }
     }
     for (resource in listOf(
-        Res.drawable.collapse_down, Res.drawable.ku,
+        Res.drawable.confirm, Res.drawable.cancel, // from dialogs
+        Res.drawable.collapse_down, Res.drawable.ku, // aka collapse-left
         Res.drawable.expand, Res.drawable.shrink, Res.drawable.copy, Res.drawable.delete_forever // from canvas HUD
     ))
         painterResource(resource)
