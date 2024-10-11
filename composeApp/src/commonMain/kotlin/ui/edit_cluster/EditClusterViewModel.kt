@@ -48,6 +48,7 @@ import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
+import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeLineBy2Points
 import domain.io.Ddc
 import domain.io.OldDdc
@@ -1705,6 +1706,7 @@ class EditClusterViewModel(
         when (toolMode) {
             ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> completeCircleByCenterAndRadius()
             ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
+            ToolMode.CIRCLE_BY_PENCIL_AND_POINT -> completeCircleByPencilAndPoint()
             ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
             ToolMode.CIRCLE_INTERPOLATION -> showCircleInterpolationDialog = true
@@ -1768,6 +1770,38 @@ class EditClusterViewModel(
                     point1 = realized[0],
                     point2 = realized[1],
                     point3 = realized[2],
+                ),
+            )
+            createNewCircle(newCircle?.upscale())
+        }
+        partialArgList = PartialArgList(argList.signature)
+    }
+
+    private fun completeCircleByPencilAndPoint() {
+        val argList = partialArgList!!
+        val args = argList.args.map {
+            it as Arg.CircleOrPoint
+        }
+        if (args.all { it is Arg.CircleOrPoint.Point.XY }) {
+            val (p1, p2, p3) = args.map {
+                (it as Arg.CircleOrPoint.Point.XY).toPoint().downscale()
+            }
+            val newCircle = computeCircleByPencilAndPoint(p1, p2, p3)
+            expressions.addFree(isPoint = false)
+            createNewCircle(newCircle?.upscale())
+        } else {
+            val realized = args.map {
+                when (it) {
+                    is Arg.CircleOrPoint.CircleIndex -> Indexed.Circle(it.index)
+                    is Arg.CircleOrPoint.Point.Index -> Indexed.Point(it.index)
+                    is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint())
+                }
+            }
+            val newCircle = expressions.addSoloCircleExpression(
+                Expr.CircleByPencilAndPoint(
+                    circle1 = realized[0],
+                    circle2 = realized[1],
+                    point = realized[2],
                 ),
             )
             createNewCircle(newCircle?.upscale())

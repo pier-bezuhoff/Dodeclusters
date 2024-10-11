@@ -22,6 +22,9 @@ import dodeclusters.composeapp.generated.resources.circle_by_3_points_name
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_description
 import dodeclusters.composeapp.generated.resources.circle_by_center_and_radius_name
+import dodeclusters.composeapp.generated.resources.circle_by_pencil_and_point_arg_descriptions
+import dodeclusters.composeapp.generated.resources.circle_by_pencil_and_point_description
+import dodeclusters.composeapp.generated.resources.circle_by_pencil_and_point_name
 import dodeclusters.composeapp.generated.resources.circle_center_and_radius_point
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_description
@@ -86,6 +89,7 @@ import dodeclusters.composeapp.generated.resources.paint_splash
 import dodeclusters.composeapp.generated.resources.palette
 import dodeclusters.composeapp.generated.resources.palette_description
 import dodeclusters.composeapp.generated.resources.palette_name
+import dodeclusters.composeapp.generated.resources.propeller
 import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.region_description
@@ -326,6 +330,13 @@ sealed class EditClusterTool(
         Res.string.circle_by_3_points_description,
         Res.array.circle_by_3_points_arg_descriptions,
         Res.drawable.circle_3_points
+    )
+    data object ConstructCircleByPencilAndPoint: MultiArg(
+        SIGNATURE_3_GENERALIZED_CIRCLE,
+        Res.string.circle_by_pencil_and_point_name,
+        Res.string.circle_by_pencil_and_point_description,
+        Res.array.circle_by_pencil_and_point_arg_descriptions,
+        Res.drawable.propeller
     )
     data object ConstructLineBy2Points: MultiArg(
         SIGNATURE_2_GENERALIZED_CIRCLES,

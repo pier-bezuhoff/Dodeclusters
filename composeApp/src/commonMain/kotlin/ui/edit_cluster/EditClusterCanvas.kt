@@ -434,6 +434,7 @@ private fun DrawScope.drawParts(
     }
 }
 
+// draw stuff for tool modes
 private fun DrawScope.drawPartialConstructs(
     viewModel: EditClusterViewModel,
     visibleRect: Rect,
@@ -539,6 +540,26 @@ private fun DrawScope.drawPartialConstructs(
                     drawCircleOrLine(line, visibleRect, creationPrototypeColor, style = circleStroke)
             } else if (args.size == 3) {
                 val circle = GeneralizedCircle.perp3(
+                    GeneralizedCircle.fromGCircle(gCircles[0]),
+                    GeneralizedCircle.fromGCircle(gCircles[1]),
+                    GeneralizedCircle.fromGCircle(gCircles[2]),
+                )?.toGCircle() as? CircleOrLine
+                if (circle != null)
+                    drawCircleOrLine(circle, visibleRect, creationPrototypeColor, style = circleStroke)
+            }
+        }
+        ToolMode.CIRCLE_BY_PENCIL_AND_POINT -> viewModel.partialArgList!!.args.let { args ->
+            val gCircles = args.map { viewModel.getArg(it as Arg.CircleOrPoint)!! }
+            if (args.size == 2) {
+                val line = GeneralizedCircle.parallel2perp1(
+                    GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
+                    GeneralizedCircle.fromGCircle(gCircles[0]),
+                    GeneralizedCircle.fromGCircle(gCircles[1]),
+                )?.toGCircle() as? Line
+                if (line != null)
+                    drawCircleOrLine(line, visibleRect, creationPrototypeColor, style = circleStroke)
+            } else if (args.size == 3) {
+                val circle = GeneralizedCircle.parallel2perp1(
                     GeneralizedCircle.fromGCircle(gCircles[0]),
                     GeneralizedCircle.fromGCircle(gCircles[1]),
                     GeneralizedCircle.fromGCircle(gCircles[2]),

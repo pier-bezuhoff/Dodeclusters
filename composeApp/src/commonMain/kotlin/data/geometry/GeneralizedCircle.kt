@@ -356,7 +356,7 @@ data class GeneralizedCircle(
             }
 
         /** Construct the GC perpendicular to the given 3, includes circle by 3 points, etc.
-         * In CGA: `!( (!c1) ^ (!c2) ^ (!c3) )` */
+         * In CGA: `c1^c2^c3 == !( (!c1) v (!c2) v (!c3) )` */
         fun perp3(c1: GeneralizedCircle, c2: GeneralizedCircle, c3: GeneralizedCircle): GeneralizedCircle? {
             val (w1, x1, y1, z1) = c1
             val (w2, x2, y2, z2) = c2
@@ -368,6 +368,26 @@ data class GeneralizedCircle(
             val z = -x1*y2*z3 + x1*y3*z2 + x2*y1*z3 - x2*y3*z1 - x3*y1*z2 + x3*y2*z1
             if (is0000(w,x,y,z)) {
                 println("GeneralizedCircle.perp3 resulted in near-zero: ($w, $x, $y, $z) aka 0 or infinite number of solutions")
+                return null
+            }
+            if (listOf(w,x,y,z).any { it.isNaN() || it.isInfinite() }) {
+                return null
+            }
+            return GeneralizedCircle(w, x, y, z).normalizedPreservingDirection()
+        }
+
+        /** Construct the GC from the same pencil as [c1] and [c2], that is perpendicular to [perp], includes circle from pencil thru point.
+         * In CGA: `(!(c1^c2) ^ c3) == !( (!c1) ^ !((!c2) ^ (!c3)) )` */
+        fun parallel2perp1(c1: GeneralizedCircle, c2: GeneralizedCircle, perp: GeneralizedCircle): GeneralizedCircle? {
+            val (w1, x1, y1, z1) = c1
+            val (w2, x2, y2, z2) = c2
+            val (w3, x3, y3, z3) = perp
+            val w = -w3*w2*z1 + w3*w1*z2 + w2*x3*x1 + w2*y3*y1 - w1*x3*x2 - w1*y3*y2
+            val x = -w3*x2*z1 + w3*x1*z2 + w2*x1*z3 - w1*x2*z3 + x2*y3*y1 - x1*y3*y2
+            val y = -w3*y2*z1 + w3*y1*z2 + w2*y1*z3 - w1*y2*z3 - x3*x2*y1 + x3*x1*y2
+            val z = w2*z3*z1 - w1*z3*z2 - x3*x2*z1 + x3*x1*z2 - y3*y2*z1 + y3*y1*z2
+            if (is0000(w,x,y,z)) {
+                println("GeneralizedCircle.parallel2perp1 resulted in near-zero: ($w, $x, $y, $z) aka 0 or infinite number of solutions")
                 return null
             }
             if (listOf(w,x,y,z).any { it.isNaN() || it.isInfinite() }) {

@@ -3,7 +3,6 @@ package ui.edit_cluster
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import data.Cluster
-import domain.PartialArgList
 import domain.Signature
 import kotlinx.serialization.Serializable
 import ui.tools.EditClusterTool
@@ -46,6 +45,7 @@ enum class ToolMode(
 
     CIRCLE_BY_CENTER_AND_RADIUS(EditClusterTool.ConstructCircleByCenterAndRadius),
     CIRCLE_BY_3_POINTS(EditClusterTool.ConstructCircleBy3Points),
+    CIRCLE_BY_PENCIL_AND_POINT(EditClusterTool.ConstructCircleByPencilAndPoint),
     LINE_BY_2_POINTS(EditClusterTool.ConstructLineBy2Points),
     ARC_PATH(EditClusterTool.ConstructArcPath),
     POINT(EditClusterTool.AddPoint),

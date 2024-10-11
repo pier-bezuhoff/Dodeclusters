@@ -82,6 +82,13 @@
         <item>The 2nd point / perpendicular object</item>
         <item>The 3rd point / perpendicular object</item>
     </string-array>
+    <string name="circle_by_pencil_and_point_name">Circle by pencil and point</string>
+    <string name="circle_by_pencil_and_point_description">Construct a circle by its pencil thru a point / perpendicular to an object</string>
+    <string-array name="circle_by_pencil_and_point_arg_descriptions">
+        <item>The 1st object in the pencil</item>
+        <item>The 2nd object in the pencil</item>
+        <item>The point / perpendicular object</item>
+    </string-array>
     <string name="line_by_2_points_name">Line by 2 points</string>
     <string name="line_by_2_points_description">Construct a line by 2 points or by objects perpendicular to it</string>
     <string-array name="line_by_2_points_arg_descriptions">

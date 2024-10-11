@@ -37,14 +37,17 @@ sealed class Expr(
     data class CircleByCenterAndRadius(
         val center: Indexed.Point,
         val radiusPoint: Indexed.Point
-    ) : OneToOne(
-        Parameters.None, listOf(center, radiusPoint))
+    ) : OneToOne(Parameters.None, listOf(center, radiusPoint))
     data class CircleBy3Points( // order-less
         val point1: Indexed,
         val point2: Indexed,
         val point3: Indexed,
-    ) : OneToOne(
-        Parameters.None, listOf(point1, point2, point3))
+    ) : OneToOne(Parameters.None, listOf(point1, point2, point3))
+    data class CircleByPencilAndPoint(
+        val circle1: Indexed,
+        val circle2: Indexed,
+        val point: Indexed,
+    ) : OneToOne(Parameters.None, listOf(circle1, circle2, point))
     data class LineBy2Points( // order-less
         val point1: Indexed,
         val point2: Indexed,
@@ -108,6 +111,11 @@ sealed class Expr(
                             g(point1),
                             g(point2),
                             g(point3)
+                        )
+                        is CircleByPencilAndPoint -> computeCircleByPencilAndPoint(
+                            g(circle1),
+                            g(circle2),
+                            g(point),
                         )
                         is LineBy2Points -> computeLineBy2Points(
                             g(point1),

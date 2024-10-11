@@ -276,6 +276,7 @@ class ExpressionForest(
                 set(ix, expression.eval(cache))
             }
         }
+        // idk, being so easily detachable feels wrong
 //        for (changedIx in changedIxs) {
 //            if (expressions[changedIx] != null && changedIx !in changed) {
 //                // we have moved a non-free node, but haven't touched its parents

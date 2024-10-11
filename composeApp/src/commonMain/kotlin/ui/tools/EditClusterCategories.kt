@@ -91,9 +91,10 @@ sealed class EditClusterCategory(
             EditClusterTool.ConstructArcPath,
             EditClusterTool.ConstructLineBy2Points,
             EditClusterTool.AddPoint,
+            EditClusterTool.ConstructCircleByPencilAndPoint,
             EditClusterTool.InsertCenteredCross,
         ),
-        defaultables = listOf(0, 1, 2, 3, 4)
+        defaultables = listOf(0, 1, 2, 3, 4, 5)
     ) { // ~mode-like
         // mode: rectangle by top-left & bottom-right
         // mode: polygon
