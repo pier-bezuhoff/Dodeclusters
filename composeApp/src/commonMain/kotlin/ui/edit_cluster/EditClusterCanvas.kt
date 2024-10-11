@@ -552,9 +552,9 @@ private fun DrawScope.drawPartialConstructs(
             val gCircles = args.map { viewModel.getArg(it as Arg.CircleOrPoint)!! }
             if (args.size == 2) {
                 val line = GeneralizedCircle.parallel2perp1(
-                    GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
                     GeneralizedCircle.fromGCircle(gCircles[0]),
                     GeneralizedCircle.fromGCircle(gCircles[1]),
+                    GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
                 )?.toGCircle() as? Line
                 if (line != null)
                     drawCircleOrLine(line, visibleRect, creationPrototypeColor, style = circleStroke)

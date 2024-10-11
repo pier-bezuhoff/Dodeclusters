@@ -78,6 +78,13 @@
         <item>2-ую точку / перпендикулярный объект</item>
         <item>3-ью точку / перпендикулярный объект</item>
     </string-array>
+    <string name="circle_by_pencil_and_point_name">Окружность из пучка через точку</string>
+    <string name="circle_by_pencil_and_point_description">Построить окружность из пучка (через 2 заданных объекта), через заданную точку или перпендикулярно заданному объекту</string>
+    <string-array name="circle_by_pencil_and_point_arg_descriptions">
+        <item>1-ый объект из пучка</item>
+        <item>2-ой объект из пучка</item>
+        <item>точку или перпендикулярный объект</item>
+    </string-array>
     <string name="line_by_2_points_name">Прямая по двум точкам</string>
     <string name="line_by_2_points_description">Провести прямую через две заданные точки, или по двум объектам, перпендикулярным ей</string>
     <string-array name="line_by_2_points_arg_descriptions">
