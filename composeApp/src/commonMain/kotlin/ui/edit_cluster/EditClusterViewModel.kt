@@ -488,10 +488,18 @@ class EditClusterViewModel(
             }
     }
 
-    fun createNewCircle(newCircle: CircleOrLine?) =
+    /** Use BEFORE modifying the state by the [Command.CREATE]! */
+    private fun recordCreateCommand() {
+        recordCommand(Command.CREATE, unique = true)
+    }
+
+    fun createNewCircle(
+        newCircle: CircleOrLine?,
+    ) =
         createNewCircles(listOf(newCircle))
 
-    /** Append [newCircles] to [circles] and queue circle entrance animation */
+    /** Append [newCircles] to [circles] and queue circle entrance animation
+     * */
     fun createNewCircles(
         newCircles: List<CircleOrLine?>,
     ) {
@@ -502,7 +510,6 @@ class EditClusterViewModel(
         }
         val validNewCircles = normalizedCircles.filterNotNull()
         if (validNewCircles.isNotEmpty()) {
-            recordCommand(Command.CREATE, unique = true)
             showCircles = true
             val prevSize = circles.size
             circles.addAll(normalizedCircles)
@@ -520,9 +527,11 @@ class EditClusterViewModel(
     }
 
     fun createNewFreePoint(
-        point: Point
+        point: Point,
+        triggerRecording: Boolean = true
     ): Indexed.Point {
-        recordCommand(Command.CREATE, unique = true)
+        if (triggerRecording)
+            recordCreateCommand()
         points.add(point)
         expressions.addFree(isPoint = true)
         return Indexed.Point(points.size - 1)
@@ -595,7 +604,7 @@ class EditClusterViewModel(
             recordCommand(Command.DELETE, unique = true)
         val toBeDeleted = expressions.deleteNodes(
             selectedPoints.map { Indexed.Point(it) } +
-                if (circleSelectionIsActive) selection.map { Indexed.Circle(it) }
+                if (thereAreSelectedCirclesToDelete) selection.map { Indexed.Circle(it) }
                 else emptyList()
         )
         val pointsToBeDelete = toBeDeleted.filterIsInstance<Indexed.Point>()
@@ -1058,6 +1067,7 @@ class EditClusterViewModel(
             absolute(Offset(midX, 2*midY)),
         )
         showCircles = true
+        recordCreateCommand()
         createNewCircles(listOf(horizontalLine, verticalLine))
         expressions.addFree(isPoint = false)
         expressions.addFree(isPoint = false)
@@ -1720,6 +1730,7 @@ class EditClusterViewModel(
     private fun completeCircleByCenterAndRadius() {
         val argList = partialArgList!!
         val args = argList.args.map { it as Arg.Point }
+        recordCreateCommand()
         if (args.all { it is Arg.Point.XY }) {
             val newCircle = computeCircleByCenterAndRadius(
                 center = (args[0] as Arg.Point.XY).toPoint().downscale(),
@@ -1750,6 +1761,7 @@ class EditClusterViewModel(
         val args = argList.args.map {
             it as Arg.CircleOrPoint
         }
+        recordCreateCommand()
         if (args.all { it is Arg.CircleOrPoint.Point.XY }) {
             val (p1, p2, p3) = args.map {
                 (it as Arg.CircleOrPoint.Point.XY).toPoint().downscale()
@@ -1762,7 +1774,7 @@ class EditClusterViewModel(
                 when (it) {
                     is Arg.CircleOrPoint.CircleIndex -> Indexed.Circle(it.index)
                     is Arg.CircleOrPoint.Point.Index -> Indexed.Point(it.index)
-                    is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint())
+                    is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }.sortedBy { it.index }
             val newCircle = expressions.addSoloCircleExpression(
@@ -1782,19 +1794,20 @@ class EditClusterViewModel(
         val args = argList.args.map {
             it as Arg.CircleOrPoint
         }
+        recordCreateCommand()
         if (args.all { it is Arg.CircleOrPoint.Point.XY }) {
             val (p1, p2, p3) = args.map {
                 (it as Arg.CircleOrPoint.Point.XY).toPoint().downscale()
             }
             val newCircle = computeCircleByPencilAndPoint(p1, p2, p3)
-            expressions.addFree(isPoint = false)
             createNewCircle(newCircle?.upscale())
+            expressions.addFree(isPoint = false)
         } else {
             val realized = args.map {
                 when (it) {
                     is Arg.CircleOrPoint.CircleIndex -> Indexed.Circle(it.index)
                     is Arg.CircleOrPoint.Point.Index -> Indexed.Point(it.index)
-                    is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint())
+                    is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
             val newCircle = expressions.addSoloCircleExpression(
@@ -1814,19 +1827,20 @@ class EditClusterViewModel(
         val args = argList.args.map {
             it as Arg.CircleOrPoint
         }
+        recordCreateCommand()
         if (args.all { it is Arg.CircleOrPoint.Point.XY }) {
             val (p1, p2) = args.map {
                 (it as Arg.CircleOrPoint.Point.XY).toPoint().downscale()
             }
             val newCircle = computeLineBy2Points(p1, p2)
-            expressions.addFree(isPoint = false)
             createNewCircle(newCircle?.upscale())
+            expressions.addFree(isPoint = false)
         } else {
             val realized = args.map {
                 when (it) {
                     is Arg.CircleOrPoint.CircleIndex -> Indexed.Circle(it.index)
                     is Arg.CircleOrPoint.Point.Index -> Indexed.Point(it.index)
-                    is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint())
+                    is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }.sortedBy { it.index }
             val newCircle = expressions.addSoloCircleExpression(
@@ -1860,6 +1874,7 @@ class EditClusterViewModel(
 //                else -> null
 //            }
         }
+        recordCreateCommand()
         val newPoints = targetPointIxs.mapNotNull { pointIx ->
             val newPoint = expressions.addSoloPointExpression(
                 Expr.CircleInversion(
@@ -1892,6 +1907,7 @@ class EditClusterViewModel(
         val args = argList.args.map { it as Arg.CircleIndex }
         val startCircleIx = args[0].index
         val endCircleIx = args[1].index
+        recordCreateCommand()
         val newCircles = expressions.addMultiExpression(
             Expr.CircleInterpolation(
                 params,
@@ -1918,6 +1934,7 @@ class EditClusterViewModel(
         val args = argList.args.map { it as Arg.CircleIndex }
         val startCircleIx = args[0].index
         val endCircleIx = args[1].index
+        recordCreateCommand()
         val newCircles = expressions.addMultiExpression(
             Expr.CircleExtrapolation(
                 params,
@@ -1940,6 +1957,7 @@ class EditClusterViewModel(
     fun completeLoxodromicMotion(
         params: LoxodromicMotionParameters,
     ) {
+        recordCreateCommand()
         showLoxodromicMotionDialog = false
         val argList = partialArgList!!
         val args = argList.args
@@ -1998,6 +2016,7 @@ class EditClusterViewModel(
         // only add circles
         // since `part`itioning in-arcpath region is rather involved
         arcPathUnderConstruction?.let { arcPath ->
+            recordCreateCommand()
             val newCircles: List<CircleOrLine> = arcPath.circles
                 .mapIndexed { j, circle ->
                     when (circle) {

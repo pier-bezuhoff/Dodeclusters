@@ -235,7 +235,7 @@ class ExpressionForest(
     }
 
     /**
-     * delete [ixs] nodes and all of their children
+     * delete [ixs] nodes and all of their children from the [ExpressionForest]
      * @return all the deleted nodes
      * */
     fun deleteNodes(ixs: List<Indexed>): Set<Indexed> {
