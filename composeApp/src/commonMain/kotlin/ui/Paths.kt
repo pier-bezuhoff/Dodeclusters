@@ -79,9 +79,6 @@ fun chessboardPath(
     return path
 }
 
-// NOTE: to create proper reduce(xor):
-//  2^(# circles) -> binary -> filter even number of 1 -> to parts
-// MAYBE: move to Cluster methods
 fun part2path(
     circles: List<CircleOrLine?>,
     part: Cluster.Part,

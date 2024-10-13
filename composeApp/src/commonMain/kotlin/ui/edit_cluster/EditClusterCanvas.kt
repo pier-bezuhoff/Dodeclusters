@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
@@ -61,6 +63,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.SimpleButton
 import ui.circle2path
+import ui.edit_cluster.EditClusterViewModel.Companion.downscale
 import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
@@ -749,7 +752,7 @@ fun BoxScope.CircleSelectionContextActions(viewModel: EditClusterViewModel) {
             painterResource(EditClusterTool.Delete.icon),
             stringResource(EditClusterTool.Delete.name),
             Modifier.offset(
-                x = positions.left.toDp() - halfSize,
+                x = positions.right.toDp() - halfSize,
                 y = positions.bottom.toDp() - halfSize
             ),
             tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
@@ -867,7 +870,10 @@ fun DrawScope.drawSelectionControls(
         handleRadius,
         Offset(positions.right, positions.calculateSliderY(sliderPercentage))
     )
-    translate(positions.right - iconDim/2f, positions.bottom - iconDim/2f) {
+    translate(
+        positions.rotationHandleOffset.x - iconDim / 2f,
+        positions.rotationHandleOffset.y - iconDim / 2f
+    ) {
         with (rotateIcon) {
             draw(iconSize, colorFilter = ColorFilter.tint(rotateHandleColor))
         }
@@ -891,8 +897,10 @@ fun DrawScope.drawSelectionControls(
 //            | x2 [copy]
 //            |
 //        ____J
-//      [x]   . R  [rotation handle]
-//            .
+//      [R]   . x  [delete]
+//       ^    .
+//       |
+//    rotate handle
 // TODO: remove/decrease bottom margin when in landscape
 @Immutable
 data class SelectionControlsPositions(
@@ -917,7 +925,7 @@ data class SelectionControlsPositions(
     val left = right - (bottom - topUnderScaleSlider)
 
     val sliderMiddleOffset = Offset(right, sliderMiddlePosition)
-    val rotationHandleOffset = Offset(right, bottom)
+    val rotationHandleOffset = Offset(left, bottom)
 
     @Stable
     fun calculateSliderY(percentage: Float = 0.5f): Float =

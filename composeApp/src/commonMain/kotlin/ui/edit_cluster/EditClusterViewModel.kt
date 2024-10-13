@@ -79,6 +79,8 @@ import kotlin.time.Duration.Companion.seconds
 // MAYBE: use UiState functional pattern instead of this mess
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
+// MAYBE: store all circles & points downscaled close to [-2; 2] range by default
+//  with scale transform attached
 @Stable
 class EditClusterViewModel(
     /** NOT a viewModelScope, just a rememberCS from the screen composable */
@@ -777,6 +779,7 @@ class EditClusterViewModel(
                 selection.add(ix)
         }
 
+    // NOTE: part boundaries get messed up when we alter a big structure like spiral
     /** -> (compressed part, verbose part involving all circles) surrounding clicked position */
     private fun selectPartAt(
         visiblePosition: Offset,

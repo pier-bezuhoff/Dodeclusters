@@ -36,12 +36,10 @@ sealed interface Indexed {
     val index: Ix
 
     /** index for a circle or a line */
-    @JvmInline
     @Serializable
-    value class Circle(override val index: Ix) : Indexed
-    @JvmInline
+    data class Circle(override val index: Ix) : Indexed
     @Serializable
-    value class Point(override val index: Ix) : Indexed
+    data class Point(override val index: Ix) : Indexed
 }
 
 @Serializable
