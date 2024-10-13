@@ -312,19 +312,20 @@ data class GeneralizedCircle(
             w == 0.0 && x == 0.0 && y == 0.0 -> Point.CONFORMAL_INFINITY
             isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
             isPoint -> Point(x / w, y / w)
+            // TODO: add isCCW = w > 0
             isRealCircle -> Circle(x / w, y / w, sqrt(r2))
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
             else -> throw IllegalStateException("Never. $this")
         }
 
-        fun toDirectedCircleOrLine(): DirectedCircleOrLine? =
+        fun toDirectedCircleOrLine(): CircleOrLine? =
             when {
                 w == 0.0 && x == 0.0 && y == 0.0 -> null
                 isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
                 isPoint -> null
-                isRealCircle -> DirectedCircle(
+                isRealCircle -> Circle(
                     x / w, y / w, sqrt(r2),
-                    inside = sign(w) > 0
+                    isCCW = sign(w) > 0
                 )
                 isImaginaryCircle -> null
                 else -> throw IllegalStateException("Never. $this")
