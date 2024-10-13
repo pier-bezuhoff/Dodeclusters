@@ -30,6 +30,7 @@ actual fun parseDdc(content: String): Ddc {
                         x = jsCircle.x,
                         y = jsCircle.y,
                         radius = jsCircle.radius,
+                        isCCW = jsCircle.isCCW ?: Ddc.DEFAULT_CIRCLE_IS_CCW,
                         visible = jsCircle.visible ?: Ddc.DEFAULT_CIRCLE_VISIBLE,
                         filled = jsCircle.filled ?: Ddc.DEFAULT_CIRCLE_FILLED,
                         fillColor = jsCircle.fillColor?.parseColor() ?: Ddc.DEFAULT_CIRCLE_FILL_COLOR,
@@ -57,7 +58,7 @@ actual fun parseDdc(content: String): Ddc {
                             when {
                                 isCircleObject(it) -> {
                                     val circle = it as JsCircle
-                                    Circle(circle.x, circle.y, circle.radius)
+                                    Circle(circle.x, circle.y, circle.radius, circle.isCCW ?: Ddc.DEFAULT_CIRCLE_IS_CCW)
                                 }
                                 isLineObject(it) -> {
                                     val line = it as JsLine
@@ -204,6 +205,7 @@ external interface JsCircleFigure : JsFigure {
     val x: Double
     val y: Double
     val radius: Double
+    val isCCW: Boolean?
     val visible: Boolean?
     val filled: Boolean?
     val fillColor: JsString?
@@ -235,6 +237,7 @@ external interface JsCircle : JsCircleOrLine {
     val x: Double
     val y: Double
     val radius: Double
+    val isCCW: Boolean?
 }
 
 external interface JsLine : JsCircleOrLine {

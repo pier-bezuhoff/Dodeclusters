@@ -76,6 +76,7 @@ data class Ddc(
             val x: Double,
             val y: Double,
             val radius: Double,
+            val isCCW: Boolean = DEFAULT_CIRCLE_IS_CCW,
             val visible: Boolean = DEFAULT_CIRCLE_VISIBLE,
             val filled: Boolean = DEFAULT_CIRCLE_FILLED,
             @Serializable(ColorCssSerializer::class)
@@ -86,7 +87,7 @@ data class Ddc(
             val rule: List<Int> = DEFAULT_CIRCLE_RULE,
         ) : Token() {
             fun toCircle(): data.geometry.Circle =
-                Circle(x, y, radius)
+                Circle(x, y, radius, isCCW)
         }
         @SerialName("Line")
         @Serializable
@@ -153,6 +154,7 @@ data class Ddc(
         val DEFAULT_CLUSTER_BORDER_COLOR: Color? = null
         val DEFAULT_CLUSTER_RULE = emptyList<Int>()
 
+        const val DEFAULT_CIRCLE_IS_CCW = true
         const val DEFAULT_CIRCLE_VISIBLE = false
         const val DEFAULT_CIRCLE_FILLED = true
         val DEFAULT_CIRCLE_FILL_COLOR: Color = Color.Black
@@ -277,6 +279,7 @@ private data class Indentation(val indentLevel: Int) {
             encode("x", f.x),
             encode("y", f.y),
             encode("radius", f.radius),
+            encodeOptional("isCCW", if (f.isCCW != Ddc.DEFAULT_CIRCLE_IS_CCW) f.isCCW else null),
             encode("visible", f.visible),
             encode("filled", f.filled),
             encodeOptional("fillColor", f.fillColor?.encodeColor()),
@@ -302,6 +305,9 @@ private data class Indentation(val indentLevel: Int) {
             encode("x", circle.x),
             encode("y", circle.y),
             encode("radius", circle.radius),
+            encodeOptional("isCCW",
+                if (circle.isCCW != Ddc.DEFAULT_CIRCLE_IS_CCW) circle.isCCW else null
+            ),
         )
 
     fun encodeClusterLine(line: Line): String =
