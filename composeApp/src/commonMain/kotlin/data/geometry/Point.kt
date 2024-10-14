@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isFinite
+import domain.rotateBy
 import kotlinx.serialization.Serializable
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -42,6 +43,11 @@ data class Point(
             CONFORMAL_INFINITY
         else
             Point(newX, newY)
+    }
+
+    fun rotate(focus: Offset, angleDeg: Float): Point {
+        val newOffset = (toOffset() - focus).rotateBy(angleDeg) + focus
+        return fromOffset(newOffset)
     }
 
     fun middle(point: Point): Point =

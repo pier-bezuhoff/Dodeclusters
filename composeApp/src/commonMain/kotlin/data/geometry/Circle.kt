@@ -162,6 +162,30 @@ data class Circle(
                 circle.hasOutside(center) && circle.distanceFrom(center) >= radius
         }
 
+    fun approximateToLine(screenCenter: Offset): Line {
+        // here = visible center
+        val hereX = screenCenter.x // here = point P
+        val hereY = screenCenter.y
+        val toCX = x - hereX // center = point C
+        val toCY = y - hereY
+        val pc = hypot(toCX, toCY)
+        val weAreIn = radius > pc // <here> is inside the big circle
+        val inSign = if (weAreIn) -1 else 1
+        val rho = abs(pc - radius) // distance from <here> to the line
+//        val rho = 0.0 //abs(pc - radius) // distance from <here> to the line
+        val radiusSign = if (isCCW) +1 else -1
+        val nx = inSign * toCX/pc // normal to the line from P = (cos phi, sin phi)
+        val ny = inSign * toCY/pc
+        // <PX, n> = x*nx + y*ny = rho is the line's equation
+        val directionSign = (radiusSign * inSign) // -1 is cancelled by xOy system being left-handed / y-axis is upside down
+//        val vx = directionSign * -ny // v = direction-vector of the line
+//        val vy = directionSign * nx // (-ny, nx) = CCW 90 deg rotation of (nx, ny)
+        val p0x = hereX + nx * rho // closest point on the line to <here>
+        val p0y = hereY + ny * rho
+        val c = -p0x*nx - p0y*ny
+        return Line(nx*directionSign, ny*directionSign, c*directionSign)
+    }
+
     companion object {
         @Deprecated("Superseded by more general and stable method GeneralizedCircle.perp3")
         fun by3Points(p1: Offset, p2: Offset, p3: Offset): Circle {
@@ -196,7 +220,6 @@ data class Circle(
                 val center = (z1 + z2)/2 + veryBigRadius*(v/v.r)*i
                 return Circle(center.re, center.im, veryBigRadius)
             }
-
         }
 
         /** Apply the [inverting] circle or line to [theOneBeingInverted]

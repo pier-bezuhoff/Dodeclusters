@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
@@ -40,7 +39,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
@@ -58,12 +56,12 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Arg
 import domain.rotateBy
+import getPlatform
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.SimpleButton
 import ui.circle2path
-import ui.edit_cluster.EditClusterViewModel.Companion.downscale
 import ui.part2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
@@ -91,7 +89,7 @@ fun BoxScope.EditClusterCanvas(
     ) }
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
-    val pointRadius = 5f
+    val pointRadius = 2.5f * strokeWidth
     val scaleIcon = painterResource(Res.drawable.zoom_in)
     val scaleIconColor = MaterialTheme.colorScheme.secondary
     val scaleIndicatorColor = DodeclustersColors.skyBlue
@@ -104,7 +102,7 @@ fun BoxScope.EditClusterCanvas(
     // MAYBE: black/dark grey for light scheme
     val circleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
     val freeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
-    val pointColor = circleColor
+    val pointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.8f)
     val freePointColor = freeCircleColor
     val selectedCircleColor =
 //        MaterialTheme.colorScheme.primary
@@ -252,9 +250,13 @@ private fun DrawScope.drawCircleOrLine(
         //  so we need to approx them with lines
         is Circle -> {
             val radius = circle.radius.toFloat()
-            drawCircle(
-                color, radius, circle.center, alpha, style, blendMode = blendMode
-            )
+            val maxRadius = getPlatform().maxCircleRadius
+            if (radius <= maxRadius) {
+                drawCircle(color, radius, circle.center, alpha, style, blendMode = blendMode)
+            } else {
+                val line = circle.approximateToLine(visibleRect.center)
+                drawCircleOrLine(line, visibleRect, color, alpha, style, blendMode, drawHalfPlanesForLines)
+            }
         }
         is Line -> {
             val maxDim = visibleRect.maxDimension

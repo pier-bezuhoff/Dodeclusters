@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import domain.signNonZero
+import getPlatform
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
 import kotlin.math.abs
@@ -307,31 +308,37 @@ data class GeneralizedCircle(
             }
         }
 
+    // NOTE: i recommend normalizing preserving the direction before the conversion
     fun toGCircle(): GCircle =
         when {
             w == 0.0 && x == 0.0 && y == 0.0 -> Point.CONFORMAL_INFINITY
             isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
             isPoint -> Point(x / w, y / w)
             // TODO: add isCCW = w > 0
-            isRealCircle -> Circle(x / w, y / w, sqrt(r2))
+            isRealCircle -> {
+                val r = sqrt(r2)
+                Circle(x / w, y / w, r)
+            }
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
             else -> throw IllegalStateException("Never. $this")
         }
 
-        fun toDirectedCircleOrLine(): CircleOrLine? =
-            when {
-                w == 0.0 && x == 0.0 && y == 0.0 -> null
-                isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
-                isPoint -> null
-                isRealCircle -> Circle(
-                    x / w, y / w, sqrt(r2),
-                    isCCW = sign(w) > 0
-                )
-                isImaginaryCircle -> null
-                else -> throw IllegalStateException("Never. $this")
-            }
+    fun toDirectedCircleOrLine(): CircleOrLine? =
+        when {
+            w == 0.0 && x == 0.0 && y == 0.0 -> null
+            isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
+            isPoint -> null
+            isRealCircle -> Circle(
+                x / w, y / w, sqrt(r2),
+                isCCW = sign(w) > 0
+            )
+            isImaginaryCircle -> null
+            else -> throw IllegalStateException("Never. $this")
+        }
 
     companion object {
+        private val MAX_CIRCLE_RADIUS: Float = getPlatform().maxCircleRadius
+
         fun fromGCircle(gCircle: GCircle): GeneralizedCircle =
             when (gCircle) {
                 is Circle -> GeneralizedCircle(

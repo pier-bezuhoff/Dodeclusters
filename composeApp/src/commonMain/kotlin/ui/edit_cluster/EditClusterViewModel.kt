@@ -1220,6 +1220,7 @@ class EditClusterViewModel(
                             }
                         }
                         ArgType.CircleOrPoint -> {
+                            // idk why but selecting (dependent) points seems de-prioritized
                             val result = snapped(absolute(visiblePosition))
                             if (result is PointSnapResult.Eq) {
                                 val newArg = Arg.CircleOrPoint.Point.Index(result.pointIndex)
@@ -1411,9 +1412,10 @@ class EditClusterViewModel(
                     }
                 }
                 is HandleConfig.SeveralCircles -> {
+                    val targets = selection + selectedPoints.map { -it - 1 }
                     when (val sm = submode) {
                         is SubMode.Scale -> {
-                            recordCommand(Command.SCALE, targets = selection)
+                            recordCommand(Command.SCALE, targets = targets)
                             getSelectionRect()?.let { rect ->
                                 val scaleHandlePosition = rect.topRight
                                 val center = rect.center
@@ -1423,19 +1425,31 @@ class EditClusterViewModel(
                                 for (ix in selection) {
                                     circles[ix] = circles[ix]?.scale(center, scaleFactor)
                                 }
+                                for (ix in selectedPoints) {
+                                    points[ix] = points[ix]?.scale(center, scaleFactor)
+                                }
+                                expressions.update(
+                                    selection.map { Indexed.Circle(it) } +
+                                    selectedPoints.map { Indexed.Point(it) }
+                                )
                             }
-                            expressions.update(selection.map { Indexed.Circle(it) })
                         }
                         is SubMode.ScaleViaSlider -> {
                             val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
                             if (sm.sliderPercentage != newPercentage) {
-                                recordCommand(Command.SCALE, targets = selection)
+                                recordCommand(Command.SCALE, targets = targets)
                                 val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
                                 for (ix in selection) {
                                     circles[ix] = circles[ix]?.scale(sm.center, scaleFactor)
                                 }
+                                for (ix in selectedPoints) {
+                                    points[ix] = points[ix]?.scale(sm.center, scaleFactor)
+                                }
                                 submode = sm.copy(sliderPercentage = newPercentage)
-                                expressions.update(selection.map { Indexed.Circle(it) })
+                                expressions.update(
+                                    selection.map { Indexed.Circle(it) } +
+                                    selectedPoints.map { Indexed.Point(it) }
+                                )
                             }
                         }
                         is SubMode.Rotate -> {
@@ -1448,12 +1462,18 @@ class EditClusterViewModel(
                             val snappedAngle =
                                 if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
                                 else newAngle
-                            val angle1 = snappedAngle - sm.snappedAngle
+                            val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
                             for (ix in selection) {
-                                circles[ix] = circles[ix]?.rotate(sm.center, angle1.toFloat())
+                                circles[ix] = circles[ix]?.rotate(sm.center, angle1)
+                            }
+                            for (ix in selectedPoints) {
+                                points[ix] = points[ix]?.rotate(sm.center, angle1)
                             }
                             submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
-                            expressions.update(selection.map { Indexed.Circle(it) })
+                            expressions.update(
+                                selection.map { Indexed.Circle(it) } +
+                                selectedPoints.map { Indexed.Point(it) }
+                        )
                         }
                         else -> Unit
                     }
@@ -1468,9 +1488,9 @@ class EditClusterViewModel(
                 } else {
                     val diff =
                         (qualifiedPart.insides - newQualifiedPart.insides) union
-                        (newQualifiedPart.insides - qualifiedPart.insides) union
-                        (qualifiedPart.outsides - newQualifiedPart.outsides) union
-                        (newQualifiedPart.outsides - qualifiedPart.outsides)
+                                (newQualifiedPart.insides - qualifiedPart.insides) union
+                                (qualifiedPart.outsides - newQualifiedPart.outsides) union
+                                (newQualifiedPart.outsides - qualifiedPart.outsides)
                     selection.addAll(diff.filter { it !in selection })
                 }
             } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
@@ -1512,8 +1532,11 @@ class EditClusterViewModel(
             points[ix] = snapped(c, excludePoints = true, excludedCircles = excludedSnapTargets).result
             expressions.changeToFree(Indexed.Point(ix))
             expressions.update(listOf(Indexed.Point(ix)))
-        } else if (mode == SelectionMode.Multiselect && selection.isNotEmpty() && showCircles) {
-            if (selection.size == 1) { // move + scale radius
+        } else if (
+            mode == SelectionMode.Multiselect &&
+            (selection.isNotEmpty() && showCircles || selectedPoints.isNotEmpty())
+        ) {
+            if (selection.size == 1 && selectedPoints.isEmpty()) { // move + scale radius
                 recordCommand(Command.MOVE, targets = selection)
                 val ix = selection.single()
                 when (val circle = circles[ix]) {
@@ -1524,15 +1547,25 @@ class EditClusterViewModel(
                     null -> {}
                 }
             } else if (selection.size > 1) { // scale radius & position
-                recordCommand(Command.MOVE, targets = selection)
+                val targets = selection + selectedPoints.map { -it - 1 }
+                recordCommand(Command.MOVE, targets = targets)
                 for (ix in selection) {
                     circles[ix] = circles[ix]
                         ?.rotate(c, rotationAngle)
                         ?.scale(c, zoom)
                         ?.translate(pan)
                 }
+                for (ix in selectedPoints) {
+                    points[ix] = points[ix]
+                        ?.rotate(c, rotationAngle)
+                        ?.scale(c, zoom)
+                        ?.translate(pan)
+                }
             }
-            expressions.update(selection.map { Indexed.Circle(it) })
+            expressions.update(
+                selection.map { Indexed.Circle(it) } +
+                        selectedPoints.map { Indexed.Point(it) }
+            )
         } else {
             val result = snapped(c)
             val absolutePoint = result.result
@@ -1576,22 +1609,22 @@ class EditClusterViewModel(
         when (mode) {
             SelectionMode.Drag -> {
                 if (selection.isEmpty() && selectedPoints.isNotEmpty() && visiblePosition != null) {
-                    val ix = selectedPoints.first()
-                    val excludedSnapTargets = expressions.children
-                        .getOrElse(Indexed.Point(ix)) { emptySet() }
-                        .filterIsInstance<Indexed.Circle>()
-                        .map { it.index }
-                        .toSet()
-                    val result = snapped(
-                        absolute(visiblePosition),
-                        excludePoints = true,
-                        excludedCircles = excludedSnapTargets
-                    )
+                    // MAYBE: try to re-attach free points
+//                    val ix = selectedPoints.first()
+//                    val excludedSnapTargets = expressions.children
+//                        .getOrElse(Indexed.Point(ix)) { emptySet() }
+//                        .filterIsInstance<Indexed.Circle>()
+//                        .map { it.index }
+//                        .toSet()
+//                    val result = snapped(
+//                        absolute(visiblePosition),
+//                        excludePoints = true,
+//                        excludedCircles = excludedSnapTargets
+//                    )
                     // should we: set to null and replace with a new point
                     // try to find existing one? smth else?
 //                    realizePointCircleSnap(result)
-//                    points[ix] = snapped(c, excludePoints = true, excludedCircles = excludedSnapTargets).result
-                    println("attach $result")
+//                    println("attach $result")
                 }
             }
             ToolMode.ARC_PATH -> {}
@@ -2096,6 +2129,15 @@ class EditClusterViewModel(
             else -> true
         }
 
+
+//    fun GCircle.downscale(): GCircle = scale(0.0, 0.0, DOWNSCALING_FACTOR)
+//    fun GCircle.upscale(): GCircle = scale(0.0, 0.0, UPSCALING_FACTOR)
+    fun CircleOrLine.downscale(): CircleOrLine = scale(0.0, 0.0, DOWNSCALING_FACTOR)
+    fun CircleOrLine.upscale(): CircleOrLine =
+        scale(0.0, 0.0, UPSCALING_FACTOR)
+    fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)
+    fun Point.upscale(): Point = scale(0.0, 0.0, UPSCALING_FACTOR)
+
     /** Be careful to pass *only* strictly immutable args by __copying__ */
     @Serializable
     @Immutable
@@ -2178,16 +2220,10 @@ class EditClusterViewModel(
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 200.0
         const val DOWNSCALING_FACTOR = 1/UPSCALING_FACTOR
+        val MAX_CIRCLE_RADIUS: Float = getPlatform().maxCircleRadius
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)
-
-        fun GCircle.downscale(): GCircle = scale(0.0, 0.0, DOWNSCALING_FACTOR)
-        fun GCircle.upscale(): GCircle = scale(0.0, 0.0, UPSCALING_FACTOR)
-        fun CircleOrLine.downscale(): CircleOrLine = scale(0.0, 0.0, DOWNSCALING_FACTOR)
-        fun CircleOrLine.upscale(): CircleOrLine = scale(0.0, 0.0, UPSCALING_FACTOR)
-        fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)
-        fun Point.upscale(): Point = scale(0.0, 0.0, UPSCALING_FACTOR)
     }
 }
 

@@ -67,19 +67,22 @@ actual fun SaveFileButton(
 }
 
 fun saveTextFile(content: String, originalFile: File) {
-    val name = originalFile.nameWithoutExtension
-    val extension = if (originalFile.extension.isNotBlank()) "." + originalFile.extension else ""
-    var suffix: Int? = null
-    fun newFilename(): String =
-        name + (suffix ?: "") + extension
-    while (File(originalFile.parent, newFilename()).exists()) {
-        if (suffix == null)
-            suffix = 1
-        else
-            suffix += 1
-    }
-    val file = File(originalFile.parent, newFilename())
-    file.createNewFile()
+    // NOTE: we want to allow overriding old files
+//    val name = originalFile.nameWithoutExtension
+//    val extension = if (originalFile.extension.isNotBlank()) "." + originalFile.extension else ""
+//    var suffix: Int? = null
+//    fun newFilename(): String =
+//        name + (suffix ?: "") + extension
+//    while (File(originalFile.parent, newFilename()).exists()) {
+//        if (suffix == null)
+//            suffix = 1
+//        else
+//            suffix += 1
+//    }
+//    val file = File(originalFile.parent, newFilename())
+    val file = originalFile
+    if (!file.exists())
+        file.createNewFile()
     file.bufferedWriter().use { out ->
         content.lines().forEach { line ->
             out.write(line)

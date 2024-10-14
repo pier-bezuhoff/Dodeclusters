@@ -7,6 +7,7 @@ import data.Cluster
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
+import getPlatform
 
 fun circle2path(circle: Circle): Path =
     Path().apply {
@@ -84,11 +85,17 @@ fun part2path(
     part: Cluster.Part,
     visibleRect: Rect
 ): Path {
+    val maxRadius = getPlatform().maxCircleRadius
     val circleInsides = part.insides.mapNotNull { circles[it] }
     val insidePath: Path? = circleInsides
         .map {
             when (it) {
-                is Circle -> circle2path(it)
+                is Circle -> {
+                    if (it.radius <= maxRadius)
+                        circle2path(it)
+                    else
+                        halfPlanePath(it.approximateToLine(visibleRect.center), visibleRect)
+                }
                 is Line -> halfPlanePath(it, visibleRect)
             }
         }
