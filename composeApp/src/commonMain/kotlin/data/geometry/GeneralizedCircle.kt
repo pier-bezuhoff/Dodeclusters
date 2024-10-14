@@ -337,8 +337,6 @@ data class GeneralizedCircle(
         }
 
     companion object {
-        private val MAX_CIRCLE_RADIUS: Float = getPlatform().maxCircleRadius
-
         fun fromGCircle(gCircle: GCircle): GeneralizedCircle =
             when (gCircle) {
                 is Circle -> GeneralizedCircle(

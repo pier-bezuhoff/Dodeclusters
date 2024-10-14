@@ -1220,7 +1220,6 @@ class EditClusterViewModel(
                             }
                         }
                         ArgType.CircleOrPoint -> {
-                            // idk why but selecting (dependent) points seems de-prioritized
                             val result = snapped(absolute(visiblePosition))
                             if (result is PointSnapResult.Eq) {
                                 val newArg = Arg.CircleOrPoint.Point.Index(result.pointIndex)
@@ -1243,17 +1242,18 @@ class EditClusterViewModel(
                             }
                         }
                         ArgType.CircleAndPointIndices -> {
+                            selectPoint(points, visiblePosition)?.let { pointIndex ->
+                                val newArg = Arg.CircleAndPointIndices(
+                                    circleIndices = emptyList(),
+                                    pointIndices = listOf(pointIndex)
+                                )
+                                if (partialArgList!!.currentArg != newArg)
+                                    partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
+                            } ?:
                             selectCircle(circles, visiblePosition)?.let { circleIndex ->
                                 val newArg = Arg.CircleAndPointIndices(
                                     circleIndices = listOf(circleIndex),
                                     pointIndices = emptyList()
-                                )
-                                if (partialArgList!!.currentArg != newArg)
-                                    partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
-                            } ?: selectPoint(points, visiblePosition)?.let { pointIndex ->
-                                val newArg = Arg.CircleAndPointIndices(
-                                    circleIndices = emptyList(),
-                                    pointIndices = listOf(pointIndex)
                                 )
                                 if (partialArgList!!.currentArg != newArg)
                                     partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)

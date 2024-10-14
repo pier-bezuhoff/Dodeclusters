@@ -102,7 +102,7 @@ fun BoxScope.EditClusterCanvas(
     // MAYBE: black/dark grey for light scheme
     val circleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
     val freeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
-    val pointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.8f)
+    val pointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
     val freePointColor = freeCircleColor
     val selectedCircleColor =
 //        MaterialTheme.colorScheme.primary
@@ -246,12 +246,10 @@ private fun DrawScope.drawCircleOrLine(
     drawHalfPlanesForLines: Boolean = false
 ) {
     when (circle) {
-        // MAYBE: when the radius is exceedingly high, circles disappear
-        //  so we need to approx them with lines
         is Circle -> {
             val radius = circle.radius.toFloat()
             val maxRadius = getPlatform().maxCircleRadius
-            if (radius <= maxRadius) {
+            if (radius <= maxRadius || style != Fill) {
                 drawCircle(color, radius, circle.center, alpha, style, blendMode = blendMode)
             } else {
                 val line = circle.approximateToLine(visibleRect.center)
