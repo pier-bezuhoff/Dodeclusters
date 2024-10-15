@@ -405,10 +405,10 @@ fun EditClusterTopBar(
                     painterResource(saveCluster.icon),
                     stringResource(saveCluster.name),
                     saveData = SaveData(
-                        name = saveCluster.defaultName,
-                        extension = saveCluster.extension, // yml
+                        name = saveCluster.DEFAULT_NAME,
+                        extension = saveCluster.EXTENSION, // yml
                         otherDisplayedExtensions = saveCluster.otherDisplayedExtensions,
-                        mimeType = saveCluster.mimeType,
+                        mimeType = saveCluster.MIME_TYPE,
                     ) { name ->
                         viewModel.saveAsYaml(name)
                     },
@@ -423,9 +423,9 @@ fun EditClusterTopBar(
                     painterResource(svgExport.icon),
                     stringResource(svgExport.name),
                     saveData = SaveData(
-                        name = svgExport.defaultName,
-                        extension = svgExport.extension,
-                        mimeType = svgExport.mimeType,
+                        name = svgExport.DEFAULT_NAME,
+                        extension = svgExport.EXTENSION,
+                        mimeType = svgExport.MIME_TYPE,
                     ) { name ->
                         viewModel.exportAsSvg(name)
                     },

@@ -7,6 +7,7 @@ import dodeclusters.composeapp.generated.resources.add_image
 import dodeclusters.composeapp.generated.resources.add_point_arg_descriptions
 import dodeclusters.composeapp.generated.resources.add_point_description
 import dodeclusters.composeapp.generated.resources.add_point_name
+import dodeclusters.composeapp.generated.resources.anchor
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
 import dodeclusters.composeapp.generated.resources.arc_path_arg_descriptions
@@ -117,7 +118,6 @@ import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.upload
 import dodeclusters.composeapp.generated.resources.visible
-import domain.PartialArgList
 import domain.SIGNATURE_1_POINT
 import domain.SIGNATURE_2_CIRCLES
 import domain.SIGNATURE_2_GENERALIZED_CIRCLES
@@ -175,18 +175,18 @@ sealed class EditClusterTool(
         Res.string.save_cluster_name,
         icon = Res.drawable.save
     ) {
-        const val defaultName = Ddc.DEFAULT_NAME
-        const val extension = Ddc.DEFAULT_EXTENSION // yml
+        const val DEFAULT_NAME = Ddc.DEFAULT_NAME
+        const val EXTENSION = Ddc.DEFAULT_EXTENSION // yml
         val otherDisplayedExtensions = setOf("yaml", "ddc", "ddu")
-        const val mimeType = "application/yaml"
+        const val MIME_TYPE = "application/yaml"
     }
     data object SvgExport: CustomAction(
         Res.string.svg_export_name,
         icon = Res.drawable.upload
     ) {
-        const val defaultName = Ddc.DEFAULT_NAME
-        const val extension = "svg"
-        const val mimeType = "image/svg+xml" // apparently this is highly contested (since svg can contain js)
+        const val DEFAULT_NAME = Ddc.DEFAULT_NAME
+        const val EXTENSION = "svg"
+        const val MIME_TYPE = "image/svg+xml" // apparently this is highly contested (since svg can contain js)
     }
     data object OpenFile: CustomAction(
         Res.string.open_file_name,
@@ -336,7 +336,7 @@ sealed class EditClusterTool(
         Res.string.circle_by_pencil_and_point_name,
         Res.string.circle_by_pencil_and_point_description,
         Res.array.circle_by_pencil_and_point_arg_descriptions,
-        Res.drawable.propeller
+        Res.drawable.anchor
     )
     data object ConstructLineBy2Points: MultiArg(
         SIGNATURE_2_GENERALIZED_CIRCLES,
