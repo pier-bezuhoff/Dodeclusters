@@ -30,8 +30,10 @@ data class Circle(
     val radius: Double,
     /** Counterclockwise or clockwise direction
      *
-     * CCW direction by convention is associated with the circle's _inside_,
-     * and CW with _outside_
+     * _internal orientation_ of CCW direction by convention is associated with
+     * _external orientation_ of the circle's _inside_, and CW with _outside_
+     *
+     * note: odd number of inversions/reflections desyncs internal and external orientations
      * */
     val isCCW: Boolean = true,
 ) : GCircle, CircleOrLine {
@@ -145,21 +147,53 @@ data class Circle(
         return Circle(newOffset, radius, isCCW)
     }
 
+    /** "⭗" case, anti-symmetric in args */
+    infix fun isIn(circle: Circle): Boolean =
+        distanceBetweenCenters(circle) + radius <= circle.radius
+
+    /** "o o" case, symmetric in args */
+    infix fun isOutBeside(circle: Circle): Boolean =
+        distanceBetweenCenters(circle) >= radius + circle.radius
+
     // MAYBE: use epsilon?
     override fun isInside(circle: CircleOrLine): Boolean =
         when (circle) {
-            is Circle -> // "⭗" case
-                distanceBetweenCenters(circle) + radius <= circle.radius
-            is Line -> // " o |" case
-                circle.hasInside(center) && circle.distanceFrom(centerPoint) >= radius
+            is Circle ->
+                when {
+                    this.isCCW && circle.isCCW -> // "⭗" case
+                        this isIn circle
+                    this.isCCW && !circle.isCCW -> // "o o" case
+                        this isOutBeside circle
+                    !this.isCCW && circle.isCCW ->
+                        false
+                    else -> // both are outsides, "⭗'" case
+                        circle isIn this
+                }
+            is Line ->
+                if (isCCW) // " o |" case
+                    circle.hasInside(center) && circle.distanceFrom(centerPoint) >= radius
+                else
+                    false
         }
 
     override fun isOutside(circle: CircleOrLine): Boolean =
         when (circle) {
-            is Circle -> // "o o" case
-                distanceBetweenCenters(circle) >= circle.radius + radius
-            is Line -> // "| o" case
-                circle.hasOutside(center) && circle.distanceFrom(center) >= radius
+            is Circle ->
+                when {
+                    this.isCCW && circle.isCCW -> // "o o" case
+                        this isOutBeside circle
+                    this.isCCW && !circle.isCCW -> // "⭗" case
+                        this isIn circle
+                    !this.isCCW && circle.isCCW -> // "⭗'" case
+                        circle isIn this
+                    else -> // both are outsides
+                        false
+                }
+            is Line ->
+                if (this.isCCW) // "| o" case
+                    circle.hasOutside(center) && circle.distanceFrom(center) >= radius
+                else
+                    false
         }
 
     fun approximateToLine(screenCenter: Offset): Line {
@@ -172,7 +206,6 @@ data class Circle(
         val weAreIn = radius > pc // <here> is inside the big circle
         val inSign = if (weAreIn) -1 else 1
         val rho = abs(pc - radius) // distance from <here> to the line
-//        val rho = 0.0 //abs(pc - radius) // distance from <here> to the line
         val radiusSign = if (isCCW) +1 else -1
         val nx = inSign * toCX/pc // normal to the line from P = (cos phi, sin phi)
         val ny = inSign * toCY/pc
@@ -216,7 +249,7 @@ data class Circle(
                 val z2 = p2.toComplex()
                 val v = z2 - z1
                 if (v.r <= EPSILON)
-                    throw NumberFormatException("Not a line: 2 line points coincide")
+                    throw IllegalArgumentException("Not a line: 2 line points $p1 and $p2 near-coincide")
                 val center = (z1 + z2)/2 + veryBigRadius*(v/v.r)*i
                 return Circle(center.re, center.im, veryBigRadius)
             }
@@ -385,9 +418,10 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
         checkPositionEpsilon(point) < 0
     fun hasOutsideEpsilon(point: Point): Boolean =
         checkPositionEpsilon(point) > 0
-    /** semiorder ⊆ on circles' insides (⭗) */
+    /** partial order ⊆ on circles (treated as either inside or outside regions) */
     infix fun isInside(circle: CircleOrLine): Boolean
-    /** semiorder ⊇ on circles, includes side-by-side (oo) but not encapsulating (⭗) case */
+    /** partial order ⊇ on circles (treated as either inside or outside regions)
+     * `A isOutside B` == A ⊆ Bꟲ*/
     infix fun isOutside(circle: CircleOrLine): Boolean
     fun translate(vector: Offset): CircleOrLine
     fun scale(focus: Offset, zoom: Float): CircleOrLine

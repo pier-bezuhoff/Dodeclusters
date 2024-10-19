@@ -1,5 +1,6 @@
 package ui
 
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
@@ -9,6 +10,7 @@ import data.geometry.CircleOrLine
 import data.geometry.Line
 import getPlatform
 
+/** NOTE: ignores [circle]'s orientation at this point */
 fun circle2path(circle: Circle): Path =
     Path().apply {
         addOval(
@@ -86,15 +88,24 @@ fun part2path(
     visibleRect: Rect
 ): Path {
     val maxRadius = getPlatform().maxCircleRadius
-    val circleInsides = part.insides.mapNotNull { circles[it] }
+    val ins = part.insides.mapNotNull { circles[it] }
+    val outs = part.outsides.mapNotNull { circles[it] }
+    val circleInsides =
+        ins.filter { it !is Circle || it.isCCW } +
+        outs.filter { it is Circle && !it.isCCW }
+    val circleOutsides =
+        ins.filter { it is Circle && !it.isCCW } +
+        outs.filter { it !is Circle || it.isCCW }
     val insidePath: Path? = circleInsides
         .map {
             when (it) {
                 is Circle -> {
-                    if (it.radius <= maxRadius)
+                    if (it.radius <= maxRadius) {
                         circle2path(it)
-                    else
-                        halfPlanePath(it.approximateToLine(visibleRect.center), visibleRect)
+                    } else {
+                        val line = it.approximateToLine(visibleRect.center)
+                        halfPlanePath(line, visibleRect)
+                    }
                 }
                 is Line -> halfPlanePath(it, visibleRect)
             }
@@ -103,7 +114,6 @@ fun part2path(
             acc.op(acc, anotherPath, PathOperation.Intersect)
             acc
         }
-    val circleOutsides = part.outsides.mapNotNull { circles[it] }
     return if (insidePath == null) {
         val invertedPath = circleOutsides.map {
             when (it) {
@@ -119,9 +129,9 @@ fun part2path(
         path.addRect(visibleRect.inflate(100f))
         path.op(path, invertedPath, PathOperation.Difference)
         path
-    } else if (part.outsides.isEmpty())
+    } else if (part.outsides.isEmpty()) {
         insidePath
-    else {
+    } else {
         circleOutsides.fold(insidePath) { acc: Path, circleOutside: CircleOrLine ->
             val path = when (circleOutside) {
                 is Circle -> circle2path(circleOutside)

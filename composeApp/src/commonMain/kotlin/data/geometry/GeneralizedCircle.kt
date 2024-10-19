@@ -312,38 +312,28 @@ data class GeneralizedCircle(
     fun toGCircle(): GCircle =
         when {
             w == 0.0 && x == 0.0 && y == 0.0 -> Point.CONFORMAL_INFINITY
-            isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
+            isLine -> Line(x, y, -z)
             isPoint -> Point(x / w, y / w)
-            // TODO: add isCCW = w > 0
             isRealCircle -> {
                 val r = sqrt(r2)
-                Circle(x / w, y / w, r)
+                val isCCW = w >= 0
+                Circle(x / w, y / w, r, isCCW)
             }
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
-            else -> throw IllegalStateException("Never. $this")
-        }
-
-    fun toDirectedCircleOrLine(): CircleOrLine? =
-        when {
-            w == 0.0 && x == 0.0 && y == 0.0 -> null
-            isLine -> Line(x, y, -z) // i'll be real, idk why there is a minus before z
-            isPoint -> null
-            isRealCircle -> Circle(
-                x / w, y / w, sqrt(r2),
-                isCCW = sign(w) > 0
-            )
-            isImaginaryCircle -> null
             else -> throw IllegalStateException("Never. $this")
         }
 
     companion object {
         fun fromGCircle(gCircle: GCircle): GeneralizedCircle =
             when (gCircle) {
-                is Circle -> GeneralizedCircle(
-                    1.0,
-                    gCircle.x, gCircle.y,
-                    (gCircle.x.pow(2) + gCircle.y.pow(2) - gCircle.radius.pow(2))/2
-                ).normalizedPreservingDirection()
+                is Circle -> {
+                    val sign = if (gCircle.isCCW) +1 else -1
+                    GeneralizedCircle(
+                        1.0,
+                        gCircle.x, gCircle.y,
+                        (gCircle.x.pow(2) + gCircle.y.pow(2) - gCircle.radius.pow(2))/2
+                    ).normalizedPreservingDirection() * sign
+                }
                 // a*x + b*y + c = 0
                 // -> a*e_x + b*e_y + c*e_inf
                 is Line ->

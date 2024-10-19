@@ -794,8 +794,8 @@ class EditClusterViewModel(
         val (essentialIns, essentialOuts) = compressPart(circles, ins, outs)
         val part0 = Cluster.Part(ins.toSet(), outs.toSet(), regionColor)
         val part = Cluster.Part(
-//            insides = sievedIns.toSet(),
-//            outsides = sievedOuts.toSet(),
+//            insides = ins.toSet(),
+//            outsides = outs.toSet(),
             insides = essentialIns,
             outsides = essentialOuts,
             fillColor = regionColor

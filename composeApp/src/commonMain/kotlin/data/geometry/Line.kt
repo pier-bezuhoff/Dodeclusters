@@ -162,7 +162,11 @@ data class Line(
 
     override fun isInside(circle: CircleOrLine): Boolean =
         when (circle) {
-            is Circle -> false
+            is Circle ->
+                if (circle.isCCW)
+                    false
+                else
+                    circle.copy(isCCW = true).isOutside(this)
             is Line -> {
                 val l1 = this.normalized()
                 val l2 = circle.normalized()
@@ -173,7 +177,11 @@ data class Line(
 
     override fun isOutside(circle: CircleOrLine): Boolean =
         when (circle) {
-            is Circle -> circle.isOutside(this) // beware of cyclic dependencies
+            is Circle ->
+                if (circle.isCCW)
+                    circle.isOutside(this) // beware of cyclic dependencies
+                else
+                    false
             is Line -> {
                 val l1 = this.normalized()
                 val l2 = circle.normalized()
