@@ -22,7 +22,7 @@ const val EPSILON: Double = 1e-6
 const val EPSILON2: Double = EPSILON*EPSILON
 
 /** Circle with center ([x], [y]) and [radius]
- * @param[isCCW] Counterclockwise or clockwise direction (in vs out)
+ * @param[isCCW] Counterclockwise or clockwise direction (_in_ vs _out_)
  * */
 @SerialName("circle")
 @Serializable
@@ -62,7 +62,7 @@ data class Circle(
     override fun project(point: Point): Point {
         val (x1, y1) = point
         if (x == x1 && y == y1 || point == Point.CONFORMAL_INFINITY) {
-            println("bad projection")
+            println("WARNING: bad projection")
             return order2point(0.0)
         }
         val vx = x1 - x

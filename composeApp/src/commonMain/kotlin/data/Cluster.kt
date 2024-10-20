@@ -90,7 +90,9 @@ fun compressPartByRelativeContainment(
     ins: List<Ix>,
     outs: List<Ix>,
 ): Pair<List<Ix>, List<Ix>> {
-    // NOTE: these do not take into account more complex "intersection is always inside x" type relationships
+    // NOTE: these do not take into account more complex
+    //  "intersection is always inside x" type relationships,
+    //  we leave it to compressPartByIntersectionPoints
     val excessiveIns = ins.filter { inJ -> // NOTE: tbh idt these can occur naturally
         val circle = circles[inJ]!!
         ins.any { otherIn ->
