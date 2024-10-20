@@ -21,13 +21,16 @@ import kotlin.math.sqrt
 const val EPSILON: Double = 1e-6
 const val EPSILON2: Double = EPSILON*EPSILON
 
+/** Circle with center ([x], [y]) and [radius]
+ * @param[isCCW] Counterclockwise or clockwise direction (in vs out)
+ * */
 @SerialName("circle")
 @Serializable
 @Immutable
 data class Circle(
-    val x: Double,
-    val y: Double,
-    val radius: Double,
+    override val x: Double,
+    override val y: Double,
+    override val radius: Double,
     /** Counterclockwise or clockwise direction
      *
      * _internal orientation_ of CCW direction by convention is associated with
@@ -36,7 +39,7 @@ data class Circle(
      * note: odd number of inversions/reflections desyncs internal and external orientations
      * */
     val isCCW: Boolean = true,
-) : GCircle, CircleOrLine {
+) : UndirectedCircle {
     val center: Offset get() =
         Offset(x.toFloat(), y.toFloat())
 
@@ -146,6 +149,9 @@ data class Circle(
         val newOffset = (center - focus).rotateBy(angleDeg) + focus
         return Circle(newOffset, radius, isCCW)
     }
+
+    override fun reversed(): Circle =
+        copy(isCCW = !isCCW)
 
     /** "⭗" case, anti-symmetric in args */
     infix fun isIn(circle: Circle): Boolean =
@@ -322,7 +328,7 @@ data class Circle(
                 }
             }
 
-        // TODO: come up with intrinsic point-ordering method
+        // MAYBE: come up with intrinsic point-ordering method
         fun calculateIntersectionPoints(
             circle1: CircleOrLine, circle2: CircleOrLine
         ): List<Point> =
@@ -398,6 +404,12 @@ data class Circle(
     }
 }
 
+sealed interface UndirectedCircle : CircleOrLine {
+    val x: Double
+    val y: Double
+    val radius: Double
+}
+
 @Serializable
 @Immutable
 sealed interface CircleOrLine : GCircle, LocusWithOrder {
@@ -427,10 +439,13 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
     fun scale(focus: Offset, zoom: Float): CircleOrLine
     override fun scale(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
     fun rotate(focus: Offset, angleDeg: Float): CircleOrLine
+    override fun reversed(): CircleOrLine
 }
 
-/** Represents totally ordered set of points equivalent to R or S1 */
+/** Represents totally ordered set of points isomorphic to ℝ or S¹ */
 sealed interface LocusWithOrder {
+    /** Either reverses the order of points within or does nothing ig */
+    fun reversed(): LocusWithOrder
     // Constraints:
     // order2point(point2order(p)) === p
     // point2order(order2point(o)) === o

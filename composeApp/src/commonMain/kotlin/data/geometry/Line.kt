@@ -160,6 +160,9 @@ data class Line(
         return Line(newA, newB, newC)
     }
 
+    override fun reversed(): Line =
+        copy(a = -a, b = -b, c = -c)
+
     override fun isInside(circle: CircleOrLine): Boolean =
         when (circle) {
             is Circle ->
