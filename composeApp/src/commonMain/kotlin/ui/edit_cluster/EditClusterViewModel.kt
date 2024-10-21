@@ -566,30 +566,21 @@ class EditClusterViewModel(
     private fun copyParts(
         oldIndices: List<Ix>,
         newIndices: List<Ix>,
-        orientationFlips: List<Boolean> = newIndices.map { false }
+        flipInAndOut: Boolean = false,
     ) {
-        // TODO: line -> circle flipping
-        require(oldIndices.size == newIndices.size && oldIndices.size == orientationFlips.size)
+        require(oldIndices.size == newIndices.size)
         val old2new = oldIndices.zip(newIndices).toMap()
-        val new2flip = newIndices.zip(orientationFlips).toMap()
         val newParts = parts.filter {
             oldIndices.containsAll(it.insides) && oldIndices.containsAll(it.outsides)
         }.map { part ->
-            val newInsides = mutableSetOf<Ix>()
-            val newOutsides = mutableSetOf<Ix>()
-            for (i in part.insides) {
-                val new = old2new[i]!!
-                if (new2flip[new]!!)
-                    newOutsides.add(new)
-                else
-                    newInsides.add(new)
-            }
-            for (i in part.outsides) {
-                val new = old2new[i]!!
-                if (new2flip[new]!!)
-                    newInsides.add(new)
-                else
-                    newOutsides.add(new)
+            val newInsides: Set<Ix>
+            val newOutsides: Set<Ix>
+            if (flipInAndOut) {
+                newInsides = part.outsides.map { old2new[it]!! }.toSet()
+                newOutsides = part.insides.map { old2new[it]!! }.toSet()
+            } else {
+                newInsides = part.insides.map { old2new[it]!! }.toSet()
+                newOutsides = part.outsides.map { old2new[it]!! }.toSet()
             }
             Cluster.Part(
                 insides = newInsides,
@@ -753,7 +744,7 @@ class EditClusterViewModel(
                 distance / priority
             }
             ?.let { (ix, _) -> ix }
-            ?.also { println("select circle #$it: ${circles[it]} <- ${expressions.expressions[Indexed.Circle(it)]}") }
+            ?.also { println("select circle #$it: ${circles[it]} <- expr: ${expressions.expressions[Indexed.Circle(it)]}") }
     }
 
     fun reselectCircleAt(visiblePosition: Offset): Boolean {
@@ -1749,17 +1740,18 @@ class EditClusterViewModel(
         val argList = partialArgList
         require(argList != null && argList.isFull && argList.isValid && argList.lastArgIsConfirmed) { "Invalid partialArgList $argList" }
         require(toolMode is ToolMode && toolMode.signature == argList.signature) { "Invalid signature: $toolMode's ${(toolMode as ToolMode).signature} != ${argList.signature}" }
+        // TODO: realize args when needed
         when (toolMode) {
             ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> completeCircleByCenterAndRadius()
             ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
             ToolMode.CIRCLE_BY_PENCIL_AND_POINT -> completeCircleByPencilAndPoint()
             ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
+            ToolMode.POINT -> completePoint()
+            ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
             ToolMode.CIRCLE_INTERPOLATION -> showCircleInterpolationDialog = true
             ToolMode.CIRCLE_EXTRAPOLATION -> showCircleExtrapolationDialog = true
             ToolMode.LOXODROMIC_MOTION -> showLoxodromicMotionDialog = true
-            ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
-            ToolMode.POINT -> completePoint()
         }
     }
 
@@ -1920,18 +1912,11 @@ class EditClusterViewModel(
             )
             newPoint?.upscale()
         }
-//        newCircles
-//            .mapIndexed { i, (_, flip) -> if (flip) i+circles.size else null }
-//            .filterNotNull()
-//            .let { ixs ->
-//                println("flipped: $ixs")
-//            }
-        // FIX: doesn't account for inside-out region spilling
         createNewCircles(newCircles)
         copyParts(
             targetCircleIxs,
             ((circles.size - newCircles.size) until circles.size).toList(),
-//            newCircles.map { (_, flip) -> flip }
+            flipInAndOut = true
         )
         points.addAll(newPoints)
         partialArgList = PartialArgList(argList.signature)
@@ -2032,11 +2017,12 @@ class EditClusterViewModel(
         val size0 = circles.size
         createNewCircles(allNewCircles)
         points.addAll(allNewPoints)
-        val k = targetCircleIndices.size
-        repeat(params.nSteps + 1) { i ->
-            val m = size0 + i * k // first index of this batch
-            // FIX: doesn't account for inside-out region spilling
-            copyParts(targetCircleIndices, (m until m+k).toList())
+        val n = params.nSteps + 1
+        repeat(n) { i ->
+            val newIndices = targetCircleIndices.indices.map { j ->
+                size0 + i + j*n
+            }
+            copyParts(targetCircleIndices, newIndices)
         }
         partialArgList = PartialArgList(argList.signature)
         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params)

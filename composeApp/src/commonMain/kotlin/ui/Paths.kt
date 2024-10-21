@@ -101,7 +101,7 @@ fun part2path(
                 is Circle -> {
                     if (it.radius <= maxRadius) {
                         circle2path(it)
-                    } else {
+                    } else { // TODO: instead calc arc from rect-circle intersection
                         val line = it.approximateToLine(visibleRect.center)
                         halfPlanePath(line, visibleRect)
                     }
