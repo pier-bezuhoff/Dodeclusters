@@ -92,6 +92,7 @@ import ui.WithTooltip
 import ui.isCompact
 import ui.isLandscape
 import ui.theme.DodeclustersColors
+import ui.theme.extendedColorScheme
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import ui.tools.Tool
@@ -180,10 +181,18 @@ fun EditClusterScreen(
             ColorPickerDialog(
                 initialColor = viewModel.regionColor,
                 onDismissRequest = viewModel::resetRegionColorPicker,
-                onConfirm = viewModel::selectRegionColor
+                onConfirm = viewModel::setNewRegionColor
             )
         }
-        DialogType.CIRCLE_COLOR_PICKER -> {}
+        DialogType.CIRCLE_COLOR_PICKER -> {
+            val initialColor = viewModel.getMostCommonCircleColorInSelection()
+                ?: MaterialTheme.extendedColorScheme.highAccentColor
+            ColorPickerDialog(
+                initialColor = initialColor,
+                onDismissRequest = viewModel::resetCircleColorPicker,
+                onConfirm = viewModel::setNewCircleColor
+            )
+        }
         DialogType.CIRCLE_INTERPOLATION -> {
             if (viewModel.partialArgList?.isFull == true) {
                 val (startCircle, endCircle) = viewModel.partialArgList!!.args

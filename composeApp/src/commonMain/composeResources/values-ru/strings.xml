@@ -38,6 +38,8 @@
     <string name="applied_color_description">Выбрать этот уже использованный цвет</string>
     <string name="duplicate_name">Дублировать</string>
     <string name="duplicate_description">Продублировать выделенные окружности</string>
+    <string name="pick_circle_color_name">Цвет окружности</string>
+    <string name="pick_circle_color_description">Выбор цвета окружности</string>
     <string name="delete_name">Удалить</string>
     <string name="delete_description">Удалить выделенные окружности</string>
     <string name="circle_inversion_name">Инверсия относительно окружности</string>

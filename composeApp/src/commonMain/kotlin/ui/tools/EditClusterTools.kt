@@ -90,6 +90,8 @@ import dodeclusters.composeapp.generated.resources.paint_splash
 import dodeclusters.composeapp.generated.resources.palette
 import dodeclusters.composeapp.generated.resources.palette_description
 import dodeclusters.composeapp.generated.resources.palette_name
+import dodeclusters.composeapp.generated.resources.pick_circle_color_description
+import dodeclusters.composeapp.generated.resources.pick_circle_color_name
 import dodeclusters.composeapp.generated.resources.propeller
 import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.redo_name
@@ -385,8 +387,8 @@ sealed class EditClusterTool(
         Res.drawable.copy
     )
     data object PickCircleColor: ContextAction(
-        Res.string.palette_name,
-        Res.string.palette_description,
+        Res.string.pick_circle_color_name,
+        Res.string.pick_circle_color_description,
         Res.drawable.palette
     )
     // MAYBE: eraser-like mode

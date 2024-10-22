@@ -1010,7 +1010,7 @@ class EditClusterViewModel(
         }
     }
 
-    fun selectRegionColor(color: Color) {
+    fun setNewRegionColor(color: Color) {
         openedDialog = null
         regionColor = color
         selectTool(EditClusterTool.Region)
@@ -1018,6 +1018,25 @@ class EditClusterViewModel(
     }
 
     fun resetRegionColorPicker() {
+        openedDialog = null
+    }
+
+    fun getMostCommonCircleColorInSelection(): Color? =
+        selection
+            .mapNotNull { circleColors[it] }
+            .groupingBy { it }
+            .eachCount()
+            .maxByOrNull { (_, k) -> k }
+            ?.key
+
+    fun setNewCircleColor(color: Color) {
+        for (ix in selection) {
+            circleColors[ix] = color
+        }
+        openedDialog = null
+    }
+
+    fun resetCircleColorPicker() {
         openedDialog = null
     }
     
@@ -2122,10 +2141,10 @@ class EditClusterViewModel(
             EditClusterTool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
             EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
             EditClusterTool.Duplicate -> duplicateCircles()
-            EditClusterTool.PickCircleColor -> TODO()
+            EditClusterTool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
             EditClusterTool.Delete -> deleteCircles()
             EditClusterTool.InsertCenteredCross -> insertCenteredCross()
-            is EditClusterTool.AppliedColor -> selectRegionColor(tool.color)
+            is EditClusterTool.AppliedColor -> setNewRegionColor(tool.color)
             is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
             EditClusterTool.Undo -> undo()
             EditClusterTool.Redo -> redo()

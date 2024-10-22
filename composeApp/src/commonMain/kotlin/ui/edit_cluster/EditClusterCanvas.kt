@@ -346,18 +346,14 @@ private fun DrawScope.drawCircles(
     if (viewModel.pointSelectionIsActive) {
         for ((ix, point) in viewModel.points.withIndex()) {
             if (point != null && ix !in viewModel.selectedPoints) {
-                val color =
-                    viewModel.circleColors[ix] ?:
-                    if (viewModel.isFreePoint(ix)) freePointColor else pointColor
+                val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
         }
     } else {
         for ((ix, point) in viewModel.points.withIndex()) {
             if (point != null) {
-                val color =
-                    viewModel.circleColors[ix] ?:
-                    if (viewModel.isFreePoint(ix)) freePointColor else pointColor
+                val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
         }
@@ -759,6 +755,16 @@ fun BoxScope.CircleSelectionContextActions(viewModel: EditClusterViewModel) {
             ),
             tint = DodeclustersColors.skyBlue.copy(alpha = 0.9f)
         ) { viewModel.toolAction(EditClusterTool.Duplicate) }
+        SimpleButton(
+            painterResource(EditClusterTool.PickCircleColor.icon),
+            stringResource(EditClusterTool.PickCircleColor.name),
+            // TODO: proper position and backdrop
+            Modifier.offset(
+                x = positions.right.toDp() - halfSize,
+                y = (positions.topUnderScaleSlider/2 + positions.bottom/2).toDp() - halfSize
+            ),
+            tint = viewModel.getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor
+        ) { viewModel.toolAction(EditClusterTool.PickCircleColor) }
         SimpleButton(
             painterResource(EditClusterTool.Delete.icon),
             stringResource(EditClusterTool.Delete.name),

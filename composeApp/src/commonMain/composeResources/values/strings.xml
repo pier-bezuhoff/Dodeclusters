@@ -42,6 +42,8 @@
     <string name="shrink_name">Shrink</string>
     <string name="duplicate_name">Duplicate</string>
     <string name="duplicate_description">Duplicate selected circles</string>
+    <string name="pick_circle_color_name">Circle color</string>
+    <string name="pick_circle_color_description">Pick circle color</string>
     <string name="delete_name">Delete</string>
     <string name="delete_description">Delete selected circles</string>
     <string name="circle_inversion_name">Circle inversion</string>
