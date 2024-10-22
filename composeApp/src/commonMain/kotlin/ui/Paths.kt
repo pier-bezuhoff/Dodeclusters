@@ -1,13 +1,18 @@
 package ui
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import data.Cluster
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.EPSILON2
 import data.geometry.Line
 import getPlatform
+import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 /** NOTE: ignores [circle]'s orientation at this point */
 fun circle2path(circle: Circle): Path =
@@ -138,6 +143,72 @@ fun part2path(
             }
             acc.op(acc, path, PathOperation.Difference)
             acc
+        }
+    }
+}
+
+fun circleRectIntersection(
+    bigCircle: Circle,
+    visibleRect: Rect,
+) {
+    val o = bigCircle.center
+    val r = bigCircle.radius
+    val left = visibleRect.left
+    val right = visibleRect.right
+    val top = visibleRect.top
+    val bottom = visibleRect.bottom
+    val tl = (visibleRect.topLeft - o).getDistance()
+    val tr = (visibleRect.topRight - o).getDistance()
+    val bl = (visibleRect.bottomLeft - o).getDistance()
+    val br = (visibleRect.bottomRight - o).getDistance()
+    val isLeft = o.x < left
+    val isInH = o.x in left..right
+    val isRight = right < o.x
+    val isTop = o.y < top
+    val isInV = o.y in top..bottom
+    val isBottom = bottom < o.y
+    if (isInH && isInV)
+        return // draw nothing
+
+    val topPoints = horizontalSegmentCircleIntersection(top, bigCircle)
+        .filter { it.x in left..right }
+    val bottomPoints = horizontalSegmentCircleIntersection(bottom, bigCircle)
+        .filter { it.x in left..right }
+    val leftPoints = verticalSegmentCircleIntersection(left, bigCircle)
+        .filter { it.y in top..bottom }
+    val rightPoints = verticalSegmentCircleIntersection(right, bigCircle)
+        .filter { it.y in top..bottom }
+    val points = topPoints + rightPoints + bottomPoints + leftPoints // naturally ordered
+    // 0..4 points in total
+    // add arcs, _, |, L segments
+}
+
+fun horizontalSegmentCircleIntersection(y: Float, circle: Circle): List<Offset> {
+    val dx2 = circle.r2 - (y - circle.y).pow(2)
+    return when {
+        abs(dx2) < EPSILON2 -> listOf(Offset(circle.x.toFloat(), y))
+        dx2 < 0 -> emptyList()
+        else -> {
+            val dx = sqrt(dx2)
+            listOf( // ordered left->right
+                Offset((circle.x - dx).toFloat(), y),
+                Offset((circle.x + dx).toFloat(), y),
+            )
+        }
+    }
+}
+
+fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
+    val dy2 = circle.r2 - (x - circle.x).pow(2)
+    return when {
+        abs(dy2) < EPSILON2 -> listOf(Offset(x, circle.y.toFloat()))
+        dy2 < 0 -> emptyList()
+        else -> {
+            val dy = sqrt(dy2)
+            listOf( // ordered top->bottom
+                Offset(x, (circle.y - dy).toFloat()),
+                Offset(x, (circle.y + dy).toFloat()),
+            )
         }
     }
 }

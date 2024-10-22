@@ -367,9 +367,7 @@ private fun DrawScope.drawSelectedCircles(
         (viewModel.circleSelectionIsActive ||
         viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection)
     ) {
-        val circles = viewModel.selection
-            .map { viewModel.circles[it] }
-            .filterNotNull()
+        val circles = viewModel.selection.mapNotNull { viewModel.circles[it] }
         for (circle in circles) {
             drawCircleOrLine(
                 circle, visibleRect, selectedCircleColor,
@@ -379,9 +377,7 @@ private fun DrawScope.drawSelectedCircles(
         }
     }
     if (viewModel.pointSelectionIsActive) {
-        val points = viewModel.selectedPoints
-            .map { viewModel.points[it] }
-            .filterNotNull()
+        val points = viewModel.selectedPoints.mapNotNull { viewModel.points[it] }
         for (point in points) {
             drawCircle(selectedPointColor, pointRadius, point.toOffset())
         }
