@@ -404,6 +404,7 @@ data class Circle(
     }
 }
 
+@Immutable
 sealed interface UndirectedCircle : CircleOrLine {
     val x: Double
     val y: Double
@@ -443,6 +444,7 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
 }
 
 /** Represents totally ordered set of points isomorphic to ℝ or S¹ */
+@Immutable
 sealed interface LocusWithOrder {
     /** Either reverses the order of points within or does nothing ig */
     fun reversed(): LocusWithOrder

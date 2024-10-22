@@ -1,5 +1,6 @@
 package domain.expressions
 
+import androidx.compose.runtime.Immutable
 import domain.Ix
 import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
@@ -11,6 +12,7 @@ import kotlin.jvm.JvmInline
 
 // not sure it is of use
 @Serializable
+@Immutable
 sealed interface Function {
     @Serializable
     enum class OneToOne : Function {
@@ -32,6 +34,7 @@ sealed interface Function {
 // potential optimization: represent point indices as
 // -(i+1) while circle indices are +i
 @Serializable
+@Immutable
 sealed interface Indexed {
     val index: Ix
 
@@ -43,6 +46,7 @@ sealed interface Indexed {
 }
 
 @Serializable
+@Immutable
 sealed interface Expression {
     val expr: Expr
 

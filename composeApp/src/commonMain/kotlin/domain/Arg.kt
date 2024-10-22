@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import data.geometry.Point
 import kotlinx.serialization.Serializable
 
+@Immutable
 enum class ArgType {
     Point,
     Circle,
@@ -53,6 +54,7 @@ sealed class Arg(val argType: ArgType) {
 }
 
 @Serializable
+@Immutable
 data class Signature(val argTypes: List<ArgType>) {
     constructor(vararg argTypes: ArgType) : this(argTypes.toList())
 }

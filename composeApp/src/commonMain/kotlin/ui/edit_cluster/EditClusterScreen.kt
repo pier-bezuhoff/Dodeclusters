@@ -114,7 +114,7 @@ fun EditClusterScreen(
     val saver = remember { EditClusterViewModel.Saver(coroutineScope) }
     // TODO: test bg kills more
     val viewModel = rememberSaveable(saver = saver) {
-        EditClusterViewModel.UiState.restore(coroutineScope, EditClusterViewModel.UiState.SAMPLE)
+        EditClusterViewModel.State.restore(coroutineScope, EditClusterViewModel.State.SAMPLE)
     }
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(
@@ -175,59 +175,63 @@ fun EditClusterScreen(
         }
     }
     preloadIcons()
-    if (viewModel.showColorPickerDialog) {
-        ColorPickerDialog(
-            initialColor = viewModel.regionColor,
-            onDismissRequest = { viewModel.showColorPickerDialog = false },
-            onConfirm = viewModel::selectRegionColor
-        )
-    }
-    if (viewModel.showCircleInterpolationDialog && viewModel.partialArgList?.isFull == true) {
-        val (startCircle, endCircle) = viewModel.partialArgList!!.args
-            .map {
-                viewModel.circles[(it as Arg.CircleIndex).index]!!
-            }
-        CircleInterpolationDialog(
-            startCircle, endCircle,
-            onDismissRequest = { viewModel.resetCircleInterpolation() },
-            onConfirm = { params ->
-                viewModel.completeCircleInterpolation(params)
-            },
-            defaults = viewModel.defaultInterpolationParameters
-        )
-    }
-    if (viewModel.showCircleExtrapolationDialog && viewModel.partialArgList?.isFull == true) {
-        val (startCircle, endCircle) = viewModel.partialArgList!!.args
-            .map {
-                viewModel.circles[(it as Arg.CircleIndex).index]!!
-            }
-        CircleExtrapolationDialog(
-            startCircle, endCircle,
-            onDismissRequest = { viewModel.resetCircleExtrapolation() },
-            onConfirm = { params ->
-                viewModel.completeCircleExtrapolation(params)
-            },
-            defaults = viewModel.defaultExtrapolationParameters
-        )
-    }
-    if (viewModel.showLoxodromicMotionDialog && viewModel.partialArgList?.isFull == true) {
-        val (divergencePoint, convergencePoint) = viewModel.partialArgList!!.args
-            .drop(1)
-            .map { it as Arg.Point }
-            .map { when (it) {
-                is Arg.Point.XY -> it.toPoint()
-                is Arg.Point.Index -> viewModel.points[it.index]
-            } }
-        if (divergencePoint != null && convergencePoint != null) {
-            LoxodromicMotionDialog(
-                divergencePoint, convergencePoint,
-                onDismissRequest = { viewModel.resetLoxodromicMotion() },
-                onConfirm = { params ->
-                    viewModel.completeLoxodromicMotion(params)
-                },
-                defaults = viewModel.defaultLoxodromicMotionParameters
+    when (viewModel.openedDialog) {
+        DialogType.REGION_COLOR_PICKER -> {
+            ColorPickerDialog(
+                initialColor = viewModel.regionColor,
+                onDismissRequest = viewModel::resetRegionColorPicker,
+                onConfirm = viewModel::selectRegionColor
             )
         }
+        DialogType.CIRCLE_COLOR_PICKER -> {}
+        DialogType.CIRCLE_INTERPOLATION -> {
+            if (viewModel.partialArgList?.isFull == true) {
+                val (startCircle, endCircle) = viewModel.partialArgList!!.args
+                    .map {
+                        viewModel.circles[(it as Arg.CircleIndex).index]!!
+                    }
+                CircleInterpolationDialog(
+                    startCircle, endCircle,
+                    onDismissRequest = viewModel::resetCircleInterpolation,
+                    onConfirm = viewModel::completeCircleInterpolation,
+                    defaults = viewModel.defaultInterpolationParameters
+                )
+            }
+        }
+        DialogType.CIRCLE_EXTRAPOLATION -> {
+            if (viewModel.partialArgList?.isFull == true) {
+                val (startCircle, endCircle) = viewModel.partialArgList!!.args
+                    .map {
+                        viewModel.circles[(it as Arg.CircleIndex).index]!!
+                    }
+                CircleExtrapolationDialog(
+                    startCircle, endCircle,
+                    onDismissRequest = viewModel::resetCircleExtrapolation,
+                    onConfirm = viewModel::completeCircleExtrapolation,
+                    defaults = viewModel.defaultExtrapolationParameters
+                )
+            }
+        }
+        DialogType.LOXODROMIC_MOTION -> {
+            if (viewModel.partialArgList?.isFull == true) {
+                val (divergencePoint, convergencePoint) = viewModel.partialArgList!!.args
+                    .drop(1)
+                    .map { it as Arg.Point }
+                    .map { when (it) {
+                        is Arg.Point.XY -> it.toPoint()
+                        is Arg.Point.Index -> viewModel.points[it.index]
+                    } }
+                if (divergencePoint != null && convergencePoint != null) {
+                    LoxodromicMotionDialog(
+                        divergencePoint, convergencePoint,
+                        onDismissRequest = viewModel::resetLoxodromicMotion,
+                        onConfirm = viewModel::completeLoxodromicMotion,
+                        defaults = viewModel.defaultLoxodromicMotionParameters
+                    )
+                }
+            }
+        }
+        null -> {}
     }
     LaunchedEffect(ddcContent, sampleIndex) {
         if (ddcContent != null) {
@@ -277,8 +281,9 @@ fun preloadIcons() {
         Res.drawable.confirm, Res.drawable.cancel, // from dialogs
         Res.drawable.collapse_down, Res.drawable.ku, // aka collapse-left
         Res.drawable.expand, Res.drawable.shrink, Res.drawable.copy, Res.drawable.delete_forever // from canvas HUD
-    ))
+    )) {
         painterResource(resource)
+    }
 }
 
 @Composable

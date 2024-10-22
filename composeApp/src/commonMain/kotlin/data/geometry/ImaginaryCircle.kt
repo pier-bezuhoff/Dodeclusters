@@ -1,8 +1,10 @@
 package data.geometry
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
 @Serializable
+@Immutable
 data class ImaginaryCircle(
     val x: Double,
     val y: Double,

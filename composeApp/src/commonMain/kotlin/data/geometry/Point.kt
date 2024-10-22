@@ -1,5 +1,6 @@
 package data.geometry
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isFinite
 import domain.rotateBy
@@ -8,6 +9,7 @@ import kotlin.math.atan2
 import kotlin.math.hypot
 
 @Serializable
+@Immutable
 data class Point(
     val x: Double,
     val y: Double

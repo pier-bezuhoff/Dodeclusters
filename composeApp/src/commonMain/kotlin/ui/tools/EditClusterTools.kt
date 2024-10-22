@@ -384,6 +384,11 @@ sealed class EditClusterTool(
         Res.string.duplicate_description,
         Res.drawable.copy
     )
+    data object PickCircleColor: ContextAction(
+        Res.string.palette_name,
+        Res.string.palette_description,
+        Res.drawable.palette
+    )
     // MAYBE: eraser-like mode
     data object Delete: ContextAction(
         Res.string.delete_name,

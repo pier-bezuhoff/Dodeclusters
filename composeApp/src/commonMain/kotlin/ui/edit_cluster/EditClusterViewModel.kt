@@ -6,6 +6,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.runtime.setValue
@@ -149,7 +150,7 @@ class EditClusterViewModel(
     var regionColor by mutableStateOf(DodeclustersColors.primaryDark) // DodeclustersColors.purple)
         private set
     /** custom colors for circle borders */
-//    val circleColors = mutableStateMapOf<Ix, Color>()
+    val circleColors = mutableStateMapOf<Ix, Color>()
     var showCircles by mutableStateOf(true)
         private set
     /** which style to use when drawing parts: true = stroke, false = fill */
@@ -190,9 +191,9 @@ class EditClusterViewModel(
         private set
 
     // NOTE: history doesn't survive background app kill
-    private val history = History<UiState>(
-        saveState = { UiState.save(this) },
-        loadState = { state -> loadUiState(state) }
+    private val history = History<State>(
+        saveState = { State.save(this) },
+        loadState = { state -> loadState(state) }
     )
     var undoIsEnabled by mutableStateOf(false) // = history is not empty
     var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
@@ -207,10 +208,8 @@ class EditClusterViewModel(
     private val _circleAnimations = MutableSharedFlow<CircleAnimation>()
     val circleAnimations = _circleAnimations.asSharedFlow()
 
-    var showColorPickerDialog by mutableStateOf(false)
-    var showCircleInterpolationDialog by mutableStateOf(false)
-    var showCircleExtrapolationDialog by mutableStateOf(false)
-    var showLoxodromicMotionDialog by mutableStateOf(false)
+    var openedDialog: DialogType? by mutableStateOf(null)
+        private set
 
     var arcPathUnderConstruction by mutableStateOf<ArcPath?>(null)
         private set
@@ -419,7 +418,7 @@ class EditClusterViewModel(
         resetTransients()
     }
 
-    private fun loadUiState(state: UiState) {
+    private fun loadState(state: State) {
         submode = SubMode.None
         selection.clear()
         selectedPoints = emptyList()
@@ -1012,10 +1011,14 @@ class EditClusterViewModel(
     }
 
     fun selectRegionColor(color: Color) {
-        showColorPickerDialog = false
+        openedDialog = null
         regionColor = color
         selectTool(EditClusterTool.Region)
 //        showPanel = true
+    }
+
+    fun resetRegionColorPicker() {
+        openedDialog = null
     }
     
     // MAYBE: replace with select-all->delete in invisible-circles part manipulation mode
@@ -1783,9 +1786,9 @@ class EditClusterViewModel(
             ToolMode.POINT -> completePoint()
             ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
-            ToolMode.CIRCLE_INTERPOLATION -> showCircleInterpolationDialog = true
-            ToolMode.CIRCLE_EXTRAPOLATION -> showCircleExtrapolationDialog = true
-            ToolMode.LOXODROMIC_MOTION -> showLoxodromicMotionDialog = true
+            ToolMode.CIRCLE_INTERPOLATION -> openedDialog = DialogType.CIRCLE_INTERPOLATION
+            ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
+            ToolMode.LOXODROMIC_MOTION -> openedDialog = DialogType.LOXODROMIC_MOTION
         }
     }
 
@@ -1957,7 +1960,7 @@ class EditClusterViewModel(
     }
 
     fun completeCircleInterpolation(params: InterpolationParameters) {
-        showCircleInterpolationDialog = false
+        openedDialog = null
         val argList = partialArgList!!
         val args = argList.args.map { it as Arg.CircleIndex }
         val startCircleIx = args[0].index
@@ -1977,14 +1980,14 @@ class EditClusterViewModel(
     }
 
     fun resetCircleInterpolation() {
-        showCircleInterpolationDialog = false
+        openedDialog = null
         partialArgList = PartialArgList(EditClusterTool.CircleInterpolation.signature)
     }
 
     fun completeCircleExtrapolation(
         params: ExtrapolationParameters,
     ) {
-        showCircleExtrapolationDialog = false
+        openedDialog = null
         val argList = partialArgList!!
         val args = argList.args.map { it as Arg.CircleIndex }
         val startCircleIx = args[0].index
@@ -2004,7 +2007,7 @@ class EditClusterViewModel(
     }
 
     fun resetCircleExtrapolation() {
-        showCircleExtrapolationDialog = false
+        openedDialog = null
         partialArgList = PartialArgList(EditClusterTool.CircleExtrapolation.signature)
     }
 
@@ -2012,8 +2015,8 @@ class EditClusterViewModel(
     fun completeLoxodromicMotion(
         params: LoxodromicMotionParameters,
     ) {
+        openedDialog = null
         recordCreateCommand()
-        showLoxodromicMotionDialog = false
         val argList = partialArgList!!
         val args = argList.args
         val objArg = args[0] as Arg.CircleAndPointIndices
@@ -2063,7 +2066,7 @@ class EditClusterViewModel(
     }
 
     fun resetLoxodromicMotion() {
-        showLoxodromicMotionDialog = false
+        openedDialog = null
         partialArgList = PartialArgList(EditClusterTool.LoxodromicMotion.signature)
     }
 
@@ -2115,10 +2118,11 @@ class EditClusterViewModel(
             EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selected circles only
             EditClusterTool.ToggleFilledOrOutline -> showWireframes = !showWireframes
             EditClusterTool.HideUI -> hideUIFor30s()
-            EditClusterTool.Palette -> showColorPickerDialog = true
+            EditClusterTool.Palette -> openedDialog = DialogType.REGION_COLOR_PICKER
             EditClusterTool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
             EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
             EditClusterTool.Duplicate -> duplicateCircles()
+            EditClusterTool.PickCircleColor -> TODO()
             EditClusterTool.Delete -> deleteCircles()
             EditClusterTool.InsertCenteredCross -> insertCenteredCross()
             is EditClusterTool.AppliedColor -> selectRegionColor(tool.color)
@@ -2144,7 +2148,7 @@ class EditClusterViewModel(
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
-            EditClusterTool.Palette -> showColorPickerDialog
+//            EditClusterTool.Palette -> openedDialog == DialogType.REGION_COLOR_PICKER
             is EditClusterTool.MultiArg -> mode == ToolMode.correspondingTo(tool)
             else -> true
         }
@@ -2161,7 +2165,7 @@ class EditClusterViewModel(
     /** Be careful to pass *only* strictly immutable args by __copying__ */
     @Serializable
     @Immutable
-    data class UiState(
+    data class State(
         val circles: List<CircleOrLine?>,
         val points: List<Point?>,
         val parts: List<Cluster.Part>,
@@ -2171,7 +2175,7 @@ class EditClusterViewModel(
         val translation: Offset,
     ) {
         companion object {
-            val SAMPLE = UiState(
+            val SAMPLE = State(
                 circles = listOf(
                     Circle(200.0, 200.0, 100.0),
                     Circle(250.0, 200.0, 100.0),
@@ -2186,23 +2190,23 @@ class EditClusterViewModel(
                 translation = Offset(225f, 225f) + Offset(400f, 0f)
             )
 
-            fun restore(coroutineScope: CoroutineScope, uiState: UiState): EditClusterViewModel =
+            fun restore(coroutineScope: CoroutineScope, state: State): EditClusterViewModel =
                 EditClusterViewModel(
                     coroutineScope,
-                    uiState.circles,
-                    uiState.parts,
-                    uiState.expressions,
+                    state.circles,
+                    state.parts,
+                    state.expressions,
                 ).apply {
-                    if (uiState.selection.size > 1)
+                    if (state.selection.size > 1)
                         mode = SelectionMode.Multiselect
-                    selection.addAll(uiState.selection)
-                    translation = uiState.translation
-                    points.addAll(uiState.points)
+                    selection.addAll(state.selection)
+                    translation = state.translation
+                    points.addAll(state.points)
                 }
 
-            fun save(viewModel: EditClusterViewModel): UiState =
+            fun save(viewModel: EditClusterViewModel): State =
                 with (viewModel) {
-                    UiState(
+                    State(
                         circles.toList(), points.toList(), parts.toList(),
                         expressions.expressions.toMap(),
                         selection.toList(),
@@ -2216,11 +2220,11 @@ class EditClusterViewModel(
         private val coroutineScope: CoroutineScope
     ) : androidx.compose.runtime.saveable.Saver<EditClusterViewModel, String> {
         override fun SaverScope.save(value: EditClusterViewModel): String =
-            JSON.encodeToString(UiState.serializer(), UiState.save(value))
+            JSON.encodeToString(State.serializer(), State.save(value))
         override fun restore(value: String): EditClusterViewModel {
-            return UiState.restore(
+            return State.restore(
                 coroutineScope,
-                JSON.decodeFromString(UiState.serializer(), value)
+                JSON.decodeFromString(State.serializer(), value)
             )
         }
         companion object {
@@ -2246,20 +2250,4 @@ class EditClusterViewModel(
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)
     }
-}
-
-/** ixs = indices of circles to which the handle is attached */
-@Immutable
-sealed class HandleConfig(open val ixs: List<Ix>) {
-    data class SingleCircle(val ix: Ix): HandleConfig(listOf(ix))
-    data class SeveralCircles(override val ixs: List<Ix>): HandleConfig(ixs)
-}
-
-/** params for create/copy/delete animations */
-@Immutable
-sealed interface CircleAnimation {
-    val circles: List<CircleOrLine>
-    data class Entrance(override val circles: List<CircleOrLine>) : CircleAnimation
-    data class ReEntrance(override val circles: List<CircleOrLine>) : CircleAnimation
-    data class Exit(override val circles: List<CircleOrLine>) : CircleAnimation
 }

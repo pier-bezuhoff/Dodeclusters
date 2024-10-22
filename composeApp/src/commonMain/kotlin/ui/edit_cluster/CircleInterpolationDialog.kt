@@ -20,6 +20,7 @@ import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +55,7 @@ import ui.component2
 import ui.hideSystemBars
 import kotlin.math.roundToInt
 
+@Immutable
 data class DefaultInterpolationParameters(
     val nInterjacents: Int = 1,
     val inBetween: Boolean = true,

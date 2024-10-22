@@ -1,8 +1,6 @@
-import org.gradle.kotlin.dsl.support.kotlinCompilerOptions
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
@@ -149,4 +147,9 @@ compose.desktop {
 
 compose.experimental {
 //    web.application {}
+}
+
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose_compiler")
+    metricsDestination = layout.buildDirectory.dir("compose_compiler")
 }

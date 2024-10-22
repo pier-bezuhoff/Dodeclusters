@@ -1,6 +1,7 @@
 package data
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
 import data.geometry.CircleOrLine

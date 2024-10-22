@@ -1,5 +1,6 @@
 package data.geometry
 
+import androidx.compose.runtime.Immutable
 import domain.TAU
 import domain.signNonZero
 import domain.updated
@@ -8,6 +9,7 @@ import kotlin.math.atan2
 import kotlin.math.hypot
 
 // BUG: arcs often break when moving diff pts
+@Immutable
 data class ArcPath(
     val startPoint: Point,
     val points: List<Point> = emptyList(),
@@ -28,6 +30,7 @@ data class ArcPath(
     val nArcs: Int get() =
         points.size
 
+    @Immutable
     sealed interface Focus {
         data object StartPoint : Focus
         data class Point(val index: Int) : Focus

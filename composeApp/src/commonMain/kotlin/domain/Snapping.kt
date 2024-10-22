@@ -1,5 +1,6 @@
 package domain
 
+import androidx.compose.runtime.Immutable
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
@@ -9,6 +10,7 @@ import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 
+@Immutable
 sealed interface PointSnapResult {
     val result: Point
     sealed interface PointToPoint : PointSnapResult

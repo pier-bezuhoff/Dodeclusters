@@ -1,6 +1,9 @@
 package domain
 
+import androidx.compose.runtime.Immutable
+
 /** used for grouping VM.UiState changes into batches for history keeping */
+@Immutable
 enum class Command {
     MOVE,
     CHANGE_RADIUS, SCALE,

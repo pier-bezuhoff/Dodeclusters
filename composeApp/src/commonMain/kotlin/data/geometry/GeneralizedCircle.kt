@@ -2,7 +2,6 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import domain.signNonZero
-import getPlatform
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
 import kotlin.math.abs
@@ -399,6 +398,8 @@ data class GeneralizedCircle(
     }
 }
 
+@Serializable
+@Immutable
 enum class CirclePencilType {
     ELLIPTIC, // lines with 1 common point, circles with 2 common points
     PARABOLIC, // parallel lines, circles tangential to 1 common line at 1 common point

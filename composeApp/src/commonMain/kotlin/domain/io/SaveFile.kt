@@ -1,9 +1,11 @@
 package domain.io
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 
+@Immutable
 data class SaveData(
     /** file's name without extension */
     val name: String,

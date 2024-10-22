@@ -1,5 +1,6 @@
 package domain.expressions
 
+import androidx.compose.runtime.Immutable
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
@@ -10,6 +11,7 @@ typealias ExprResult = List<GCircle?>
 
 /** Whenever the order of [args] doesn't matter, enforce index-increasing order */
 @Serializable
+@Immutable
 sealed class Expr(
     @SerialName("parameters_0")
     open val parameters: Parameters,

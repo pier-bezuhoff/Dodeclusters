@@ -1,11 +1,14 @@
 package domain.expressions
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
 // numeric values used, from the dialog or somewhere else
 @Serializable
+@Immutable
 sealed interface Parameters {
     @Serializable
+    @Immutable
     data object None : Parameters
 }
 
@@ -14,12 +17,14 @@ sealed interface Parameters {
  * end = Right
  */
 @Serializable
+@Immutable
 data class ExtrapolationParameters(
     val nLeft: Int,
     val nRight: Int,
 ) : Parameters
 
 @Serializable
+@Immutable
 data class InterpolationParameters(
     val nInterjacents: Int,
     val inBetween: Boolean,
@@ -31,6 +36,7 @@ data class InterpolationParameters(
  * @param[nSteps] number of intermediate steps (0 = result only)
  * */
 @Serializable
+@Immutable
 data class LoxodromicMotionParameters(
     val angle: Float,
     val dilation: Double,

@@ -1,5 +1,6 @@
 package ui.edit_cluster
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -10,8 +11,11 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import kotlinx.serialization.Serializable
 
 // MAYBE: add shortcut help on ?
+@Serializable
+@Immutable
 enum class KeyboardAction {
     SELECT_ALL,
     DELETE,

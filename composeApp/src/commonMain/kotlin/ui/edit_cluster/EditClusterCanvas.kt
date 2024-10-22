@@ -327,30 +327,40 @@ private fun DrawScope.drawCircles(
     if (viewModel.circleSelectionIsActive) {
         for ((ix, circle) in viewModel.circles.withIndex()) {
             if (circle != null && ix !in viewModel.selection) {
-                val color = if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
+                val color =
+                    viewModel.circleColors[ix] ?:
+                    if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
                 drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
             }
         }
     } else {
         for ((ix, circle) in viewModel.circles.withIndex()) {
             if (circle != null) {
-                val color = if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
+                val color =
+                    viewModel.circleColors[ix] ?:
+                    if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
                 drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
             }
         }
     }
     if (viewModel.pointSelectionIsActive) {
-        for ((ix, point) in viewModel.points.withIndex())
+        for ((ix, point) in viewModel.points.withIndex()) {
             if (point != null && ix !in viewModel.selectedPoints) {
-                val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
+                val color =
+                    viewModel.circleColors[ix] ?:
+                    if (viewModel.isFreePoint(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
+        }
     } else {
-        for ((ix, point) in viewModel.points.withIndex())
+        for ((ix, point) in viewModel.points.withIndex()) {
             if (point != null) {
-                val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
+                val color =
+                    viewModel.circleColors[ix] ?:
+                    if (viewModel.isFreePoint(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
+        }
     }
 }
 
@@ -367,13 +377,18 @@ private fun DrawScope.drawSelectedCircles(
         (viewModel.circleSelectionIsActive ||
         viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection)
     ) {
-        val circles = viewModel.selection.mapNotNull { viewModel.circles[it] }
-        for (circle in circles) {
-            drawCircleOrLine(
-                circle, visibleRect, selectedCircleColor,
-                alpha = thiccSelectionCircleAlpha,
-                style = circleThiccStroke
-            )
+        for (ix in viewModel.selection) {
+            val circle = viewModel.circles[ix]
+            if (circle != null) {
+                val color =
+                    viewModel.circleColors[ix] ?:
+                    selectedCircleColor
+                drawCircleOrLine(
+                    circle, visibleRect, color,
+                    alpha = thiccSelectionCircleAlpha,
+                    style = circleThiccStroke
+                )
+            }
         }
     }
     if (viewModel.pointSelectionIsActive) {
@@ -384,7 +399,6 @@ private fun DrawScope.drawSelectedCircles(
     }
 }
 
-// TODO: draw fill+stroke for to avoid seams
 private fun DrawScope.drawParts(
     viewModel: EditClusterViewModel,
     visibleRect: Rect,

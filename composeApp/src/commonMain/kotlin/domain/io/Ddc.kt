@@ -1,5 +1,6 @@
 package domain.io
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
 import data.Cluster
@@ -17,6 +18,7 @@ import ui.theme.DodeclustersColors
 // NOTE: do not forget to update js version JsDdc correspondingly
 /** Dodeclusters' format. Aiming for a nicely-formatted, readable & extensible YAML subset */
 @Serializable
+@Immutable
 data class Ddc(
     val name: String = DEFAULT_NAME,
     @Serializable(ColorCssSerializer::class)
