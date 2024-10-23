@@ -15,6 +15,7 @@ data class ExtendedColorScheme(
 )
 
 val LocalExtendedColors = staticCompositionLocalOf {
+//    DodeclustersColors.extendedDarkScheme
     ExtendedColorScheme(
         accentColor = Color.Unspecified,
         highAccentColor = Color.Unspecified
@@ -25,4 +26,5 @@ val MaterialTheme.extendedColorScheme: ExtendedColorScheme
     @Composable
     @ReadOnlyComposable
     get() =
+//    DodeclustersColors.extendedDarkScheme
         LocalExtendedColors.current

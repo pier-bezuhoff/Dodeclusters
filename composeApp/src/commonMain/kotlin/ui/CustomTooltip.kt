@@ -4,7 +4,6 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.MutatorMutex
-import androidx.compose.material3.BasicTooltipState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipState
@@ -38,7 +37,7 @@ import kotlinx.coroutines.withTimeout
 fun rememberMyTooltipState(
     initialIsVisible: Boolean = false,
     isPersistent: Boolean = false,
-    /** Tooltip duration in miliseconds */
+    /** Tooltip duration in milliseconds */
     tooltipDuration: Long = androidx.compose.foundation.BasicTooltipDefaults.TooltipDuration,
     mutatorMutex: MutatorMutex = androidx.compose.foundation.BasicTooltipDefaults.GlobalMutatorMutex
 ): TooltipState =
@@ -72,7 +71,7 @@ fun rememberMyTooltipState(
 fun MyTooltipState(
     initialIsVisible: Boolean = false,
     isPersistent: Boolean = true,
-    /** Tooltip duration in miliseconds */
+    /** Tooltip duration in milliseconds */
     tooltipDuration: Long = androidx.compose.foundation.BasicTooltipDefaults.TooltipDuration,
     mutatorMutex: MutatorMutex = androidx.compose.foundation.BasicTooltipDefaults.GlobalMutatorMutex,
 ): TooltipState =

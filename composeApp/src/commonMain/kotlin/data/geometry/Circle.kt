@@ -80,7 +80,7 @@ data class Circle(
     override fun distanceFrom(point: Point): Double =
         abs(hypot(point.x - x, point.y - y) - radius)
 
-    inline fun distanceBetweenCenters(circle: Circle): Double =
+    fun distanceBetweenCenters(circle: Circle): Double =
         hypot(x - circle.x, y - circle.y)
 
     /** -1 = inside, 0 on the circle, +1 = outside */
