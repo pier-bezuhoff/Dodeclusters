@@ -98,6 +98,8 @@ string|open_file_name|T3BlbiBEb2RlY2x1c3RlcnMgZmlsZQ==
 string|open_file|T3BlbiBmaWxl
 string|palette_description|UGljayBjb2xvcnM=
 string|palette_name|UGFsZXR0ZQ==
+string|pick_circle_color_description|UGljayBjaXJjbGUgY29sb3I=
+string|pick_circle_color_name|Q2lyY2xlIGNvbG9y
 string|redo_name|UmVkbw==
 string|region_category_name|UmVnaW9ucw==
 string|region_description|TW9kZTogUGljayByZWdpb25zIGJldHdlZW4gY2lyY2xlcyB0byBmaWxsIHdpdGggY29sb3I=
