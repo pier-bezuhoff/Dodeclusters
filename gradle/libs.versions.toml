@@ -30,8 +30,8 @@ compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview"
 compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "jetpack-compose" }
 compose-material = { module = "androidx.compose.material:material", version.ref = "jetpack-compose" }
 compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
-# no wasm/js window-size-class support so far
-#compose-material3-window-size-klass = { module = "androidx.compose.material3:material3-window-size-class", version.ref = "material3" }
+# official window-size-class is still worse
+#compose-material3-window-size-klass = { module = "org.jetbrains.compose.material3:material3-window-size-class", version.ref = "material3" }
 compose-material3-window-size-klass = { module = "dev.chrisbanes.material3:material3-window-size-class-multiplatform", version.ref = "window-size-klass" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization"}
 colormath = { module = "com.github.ajalt.colormath:colormath", version.ref = "colormath" }

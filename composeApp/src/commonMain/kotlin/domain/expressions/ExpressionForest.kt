@@ -1,8 +1,10 @@
 package domain.expressions
 
+import androidx.compose.ui.geometry.Offset
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
+import kotlin.math.exp
 
 class ExpressionForest(
     initialExpressions: Map<Indexed, Expression?>, // pls include all possible indices
@@ -328,4 +330,22 @@ class ExpressionForest(
             argTiers.maxByOrNull { it + 1 } ?: 0
         }
     }
+
+    fun getIncidentPoints(parentIx: Indexed.Circle): List<Indexed.Point> =
+        (children[parentIx] ?: emptySet())
+            .filterIsInstance<Indexed.Point>()
+            .filter { expressions[it]?.expr is Expr.Incidence }
+
+    fun adjustIncidentPointExpressions(ix2point: Map<Indexed.Point, Point?>) {
+        for ((ix, point) in ix2point) {
+            if (point != null) {
+                val expr = expressions[ix]?.expr as Expr.Incidence
+                val parent = get(expr.carrier) as CircleOrLine
+                expressions[ix] = Expression.Just(expr.copy(
+                    parameters = IncidenceParameters(order = parent.point2order(point))
+                ))
+            }
+        }
+    }
+
 }

@@ -694,6 +694,8 @@ private fun DrawScope.drawHandles(
                     }
                 }
             }
+
+            null -> {}
         }
         (viewModel.submode as? SubMode.Rotate)?.let { (center, angle) ->
             val currentDirection = Offset(0f, -1f).rotateBy(angle.toFloat())
