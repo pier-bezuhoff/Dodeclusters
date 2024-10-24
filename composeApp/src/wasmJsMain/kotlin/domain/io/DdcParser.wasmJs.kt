@@ -8,8 +8,10 @@ import domain.ColorCssSerializer
 import domain.ColorULongSerializer
 import kotlinx.serialization.json.Json
 
+// i suppose i don't need this anymore...
+
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
-actual fun parseDdc(content: String): Ddc {
+private fun _parseDdc(content: String): Ddc {
     val jsDdc = loadYaml(content) as JsDdc
     println("js-yaml parsed yaml successfully")
     val ddc = Ddc(
@@ -89,7 +91,7 @@ actual fun parseDdc(content: String): Ddc {
 }
 
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
-actual fun parseOldDdc(content: String): OldDdc {
+private fun _parseOldDdc(content: String): OldDdc {
     val jsDdc = loadYaml(content) as JsDdc
     println("js-yaml parsed yaml successfully")
     val ddc = OldDdc(
