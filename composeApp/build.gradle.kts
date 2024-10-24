@@ -9,7 +9,6 @@ plugins {
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlinSerialization)
-//    alias(libs.plugins.kotest.multiplatform)
 }
 
 kotlin {
@@ -42,6 +41,9 @@ kotlin {
 //    }
 
     sourceSets {
+        commonMain.languageSettings {
+            progressiveMode = true // cries about deprecations and stuff more
+        }
         all {
             languageSettings {
                 optIn("org.jetbrains.compose.resources.ExperimentalResourceApi")
@@ -49,13 +51,7 @@ kotlin {
         }
 
         val desktopMain by getting
-        
-        androidMain.dependencies {
-            implementation(libs.compose.ui.tooling.preview)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.core.ktx)
-            implementation(libs.kaml)
-        }
+
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -66,21 +62,20 @@ kotlin {
             implementation(libs.compose.material3.window.size.klass)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.colormath)
+            implementation(libs.kaml) // NOTE: kaml on wasm is experimental for now, maybe test it
+        }
+        androidMain.dependencies {
+            implementation(libs.compose.ui.tooling.preview)
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core.ktx)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
-            implementation(libs.kaml) // NOTE: kaml on wasm is experimental for now, maybe test it
         }
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
-//            implementation(kotlin("test-common"))
             implementation(kotlin("test-annotations-common"))
-//            implementation(libs.kotest.runner.junit5)
-//            implementation(libs.kotest.assertions.core)
-//            implementation(libs.kotest.framework.engine)
-//            implementation(libs.kotest.property)
-//            implementation(libs.kotest.framework.datatest)
         }
     }
 }

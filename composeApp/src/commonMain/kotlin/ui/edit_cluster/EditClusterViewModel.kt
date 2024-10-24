@@ -1402,17 +1402,27 @@ class EditClusterViewModel(
         }
     }
 
-    private fun scaleSingleCircle(c: Offset, h: HandleConfig.SingleCircle, sm: SubMode.Scale) {
+    private fun scaleSingleCircle(c: Offset, zoom: Float, h: HandleConfig.SingleCircle, sm: SubMode.Scale) {
+        val ix = Indexed.Circle(h.ix)
         val circle = circles[h.ix]
         val free = !LOCK_DEPENDENT_OBJECT || isFreeCircle(h.ix)
-        if (circle is Circle && free) {
+        if (free) {
             recordCommand(Command.CHANGE_RADIUS, targets = listOf(h.ix))
-            val center = sm.center
-            val r = (c - center).getDistance()
-            circles[h.ix] = circle.copy(radius = r.toDouble())
-            // no need to adjust children when scaling Circle
-            val ix = Indexed.Circle(h.ix)
-            expressions.update(listOf(ix))
+            if (circle is Circle) {
+                val center = sm.center
+                val r = (c - center).getDistance()
+                circles[h.ix] = circle.copy(radius = r.toDouble())
+                // no need to adjust children when scaling Circle
+                expressions.update(listOf(ix))
+            } else if (circle is Line) {
+                val center = circle.project(c)
+                adjustIncidentPoints(
+                    parentIx = h.ix,
+                    centroid = center,
+                    zoom = zoom
+                )
+                expressions.update(listOf(ix))
+            }
         }
     }
 
@@ -1660,7 +1670,7 @@ class EditClusterViewModel(
             when (val h = handleConfig) {
                 is HandleConfig.SingleCircle -> {
                     when (val sm = submode) {
-                        is SubMode.Scale -> scaleSingleCircle(c = c, h = h, sm = sm)
+                        is SubMode.Scale -> scaleSingleCircle(c = c, zoom = zoom, h = h, sm = sm)
                         is SubMode.ScaleViaSlider -> scaleViaSliderSingleCircle(pan = pan, h = h, sm = sm)
                         is SubMode.Rotate -> rotateSingleCircle(pan = pan, c = c, h = h, sm = sm)
                         else -> {}
