@@ -6,6 +6,7 @@ import com.charleskorn.kaml.YamlConfiguration
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
@@ -22,6 +23,7 @@ private val ddcSerializationModule = SerializersModule { // shoudnt be necessary
     }
 }
 
+@Throws(SerializationException::class, IllegalArgumentException::class)
 fun parseDdc(content: String): Ddc {
     val config = YamlConfiguration(
         encodeDefaults = true,
@@ -38,6 +40,7 @@ private val oldDdcSerializationModule = SerializersModule {
     }
 }
 
+@Throws(SerializationException::class, IllegalArgumentException::class)
 fun parseOldDdc(content: String): OldDdc {
     val config = YamlConfiguration(
         encodeDefaults = true,

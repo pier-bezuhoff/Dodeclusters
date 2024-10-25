@@ -62,6 +62,7 @@ import domain.reindexingMap
 import domain.snapAngle
 import domain.snapPointToCircles
 import domain.snapPointToPoints
+import domain.sortedByFrequency
 import getPlatform
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -74,7 +75,6 @@ import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
-import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
@@ -144,6 +144,7 @@ class EditClusterViewModel(
         private set
     private val panelNeedsToBeShown by derivedStateOf { activeCategory.tools.size > 1 }
     var showPanel by mutableStateOf(panelNeedsToBeShown)
+        private set
     var showPromptToSetActiveSelectionAsToolArg by mutableStateOf(false) // to be updated manually
         private set
     var showUI by mutableStateOf(true)
@@ -342,7 +343,7 @@ class EditClusterViewModel(
     // backwards compatibility
     fun saveAsJson(): String {
         val cluster = Cluster(
-            circles.filterNotNull(), parts.toList(), filled = true
+            circles.filterNotNull(), parts.toList()
         )
         return Json.encodeToString(Cluster.serializer(), cluster)
     }
@@ -358,7 +359,6 @@ class EditClusterViewModel(
             loadCluster(Cluster(
                 cluster.circles,
                 cluster.parts,
-                cluster.filled
             ))
         } catch (e: SerializationException) {
             println("Failed to parse json")
@@ -864,6 +864,15 @@ class EditClusterViewModel(
     fun isFreePoint(pointIndex: Ix): Boolean =
         expressions.expressions[Indexed.Point(pointIndex)] == null
 
+    // MAYBE: wrap into state that depends only on [parts] for caching
+    fun getColorsByMostUsed(): List<Color> =
+        parts
+            .flatMap { part ->
+                part.borderColor?.let { listOf(part.fillColor, it) }
+                    ?: listOf(part.fillColor)
+            }
+            .sortedByFrequency()
+
     fun snapped(
         absolutePosition: Offset,
         excludePoints: Boolean = false,
@@ -983,6 +992,10 @@ class EditClusterViewModel(
         showCircles = !showCircles
         if (!showCircles && mode is ToolMode)
             switchToMode(SelectionMode.Drag)
+    }
+
+    fun hidePanel() {
+        showPanel = false
     }
 
     fun hideUIFor30s() {

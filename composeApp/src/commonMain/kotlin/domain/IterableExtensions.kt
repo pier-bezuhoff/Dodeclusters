@@ -37,7 +37,7 @@ fun combinations(n: Int, r: Int): Sequence<List<Int>> = sequence {
         if (i == -1)
             return@sequence
         indices[i] += 1
-        for (j in (i + 1) until r) // diagonalization for non-repeating combinations
+        for (j in (i + 1) until r) // diagonalizing for non-repeating combinations
             indices[j] = indices[j-1] + 1
         yield(indices.toList())
     }
@@ -57,3 +57,14 @@ fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Ix>): Map<Ix, I
     }
     return re
 }
+
+/**
+ * Sorts elements by their frequency
+ * @return List of distinct elements from most common to most rare
+ * */
+fun <T> Iterable<T>.sortedByFrequency(): List<T> =
+    this.groupingBy { it }
+        .eachCount()
+        .entries
+        .sortedByDescending { (_, count) -> count }
+        .map { (t, _) -> t }

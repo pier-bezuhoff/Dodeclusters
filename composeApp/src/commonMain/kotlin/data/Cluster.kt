@@ -1,7 +1,6 @@
 package data
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
 import data.geometry.CircleOrLine
@@ -19,8 +18,6 @@ data class Cluster(
     val circles: List<CircleOrLine>,
     /** union of parts comprised of circle intersections */
     val parts: List<Part> = emptyList(),
-    /** fill regions inside / wireframe */
-    val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
 ) {
     // NOTE: we can alternatively use 1 BooleanArray[circles.size] to specify part bounds
     //  out of the circles, and another BooleanArray[insides.size + outsides.size] to specify
@@ -35,11 +32,12 @@ data class Cluster(
         val outsides: Set<Int>,
         @Serializable(ColorCssSerializer::class)
         val fillColor: Color = Ddc.DEFAULT_CLUSTER_FILL_COLOR,
+        // its use is debatable
         @Serializable(ColorCssSerializer::class)
         val borderColor: Color? = Ddc.DEFAULT_CLUSTER_BORDER_COLOR,
     ) {
         override fun toString(): String =
-            "Cluster.Part(in = [${insides.joinToString()}],\nout = [${outsides.joinToString()}],\ncolor = $fillColor)"
+            "Cluster.Part(\nin = [${insides.joinToString()}],\nout = [${outsides.joinToString()}],\ncolor = $fillColor)"
 
         /** ruff semiorder ⊆ on delimited regions; only goes off indices */
         infix fun isObviouslyInside(otherPart: Part): Boolean =
@@ -52,7 +50,6 @@ data class Cluster(
         val SAMPLE = Cluster(
             circles = listOf(Circle(200.0, 100.0, 50.0)),
             parts = emptyList(),
-            filled = true
         )
     }
 }

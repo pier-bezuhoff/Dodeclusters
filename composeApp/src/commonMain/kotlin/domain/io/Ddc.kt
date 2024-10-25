@@ -49,7 +49,6 @@ data class Ddc(
                 else listOf(0, cluster.circles.size - 1),
                 cluster.circles,
                 cluster.parts,
-                cluster.filled
             )
         )
     )
@@ -69,7 +68,7 @@ data class Ddc(
             val rule: List<Int> = DEFAULT_CLUSTER_RULE,
         ) : Token() {
             fun toCluster(): data.Cluster =
-                Cluster(circles, parts, filled)
+                Cluster(circles, parts)
         }
         @SerialName("Circle")
         @Serializable
@@ -202,7 +201,6 @@ data class OldDdc(
                 else listOf(0, cluster.circles.size - 1),
                 cluster.circles.filterIsInstance<Circle>(),
                 cluster.parts,
-                cluster.filled
             )
         )
     )
@@ -222,7 +220,7 @@ data class OldDdc(
             val rule: List<Int> = Ddc.DEFAULT_CLUSTER_RULE,
         ) : Token() {
             fun toCluster(): data.Cluster =
-                Cluster(circles, parts, filled)
+                Cluster(circles, parts)
         }
         @SerialName("Circle")
         @Serializable
@@ -342,7 +340,6 @@ private data class Indentation(val indentLevel: Int) {
             encode("parts:" + if (f.parts.isEmpty()) " []" else ""),
             *f.parts.map { down().encodeClusterPart(it) }.toTypedArray(),
             encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule)),
-            encode("filled", f.filled),
         )
 
     companion object {

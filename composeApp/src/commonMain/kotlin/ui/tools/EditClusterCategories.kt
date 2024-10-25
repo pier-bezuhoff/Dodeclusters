@@ -58,7 +58,7 @@ sealed class EditClusterCategory(
         Res.string.visibility_category_name,
         listOf(
             EditClusterTool.ShowCircles,
-            EditClusterTool.ToggleFilledOrOutline,
+//            EditClusterTool.ToggleFilledOrOutline,
             EditClusterTool.HideUI,
         )
     ) { // ~button/switch-like

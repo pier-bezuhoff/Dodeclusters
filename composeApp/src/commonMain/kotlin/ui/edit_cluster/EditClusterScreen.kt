@@ -158,15 +158,25 @@ fun EditClusterScreen(
                 EditClusterCanvas(viewModel)
                 if (viewModel.showUI) {
                     ToolDescription(
-                        viewModel.activeTool,
-                        viewModel.partialArgList,
-                        isLandscape,
-                        compact,
-                        viewModel.showPromptToSetActiveSelectionAsToolArg,
-                        viewModel::setActiveSelectionAsToolArg,
-                        Modifier.align(Alignment.TopStart)
+                        tool = viewModel.activeTool,
+                        partialArgList = viewModel.partialArgList,
+                        isLandscape = isLandscape,
+                        compact = compact,
+                        showSelectionAsArgPrompt = viewModel.showPromptToSetActiveSelectionAsToolArg,
+                        setSelectionAsArg = viewModel::setActiveSelectionAsToolArg,
+                        modifier = Modifier.align(Alignment.TopStart)
                     )
-                    EditClusterTopBar(viewModel, compact, Modifier.align(Alignment.TopEnd))
+                    EditClusterTopBar(
+                        compact = compact,
+                        undoIsEnabled = viewModel.undoIsEnabled,
+                        redoIsEnabled = viewModel.redoIsEnabled,
+                        saveAsYaml = viewModel::saveAsYaml,
+                        exportAsSvg = viewModel::exportAsSvg,
+                        loadFromYaml = { content -> content?.let { viewModel.loadFromYaml(content) } },
+                        undo = viewModel::undo,
+                        redo = viewModel::redo,
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    )
                     if (isLandscape)
                         ToolbarLandscape(viewModel, compact, Modifier.align(Alignment.CenterStart))
                     else
@@ -386,8 +396,14 @@ fun ToolDescription(
 
 @Composable
 fun EditClusterTopBar(
-    viewModel: EditClusterViewModel,
     compact: Boolean,
+    undoIsEnabled: Boolean,
+    redoIsEnabled: Boolean,
+    saveAsYaml: (name: String) -> String,
+    exportAsSvg: (name: String) -> String,
+    loadFromYaml: (content: String?) -> Unit,
+    undo: () -> Unit,
+    redo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val iconModifier =
@@ -423,9 +439,8 @@ fun EditClusterTopBar(
                         extension = saveCluster.EXTENSION, // yml
                         otherDisplayedExtensions = saveCluster.otherDisplayedExtensions,
                         mimeType = saveCluster.MIME_TYPE,
-                    ) { name ->
-                        viewModel.saveAsYaml(name)
-                    },
+                        content = saveAsYaml
+                    ),
                     modifier = iconModifier
                 ) {
                     println(if (it) "saved" else "not saved")
@@ -440,9 +455,8 @@ fun EditClusterTopBar(
                         name = svgExport.DEFAULT_NAME,
                         extension = svgExport.EXTENSION,
                         mimeType = svgExport.MIME_TYPE,
-                    ) { name ->
-                        viewModel.exportAsSvg(name)
-                    },
+                        content = exportAsSvg
+                    ),
                     modifier = iconModifier
                 ) {
                     println(if (it) "exported" else "not exported")
@@ -453,29 +467,26 @@ fun EditClusterTopBar(
                     painterResource(EditClusterTool.OpenFile.icon),
                     stringResource(EditClusterTool.OpenFile.name),
                     LookupData.YAML,
-                    iconModifier
-                ) { content ->
-                    content?.let {
-                        viewModel.loadFromYaml(content)
-                    }
-                }
+                    modifier = iconModifier,
+                    onOpen = loadFromYaml,
+                )
             }
             WithTooltip(stringResource(EditClusterTool.Undo.description)) {
                 DisableableButton(
                     painterResource(EditClusterTool.Undo.icon),
                     stringResource(EditClusterTool.Undo.name),
-                    viewModel.undoIsEnabled,
+                    undoIsEnabled,
                     iconModifier,
-                    onClick = viewModel::undo
+                    onClick = undo
                 )
             }
             WithTooltip(stringResource(EditClusterTool.Redo.description)) {
                 DisableableButton(
                     painterResource(EditClusterTool.Redo.icon),
                     stringResource(EditClusterTool.Redo.name),
-                    viewModel.redoIsEnabled,
+                    redoIsEnabled,
                     iconModifier,
-                    onClick = viewModel::redo
+                    onClick = redo
                 )
             }
         }
@@ -495,8 +506,18 @@ private fun ToolbarPortrait(viewModel: EditClusterViewModel, compact: Boolean, m
                     .togetherWith(slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start))
             }
         ) { (activeCategory, showPanel) ->
-            if (showPanel)
-                HorizontalPanel(viewModel, activeCategory, compact, Modifier.align(Alignment.Start))
+            if (showPanel) {
+                HorizontalPanel(
+                    activeCategory = activeCategory,
+                    compact = compact,
+                    regionColor = viewModel.regionColor,
+                    isToolEnabled = viewModel::toolPredicate,
+                    selectTool = viewModel::selectTool,
+                    getColorsByMostUsed = viewModel::getColorsByMostUsed,
+                    hidePanel = viewModel::hidePanel,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+            }
         }
         BottomToolbar(viewModel, compact, Modifier.align(Alignment.Start))
     }
@@ -518,8 +539,18 @@ private fun ToolbarLandscape(viewModel: EditClusterViewModel, compact: Boolean, 
                     .togetherWith(slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start))
             }
         ) { (activeCategory, showPanel) ->
-            if (showPanel)
-                VerticalPanel(viewModel, activeCategory, compact, Modifier.align(Alignment.Top))
+            if (showPanel) {
+                VerticalPanel(
+                    activeCategory = activeCategory,
+                    compact = compact,
+                    regionColor = viewModel.regionColor,
+                    isToolEnabled = viewModel::toolPredicate,
+                    selectTool = viewModel::selectTool,
+                    getColorsByMostUsed = viewModel::getColorsByMostUsed,
+                    hidePanel = viewModel::hidePanel,
+                    modifier = Modifier.align(Alignment.Top)
+                )
+            }
         }
     }
 }
@@ -642,19 +673,18 @@ fun CategoryButton(
         Spacer(Modifier.size(12.dp, 12.dp))
     Crossfade(defaultTool) {
         ToolButton(
-            viewModel,
-            defaultTool,
-            modifier
+            tool = defaultTool,
+            enabled = viewModel.toolPredicate(defaultTool),
+            regionColor = viewModel.regionColor,
+            tint = tint,
+            modifier = modifier
                 .padding(4.dp)
                 .size(
                     if (compact) 36.dp
                     else 40.dp
                 )
             ,
-            tint
-        ) {
-            viewModel.selectTool(defaultTool, togglePanel = true)
-        }
+        ) { tool -> viewModel.selectTool(tool, togglePanel = true) }
     }
 }
 
@@ -662,9 +692,13 @@ fun CategoryButton(
 // MAYBE: just make individual panel for every category instead of generalization
 @Composable
 private fun HorizontalPanel(
-    viewModel: EditClusterViewModel,
     activeCategory: EditClusterCategory,
     compact: Boolean,
+    regionColor: Color,
+    isToolEnabled: (EditClusterTool) -> Boolean,
+    selectTool: (EditClusterTool) -> Unit,
+    getColorsByMostUsed: () -> List<Color>,
+    hidePanel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // shown on the top of the bottom toolbar
@@ -688,7 +722,13 @@ private fun HorizontalPanel(
     ) {
         Spacer(Modifier.width(8.dp))
         for (tool in activeCategory.tools) {
-            ToolButton(viewModel, tool, toolModifier)
+            ToolButton(
+                tool = tool,
+                enabled = isToolEnabled(tool),
+                regionColor = regionColor,
+                modifier = toolModifier,
+                onClick = selectTool
+            )
         }
         if (activeCategory is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
             VerticalDivider(Modifier
@@ -696,17 +736,9 @@ private fun HorizontalPanel(
                 .padding(horizontal = 8.dp)
                 .align(Alignment.CenterVertically)
             )
-            val colorsByMostUsed = viewModel.parts
-                .flatMap { part ->
-                    part.borderColor?.let { listOf(part.fillColor, it) } ?: listOf(part.fillColor)
-                }
-                .groupingBy { it }
-                .eachCount()
-                .entries
-                .sortedByDescending { (_, count) -> count }
-                .map { (color, _) -> color }
+            val colorsByMostUsed = getColorsByMostUsed()
             for (color in colorsByMostUsed) {
-                ToolButton(viewModel, EditClusterTool.AppliedColor(color), toolModifier)
+                AppliedColorButton(color, toolModifier, selectTool)
             }
         }
         // hide panel button
@@ -715,7 +747,7 @@ private fun HorizontalPanel(
                 painterResource(Res.drawable.collapse_down),
                 stringResource(Res.string.collapse),
                 toolModifier.padding(4.dp),
-                onClick = { viewModel.showPanel = false }
+                onClick = hidePanel
             )
         }
     }
@@ -726,9 +758,13 @@ private fun HorizontalPanel(
 
 @Composable
 private fun VerticalPanel(
-    viewModel: EditClusterViewModel,
     activeCategory: EditClusterCategory,
     compact: Boolean,
+    regionColor: Color,
+    isToolEnabled: (EditClusterTool) -> Boolean,
+    selectTool: (EditClusterTool) -> Unit,
+    getColorsByMostUsed: () -> List<Color>,
+    hidePanel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // shown on the top of the bottom toolbar
@@ -753,7 +789,13 @@ private fun VerticalPanel(
     ) {
         Spacer(Modifier.height(8.dp))
         for (tool in activeCategory.tools) {
-            ToolButton(viewModel, tool, toolModifier)
+            ToolButton(
+                tool = tool,
+                enabled = isToolEnabled(tool),
+                regionColor = regionColor,
+                modifier = toolModifier,
+                onClick = selectTool
+            )
         }
         if (activeCategory is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
             HorizontalDivider(Modifier
@@ -761,17 +803,9 @@ private fun VerticalPanel(
                 .padding(vertical = 8.dp)
                 .align(Alignment.CenterHorizontally)
             )
-            val colorsByMostUsed = viewModel.parts
-                .flatMap { part ->
-                    part.borderColor?.let { listOf(part.fillColor, it) } ?: listOf(part.fillColor)
-                }
-                .groupingBy { it }
-                .eachCount()
-                .entries
-                .sortedByDescending { (_, count) -> count }
-                .map { (color, _) -> color }
+            val colorsByMostUsed = getColorsByMostUsed()
             for (color in colorsByMostUsed) {
-                ToolButton(viewModel, EditClusterTool.AppliedColor(color), toolModifier)
+                AppliedColorButton(color, toolModifier, selectTool)
             }
         }
         // hide panel button
@@ -780,91 +814,75 @@ private fun VerticalPanel(
                 painterResource(Res.drawable.ku),
                 stringResource(Res.string.collapse),
                 toolModifier.padding(4.dp),
-                onClick = { viewModel.showPanel = false }
+                onClick = hidePanel
             )
         }
     }
 }
 
+// all-included multiplexer
+/**
+ * @param[regionColor] only used for Palette color
+ * */
 @Composable
 fun ToolButton(
-    viewModel: EditClusterViewModel,
     tool: EditClusterTool,
-    modifier: Modifier = Modifier.padding(4.dp),
+    enabled: Boolean,
+    regionColor: Color,
     tint: Color = LocalContentColor.current,
-    onClick: () -> Unit = { viewModel.selectTool(tool) }
+    modifier: Modifier = Modifier.padding(4.dp),
+    onClick: (EditClusterTool) -> Unit,
 ) {
     val icon = painterResource(tool.icon)
     val name = stringResource(tool.name)
     val description = stringResource(tool.description)
+    val callback = { onClick(tool) }
     WithTooltip(description) {
         when (tool) {
-            EditClusterTool.Delete -> { // unused
-                IconButton(
-                    onClick = onClick,
-                    modifier = modifier,
-                    enabled = viewModel.circleSelectionIsActive
-                ) {
-                    val alpha = if (viewModel.circleSelectionIsActive) 1f else 0.5f
-                    Icon(
-                        icon,
-                        contentDescription = name,
-                        modifier = modifier,
-                        tint = EditClusterTool.Delete.tint.copy(alpha = alpha),
-                    )
-                }
-            }
-
             EditClusterTool.Palette -> {
-                PaletteButton(viewModel.regionColor, modifier, onClick)
+                PaletteButton(regionColor, modifier, callback)
             }
-
             is EditClusterTool.AppliedColor -> {
                 IconButton(
-                    onClick = onClick,
+                    onClick = callback,
                     modifier = modifier,
                 ) {
                     Icon(
-                        icon,
+                        painter = icon,
                         contentDescription = name,
                         modifier = modifier,
                         tint = tool.color,
                     )
                 }
             }
-
-            is Tool.ActionOnSelection -> {
-                DisableableButton(
-                    icon, name,
-                    enabled = viewModel.circleSelectionIsActive,
-                    modifier,
-                    tint,
-                    onClick
+            is Tool.InstantAction -> {
+                SimpleButton(
+                    iconPainter = icon,
+                    name = name,
+                    modifier = modifier,
+                    tint = tint,
+                    onClick = callback
                 )
             }
-
-            is Tool.InstantAction -> {
-                SimpleButton(icon, name, modifier, tint, onClick = onClick)
-            }
-
             is Tool.BinaryToggle -> {
                 if (tool.disabledIcon == null) {
                     OnOffButton(
-                        icon, name,
-                        isOn = viewModel.toolPredicate(tool),
+                        iconPainter = icon,
+                        name = name,
+                        isOn = enabled,
                         modifier = modifier,
                         tint = tint,
-                        onClick = onClick
+                        onClick = callback
                     )
                 } else {
                     TwoIconButton(
-                        icon,
+                        iconPainter = icon,
                         disabledIconPainter = painterResource(tool.disabledIcon!!),
-                        name,
-                        enabled = viewModel.toolPredicate(tool),
-                        modifier,
-                        tint,
-                        onClick
+                        name = name,
+                        enabled = enabled,
+                        modifier = modifier,
+                        tint = tint,
+                        onClick = callback
                     )
                 }
             }
@@ -896,5 +914,30 @@ fun PaletteButton(
             contentDescription = stringResource(EditClusterTool.Palette.name),
             modifier = modifier,
         )
+    }
+}
+
+@Composable
+fun AppliedColorButton(
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: (EditClusterTool.AppliedColor) -> Unit,
+) {
+    val tool = EditClusterTool.AppliedColor(color)
+    val icon = painterResource(tool.icon)
+    val name = stringResource(tool.name)
+    val description = stringResource(tool.description)
+    WithTooltip(description) {
+        IconButton(
+            onClick = { onClick(tool) },
+            modifier = modifier,
+        ) {
+            Icon(
+                icon,
+                contentDescription = name,
+                modifier = modifier,
+                tint = tool.color,
+            )
+        }
     }
 }
