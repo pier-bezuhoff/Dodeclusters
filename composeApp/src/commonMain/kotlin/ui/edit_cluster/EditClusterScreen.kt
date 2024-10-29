@@ -190,7 +190,7 @@ fun EditClusterScreen(
         DialogType.REGION_COLOR_PICKER -> {
             ColorPickerDialog(
                 initialColor = viewModel.regionColor,
-                onDismissRequest = viewModel::resetRegionColorPicker,
+                onDismissRequest = viewModel::dismissRegionColorPicker,
                 onConfirm = viewModel::setNewRegionColor
             )
         }
@@ -199,7 +199,7 @@ fun EditClusterScreen(
                 ?: MaterialTheme.extendedColorScheme.highAccentColor
             ColorPickerDialog(
                 initialColor = initialColor,
-                onDismissRequest = viewModel::resetCircleColorPicker,
+                onDismissRequest = viewModel::dismissCircleColorPicker,
                 onConfirm = viewModel::setNewCircleColor
             )
         }
@@ -688,7 +688,6 @@ fun CategoryButton(
     }
 }
 
-// MAYBE: hoist VM upwards with callbacks
 // MAYBE: just make individual panel for every category instead of generalization
 @Composable
 private fun HorizontalPanel(

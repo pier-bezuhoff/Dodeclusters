@@ -9,19 +9,24 @@ import kotlin.jvm.Transient
 
 @Immutable
 sealed interface Mode {
+    val tool: EditClusterTool
+
     fun isSelectingCircles(): Boolean =
         this == SelectionMode.Drag || this == SelectionMode.Multiselect
 }
 
 @Serializable
 @Immutable
-enum class SelectionMode : Mode {
+enum class SelectionMode(
+    @Transient
+    override val tool: EditClusterTool
+) : Mode {
     /** Select & drag singular circles */
-    Drag,
+    Drag(EditClusterTool.Drag),
     /** Select multiple circles */
-    Multiselect,
+    Multiselect(EditClusterTool.Multiselect),
     /** Select regions to create new [Cluster.Part]s */
-    Region,
+    Region(EditClusterTool.Region),
 }
 
 // presently unused
@@ -37,7 +42,7 @@ enum class MultiselectLogic {
 @Immutable
 enum class ToolMode(
     @Transient
-    val tool: EditClusterTool.MultiArg
+    override val tool: EditClusterTool.MultiArg
 ) : Mode {
     CIRCLE_INVERSION(EditClusterTool.CircleInversion),
     CIRCLE_INTERPOLATION(EditClusterTool.CircleInterpolation),

@@ -23,6 +23,7 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -32,6 +33,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
@@ -47,6 +50,7 @@ import com.github.ajalt.colormath.model.RGB
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.color_picker_title
 import dodeclusters.composeapp.generated.resources.hex_name
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.OkButton
@@ -54,6 +58,7 @@ import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.hideSystemBars
 import ui.isLandscape
+import kotlin.time.Duration.Companion.milliseconds
 
 // TODO: preview previous vs current color
 // TODO: add predefined colors (e.g. a-la in inkscape or such)
@@ -245,6 +250,8 @@ private fun ColorPickerDisplay(
     )
 }
 
+// BUG: the text field gets randomly focused on android after dismissing
+//  the dialog once or twice
 @Composable
 private fun HexInput(
     color: MutableState<HsvColor>,

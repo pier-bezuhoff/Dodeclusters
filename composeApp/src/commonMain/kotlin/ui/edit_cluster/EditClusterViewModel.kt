@@ -1032,8 +1032,13 @@ class EditClusterViewModel(
 //        showPanel = true
     }
 
-    fun resetRegionColorPicker() {
+    fun dismissRegionColorPicker() {
         openedDialog = null
+        val tool = mode.tool
+        val category = categories.firstOrNull { tool in it.tools }
+        if (category != null)
+            selectCategory(category, togglePanel = true)
+        activeTool = tool
     }
 
     fun getMostCommonCircleColorInSelection(): Color? =
@@ -1051,7 +1056,7 @@ class EditClusterViewModel(
         openedDialog = null
     }
 
-    fun resetCircleColorPicker() {
+    fun dismissCircleColorPicker() {
         openedDialog = null
     }
     
@@ -2337,6 +2342,7 @@ class EditClusterViewModel(
     fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)
     fun Point.upscale(): Point = scale(0.0, 0.0, UPSCALING_FACTOR)
 
+    // NOTE: there seem to be some problems with bg kill recovery on android
     /** Be careful to pass *only* strictly immutable args by __copying__ */
     @Serializable
     @Immutable
