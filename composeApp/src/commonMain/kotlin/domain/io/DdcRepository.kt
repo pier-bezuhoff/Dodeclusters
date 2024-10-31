@@ -1,9 +1,9 @@
-package data
+package domain.io
 
 import dodeclusters.composeapp.generated.resources.Res
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 
-class ClusterRepository {
+class DdcRepository {
 
     @OptIn(ExperimentalResourceApi::class)
     suspend fun loadSampleClusterYaml(

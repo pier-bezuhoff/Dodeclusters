@@ -4,12 +4,21 @@ import androidx.compose.runtime.Immutable
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
+import domain.Ix
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 typealias ExprResult = List<GCircle?>
 
-/** Whenever the order of [args] doesn't matter, enforce index-increasing order */
+/**
+ * Raw expression that can have several outputs:
+ * either [OneToOne] or [OneToMany]
+ *
+ * Whenever the order of [args] doesn't matter, enforce index-increasing order
+ * @param[parameters] Static parameters used in the expression, generally
+ * a collection of numbers
+ * @param[args] Indexed links to dynamic point/line/circle arguments
+ * */
 @Serializable
 @Immutable
 sealed class Expr(
@@ -167,10 +176,53 @@ sealed class Expr(
             return emptyList()
         }
     }
+
+    @Throws(ClassCastException::class)
+    inline fun mapArgs(
+        crossinline reIndexer: (Indexed) -> Indexed,
+    ): Expr =
+        when (this) {
+            is Incidence -> copy(
+                carrier = reIndexer(carrier) as Indexed.Circle
+            )
+            is CircleByCenterAndRadius -> copy(
+                center = reIndexer(center) as Indexed.Point,
+                radiusPoint = reIndexer(radiusPoint) as Indexed.Point,
+            )
+            is CircleBy3Points -> copy(
+                point1 = reIndexer(point1),
+                point2 = reIndexer(point2),
+                point3 = reIndexer(point3),
+            )
+            is CircleByPencilAndPoint -> copy(
+                circle1 = reIndexer(circle1),
+                circle2 = reIndexer(circle2),
+                point = reIndexer(point),
+            )
+            is LineBy2Points -> copy(
+                point1 = reIndexer(point1),
+                point2 = reIndexer(point2),
+            )
+            is CircleInversion -> copy(
+                target = reIndexer(target),
+                engine = reIndexer(engine) as Indexed.Circle
+            )
+            is Intersection -> copy(
+                circle1 = reIndexer(circle1) as Indexed.Circle,
+                circle2 = reIndexer(circle2) as Indexed.Circle,
+            )
+            is CircleInterpolation -> copy(
+                startCircle = reIndexer(startCircle) as Indexed.Circle,
+                endCircle = reIndexer(endCircle) as Indexed.Circle,
+            )
+            is CircleExtrapolation -> copy(
+                startCircle = reIndexer(startCircle) as Indexed.Circle,
+                endCircle = reIndexer(endCircle) as Indexed.Circle,
+            )
+            is LoxodromicMotion -> copy(
+                divergencePoint = reIndexer(divergencePoint) as Indexed.Point,
+                convergencePoint = reIndexer(convergencePoint) as Indexed.Point,
+                target = reIndexer(target)
+            )
+        }
 }
-
-@Serializable
-data class IncidenceParameters(
-    val order: Double
-) : Parameters
-

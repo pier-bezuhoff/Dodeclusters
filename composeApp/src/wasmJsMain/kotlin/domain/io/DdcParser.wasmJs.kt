@@ -1,11 +1,12 @@
 package domain.io
 
 import androidx.compose.ui.graphics.Color
-import data.Cluster
+import domain.cluster.Cluster
 import data.geometry.Circle
 import data.geometry.Line
 import domain.ColorCssSerializer
 import domain.ColorULongSerializer
+import domain.cluster.ClusterPart
 import kotlinx.serialization.json.Json
 
 // i suppose i don't need this anymore...
@@ -71,7 +72,7 @@ private fun _parseDdc(content: String): Ddc {
                             }
                         },
                         parts = jsCluster.parts.map { part ->
-                            Cluster.Part(
+                            ClusterPart(
                                 insides = part.insides.map { it.toInt() }.toSet(),
                                 outsides = part.outsides.map { it.toInt() }.toSet(),
                                 fillColor = part.fillColor.parseColor() ?: Ddc.DEFAULT_CLUSTER_FILL_COLOR,
@@ -91,10 +92,10 @@ private fun _parseDdc(content: String): Ddc {
 }
 
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
-private fun _parseOldDdc(content: String): OldDdc {
+private fun _parseOldDdc(content: String): DdcV1 {
     val jsDdc = loadYaml(content) as JsDdc
     println("js-yaml parsed yaml successfully")
-    val ddc = OldDdc(
+    val ddc = DdcV1(
         name = jsDdc.name ?: Ddc.DEFAULT_NAME,
         backgroundColor = jsDdc.backgroundColor?.parseColor() ?: Ddc.DEFAULT_BACKGROUND_COLOR,
         bestCenterX = jsDdc.bestCenterX ?: Ddc.DEFAULT_BEST_CENTER_X,
@@ -105,7 +106,7 @@ private fun _parseOldDdc(content: String): OldDdc {
             when {
                 isCircleObject(jsFigure) -> {
                     val jsCircle = jsFigure as JsCircleFigure
-                    OldDdc.Token.Circle(
+                    DdcV1.Token.Circle(
                         index = jsCircle.index,
                         x = jsCircle.x,
                         y = jsCircle.y,
@@ -119,14 +120,14 @@ private fun _parseOldDdc(content: String): OldDdc {
                 }
                 isClusterObject(jsFigure) -> {
                     val jsCluster = jsFigure as JsCluster
-                    OldDdc.Token.Cluster(
+                    DdcV1.Token.Cluster(
                         indices = jsCluster.indices.map { it.toInt() },
                         circles = jsCluster.circles.map {
                             val circle = it as JsCircle
                             Circle(circle.x, circle.y, circle.radius)
                         },
                         parts = jsCluster.parts.map { part ->
-                            Cluster.Part(
+                            ClusterPart(
                                 insides = part.insides.map { it.toInt() }.toSet(),
                                 outsides = part.outsides.map { it.toInt() }.toSet(),
                                 fillColor = part.fillColor.parseColor() ?: Ddc.DEFAULT_CLUSTER_FILL_COLOR,

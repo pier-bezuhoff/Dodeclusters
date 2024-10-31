@@ -12,6 +12,12 @@ sealed interface Parameters {
     data object None : Parameters
 }
 
+@Serializable
+@Immutable
+data class IncidenceParameters(
+    val order: Double
+) : Parameters
+
 /**
  * start = Left
  * end = Right

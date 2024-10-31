@@ -1,10 +1,8 @@
 package domain.expressions
 
-import androidx.compose.ui.geometry.Offset
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
-import kotlin.math.exp
 
 class ExpressionForest(
     initialExpressions: Map<Indexed, Expression?>, // pls include all possible indices
@@ -67,20 +65,33 @@ class ExpressionForest(
             }
         }
 
-    fun addFree(
-        isPoint: Boolean
-    ) {
-        val ix: Indexed = if (isPoint) {
-            val i = expressions.keys
-                .filterIsInstance<Indexed.Point>()
-                .maxOfOrNull { it.index + 1 } ?: 0
-            Indexed.Point(i)
-        } else {
-            val i = expressions.keys
-                .filterIsInstance<Indexed.Circle>()
-                .maxOfOrNull { it.index + 1 } ?: 0
-            Indexed.Circle(i)
-        }
+    private fun calculateNextPointIndex(): Indexed.Point {
+        val i = expressions.keys
+            .filterIsInstance<Indexed.Point>()
+            .maxOfOrNull { it.index + 1 } ?: 0
+        return Indexed.Point(i)
+    }
+
+    private fun calculateNextCircleIndex(): Indexed.Circle {
+        val i = expressions.keys
+            .filterIsInstance<Indexed.Circle>()
+            .maxOfOrNull { it.index + 1 } ?: 0
+        return Indexed.Circle(i)
+    }
+
+    fun addFreePoint() {
+        val ix = calculateNextPointIndex()
+        expressions[ix] = null
+        children[ix] = emptySet()
+        ix2tier[ix] = 0
+        if (tier2ixs.isEmpty())
+            tier2ixs += setOf(ix)
+        else
+            tier2ixs[0] = tier2ixs[0] + ix
+    }
+
+    fun addFreeCircle() {
+        val ix = calculateNextCircleIndex()
         expressions[ix] = null
         children[ix] = emptySet()
         ix2tier[ix] = 0
@@ -94,10 +105,7 @@ class ExpressionForest(
     fun addSoloPointExpression(
         expr: Expr.OneToOne,
     ): Point? {
-        val i = expressions.keys
-            .filterIsInstance<Indexed.Point>()
-            .maxOfOrNull { it.index + 1 } ?: 0
-        val ix: Indexed = Indexed.Point(i)
+        val ix = calculateNextPointIndex()
         expressions[ix] = Expression.Just(expr)
         expr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
@@ -120,10 +128,7 @@ class ExpressionForest(
     fun addSoloCircleExpression(
         expr: Expr.OneToOne,
     ): CircleOrLine? {
-        val i = expressions.keys
-            .filterIsInstance<Indexed.Circle>()
-            .maxOfOrNull { it.index + 1 } ?: 0
-        val ix: Indexed = Indexed.Circle(i)
+        val ix = calculateNextCircleIndex()
         expressions[ix] = Expression.Just(expr)
         expr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
@@ -149,10 +154,7 @@ class ExpressionForest(
     ): ExprResult {
         val result = expr.eval(get)
          if (isPoint) {
-            val i = expressions.keys
-                .filterIsInstance<Indexed.Point>()
-                .maxOfOrNull { it.index + 1 } ?: 0
-            val ix0 = Indexed.Point(i)
+            val ix0 = calculateNextPointIndex()
             val tier = computeTier(ix0)
             repeat(result.size) { outputIndex ->
                 val ix = Indexed.Point(ix0.index + outputIndex)
@@ -169,10 +171,7 @@ class ExpressionForest(
             }
              println("$ix0 -> $expr -> $result")
         } else {
-            val i = expressions.keys
-                .filterIsInstance<Indexed.Circle>()
-                .maxOfOrNull { it.index + 1 } ?: 0
-            val ix0 = Indexed.Circle(i)
+            val ix0 = calculateNextCircleIndex()
              val tier = computeTier(ix0)
              repeat(result.size) { outputIndex ->
                  val ix = Indexed.Circle(ix0.index + outputIndex)

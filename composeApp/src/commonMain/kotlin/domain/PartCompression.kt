@@ -1,69 +1,10 @@
-package data
+package domain
 
-import androidx.compose.runtime.Immutable
-import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.EPSILON
 import data.geometry.Line
 import data.geometry.Point
-import domain.ColorCssSerializer
-import domain.Ix
-import domain.io.Ddc
-import kotlinx.serialization.Serializable
-
-@Serializable
-@Immutable
-data class Cluster(
-    val circles: List<CircleOrLine>,
-    /** union of parts comprised of circle intersections */
-    val parts: List<Part> = emptyList(),
-) {
-    // NOTE: we can alternatively use 1 BooleanArray[circles.size] to specify part bounds
-    //  out of the circles, and another BooleanArray[insides.size + outsides.size] to specify
-    //  which are in and which are out
-    /** intersection of insides and outside of circles of a cluster */
-    @Serializable
-    @Immutable
-    data class Part(
-        /** indices of interior circles */
-        val insides: Set<Int>,
-        /** indices of bounding complementary circles */
-        val outsides: Set<Int>,
-        @Serializable(ColorCssSerializer::class)
-        val fillColor: Color = Ddc.DEFAULT_CLUSTER_FILL_COLOR,
-        // its use is debatable
-        @Serializable(ColorCssSerializer::class)
-        val borderColor: Color? = Ddc.DEFAULT_CLUSTER_BORDER_COLOR,
-    ) {
-        override fun toString(): String =
-            "Cluster.Part(\nin = [${insides.joinToString()}],\nout = [${outsides.joinToString()}],\ncolor = $fillColor)"
-
-        /** ruff semiorder ⊆ on delimited regions; only goes off indices */
-        infix fun isObviouslyInside(otherPart: Part): Boolean =
-            // the more intersections the smaller the delimited region is
-            insides.containsAll(otherPart.insides) &&
-            outsides.containsAll(otherPart.outsides)
-    }
-
-    companion object {
-        val SAMPLE = Cluster(
-            circles = listOf(Circle(200.0, 100.0, 50.0)),
-            parts = emptyList(),
-        )
-    }
-}
-
-@Serializable
-@Immutable
-data class OldCluster(
-    val circles: List<Circle>,
-    /** union of parts comprised of circle intersections */
-    val parts: List<Cluster.Part> = emptyList(),
-    /** fill regions inside / wireframe */
-    val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
-)
-
 
 /** [ins] and [outs] delimiters must not contain `null` circles */
 fun compressPart(
@@ -121,7 +62,7 @@ fun compressPartByIntersectionPoints(
 
     fun testIfPointFitsOurRequirements(point: Point): Boolean =
         ins.all { it.checkPositionEpsilon(point) <= 0 } && // inside or bordering ins
-        outs.all { it.checkPositionEpsilon(point) >= 0 } // outside or bordering outs
+                outs.all { it.checkPositionEpsilon(point) >= 0 } // outside or bordering outs
 
     val allCircles = ins + outs
     val n = allCircles.size
@@ -208,7 +149,7 @@ fun compressPartByIntersectionPoints(
                 if (repeatIx == -1) { // new ip
                     val itFits =
                         essentialIns.all { ins[it].checkPositionEpsilon(ip) <= 0 } && // inside or bordering ins
-                        essentialOuts.all { outs[it].checkPositionEpsilon(ip) >= 0 } // outside or bordering outs
+                                essentialOuts.all { outs[it].checkPositionEpsilon(ip) >= 0 } // outside or bordering outs
                     if (itFits)
                         extendedIntersections.add(ip)
                 }

@@ -217,7 +217,7 @@ private fun SelectionsCanvas(
                     viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection
                 )
             ) {
-                val circles = viewModel.selection
+                val circles = viewModel.circleSelection
                     .mapNotNull { viewModel.circles[it] }
                 for (circle in circles) {
                     // alpha = where selection lines are shown
@@ -326,7 +326,7 @@ private fun DrawScope.drawCircles(
 ) {
     if (viewModel.circleSelectionIsActive) {
         for ((ix, circle) in viewModel.circles.withIndex()) {
-            if (circle != null && ix !in viewModel.selection) {
+            if (circle != null && ix !in viewModel.circleSelection) {
                 val color =
                     viewModel.circleColors[ix] ?:
                     if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
@@ -345,7 +345,7 @@ private fun DrawScope.drawCircles(
     }
     if (viewModel.pointSelectionIsActive) {
         for ((ix, point) in viewModel.points.withIndex()) {
-            if (point != null && ix !in viewModel.selectedPoints) {
+            if (point != null && ix !in viewModel.pointSelection) {
                 val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
@@ -373,7 +373,7 @@ private fun DrawScope.drawSelectedCircles(
         (viewModel.circleSelectionIsActive ||
         viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection)
     ) {
-        for (ix in viewModel.selection) {
+        for (ix in viewModel.circleSelection) {
             val circle = viewModel.circles[ix]
             if (circle != null) {
                 val color =
@@ -388,7 +388,7 @@ private fun DrawScope.drawSelectedCircles(
         }
     }
     if (viewModel.pointSelectionIsActive) {
-        val points = viewModel.selectedPoints.mapNotNull { viewModel.points[it] }
+        val points = viewModel.pointSelection.mapNotNull { viewModel.points[it] }
         for (point in points) {
             drawCircle(selectedPointColor, pointRadius, point.toOffset())
         }
@@ -429,7 +429,7 @@ private fun DrawScope.drawParts(
             } else {
                 drawPath( // drawing stroke+fill to prevent seams
                     path,
-                    color = part.fillColor,
+                    color = part.borderColor ?: part.fillColor,
                     alpha = clusterPathAlpha,
                     style = circleStroke
                 )
@@ -647,7 +647,7 @@ private fun DrawScope.drawHandles(
         val iconSize = Size(iconDim, iconDim)
         when (viewModel.handleConfig) {
             is HandleConfig.SingleCircle -> {
-                val selectedCircle = viewModel.circles[viewModel.selection.single()]
+                val selectedCircle = viewModel.circles[viewModel.circleSelection.single()]
                 if (selectedCircle is Circle) {
                     val right = selectedCircle.center + Offset(selectedCircle.radius.toFloat(), 0f)
                     drawLine( // radius marker

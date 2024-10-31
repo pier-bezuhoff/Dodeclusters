@@ -3,11 +3,12 @@ package domain.io
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import data.Cluster
+import domain.cluster.Cluster
 import domain.ColorCssSerializer
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
+import domain.cluster.ClusterPart
 import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import kotlin.math.hypot
@@ -69,7 +70,7 @@ $allCircles
 fun partMask(
     circles: List<CircleOrLine>,
     partIndex: Int,
-    part: Cluster.Part,
+    part: ClusterPart,
     visibleRect: Rect
 ): String {
     val insides = part.insides.map { circles[it] }

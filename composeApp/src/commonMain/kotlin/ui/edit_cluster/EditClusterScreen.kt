@@ -58,8 +58,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import data.Cluster
-import data.ClusterRepository
+import domain.io.DdcRepository
 import domain.PartialArgList
 import data.geometry.Circle
 import dodeclusters.composeapp.generated.resources.Res
@@ -76,6 +75,8 @@ import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_pro
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import domain.Arg
+import domain.cluster.Constellation
+import domain.expressions.CircleConstruct
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveData
@@ -111,7 +112,7 @@ fun EditClusterScreen(
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
     val compact = windowSizeClass.isCompact
     val coroutineScope = rememberCoroutineScope()
-    val clusterRepository = remember { ClusterRepository() }
+    val ddcRepository = remember { DdcRepository() }
     val saver = remember { EditClusterViewModel.Saver(coroutineScope) }
     // TODO: test bg kills more
     val viewModel = rememberSaveable(saver = saver) {
@@ -257,18 +258,21 @@ fun EditClusterScreen(
             println("loading external ddc")
             viewModel.loadFromYaml(ddcContent)
         } else if (sampleIndex != null) {
-            clusterRepository.loadSampleClusterYaml(sampleIndex) { content ->
+            ddcRepository.loadSampleClusterYaml(sampleIndex) { content ->
                 if (content != null) {
                     viewModel.loadFromYaml(content)
                 }
             }
         } else {
-            viewModel.loadCluster(Cluster(
-                listOf(
-                    Circle(0.0, 0.0, 200.0),
-                ),
-//                parts = listOf(Cluster.Part(insides = setOf(0), outsides = emptySet(), fillColor = DodeclustersColors.secondaryDark/*primaryDark*/))
-            ))
+            viewModel.loadNewConstellation(
+                Constellation(
+                    points = emptyList(),
+                    circles = listOf(
+                        Circle(0.0, 0.0, 200.0),
+                    ).map { CircleConstruct.Concrete(it) },
+                    parts = emptyList()
+                )
+            )
             viewModel.moveToDdcCenter(0f, 0f)
         }
     }

@@ -4,11 +4,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
-import data.Cluster
+import domain.cluster.Cluster
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.EPSILON2
 import data.geometry.Line
+import domain.cluster.ClusterPart
 import getPlatform
 import kotlin.math.abs
 import kotlin.math.pow
@@ -88,7 +89,7 @@ fun chessboardPath(
 
 fun part2path(
     circles: List<CircleOrLine?>,
-    part: Cluster.Part,
+    part: ClusterPart,
     visibleRect: Rect
 ): Path {
     val maxRadius = getPlatform().maxCircleRadius

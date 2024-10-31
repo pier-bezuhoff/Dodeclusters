@@ -1,7 +1,6 @@
 package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
-import data.Cluster
 import domain.Signature
 import kotlinx.serialization.Serializable
 import ui.tools.EditClusterTool
@@ -25,7 +24,7 @@ enum class SelectionMode(
     Drag(EditClusterTool.Drag),
     /** Select multiple circles */
     Multiselect(EditClusterTool.Multiselect),
-    /** Select regions to create new [Cluster.Part]s */
+    /** Select regions to create new [ClusterPart]s */
     Region(EditClusterTool.Region),
 }
 

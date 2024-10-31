@@ -389,7 +389,7 @@ sealed class EditClusterTool(
     data object PickCircleColor: ContextAction(
         Res.string.pick_circle_color_name,
         Res.string.pick_circle_color_description,
-        Res.drawable.palette
+        Res.drawable.paint_splash
     )
     // MAYBE: eraser-like mode
     data object Delete: ContextAction(

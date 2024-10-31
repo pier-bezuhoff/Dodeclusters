@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -39,6 +40,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -250,8 +253,6 @@ private fun ColorPickerDisplay(
     )
 }
 
-// BUG: the text field gets randomly focused on android after dismissing
-//  the dialog once or twice
 @Composable
 private fun HexInput(
     color: MutableState<HsvColor>,
@@ -259,6 +260,9 @@ private fun HexInput(
     modifier: Modifier = Modifier,
     onConfirm: () -> Unit
 ) {
+    val windowInfo = LocalWindowInfo.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
     var isError by remember(color.value) { mutableStateOf(false) }
     OutlinedTextField(
         value = hex.value,
@@ -289,6 +293,7 @@ private fun HexInput(
         ),
         singleLine = true,
         modifier = modifier
+            .focusRequester(focusRequester)
             .onKeyEvent {
                 if (it.key == Key.Enter) {
                     onConfirm()
@@ -299,4 +304,13 @@ private fun HexInput(
 //        colors = OutlinedTextFieldDefaults.colors()
 //            .copy(unfocusedContainerColor = color.value.toColor())
     )
+    // reference: https://stackoverflow.com/q/71412537/7143065
+    LaunchedEffect(windowInfo) {
+        snapshotFlow { windowInfo.isWindowFocused }.collect { isWindowFocused ->
+            if (isWindowFocused) {
+                focusRequester.freeFocus()
+                keyboard?.hide()
+            }
+        }
+    }
 }

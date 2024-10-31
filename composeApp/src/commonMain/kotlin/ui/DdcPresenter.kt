@@ -7,9 +7,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import com.github.ajalt.colormath.model.RGB
 import com.github.ajalt.colormath.transform.interpolate
-import data.Cluster
+import domain.cluster.Cluster
 import domain.Indices
 import domain.Ix
+import domain.cluster.ClusterPart
 import domain.io.Ddc
 import kotlin.math.exp
 
@@ -168,7 +169,7 @@ class DdcPresenter(
                             indices = listOf(token.index, token.index),
                             circles = listOf(token.toCircle()),
                             parts = listOf(
-                                Cluster.Part(
+                                ClusterPart(
                                     insides = setOf(0),
                                     outsides = emptySet(),
                                     fillColor = token.fillColor ?: Ddc.DEFAULT_CIRCLE_FILL_COLOR,

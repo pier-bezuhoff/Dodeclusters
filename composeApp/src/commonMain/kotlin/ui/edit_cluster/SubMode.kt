@@ -2,7 +2,8 @@ package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
-import data.Cluster
+import domain.cluster.Cluster
+import domain.cluster.ClusterPart
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -26,9 +27,9 @@ sealed interface SubMode {
     ) : SubMode
 
     data class FlowSelect(
-        val lastQualifiedPart: Cluster.Part? = null
+        val lastQualifiedPart: ClusterPart? = null
     ) : SubMode
     data class FlowFill(
-        val lastQualifiedPart: Cluster.Part? = null
+        val lastQualifiedPart: ClusterPart? = null
     ) : SubMode
 }

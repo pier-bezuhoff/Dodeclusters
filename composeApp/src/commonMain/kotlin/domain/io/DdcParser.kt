@@ -33,20 +33,20 @@ fun parseDdc(content: String): Ddc {
     return Yaml(ddcSerializationModule, config).decodeFromString(Ddc.serializer(), content)
 }
 
-private val oldDdcSerializationModule = SerializersModule {
-    polymorphic(OldDdc.Token::class) {
-        subclass(OldDdc.Token.Cluster::class)
-        subclass(OldDdc.Token.Circle::class)
+private val ddcV1SerializationModule = SerializersModule {
+    polymorphic(DdcV1.Token::class) {
+        subclass(DdcV1.Token.Cluster::class)
+        subclass(DdcV1.Token.Circle::class)
     }
 }
 
 @Throws(SerializationException::class, IllegalArgumentException::class)
-fun parseOldDdc(content: String): OldDdc {
+fun parseOldDdc(content: String): DdcV1 {
     val config = YamlConfiguration(
         encodeDefaults = true,
         strictMode = false,
         polymorphismStyle = PolymorphismStyle.Property
     )
-    return Yaml(oldDdcSerializationModule, config)
-        .decodeFromString(OldDdc.serializer(), content)
+    return Yaml(ddcV1SerializationModule, config)
+        .decodeFromString(DdcV1.serializer(), content)
 }
