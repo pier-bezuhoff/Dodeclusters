@@ -4,11 +4,13 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isFinite
 import domain.rotateBy
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.atan2
 import kotlin.math.hypot
 
 @Serializable
+@SerialName("point")
 @Immutable
 data class Point(
     val x: Double,

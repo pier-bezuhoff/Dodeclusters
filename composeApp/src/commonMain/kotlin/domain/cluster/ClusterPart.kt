@@ -2,6 +2,7 @@ package domain.cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import domain.ColorAsCss
 import domain.ColorCssSerializer
 import domain.io.Ddc
 import kotlinx.serialization.Serializable
@@ -22,11 +23,9 @@ data class ClusterPart(
     val insides: Set<Int>,
     /** indices of bounding complementary circles */
     val outsides: Set<Int>,
-    @Serializable(ColorCssSerializer::class)
-    val fillColor: Color = Ddc.DEFAULT_CLUSTER_FILL_COLOR,
+    val fillColor: ColorAsCss = Ddc.DEFAULT_CLUSTER_FILL_COLOR,
     // its use is debatable
-    @Serializable(ColorCssSerializer::class)
-    val borderColor: Color? = Ddc.DEFAULT_CLUSTER_BORDER_COLOR,
+    val borderColor: ColorAsCss? = Ddc.DEFAULT_CLUSTER_BORDER_COLOR,
 ) {
     override fun toString(): String =
         """ClusterPart(

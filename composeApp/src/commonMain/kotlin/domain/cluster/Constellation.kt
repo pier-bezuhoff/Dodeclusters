@@ -1,6 +1,10 @@
 package domain.cluster
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
+import domain.ColorAsCss
+import domain.ColorCssSerializer
+import domain.Ix
 import domain.expressions.CircleConstruct
 import domain.expressions.Expression
 import domain.expressions.Indexed
@@ -15,6 +19,9 @@ data class Constellation(
     val points: List<PointConstruct>,
     val circles: List<CircleConstruct>,
     val parts: List<ClusterPart>, // TODO: transition to ArcPath's
+    // purely decorative, the "real" border color can be specified
+    // using unfilled single-circle ClusterPart with borderColor
+    val circleColors: Map<Ix, ColorAsCss> = emptyMap(),
 ) {
 
     fun toExpressionMap(): Map<Indexed, Expression?> =

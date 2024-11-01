@@ -42,3 +42,21 @@ fun signNonZero(x: Double): Int =
 
 fun Double.divideWithRemainder(divisor: Double): Double =
     floor(this/divisor)
+
+inline fun <reified A, reified B> tryCatch2(
+    crossinline tryBlock: () -> Unit,
+    crossinline catchBlock: (Exception) -> Unit,
+    crossinline finallyBlock: () -> Unit = {}
+) where A : Exception, B : Exception {
+    try {
+        tryBlock()
+    } catch (e: Exception) {
+        when (e) {
+            is A -> catchBlock(e)
+            is B -> catchBlock(e)
+            else -> {}
+        }
+    } finally {
+        finallyBlock()
+    }
+}

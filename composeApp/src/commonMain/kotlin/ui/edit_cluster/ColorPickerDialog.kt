@@ -307,9 +307,9 @@ private fun HexInput(
     // reference: https://stackoverflow.com/q/71412537/7143065
     LaunchedEffect(windowInfo) {
         snapshotFlow { windowInfo.isWindowFocused }.collect { isWindowFocused ->
-            if (isWindowFocused) {
+            if (isWindowFocused) { // runs once every time the dialog is opened
                 focusRequester.freeFocus()
-                keyboard?.hide()
+                keyboard?.hide() // suppresses rare auto-showing keyboard bug
             }
         }
     }

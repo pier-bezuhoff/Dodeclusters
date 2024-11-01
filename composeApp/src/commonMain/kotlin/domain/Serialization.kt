@@ -20,7 +20,7 @@ typealias ColorAsCss = @Serializable(ColorCssSerializer::class) Color
 
 // i have no idea why there was no default serializer
 // nice reference: https://github.com/Kotlin/kotlinx.serialization/blob/master/docs/serializers.md#primitive-serializer
-// NOTE: colormath also have similar (de-)serialization functions, maybe use theirs
+// NOTE: colormath also has similar (de-)serialization functions, maybe use theirs
 object ColorCssSerializer : KSerializer<Color> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("Color", PrimitiveKind.STRING)

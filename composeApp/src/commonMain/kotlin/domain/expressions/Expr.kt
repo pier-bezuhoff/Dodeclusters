@@ -4,9 +4,11 @@ import androidx.compose.runtime.Immutable
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
-import domain.Ix
+import domain.expressions.Expr.OneToMany
+import domain.expressions.Expr.OneToOne
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 typealias ExprResult = List<GCircle?>
 
@@ -22,80 +24,92 @@ typealias ExprResult = List<GCircle?>
 @Serializable
 @Immutable
 sealed class Expr(
-    @SerialName("parameters_0")
-    open val parameters: Parameters,
+    @Transient
+    open val parameters: Parameters = Parameters.None,
     // each arg can in turn be computed as an expression, making up Forest-like data structure
-    @SerialName("args_0")
-    open val args: List<Indexed>,
+    @Transient
+    open val args: List<Indexed> = emptyList(),
 ) {
     @Serializable
     sealed class OneToOne(
-        @SerialName("params")
-        override val parameters: Parameters,
-        override val args: List<Indexed>,
+        @Transient
+        override val parameters: Parameters = Parameters.None,
+        @Transient
+        override val args: List<Indexed> = emptyList(),
     ) : Expr(parameters, args)
     @Serializable
     sealed class OneToMany(
-        @SerialName("params")
-        override val parameters: Parameters,
-        override val args: List<Indexed>,
+        @Transient
+        override val parameters: Parameters = Parameters.None,
+        @Transient
+        override val args: List<Indexed> = emptyList(),
     ) : Expr(parameters, args)
 
     // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr
     //  p' = f(Δ(f⁻¹(p)), where point p on dependent carrier f(<free>) moves to p' when <free> is affected by Δ
     @Serializable
+    @SerialName("IncidentPoint")
     data class Incidence(
         override val parameters: IncidenceParameters,
         val carrier: Indexed.Circle,
     ) : OneToOne(parameters, listOf(carrier))
     @Serializable
+    @SerialName("CircleByCenterAndRadius")
     data class CircleByCenterAndRadius(
         val center: Indexed.Point,
         val radiusPoint: Indexed.Point
     ) : OneToOne(Parameters.None, listOf(center, radiusPoint))
     @Serializable
+    @SerialName("CircleBy3PerpendicularObjects")
     data class CircleBy3Points( // order-less
-        val point1: Indexed,
-        val point2: Indexed,
-        val point3: Indexed,
-    ) : OneToOne(Parameters.None, listOf(point1, point2, point3))
+        val object1: Indexed,
+        val object2: Indexed,
+        val object3: Indexed,
+    ) : OneToOne(Parameters.None, listOf(object1, object2, object3))
     @Serializable
+    @SerialName("CircleBy2ObjectsFromItsPencilAndPerpendicularObject")
     data class CircleByPencilAndPoint(
-        val circle1: Indexed,
-        val circle2: Indexed,
-        val point: Indexed,
-    ) : OneToOne(Parameters.None, listOf(circle1, circle2, point))
+        val pencilObject1: Indexed,
+        val pencilObject2: Indexed,
+        val perpendicularObject: Indexed,
+    ) : OneToOne(Parameters.None, listOf(pencilObject1, pencilObject2, perpendicularObject))
     @Serializable
+    @SerialName("LineBy2PerpendicularObjects")
     data class LineBy2Points( // order-less
-        val point1: Indexed,
-        val point2: Indexed,
-    ) : OneToOne(Parameters.None, listOf(point1, point2))
+        val object1: Indexed,
+        val object2: Indexed,
+    ) : OneToOne(Parameters.None, listOf(object1, object2))
     @Serializable
+    @SerialName("CircleInversion")
     data class CircleInversion(
         val target: Indexed,
         val engine: Indexed.Circle,
     ) : OneToOne(Parameters.None, listOf(target, engine))
 
     @Serializable
+    @SerialName("Intersection")
     data class Intersection( // order-less
         val circle1: Indexed.Circle,
         val circle2: Indexed.Circle,
     ) : OneToMany(Parameters.None, listOf(circle1, circle2))
     // TODO: point-point line interpolation
     @Serializable
+    @SerialName("CircleInterpolation")
     data class CircleInterpolation(
         override val parameters: InterpolationParameters,
         val startCircle: Indexed.Circle,
         val endCircle: Indexed.Circle,
     ) : OneToMany(parameters, listOf(startCircle, endCircle))
     @Serializable
+    @SerialName("CircleExtrapolation")
     data class CircleExtrapolation(
         override val parameters: ExtrapolationParameters,
         val startCircle: Indexed.Circle,
         val endCircle: Indexed.Circle,
     ) : OneToMany(parameters, listOf(startCircle, endCircle))
     @Serializable
-    data class LoxodromicMotion(
+    @SerialName("LoxodromicMotion")
+    data class LoxodromicMotion( // TODO: add backwards steps
         override val parameters: LoxodromicMotionParameters,
         val divergencePoint: Indexed.Point,
         val convergencePoint: Indexed.Point,
@@ -131,18 +145,18 @@ sealed class Expr(
                             p(radiusPoint)
                         )
                         is CircleBy3Points -> computeCircleBy3Points(
-                            g(point1),
-                            g(point2),
-                            g(point3)
+                            g(object1),
+                            g(object2),
+                            g(object3)
                         )
                         is CircleByPencilAndPoint -> computeCircleByPencilAndPoint(
-                            g(circle1),
-                            g(circle2),
-                            g(point),
+                            g(pencilObject1),
+                            g(pencilObject2),
+                            g(perpendicularObject),
                         )
                         is LineBy2Points -> computeLineBy2Points(
-                            g(point1),
-                            g(point2)
+                            g(object1),
+                            g(object2)
                         )
                         is CircleInversion -> computeCircleInversion(
                             g(target),
@@ -190,18 +204,18 @@ sealed class Expr(
                 radiusPoint = reIndexer(radiusPoint) as Indexed.Point,
             )
             is CircleBy3Points -> copy(
-                point1 = reIndexer(point1),
-                point2 = reIndexer(point2),
-                point3 = reIndexer(point3),
+                object1 = reIndexer(object1),
+                object2 = reIndexer(object2),
+                object3 = reIndexer(object3),
             )
             is CircleByPencilAndPoint -> copy(
-                circle1 = reIndexer(circle1),
-                circle2 = reIndexer(circle2),
-                point = reIndexer(point),
+                pencilObject1 = reIndexer(pencilObject1),
+                pencilObject2 = reIndexer(pencilObject2),
+                perpendicularObject = reIndexer(perpendicularObject),
             )
             is LineBy2Points -> copy(
-                point1 = reIndexer(point1),
-                point2 = reIndexer(point2),
+                object1 = reIndexer(object1),
+                object2 = reIndexer(object2),
             )
             is CircleInversion -> copy(
                 target = reIndexer(target),

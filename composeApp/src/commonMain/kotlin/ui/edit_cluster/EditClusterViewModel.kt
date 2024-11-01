@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
+import com.charleskorn.kaml.PolymorphismStyle
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.YamlConfiguration
 import domain.cluster.Cluster
 import domain.cluster.ClusterV1
 import data.geometry.ArcPath
@@ -57,9 +60,9 @@ import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeLineBy2Points
 import domain.expressions.reIndexExpression
-import domain.filterIndices
 import domain.io.Ddc
 import domain.io.DdcV1
+import domain.io.DdcV3
 import domain.io.cluster2svg
 import domain.io.cluster2svgCheckPattern
 import domain.io.parseDdc
@@ -77,11 +80,11 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
-import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
@@ -235,6 +238,19 @@ class EditClusterViewModel(
     }
 
     fun saveAsYaml(name: String = Ddc.DEFAULT_NAME): String {
+        return Yaml(
+            configuration = YamlConfiguration(
+                encodeDefaults = false,
+                strictMode = false,
+                polymorphismStyle = PolymorphismStyle.Property,
+            )
+        ).encodeToString(DdcV3.from(toConstellation()).copy(
+            name = name,
+            bestCenterX = computeAbsoluteCenter()?.x,
+            bestCenterY = computeAbsoluteCenter()?.y,
+            chessboardPattern = displayChessboardPattern,
+            chessboardPatternStartsColored = chessboardPatternStartsColored,
+        ))
         val nullCircles = circles.indices.filter { circles[it] == null }
         val circleReindexing = reindexingMap(circles.indices, nullCircles.toSet())
         val realCircles = circles.filterNotNull()
@@ -367,6 +383,7 @@ class EditClusterViewModel(
         circleSelection = emptyList()
         pointSelection = emptyList()
         parts.clear()
+        circleColors.clear()
         points.clear()
         circles.clear()
         points.addAll(
@@ -400,6 +417,7 @@ class EditClusterViewModel(
         )
         expressions.reEval() // calculates all dependent objects
         parts.addAll(constellation.parts)
+        circleColors.putAll(constellation.circleColors)
     }
 
     fun toConstellation(): Constellation {
@@ -459,7 +477,8 @@ class EditClusterViewModel(
                     insides = part.insides.map { circleReindexing[it]!! }.toSet(),
                     outsides = part.outsides.map { circleReindexing[it]!! }.toSet(),
                 )
-            }
+            },
+            circleColors = circleColors.toMap()
         )
     }
 
@@ -2053,9 +2072,9 @@ class EditClusterViewModel(
             }.sortedBy { it.index }
             val newCircle = expressions.addSoloCircleExpression(
                 Expr.CircleBy3Points(
-                    point1 = realized[0],
-                    point2 = realized[1],
-                    point3 = realized[2],
+                    object1 = realized[0],
+                    object2 = realized[1],
+                    object3 = realized[2],
                 ),
             )
             createNewCircle(newCircle?.upscale())
@@ -2086,9 +2105,9 @@ class EditClusterViewModel(
             }
             val newCircle = expressions.addSoloCircleExpression(
                 Expr.CircleByPencilAndPoint(
-                    circle1 = realized[0],
-                    circle2 = realized[1],
-                    point = realized[2],
+                    pencilObject1 = realized[0],
+                    pencilObject2 = realized[1],
+                    perpendicularObject = realized[2],
                 ),
             )
             createNewCircle(newCircle?.upscale())
@@ -2119,8 +2138,8 @@ class EditClusterViewModel(
             }.sortedBy { it.index }
             val newCircle = expressions.addSoloCircleExpression(
                 Expr.LineBy2Points(
-                    point1 = realized[0],
-                    point2 = realized[1],
+                    object1 = realized[0],
+                    object2 = realized[1],
                 ),
             )
             createNewCircle(newCircle?.upscale())
@@ -2436,6 +2455,7 @@ class EditClusterViewModel(
         }
         companion object {
             val JSON = Json {
+                encodeDefaults = false
                 allowStructuredMapKeys = true
             }
         }
