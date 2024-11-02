@@ -7,18 +7,17 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import com.github.ajalt.colormath.model.RGB
 import com.github.ajalt.colormath.transform.interpolate
-import domain.cluster.Cluster
 import domain.Indices
 import domain.Ix
 import domain.cluster.ClusterPart
-import domain.io.Ddc
+import domain.io.DdcV2
 import kotlin.math.exp
 
 // naked top-level circle = cluster with 1 part = [this circle]
 // Analogue to Dodeca Meditation's CircleGroup
 // TODO: use projective circle representation that would also
 //  include true straight lines among other benefits
-/** Dynamic model of [Ddc], that efficiently encapsulates [draw] and [update] operations */
+/** Dynamic model of [DdcV2], that efficiently encapsulates [draw] and [update] operations */
 class DdcPresenter(
     /** # of all clusters + visible circles */
     val clusterCount: Int,
@@ -159,28 +158,28 @@ class DdcPresenter(
     }
 
     companion object {
-        fun fromDdc(ddc: Ddc): DdcPresenter {
+        fun fromDdc(ddc: DdcV2): DdcPresenter {
             val clusters = ddc.content
                 // clusterizing visible top-level circles
-                .filterNot { it is Ddc.Token.Circle && !it.visible }
+                .filterNot { it is DdcV2.Token.Circle && !it.visible }
                 .map { token ->
                     when (token) {
-                        is Ddc.Token.Circle -> Ddc.Token.Cluster(
+                        is DdcV2.Token.Circle -> DdcV2.Token.Cluster(
                             indices = listOf(token.index, token.index),
                             circles = listOf(token.toCircle()),
                             parts = listOf(
                                 ClusterPart(
                                     insides = setOf(0),
                                     outsides = emptySet(),
-                                    fillColor = token.fillColor ?: Ddc.DEFAULT_CIRCLE_FILL_COLOR,
+                                    fillColor = token.fillColor ?: DdcV2.DEFAULT_CIRCLE_FILL_COLOR,
                                     borderColor = token.borderColor
                                 )
                             ),
                             filled = token.filled,
                             rule = token.rule
                         )
-                        is Ddc.Token.Line -> TODO()
-                        is Ddc.Token.Cluster -> token
+                        is DdcV2.Token.Line -> TODO()
+                        is DdcV2.Token.Cluster -> token
                     }
                 }
             val clusterCount = clusters.size
@@ -206,9 +205,9 @@ class DdcPresenter(
             val partBorderColor = indexedParts.flatten().map { (_, part) -> part.borderColor }
             val circleCount = ddc.content
                 .lastOrNull()?.let {
-                    if (it is Ddc.Token.Circle)
+                    if (it is DdcV2.Token.Circle)
                         it.index
-                    else (it as Ddc.Token.Cluster).indices.last()
+                    else (it as DdcV2.Token.Cluster).indices.last()
                 } ?: 0
             val xs = DoubleArray(circleCount)
             val ys = DoubleArray(circleCount)
@@ -216,14 +215,14 @@ class DdcPresenter(
             val rules = mutableListOf<List<Int>>()
             for (token in ddc.content) {
                 when (token) {
-                    is Ddc.Token.Circle -> {
+                    is DdcV2.Token.Circle -> {
                         xs[token.index] = token.x
                         ys[token.index] = token.y
                         rs[token.index] = token.radius
                         rules[token.index] = token.rule
                     }
-                    is Ddc.Token.Line -> TODO()
-                    is Ddc.Token.Cluster -> {
+                    is DdcV2.Token.Line -> TODO()
+                    is DdcV2.Token.Cluster -> {
                         val firstIndex = token.indices.first()
                         token.circles.forEachIndexed { i, circle ->
                             TODO()

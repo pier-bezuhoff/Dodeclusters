@@ -1,7 +1,6 @@
 package domain.io
 
 import androidx.compose.ui.graphics.Color
-import domain.cluster.Cluster
 import data.geometry.Circle
 import data.geometry.Line
 import domain.ColorCssSerializer
@@ -12,56 +11,56 @@ import kotlinx.serialization.json.Json
 // i suppose i don't need this anymore...
 
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
-private fun _parseDdc(content: String): Ddc {
+private fun _parseDdc(content: String): DdcV2 {
     val jsDdc = loadYaml(content) as JsDdc
     println("js-yaml parsed yaml successfully")
-    val ddc = Ddc(
-        name = jsDdc.name ?: Ddc.DEFAULT_NAME,
-        backgroundColor = jsDdc.backgroundColor?.parseColor() ?: Ddc.DEFAULT_BACKGROUND_COLOR,
-        bestCenterX = jsDdc.bestCenterX ?: Ddc.DEFAULT_BEST_CENTER_X,
-        bestCenterY = jsDdc.bestCenterY ?: Ddc.DEFAULT_BEST_CENTER_Y,
-        shape = jsDdc.shape.parseShape() ?: Ddc.DEFAULT_SHAPE,
-        drawTrace = jsDdc.drawTrace ?: Ddc.DEFAULT_DRAW_TRACE,
-        chessboardPattern = jsDdc.chessboardPattern ?: Ddc.DEFAULT_CHESSBOARD_PATTERN,
-        chessboardPatternStartsColored = jsDdc.chessboardPatternStartsColored ?: Ddc.DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED,
+    val ddc = DdcV2(
+        name = jsDdc.name ?: DdcV2.DEFAULT_NAME,
+        backgroundColor = jsDdc.backgroundColor?.parseColor() ?: DdcV2.DEFAULT_BACKGROUND_COLOR,
+        bestCenterX = jsDdc.bestCenterX ?: DdcV2.DEFAULT_BEST_CENTER_X,
+        bestCenterY = jsDdc.bestCenterY ?: DdcV2.DEFAULT_BEST_CENTER_Y,
+        shape = jsDdc.shape.parseShape() ?: DdcV2.DEFAULT_SHAPE,
+        drawTrace = jsDdc.drawTrace ?: DdcV2.DEFAULT_DRAW_TRACE,
+        chessboardPattern = jsDdc.chessboardPattern ?: DdcV2.DEFAULT_CHESSBOARD_PATTERN,
+        chessboardPatternStartsColored = jsDdc.chessboardPatternStartsColored ?: DdcV2.DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED,
         content = jsDdc.content.map { jsFigure ->
             when {
                 isCircleObject(jsFigure) -> {
                     val jsCircle = jsFigure as JsCircleFigure
-                    Ddc.Token.Circle(
+                    DdcV2.Token.Circle(
                         index = jsCircle.index,
                         x = jsCircle.x,
                         y = jsCircle.y,
                         radius = jsCircle.radius,
-                        isCCW = jsCircle.isCCW ?: Ddc.DEFAULT_CIRCLE_IS_CCW,
-                        visible = jsCircle.visible ?: Ddc.DEFAULT_CIRCLE_VISIBLE,
-                        filled = jsCircle.filled ?: Ddc.DEFAULT_CIRCLE_FILLED,
-                        fillColor = jsCircle.fillColor?.parseColor() ?: Ddc.DEFAULT_CIRCLE_FILL_COLOR,
-                        borderColor = jsCircle.borderColor?.parseColor() ?: Ddc.DEFAULT_CIRCLE_BORDER_COLOR,
-                        rule = jsCircle.rule?.map { it.toInt() } ?: Ddc.DEFAULT_CIRCLE_RULE
+                        isCCW = jsCircle.isCCW ?: DdcV2.DEFAULT_CIRCLE_IS_CCW,
+                        visible = jsCircle.visible ?: DdcV2.DEFAULT_CIRCLE_VISIBLE,
+                        filled = jsCircle.filled ?: DdcV2.DEFAULT_CIRCLE_FILLED,
+                        fillColor = jsCircle.fillColor?.parseColor() ?: DdcV2.DEFAULT_CIRCLE_FILL_COLOR,
+                        borderColor = jsCircle.borderColor?.parseColor() ?: DdcV2.DEFAULT_CIRCLE_BORDER_COLOR,
+                        rule = jsCircle.rule?.map { it.toInt() } ?: DdcV2.DEFAULT_CIRCLE_RULE
                     )
                 }
                 isLineObject(jsFigure) -> {
                     val jsCircle = jsFigure as JsLineFigure
-                    Ddc.Token.Line(
+                    DdcV2.Token.Line(
                         index = jsCircle.index,
                         a = jsCircle.a,
                         b = jsCircle.b,
                         c = jsCircle.c,
-                        visible = jsCircle.visible ?: Ddc.DEFAULT_CIRCLE_VISIBLE,
-                        borderColor = jsCircle.borderColor?.parseColor() ?: Ddc.DEFAULT_CIRCLE_BORDER_COLOR,
-                        rule = jsCircle.rule?.map { it.toInt() } ?: Ddc.DEFAULT_CIRCLE_RULE
+                        visible = jsCircle.visible ?: DdcV2.DEFAULT_CIRCLE_VISIBLE,
+                        borderColor = jsCircle.borderColor?.parseColor() ?: DdcV2.DEFAULT_CIRCLE_BORDER_COLOR,
+                        rule = jsCircle.rule?.map { it.toInt() } ?: DdcV2.DEFAULT_CIRCLE_RULE
                     )
                 }
                 isClusterObject(jsFigure) -> {
                     val jsCluster = jsFigure as JsCluster
-                    Ddc.Token.Cluster(
+                    DdcV2.Token.Cluster(
                         indices = jsCluster.indices.map { it.toInt() },
                         circles = jsCluster.circles.map {
                             when {
                                 isCircleObject(it) -> {
                                     val circle = it as JsCircle
-                                    Circle(circle.x, circle.y, circle.radius, circle.isCCW ?: Ddc.DEFAULT_CIRCLE_IS_CCW)
+                                    Circle(circle.x, circle.y, circle.radius, circle.isCCW ?: DdcV2.DEFAULT_CIRCLE_IS_CCW)
                                 }
                                 isLineObject(it) -> {
                                     val line = it as JsLine
@@ -75,12 +74,12 @@ private fun _parseDdc(content: String): Ddc {
                             ClusterPart(
                                 insides = part.insides.map { it.toInt() }.toSet(),
                                 outsides = part.outsides.map { it.toInt() }.toSet(),
-                                fillColor = part.fillColor.parseColor() ?: Ddc.DEFAULT_CLUSTER_FILL_COLOR,
-                                borderColor = part.borderColor?.parseColor() ?: Ddc.DEFAULT_CLUSTER_FILL_COLOR,
+                                fillColor = part.fillColor.parseColor() ?: DdcV2.DEFAULT_CLUSTER_FILL_COLOR,
+                                borderColor = part.borderColor?.parseColor() ?: DdcV2.DEFAULT_CLUSTER_FILL_COLOR,
                             )
                         },
-                        filled = jsCluster.filled ?: Ddc.DEFAULT_CLUSTER_FILLED,
-                        rule = jsCluster.rule?.map { it.toInt() } ?: Ddc.DEFAULT_CLUSTER_RULE
+                        filled = jsCluster.filled ?: DdcV2.DEFAULT_CLUSTER_FILLED,
+                        rule = jsCluster.rule?.map { it.toInt() } ?: DdcV2.DEFAULT_CLUSTER_RULE
                     )
                 }
                 else ->
@@ -96,12 +95,12 @@ private fun _parseOldDdc(content: String): DdcV1 {
     val jsDdc = loadYaml(content) as JsDdc
     println("js-yaml parsed yaml successfully")
     val ddc = DdcV1(
-        name = jsDdc.name ?: Ddc.DEFAULT_NAME,
-        backgroundColor = jsDdc.backgroundColor?.parseColor() ?: Ddc.DEFAULT_BACKGROUND_COLOR,
-        bestCenterX = jsDdc.bestCenterX ?: Ddc.DEFAULT_BEST_CENTER_X,
-        bestCenterY = jsDdc.bestCenterY ?: Ddc.DEFAULT_BEST_CENTER_Y,
-        shape = jsDdc.shape.parseShape() ?: Ddc.DEFAULT_SHAPE,
-        drawTrace = jsDdc.drawTrace ?: Ddc.DEFAULT_DRAW_TRACE,
+        name = jsDdc.name ?: DdcV2.DEFAULT_NAME,
+        backgroundColor = jsDdc.backgroundColor?.parseColor() ?: DdcV2.DEFAULT_BACKGROUND_COLOR,
+        bestCenterX = jsDdc.bestCenterX ?: DdcV2.DEFAULT_BEST_CENTER_X,
+        bestCenterY = jsDdc.bestCenterY ?: DdcV2.DEFAULT_BEST_CENTER_Y,
+        shape = jsDdc.shape.parseShape() ?: DdcV2.DEFAULT_SHAPE,
+        drawTrace = jsDdc.drawTrace ?: DdcV2.DEFAULT_DRAW_TRACE,
         content = jsDdc.content.map { jsFigure ->
             when {
                 isCircleObject(jsFigure) -> {
@@ -111,11 +110,11 @@ private fun _parseOldDdc(content: String): DdcV1 {
                         x = jsCircle.x,
                         y = jsCircle.y,
                         radius = jsCircle.radius,
-                        visible = jsCircle.visible ?: Ddc.DEFAULT_CIRCLE_VISIBLE,
-                        filled = jsCircle.filled ?: Ddc.DEFAULT_CIRCLE_FILLED,
-                        fillColor = jsCircle.fillColor?.parseColor() ?: Ddc.DEFAULT_CIRCLE_FILL_COLOR,
-                        borderColor = jsCircle.borderColor?.parseColor() ?: Ddc.DEFAULT_CIRCLE_BORDER_COLOR,
-                        rule = jsCircle.rule?.map { it.toInt() } ?: Ddc.DEFAULT_CIRCLE_RULE
+                        visible = jsCircle.visible ?: DdcV2.DEFAULT_CIRCLE_VISIBLE,
+                        filled = jsCircle.filled ?: DdcV2.DEFAULT_CIRCLE_FILLED,
+                        fillColor = jsCircle.fillColor?.parseColor() ?: DdcV2.DEFAULT_CIRCLE_FILL_COLOR,
+                        borderColor = jsCircle.borderColor?.parseColor() ?: DdcV2.DEFAULT_CIRCLE_BORDER_COLOR,
+                        rule = jsCircle.rule?.map { it.toInt() } ?: DdcV2.DEFAULT_CIRCLE_RULE
                     )
                 }
                 isClusterObject(jsFigure) -> {
@@ -130,12 +129,12 @@ private fun _parseOldDdc(content: String): DdcV1 {
                             ClusterPart(
                                 insides = part.insides.map { it.toInt() }.toSet(),
                                 outsides = part.outsides.map { it.toInt() }.toSet(),
-                                fillColor = part.fillColor.parseColor() ?: Ddc.DEFAULT_CLUSTER_FILL_COLOR,
-                                borderColor = part.borderColor?.parseColor() ?: Ddc.DEFAULT_CLUSTER_FILL_COLOR,
+                                fillColor = part.fillColor.parseColor() ?: DdcV2.DEFAULT_CLUSTER_FILL_COLOR,
+                                borderColor = part.borderColor?.parseColor() ?: DdcV2.DEFAULT_CLUSTER_FILL_COLOR,
                             )
                         },
-                        filled = jsCluster.filled ?: Ddc.DEFAULT_CLUSTER_FILLED,
-                        rule = jsCluster.rule?.map { it.toInt() } ?: Ddc.DEFAULT_CLUSTER_RULE
+                        filled = jsCluster.filled ?: DdcV2.DEFAULT_CLUSTER_FILLED,
+                        rule = jsCluster.rule?.map { it.toInt() } ?: DdcV2.DEFAULT_CLUSTER_RULE
                     )
                 }
                 else ->

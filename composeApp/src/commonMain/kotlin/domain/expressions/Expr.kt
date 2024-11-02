@@ -8,9 +8,20 @@ import domain.expressions.Expr.OneToMany
 import domain.expressions.Expr.OneToOne
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 typealias ExprResult = List<GCircle?>
+
+interface ExprLike {
+    val parameters: Parameters
+    // each arg can in turn be computed as an expression, making up Forest-like data structure
+    val args: List<Indexed>
+}
+
+// workaround for kotlinx.serialization bug https://github.com/Kotlin/kotlinx.serialization/issues/2785
+private data class E(
+    override val parameters: Parameters,
+    override val args: List<Indexed>
+) : ExprLike
 
 /**
  * Raw expression that can have several outputs:
@@ -23,27 +34,12 @@ typealias ExprResult = List<GCircle?>
  * */
 @Serializable
 @Immutable
-sealed class Expr(
-    @Transient
-    open val parameters: Parameters = Parameters.None,
-    // each arg can in turn be computed as an expression, making up Forest-like data structure
-    @Transient
-    open val args: List<Indexed> = emptyList(),
-) {
+sealed interface Expr : ExprLike {
+
     @Serializable
-    sealed class OneToOne(
-        @Transient
-        override val parameters: Parameters = Parameters.None,
-        @Transient
-        override val args: List<Indexed> = emptyList(),
-    ) : Expr(parameters, args)
+    sealed interface OneToOne : Expr
     @Serializable
-    sealed class OneToMany(
-        @Transient
-        override val parameters: Parameters = Parameters.None,
-        @Transient
-        override val args: List<Indexed> = emptyList(),
-    ) : Expr(parameters, args)
+    sealed interface OneToMany : Expr
 
     // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr
     //  p' = f(Δ(f⁻¹(p)), where point p on dependent carrier f(<free>) moves to p' when <free> is affected by Δ
@@ -52,61 +48,63 @@ sealed class Expr(
     data class Incidence(
         override val parameters: IncidenceParameters,
         val carrier: Indexed.Circle,
-    ) : OneToOne(parameters, listOf(carrier))
+    ) : OneToOne, ExprLike by E(parameters, listOf(carrier))
     @Serializable
     @SerialName("CircleByCenterAndRadius")
     data class CircleByCenterAndRadius(
         val center: Indexed.Point,
         val radiusPoint: Indexed.Point
-    ) : OneToOne(Parameters.None, listOf(center, radiusPoint))
+    ) : OneToOne, ExprLike by E(Parameters.None, listOf(center, radiusPoint))
+    // MAYBE: allow ImaginaryCircle or Point to be output for further use
     @Serializable
     @SerialName("CircleBy3PerpendicularObjects")
     data class CircleBy3Points( // order-less
         val object1: Indexed,
         val object2: Indexed,
         val object3: Indexed,
-    ) : OneToOne(Parameters.None, listOf(object1, object2, object3))
+    ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2, object3))
     @Serializable
     @SerialName("CircleBy2ObjectsFromItsPencilAndPerpendicularObject")
     data class CircleByPencilAndPoint(
         val pencilObject1: Indexed,
         val pencilObject2: Indexed,
         val perpendicularObject: Indexed,
-    ) : OneToOne(Parameters.None, listOf(pencilObject1, pencilObject2, perpendicularObject))
+    ) : OneToOne, ExprLike by E(Parameters.None, listOf(pencilObject1, pencilObject2, perpendicularObject))
     @Serializable
     @SerialName("LineBy2PerpendicularObjects")
     data class LineBy2Points( // order-less
         val object1: Indexed,
         val object2: Indexed,
-    ) : OneToOne(Parameters.None, listOf(object1, object2))
+    ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2))
     @Serializable
     @SerialName("CircleInversion")
     data class CircleInversion(
         val target: Indexed,
         val engine: Indexed.Circle,
-    ) : OneToOne(Parameters.None, listOf(target, engine))
+    ) : OneToOne, ExprLike by E(Parameters.None, listOf(target, engine))
 
     @Serializable
     @SerialName("Intersection")
     data class Intersection( // order-less
         val circle1: Indexed.Circle,
         val circle2: Indexed.Circle,
-    ) : OneToMany(Parameters.None, listOf(circle1, circle2))
+    ) : OneToMany, ExprLike by E(Parameters.None, listOf(circle1, circle2))
     // TODO: point-point line interpolation
+    // FIX: 1/2 of 90deg angle flickers, use orientation in tandem with inBetween parameter
     @Serializable
     @SerialName("CircleInterpolation")
     data class CircleInterpolation(
         override val parameters: InterpolationParameters,
         val startCircle: Indexed.Circle,
         val endCircle: Indexed.Circle,
-    ) : OneToMany(parameters, listOf(startCircle, endCircle))
+    ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
     @Serializable
     @SerialName("CircleExtrapolation")
     data class CircleExtrapolation(
         override val parameters: ExtrapolationParameters,
         val startCircle: Indexed.Circle,
         val endCircle: Indexed.Circle,
-    ) : OneToMany(parameters, listOf(startCircle, endCircle))
+    ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
     @Serializable
     @SerialName("LoxodromicMotion")
     data class LoxodromicMotion( // TODO: add backwards steps
@@ -114,11 +112,9 @@ sealed class Expr(
         val divergencePoint: Indexed.Point,
         val convergencePoint: Indexed.Point,
         val target: Indexed,
-    ) : OneToMany(
-        parameters,
-        listOf(divergencePoint, convergencePoint, target)
-    )
+    ) : OneToMany, ExprLike by E(parameters, listOf(divergencePoint, convergencePoint, target))
 
+    // MAYBE: inline
     fun eval(
         get: (Indexed) -> GCircle?,
     ): ExprResult {
@@ -191,9 +187,10 @@ sealed class Expr(
         }
     }
 
+    // MAYBE: inline
     @Throws(ClassCastException::class)
-    inline fun mapArgs(
-        crossinline reIndexer: (Indexed) -> Indexed,
+    fun mapArgs(
+        reIndexer: (Indexed) -> Indexed,
     ): Expr =
         when (this) {
             is Incidence -> copy(

@@ -50,8 +50,8 @@ actual fun SaveFileButton(
     val coroutineScope = rememberCoroutineScope()
     var openDialog by remember { mutableStateOf(false) }
     var ddcName by remember { mutableStateOf(TextFieldValue(
-        text = Ddc.DEFAULT_NAME,
-        selection = TextRange(Ddc.DEFAULT_NAME.length) // important to insert cursor AT THE END
+        text = DdcV2.DEFAULT_NAME,
+        selection = TextRange(DdcV2.DEFAULT_NAME.length) // important to insert cursor AT THE END
     )) }
     val textFieldFocusRequester = remember { FocusRequester() }
 

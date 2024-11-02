@@ -3,6 +3,7 @@ package domain.expressions
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
+import kotlin.math.exp
 
 class ExpressionForest(
     initialExpressions: Map<Indexed, Expression?>, // pls include all possible indices
@@ -23,7 +24,7 @@ class ExpressionForest(
     /** index -> tier */
     private val ix2tier: MutableMap<Indexed, Int> = initialExpressions
         .keys
-        .associateWith { -1 }
+        .associateWith { -1 } // stub
         .toMutableMap()
     /** tier -> indices */
     private val tier2ixs: MutableList<Set<Indexed>>
@@ -308,8 +309,7 @@ class ExpressionForest(
     private fun computeTiers() {
         for (ix in expressions.keys) {
             if (ix2tier[ix] == -1) {
-                val tier = computeTier(ix)
-                ix2tier[ix] = tier
+                ix2tier[ix] = computeTier(ix)
             }
         }
     }
@@ -335,6 +335,8 @@ class ExpressionForest(
                 }
                 argTiers.add(tier)
             }
+            if (args.isEmpty())
+                println("WARNING: $expr has empty args!?")
             1 + (argTiers.maxOrNull() ?: -1)
         }
     }

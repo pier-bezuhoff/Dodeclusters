@@ -54,7 +54,7 @@ inline fun <reified A, reified B> tryCatch2(
         when (e) {
             is A -> catchBlock(e)
             is B -> catchBlock(e)
-            else -> {}
+            else -> throw e
         }
     } finally {
         finallyBlock()

@@ -10,13 +10,13 @@ import kotlinx.serialization.Serializable
 /** Old, deprecated Dodeclusters' format. Left for compat */
 @Serializable
 data class DdcV1(
-    val name: String = Ddc.DEFAULT_NAME,
+    val name: String = DdcV2.DEFAULT_NAME,
     @Serializable(ColorCssSerializer::class)
-    val backgroundColor: Color = Ddc.DEFAULT_BACKGROUND_COLOR,
-    val bestCenterX: Float? = Ddc.DEFAULT_BEST_CENTER_X,
-    val bestCenterY: Float? = Ddc.DEFAULT_BEST_CENTER_Y,
-    val shape: Shape = Ddc.DEFAULT_SHAPE,
-    val drawTrace: Boolean = Ddc.DEFAULT_DRAW_TRACE,
+    val backgroundColor: Color = DdcV2.DEFAULT_BACKGROUND_COLOR,
+    val bestCenterX: Float? = DdcV2.DEFAULT_BEST_CENTER_X,
+    val bestCenterY: Float? = DdcV2.DEFAULT_BEST_CENTER_Y,
+    val shape: Shape = DdcV2.DEFAULT_SHAPE,
+    val drawTrace: Boolean = DdcV2.DEFAULT_DRAW_TRACE,
     val content: List<Token>,
 ) {
     val nCircles: Int
@@ -48,9 +48,9 @@ data class DdcV1(
             val circles: List<data.geometry.Circle>,
             /** circle indices used parts shall be Ddc-global circle indices, the one consistent with cluster.indices */
             val parts: List<domain.cluster.ClusterPart>,
-            val filled: Boolean = Ddc.DEFAULT_CLUSTER_FILLED,
+            val filled: Boolean = DdcV2.DEFAULT_CLUSTER_FILLED,
             /** circle indices used shall be Ddc-global circle indices, the one consistent with cluster.indices and circle.index */
-            val rule: List<Int> = Ddc.DEFAULT_CLUSTER_RULE,
+            val rule: List<Int> = DdcV2.DEFAULT_CLUSTER_RULE,
         ) : Token() {
             fun toCluster(): domain.cluster.Cluster =
                 Cluster(circles, parts)
@@ -62,14 +62,14 @@ data class DdcV1(
             val x: Double,
             val y: Double,
             val radius: Double,
-            val visible: Boolean = Ddc.DEFAULT_CIRCLE_VISIBLE,
-            val filled: Boolean = Ddc.DEFAULT_CIRCLE_FILLED,
+            val visible: Boolean = DdcV2.DEFAULT_CIRCLE_VISIBLE,
+            val filled: Boolean = DdcV2.DEFAULT_CIRCLE_FILLED,
             @Serializable(ColorCssSerializer::class)
-            val fillColor: Color? = Ddc.DEFAULT_CIRCLE_FILL_COLOR,
+            val fillColor: Color? = DdcV2.DEFAULT_CIRCLE_FILL_COLOR,
             @Serializable(ColorCssSerializer::class)
-            val borderColor: Color? = Ddc.DEFAULT_CIRCLE_BORDER_COLOR,
+            val borderColor: Color? = DdcV2.DEFAULT_CIRCLE_BORDER_COLOR,
             /** circle indices used shall be Ddc-global circle indices, the one consistent with cluster.indices and circle.index */
-            val rule: List<Int> = Ddc.DEFAULT_CIRCLE_RULE,
+            val rule: List<Int> = DdcV2.DEFAULT_CIRCLE_RULE,
         ) : Token() {
             fun toCircle(): data.geometry.Circle =
                 Circle(x, y, radius)

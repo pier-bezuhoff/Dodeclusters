@@ -24,7 +24,7 @@ data class DdcV3(
     val chessboardPatternStartsColored: Boolean = DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED,
     // using Map<Int, _> instead of list to force yaml to use numbered list
     val points: Map<Ix, Token.Point> = DEFAULT_POINTS,
-    val circles: Map<Ix, Token.Circle> = DEFAULT_CIRCLES,
+    val circles: Map<Ix, Token.Circle>, // this disallows missing "circles" field
     val arcPaths: List<Token.ArcPath> = DEFAULT_ARC_PATHS,
 ) {
     @Serializable
@@ -50,6 +50,26 @@ data class DdcV3(
             // intersections, ordered directed circles, fill&border colors, filled or nay
         ) : Token
     }
+
+    fun toConstellation(): Constellation =
+        Constellation(
+            points = points.entries
+                .sortedBy { (i, _) -> i }
+                .map { (_, token) ->
+                    token.point
+                },
+            circles = circles.entries
+                .sortedBy { (i, _) -> i }
+                .map { (_, token) ->
+                    token.circle
+                },
+            parts = arcPaths.map { it.arcPath },
+            circleColors = circles.entries
+                .mapNotNull { (i, token) ->
+                    if (token.borderColor == null) null
+                    else i to token.borderColor
+                }.toMap()
+        )
 
     companion object {
         fun from(constellation: Constellation): DdcV3 =

@@ -2,11 +2,11 @@ package domain.io
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
-import domain.cluster.Cluster
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
 import domain.ColorCssSerializer
+import domain.cluster.Cluster
 import domain.cluster.ClusterPart
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -20,7 +20,7 @@ import ui.theme.DodeclustersColors
 /** Dodeclusters' format. Aiming for a nicely-formatted, readable & extensible YAML subset */
 @Serializable
 @Immutable
-data class Ddc(
+data class DdcV2(
     val name: String = DEFAULT_NAME,
     @Serializable(ColorCssSerializer::class)
     val backgroundColor: Color = DEFAULT_BACKGROUND_COLOR,
@@ -195,14 +195,14 @@ internal data class Indentation(val indentLevel: Int) {
         "$prevIndent- $header\n" +
             lines.filterNotNull().joinToString(separator = "\n")
 
-    fun encodeCircle(f: Ddc.Token.Circle): String =
+    fun encodeCircle(f: DdcV2.Token.Circle): String =
         encodeListItem(
             "type: Circle",
             encode("index", f.index),
             encode("x", f.x),
             encode("y", f.y),
             encode("radius", f.radius),
-            encodeOptional("isCCW", if (f.isCCW != Ddc.DEFAULT_CIRCLE_IS_CCW) f.isCCW else null),
+            encodeOptional("isCCW", if (f.isCCW != DdcV2.DEFAULT_CIRCLE_IS_CCW) f.isCCW else null),
             encode("visible", f.visible),
             encode("filled", f.filled),
             encodeOptional("fillColor", f.fillColor?.encodeColor()),
@@ -210,7 +210,7 @@ internal data class Indentation(val indentLevel: Int) {
             encodeOptional("rule", if (f.rule.isEmpty()) null else encodeIntSequence(f.rule)),
         )
 
-    fun encodeLine(f: Ddc.Token.Line): String =
+    fun encodeLine(f: DdcV2.Token.Line): String =
         encodeListItem(
             "type: Line",
             encode("index", f.index),
@@ -229,7 +229,7 @@ internal data class Indentation(val indentLevel: Int) {
             encode("y", circle.y),
             encode("radius", circle.radius),
             encodeOptional("isCCW",
-                if (circle.isCCW != Ddc.DEFAULT_CIRCLE_IS_CCW) circle.isCCW else null
+                if (circle.isCCW != DdcV2.DEFAULT_CIRCLE_IS_CCW) circle.isCCW else null
             ),
         )
 
@@ -249,7 +249,7 @@ internal data class Indentation(val indentLevel: Int) {
             encodeOptional("borderColor", part.borderColor?.encodeColor()),
         )
 
-    fun encodeCluster(f: Ddc.Token.Cluster): String =
+    fun encodeCluster(f: DdcV2.Token.Cluster): String =
         encodeListItem(
             "type: Cluster",
             encode("indices", "[${f.indices.first()}, ${f.indices.last()}]"),
@@ -270,8 +270,3 @@ internal data class Indentation(val indentLevel: Int) {
     }
 }
 
-@Serializable
-/** Shapes to draw instead of circles */
-enum class Shape {
-    CIRCLE, SQUARE, CROSS, VERTICAL_BAR, HORIZONTAL_BAR;
-}

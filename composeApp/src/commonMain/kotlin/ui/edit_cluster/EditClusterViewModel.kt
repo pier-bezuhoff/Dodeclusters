@@ -60,18 +60,20 @@ import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeLineBy2Points
 import domain.expressions.reIndexExpression
-import domain.io.Ddc
+import domain.io.DdcV2
 import domain.io.DdcV1
 import domain.io.DdcV3
 import domain.io.cluster2svg
 import domain.io.cluster2svgCheckPattern
-import domain.io.parseDdc
-import domain.io.parseOldDdc
+import domain.io.parseDdcV2
+import domain.io.parseDdcV1
+import domain.io.parseDdcV3
 import domain.reindexingMap
 import domain.snapAngle
 import domain.snapPointToCircles
 import domain.snapPointToPoints
 import domain.sortedByFrequency
+import domain.tryCatch2
 import getPlatform
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -237,7 +239,7 @@ class EditClusterViewModel(
         canvasSize = newCanvasSize
     }
 
-    fun saveAsYaml(name: String = Ddc.DEFAULT_NAME): String {
+    fun saveAsYaml(name: String = DdcV2.DEFAULT_NAME): String {
         return Yaml(
             configuration = YamlConfiguration(
                 encodeDefaults = false,
@@ -251,30 +253,9 @@ class EditClusterViewModel(
             chessboardPattern = displayChessboardPattern,
             chessboardPatternStartsColored = chessboardPatternStartsColored,
         ))
-        val nullCircles = circles.indices.filter { circles[it] == null }
-        val circleReindexing = reindexingMap(circles.indices, nullCircles.toSet())
-        val realCircles = circles.filterNotNull()
-        val reindexedParts = parts.map { part ->
-            part.copy(
-                insides = part.insides.map { circleReindexing[it]!! }.toSet(),
-                outsides = part.outsides.map { circleReindexing[it]!! }.toSet(),
-            )
-        }
-        val cluster = Cluster(
-            realCircles, reindexedParts
-        )
-        var ddc = Ddc(cluster).copy(
-            name = name,
-            chessboardPattern = displayChessboardPattern,
-            chessboardPatternStartsColored = chessboardPatternStartsColored,
-        )
-        computeAbsoluteCenter()?.let { center ->
-            ddc = ddc.copy(bestCenterX = center.x, bestCenterY = center.y)
-        }
-        return ddc.encode()
     }
 
-    fun exportAsSvg(name: String = Ddc.DEFAULT_NAME): String {
+    fun exportAsSvg(name: String = DdcV2.DEFAULT_NAME): String {
         val nullCircles = circles.indices.filter { circles[it] == null }
         val circleReindexing = reindexingMap(circles.indices, nullCircles.toSet())
         val realCircles = circles.filterNotNull()
@@ -311,35 +292,80 @@ class EditClusterViewModel(
             absolute(visibleCenter)
         }
 
+    // TODO: make it suspend
     fun loadFromYaml(yaml: String) {
-        try {
-            val ddc = parseDdc(yaml)
-            val cluster = ddc.content
-                .filterIsInstance<Ddc.Token.Cluster>()
-                .first()
-                .toCluster()
-            loadNewConstellation(cluster.toConstellation())
-            moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
-            displayChessboardPattern = ddc.chessboardPattern
-            chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
-        } catch (e: Exception) {
-            println("Failed to parse yaml")
-            e.printStackTrace()
-            try {
-                println("Falling back to OldDdc yaml")
+        tryCatch2<SerializationException, IllegalArgumentException>(
+            {
+                val ddc = parseDdcV3(yaml)
+                val constellation = ddc.toConstellation()
+                loadNewConstellation(constellation)
+                moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
+                displayChessboardPattern = ddc.chessboardPattern
+                chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
+            },
+            { e ->
                 e.printStackTrace()
-                val ddc = parseOldDdc(yaml)
+                println("Failed to parse DdcV3->yaml, falling back to DdcV2->yaml")
+                loadDdcV2FromYaml(yaml) // FIX: it does not fail actually
+            }
+        )
+    }
+
+    private fun loadDdcV2FromYaml(yaml: String) {
+        tryCatch2<SerializationException, IllegalArgumentException>(
+            {
+                val ddc = parseDdcV2(yaml)
+                val cluster = ddc.content
+                    .filterIsInstance<DdcV2.Token.Cluster>()
+                    .first()
+                    .toCluster()
+                loadNewConstellation(cluster.toConstellation())
+                moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
+                displayChessboardPattern = ddc.chessboardPattern
+                chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
+            },
+            { e1 ->
+                e1.printStackTrace()
+                println("Failed to parse DdcV2->yaml, falling back to DdcV1->yaml")
+                loadDdcV1FromYaml(yaml)
+            }
+        )
+    }
+
+    private fun loadDdcV1FromYaml(yaml: String) {
+        tryCatch2<SerializationException, IllegalArgumentException>(
+            {
+                val ddc = parseDdcV1(yaml)
                 val cluster = ddc.content
                     .filterIsInstance<DdcV1.Token.Cluster>()
                     .first()
                     .toCluster()
                 loadNewConstellation(cluster.toConstellation())
                 moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
-            } catch (e: Exception) {
-                println("Falling back to json")
-                loadFromJson(yaml) // NOTE: for backwards compat
+            },
+            { e2 ->
+                e2.printStackTrace()
+                println("Failed to parse DdcV1->yaml, falling back to ClusterV1->json")
+                loadClusterV1FromJson(yaml) // NOTE: for backwards compat
             }
+        )
+    }
+
+    private fun loadClusterV1FromJson(json: String) {
+        val permissiveJson = Json {
+            isLenient = true
+            ignoreUnknownKeys = true // enables backward compatibility to a certain level
         }
+        tryCatch2<SerializationException, IllegalArgumentException>(
+            {
+                val cluster1: ClusterV1 = permissiveJson.decodeFromString(ClusterV1.serializer(), json)
+                loadNewConstellation(cluster1.toCluster().toConstellation())
+            },
+            { e ->
+                e.printStackTrace()
+                println("Failed to parse ClusterV1->json")
+            }
+        )
     }
 
     fun moveToDdcCenter(bestCenterX: Float?, bestCenterY: Float?) {
@@ -347,24 +373,6 @@ class EditClusterViewModel(
             bestCenterX?.let { it - canvasSize.width/2f } ?: 0f,
             bestCenterY?.let { it - canvasSize.height/2f } ?: 0f
         )
-    }
-
-    // backwards compatibility
-    fun loadFromJson(json: String) {
-        try {
-            val permissiveJson = Json {
-                isLenient = true
-                ignoreUnknownKeys = true // enables backward compatibility to a certain level
-            }
-            val cluster1: ClusterV1 = permissiveJson.decodeFromString(ClusterV1.serializer(), json)
-            loadNewConstellation(cluster1.toCluster().toConstellation())
-        } catch (e: SerializationException) {
-            println("Failed to parse json")
-            e.printStackTrace()
-        } catch (e: IllegalArgumentException) {
-            println("Failed to parse json")
-            e.printStackTrace()
-        }
     }
 
     // MAYBE: make a suspend function + add load spinner
@@ -416,6 +424,7 @@ class EditClusterViewModel(
             } }
         )
         expressions.reEval() // calculates all dependent objects
+        // FIX: ix2tier calc is off, expr.args are all empty!
         parts.addAll(constellation.parts)
         circleColors.putAll(constellation.circleColors)
     }
@@ -659,6 +668,9 @@ class EditClusterViewModel(
             points[ix.index] = null
         pointSelection = emptyList()
         if (circlesToBeDelete.isNotEmpty()) {
+            circlesToBeDelete.forEach {
+                circleColors.remove(it.index)
+            }
             val whatsGone = circlesToBeDelete.map { it.index }
                 .toSet()
             // FIX: there's been an incident of select-all > delete > out-of-bounds 6/6 here

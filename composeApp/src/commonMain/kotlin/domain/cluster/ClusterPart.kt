@@ -1,10 +1,8 @@
 package domain.cluster
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.graphics.Color
 import domain.ColorAsCss
-import domain.ColorCssSerializer
-import domain.io.Ddc
+import domain.io.DdcV2
 import kotlinx.serialization.Serializable
 
 // TODO: replace parts Cluster.Part (which can be disjunctive regions) with
@@ -23,9 +21,9 @@ data class ClusterPart(
     val insides: Set<Int>,
     /** indices of bounding complementary circles */
     val outsides: Set<Int>,
-    val fillColor: ColorAsCss = Ddc.DEFAULT_CLUSTER_FILL_COLOR,
+    val fillColor: ColorAsCss = DdcV2.DEFAULT_CLUSTER_FILL_COLOR,
     // its use is debatable
-    val borderColor: ColorAsCss? = Ddc.DEFAULT_CLUSTER_BORDER_COLOR,
+    val borderColor: ColorAsCss? = DdcV2.DEFAULT_CLUSTER_BORDER_COLOR,
 ) {
     override fun toString(): String =
         """ClusterPart(

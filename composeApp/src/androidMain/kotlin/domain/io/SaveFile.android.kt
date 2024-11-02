@@ -10,8 +10,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
-import domain.io.Ddc
-import domain.io.SaveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
@@ -49,7 +47,7 @@ actual fun SaveFileButton(
                     }
                     context.contentResolver.openFileDescriptor(uri, "w")?.use { parcelFileDescriptor ->
                         FileOutputStream(parcelFileDescriptor.fileDescriptor).use { outputStream ->
-                            val content = saveData.content(name ?: Ddc.DEFAULT_NAME)
+                            val content = saveData.content(name ?: DdcV2.DEFAULT_NAME)
                             outputStream.write(content.toByteArray())
                             onSaved(true)
                         }
