@@ -240,6 +240,7 @@ class EditClusterViewModel(
     }
 
     fun saveAsYaml(name: String = DdcV2.DEFAULT_NAME): String {
+        // Q: there seemingly was an issue with saving circleColors on Android
         return Yaml(
             configuration = YamlConfiguration(
                 encodeDefaults = false,
@@ -306,7 +307,7 @@ class EditClusterViewModel(
             { e ->
                 e.printStackTrace()
                 println("Failed to parse DdcV3->yaml, falling back to DdcV2->yaml")
-                loadDdcV2FromYaml(yaml) // FIX: it does not fail actually
+                loadDdcV2FromYaml(yaml)
             }
         )
     }

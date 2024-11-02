@@ -24,7 +24,7 @@ data class DdcV3(
     val chessboardPatternStartsColored: Boolean = DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED,
     // using Map<Int, _> instead of list to force yaml to use numbered list
     val points: Map<Ix, Token.Point> = DEFAULT_POINTS,
-    val circles: Map<Ix, Token.Circle>, // this disallows missing "circles" field
+    val circles: Map<Ix, Token.Circle>, // this disallows missing "circles" field, and produces exception on DdcV3
     val arcPaths: List<Token.ArcPath> = DEFAULT_ARC_PATHS,
 ) {
     @Serializable
