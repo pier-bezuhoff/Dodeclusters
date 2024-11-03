@@ -764,7 +764,7 @@ fun BoxScope.CircleSelectionContextActions(viewModel: EditClusterViewModel) {
             // TODO: proper position and backdrop
             Modifier.offset(
                 x = positions.right.toDp() - halfSize,
-                y = (positions.topUnderScaleSlider/2 + positions.bottom/2).toDp() - halfSize
+                y = positions.halfHigherThanBottom.toDp() - halfSize
             ),
             tint = viewModel.getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor
         ) { viewModel.toolAction(EditClusterTool.PickCircleColor) }
@@ -874,6 +874,7 @@ fun DrawScope.drawSelectionControls(
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.top))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.scaleSliderBottom))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.topUnderScaleSlider))
+    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.halfHigherThanBottom))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.left, positions.bottom))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.bottom))
     drawLine(
@@ -940,6 +941,7 @@ data class SelectionControlsPositions(
     val scaleSliderBottom = top + height * RELATIVE_SCALE_SLIDER_HEIGHT
     val topUnderScaleSlider = scaleSliderBottom + height * RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT
     val bottom = height * (1 - RELATIVE_VERTICAL_MARGIN)
+    val halfHigherThanBottom = (topUnderScaleSlider + bottom)/2f
 
     val right = width * (1 - RELATIVE_RIGHT_MARGIN)
     val left = right - (bottom - topUnderScaleSlider)

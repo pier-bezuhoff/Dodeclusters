@@ -196,16 +196,25 @@ data class GeneralizedCircle(
         val a = this.normalizedPreservingDirection()
         val b = other.normalizedPreservingDirection()
         val d = a scalarProduct b
+        val coDirected = d >= 0.0
         val pencilType = a.calculatePencilType(b)
+        // TODO: imaginary/point output for consistency
         val maxInterpolationParameter = when (pencilType) {
             CirclePencilType.PARABOLIC -> 1.0
-            CirclePencilType.ELLIPTIC ->
-                if (inBetween) acos(abs(d))
-                else PI - acos(abs(d))
+            CirclePencilType.ELLIPTIC -> {
+                val inBetweenSign = if (inBetween) -1 else +1
+                acos(inBetweenSign * d)
+            }
             CirclePencilType.HYPERBOLIC -> acosh(abs(d))
             null -> 0.0
         }
-        val inOutSign = if (inBetween || pencilType != CirclePencilType.ELLIPTIC) +1 else -1
+        val inOutSign = when (pencilType) {
+            CirclePencilType.ELLIPTIC -> {
+                if (inBetween != coDirected) +1
+                else -1
+            }
+            else -> +1
+        }
         val k = sign * inOutSign * index.toDouble()/nOfSections * maxInterpolationParameter
         // exp(-k/2 * (a^b).normalized) >>> a
         val bivector = Rotor.fromOuterProduct(a, b)

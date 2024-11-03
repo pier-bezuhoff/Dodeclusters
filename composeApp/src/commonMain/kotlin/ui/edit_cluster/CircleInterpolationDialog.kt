@@ -82,6 +82,7 @@ fun CircleInterpolationDialog(
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val pencilType = start.calculatePencilType(end)
+    // TODO: use sign on inversive distance to inform/flip inBetween
     val minCount = defaults.minCircleCount
     val maxCount = defaults.maxCircleCount
     val sliderState = remember { SliderState(
