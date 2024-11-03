@@ -386,6 +386,7 @@ class EditClusterViewModel(
         // reset history on load
         history.clear()
         resetTransients()
+        println("loaded new constellation")
     }
 
     private fun loadConstellation(constellation: Constellation) {

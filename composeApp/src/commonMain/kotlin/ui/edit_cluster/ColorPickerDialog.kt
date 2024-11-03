@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -286,7 +287,10 @@ private fun HexInput(
         placeholder = { Text("RRGGBB", color = LocalContentColor.current.copy(alpha = 0.5f)) },
         isError = isError,
         keyboardOptions = KeyboardOptions( // smart ass enter capturing
-            imeAction = ImeAction.Done
+            autoCorrectEnabled = false,
+            keyboardType = KeyboardType.Ascii,
+            imeAction = ImeAction.Done,
+            showKeyboardOnFocus = false, // this sadly does nothing...
         ),
         keyboardActions = KeyboardActions(
             onDone = { onConfirm() }
@@ -304,6 +308,7 @@ private fun HexInput(
 //        colors = OutlinedTextFieldDefaults.colors()
 //            .copy(unfocusedContainerColor = color.value.toColor())
     )
+    // NOTE: this fix only works 90% of time...
     // reference: https://stackoverflow.com/q/71412537/7143065
     LaunchedEffect(windowInfo) {
         snapshotFlow { windowInfo.isWindowFocused }.collect { isWindowFocused ->

@@ -24,6 +24,9 @@ fun computeCircleByCenterAndRadius(
         )
 }
 
+// NOTE: can produce non-CCW circle;
+//  presently args are sorted by index, which removes possibility to select
+//  their cyclic order, so we cant choose resulting CCW
 fun computeCircleBy3Points(
     point1: GCircle,
     point2: GCircle,

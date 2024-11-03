@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import data.kmath_complex.ComplexField
 import data.kmath_complex.r
 import data.kmath_complex.r2
+import domain.TAU
 import domain.rotateBy
 import domain.toComplex
 import kotlinx.serialization.SerialName
@@ -328,7 +329,6 @@ data class Circle(
                 }
             }
 
-        // MAYBE: come up with intrinsic point-ordering method
         fun calculateIntersectionPoints(
             circle1: CircleOrLine, circle2: CircleOrLine
         ): List<Point> =
@@ -343,7 +343,12 @@ data class Circle(
                         val wx = b1*c2 - b2*c1 // det in homogenous coordinates
                         val wy = a2*c1 - a1*c2
                         // we know that w != 0 (non-parallel)
-                        listOf(Point.CONFORMAL_INFINITY, Point(wx/w, wy/w))
+                        val p = Point(wx/w, wy/w)
+                        val q = Point.CONFORMAL_INFINITY
+                        if (circle1.directionX*a2 + circle1.directionY*b2 >= 0)
+                            listOf(p, q)
+                        else
+                            listOf(q, p)
                     }
                 }
                 circle1 is Line && circle2 is Circle -> {
@@ -358,14 +363,17 @@ data class Circle(
                         val pToIntersection = sqrt(r.pow(2) - distance*distance)
                         val vx = circle1.directionX
                         val vy = circle1.directionY
-                        listOf(
-                            Point(px + vx*pToIntersection, py + vy*pToIntersection),
-                            Point(px - vx*pToIntersection, py - vy*pToIntersection),
-                        )
+                        val p = Point(px + vx*pToIntersection, py + vy*pToIntersection)
+                        val q = Point(px - vx*pToIntersection, py - vy*pToIntersection)
+                        val s = circle1.pointInBetween(p, q) // directed segment p->s->q
+                        if (circle2.hasInsideEpsilon(s))
+                            listOf(p, q)
+                        else
+                            listOf(q, p)
                     }
                 }
                 circle1 is Circle && circle2 is Line ->
-                    calculateIntersectionPoints(circle2, circle1) // ^^^
+                    calculateIntersectionPoints(circle2, circle1).reversed() // ^^^
                 circle1 is Circle && circle2 is Circle -> {
                     val (x1,y1,r1) = circle1
                     val (x2,y2,r2) = circle2
@@ -392,11 +400,13 @@ data class Circle(
                         val pcy = y1 + a * dcy / d
                         val vx = h * dcx / d
                         val vy = h * dcy / d
-                        // Q: does the point order depend on the input circle order?
-                        listOf(
-                            Point(pcx + vy, pcy - vx),
-                            Point(pcx - vy, pcy + vx)
-                        )
+                        val p = Point(pcx + vy, pcy - vx)
+                        val q = Point(pcx - vy, pcy + vx)
+                        val s = circle1.pointInBetween(p, q) // directed arc p->s->q
+                        if (circle2.hasInsideEpsilon(s))
+                            listOf(p, q)
+                        else
+                            listOf(q, p)
                     }
                 }
                 else -> throw IllegalStateException("Never")
