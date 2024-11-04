@@ -14,6 +14,7 @@ class DdcRepository {
         val samplePath = sampleName2Path(sampleName)
         return if (samplePath != null) {
             val path = "files" + fileSeparator + samplePath.path
+            println("loading sample @ $path")
             val r =  Res.readBytes(path)
             val content = r.decodeToString()
             content
