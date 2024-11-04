@@ -1,7 +1,9 @@
+import java.io.File
 import kotlin.math.pow
 
 class JVMPlatform: Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
+    override val fileSeparator: Char = File.separatorChar
     override val tapRadius: Float = 10f
     override val maxCircleRadius: Float = 1e5f
 

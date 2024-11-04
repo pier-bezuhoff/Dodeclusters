@@ -1,0 +1,231 @@
+name: "apollonius-lec"
+bestCenterX: -198.0
+bestCenterY: -235.125
+points:
+  0:
+    Point:
+      type: "PointExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1:
+            index: 0
+          circle2:
+            index: 7
+        outputIndex: 0
+  1:
+    Point:
+      type: "PointExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1:
+            index: 0
+          circle2:
+            index: 7
+        outputIndex: 1
+  2:
+    Point:
+      type: "PointExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1:
+            index: 1
+          circle2:
+            index: 6
+        outputIndex: 0
+  3:
+    Point:
+      type: "PointExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1:
+            index: 1
+          circle2:
+            index: 6
+        outputIndex: 1
+  4:
+    Point:
+      type: "PointExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1:
+            index: 2
+          circle2:
+            index: 8
+        outputIndex: 0
+  5:
+    Point:
+      type: "PointExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1:
+            index: 2
+          circle2:
+            index: 8
+        outputIndex: 1
+circles:
+  0:
+    CircleOrLine:
+      type: "ConcreteCircleOrLine"
+      circleOrLine:
+        type: "circle"
+        x: -398.4137268066406
+        y: -178.3775634765625
+        radius: 190.2502249131204
+  1:
+    CircleOrLine:
+      type: "ConcreteCircleOrLine"
+      circleOrLine:
+        type: "circle"
+        x: -412.08905029296875
+        y: -328.748291015625
+        radius: 217.15852331354148
+  2:
+    CircleOrLine:
+      type: "ConcreteCircleOrLine"
+      circleOrLine:
+        type: "circle"
+        x: -163.73599243164063
+        y: -179.48727416992188
+        radius: 189.11368939536248
+  3:
+    CircleOrLine:
+      type: "CircleOrLineExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 1
+            inBetween: true
+          startCircle:
+            index: 0
+          endCircle:
+            index: 1
+        outputIndex: 0
+    borderColor: "#4c371b"
+  4:
+    CircleOrLine:
+      type: "CircleOrLineExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 1
+            inBetween: true
+          startCircle:
+            index: 0
+          endCircle:
+            index: 2
+        outputIndex: 0
+    borderColor: "#4c371b"
+  5:
+    CircleOrLine:
+      type: "CircleOrLineExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 1
+            inBetween: true
+          startCircle:
+            index: 1
+          endCircle:
+            index: 2
+        outputIndex: 0
+    borderColor: "#4c371b"
+  6:
+    CircleOrLine:
+      type: "CircleOrLineExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "CircleBy2ObjectsFromItsPencilAndPerpendicularObject"
+          pencilObject1:
+            type: "CircleWithIndex"
+            index: 3
+          pencilObject2:
+            type: "CircleWithIndex"
+            index: 5
+          perpendicularObject:
+            type: "CircleWithIndex"
+            index: 1
+  7:
+    CircleOrLine:
+      type: "CircleOrLineExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "CircleBy2ObjectsFromItsPencilAndPerpendicularObject"
+          pencilObject1:
+            type: "CircleWithIndex"
+            index: 3
+          pencilObject2:
+            type: "CircleWithIndex"
+            index: 4
+          perpendicularObject:
+            type: "CircleWithIndex"
+            index: 0
+  8:
+    CircleOrLine:
+      type: "CircleOrLineExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "CircleBy2ObjectsFromItsPencilAndPerpendicularObject"
+          pencilObject1:
+            type: "CircleWithIndex"
+            index: 5
+          pencilObject2:
+            type: "CircleWithIndex"
+            index: 4
+          perpendicularObject:
+            type: "CircleWithIndex"
+            index: 2
+  9:
+    CircleOrLine:
+      type: "CircleOrLineExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "CircleBy3PerpendicularObjects"
+          object1:
+            type: "PointWithIndex"
+            index: 1
+          object2:
+            type: "PointWithIndex"
+            index: 3
+          object3:
+            type: "PointWithIndex"
+            index: 4
+    borderColor: "#6fd4f5"
+  10:
+    CircleOrLine:
+      type: "CircleOrLineExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "CircleBy3PerpendicularObjects"
+          object1:
+            type: "PointWithIndex"
+            index: 0
+          object2:
+            type: "PointWithIndex"
+            index: 2
+          object3:
+            type: "PointWithIndex"
+            index: 5
+    borderColor: "#6fd4f5"

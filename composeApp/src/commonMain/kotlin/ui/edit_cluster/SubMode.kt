@@ -2,7 +2,6 @@ package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
-import domain.cluster.Cluster
 import domain.cluster.ClusterPart
 import kotlinx.serialization.Serializable
 

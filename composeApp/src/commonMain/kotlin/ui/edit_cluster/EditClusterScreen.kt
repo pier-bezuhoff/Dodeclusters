@@ -103,7 +103,7 @@ import kotlin.math.min
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun EditClusterScreen(
-    sampleIndex: Int? = null,
+    sampleName: String? = null,
     ddcContent: String? = null,
     keyboardActions: Flow<KeyboardAction>? = null,
 ) {
@@ -253,12 +253,12 @@ fun EditClusterScreen(
         }
         null -> {}
     }
-    LaunchedEffect(ddcContent, sampleIndex) {
+    LaunchedEffect(ddcContent, sampleName) {
         if (ddcContent != null) {
             println("loading external ddc")
             viewModel.loadFromYaml(ddcContent)
-        } else if (sampleIndex != null) {
-            ddcRepository.loadSampleClusterYaml(sampleIndex) { content ->
+        } else if (sampleName != null) {
+            ddcRepository.loadSampleClusterYaml(sampleName) { content ->
                 if (content != null) {
                     viewModel.loadFromYaml(content)
                 }

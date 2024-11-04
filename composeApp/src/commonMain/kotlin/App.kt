@@ -8,14 +8,14 @@ import ui.theme.DodeclustersTheme
 
 @Composable
 fun App(
-    sampleIndex: Int? = null,
+    sampleName: String? = null,
     ddcContent: String? = null,
     colorTheme: ColorTheme = DEFAULT_COLOR_THEME,
     keyboardActions: Flow<KeyboardAction>? = null,
 ) {
     DodeclustersTheme(colorTheme) {
         EditClusterScreen(
-            sampleIndex = sampleIndex,
+            sampleName = sampleName,
             ddcContent = ddcContent,
             keyboardActions = keyboardActions
         )
