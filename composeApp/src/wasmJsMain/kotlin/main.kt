@@ -7,11 +7,9 @@ import ui.theme.DEFAULT_COLOR_THEME
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     // example:
-    // https://pier-bezuhoff.github.io/Dodeclusters?theme=dark#apollonius
+    // https://pier-bezuhoff.github.io/Dodeclusters?theme=dark&sample=apollonius
     val url = getCurrentURL()
-    // "?sample=0" etc
-//    val sampleIndex: Int? = url.searchParams.get("sample")?.toIntOrNull()
-    val hash = url.hash.trimStart('#')
+    val sampleName: String? = url.searchParams.get("sample")
     val colorTheme: ColorTheme = when (url.searchParams.get("theme")?.lowercase()) {
         "light" -> ColorTheme.LIGHT
         "dark" -> ColorTheme.DARK
@@ -19,7 +17,7 @@ fun main() {
         else -> DEFAULT_COLOR_THEME
     }
     CanvasBasedWindow(canvasElementId = "ComposeTarget") {
-        App(sampleName = hash, colorTheme = colorTheme)
+        App(sampleName = sampleName, colorTheme = colorTheme)
     }
 }
 

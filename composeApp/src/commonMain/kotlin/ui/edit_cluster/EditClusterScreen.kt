@@ -258,21 +258,15 @@ fun EditClusterScreen(
             println("loading external ddc")
             viewModel.loadFromYaml(ddcContent)
         } else if (sampleName != null) {
-            ddcRepository.loadSampleClusterYaml(sampleName) { content ->
-                if (content != null) {
-                    viewModel.loadFromYaml(content)
-                }
+            val content = ddcRepository.loadSampleClusterYaml(sampleName)
+            if (content != null) {
+                viewModel.loadFromYaml(content)
+            } else {
+                viewModel.loadNewConstellation(Constellation.SAMPLE)
+                viewModel.moveToDdcCenter(0f, 0f)
             }
         } else {
-            viewModel.loadNewConstellation(
-                Constellation(
-                    points = emptyList(),
-                    circles = listOf(
-                        Circle(0.0, 0.0, 200.0),
-                    ).map { CircleConstruct.Concrete(it) },
-                    parts = emptyList()
-                )
-            )
+            viewModel.loadNewConstellation(Constellation.SAMPLE)
             viewModel.moveToDdcCenter(0f, 0f)
         }
     }

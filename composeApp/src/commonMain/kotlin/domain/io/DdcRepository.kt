@@ -9,17 +9,16 @@ class DdcRepository {
     @OptIn(ExperimentalResourceApi::class)
     suspend fun loadSampleClusterYaml(
         sampleName: String,
-        onLoaded: (content: String?) -> Unit
-    ) {
+    ): String? {
         val fileSeparator = getPlatform().fileSeparator
         val samplePath = sampleName2Path(sampleName)
-        if (samplePath != null) {
+        return if (samplePath != null) {
             val path = "files" + fileSeparator + samplePath.path
             val r =  Res.readBytes(path)
             val content = r.decodeToString()
-            onLoaded(content)
+            content
         } else {
-            onLoaded(null)
+            null
         }
     }
 

@@ -2,6 +2,7 @@ package domain.cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import data.geometry.Circle
 import domain.ColorAsCss
 import domain.ColorCssSerializer
 import domain.Ix
@@ -39,4 +40,14 @@ data class Constellation(
                 is CircleConstruct.Dynamic -> ix to p.expression
             }
         }.toMap()
+
+    companion object {
+        val SAMPLE = Constellation(
+            points = emptyList(),
+            circles = listOf(
+                Circle(0.0, 0.0, 200.0),
+            ).map { CircleConstruct.Concrete(it) },
+            parts = emptyList()
+        )
+    }
 }
