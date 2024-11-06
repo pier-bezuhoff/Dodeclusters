@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
+import androidx.lifecycle.ViewModel
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
@@ -90,12 +91,14 @@ import ui.tools.EditClusterTool
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
+class MyViewModel : ViewModel() {
+    val circles: SnapshotStateList<CircleOrLine?> = mutableStateListOf()
+}
+
 // TODO: migrate to Decompose 3 for a real VM impl
 // MAYBE: use UiState functional pattern instead of this mess
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
-// MAYBE: store all circles & points downscaled close to [-2; 2] range by default
-//  with scale transform attached
 @Stable
 class EditClusterViewModel(
     /** NOT a viewModelScope, just a rememberCS from the screen composable */

@@ -9,7 +9,6 @@ import kotlin.math.PI
 
 // eval for one-to-many functions
 
-// TODO: sort points smartly based on orientations and input order
 /** always returns size=2 list */
 fun computeIntersection(
     obj1: CircleOrLine,
@@ -24,9 +23,7 @@ fun computeIntersection(
     }
 }
 
-// NOTE: 1/2 of 90degree bisectors flicker
-// MAYBE: take into account object orientation AND inBetween to
-//  produce more robust result
+// TODO: GCircle output
 fun computeCircleInterpolation(
     params: InterpolationParameters, // bad: using ui dep in domain
     startCircle: CircleOrLine,

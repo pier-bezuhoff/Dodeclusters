@@ -42,7 +42,7 @@ kotlin {
 
     sourceSets {
         commonMain.languageSettings {
-            progressiveMode = true // cries about deprecations and stuff more
+//            progressiveMode = true // cries about deprecations and stuff more
         }
         all {
             languageSettings {
@@ -54,25 +54,29 @@ kotlin {
 
         commonMain.dependencies {
             implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material) // used only for icons
-            implementation(compose.material3)
-            implementation(compose.ui)
+            implementation(libs.compose.foundation)
+            implementation(libs.compose.material) // used only for icons
+            implementation(libs.compose.material3)
+            implementation(libs.compose.ui)
+            implementation(libs.compose.ui.graphics)
             implementation(compose.components.resources)
+            implementation(libs.compose.lifecycle.viewmodel)
+//            implementation(libs.coroutines.core)
             implementation(libs.compose.material3.window.size.klass)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.colormath)
-            implementation(libs.kaml) // NOTE: kaml on wasm is experimental for now, maybe test it
+            implementation(libs.kaml)
         }
         androidMain.dependencies {
             implementation(libs.compose.ui.tooling.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
+//            implementation(libs.coroutines.android)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+//            implementation(libs.coroutines.swing)
         }
-
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(kotlin("test-annotations-common"))

@@ -1,38 +1,45 @@
 [versions]
 dodeclusters-versionCode = "3"
 dodeclusters-version = "0.3.0"
-
-# latest compatible with this Android Studio version, but is far ahead of
-# the one that is officially supported by KMP 1.6.11 (agp 8.3.*)
-agp = "8.5.2"
 # NOTE: Andorid 15 (api 35) is already out, but
 #  you need AndroidStudio 2024.2.1 & agp 8.6.0,
 #  see https://developer.android.com/build/releases/gradle-plugin#api-level-support
 android-compileSdk = "34"
 android-minSdk = "24" # = Android 7.0 Nougat
 android-targetSdk = "34"
-androidx-activityCompose = "1.9.3"
-androidx-core-ktx = "1.13.1" # do not update, 1.15.0 requires api 35
-kotlinx-serialization = "1.7.3"
+
+kotlin = "2.0.21"
+# latest compatible with this Android Studio version, but is far ahead of
+# the one that is officially supported by KMP 1.6.11 (agp 8.3.*)
+agp = "8.5.2"
+compose-multiplatform = "1.7.0" # aligns with compose-multiplatform version
+#noinspection GradleDependency
 jetpack-compose = "1.7.4" # check github compose-multiplatform/release for the one compatible
 # https://github.com/JetBrains/compose-multiplatform/releases/tag/v1.7.0
-compose-plugin = "1.7.0" # aligns with compose-multiplatform version
-material3 = "1.7.0" # m3 version should match compose-plugin
+kotlinx-serialization = "1.7.3"
+kotlinx-coroutines = "1.9.0"
+androidx-activityCompose = "1.9.3"
+#noinspection GradleDependency
+androidx-core-ktx = "1.13.1" # do not update, 1.15.0 requires api 35
+lifecycle-viewmodel = "2.8.3"
 window-size-klass = "0.5.0"
 colormath = "3.6.0"
 kaml = "0.62.2"
-kotest = "5.9.1"
-kotlin = "2.0.21"
 
 [libraries]
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidx-core-ktx" }
-androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "jetpack-compose" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+compose-ui-graphics = { module = "org.jetbrains.compose.ui:ui-graphics", version.ref = "compose-multiplatform" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "jetpack-compose" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "jetpack-compose" }
-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "jetpack-compose" }
-compose-material = { module = "androidx.compose.material:material", version.ref = "jetpack-compose" }
-compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
+compose-material = { module = "org.jetbrains.compose.material:material", version.ref = "compose-multiplatform" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-multiplatform" }
+compose-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle-viewmodel" }
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidx-core-ktx" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
 # official window-size-class is still worse
 #compose-material3-window-size-klass = { module = "org.jetbrains.compose.material3:material3-window-size-class", version.ref = "material3" }
 compose-material3-window-size-klass = { module = "dev.chrisbanes.material3:material3-window-size-class-multiplatform", version.ref = "window-size-klass" }
@@ -40,17 +47,11 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 colormath = { module = "com.github.ajalt.colormath:colormath", version.ref = "colormath" }
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
-kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
-kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
-kotest-framework-datatest = { module = "io.kotest:kotest-framework-datatest", version.ref = "kotest" }
-kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
-jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
+jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-kotest-multiplatform = { id = "io.kotest.multiplatform", version.ref = "kotest" }
