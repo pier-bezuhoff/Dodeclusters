@@ -42,7 +42,7 @@ kotlin {
 
     sourceSets {
         commonMain.languageSettings {
-//            progressiveMode = true // cries about deprecations and stuff more
+            progressiveMode = true // cries about deprecations and stuff more
         }
         all {
             languageSettings {
@@ -53,29 +53,31 @@ kotlin {
         val desktopMain by getting
 
         commonMain.dependencies {
+            // NOTE: compose.X translates into "org.jetbrains.compose.X:X" with compose-multiplatform version
             implementation(compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material) // used only for icons
-            implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
+            implementation(compose.foundation)
+            implementation(compose.material) // used only for icons
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(compose.components.uiToolingPreview)
             implementation(libs.compose.ui.graphics)
             implementation(compose.components.resources)
             implementation(libs.compose.lifecycle.viewmodel)
-//            implementation(libs.coroutines.core)
+            implementation(libs.coroutines.core)
             implementation(libs.compose.material3.window.size.klass)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.colormath)
             implementation(libs.kaml)
         }
         androidMain.dependencies {
-            implementation(libs.compose.ui.tooling.preview)
+//            implementation(libs.compose.ui.tooling.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
-//            implementation(libs.coroutines.android)
+            implementation(libs.coroutines.android)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
-//            implementation(libs.coroutines.swing)
+            implementation(libs.coroutines.swing)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

@@ -1,14 +1,12 @@
 package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
@@ -21,7 +19,12 @@ import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
@@ -76,7 +79,6 @@ import domain.snapPointToPoints
 import domain.sortedByFrequency
 import domain.tryCatch2
 import getPlatform
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -91,19 +93,12 @@ import ui.tools.EditClusterTool
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
-class MyViewModel : ViewModel() {
-    val circles: SnapshotStateList<CircleOrLine?> = mutableStateListOf()
-}
-
-// TODO: migrate to Decompose 3 for a real VM impl
 // MAYBE: use UiState functional pattern instead of this mess
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
-@Stable
 class EditClusterViewModel(
-    /** NOT a viewModelScope, just a rememberCS from the screen composable */
-    private val coroutineScope: CoroutineScope,
-) {
+//    private val savedStateHandle: SavedStateHandle,
+) : ViewModel() {
     val points: SnapshotStateList<Point?> = mutableStateListOf()
     val circles: SnapshotStateList<CircleOrLine?> = mutableStateListOf()
     val parts: SnapshotStateList<ClusterPart> = mutableStateListOf()
@@ -196,7 +191,7 @@ class EditClusterViewModel(
 
     // NOTE: history doesn't survive background app kill
     private val history: History<State> = History(
-        saveState = { State.save(this) },
+        saveState = { saveState() },
         loadState = { state -> loadState(state) }
     )
     var undoIsEnabled by mutableStateOf(false) // = history is not empty
@@ -228,6 +223,10 @@ class EditClusterViewModel(
 
     /** min tap/grab distance to select an object */
     private var tapRadius = getPlatform().tapRadius
+
+    init {
+//        restoreFromSavedStateHandle()
+    }
 
     fun setEpsilon(density: Density) {
         with (density) {
@@ -585,7 +584,7 @@ class EditClusterViewModel(
             val prevSize = circles.size
             circles.addAll(normalizedCircles)
             circleSelection = (prevSize until circles.size).filter { circles[it] != null }
-            coroutineScope.launch {
+            viewModelScope.launch {
                 _circleAnimations.emit(
                     CircleAnimation.Entrance(validNewCircles)
                 )
@@ -618,7 +617,7 @@ class EditClusterViewModel(
                 expressions.addFreeCircle()
             copyParts(circleSelection, newIndices.toList())
             circleSelection = newIndices.toList()
-            coroutineScope.launch {
+            viewModelScope.launch {
                 _circleAnimations.emit(
                     CircleAnimation.ReEntrance(copiedCircles)
                 )
@@ -698,7 +697,7 @@ class EditClusterViewModel(
                     }
                     .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
             )
-            coroutineScope.launch {
+            viewModelScope.launch {
                 _circleAnimations.emit(
                     CircleAnimation.Exit(deletedCircles)
                 )
@@ -1065,7 +1064,7 @@ class EditClusterViewModel(
     fun hideUIFor30s() {
         if (showUI) {
             showUI = false
-            coroutineScope.launch {
+            viewModelScope.launch {
                 // MAYBE: also trigger fullscreen for desktop
                 delay(30.seconds)
                 showUI = true
@@ -2407,6 +2406,38 @@ class EditClusterViewModel(
     fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)
     fun Point.upscale(): Point = scale(0.0, 0.0, UPSCALING_FACTOR)
 
+    private fun saveState(): State =
+        State(
+            constellation = toConstellation(),
+            circleSelection = circleSelection.toList(),
+            translation = translation
+        )
+
+    private fun restoreFromSavedStateHandle() {
+//        savedStateHandle.get<String>("state")?.let { s ->
+//            val state = JSON.decodeFromString(State.serializer(), s)
+//            restoreFromState(state)
+//        }
+    }
+
+    private fun restoreFromState(state: State) {
+        loadNewConstellation(state.constellation)
+        if (state.circleSelection.size > 1)
+            mode = SelectionMode.Multiselect
+        circleSelection = state.circleSelection
+        translation = state.translation
+    }
+
+    // NOTE: idk if this should be here actually
+    //  + the string is humongous, idk if this would work
+    override fun onCleared() {
+//        val state = saveState()
+        // MAYBE: it's better to save this persistently via KStore
+//        savedStateHandle["state"] = JSON.encodeToString(State.serializer(), state)
+        println("saved VM as a SavedStateHandle")
+        super.onCleared()
+    }
+
     // NOTE: there seem to be some problems with bg kill recovery on android
     /** Be careful to pass *only* strictly immutable args by __copying__ */
     @Serializable
@@ -2436,49 +2467,25 @@ class EditClusterViewModel(
                 // NOTE: hardcoded default is bad, much better would be to specify the center but oh well
                 translation = Offset(225f, 225f) + Offset(400f, 0f)
             )
-
-            fun restore(coroutineScope: CoroutineScope, state: State): EditClusterViewModel =
-                EditClusterViewModel(
-                    coroutineScope,
-                ).apply {
-                    loadNewConstellation(state.constellation)
-                    if (state.circleSelection.size > 1)
-                        mode = SelectionMode.Multiselect
-                    circleSelection = state.circleSelection
-                    translation = state.translation
-                }
-
-            fun save(viewModel: EditClusterViewModel): State =
-                with (viewModel) {
-                    State(
-                        constellation = toConstellation(),
-                        circleSelection = circleSelection.toList(),
-                        translation = viewModel.translation
-                    )
-                }
-        }
-    }
-
-    class Saver(
-        private val coroutineScope: CoroutineScope
-    ) : androidx.compose.runtime.saveable.Saver<EditClusterViewModel, String> {
-        override fun SaverScope.save(value: EditClusterViewModel): String =
-            JSON.encodeToString(State.serializer(), State.save(value))
-        override fun restore(value: String): EditClusterViewModel {
-            return State.restore(
-                coroutineScope,
-                JSON.decodeFromString(State.serializer(), value)
-            )
-        }
-        companion object {
-            val JSON = Json {
-                encodeDefaults = false
-                allowStructuredMapKeys = true
-            }
         }
     }
 
     companion object {
+        // reference: https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-factories
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            addInitializer(EditClusterViewModel::class) {
+                // FIX: missing SAVED_STATE_REGISTRY_OWNER_KEY
+//                val savedStateHandle = createSavedStateHandle()
+                EditClusterViewModel(
+//                    savedStateHandle = savedStateHandle
+                )
+            }
+        }
+        val JSON = Json {
+            encodeDefaults = false
+            allowStructuredMapKeys = true
+        }
+
         const val LOW_ACCURACY_FACTOR = 1.5f
         const val HUD_ZOOM_INCREMENT = 1.1f // == +10%
         const val KEYBOARD_ZOOM_INCREMENT = 1.05f // == +5%

@@ -58,9 +58,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import domain.io.DdcRepository
-import domain.PartialArgList
-import data.geometry.Circle
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.collapse
@@ -75,8 +74,9 @@ import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_pro
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import domain.Arg
+import domain.PartialArgList
 import domain.cluster.Constellation
-import domain.expressions.CircleConstruct
+import domain.io.DdcRepository
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveData
@@ -111,19 +111,17 @@ fun EditClusterScreen(
     val isLandscape = windowSizeClass.isLandscape
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
     val compact = windowSizeClass.isCompact
-    val coroutineScope = rememberCoroutineScope()
     val ddcRepository = remember { DdcRepository() }
-    val saver = remember { EditClusterViewModel.Saver(coroutineScope) }
     // TODO: test bg kills more
-    val viewModel = rememberSaveable(saver = saver) {
-        EditClusterViewModel.State.restore(coroutineScope, EditClusterViewModel.State.SAMPLE)
-    }
+    val viewModel: EditClusterViewModel = viewModel(
+        factory = EditClusterViewModel.Factory
+    )
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(
         modifier =
-        if (keyboardActions == null)
-            Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
-        else Modifier,
+            if (keyboardActions == null)
+                Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
+            else Modifier,
         floatingActionButton = {
             if (!isLandscape && viewModel.showUI) {
                 // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
