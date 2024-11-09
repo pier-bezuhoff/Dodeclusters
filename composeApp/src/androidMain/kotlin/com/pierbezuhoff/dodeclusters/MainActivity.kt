@@ -33,13 +33,18 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import domain.io.readDdcFromUri
+import kotlinx.coroutines.flow.MutableSharedFlow
 import setFilesDir
+import ui.LifecycleEvent
 import ui.theme.DodeclustersColors
 import java.io.FileNotFoundException
 
 class MainActivity : ComponentActivity() {
+    private lateinit var lifecycleEvents: MutableSharedFlow<LifecycleEvent>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lifecycleEvents = MutableSharedFlow(replay = 1)
         if (!filesDir.exists())
             filesDir.createNewFile()
         setFilesDir(filesDir)
@@ -113,12 +118,15 @@ class MainActivity : ComponentActivity() {
                     WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = isDarkTheme
                 }
             }
-            App(ddcContent = ddcContent)
+            App(
+                ddcContent = ddcContent,
+                lifecycleEvents = lifecycleEvents,
+            )
         }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        println("MainActivity.onSaveInstanceState")
+        lifecycleEvents.tryEmit(LifecycleEvent.SaveInstanceState)
         super.onSaveInstanceState(outState)
     }
 

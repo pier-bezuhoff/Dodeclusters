@@ -4,7 +4,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import getPlatform
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 
-class DdcRepository {
+object DdcRepository {
 
     @OptIn(ExperimentalResourceApi::class)
     suspend fun loadSampleClusterYaml(

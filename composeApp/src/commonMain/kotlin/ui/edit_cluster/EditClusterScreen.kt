@@ -72,7 +72,6 @@ import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import domain.Arg
 import domain.PartialArgList
-import domain.cluster.Constellation
 import domain.io.DdcRepository
 import domain.io.LookupData
 import domain.io.OpenFileButton
@@ -83,6 +82,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import ui.DisableableButton
+import ui.LifecycleEvent
 import ui.OnOffButton
 import ui.SimpleButton
 import ui.TwoIconButton
@@ -103,13 +103,13 @@ fun EditClusterScreen(
     sampleName: String? = null,
     ddcContent: String? = null,
     keyboardActions: Flow<KeyboardAction>? = null,
+    lifecycleEvents: Flow<LifecycleEvent>? = null,
 ) {
     val windowSizeClass = calculateWindowSizeClass()
     val isLandscape = windowSizeClass.isLandscape
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
     val compact = windowSizeClass.isCompact
-    val ddcRepository = remember { DdcRepository() }
-    // TODO: test bg kills more
+    val ddcRepository = DdcRepository
     val viewModel: EditClusterViewModel = viewModel(
         factory = EditClusterViewModel.Factory
     )
@@ -248,9 +248,9 @@ fun EditClusterScreen(
         }
         null -> {}
     }
-    LaunchedEffect(ddcContent, sampleName) {
+    LaunchedEffect(ddcContent, sampleName, viewModel) {
         if (ddcContent != null) {
-            println("loading external ddc")
+            println("loading external ddc...")
             viewModel.loadFromYaml(ddcContent)
         } else if (sampleName != null) {
             val content = ddcRepository.loadSampleClusterYaml(sampleName)
@@ -263,6 +263,17 @@ fun EditClusterScreen(
         keyboardActions?.let {
             keyboardActions.collect { action ->
                 viewModel.processKeyboardAction(action)
+            }
+        }
+    }
+    LaunchedEffect(lifecycleEvents, viewModel) {
+        lifecycleEvents?.let {
+            lifecycleEvents.collect { action ->
+                when (action) {
+                    LifecycleEvent.SaveInstanceState -> {
+                        viewModel.cacheState()
+                    }
+                }
             }
         }
     }

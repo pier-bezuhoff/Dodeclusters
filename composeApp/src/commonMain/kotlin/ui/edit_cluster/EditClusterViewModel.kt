@@ -19,17 +19,13 @@ import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import domain.cluster.Cluster
-import domain.cluster.ClusterV1
 import data.geometry.ArcPath
 import data.geometry.Circle
 import data.geometry.CircleOrLine
@@ -42,11 +38,12 @@ import domain.Command
 import domain.History
 import domain.Indices
 import domain.Ix
-import domain.OffsetSerializer
 import domain.PartialArgList
 import domain.PointSnapResult
 import domain.angleDeg
+import domain.cluster.Cluster
 import domain.cluster.ClusterPart
+import domain.cluster.ClusterV1
 import domain.cluster.Constellation
 import domain.compressPart
 import domain.expressions.CircleConstruct
@@ -64,13 +61,13 @@ import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeLineBy2Points
 import domain.expressions.reIndexExpression
-import domain.io.DdcV2
 import domain.io.DdcV1
+import domain.io.DdcV2
 import domain.io.DdcV3
 import domain.io.cluster2svg
 import domain.io.cluster2svgCheckPattern
-import domain.io.parseDdcV2
 import domain.io.parseDdcV1
+import domain.io.parseDdcV2
 import domain.io.parseDdcV3
 import domain.reindexingMap
 import domain.snapAngle
@@ -79,8 +76,6 @@ import domain.snapPointToPoints
 import domain.sortedByFrequency
 import domain.tryCatch2
 import getPlatform
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -302,7 +297,7 @@ class EditClusterViewModel : ViewModel() {
                 val ddc = parseDdcV3(yaml)
                 val constellation = ddc.toConstellation()
                 loadNewConstellation(constellation)
-                moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
+                centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
                 displayChessboardPattern = ddc.chessboardPattern
                 chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
             },
@@ -323,7 +318,7 @@ class EditClusterViewModel : ViewModel() {
                     .first()
                     .toCluster()
                 loadNewConstellation(cluster.toConstellation())
-                moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
+                centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
                 displayChessboardPattern = ddc.chessboardPattern
                 chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
             },
@@ -344,7 +339,7 @@ class EditClusterViewModel : ViewModel() {
                     .first()
                     .toCluster()
                 loadNewConstellation(cluster.toConstellation())
-                moveToDdcCenter(ddc.bestCenterX, ddc.bestCenterY)
+                centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
             },
             { e2 ->
                 e2.printStackTrace()
@@ -371,10 +366,10 @@ class EditClusterViewModel : ViewModel() {
         )
     }
 
-    fun moveToDdcCenter(bestCenterX: Float?, bestCenterY: Float?) {
+    fun centerizeTo(centerX: Float?, centerY: Float?) {
         translation = -Offset(
-            bestCenterX?.let { it - canvasSize.width/2f } ?: 0f,
-            bestCenterY?.let { it - canvasSize.height/2f } ?: 0f
+            centerX?.let { it - canvasSize.width/2f } ?: 0f,
+            centerY?.let { it - canvasSize.height/2f } ?: 0f
         )
     }
 
@@ -523,7 +518,7 @@ class EditClusterViewModel : ViewModel() {
         submode = SubMode.None
         loadConstellation(state.constellation)
         circleSelection = state.circleSelection
-        translation = state.translation
+        centerizeTo(state.centerX, state.centerY)
     }
 
     private fun resetTransients() {
@@ -2406,39 +2401,51 @@ class EditClusterViewModel : ViewModel() {
     fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)
     fun Point.upscale(): Point = scale(0.0, 0.0, UPSCALING_FACTOR)
 
-    private fun saveState(): State =
-        State(
+    fun saveState(): State {
+        val center = computeAbsoluteCenter() ?: Offset.Zero
+        return State(
             constellation = toConstellation(),
             circleSelection = circleSelection.toList(),
-            translation = translation
+            centerX = center.x,
+            centerY = center.y,
         )
+    }
 
     private fun launchRestore() {
         viewModelScope.launch {
-            val state = getPlatform().lastStateStore.get()
-            if (state != null) {
-                println("re-storing VM")
-                restoreFromState(state)
-            } else {
+            if (!RESTORE_LAST_SAVE_ON_LOAD) {
                 loadNewConstellation(Constellation.SAMPLE)
-                moveToDdcCenter(0f, 0f)
+                centerizeTo(0f, 0f)
+            } else {
+                val state = getPlatform().lastStateStore.get()
+                if (state != null) {
+                    restoreFromState(state)
+                } else {
+                    loadNewConstellation(Constellation.SAMPLE)
+                    centerizeTo(0f, 0f)
+                }
             }
         }
     }
 
     private fun restoreFromState(state: State) {
         loadNewConstellation(state.constellation)
-        if (state.circleSelection.size > 1)
+        if (state.circleSelection.size > 1) {
             mode = SelectionMode.Multiselect
+        }
         circleSelection = state.circleSelection
-        translation = state.translation
+        centerizeTo(state.centerX, state.centerY)
     }
 
-    // i never saw this proc on Android tbh
-    override fun onCleared() {
-        println("VM.onCleared: saving VM state")
+    fun cacheState() {
+        println("caching VM state...")
         val state = saveState()
         getPlatform().saveLastState(state)
+    }
+
+    // i never saw this proc on Android or Wasm tbh
+    override fun onCleared() {
+        cacheState()
         super.onCleared()
     }
 
@@ -2449,8 +2456,9 @@ class EditClusterViewModel : ViewModel() {
     data class State(
         val constellation: Constellation,
         val circleSelection: List<Ix>, // circle indices
-        @Serializable(OffsetSerializer::class)
-        val translation: Offset,
+        // NOTE: saving VM.translation instead has some issues
+        val centerX: Float,
+        val centerY: Float,
     ) {
         companion object {
             val SAMPLE = State(
@@ -2468,8 +2476,8 @@ class EditClusterViewModel : ViewModel() {
                     )),
                 ),
                 circleSelection = listOf(0),
-                // NOTE: hardcoded default is bad, much better would be to specify the center but oh well
-                translation = Offset(225f, 225f) + Offset(400f, 0f)
+                centerX = 225f,
+                centerY = 225f,
             )
         }
     }
@@ -2481,10 +2489,6 @@ class EditClusterViewModel : ViewModel() {
                 EditClusterViewModel()
             }
         }
-        val JSON = Json {
-            encodeDefaults = false
-            allowStructuredMapKeys = true
-        }
 
         const val LOW_ACCURACY_FACTOR = 1.5f
         const val HUD_ZOOM_INCREMENT = 1.1f // == +10%
@@ -2493,10 +2497,10 @@ class EditClusterViewModel : ViewModel() {
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
         const val LOCK_DEPENDENT_OBJECT = true
+        const val RESTORE_LAST_SAVE_ON_LOAD = true
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 200.0
         const val DOWNSCALING_FACTOR = 1/UPSCALING_FACTOR
-        val MAX_CIRCLE_RADIUS: Float = getPlatform().maxCircleRadius
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)
