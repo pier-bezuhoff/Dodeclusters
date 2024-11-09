@@ -79,6 +79,8 @@ import domain.snapPointToPoints
 import domain.sortedByFrequency
 import domain.tryCatch2
 import getPlatform
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -96,9 +98,7 @@ import kotlin.time.Duration.Companion.seconds
 // MAYBE: use UiState functional pattern instead of this mess
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
-class EditClusterViewModel(
-//    private val savedStateHandle: SavedStateHandle,
-) : ViewModel() {
+class EditClusterViewModel : ViewModel() {
     val points: SnapshotStateList<Point?> = mutableStateListOf()
     val circles: SnapshotStateList<CircleOrLine?> = mutableStateListOf()
     val parts: SnapshotStateList<ClusterPart> = mutableStateListOf()
@@ -225,7 +225,7 @@ class EditClusterViewModel(
     private var tapRadius = getPlatform().tapRadius
 
     init {
-//        restoreFromSavedStateHandle()
+        launchRestore()
     }
 
     fun setEpsilon(density: Density) {
@@ -2413,11 +2413,17 @@ class EditClusterViewModel(
             translation = translation
         )
 
-    private fun restoreFromSavedStateHandle() {
-//        savedStateHandle.get<String>("state")?.let { s ->
-//            val state = JSON.decodeFromString(State.serializer(), s)
-//            restoreFromState(state)
-//        }
+    private fun launchRestore() {
+        viewModelScope.launch {
+            val state = getPlatform().lastStateStore.get()
+            if (state != null) {
+                println("re-storing VM")
+                restoreFromState(state)
+            } else {
+                loadNewConstellation(Constellation.SAMPLE)
+                moveToDdcCenter(0f, 0f)
+            }
+        }
     }
 
     private fun restoreFromState(state: State) {
@@ -2428,13 +2434,11 @@ class EditClusterViewModel(
         translation = state.translation
     }
 
-    // NOTE: idk if this should be here actually
-    //  + the string is humongous, idk if this would work
+    // i never saw this proc on Android tbh
     override fun onCleared() {
-//        val state = saveState()
-        // MAYBE: it's better to save this persistently via KStore
-//        savedStateHandle["state"] = JSON.encodeToString(State.serializer(), state)
-        println("saved VM as a SavedStateHandle")
+        println("VM.onCleared: saving VM state")
+        val state = saveState()
+        getPlatform().saveLastState(state)
         super.onCleared()
     }
 
@@ -2474,11 +2478,7 @@ class EditClusterViewModel(
         // reference: https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-factories
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             addInitializer(EditClusterViewModel::class) {
-                // FIX: missing SAVED_STATE_REGISTRY_OWNER_KEY
-//                val savedStateHandle = createSavedStateHandle()
-                EditClusterViewModel(
-//                    savedStateHandle = savedStateHandle
-                )
+                EditClusterViewModel()
             }
         }
         val JSON = Json {
@@ -2492,7 +2492,7 @@ class EditClusterViewModel(
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
-        const val LOCK_DEPENDENT_OBJECT = false
+        const val LOCK_DEPENDENT_OBJECT = true
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 200.0
         const val DOWNSCALING_FACTOR = 1/UPSCALING_FACTOR

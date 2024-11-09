@@ -68,16 +68,23 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.colormath)
             implementation(libs.kaml)
+            implementation(libs.kstore)
         }
         androidMain.dependencies {
-//            implementation(libs.compose.ui.tooling.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
             implementation(libs.coroutines.android)
+            implementation(libs.kstore.file)
+            implementation(libs.appdirs)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.coroutines.swing)
+            implementation(libs.kstore.file)
+            implementation(libs.appdirs)
+        }
+        wasmJsMain.dependencies {
+            implementation(libs.kstore.storage)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

@@ -48,8 +48,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -58,7 +56,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
@@ -259,13 +256,7 @@ fun EditClusterScreen(
             val content = ddcRepository.loadSampleClusterYaml(sampleName)
             if (content != null) {
                 viewModel.loadFromYaml(content)
-            } else {
-                viewModel.loadNewConstellation(Constellation.SAMPLE)
-                viewModel.moveToDdcCenter(0f, 0f)
             }
-        } else {
-            viewModel.loadNewConstellation(Constellation.SAMPLE)
-            viewModel.moveToDdcCenter(0f, 0f)
         }
     }
     LaunchedEffect(keyboardActions, viewModel) {
