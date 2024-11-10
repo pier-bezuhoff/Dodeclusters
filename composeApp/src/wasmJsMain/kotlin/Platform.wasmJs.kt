@@ -20,14 +20,10 @@ object WasmPlatform: Platform {
         storeOf(key = Platform.LAST_STATE_STORE_FILE_NAME)
     }
 
-    // FIX: so far this is never reached it appears
     @OptIn(DelicateCoroutinesApi::class)
     override fun saveLastState(state: EditClusterViewModel.State) {
-        println("Wasm: saveLastState")
-        // TEST: idk if non-IO dispatcher will do the job
-        GlobalScope.launch(Dispatchers.Default) {
+        GlobalScope.launch(Dispatchers.Default) { // MAYBE: another dispatcher is better
             lastStateStore.set(state)
-            println("Wasm: last state saved")
         }
     }
 

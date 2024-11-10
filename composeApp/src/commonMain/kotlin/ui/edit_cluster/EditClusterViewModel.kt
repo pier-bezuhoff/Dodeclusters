@@ -2443,7 +2443,8 @@ class EditClusterViewModel : ViewModel() {
         getPlatform().saveLastState(state)
     }
 
-    // i never saw this proc on Android or Wasm tbh
+    // NOTE: i never seen this proc on Android or Wasm tbh
+    //  so i had to create Flow<LifecycleEvent> to manually trigger caching
     override fun onCleared() {
         cacheState()
         super.onCleared()

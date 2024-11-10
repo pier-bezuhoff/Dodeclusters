@@ -6,5 +6,6 @@ import kotlinx.serialization.Serializable
 @Immutable
 @Serializable
 enum class LifecycleEvent {
-    SaveInstanceState,
+    /** signals to save UI state */
+    SaveUIState,
 }

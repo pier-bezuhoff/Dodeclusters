@@ -40,11 +40,11 @@ import ui.theme.DodeclustersColors
 import java.io.FileNotFoundException
 
 class MainActivity : ComponentActivity() {
-    private lateinit var lifecycleEvents: MutableSharedFlow<LifecycleEvent>
+    private val lifecycleEvents: MutableSharedFlow<LifecycleEvent> =
+        MutableSharedFlow(replay = 1)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        lifecycleEvents = MutableSharedFlow(replay = 1)
         if (!filesDir.exists())
             filesDir.createNewFile()
         setFilesDir(filesDir)
@@ -126,7 +126,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        lifecycleEvents.tryEmit(LifecycleEvent.SaveInstanceState)
+        lifecycleEvents.tryEmit(LifecycleEvent.SaveUIState)
         super.onSaveInstanceState(outState)
     }
 
