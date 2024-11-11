@@ -1411,9 +1411,11 @@ class EditClusterViewModel : ViewModel() {
 
     // pointer input callbacks
     // onDown -> onTap
-    fun onTap(position: Offset) {
-        // select circle(s)/region
-        if (showCircles) {
+    fun onTap(position: Offset, pointerCount: Int) {
+        if (pointerCount == 2) { // 2-finger tap for undo
+            if (undoIsEnabled)
+                undo()
+        } else if (showCircles) { // select circle(s)/region
             when (mode) {
                 SelectionMode.Drag -> {
                     val pointReselected = reselectPointAt(position)

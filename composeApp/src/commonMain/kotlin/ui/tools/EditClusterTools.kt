@@ -41,6 +41,7 @@ import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.complete_arc_path
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.copy
+import dodeclusters.composeapp.generated.resources.crossed_circle
 import dodeclusters.composeapp.generated.resources.delete_all_parts_description
 import dodeclusters.composeapp.generated.resources.delete_all_parts_name
 import dodeclusters.composeapp.generated.resources.delete_description
@@ -57,6 +58,7 @@ import dodeclusters.composeapp.generated.resources.expand_name
 import dodeclusters.composeapp.generated.resources.extrapolate_lines
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_description
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_name
+import dodeclusters.composeapp.generated.resources.fill_region
 import dodeclusters.composeapp.generated.resources.fill_swiped_circles
 import dodeclusters.composeapp.generated.resources.filled_circle
 import dodeclusters.composeapp.generated.resources.flagged_point
@@ -80,6 +82,7 @@ import dodeclusters.composeapp.generated.resources.line_by_2_points_name
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_description
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_name
+import dodeclusters.composeapp.generated.resources.multiselect
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
 import dodeclusters.composeapp.generated.resources.multiselect_name
@@ -119,6 +122,7 @@ import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.upload
 import dodeclusters.composeapp.generated.resources.visible
+import dodeclusters.composeapp.generated.resources.visible_circle
 import domain.SIGNATURE_1_POINT
 import domain.SIGNATURE_2_CIRCLES
 import domain.SIGNATURE_2_GENERALIZED_CIRCLES
@@ -212,7 +216,8 @@ sealed class EditClusterTool(
     data object Multiselect: Switch(
         Res.string.multiselect_name,
         Res.string.multiselect_description,
-        Res.drawable.multiselect_mode_3_scattered_circles
+        Res.drawable.multiselect
+//        Res.drawable.multiselect_mode_3_scattered_circles
     )
     data object FlowSelect: Switch(
         Res.string.flow_multiselect_name,
@@ -229,7 +234,8 @@ sealed class EditClusterTool(
     data object Region: Switch(
         Res.string.region_name,
         Res.string.region_description,
-        Res.drawable.select_region_mode_intersection
+        Res.drawable.fill_region
+//        Res.drawable.select_region_mode_intersection
     )
     data object FlowFill: Switch(
         Res.string.flow_fill_name,
@@ -257,8 +263,10 @@ sealed class EditClusterTool(
     data object ShowCircles: Switch(
         Res.string.show_circles_name,
         Res.string.show_circles_description,
-        Res.drawable.visible,
-        Res.drawable.invisible
+        Res.drawable.visible_circle,
+        Res.drawable.crossed_circle
+//        Res.drawable.visible
+//        Res.drawable.invisible
     )
     data object ToggleFilledOrOutline: Switch(
         Res.string.toggle_filled_or_outline_name,
