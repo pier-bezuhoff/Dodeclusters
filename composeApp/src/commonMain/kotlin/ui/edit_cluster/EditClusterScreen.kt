@@ -153,7 +153,7 @@ fun EditClusterScreen(
                 EditClusterCanvas(viewModel)
                 if (viewModel.showUI) {
                     ToolDescription(
-                        tool = viewModel.activeTool,
+                        tool = viewModel.toolbarState.activeTool,
                         partialArgList = viewModel.partialArgList,
                         isLandscape = isLandscape,
                         compact = compact,
@@ -497,7 +497,7 @@ private fun ToolbarPortrait(viewModel: EditClusterViewModel, compact: Boolean, m
         verticalArrangement = Arrangement.Bottom,
     ) {
         AnimatedContent(
-            Pair(viewModel.activeCategory, viewModel.showPanel),
+            Pair(viewModel.toolbarState.activeCategory, viewModel.showPanel),
             transitionSpec = {
                 slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End)
                     .togetherWith(slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start))
@@ -530,7 +530,7 @@ private fun ToolbarLandscape(viewModel: EditClusterViewModel, compact: Boolean, 
             .align(Alignment.CenterVertically)
         )
         AnimatedContent(
-            Pair(viewModel.activeCategory, viewModel.showPanel),
+            Pair(viewModel.toolbarState.activeCategory, viewModel.showPanel),
             transitionSpec = {
                 slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End)
                     .togetherWith(slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start))
@@ -663,25 +663,36 @@ fun CategoryButton(
     modifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current,
 ) {
-    val i = viewModel.categories.indexOf(category)
-    val defaultTool = category.tools[viewModel.categoryDefaults[i]]
-//    val icon = category.icon ?: defaultTool.icon
+    val defaultTool = viewModel.toolbarState.getDefaultTool(category)
     if (!compact)
         Spacer(Modifier.size(12.dp, 12.dp))
-    Crossfade(defaultTool) {
-        ToolButton(
-            tool = defaultTool,
-            enabled = viewModel.toolPredicate(defaultTool),
-            regionColor = viewModel.regionColor,
-            tint = tint,
-            modifier = modifier
-                .padding(4.dp)
-                .size(
-                    if (compact) 36.dp
-                    else 40.dp
-                )
-            ,
-        ) { tool -> viewModel.selectTool(tool, togglePanel = true) }
+    val categoryModifier = modifier
+        .padding(4.dp)
+        .size(
+            if (compact) 36.dp
+            else 40.dp
+        )
+    if (defaultTool == null) {
+        require(category.icon != null) { "no category.icon or category.default specified" }
+        SimpleButton(
+            painterResource(category.icon),
+            stringResource(category.name),
+            categoryModifier,
+        ) {
+            viewModel.switchToCategory(category, togglePanel = true)
+        }
+    } else {
+        Crossfade(defaultTool) {
+            ToolButton(
+                tool = defaultTool,
+                enabled = viewModel.toolPredicate(defaultTool),
+                regionColor = viewModel.regionColor,
+                tint = tint,
+                modifier = categoryModifier,
+            ) { tool ->
+                viewModel.selectTool(tool, togglePanel = true)
+            }
+        }
     }
 }
 

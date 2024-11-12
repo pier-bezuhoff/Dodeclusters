@@ -3,13 +3,12 @@ package ui.edit_cluster
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -78,6 +77,7 @@ import domain.tryCatch2
 import getPlatform
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -97,7 +97,7 @@ class EditClusterViewModel : ViewModel() {
     val points: SnapshotStateList<Point?> = mutableStateListOf()
     val circles: SnapshotStateList<CircleOrLine?> = mutableStateListOf()
     val parts: SnapshotStateList<ClusterPart> = mutableStateListOf()
-    var expressions: ExpressionForest = ExpressionForest( // stub
+    private var expressions: ExpressionForest = ExpressionForest( // stub
         initialExpressions = emptyMap(),
         get = { null },
         set = { _, _ -> }
@@ -111,59 +111,46 @@ class EditClusterViewModel : ViewModel() {
 
     // MAYBE: when circles are hidden select parts instead
     /** indices of selected [circles] */
-    var circleSelection by mutableStateOf(listOf<Ix>())
+    var circleSelection: List<Ix> by mutableStateOf(emptyList())
+        private set
     /** indices of selected [points] */
-    var pointSelection by mutableStateOf(listOf<Ix>())
+    var pointSelection: List<Ix> by mutableStateOf(emptyList())
+        private set
 
-    val categories: List<EditClusterCategory> = listOf(
-        EditClusterCategory.Drag,
-        EditClusterCategory.Multiselect,
-        EditClusterCategory.Region,
-        EditClusterCategory.Visibility,
-        EditClusterCategory.Colors,
-        EditClusterCategory.Transform,
-        EditClusterCategory.Create, // FAB
-    )
-    // this int list is to be persisted/preserved
-    // category index -> tool index among category.tools
-    val categoryDefaults: SnapshotStateList<Int> =
-        categories.map { it.tools.indexOf(it.default) }.toMutableStateList()
-    var activeCategoryIndex: Int by mutableIntStateOf(0)
+    /** encapsulates all category- and tool-related info */
+    var toolbarState: ToolbarState by mutableStateOf(ToolbarState())
         private set
-    val activeCategory: EditClusterCategory by derivedStateOf { categories[activeCategoryIndex] }
-    var activeTool: EditClusterTool by mutableStateOf(activeCategory.default ?: EditClusterTool.Drag)
+    var showPanel: Boolean by mutableStateOf(toolbarState.panelNeedsToBeShown)
         private set
-    private val panelNeedsToBeShown by derivedStateOf { activeCategory.tools.size > 1 }
-    var showPanel by mutableStateOf(panelNeedsToBeShown)
+    var showPromptToSetActiveSelectionAsToolArg: Boolean by mutableStateOf(false) // to be updated manually
         private set
-    var showPromptToSetActiveSelectionAsToolArg by mutableStateOf(false) // to be updated manually
+    var showUI: Boolean by mutableStateOf(true)
         private set
-    var showUI by mutableStateOf(true)
 
     /** currently selected color */
-    var regionColor by mutableStateOf(DodeclustersColors.primaryDark) // DodeclustersColors.purple)
+    var regionColor: Color by mutableStateOf(DodeclustersColors.primaryDark) // DodeclustersColors.purple)
         private set
     /** custom colors for circle borders */
-    val circleColors = mutableStateMapOf<Ix, Color>()
-    var showCircles by mutableStateOf(true)
+    val circleColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
+    var showCircles: Boolean by mutableStateOf(true)
         private set
     /** which style to use when drawing parts: true = stroke, false = fill */
-    var showWireframes by mutableStateOf(false)
+    var showWireframes: Boolean by mutableStateOf(false)
         private set
     /** applies to [SelectionMode.Region]:
      * only use circles present in the [circleSelection] to determine which parts to fill */
-    var restrictRegionsToSelection by mutableStateOf(false)
+    var restrictRegionsToSelection: Boolean by mutableStateOf(false)
         private set
-    var displayChessboardPattern by mutableStateOf(false)
+    var displayChessboardPattern: Boolean by mutableStateOf(false)
         private set
     /** true = background starts colored */
-    var chessboardPatternStartsColored by mutableStateOf(true)
+    var chessboardPatternStartsColored: Boolean by mutableStateOf(true)
         private set
 
-    val circleSelectionIsActive by derivedStateOf {
+    val circleSelectionIsActive: Boolean by derivedStateOf {
         showCircles && circleSelection.isNotEmpty() && mode.isSelectingCircles()
     }
-    val pointSelectionIsActive by derivedStateOf {
+    val pointSelectionIsActive: Boolean by derivedStateOf {
         showCircles && pointSelection.isNotEmpty() && mode.isSelectingCircles()
     }
     val handleConfig: HandleConfig? by derivedStateOf { // depends on selectionMode & selection
@@ -189,8 +176,10 @@ class EditClusterViewModel : ViewModel() {
         saveState = { saveState() },
         loadState = { state -> loadState(state) }
     )
-    var undoIsEnabled by mutableStateOf(false) // = history is not empty
-    var redoIsEnabled by mutableStateOf(false) // = redoHistory is not empty
+    var undoIsEnabled: Boolean by mutableStateOf(false) // = history is not empty
+        private set
+    var redoIsEnabled: Boolean by mutableStateOf(false) // = redoHistory is not empty
+        private set
 
     var defaultInterpolationParameters = DefaultInterpolationParameters()
         private set
@@ -199,22 +188,22 @@ class EditClusterViewModel : ViewModel() {
     var defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters()
         private set
 
-    private val _circleAnimations = MutableSharedFlow<CircleAnimation>()
-    val circleAnimations = _circleAnimations.asSharedFlow()
+    private val _circleAnimations: MutableSharedFlow<CircleAnimation> = MutableSharedFlow()
+    val circleAnimations: SharedFlow<CircleAnimation> = _circleAnimations.asSharedFlow()
 
     var openedDialog: DialogType? by mutableStateOf(null)
         private set
 
-    var arcPathUnderConstruction by mutableStateOf<ArcPath?>(null)
+    var arcPathUnderConstruction: ArcPath? by mutableStateOf(null)
         private set
 
     var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
         private set
-    private val selectionControlsPositions by derivedStateOf {
+    private val selectionControlsPositions: SelectionControlsPositions by derivedStateOf {
         SelectionControlsPositions(canvasSize)
     }
-    var translation by mutableStateOf(Offset.Zero) // pre-scale offset
-//    val scale = mutableStateOf(1f)
+    var translation: Offset by mutableStateOf(Offset.Zero)
+        private set
 
     /** min tap/grab distance to select an object */
     private var tapRadius = getPlatform().tapRadius
@@ -232,7 +221,7 @@ class EditClusterViewModel : ViewModel() {
     fun changeCanvasSize(newCanvasSize: IntSize) {
         val prevCenter = Offset(canvasSize.width/2f, canvasSize.height/2f)
         val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
-        translation = translation + (newCenter - prevCenter)
+        translation += (newCenter - prevCenter)
         canvasSize = newCanvasSize
     }
 
@@ -1093,10 +1082,10 @@ class EditClusterViewModel : ViewModel() {
     fun dismissRegionColorPicker() {
         openedDialog = null
         val tool = mode.tool
-        val category = categories.firstOrNull { tool in it.tools }
+        val category = toolbarState.categories.firstOrNull { tool in it.tools }
         if (category != null)
             selectCategory(category, togglePanel = true)
-        activeTool = tool
+        toolbarState = toolbarState.copy(activeTool = tool)
     }
 
     fun getMostCommonCircleColorInSelection(): Color? =
@@ -1133,7 +1122,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun setActiveSelectionAsToolArg() {
-        activeTool.let { tool ->
+        toolbarState.activeTool.let { tool ->
             require(
                 tool is EditClusterTool.MultiArg &&
                 tool.signature.argTypes.first() == ArgType.CircleAndPointIndices &&
@@ -1410,9 +1399,10 @@ class EditClusterViewModel : ViewModel() {
     }
 
     // pointer input callbacks
-    // onDown -> onTap
+    // onDown -> onTap -> onUp
     fun onTap(position: Offset, pointerCount: Int) {
-        if (pointerCount == 2) { // 2-finger tap for undo
+        // 2-finger tap for undo (works only on Android afaik)
+        if (TWO_FINGER_TAP_FOR_UNDO && pointerCount == 2) {
             if (undoIsEnabled)
                 undo()
         } else if (showCircles) { // select circle(s)/region
@@ -1910,8 +1900,8 @@ class EditClusterViewModel : ViewModel() {
         if (partialArgList?.isFull == true) {
             completeToolMode()
         }
-        if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect)
-            activeTool = EditClusterTool.Multiselect // haxx
+        if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) // haxx
+            toolbarState = toolbarState.copy(activeTool = EditClusterTool.Multiselect)
         if (submode !is SubMode.FlowFill)
             submode = SubMode.None
     }
@@ -1947,12 +1937,11 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun selectCategory(category: EditClusterCategory, togglePanel: Boolean = false) {
-        val wasSelected = activeCategory == category
+        val wasSelected = toolbarState.activeCategory == category
         val panelWasShown = showPanel
-        val ix = categories.indexOf(category)
-        activeCategoryIndex = ix
-        showPanel = panelNeedsToBeShown
-        if (togglePanel && wasSelected && panelNeedsToBeShown) {
+        toolbarState = toolbarState.copy(activeCategory = category)
+        showPanel = toolbarState.panelNeedsToBeShown
+        if (togglePanel && wasSelected && toolbarState.panelNeedsToBeShown) {
             showPanel = !panelWasShown
         }
     }
@@ -1962,25 +1951,20 @@ class EditClusterViewModel : ViewModel() {
         if (tool is EditClusterTool.AppliedColor) {
             category = EditClusterCategory.Colors
         } else {
-            val cIndex = categories.indexOfFirst { tool in it.tools }
-            category = categories[cIndex]
-            val i = category.tools.indexOf(tool)
-            if (i in category.defaultables)
-                categoryDefaults[cIndex] = i
+            category = toolbarState.getCategory(tool)
+            toolbarState = toolbarState.updateDefault(category, tool)
         }
-        activeTool = tool
+        toolbarState = toolbarState.copy(activeTool = tool)
         selectCategory(category, togglePanel = togglePanel)
         toolAction(tool)
     }
 
     fun switchToCategory(category: EditClusterCategory, togglePanel: Boolean = false) {
-        val categoryIndex = categories.indexOf(category)
-        val defaultToolIndex = categoryDefaults[categoryIndex]
-        if (defaultToolIndex != -1) {
-            val defaultTool = category.tools[defaultToolIndex]
-            selectTool(defaultTool, togglePanel = togglePanel)
-        } else {
+        val defaultTool = toolbarState.getDefaultTool(category)
+        if (defaultTool == null) {
             selectCategory(category, togglePanel = togglePanel)
+        } else {
+            selectTool(defaultTool, togglePanel = togglePanel)
         }
     }
 
@@ -2501,6 +2485,7 @@ class EditClusterViewModel : ViewModel() {
         const val ENABLE_ANGLE_SNAPPING = true
         const val LOCK_DEPENDENT_OBJECT = true
         const val RESTORE_LAST_SAVE_ON_LOAD = true
+        const val TWO_FINGER_TAP_FOR_UNDO = true
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 200.0
         const val DOWNSCALING_FACTOR = 1/UPSCALING_FACTOR

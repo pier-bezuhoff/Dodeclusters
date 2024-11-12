@@ -31,7 +31,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.max
 
-// had to patch the built-in function a bit to handle onUp
+// patched detectTransformGestures to handle onUp
 /**
  * A gesture detector for rotation, panning, and zoom. Once touch slop has been reached, the
  * user can use rotation, panning and zoom gestures. [onGesture] will be called when any of the
@@ -140,7 +140,7 @@ suspend fun PointerInputScope.detectTapGesturesCountingPointers(
         try {
             // wait for first tap up or long press
             upOrCancel = withTimeout(longPressTimeout) {
-                val (change, count) = waitForUpOrCancellationPlus()
+                val (change, count) = waitForUpOrCancellationCountingPointers()
                 maxPressedPointerCount = max(maxPressedPointerCount, count)
                 change
             }
@@ -157,7 +157,7 @@ suspend fun PointerInputScope.detectTapGesturesCountingPointers(
             }
         } catch (_: PointerEventTimeoutCancellationException) {
             onLongPress?.invoke(down.position)
-            maxPressedPointerCount = consumeUntilUpCountingMaxPressedPointerCount()
+            maxPressedPointerCount = consumeUntilUpCountingPointers()
             launch {
                 pressScope.release()
                 onUp?.invoke(down.position)
@@ -188,7 +188,7 @@ suspend fun PointerInputScope.detectTapGesturesCountingPointers(
                     try {
                         // Might have a long second press as the second tap
                         withTimeout(longPressTimeout) {
-                            val (secondUp, count) = waitForUpOrCancellationPlus()
+                            val (secondUp, count) = waitForUpOrCancellationCountingPointers()
                             maxPressedPointerCount = max(maxPressedPointerCount, count)
                             if (secondUp != null) {
                                 secondUp.consume()
@@ -211,7 +211,7 @@ suspend fun PointerInputScope.detectTapGesturesCountingPointers(
 
                         // notify for the long press
                         onLongPress?.invoke(secondDown.position)
-                        maxPressedPointerCount = consumeUntilUpCountingMaxPressedPointerCount()
+                        maxPressedPointerCount = consumeUntilUpCountingPointers()
                         launch {
                             pressScope.release()
                             onUp?.invoke(secondDown.position)
@@ -230,7 +230,7 @@ suspend fun PointerInputScope.detectTapGesturesCountingPointers(
  * pass. If the gesture was not canceled, the final up change is returned or `null` if the
  * event was canceled.
  */
-suspend fun AwaitPointerEventScope.waitForUpOrCancellationPlus(
+suspend fun AwaitPointerEventScope.waitForUpOrCancellationCountingPointers(
     pass: PointerEventPass = PointerEventPass.Main
 ): Pair<PointerInputChange?, Int> {
     var maxPressedPointerCount = 1
@@ -263,7 +263,7 @@ suspend fun AwaitPointerEventScope.waitForUpOrCancellationPlus(
  * [detectTapGestures]'s implementation of [PressGestureScope].
  */
 private class PressGestureScopeImpl(
-// PGS : Density so there compiler thinks there is double-override problem
+// PGS inherits Density so the compiler thinks there is double-override problem
     density: Density
 ) : Density by density, PressGestureScope {
     private var isReleased = false
@@ -314,7 +314,7 @@ private class PressGestureScopeImpl(
  * Consumes all pointer events until nothing is pressed and then returns. This method assumes
  * that something is currently pressed.
  */
-private suspend fun AwaitPointerEventScope.consumeUntilUpCountingMaxPressedPointerCount(): Int {
+private suspend fun AwaitPointerEventScope.consumeUntilUpCountingPointers(): Int {
     var maxPressedPointerCount = 1
     do {
         val event = awaitPointerEvent()

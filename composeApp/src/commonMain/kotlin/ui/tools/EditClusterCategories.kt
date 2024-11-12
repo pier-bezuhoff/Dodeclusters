@@ -2,16 +2,15 @@ package ui.tools
 
 import androidx.compose.runtime.Immutable
 import dodeclusters.composeapp.generated.resources.Res
-import dodeclusters.composeapp.generated.resources.attributes_category_name
 import dodeclusters.composeapp.generated.resources.circled_tool
 import dodeclusters.composeapp.generated.resources.colors_category_name
 import dodeclusters.composeapp.generated.resources.create_category_name
 import dodeclusters.composeapp.generated.resources.drag_category_name
-import dodeclusters.composeapp.generated.resources.half_diffused_circle
 import dodeclusters.composeapp.generated.resources.multiselect_category_name
 import dodeclusters.composeapp.generated.resources.region_category_name
 import dodeclusters.composeapp.generated.resources.transform_category_name
 import dodeclusters.composeapp.generated.resources.visibility_category_name
+import dodeclusters.composeapp.generated.resources.visible
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 
@@ -60,7 +59,9 @@ sealed class EditClusterCategory(
             EditClusterTool.ShowCircles,
 //            EditClusterTool.ToggleFilledOrOutline,
             EditClusterTool.HideUI,
-        )
+        ),
+        defaultables = emptyList(),
+        icon = Res.drawable.visible
     ) { // ~button/switch-like
     }
     data object Colors : EditClusterCategory(

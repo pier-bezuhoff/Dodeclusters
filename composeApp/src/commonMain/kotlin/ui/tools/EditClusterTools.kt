@@ -86,6 +86,7 @@ import dodeclusters.composeapp.generated.resources.multiselect
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
 import dodeclusters.composeapp.generated.resources.multiselect_name
+import dodeclusters.composeapp.generated.resources.multiselect_v2
 import dodeclusters.composeapp.generated.resources.open_file
 import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.open_region
@@ -216,7 +217,7 @@ sealed class EditClusterTool(
     data object Multiselect: Switch(
         Res.string.multiselect_name,
         Res.string.multiselect_description,
-        Res.drawable.multiselect
+        Res.drawable.multiselect_v2
 //        Res.drawable.multiselect_mode_3_scattered_circles
     )
     data object FlowSelect: Switch(
@@ -265,8 +266,6 @@ sealed class EditClusterTool(
         Res.string.show_circles_description,
         Res.drawable.visible_circle,
         Res.drawable.crossed_circle
-//        Res.drawable.visible
-//        Res.drawable.invisible
     )
     data object ToggleFilledOrOutline: Switch(
         Res.string.toggle_filled_or_outline_name,

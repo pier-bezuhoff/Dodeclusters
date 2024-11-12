@@ -1,6 +1,5 @@
 package ui
 
-import androidx.compose.foundation.BasicTooltipDefaults
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -22,11 +21,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SliderState
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -41,7 +38,6 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.cancel_name
@@ -50,7 +46,6 @@ import dodeclusters.composeapp.generated.resources.ok_description
 import dodeclusters.composeapp.generated.resources.ok_name
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import kotlin.time.Duration
 
 // MAYBE: pass a Modifier
 @Composable

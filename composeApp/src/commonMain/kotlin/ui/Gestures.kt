@@ -48,9 +48,9 @@ inline fun Modifier.reactiveCanvas(
 ): Modifier =
     this
         // alternative to zooming for desktop
-        .pointerInput(*keys) {
+        .pointerInput(*keys) { // mouse wheel scrolling
             awaitEachGesture {
-                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val event = awaitPointerEvent(PointerEventPass.Initial) // parent->children pass
                 if (event.type == PointerEventType.Scroll) {
                     val yDelta = event.changes.map { it.scrollDelta.y }.sum()
                     onVerticalScroll(yDelta)
@@ -61,14 +61,13 @@ inline fun Modifier.reactiveCanvas(
             }
         }
         .pointerInput(*keys) {
-            // not counting pointers here for now
             detectTransformGestures(onUp = { onUp(it) }) { centroid, pan, zoom, rotation ->
                 onPanZoomRotate(pan, centroid, zoom, rotation)
             }
         }
         .pointerInput(*keys) {
             detectTapGesturesCountingPointers(
-                onDown = { onDown(it) },
+                onDown = { position -> onDown(position) },
                 onUp = { position ->  onUp(position) },
                 onTap = { position, pointerCount ->
                     onTap(position, pointerCount)
@@ -86,6 +85,7 @@ inline fun Modifier.reactiveCanvas(
 //            )
         }
         // NOTE: the latter pointInput-s *can* consume events before passing it higher
+        //  more: https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures
 //        .pointerInput(*keys) {
 //            detectDragGesturesAfterLongPress(
 //                onDragStart = { position ->

@@ -68,3 +68,12 @@ fun <T> Iterable<T>.sortedByFrequency(): List<T> =
         .entries
         .sortedByDescending { (_, count) -> count }
         .map { (t, _) -> t }
+
+/** @return `null` instead of `-1` */
+fun <T> List<T>.indexOfOrNull(element: T): Int? {
+    val index = indexOf(element)
+    return if (index == -1)
+        null
+    else
+        index
+}
