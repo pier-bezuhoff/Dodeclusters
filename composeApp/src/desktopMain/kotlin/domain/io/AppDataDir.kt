@@ -9,6 +9,7 @@ fun getAppDataDir(): Path {
         appName = "Dodeclusters",
         appAuthor = "pier-bezuhoff",
     )
+    // on Linux this is ~/.local/share/$appName
     val dataDir = Path(appDirs.getUserDataDir())
     with (SystemFileSystem) {
         if(!exists(dataDir))

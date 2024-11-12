@@ -228,7 +228,6 @@ sealed class EditClusterTool(
         Res.string.multiselect_name,
         Res.string.multiselect_description,
         Res.drawable.multiselect_v2
-//        Res.drawable.multiselect_mode_3_scattered_circles
     )
     data object FlowSelect: Switch(
         Res.string.flow_multiselect_name,
@@ -246,7 +245,6 @@ sealed class EditClusterTool(
         Res.string.region_name,
         Res.string.region_description,
         Res.drawable.fill_region
-//        Res.drawable.select_region_mode_intersection
     )
     data object FlowFill: Switch(
         Res.string.flow_fill_name,

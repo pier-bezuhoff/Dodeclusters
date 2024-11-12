@@ -412,7 +412,6 @@ class EditClusterViewModel : ViewModel() {
             } }
         )
         expressions.reEval() // calculates all dependent objects
-        // FIX: ix2tier calc is off, expr.args are all empty!
         parts.addAll(constellation.parts)
         circleColors.putAll(constellation.circleColors)
     }
@@ -2389,9 +2388,16 @@ class EditClusterViewModel : ViewModel() {
 
     fun saveState(): State {
         val center = computeAbsoluteCenter() ?: Offset.Zero
+        val deletedCircles = circles.indices.filter { i ->
+            circles[i] == null && expressions.expressions[Indexed.Circle(i)] == null
+        }.toSet()
+        val circleReindexing = reindexingMap(
+            originalIndices = circles.indices,
+            deletedIndices = deletedCircles
+        )
         return State(
             constellation = toConstellation(),
-            circleSelection = circleSelection.toList(),
+            circleSelection = circleSelection.map { circleReindexing[it]!! },
             centerX = center.x,
             centerY = center.y,
         )
@@ -2404,11 +2410,11 @@ class EditClusterViewModel : ViewModel() {
                 centerizeTo(0f, 0f)
             } else {
                 val state = getPlatform().lastStateStore.get()
-                if (state != null) {
-                    restoreFromState(state)
-                } else {
+                if (state == null) {
                     loadNewConstellation(Constellation.SAMPLE)
                     centerizeTo(0f, 0f)
+                } else {
+                    restoreFromState(state)
                 }
             }
         }
