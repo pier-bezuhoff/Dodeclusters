@@ -7,7 +7,6 @@ import dodeclusters.composeapp.generated.resources.add_image
 import dodeclusters.composeapp.generated.resources.add_point_arg_descriptions
 import dodeclusters.composeapp.generated.resources.add_point_description
 import dodeclusters.composeapp.generated.resources.add_point_name
-import dodeclusters.composeapp.generated.resources.anchor
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
 import dodeclusters.composeapp.generated.resources.arc_path_arg_descriptions
@@ -15,11 +14,8 @@ import dodeclusters.composeapp.generated.resources.arc_path_description
 import dodeclusters.composeapp.generated.resources.arc_path_name
 import dodeclusters.composeapp.generated.resources.chessboard
 import dodeclusters.composeapp.generated.resources.chessboard_reflected
-import dodeclusters.composeapp.generated.resources.chessboard_reflected_v2
-import dodeclusters.composeapp.generated.resources.chessboard_v2
 import dodeclusters.composeapp.generated.resources.circle
 import dodeclusters.composeapp.generated.resources.circle_3_points
-import dodeclusters.composeapp.generated.resources.circle_3_points_v2
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_description
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_name
@@ -30,22 +26,20 @@ import dodeclusters.composeapp.generated.resources.circle_by_pencil_and_point_ar
 import dodeclusters.composeapp.generated.resources.circle_by_pencil_and_point_description
 import dodeclusters.composeapp.generated.resources.circle_by_pencil_and_point_name
 import dodeclusters.composeapp.generated.resources.circle_center_and_radius_point
-import dodeclusters.composeapp.generated.resources.circle_center_and_radius_point_v2
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_description
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_name
 import dodeclusters.composeapp.generated.resources.circle_interpolation_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_interpolation_description
 import dodeclusters.composeapp.generated.resources.circle_interpolation_name
+import dodeclusters.composeapp.generated.resources.circle_inversion
 import dodeclusters.composeapp.generated.resources.circle_inversion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_inversion_description
 import dodeclusters.composeapp.generated.resources.circle_inversion_name
-import dodeclusters.composeapp.generated.resources.circle_inversion_v3
 import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.complete_arc_path
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.copy
-import dodeclusters.composeapp.generated.resources.cross_v2
 import dodeclusters.composeapp.generated.resources.crossed_circle
 import dodeclusters.composeapp.generated.resources.delete_all_parts_description
 import dodeclusters.composeapp.generated.resources.delete_all_parts_name
@@ -67,22 +61,19 @@ import dodeclusters.composeapp.generated.resources.fill_region
 import dodeclusters.composeapp.generated.resources.fill_swiped_circles
 import dodeclusters.composeapp.generated.resources.filled_circle
 import dodeclusters.composeapp.generated.resources.flagged_point
-import dodeclusters.composeapp.generated.resources.flagged_point_v2
 import dodeclusters.composeapp.generated.resources.flow_fill_description
 import dodeclusters.composeapp.generated.resources.flow_fill_name
 import dodeclusters.composeapp.generated.resources.flow_multiselect_description
 import dodeclusters.composeapp.generated.resources.flow_multiselect_name
-import dodeclusters.composeapp.generated.resources.full_screen_cross
 import dodeclusters.composeapp.generated.resources.fullscreen
 import dodeclusters.composeapp.generated.resources.hide_layers
 import dodeclusters.composeapp.generated.resources.hide_ui_description
 import dodeclusters.composeapp.generated.resources.hide_ui_name
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_description
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_name
+import dodeclusters.composeapp.generated.resources.inserted_cross
 import dodeclusters.composeapp.generated.resources.interpolate_lines
-import dodeclusters.composeapp.generated.resources.invisible
 import dodeclusters.composeapp.generated.resources.line_2_points
-import dodeclusters.composeapp.generated.resources.line_2_points_v2
 import dodeclusters.composeapp.generated.resources.line_by_2_points_arg_descriptions
 import dodeclusters.composeapp.generated.resources.line_by_2_points_description
 import dodeclusters.composeapp.generated.resources.line_by_2_points_name
@@ -91,9 +82,7 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_description
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_name
 import dodeclusters.composeapp.generated.resources.multiselect
 import dodeclusters.composeapp.generated.resources.multiselect_description
-import dodeclusters.composeapp.generated.resources.multiselect_mode_3_scattered_circles
 import dodeclusters.composeapp.generated.resources.multiselect_name
-import dodeclusters.composeapp.generated.resources.multiselect_v2
 import dodeclusters.composeapp.generated.resources.open_file
 import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.open_region
@@ -104,7 +93,6 @@ import dodeclusters.composeapp.generated.resources.palette_name
 import dodeclusters.composeapp.generated.resources.pick_circle_color_description
 import dodeclusters.composeapp.generated.resources.pick_circle_color_name
 import dodeclusters.composeapp.generated.resources.propeller
-import dodeclusters.composeapp.generated.resources.propeller_v2
 import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.region_description
@@ -114,9 +102,7 @@ import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.select_all
-import dodeclusters.composeapp.generated.resources.select_region_mode_intersection
-import dodeclusters.composeapp.generated.resources.shark_fin_3_points_striped
-import dodeclusters.composeapp.generated.resources.shark_fin_v2
+import dodeclusters.composeapp.generated.resources.shark_fin_striped
 import dodeclusters.composeapp.generated.resources.show_circles_description
 import dodeclusters.composeapp.generated.resources.show_circles_name
 import dodeclusters.composeapp.generated.resources.shrink
@@ -132,7 +118,6 @@ import dodeclusters.composeapp.generated.resources.two_of_three_circles_connecte
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.upload
-import dodeclusters.composeapp.generated.resources.visible
 import dodeclusters.composeapp.generated.resources.visible_circle
 import domain.SIGNATURE_1_POINT
 import domain.SIGNATURE_2_CIRCLES
@@ -227,7 +212,7 @@ sealed class EditClusterTool(
     data object Multiselect: Switch(
         Res.string.multiselect_name,
         Res.string.multiselect_description,
-        Res.drawable.multiselect_v2
+        Res.drawable.multiselect
     )
     data object FlowSelect: Switch(
         Res.string.flow_multiselect_name,
@@ -254,8 +239,8 @@ sealed class EditClusterTool(
     data object FillChessboardPattern: Switch(
         Res.string.fill_chessboard_pattern_name,
         Res.string.fill_chessboard_pattern_description,
-        Res.drawable.chessboard_v2,
-        Res.drawable.chessboard_reflected_v2,
+        Res.drawable.chessboard,
+        Res.drawable.chessboard_reflected,
     )
     data object RestrictRegionToSelection: Switch(
         Res.string.restrict_region_to_selection_name,
@@ -309,7 +294,7 @@ sealed class EditClusterTool(
         Res.string.circle_inversion_name,
         Res.string.circle_inversion_description,
         Res.array.circle_inversion_arg_descriptions,
-        Res.drawable.circle_inversion_v3
+        Res.drawable.circle_inversion
     )
     data object CircleInterpolation: MultiArg(
         SIGNATURE_2_CIRCLES,
@@ -339,40 +324,40 @@ sealed class EditClusterTool(
         Res.string.circle_by_center_and_radius_name,
         Res.string.circle_by_center_and_radius_description,
         Res.array.circle_by_center_and_radius_arg_descriptions,
-        Res.drawable.circle_center_and_radius_point_v2,
+        Res.drawable.circle_center_and_radius_point
     )
     data object ConstructCircleBy3Points: MultiArg(
         SIGNATURE_3_GENERALIZED_CIRCLE,
         Res.string.circle_by_3_points_name,
         Res.string.circle_by_3_points_description,
         Res.array.circle_by_3_points_arg_descriptions,
-        Res.drawable.circle_3_points_v2
+        Res.drawable.circle_3_points
     )
     data object ConstructCircleByPencilAndPoint: MultiArg(
         SIGNATURE_3_GENERALIZED_CIRCLE,
         Res.string.circle_by_pencil_and_point_name,
         Res.string.circle_by_pencil_and_point_description,
         Res.array.circle_by_pencil_and_point_arg_descriptions,
-        Res.drawable.propeller_v2
+        Res.drawable.propeller
     )
     data object ConstructLineBy2Points: MultiArg(
         SIGNATURE_2_GENERALIZED_CIRCLES,
         Res.string.line_by_2_points_name,
         Res.string.line_by_2_points_description,
         Res.array.line_by_2_points_arg_descriptions,
-        Res.drawable.line_2_points_v2
+        Res.drawable.line_2_points
     )
     data object InsertCenteredCross: Action(
         Res.string.insert_centered_cross_name,
         Res.string.insert_centered_cross_description,
-        Res.drawable.cross_v2
+        Res.drawable.inserted_cross
     )
     data object ConstructArcPath: MultiArg(
         SIGNATURE_N_POINTS_PLACEHOLDER,
         Res.string.arc_path_name,
         Res.string.arc_path_description,
         Res.array.arc_path_arg_descriptions,
-        Res.drawable.shark_fin_v2
+        Res.drawable.shark_fin_striped
     )
     data object CompleteArcPath: ContextAction(
         Res.string.complete_arc_path,
@@ -383,7 +368,7 @@ sealed class EditClusterTool(
         Res.string.add_point_name,
         Res.string.add_point_description,
         Res.array.add_point_arg_descriptions,
-        Res.drawable.flagged_point_v2
+        Res.drawable.flagged_point
     )
     // insert rect/square
 

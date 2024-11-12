@@ -4,11 +4,24 @@
     android:viewportWidth="960"
     android:viewportHeight="960">
   <path
-      android:pathData="m877.91,517.56 l-799.4,-0.03v-80l797.47,0.19c3.88,105.07 1.72,-19.29 1.92,79.84z"
-      android:strokeWidth="1.01451"
-      android:fillColor="#000000"/>
+      android:pathData="m80,680 l799.99,-399.99"
+      android:strokeLineJoin="miter"
+      android:strokeWidth="80.0063"
+      android:fillColor="#00000000"
+      android:strokeColor="#000000"
+      android:strokeLineCap="round"/>
   <path
-      android:fillColor="#FF000000"
-      android:pathData="m272.3,587.73c-28.89,0 -53.45,-10.11 -73.67,-30.33 -20.22,-20.22 -30.33,-44.78 -30.33,-73.67 0,-28.89 10.11,-53.45 30.33,-73.67 20.22,-20.22 44.78,-30.33 73.67,-30.33 28.89,0 53.45,10.11 73.67,30.33 20.22,20.22 30.33,44.78 30.33,73.67 0,28.89 -10.11,53.45 -30.33,73.67 -20.22,20.22 -44.78,30.33 -73.67,30.33zM688.31,587.73c-28.89,0 -53.45,-10.11 -73.67,-30.33 -20.22,-20.22 -30.33,-44.78 -30.33,-73.67 0,-28.89 10.11,-53.45 30.33,-73.67 20.22,-20.22 44.78,-30.33 73.67,-30.33 28.89,0 53.45,10.11 73.67,30.33 20.22,20.22 30.33,44.78 30.33,73.67 0,28.89 -10.11,53.45 -30.33,73.67 -20.22,20.22 -44.78,30.33 -73.67,30.33z"
-      android:strokeWidth="0.866682"/>
+      android:pathData="M240,600m-120,0a120,120 0,1 1,240 0a120,120 0,1 1,-240 0"
+      android:strokeLineJoin="round"
+      android:strokeWidth="0"
+      android:fillColor="#000000"
+      android:strokeColor="#00000000"
+      android:strokeLineCap="round"/>
+  <path
+      android:pathData="M720,360m-120,0a120,120 0,1 1,240 0a120,120 0,1 1,-240 0"
+      android:strokeLineJoin="round"
+      android:strokeWidth="0"
+      android:fillColor="#000000"
+      android:strokeColor="#00000000"
+      android:strokeLineCap="round"/>
 </vector>

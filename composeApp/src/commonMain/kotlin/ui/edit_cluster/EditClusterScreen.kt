@@ -60,12 +60,13 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
+import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.expand
-import dodeclusters.composeapp.generated.resources.ku
 import dodeclusters.composeapp.generated.resources.ok_name
+import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
@@ -295,8 +296,8 @@ fun preloadIcons() {
     }
     for (resource in listOf(
         Res.drawable.confirm, Res.drawable.cancel, // from dialogs
-        Res.drawable.collapse_down, Res.drawable.ku, // aka collapse-left
-        Res.drawable.expand, Res.drawable.shrink, Res.drawable.copy, Res.drawable.delete_forever // from canvas HUD
+        Res.drawable.collapse_down, Res.drawable.collapse_left,
+        Res.drawable.expand, Res.drawable.shrink, Res.drawable.copy, Res.drawable.delete_forever, Res.drawable.rotate_counterclockwise // from canvas HUD
     )) {
         painterResource(resource)
     }
@@ -818,7 +819,7 @@ private fun VerticalPanel(
         // hide panel button
         WithTooltip(stringResource(Res.string.collapse)) {
             SimpleButton(
-                painterResource(Res.drawable.ku),
+                painterResource(Res.drawable.collapse_left),
                 stringResource(Res.string.collapse),
                 toolModifier.padding(4.dp),
                 onClick = hidePanel

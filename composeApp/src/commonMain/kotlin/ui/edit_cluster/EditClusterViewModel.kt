@@ -417,6 +417,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun toConstellation(): Constellation {
+        // pruning nulls
         val deletedPoints = points.indices.filter { i ->
             points[i] == null && expressions.expressions[Indexed.Point(i)] == null
         }.toSet()
