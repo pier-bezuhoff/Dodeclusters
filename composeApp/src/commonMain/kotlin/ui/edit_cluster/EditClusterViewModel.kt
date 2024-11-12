@@ -2423,6 +2423,7 @@ class EditClusterViewModel : ViewModel() {
         centerizeTo(state.centerX, state.centerY)
     }
 
+    /** caches latest [State] using platform-specific local storage */
     fun cacheState() {
         println("caching VM state...")
         val state = saveState()

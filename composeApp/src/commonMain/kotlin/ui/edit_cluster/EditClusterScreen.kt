@@ -675,9 +675,9 @@ fun CategoryButton(
     if (defaultTool == null) {
         require(category.icon != null) { "no category.icon or category.default specified" }
         SimpleButton(
-            painterResource(category.icon),
-            stringResource(category.name),
-            categoryModifier,
+            iconPainter = painterResource(category.icon),
+            name = stringResource(category.name),
+            modifier = categoryModifier,
         ) {
             viewModel.switchToCategory(category, togglePanel = true)
         }

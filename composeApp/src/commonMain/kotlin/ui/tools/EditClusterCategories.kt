@@ -2,6 +2,7 @@ package ui.tools
 
 import androidx.compose.runtime.Immutable
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.big_eye
 import dodeclusters.composeapp.generated.resources.circled_tool
 import dodeclusters.composeapp.generated.resources.colors_category_name
 import dodeclusters.composeapp.generated.resources.create_category_name
@@ -61,7 +62,7 @@ sealed class EditClusterCategory(
             EditClusterTool.HideUI,
         ),
         defaultables = emptyList(),
-        icon = Res.drawable.visible
+        icon = Res.drawable.big_eye
     ) { // ~button/switch-like
     }
     data object Colors : EditClusterCategory(
@@ -89,9 +90,9 @@ sealed class EditClusterCategory(
         listOf(
             EditClusterTool.ConstructCircleByCenterAndRadius,
             EditClusterTool.ConstructCircleBy3Points,
-            EditClusterTool.ConstructCircleByPencilAndPoint,
             EditClusterTool.ConstructLineBy2Points,
             EditClusterTool.AddPoint,
+            EditClusterTool.ConstructCircleByPencilAndPoint,
             EditClusterTool.ConstructArcPath,
             EditClusterTool.InsertCenteredCross,
         ),

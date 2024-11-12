@@ -47,7 +47,6 @@ import dodeclusters.composeapp.generated.resources.ok_name
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
-// MAYBE: pass a Modifier
 @Composable
 fun SimpleButton(
     iconPainter: Painter,
@@ -63,7 +62,7 @@ fun SimpleButton(
         Icon(
             iconPainter,
             contentDescription = name,
-            modifier = Modifier,
+            modifier = modifier,
             tint = tint
         )
     }
