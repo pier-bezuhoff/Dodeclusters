@@ -679,6 +679,7 @@ fun CategoryButton(
             iconPainter = painterResource(category.icon),
             name = stringResource(category.name),
             modifier = categoryModifier,
+            iconModifier = categoryModifier,
         ) {
             viewModel.switchToCategory(category, togglePanel = true)
         }

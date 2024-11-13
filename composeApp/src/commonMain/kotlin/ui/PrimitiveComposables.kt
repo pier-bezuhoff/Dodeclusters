@@ -52,6 +52,7 @@ fun SimpleButton(
     iconPainter: Painter,
     name: String,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -62,7 +63,7 @@ fun SimpleButton(
         Icon(
             iconPainter,
             contentDescription = name,
-            modifier = modifier,
+            modifier = iconModifier,
             tint = tint
         )
     }
