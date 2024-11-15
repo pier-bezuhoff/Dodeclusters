@@ -3,7 +3,20 @@ package domain.expressions
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
-import kotlin.math.exp
+
+/**
+ * tier = 0: free object,
+ * tier = 1: depends only on free objects,
+ * ...
+ * tier = n+1: max dependency tier is n
+ */
+typealias Tier = Int
+/** object with no dependencies */
+private const val FREE_TIER: Tier = 0
+/** stub for yet-to-be-computed tier */
+private const val UNCALCULATED_TIER: Tier = -1
+/** stub tier for forever-deleted object index */
+private const val ABANDONED_TIER: Tier = -2
 
 class ExpressionForest(
     initialExpressions: Map<Indexed, Expression?>, // pls include all possible indices
@@ -22,9 +35,9 @@ class ExpressionForest(
         .toMutableMap()
 
     /** index -> tier */
-    private val ix2tier: MutableMap<Indexed, Int> = initialExpressions
+    private val ix2tier: MutableMap<Indexed, Tier> = initialExpressions
         .keys
-        .associateWith { -1 } // stub
+        .associateWith { UNCALCULATED_TIER } // stub
         .toMutableMap()
     /** tier -> indices */
     private val tier2ixs: MutableList<Set<Indexed>>
@@ -84,22 +97,22 @@ class ExpressionForest(
         val ix: Indexed.Point = calculateNextPointIndex()
         expressions[ix] = null
         children[ix] = emptySet()
-        ix2tier[ix] = 0
+        ix2tier[ix] = FREE_TIER
         if (tier2ixs.isEmpty())
             tier2ixs += setOf(ix)
         else
-            tier2ixs[0] = tier2ixs[0] + ix
+            tier2ixs[FREE_TIER] = tier2ixs[FREE_TIER] + ix
     }
 
     fun addFreeCircle() {
         val ix: Indexed.Circle = calculateNextCircleIndex()
         expressions[ix] = null
         children[ix] = emptySet()
-        ix2tier[ix] = 0
+        ix2tier[ix] = FREE_TIER
         if (tier2ixs.isEmpty())
             tier2ixs += setOf(ix)
         else
-            tier2ixs[0] = tier2ixs[0] + ix
+            tier2ixs[FREE_TIER] = tier2ixs[FREE_TIER] + ix
     }
 
     /** don't forget to upscale the result afterwards! */
@@ -203,8 +216,9 @@ class ExpressionForest(
             expressions[ix] = null
             val previousTier = ix2tier[ix]!!
             tier2ixs[previousTier] = tier2ixs[previousTier] - ix
-            tier2ixs[0] = tier2ixs[0] + ix
-            ix2tier[ix] = 0
+            tier2ixs[FREE_TIER] = tier2ixs[FREE_TIER] + ix
+            ix2tier[ix] = FREE_TIER
+            recomputeChildrenTiers(ix)
         }
     }
 
@@ -217,7 +231,7 @@ class ExpressionForest(
         }
         val previousTier = ix2tier[ix]!!
         tier2ixs[previousTier] = tier2ixs[previousTier] - ix
-        ix2tier[ix] = -1
+        ix2tier[ix] = UNCALCULATED_TIER
         expressions[ix] = Expression.Just(newExpr)
         newExpr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
@@ -229,6 +243,7 @@ class ExpressionForest(
         } else { // no hopping over tiers, we good
             tier2ixs.add(setOf(ix))
         }
+        recomputeChildrenTiers(ix)
         val result = newExpr.eval(get)
         return result.firstOrNull()
             .also {
@@ -250,7 +265,7 @@ class ExpressionForest(
         for (d in deleted) {
             expressions[d] = null // do not delete it since we want to keep indices (keys) in sync with VM.circles
             children.remove(d)
-            ix2tier[d] = -1
+            ix2tier[d] = ABANDONED_TIER
         }
         for ((parentIx, childIxs) in children)
             children[parentIx] = childIxs - deleted
@@ -308,7 +323,7 @@ class ExpressionForest(
      **/
     private fun computeTiers() {
         for (ix in expressions.keys) {
-            if (ix2tier[ix] == -1) {
+            if (ix2tier[ix] == UNCALCULATED_TIER) {
                 ix2tier[ix] = computeTier(ix)
             }
         }
@@ -317,17 +332,17 @@ class ExpressionForest(
     /**
      * note: either supply [expr0] or set `expressions[ix]` BEFORE calling this
      * */
-    private fun computeTier(ix: Indexed, expr0: Expr? = null): Int {
+    private fun computeTier(ix: Indexed, expr0: Expr? = null): Tier {
         val expr: Expr? = expr0 ?: expressions[ix]?.expr
         return if (expr == null) {
-            0
+            FREE_TIER
         } else {
-            val argTiers = mutableSetOf<Int>()
+            val argTiers = mutableSetOf<Tier>()
             val args = expr.args
             for (subArg in args) {
-                val t = ix2tier[subArg] ?: -1
-                val tier: Int
-                if (t == -1) {
+                val t = ix2tier[subArg] ?: UNCALCULATED_TIER
+                val tier: Tier
+                if (t == UNCALCULATED_TIER) {
                     tier = computeTier(subArg)
                     ix2tier[subArg] = tier
                 } else {
@@ -338,6 +353,33 @@ class ExpressionForest(
             if (args.isEmpty())
                 println("WARNING: $expr has empty args!?")
             1 + (argTiers.maxOrNull() ?: -1)
+        }
+    }
+
+    private fun getAllChildren(parentIx: Indexed): Set<Indexed> {
+        val childs = children[parentIx] ?: emptySet()
+        val allChilds = childs.toMutableSet()
+        for (child in childs) {
+            allChilds += getAllChildren(child)
+        }
+        return allChilds
+    }
+
+    /**
+     * call AFTER changing parent expression & tier
+     */
+    private fun recomputeChildrenTiers(parentIx: Indexed) {
+        val childs = getAllChildren(parentIx)
+        for (child in childs) {
+            val tier = ix2tier[child] ?: UNCALCULATED_TIER
+            if (tier != UNCALCULATED_TIER) {
+                tier2ixs[tier] = tier2ixs[tier] - child
+            }
+            ix2tier[child] = UNCALCULATED_TIER
+        }
+        for (child in childs) {
+            val tier = computeTier(child)
+            tier2ixs[tier] = tier2ixs[tier] + child
         }
     }
 
@@ -357,5 +399,4 @@ class ExpressionForest(
             }
         }
     }
-
 }

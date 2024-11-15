@@ -94,6 +94,7 @@ import kotlin.time.Duration.Companion.seconds
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
 class EditClusterViewModel : ViewModel() {
+    // MAYBE: fuse points & circles
     val points: SnapshotStateList<Point?> = mutableStateListOf()
     val circles: SnapshotStateList<CircleOrLine?> = mutableStateListOf()
     val parts: SnapshotStateList<ClusterPart> = mutableStateListOf()
@@ -104,6 +105,8 @@ class EditClusterViewModel : ViewModel() {
     )
 
     var mode: Mode by mutableStateOf(SelectionMode.Drag)
+        private set
+    var submode: SubMode by mutableStateOf(SubMode.None)
         private set
     // XYPoint uses absolute positioning
     var partialArgList: PartialArgList? by mutableStateOf(null)
@@ -168,8 +171,12 @@ class EditClusterViewModel : ViewModel() {
             else -> null
         }
     }
-    var submode: SubMode by mutableStateOf(SubMode.None)
-        private set
+    val selectionIsLocked: Boolean by derivedStateOf {
+        LOCK_DEPENDENT_OBJECT && (
+            pointSelection.any { points[it] != null && isFreePoint(it) } ||
+            circleSelection.any { circles[it] != null && isFreeCircle(it) }
+        )
+    }
 
     // NOTE: history doesn't survive background app kill
     private val history: History<State> = History(
@@ -1222,6 +1229,15 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
+    private fun detachEverySelectedObject() {
+        for (i in pointSelection) {
+            expressions.changeToFree(Indexed.Point(i))
+        }
+        for (j in circleSelection) {
+            expressions.changeToFree(Indexed.Circle(j))
+        }
+    }
+
     fun onDown(visiblePosition: Offset) {
         // reset grabbed thingies
         if (showCircles) {
@@ -1916,8 +1932,12 @@ class EditClusterViewModel : ViewModel() {
     fun onLongDragCancel() {}
     fun onLongDragEnd() {}
 
-    /** @param[rotationAngle] in degrees */
-    fun adjustIncidentPoints(
+    /**
+     * transform points incident to the circle #[parentIx] via
+     * [translation] >>> scaling ([centroid], [zoom]) >>> rotation ([centroid], [rotationAngle])
+     * @param[rotationAngle] in degrees
+     */
+    private fun adjustIncidentPoints(
         parentIx: Ix,
         translation: Offset = Offset.Zero,
         centroid: Offset = Offset.Zero,
@@ -2346,6 +2366,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.Palette -> openedDialog = DialogType.REGION_COLOR_PICKER
             EditClusterTool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
             EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
+            EditClusterTool.Detach -> detachEverySelectedObject()
             EditClusterTool.Duplicate -> duplicateCircles()
             EditClusterTool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
             EditClusterTool.Delete -> deleteCircles()

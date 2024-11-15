@@ -46,6 +46,7 @@ import dodeclusters.composeapp.generated.resources.ok_description
 import dodeclusters.composeapp.generated.resources.ok_name
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import ui.tools.Tool
 
 @Composable
 fun SimpleButton(
@@ -70,6 +71,24 @@ fun SimpleButton(
 }
 
 @Composable
+fun SimpleToolButton(
+    tool: Tool,
+    modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    tint: Color =
+        if (tool is Tool.Tinted) tool.tint
+        else LocalContentColor.current,
+    onClick: () -> Unit
+) = SimpleButton(
+    iconPainter = painterResource(tool.icon),
+    name = stringResource(tool.name),
+    modifier = modifier,
+    iconModifier = iconModifier,
+    tint = tint,
+    onClick = onClick,
+)
+
+@Composable
 fun DisableableButton(
     iconPainter: Painter,
     name: String,
@@ -87,6 +106,8 @@ fun DisableableButton(
         Icon(
             iconPainter,
             contentDescription = name,
+            // NOTE: using the same modifier for Icon can have
+            //  drastic consequences
             modifier = modifier
         )
     }

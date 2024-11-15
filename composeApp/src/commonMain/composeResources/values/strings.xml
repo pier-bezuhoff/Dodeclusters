@@ -40,6 +40,7 @@
     <string name="applied_color_description">Switch to this recently used color</string>
     <string name="expand_name">Expand</string>
     <string name="shrink_name">Shrink</string>
+    <string name="detach_name">Detach</string>
     <string name="duplicate_name">Duplicate</string>
     <string name="duplicate_description">Duplicate selected circles</string>
     <string name="pick_circle_color_name">Circle color</string>

@@ -44,6 +44,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import data.geometry.Circle
@@ -61,6 +63,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.SimpleButton
+import ui.SimpleToolButton
 import ui.circle2path
 import ui.part2path
 import ui.reactiveCanvas
@@ -170,7 +173,11 @@ fun BoxScope.EditClusterCanvas(
             drawSelectionControls(viewModel, sliderColor, jCarcassColor, rotateIconColor, handleRadius, iconDim, rotateIcon)
     }
     if (viewModel.circleSelectionIsActive) {
-        CircleSelectionContextActions(viewModel)
+        if (viewModel.selectionIsLocked) {
+            LockedCircleSelectionContextActions(viewModel)
+        } else {
+            CircleSelectionContextActions(viewModel)
+        }
     } else if (viewModel.pointSelectionIsActive) {
         PointSelectionContextActions(viewModel)
     } else if (
@@ -712,11 +719,33 @@ private fun DrawScope.drawHandles(
     }
 }
 
+// TODO: same for point-only selection
+@Composable
+fun BoxScope.LockedCircleSelectionContextActions(viewModel: EditClusterViewModel) {
+    with (ConcreteSelectionControlsPositions(viewModel.canvasSize, LocalDensity.current)) {
+        // duplicate & delete buttons
+        SimpleToolButton(
+            EditClusterTool.Duplicate,
+            topRightUnderScaleModifier,
+        ) { viewModel.toolAction(EditClusterTool.Duplicate) }
+        SimpleToolButton(
+            EditClusterTool.PickCircleColor,
+            halfBottomRightModifier,
+            tint = viewModel.getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor
+        ) { viewModel.toolAction(EditClusterTool.PickCircleColor) }
+        SimpleToolButton(
+            EditClusterTool.Delete,
+            bottomRightModifier,
+        ) { viewModel.toolAction(EditClusterTool.Delete) }
+        SimpleToolButton(
+            EditClusterTool.Detach,
+            bottomLeftModifier,
+        ) { viewModel.toolAction(EditClusterTool.Detach) }
+    }
+}
+
 @Composable
 fun BoxScope.CircleSelectionContextActions(viewModel: EditClusterViewModel) {
-    val (w, h) = viewModel.canvasSize
-    val positions = SelectionControlsPositions(w, h)
-    val halfSize = (48/2).dp
     // infinity button to the left-center
     // + a way to trigger a visual effect over it
 //    SimpleButton(
@@ -724,77 +753,46 @@ fun BoxScope.CircleSelectionContextActions(viewModel: EditClusterViewModel) {
 //        stringResource(Res.string.stub),
 //        Modifier.align(Alignment.CenterStart)
 //    ) {}
-    with (LocalDensity.current) {
+    with (ConcreteSelectionControlsPositions(viewModel.canvasSize, LocalDensity.current)) {
         // expand & shrink buttons
-        SimpleButton(
-            painterResource(EditClusterTool.Expand.icon),
-            stringResource(EditClusterTool.Expand.name),
+        SimpleToolButton(
+            EditClusterTool.Expand,
             Modifier
                 .align(Alignment.TopStart)
-                .offset(
-                    x = positions.right.toDp() - halfSize,
-                    y = positions.top.toDp() - halfSize
-                ),
+                .then(topRightModifier)
+            ,
             tint = MaterialTheme.colorScheme.secondary
         ) { viewModel.toolAction(EditClusterTool.Expand) }
-        SimpleButton(
-            painterResource(EditClusterTool.Shrink.icon),
-            stringResource(EditClusterTool.Shrink.name),
-            Modifier.offset(
-                x = positions.right.toDp() - halfSize,
-                y = positions.scaleSliderBottom.toDp() - halfSize
-            ),
+        SimpleToolButton(
+            EditClusterTool.Shrink,
+            scaleBottomRightModifier,
             tint = MaterialTheme.colorScheme.secondary
         ) { viewModel.toolAction(EditClusterTool.Shrink) }
-        // BUG: in browser after using "<url>?sample=0" shrink & copy button icons randomly disappear
         // duplicate & delete buttons
-        SimpleButton(
-            painterResource(EditClusterTool.Duplicate.icon),
-            stringResource(EditClusterTool.Duplicate.name),
-            Modifier.offset(
-                x = positions.right.toDp() - halfSize,
-                y = positions.topUnderScaleSlider.toDp() - halfSize
-            ),
-            tint = DodeclustersColors.skyBlue.copy(alpha = 0.9f)
+        SimpleToolButton(
+            EditClusterTool.Duplicate,
+            topRightUnderScaleModifier,
         ) { viewModel.toolAction(EditClusterTool.Duplicate) }
-        SimpleButton(
-            painterResource(EditClusterTool.PickCircleColor.icon),
-            stringResource(EditClusterTool.PickCircleColor.name),
-            // TODO: proper position and backdrop
-            Modifier.offset(
-                x = positions.right.toDp() - halfSize,
-                y = positions.halfHigherThanBottom.toDp() - halfSize
-            ),
+        SimpleToolButton(
+            EditClusterTool.PickCircleColor,
+            halfBottomRightModifier,
             tint = viewModel.getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor
         ) { viewModel.toolAction(EditClusterTool.PickCircleColor) }
-        SimpleButton(
-            painterResource(EditClusterTool.Delete.icon),
-            stringResource(EditClusterTool.Delete.name),
-            Modifier.offset(
-                x = positions.right.toDp() - halfSize,
-                y = positions.bottom.toDp() - halfSize
-            ),
-            tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
+        SimpleToolButton(
+            EditClusterTool.Delete,
+            bottomRightModifier,
         ) { viewModel.toolAction(EditClusterTool.Delete) }
     }
 }
 
 @Composable
-fun BoxScope.PointSelectionContextActions(viewModel: EditClusterViewModel) {
-    val (w, h) = viewModel.canvasSize
-    val positions = SelectionControlsPositions(w, h)
-    val halfSize = (48/2).dp
-    with (LocalDensity.current) {
+fun PointSelectionContextActions(viewModel: EditClusterViewModel) {
+    with (ConcreteSelectionControlsPositions(viewModel.canvasSize, LocalDensity.current)) {
         // delete buttons
-        SimpleButton(
-            painterResource(EditClusterTool.Delete.icon),
-            stringResource(EditClusterTool.Delete.name),
+        SimpleToolButton(
+            EditClusterTool.Delete,
             // awkward position tbh
-            Modifier.offset(
-                x = positions.right.toDp() - halfSize,
-                y = positions.bottom.toDp() - halfSize
-            ),
-            tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
+            bottomRightModifier,
         ) { viewModel.toolAction(EditClusterTool.Delete) }
     }
 }
@@ -966,4 +964,29 @@ data class SelectionControlsPositions(
         const val RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT = 0.10f // = % of H
         const val RELATIVE_CORNER_RADIUS = 0.10f // % of minDim
     }
+}
+
+@Immutable
+data class ConcreteSelectionControlsPositions(
+    val size: IntSize,
+    val density: Density,
+    val halfSize: Dp = (48/2).dp,
+) {
+    val positions: SelectionControlsPositions = SelectionControlsPositions(size)
+
+    @Stable
+    fun offsetModifier(x: Float, y: Float): Modifier =
+        with (density) {
+            Modifier.offset(
+                x = x.toDp() - halfSize,
+                y = y.toDp() - halfSize,
+            )
+        }
+
+    val topRightModifier = offsetModifier(positions.right, positions.top)
+    val scaleBottomRightModifier = offsetModifier(positions.right, positions.scaleSliderBottom)
+    val topRightUnderScaleModifier = offsetModifier(positions.right, positions.topUnderScaleSlider)
+    val halfBottomRightModifier = offsetModifier(positions.right, positions.halfHigherThanBottom)
+    val bottomRightModifier = offsetModifier(positions.right, positions.bottom)
+    val bottomLeftModifier = offsetModifier(positions.left, positions.bottom)
 }

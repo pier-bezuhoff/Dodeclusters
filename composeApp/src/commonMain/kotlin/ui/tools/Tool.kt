@@ -1,5 +1,6 @@
 package ui.tools
 
+import androidx.compose.ui.graphics.Color
 import domain.Signature
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
@@ -36,5 +37,9 @@ sealed interface Tool {
         val argDescriptions: StringArrayResource
         val nArgs: Int
             get() = signature.argTypes.size
+    }
+
+    sealed interface Tinted : Tool {
+        val tint: Color
     }
 }

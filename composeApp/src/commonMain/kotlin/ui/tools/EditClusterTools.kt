@@ -47,6 +47,7 @@ import dodeclusters.composeapp.generated.resources.delete_description
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.delete_name
 import dodeclusters.composeapp.generated.resources.deselect
+import dodeclusters.composeapp.generated.resources.detach_name
 import dodeclusters.composeapp.generated.resources.drag_description
 import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
 import dodeclusters.composeapp.generated.resources.drag_name
@@ -77,6 +78,7 @@ import dodeclusters.composeapp.generated.resources.line_2_points
 import dodeclusters.composeapp.generated.resources.line_by_2_points_arg_descriptions
 import dodeclusters.composeapp.generated.resources.line_by_2_points_description
 import dodeclusters.composeapp.generated.resources.line_by_2_points_name
+import dodeclusters.composeapp.generated.resources.lock_open
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_description
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_name
@@ -385,7 +387,9 @@ sealed class EditClusterTool(
         Res.string.duplicate_name,
         Res.string.duplicate_description,
         Res.drawable.copy
-    )
+    ), Tool.Tinted {
+        override val tint = DodeclustersColors.skyBlue.copy(alpha = 0.9f)
+    }
     data object PickCircleColor: ContextAction(
         Res.string.pick_circle_color_name,
         Res.string.pick_circle_color_description,
@@ -396,7 +400,11 @@ sealed class EditClusterTool(
         Res.string.delete_name,
         Res.string.delete_description,
         Res.drawable.delete_forever
-    ) {
-        val tint = DodeclustersColors.pinkish
+    ), Tool.Tinted {
+        override val tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
     }
+    data object Detach: ContextAction(
+        Res.string.detach_name,
+        icon = Res.drawable.lock_open
+    )
 }

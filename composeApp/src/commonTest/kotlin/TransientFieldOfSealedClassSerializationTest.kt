@@ -17,9 +17,10 @@ sealed class A(
 }
 
 /**
- * There is a bug in kotlinx.serialization:
+ * There is a bug/unexpected behavior in kotlinx.serialization:
  * [tracking issue](https://github.com/Kotlin/kotlinx.serialization/issues/2785)
  * Still present as of version 1.7.3
+ * UPDATE: #WONTFIX
  * */
 class TransientFieldOfSealedClassSerializationTest {
 
@@ -27,7 +28,7 @@ class TransientFieldOfSealedClassSerializationTest {
     fun test() {
         val b0 = A.B(10)
         val b = Json.decodeFromString<A.B>(Json.encodeToString(b0))
-        assertTrue(b.x == 10 && b0.x == 10, "De-serialization bug")
+        assertTrue(b.x == 10 && b0.x == 10, "De-serialization bug [feature]")
         // de-serialization sets b.x to 0 as of now
     }
 }
