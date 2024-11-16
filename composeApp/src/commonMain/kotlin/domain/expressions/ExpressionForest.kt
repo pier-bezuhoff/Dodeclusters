@@ -214,8 +214,11 @@ class ExpressionForest(
                 }
             }
             expressions[ix] = null
-            val previousTier = ix2tier[ix]!!
-            tier2ixs[previousTier] = tier2ixs[previousTier] - ix
+            val previousTier = ix2tier[ix] ?: UNCALCULATED_TIER
+            require(previousTier != UNCALCULATED_TIER)
+            if (previousTier != UNCALCULATED_TIER) {
+                tier2ixs[previousTier] = tier2ixs[previousTier] - ix
+            }
             tier2ixs[FREE_TIER] = tier2ixs[FREE_TIER] + ix
             ix2tier[ix] = FREE_TIER
             recomputeChildrenTiers(ix)
@@ -379,6 +382,7 @@ class ExpressionForest(
         }
         for (child in childs) {
             val tier = computeTier(child)
+            ix2tier[child] = tier
             tier2ixs[tier] = tier2ixs[tier] + child
         }
     }

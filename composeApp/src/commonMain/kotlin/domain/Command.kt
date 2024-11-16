@@ -11,6 +11,7 @@ enum class Command {
     DUPLICATE, DELETE,
     CREATE,
     FILL_REGION,
+    CHANGE_EXPRESSION,
     /** records canvas translations and scaling */
 //    CHANGE_POV,
     ;

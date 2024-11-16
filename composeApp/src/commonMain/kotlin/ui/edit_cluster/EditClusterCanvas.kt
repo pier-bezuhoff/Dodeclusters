@@ -788,12 +788,17 @@ fun BoxScope.CircleSelectionContextActions(viewModel: EditClusterViewModel) {
 @Composable
 fun PointSelectionContextActions(viewModel: EditClusterViewModel) {
     with (ConcreteSelectionControlsPositions(viewModel.canvasSize, LocalDensity.current)) {
-        // delete buttons
         SimpleToolButton(
             EditClusterTool.Delete,
             // awkward position tbh
             bottomRightModifier,
         ) { viewModel.toolAction(EditClusterTool.Delete) }
+        if (viewModel.selectionIsLocked) {
+            SimpleToolButton(
+                EditClusterTool.Detach,
+                halfBottomRightModifier,
+            ) { viewModel.toolAction(EditClusterTool.Detach) }
+        }
     }
 }
 
@@ -849,9 +854,15 @@ fun DrawScope.drawSelectionControls(
         ),
         radius = positions.cornerRadius
     )
-    val sliderBGPath = Path().apply {
-        moveTo(positions.right, positions.top)
-        lineTo(positions.right, positions.scaleSliderBottom)
+    if (!viewModel.selectionIsLocked) {
+        val sliderBGPath = Path().apply {
+            moveTo(positions.right, positions.top)
+            lineTo(positions.right, positions.scaleSliderBottom)
+        }
+        drawPath(
+            sliderBGPath, jCarcassColor,
+            style = carcassStyle
+        )
     }
     // J-shaped carcass (always active when selection isn't empty)
     val jPath = Path().apply {
@@ -861,39 +872,39 @@ fun DrawScope.drawSelectionControls(
         lineTo(positions.left, positions.bottom)
     }
     drawPath(
-        sliderBGPath, jCarcassColor,
-        style = carcassStyle
-    )
-    drawPath(
         jPath, jCarcassColor,
         style = carcassStyle
     )
-    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.top))
-    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.scaleSliderBottom))
+    if (!viewModel.selectionIsLocked) {
+        drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.top))
+        drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.scaleSliderBottom))
+    }
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.topUnderScaleSlider))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.halfHigherThanBottom))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.left, positions.bottom))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.bottom))
-    drawLine(
-        sliderColor,
-        Offset(positions.right, positions.top + positions.sliderPadding),
-        Offset(positions.right, positions.scaleSliderBottom - positions.sliderPadding)
-    )
-    val sliderPercentage = when (val submode = viewModel.submode) {
-        is SubMode.ScaleViaSlider -> submode.sliderPercentage
-        else -> 0.5f
-    }
-    drawCircle( // slider handle
-        sliderColor,
-        handleRadius,
-        Offset(positions.right, positions.calculateSliderY(sliderPercentage))
-    )
-    translate(
-        positions.rotationHandleOffset.x - iconDim / 2f,
-        positions.rotationHandleOffset.y - iconDim / 2f
-    ) {
-        with (rotateIcon) {
-            draw(iconSize, colorFilter = ColorFilter.tint(rotateHandleColor))
+    if (!viewModel.selectionIsLocked) {
+        drawLine(
+            sliderColor,
+            Offset(positions.right, positions.top + positions.sliderPadding),
+            Offset(positions.right, positions.scaleSliderBottom - positions.sliderPadding)
+        )
+        val sliderPercentage = when (val submode = viewModel.submode) {
+            is SubMode.ScaleViaSlider -> submode.sliderPercentage
+            else -> 0.5f
+        }
+        drawCircle( // slider handle
+            sliderColor,
+            handleRadius,
+            Offset(positions.right, positions.calculateSliderY(sliderPercentage))
+        )
+        translate(
+            positions.rotationHandleOffset.x - iconDim / 2f,
+            positions.rotationHandleOffset.y - iconDim / 2f
+        ) {
+            with (rotateIcon) {
+                draw(iconSize, colorFilter = ColorFilter.tint(rotateHandleColor))
+            }
         }
     }
     // MAYBE: when in rotation mode, draw rotation anchor/center

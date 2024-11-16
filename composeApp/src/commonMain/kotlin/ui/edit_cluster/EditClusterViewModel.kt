@@ -90,7 +90,7 @@ import ui.tools.EditClusterTool
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
-// MAYBE: use UiState functional pattern instead of this mess
+// MAYBE: use UiState functional pattern + StateFlow's instead of this mess
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
 class EditClusterViewModel : ViewModel() {
@@ -171,10 +171,13 @@ class EditClusterViewModel : ViewModel() {
             else -> null
         }
     }
+    /** when changing [expressions], flip this to forcibly recalculate [selectionIsLocked] */
+    private var selectionIsLockedTrigger: Boolean by mutableStateOf(false)
     val selectionIsLocked: Boolean by derivedStateOf {
+        selectionIsLockedTrigger // haxxz
         LOCK_DEPENDENT_OBJECT && (
-            pointSelection.any { points[it] != null && isFreePoint(it) } ||
-            circleSelection.any { circles[it] != null && isFreeCircle(it) }
+            pointSelection.all { points[it] == null || !isFreePoint(it) } &&
+            circleSelection.all { circles[it] == null || !isFreeCircle(it) }
         )
     }
 
@@ -1230,12 +1233,14 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun detachEverySelectedObject() {
+        recordCommand(Command.CHANGE_EXPRESSION)
         for (i in pointSelection) {
             expressions.changeToFree(Indexed.Point(i))
         }
         for (j in circleSelection) {
             expressions.changeToFree(Indexed.Circle(j))
         }
+        selectionIsLockedTrigger = !selectionIsLockedTrigger
     }
 
     fun onDown(visiblePosition: Offset) {
@@ -2402,11 +2407,10 @@ class EditClusterViewModel : ViewModel() {
 
 //    fun GCircle.downscale(): GCircle = scale(0.0, 0.0, DOWNSCALING_FACTOR)
 //    fun GCircle.upscale(): GCircle = scale(0.0, 0.0, UPSCALING_FACTOR)
-    fun CircleOrLine.downscale(): CircleOrLine = scale(0.0, 0.0, DOWNSCALING_FACTOR)
-    fun CircleOrLine.upscale(): CircleOrLine =
-        scale(0.0, 0.0, UPSCALING_FACTOR)
-    fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)
-    fun Point.upscale(): Point = scale(0.0, 0.0, UPSCALING_FACTOR)
+    private fun CircleOrLine.downscale(): CircleOrLine = scale(0.0, 0.0, DOWNSCALING_FACTOR)
+    private fun CircleOrLine.upscale(): CircleOrLine = scale(0.0, 0.0, UPSCALING_FACTOR)
+    private fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)
+    private fun Point.upscale(): Point = scale(0.0, 0.0, UPSCALING_FACTOR)
 
     fun saveState(): State {
         val center = computeAbsoluteCenter() ?: Offset.Zero
@@ -2465,7 +2469,6 @@ class EditClusterViewModel : ViewModel() {
         super.onCleared()
     }
 
-    // NOTE: there seem to be some problems with bg kill recovery on android
     /** Be careful to pass *only* strictly immutable args by __copying__ */
     @Serializable
     @Immutable
@@ -2475,28 +2478,7 @@ class EditClusterViewModel : ViewModel() {
         // NOTE: saving VM.translation instead has some issues
         val centerX: Float,
         val centerY: Float,
-    ) {
-        companion object {
-            val SAMPLE = State(
-                Constellation(
-                    points = emptyList(),
-                    circles = listOf(
-                        Circle(200.0, 200.0, 100.0),
-                        Circle(250.0, 200.0, 100.0),
-                        Circle(200.0, 250.0, 100.0),
-                        Circle(250.0, 250.0, 100.0),
-                    ).map { CircleConstruct.Concrete(it) },
-                    parts = listOf(ClusterPart(
-                        insides = setOf(0),
-                        outsides = setOf(1, 2, 3)
-                    )),
-                ),
-                circleSelection = listOf(0),
-                centerX = 225f,
-                centerY = 225f,
-            )
-        }
-    }
+    )
 
     companion object {
         // reference: https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-factories
