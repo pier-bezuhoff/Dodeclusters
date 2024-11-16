@@ -62,7 +62,6 @@ import getPlatform
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import ui.SimpleButton
 import ui.SimpleToolButton
 import ui.circle2path
 import ui.part2path
@@ -116,7 +115,9 @@ fun BoxScope.EditClusterCanvas(
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
     val maxDecayAlpha = 0.2f
-    val decayDuration = 1_500
+    val fullDecayDuration = 1_500 // millis
+    val alpha0To1Duration = fullDecayDuration/30
+    val alpha1To0Duration = fullDecayDuration*29/30
     val animations: MutableMap<CircleAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableMapOf() }
     val coroutineScope = rememberCoroutineScope()
@@ -125,10 +126,10 @@ fun BoxScope.EditClusterCanvas(
             launch {
                 val animatable = Animatable(0f)
                 animations[event] = animatable
-                animatable.animateTo(maxDecayAlpha, tween(decayDuration/30, easing = LinearEasing))
+                animatable.animateTo(maxDecayAlpha, tween(alpha0To1Duration, easing = LinearEasing))
                 animatable.animateTo(
                     targetValue = 0f,
-                    tween(decayDuration*29/30, easing = LinearEasing),
+                    tween(alpha1To0Duration, easing = LinearEasing),
 //                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
                 )
                 animations.remove(event) // idk, this might be bad

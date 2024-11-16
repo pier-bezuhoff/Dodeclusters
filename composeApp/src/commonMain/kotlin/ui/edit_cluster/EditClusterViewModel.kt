@@ -173,6 +173,7 @@ class EditClusterViewModel : ViewModel() {
     }
     /** when changing [expressions], flip this to forcibly recalculate [selectionIsLocked] */
     private var selectionIsLockedTrigger: Boolean by mutableStateOf(false)
+    // MAYBE: show quick prompt/popup instead of button
     val selectionIsLocked: Boolean by derivedStateOf {
         selectionIsLockedTrigger // haxxz
         LOCK_DEPENDENT_OBJECT && (
@@ -535,13 +536,21 @@ class EditClusterViewModel : ViewModel() {
      * */
     private fun recordCommand(
         command: Command,
-        targets: Iterable<Ix>? = null,
-        unique: Boolean = false
+        targets: List<Ix>? = null,
+        circleTarget: Ix? = null,
+        pointTarget: Ix? = null,
+        unique: Boolean = false,
     ) {
-        val tag = if (unique)
+        val tag = if (unique) {
             Command.Tag.Unique()
-        else
-            targets?.let { Command.Tag.Targets(it.toList()) }
+        } else {
+            val allTargets = (targets ?: emptyList()) + listOfNotNull(circleTarget) + listOfNotNull(pointTarget).map { -it-1 }
+            if (allTargets.isEmpty()) {
+                null
+            } else {
+                Command.Tag.Targets(allTargets)
+            }
+        }
         history.recordCommand(command, tag)
         undoIsEnabled = history.undoIsEnabled
         redoIsEnabled = history.redoIsEnabled
@@ -600,7 +609,7 @@ class EditClusterViewModel : ViewModel() {
         return Indexed.Point(points.size - 1)
     }
 
-    fun duplicateCircles() {
+    fun duplicateSelectedCircles() {
         if (mode.isSelectingCircles()) {
             recordCommand(Command.DUPLICATE, circleSelection)
             val copiedCircles = circleSelection.mapNotNull { circles[it] } // preserves selection order
@@ -619,10 +628,6 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    /**
-     * @param[orientationFlips] for every index from [newIndices] this flag indicates
-     * that it is a circle that flipped it's orientation inside <-> outside
-     * */
     private fun copyParts(
         oldIndices: List<Ix>,
         newIndices: List<Ix>,
@@ -651,7 +656,7 @@ class EditClusterViewModel : ViewModel() {
         parts.addAll(newParts)
     }
 
-    fun deleteCircles() {
+    fun deleteSelectedPointsAndCircles() {
         val thereAreSelectedCirclesToDelete = circleSelectionIsActive
         if (pointSelection.isNotEmpty() || thereAreSelectedCirclesToDelete)
             recordCommand(Command.DELETE, unique = true)
@@ -1859,7 +1864,7 @@ class EditClusterViewModel : ViewModel() {
                 if (zoom != 1f) {
                     scaleSelection(zoom)
                 }
-                translation = translation + pan // navigate canvas
+                translation += pan // navigate canvas
             }
         }
     }
@@ -2002,8 +2007,8 @@ class EditClusterViewModel : ViewModel() {
                 switchToCategory(EditClusterCategory.Multiselect)
                 toggleSelectAll()
             }
-            KeyboardAction.DELETE -> deleteCircles()
-            KeyboardAction.PASTE -> duplicateCircles()
+            KeyboardAction.DELETE -> deleteSelectedPointsAndCircles()
+            KeyboardAction.PASTE -> duplicateSelectedCircles()
             KeyboardAction.ZOOM_IN -> scaleSelection(KEYBOARD_ZOOM_INCREMENT)
             KeyboardAction.ZOOM_OUT -> scaleSelection(1/KEYBOARD_ZOOM_INCREMENT)
             KeyboardAction.UNDO -> undo()
@@ -2372,9 +2377,9 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
             EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
             EditClusterTool.Detach -> detachEverySelectedObject()
-            EditClusterTool.Duplicate -> duplicateCircles()
+            EditClusterTool.Duplicate -> duplicateSelectedCircles()
             EditClusterTool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
-            EditClusterTool.Delete -> deleteCircles()
+            EditClusterTool.Delete -> deleteSelectedPointsAndCircles()
             EditClusterTool.InsertCenteredCross -> insertCenteredCross()
             is EditClusterTool.AppliedColor -> setNewRegionColor(tool.color)
             is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
