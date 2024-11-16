@@ -52,6 +52,7 @@ string|delete_all_parts_description|Q2xlYXIgYWxsIGZpbGxlZCByZWdpb25z
 string|delete_all_parts_name|RGVsZXRlIGFsbCBwYXJ0cw==
 string|delete_description|RGVsZXRlIHNlbGVjdGVkIGNpcmNsZXM=
 string|delete_name|RGVsZXRl
+string|detach_name|RGV0YWNo
 string|drag_category_name|RHJhZw==
 string|drag_description|TW9kZTogRHJhZyAmIGRyb3AgY2lyY2xlcyBvbmUgYnkgb25l
 string|drag_name|RHJhZw==
