@@ -71,21 +71,21 @@ fun SimpleButton(
 }
 
 @Composable
-fun SimpleToolButton(
-    tool: Tool,
+inline fun <reified T> SimpleToolButton(
+    tool: T,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
     tint: Color =
         if (tool is Tool.Tinted) tool.tint
         else LocalContentColor.current,
-    onClick: () -> Unit
-) = SimpleButton(
+    crossinline onClick: (tool: T) -> Unit
+) where T : Tool = SimpleButton(
     iconPainter = painterResource(tool.icon),
     name = stringResource(tool.name),
     modifier = modifier,
     iconModifier = iconModifier,
     tint = tint,
-    onClick = onClick,
+    onClick = { onClick(tool) },
 )
 
 @Composable

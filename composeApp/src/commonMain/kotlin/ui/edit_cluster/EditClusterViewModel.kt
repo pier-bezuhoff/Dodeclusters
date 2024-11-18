@@ -1249,6 +1249,14 @@ class EditClusterViewModel : ViewModel() {
         selectionIsLockedTrigger = !selectionIsLockedTrigger
     }
 
+    private fun swapDirectionsOfSelectedCircles() {
+        for (ix in circleSelection) {
+            if (isFreeCircle(ix)) {
+                circles[ix] = circles[ix]?.reversed()
+            }
+        }
+    }
+
     fun onDown(visiblePosition: Offset) {
         // reset grabbed thingies
         if (showCircles) {
@@ -2378,6 +2386,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
             EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
             EditClusterTool.Detach -> detachEverySelectedObject()
+            EditClusterTool.SwapDirection -> swapDirectionsOfSelectedCircles()
             EditClusterTool.Duplicate -> duplicateSelectedCircles()
             EditClusterTool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
             EditClusterTool.Delete -> deleteSelectedPointsAndCircles()

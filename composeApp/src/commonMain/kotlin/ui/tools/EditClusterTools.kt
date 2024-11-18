@@ -101,6 +101,7 @@ import dodeclusters.composeapp.generated.resources.region_description
 import dodeclusters.composeapp.generated.resources.region_name
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_description
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_name
+import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.select_all
@@ -112,6 +113,7 @@ import dodeclusters.composeapp.generated.resources.shrink_name
 import dodeclusters.composeapp.generated.resources.spiral
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
+import dodeclusters.composeapp.generated.resources.swap_direction_name
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_description
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_name
 import dodeclusters.composeapp.generated.resources.toggle_select_all_description
@@ -406,5 +408,9 @@ sealed class EditClusterTool(
     data object Detach: ContextAction(
         Res.string.detach_name,
         icon = Res.drawable.lock_open
+    )
+    data object SwapDirection: ContextAction(
+        Res.string.swap_direction_name,
+        icon = Res.drawable.right_left
     )
 }

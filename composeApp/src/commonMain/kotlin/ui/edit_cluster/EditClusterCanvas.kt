@@ -172,21 +172,21 @@ fun BoxScope.EditClusterCanvas(
             drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, scaleIndicatorColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
         }
         if (viewModel.circleSelectionIsActive)
-            drawSelectionControls(viewModel, sliderColor, jCarcassColor, rotateIconColor, handleRadius, iconDim, rotateIcon)
+            drawSelectionControls(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel.submode, sliderColor, jCarcassColor, rotateIconColor, handleRadius, iconDim, rotateIcon)
     }
     if (viewModel.circleSelectionIsActive) {
         if (viewModel.selectionIsLocked) {
-            LockedCircleSelectionContextActions(viewModel)
+            LockedCircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
         } else {
-            CircleSelectionContextActions(viewModel)
+            CircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
         }
     } else if (viewModel.pointSelectionIsActive) {
-        PointSelectionContextActions(viewModel)
+        PointSelectionContextActions(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel::toolAction)
     } else if (
         viewModel.mode == ToolMode.ARC_PATH &&
         viewModel.arcPathUnderConstruction?.nArcs?.let { it >= 1 } == true
     ) {
-        ArcPathContextActions(viewModel)
+        ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
     }
 }
 
@@ -783,33 +783,45 @@ private fun DrawScope.drawHandles(
     }
 }
 
-// TODO: same for point-only selection
 @Composable
-fun BoxScope.LockedCircleSelectionContextActions(viewModel: EditClusterViewModel) {
-    with (ConcreteSelectionControlsPositions(viewModel.canvasSize, LocalDensity.current)) {
+fun BoxScope.LockedCircleSelectionContextActions(
+    canvasSize: IntSize,
+    toolAction: (EditClusterTool) -> Unit,
+    getMostCommonCircleColorInSelection: () -> Color?
+) {
+    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
         // duplicate & delete buttons
         SimpleToolButton(
             EditClusterTool.Duplicate,
             topRightUnderScaleModifier,
-        ) { viewModel.toolAction(EditClusterTool.Duplicate) }
+            onClick = toolAction
+        )
         SimpleToolButton(
             EditClusterTool.PickCircleColor,
             halfBottomRightModifier,
-            tint = viewModel.getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor
-        ) { viewModel.toolAction(EditClusterTool.PickCircleColor) }
+            tint = getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor,
+            onClick = toolAction
+        )
         SimpleToolButton(
             EditClusterTool.Delete,
             bottomRightModifier,
-        ) { viewModel.toolAction(EditClusterTool.Delete) }
+            onClick = toolAction
+        )
         SimpleToolButton(
             EditClusterTool.Detach,
             bottomLeftModifier,
-        ) { viewModel.toolAction(EditClusterTool.Detach) }
+            tint = MaterialTheme.colorScheme.secondary,
+            onClick = toolAction
+        )
     }
 }
 
 @Composable
-fun BoxScope.CircleSelectionContextActions(viewModel: EditClusterViewModel) {
+fun BoxScope.CircleSelectionContextActions(
+    canvasSize: IntSize,
+    toolAction: (EditClusterTool) -> Unit,
+    getMostCommonCircleColorInSelection: () -> Color?,
+) {
     // infinity button to the left-center
     // + a way to trigger a visual effect over it
 //    SimpleButton(
@@ -817,7 +829,7 @@ fun BoxScope.CircleSelectionContextActions(viewModel: EditClusterViewModel) {
 //        stringResource(Res.string.stub),
 //        Modifier.align(Alignment.CenterStart)
 //    ) {}
-    with (ConcreteSelectionControlsPositions(viewModel.canvasSize, LocalDensity.current)) {
+    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
         // expand & shrink buttons
         SimpleToolButton(
             EditClusterTool.Expand,
@@ -825,56 +837,77 @@ fun BoxScope.CircleSelectionContextActions(viewModel: EditClusterViewModel) {
                 .align(Alignment.TopStart)
                 .then(topRightModifier)
             ,
-            tint = MaterialTheme.colorScheme.secondary
-        ) { viewModel.toolAction(EditClusterTool.Expand) }
+            tint = MaterialTheme.colorScheme.secondary,
+            onClick = toolAction
+        )
         SimpleToolButton(
             EditClusterTool.Shrink,
             scaleBottomRightModifier,
-            tint = MaterialTheme.colorScheme.secondary
-        ) { viewModel.toolAction(EditClusterTool.Shrink) }
+            tint = MaterialTheme.colorScheme.secondary,
+            onClick = toolAction
+        )
         // duplicate & delete buttons
         SimpleToolButton(
             EditClusterTool.Duplicate,
             topRightUnderScaleModifier,
-        ) { viewModel.toolAction(EditClusterTool.Duplicate) }
+            onClick = toolAction
+        )
         SimpleToolButton(
             EditClusterTool.PickCircleColor,
             halfBottomRightModifier,
-            tint = viewModel.getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor
-        ) { viewModel.toolAction(EditClusterTool.PickCircleColor) }
+            tint = getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor,
+            onClick = toolAction
+        )
         SimpleToolButton(
             EditClusterTool.Delete,
             bottomRightModifier,
-        ) { viewModel.toolAction(EditClusterTool.Delete) }
+            onClick = toolAction
+        )
+        SimpleToolButton(
+            EditClusterTool.SwapDirection,
+            bottomMidModifier,
+            tint = MaterialTheme.colorScheme.secondary,
+            onClick = toolAction
+        )
     }
 }
 
 @Composable
-fun PointSelectionContextActions(viewModel: EditClusterViewModel) {
-    with (ConcreteSelectionControlsPositions(viewModel.canvasSize, LocalDensity.current)) {
+fun PointSelectionContextActions(
+    canvasSize: IntSize,
+    selectionIsLocked: Boolean,
+    toolAction: (EditClusterTool) -> Unit,
+) {
+    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
         SimpleToolButton(
             EditClusterTool.Delete,
             // awkward position tbh
             bottomRightModifier,
-        ) { viewModel.toolAction(EditClusterTool.Delete) }
-        if (viewModel.selectionIsLocked) {
+            onClick = toolAction
+        )
+        if (selectionIsLocked) {
             SimpleToolButton(
                 EditClusterTool.Detach,
                 halfBottomRightModifier,
-            ) { viewModel.toolAction(EditClusterTool.Detach) }
+                tint = MaterialTheme.colorScheme.secondary,
+                onClick = toolAction
+            )
         }
     }
 }
 
 // TODO: move it somewhere else, this location is bad
 @Composable
-fun BoxScope.ArcPathContextActions(viewModel: EditClusterViewModel) {
-    val (w, h) = viewModel.canvasSize
+fun BoxScope.ArcPathContextActions(
+    canvasSize: IntSize,
+    toolAction: (EditClusterTool) -> Unit,
+) {
+    val (w, h) = canvasSize
     val verticalMargin = with (LocalDensity.current) {
         (h*SelectionControlsPositions.RELATIVE_VERTICAL_MARGIN).toDp()
     }
     Button(
-        onClick = { viewModel.toolAction(EditClusterTool.CompleteArcPath) },
+        onClick = { toolAction(EditClusterTool.CompleteArcPath) },
         Modifier // NOTE: this position is not optimal, especially for desktop
             .align(Alignment.BottomEnd)
             .offset(y = -verticalMargin)
@@ -898,7 +931,9 @@ fun BoxScope.ArcPathContextActions(viewModel: EditClusterViewModel) {
 }
 
 fun DrawScope.drawSelectionControls(
-    viewModel: EditClusterViewModel,
+    canvasSize: IntSize,
+    selectionIsLocked: Boolean,
+    subMode: SubMode,
     sliderColor: Color,
     jCarcassColor: Color,
     rotateHandleColor: Color,
@@ -909,7 +944,7 @@ fun DrawScope.drawSelectionControls(
     val carcassStyle = Stroke(0.7f * iconDim, cap = StrokeCap.Round)
     val buttonBackdropRadius = 0.8f * iconDim
     val iconSize = Size(iconDim, iconDim)
-    val (w, h) = viewModel.canvasSize
+    val (w, h) = canvasSize
     val positions = SelectionControlsPositions(w, h)
     val cornerRect = Rect(
         center = Offset(
@@ -918,7 +953,7 @@ fun DrawScope.drawSelectionControls(
         ),
         radius = positions.cornerRadius
     )
-    if (!viewModel.selectionIsLocked) {
+    if (!selectionIsLocked) {
         val sliderBGPath = Path().apply {
             moveTo(positions.right, positions.top)
             lineTo(positions.right, positions.scaleSliderBottom)
@@ -939,7 +974,7 @@ fun DrawScope.drawSelectionControls(
         jPath, jCarcassColor,
         style = carcassStyle
     )
-    if (!viewModel.selectionIsLocked) {
+    if (!selectionIsLocked) {
         drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.top))
         drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.scaleSliderBottom))
     }
@@ -947,14 +982,14 @@ fun DrawScope.drawSelectionControls(
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.halfHigherThanBottom))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.left, positions.bottom))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.bottom))
-    if (!viewModel.selectionIsLocked) {
+    if (!selectionIsLocked) {
         drawLine(
             sliderColor,
             Offset(positions.right, positions.top + positions.sliderPadding),
             Offset(positions.right, positions.scaleSliderBottom - positions.sliderPadding)
         )
-        val sliderPercentage = when (val submode = viewModel.submode) {
-            is SubMode.ScaleViaSlider -> submode.sliderPercentage
+        val sliderPercentage = when (subMode) {
+            is SubMode.ScaleViaSlider -> subMode.sliderPercentage
             else -> 0.5f
         }
         drawCircle( // slider handle
@@ -1017,6 +1052,7 @@ data class SelectionControlsPositions(
 
     val right = width * (1 - RELATIVE_RIGHT_MARGIN)
     val left = right - (bottom - topUnderScaleSlider)
+    val mid = (right + left)/2
 
     val sliderMiddleOffset = Offset(right, sliderMiddlePosition)
     val rotationHandleOffset = Offset(left, bottom)
@@ -1064,4 +1100,5 @@ data class ConcreteSelectionControlsPositions(
     val halfBottomRightModifier = offsetModifier(positions.right, positions.halfHigherThanBottom)
     val bottomRightModifier = offsetModifier(positions.right, positions.bottom)
     val bottomLeftModifier = offsetModifier(positions.left, positions.bottom)
+    val bottomMidModifier = offsetModifier(positions.mid, positions.bottom)
 }
