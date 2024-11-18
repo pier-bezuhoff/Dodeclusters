@@ -37,7 +37,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -66,6 +65,7 @@ import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.copy
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.expand
+import dodeclusters.composeapp.generated.resources.lock_open
 import dodeclusters.composeapp.generated.resources.ok_name
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
@@ -115,12 +115,11 @@ fun EditClusterScreen(
         factory = EditClusterViewModel.Factory
     )
     viewModel.setEpsilon(LocalDensity.current)
-//    ModalNavigationDrawer({}) {}
     Scaffold(
         modifier =
-            if (keyboardActions == null)
-                Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
-            else Modifier,
+        if (keyboardActions == null)
+            Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
+        else Modifier,
         floatingActionButton = {
             if (!isLandscape && viewModel.showUI) {
                 // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
@@ -170,15 +169,29 @@ fun EditClusterScreen(
                         redoIsEnabled = viewModel.redoIsEnabled,
                         saveAsYaml = viewModel::saveAsYaml,
                         exportAsSvg = viewModel::exportAsSvg,
-                        loadFromYaml = { content -> content?.let { viewModel.loadFromYaml(content) } },
+                        loadFromYaml = { content ->
+                            content?.let {
+                                viewModel.loadFromYaml(
+                                    content
+                                )
+                            }
+                        },
                         undo = viewModel::undo,
                         redo = viewModel::redo,
                         modifier = Modifier.align(Alignment.TopEnd)
                     )
                     if (isLandscape)
-                        ToolbarLandscape(viewModel, compact, Modifier.align(Alignment.CenterStart))
+                        ToolbarLandscape(
+                            viewModel,
+                            compact,
+                            Modifier.align(Alignment.CenterStart)
+                        )
                     else
-                        ToolbarPortrait(viewModel, compact, Modifier.align(Alignment.BottomStart))
+                        ToolbarPortrait(
+                            viewModel,
+                            compact,
+                            Modifier.align(Alignment.BottomStart)
+                        )
                 }
             }
         }
@@ -299,7 +312,10 @@ fun preloadIcons() {
     for (resource in listOf(
         Res.drawable.confirm, Res.drawable.cancel, // from dialogs
         Res.drawable.collapse_down, Res.drawable.collapse_left,
-        Res.drawable.expand, Res.drawable.shrink, Res.drawable.copy, Res.drawable.delete_forever, Res.drawable.rotate_counterclockwise // from canvas HUD
+        // from canvas HUD
+        Res.drawable.expand, Res.drawable.shrink,
+        Res.drawable.copy, Res.drawable.delete_forever, Res.drawable.lock_open,
+        Res.drawable.rotate_counterclockwise
     )) {
         painterResource(resource)
     }

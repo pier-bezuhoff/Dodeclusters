@@ -215,7 +215,6 @@ class ExpressionForest(
             }
             expressions[ix] = null
             val previousTier = ix2tier[ix] ?: UNCALCULATED_TIER
-            require(previousTier != UNCALCULATED_TIER)
             if (previousTier != UNCALCULATED_TIER) {
                 tier2ixs[previousTier] = tier2ixs[previousTier] - ix
             }

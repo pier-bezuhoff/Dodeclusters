@@ -9,6 +9,7 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.EPSILON2
 import data.geometry.Line
+import domain.cluster.ArcBoundRegion
 import domain.cluster.ClusterPart
 import getPlatform
 import kotlin.math.abs
@@ -210,6 +211,27 @@ fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
                 Offset(x, (circle.y - dy).toFloat()),
                 Offset(x, (circle.y + dy).toFloat()),
             )
+        }
+    }
+}
+
+fun arcBoundRegion2Path(
+    arcBoundRegion: ArcBoundRegion,
+    circles: List<CircleOrLine>,
+    visibleRect: Rect,
+): Path {
+    val arcs = arcBoundRegion.arcs
+    val path = Path()
+    return when (arcs.size) {
+        0 -> path
+        1 -> {
+            val i = arcs.first()
+//            val c = if (i >= 0)
+            path
+        }
+        else -> {
+            path
+            TODO()
         }
     }
 }

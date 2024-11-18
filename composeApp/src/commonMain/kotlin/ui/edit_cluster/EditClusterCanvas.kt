@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.StampedPathEffectStyle
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
@@ -289,6 +290,66 @@ private fun DrawScope.drawCircleOrLine(
     }
 }
 
+private const val ARROW_HEIGHT = 20f
+private const val ARROW_WIDTH = 20f
+private val ARROW_SHAPE = Path().apply {
+    lineTo(-ARROW_WIDTH/4, -ARROW_HEIGHT/2)
+    lineTo(ARROW_WIDTH*3/4, 0f)
+    lineTo(-ARROW_WIDTH/4, ARROW_HEIGHT/2)
+    close()
+}
+private const val ARROW_SPACING = 200f
+private val ARROWED_PATH_EFFECT =
+    PathEffect.stampedPathEffect(
+        shape = ARROW_SHAPE,
+        advance = ARROW_SPACING,
+        phase = ARROW_SPACING/2,
+        style = StampedPathEffectStyle.Rotate
+    )
+private const val HAIR_LENGTH = 100f
+private const val HAIR_WIDTH = 1f
+private val HAIR_PATH = Path().apply {
+    lineTo(0f, -HAIR_LENGTH)
+    lineTo(HAIR_WIDTH, -HAIR_LENGTH)
+    lineTo(HAIR_WIDTH, 0f)
+    close()
+}
+private const val HAIR_SPACING = HAIR_LENGTH/4
+private val HAIR_PATH_EFFECT =
+    PathEffect.stampedPathEffect(
+        shape = HAIR_PATH,
+        advance = HAIR_SPACING,
+        phase = 0f,
+        style = StampedPathEffectStyle.Rotate
+    )
+private fun DrawScope.drawArrows(
+    circle: CircleOrLine,
+    visibleRect: Rect,
+    color: Color,
+) {
+    when (circle) {
+        is Circle -> {
+            val path = Path()
+            path.addOval(
+                Rect(circle.center, circle.radius.toFloat()),
+                if (circle.isCCW) Path.Direction.CounterClockwise
+                else Path.Direction.Clockwise
+            )
+            drawPath(path, color, style = Stroke(pathEffect = HAIR_PATH_EFFECT))
+            drawPath(path, color, style = Stroke(pathEffect = ARROWED_PATH_EFFECT))
+        }
+        is Line -> {
+            val maxDim = visibleRect.maxDimension
+            val pointClosestToScreenCenter = circle.project(visibleRect.center)
+            val direction =  circle.directionVector
+            val farBack = pointClosestToScreenCenter - direction * maxDim
+            val farForward = pointClosestToScreenCenter + direction * maxDim
+            drawLine(color, farBack, farForward, pathEffect = HAIR_PATH_EFFECT)
+            drawLine(color, farBack, farForward, pathEffect = ARROWED_PATH_EFFECT)
+        }
+    }
+}
+
 private fun DrawScope.drawAnimation(
     animations: Map<CircleAnimation, Animatable<Float, AnimationVector1D>>,
     visibleRect: Rect
@@ -327,7 +388,7 @@ private fun DrawScope.drawCircles(
     visibleRect: Rect,
     circleColor: Color,
     freeCircleColor: Color,
-    circleStroke: DrawStyle,
+    circleStroke: Stroke,
     pointColor: Color,
     freePointColor: Color,
     pointRadius: Float
@@ -392,6 +453,8 @@ private fun DrawScope.drawSelectedCircles(
                     alpha = thiccSelectionCircleAlpha,
                     style = circleThiccStroke
                 )
+                if (EditClusterViewModel.DRAW_ARROWS_ON_SELECTED_CIRCLES)
+                    drawArrows(circle, visibleRect, color)
             }
         }
     }

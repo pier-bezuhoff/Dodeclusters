@@ -2428,7 +2428,8 @@ class EditClusterViewModel : ViewModel() {
         )
         return State(
             constellation = toConstellation(),
-            circleSelection = circleSelection.map { circleReindexing[it]!! },
+            // FIX: idk from where, but sometimes it gets null's after select-all
+            circleSelection = circleSelection.mapNotNull { circleReindexing[it] },
             centerX = center.x,
             centerY = center.y,
         )
@@ -2502,6 +2503,7 @@ class EditClusterViewModel : ViewModel() {
         const val LOCK_DEPENDENT_OBJECT = true
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true
+        const val DRAW_ARROWS_ON_SELECTED_CIRCLES = true
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 200.0
         const val DOWNSCALING_FACTOR = 1/UPSCALING_FACTOR
