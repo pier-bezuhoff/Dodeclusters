@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -158,12 +159,13 @@ fun BoxScope.EditClusterCanvas(
             .fillMaxSize()
             .graphicsLayer(
                 compositingStrategy = CompositingStrategy.Offscreen, // crucial for proper alpha blending
-//                renderEffect = BlurEffect(20f, 20f)
+//                renderEffect = BlurEffect(20f, 20f) // funi
             )
     ) {
         translate(viewModel.translation.x, viewModel.translation.y) {
             val visibleRect = size.toRect().translate(-viewModel.translation)
             drawAnimation(animations, visibleRect)
+            // TODO: hoist VM here
             drawParts(viewModel, visibleRect, clusterPathAlpha, circleStroke)
             if (viewModel.showCircles)
                 drawCircles(viewModel, visibleRect, circleColor, freeCircleColor, circleStroke, pointColor, freePointColor, pointRadius)
@@ -322,6 +324,7 @@ private val HAIR_PATH_EFFECT =
         phase = 0f,
         style = StampedPathEffectStyle.Rotate
     )
+
 private fun DrawScope.drawArrows(
     circle: CircleOrLine,
     visibleRect: Rect,
@@ -335,17 +338,33 @@ private fun DrawScope.drawArrows(
                 if (circle.isCCW) Path.Direction.CounterClockwise
                 else Path.Direction.Clockwise
             )
-            drawPath(path, color, style = Stroke(pathEffect = HAIR_PATH_EFFECT))
+            val hairPath = if (circle.isCCW) {
+                path
+            } else {
+                // have to do it this way cuz Android randomly clips outward hair to the path rect
+                Path().apply {
+                    addOval(
+                        Rect(circle.center, circle.radius.toFloat() + HAIR_LENGTH),
+                        Path.Direction.CounterClockwise
+                    )
+                }
+            }
+            drawPath(hairPath, color, style = Stroke(pathEffect = HAIR_PATH_EFFECT))
             drawPath(path, color, style = Stroke(pathEffect = ARROWED_PATH_EFFECT))
         }
         is Line -> {
+            // forked on Android...
             val maxDim = visibleRect.maxDimension
             val pointClosestToScreenCenter = circle.project(visibleRect.center)
             val direction =  circle.directionVector
             val farBack = pointClosestToScreenCenter - direction * maxDim
             val farForward = pointClosestToScreenCenter + direction * maxDim
-            drawLine(color, farBack, farForward, pathEffect = HAIR_PATH_EFFECT)
-            drawLine(color, farBack, farForward, pathEffect = ARROWED_PATH_EFFECT)
+            val path = Path()
+            path.moveTo(farBack.x, farBack.y)
+            path.lineTo(farForward.x, farForward.y)
+            // BUG: Android still clips arrows & hair on near-horizontal and near-vertical lines
+            drawPath(path, color, style = Stroke(pathEffect = HAIR_PATH_EFFECT))
+            drawPath(path, color, style = Stroke(pathEffect = ARROWED_PATH_EFFECT))
         }
     }
 }
@@ -863,12 +882,14 @@ fun BoxScope.CircleSelectionContextActions(
             bottomRightModifier,
             onClick = toolAction
         )
-        SimpleToolButton(
-            EditClusterTool.SwapDirection,
-            bottomMidModifier,
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = toolAction
-        )
+        if (EditClusterViewModel.DRAW_ARROWS_ON_SELECTED_CIRCLES) {
+            SimpleToolButton(
+                EditClusterTool.SwapDirection,
+                bottomMidModifier,
+                tint = MaterialTheme.colorScheme.secondary,
+                onClick = toolAction
+            )
+        }
     }
 }
 
