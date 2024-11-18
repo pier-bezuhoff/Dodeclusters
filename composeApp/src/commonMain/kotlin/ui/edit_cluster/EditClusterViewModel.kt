@@ -60,6 +60,7 @@ import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeLineBy2Points
 import domain.expressions.reIndexExpression
+import domain.filterIndices
 import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV3
@@ -1040,13 +1041,13 @@ class EditClusterViewModel : ViewModel() {
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
         showCircles = true
-        val notEverythingIsSelected = !circleSelection.containsAll(circles.indices.toSet())
-        if (notEverythingIsSelected) {
-            circleSelection = circles.indices.toList()
-            pointSelection = points.indices.toList()
-        } else {
+        val everythingIsSelected = circleSelection.containsAll(circles.filterIndices { it != null }.toSet())
+        if (everythingIsSelected) {
             circleSelection = emptyList()
             pointSelection = emptyList()
+        } else {
+            circleSelection = circles.filterIndices { it != null }
+            pointSelection = points.filterIndices { it != null }
         }
     }
 
