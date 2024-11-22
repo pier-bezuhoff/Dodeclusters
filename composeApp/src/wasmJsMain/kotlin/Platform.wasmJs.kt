@@ -10,6 +10,7 @@ import kotlin.math.pow
 object WasmPlatform: Platform {
     val underlyingPlatform: UnderlyingPlatform = detectUnderlyingPlatform()
     override val name: String = "Web with Kotlin/Wasm under $underlyingPlatform"
+    override val kind: PlatformKind = PlatformKind.WEB
     override val fileSeparator: Char =
         if (underlyingPlatform == UnderlyingPlatform.WINDOWS)
             '\\'

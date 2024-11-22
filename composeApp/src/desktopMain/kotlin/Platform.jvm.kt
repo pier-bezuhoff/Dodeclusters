@@ -1,12 +1,10 @@
 import domain.io.getAppDataDir
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.io.IOException
 import kotlinx.io.files.Path
 import ui.edit_cluster.EditClusterViewModel
@@ -15,6 +13,7 @@ import kotlin.math.pow
 
 object JVMPlatform: Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
+    override val kind: PlatformKind = PlatformKind.DESKTOP
     override val fileSeparator: Char = File.separatorChar
     override val tapRadius: Float = 10f
     override val maxCircleRadius: Float = 1e5f

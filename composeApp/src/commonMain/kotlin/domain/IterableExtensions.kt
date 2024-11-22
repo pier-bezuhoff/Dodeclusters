@@ -77,3 +77,31 @@ fun <T> List<T>.indexOfOrNull(element: T): Int? {
     else
         index
 }
+
+fun <T> Iterable<T>.collectionSizeOrDefault(default: Int): Int = if (this is Collection<*>) this.size else default
+
+/**
+ * Returns a list of values built from the elements of `this` collection,
+ * the [other] and [another] collections with the same index
+ * using the provided [transform] function applied to each triple of elements.
+ * The returned list has length of the shortest collection.
+ */
+inline fun <A, B, C, R> Iterable<A>.zip3(
+    other: Iterable<B>,
+    another: Iterable<C>,
+    crossinline transform: (a: A, b: B, c: C) -> R
+): List<R> {
+    val first = iterator()
+    val second = other.iterator()
+    val third = another.iterator()
+    val list = ArrayList<R>(minOf(
+        collectionSizeOrDefault(10),
+        other.collectionSizeOrDefault(10),
+        another.collectionSizeOrDefault(10),
+    ))
+    while (first.hasNext() && second.hasNext() && third.hasNext()) {
+        list.add(transform(first.next(), second.next(), third.next()))
+    }
+    return list
+}
+

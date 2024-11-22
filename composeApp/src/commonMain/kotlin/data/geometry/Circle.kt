@@ -5,11 +5,11 @@ import androidx.compose.ui.geometry.Offset
 import data.kmath_complex.ComplexField
 import data.kmath_complex.r
 import data.kmath_complex.r2
-import domain.TAU
 import domain.rotateBy
 import domain.toComplex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import ui.colorpicker.toDegree
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -63,7 +63,7 @@ data class Circle(
     override fun project(point: Point): Point {
         val (x1, y1) = point
         if (x == x1 && y == y1 || point == Point.CONFORMAL_INFINITY) {
-            println("WARNING: bad projection")
+            println("WARNING: bad projection at Circle.project")
             return order2point(0.0)
         }
         val vx = x1 - x
@@ -108,6 +108,11 @@ data class Circle(
         else // outside
             if (isCCW) +1 else -1
     }
+
+    /** @return angle in degrees [[-180°; 180°]] measured from East up to the [point] along
+     * `this` circle counterclockwise (irrespective of its [isCCW] direction) */
+    fun point2angle(point: Point): Float =
+        atan2(-point.y + y, point.x - x).toDegree().toFloat()
 
     /** CCW order starting from the East: ENWS */
     override fun point2order(point: Point): Double {
@@ -176,11 +181,12 @@ data class Circle(
                     else -> // both are outsides, "⭗'" case
                         circle isIn this
                 }
-            is Line ->
+            is Line -> {
                 if (isCCW) // " o |" case
                     circle.hasInside(center) && circle.distanceFrom(centerPoint) >= radius
                 else
                     false
+            }
         }
 
     override fun isOutside(circle: CircleOrLine): Boolean =
@@ -196,11 +202,12 @@ data class Circle(
                     else -> // both are outsides
                         false
                 }
-            is Line ->
+            is Line -> {
                 if (this.isCCW) // "| o" case
                     circle.hasOutside(center) && circle.distanceFrom(center) >= radius
                 else
                     false
+            }
         }
 
     fun approximateToLine(screenCenter: Offset): Line {
@@ -329,6 +336,12 @@ data class Circle(
                 }
             }
 
+        /** @return list of 0, 1 or 2 intersection points. When there are 2 intersection points,
+         * they are ordered as follows:
+         * [circle1] "needle" (internal orientation)
+         * goes thru
+         * [circle2] "fabric" (external orientation). The entrance is the 1st, the
+         * exit is the 2nd of the resulting points */
         fun calculateIntersectionPoints(
             circle1: CircleOrLine, circle2: CircleOrLine
         ): List<Point> =

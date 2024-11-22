@@ -28,7 +28,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -37,6 +36,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StampedPathEffectStyle
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -173,22 +173,24 @@ fun BoxScope.EditClusterCanvas(
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, scaleIndicatorColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
         }
-        if (viewModel.circleSelectionIsActive)
+        if (viewModel.circleSelectionIsActive && viewModel.showUI)
             drawSelectionControls(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel.submode, sliderColor, jCarcassColor, rotateIconColor, handleRadius, iconDim, rotateIcon)
     }
-    if (viewModel.circleSelectionIsActive) {
-        if (viewModel.selectionIsLocked) {
-            LockedCircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
-        } else {
-            CircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
+    if (viewModel.showUI) {
+        if (viewModel.circleSelectionIsActive) {
+            if (viewModel.selectionIsLocked) {
+                LockedCircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
+            } else {
+                CircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
+            }
+        } else if (viewModel.pointSelectionIsActive) {
+            PointSelectionContextActions(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel::toolAction)
+        } else if (
+            viewModel.mode == ToolMode.ARC_PATH &&
+            viewModel.arcPathUnderConstruction?.nArcs?.let { it >= 1 } == true
+        ) {
+            ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
         }
-    } else if (viewModel.pointSelectionIsActive) {
-        PointSelectionContextActions(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel::toolAction)
-    } else if (
-        viewModel.mode == ToolMode.ARC_PATH &&
-        viewModel.arcPathUnderConstruction?.nArcs?.let { it >= 1 } == true
-    ) {
-        ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
     }
 }
 
@@ -294,7 +296,7 @@ private fun DrawScope.drawCircleOrLine(
 
 private const val ARROW_HEIGHT = 20f
 private const val ARROW_WIDTH = 20f
-private val ARROW_SHAPE = Path().apply {
+private val ARROW_SHAPE = Path().apply { // >
     lineTo(-ARROW_WIDTH/4, -ARROW_HEIGHT/2)
     lineTo(ARROW_WIDTH*3/4, 0f)
     lineTo(-ARROW_WIDTH/4, ARROW_HEIGHT/2)
@@ -304,6 +306,19 @@ private const val ARROW_SPACING = 200f
 private val ARROWED_PATH_EFFECT =
     PathEffect.stampedPathEffect(
         shape = ARROW_SHAPE,
+        advance = ARROW_SPACING,
+        phase = ARROW_SPACING/2,
+        style = StampedPathEffectStyle.Rotate
+    )
+private val ARROW_SHAPE_OUTWARD = Path().apply {
+    lineTo(-ARROW_WIDTH/4, 0f)
+    lineTo(ARROW_WIDTH*3/4, ARROW_HEIGHT/2)
+    lineTo(-ARROW_WIDTH/4, ARROW_HEIGHT)
+    close()
+}
+private val ARROWED_OUTWARD_PATH_EFFECT =
+    PathEffect.stampedPathEffect(
+        shape = ARROW_SHAPE_OUTWARD,
         advance = ARROW_SPACING,
         phase = ARROW_SPACING/2,
         style = StampedPathEffectStyle.Rotate
@@ -338,8 +353,50 @@ private fun DrawScope.drawArrows(
                 if (circle.isCCW) Path.Direction.CounterClockwise
                 else Path.Direction.Clockwise
             )
+            drawPath(path, color, style = Stroke(pathEffect = HAIR_PATH_EFFECT))
+            drawPath(path, color, style = Stroke(pathEffect = ARROWED_PATH_EFFECT))
+        }
+        is Line -> {
+            val maxDim = visibleRect.maxDimension
+            val pointClosestToScreenCenter = circle.project(visibleRect.center)
+            val direction =  circle.directionVector
+            val farBack = pointClosestToScreenCenter - direction * maxDim
+            val farForward = pointClosestToScreenCenter + direction * maxDim
+            val path = Path()
+            path.moveTo(farBack.x, farBack.y)
+            path.lineTo(farForward.x, farForward.y)
+            drawPath(path, color, style = Stroke(pathEffect = HAIR_PATH_EFFECT))
+            drawPath(path, color, style = Stroke(pathEffect = ARROWED_PATH_EFFECT))
+        }
+    }
+}
+
+private fun DrawScope.drawArrowsPatchedForAndroid(
+    circle: CircleOrLine,
+    visibleRect: Rect,
+    color: Color,
+) {
+    when (circle) {
+        is Circle -> {
+            val arrowPath = Path()
+            if (circle.isCCW) {
+                arrowPath.addOval(
+                    Rect(circle.center, circle.radius.toFloat() - ARROW_HEIGHT/2),
+                    Path.Direction.CounterClockwise
+                )
+            } else {
+                arrowPath.addOval(
+                    Rect(circle.center, circle.radius.toFloat() + ARROW_HEIGHT/2),
+                    Path.Direction.Clockwise
+                )
+            }
             val hairPath = if (circle.isCCW) {
-                path
+                Path().apply {
+                    addOval(
+                        Rect(circle.center, circle.radius.toFloat()),
+                        Path.Direction.CounterClockwise
+                    )
+                }
             } else {
                 // have to do it this way cuz Android randomly clips outward hair to the path rect
                 Path().apply {
@@ -350,19 +407,26 @@ private fun DrawScope.drawArrows(
                 }
             }
             drawPath(hairPath, color, style = Stroke(pathEffect = HAIR_PATH_EFFECT))
-            drawPath(path, color, style = Stroke(pathEffect = ARROWED_PATH_EFFECT))
+            // FIX: android rect-clips NSEW-positioned arrows
+            drawPath(arrowPath, color, style = Stroke(pathEffect = ARROWED_OUTWARD_PATH_EFFECT))
         }
         is Line -> {
-            // forked on Android...
             val maxDim = visibleRect.maxDimension
             val pointClosestToScreenCenter = circle.project(visibleRect.center)
             val direction =  circle.directionVector
             val farBack = pointClosestToScreenCenter - direction * maxDim
             val farForward = pointClosestToScreenCenter + direction * maxDim
+            // NOTE: Android  clips arrows & hair on near-horizontal and near-vertical lines
+            //  do im trying to toe around it
+            //  ┏━━━━┛
+            val normalExtension = 3f * HAIR_LENGTH // why 3f and not 1f? don't ask me...
+            val start = farBack - circle.normalVector * normalExtension
+            val end = farForward + circle.normalVector * normalExtension
             val path = Path()
-            path.moveTo(farBack.x, farBack.y)
+            path.moveTo(start.x, start.y)
+            path.lineTo(farBack.x, farBack.y)
             path.lineTo(farForward.x, farForward.y)
-            // BUG: Android still clips arrows & hair on near-horizontal and near-vertical lines
+            path.lineTo(end.x, end.y)
             drawPath(path, color, style = Stroke(pathEffect = HAIR_PATH_EFFECT))
             drawPath(path, color, style = Stroke(pathEffect = ARROWED_PATH_EFFECT))
         }
@@ -448,6 +512,7 @@ private fun DrawScope.drawCircles(
     }
 }
 
+private val patchForAndroid = getPlatform().kind == PlatformKind.ANDROID
 private fun DrawScope.drawSelectedCircles(
     viewModel: EditClusterViewModel,
     visibleRect: Rect,
@@ -472,8 +537,12 @@ private fun DrawScope.drawSelectedCircles(
                     alpha = thiccSelectionCircleAlpha,
                     style = circleThiccStroke
                 )
-                if (EditClusterViewModel.DRAW_ARROWS_ON_SELECTED_CIRCLES)
-                    drawArrows(circle, visibleRect, color)
+                if (EditClusterViewModel.DRAW_ARROWS_ON_SELECTED_CIRCLES) {
+                    if (patchForAndroid)
+                        drawArrowsPatchedForAndroid(circle, visibleRect, color)
+                    else
+                        drawArrows(circle, visibleRect, color)
+                }
             }
         }
     }

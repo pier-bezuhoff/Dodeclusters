@@ -1,12 +1,10 @@
 import android.os.Build
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.io.IOException
 import kotlinx.io.files.Path
 import ui.edit_cluster.EditClusterViewModel
@@ -15,6 +13,7 @@ import kotlin.math.pow
 
 object AndroidPlatform : Platform {
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
+    override val kind: PlatformKind = PlatformKind.ANDROID
     override val fileSeparator: Char = '/'
     override val tapRadius: Float = 15f
     override val maxCircleRadius: Float = 7_000f

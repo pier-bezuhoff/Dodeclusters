@@ -3,6 +3,7 @@ import ui.edit_cluster.EditClusterViewModel
 
 interface Platform {
     val name: String
+    val kind: PlatformKind
     val fileSeparator: Char
     /** min tap/grab distance to select an object in dp */
     val tapRadius: Float
@@ -15,6 +16,10 @@ interface Platform {
     companion object {
         const val LAST_STATE_STORE_FILE_NAME = "last-save"
     }
+}
+
+enum class PlatformKind {
+    DESKTOP, ANDROID, WEB
 }
 
 expect fun getPlatform(): Platform

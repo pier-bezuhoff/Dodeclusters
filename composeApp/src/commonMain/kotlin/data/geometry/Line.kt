@@ -29,6 +29,7 @@ data class Line(
     val norm: Double =
         hypot(a, b)
 
+    /** length=1 normal vector, to the left of the direction vector */
     val normalVector: Offset get() =
         Offset((a/norm).toFloat(), (b/norm).toFloat())
 
