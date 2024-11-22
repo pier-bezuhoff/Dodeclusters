@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -36,7 +37,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StampedPathEffectStyle
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -72,6 +72,7 @@ import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
 import ui.visibleHalfPlanePath
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -310,19 +311,6 @@ private val ARROWED_PATH_EFFECT =
         phase = ARROW_SPACING/2,
         style = StampedPathEffectStyle.Rotate
     )
-private val ARROW_SHAPE_OUTWARD = Path().apply {
-    lineTo(-ARROW_WIDTH/4, 0f)
-    lineTo(ARROW_WIDTH*3/4, ARROW_HEIGHT/2)
-    lineTo(-ARROW_WIDTH/4, ARROW_HEIGHT)
-    close()
-}
-private val ARROWED_OUTWARD_PATH_EFFECT =
-    PathEffect.stampedPathEffect(
-        shape = ARROW_SHAPE_OUTWARD,
-        advance = ARROW_SPACING,
-        phase = ARROW_SPACING/2,
-        style = StampedPathEffectStyle.Rotate
-    )
 private const val HAIR_LENGTH = 100f
 private const val HAIR_WIDTH = 1f
 private val HAIR_PATH = Path().apply {
@@ -340,6 +328,7 @@ private val HAIR_PATH_EFFECT =
         style = StampedPathEffectStyle.Rotate
     )
 
+// MAYBE: instead of path effects, draw arrows directly
 private fun DrawScope.drawArrows(
     circle: CircleOrLine,
     visibleRect: Rect,
@@ -371,6 +360,7 @@ private fun DrawScope.drawArrows(
     }
 }
 
+// FUN FACT: stampedPathEffect on android is garbo
 private fun DrawScope.drawArrowsPatchedForAndroid(
     circle: CircleOrLine,
     visibleRect: Rect,
@@ -378,25 +368,14 @@ private fun DrawScope.drawArrowsPatchedForAndroid(
 ) {
     when (circle) {
         is Circle -> {
-            val arrowPath = Path()
-            if (circle.isCCW) {
-                arrowPath.addOval(
-                    Rect(circle.center, circle.radius.toFloat() - ARROW_HEIGHT/2),
-                    Path.Direction.CounterClockwise
-                )
-            } else {
-                arrowPath.addOval(
-                    Rect(circle.center, circle.radius.toFloat() + ARROW_HEIGHT/2),
-                    Path.Direction.Clockwise
-                )
-            }
+            val path = Path()
+            path.addOval(
+                Rect(circle.center, circle.radius.toFloat()),
+                if (circle.isCCW) Path.Direction.CounterClockwise
+                else Path.Direction.Clockwise
+            )
             val hairPath = if (circle.isCCW) {
-                Path().apply {
-                    addOval(
-                        Rect(circle.center, circle.radius.toFloat()),
-                        Path.Direction.CounterClockwise
-                    )
-                }
+                path
             } else {
                 // have to do it this way cuz Android randomly clips outward hair to the path rect
                 Path().apply {
@@ -407,8 +386,8 @@ private fun DrawScope.drawArrowsPatchedForAndroid(
                 }
             }
             drawPath(hairPath, color, style = Stroke(pathEffect = HAIR_PATH_EFFECT))
-            // FIX: android rect-clips NSEW-positioned arrows
-            drawPath(arrowPath, color, style = Stroke(pathEffect = ARROWED_OUTWARD_PATH_EFFECT))
+            // MAYBE: shift arrows slightly & increase radius to increase bounding rect
+            drawPath(path, color, style = Stroke(pathEffect = ARROWED_PATH_EFFECT))
         }
         is Line -> {
             val maxDim = visibleRect.maxDimension

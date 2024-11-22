@@ -2476,6 +2476,7 @@ class EditClusterViewModel : ViewModel() {
         println("caching VM state...")
         val state = saveState()
         getPlatform().saveLastState(state)
+        println("cached.")
     }
 
     // NOTE: i never seen this proc on Android or Wasm tbh

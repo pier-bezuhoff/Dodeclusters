@@ -88,20 +88,20 @@ fun chessboardPath(
     return path
 }
 
+private val maxRadius = getPlatform().maxCircleRadius
 fun part2path(
     circles: List<CircleOrLine?>,
     part: ClusterPart,
     visibleRect: Rect
 ): Path {
-    val maxRadius = getPlatform().maxCircleRadius
     val ins = part.insides.mapNotNull { circles[it] }
     val outs = part.outsides.mapNotNull { circles[it] }
     val circleInsides =
-        ins.filter { it !is Circle || it.isCCW } +
+        ins.filter { it is Line || it is Circle && it.isCCW } +
         outs.filter { it is Circle && !it.isCCW }
     val circleOutsides =
         ins.filter { it is Circle && !it.isCCW } +
-        outs.filter { it !is Circle || it.isCCW }
+        outs.filter { it is Line || it is Circle && it.isCCW }
     val insidePath: Path? = circleInsides
         .map {
             when (it) {
@@ -135,7 +135,7 @@ fun part2path(
         path.addRect(visibleRect.inflate(100f))
         path.op(path, invertedPath, PathOperation.Difference)
         path
-    } else if (part.outsides.isEmpty()) {
+    } else if (circleOutsides.isEmpty()) {
         insidePath
     } else {
         circleOutsides.fold(insidePath) { acc: Path, circleOutside: CircleOrLine ->
