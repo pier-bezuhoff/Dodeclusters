@@ -4,13 +4,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
-import domain.cluster.Cluster
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.EPSILON2
 import data.geometry.Line
-import domain.cluster.ArcBoundRegion
 import domain.cluster.ClusterPart
+import domain.cluster.ConcreteArcBoundRegion
 import getPlatform
 import kotlin.math.abs
 import kotlin.math.pow
@@ -215,23 +214,32 @@ fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
     }
 }
 
-fun arcBoundRegion2Path(
-    arcBoundRegion: ArcBoundRegion,
-    circles: List<CircleOrLine>,
-    visibleRect: Rect,
+// Q: does it track inside-vs-outside?
+fun arcs2path(
+    arcs: ConcreteArcBoundRegion,
 ): Path {
-    val arcs = arcBoundRegion.arcs
     val path = Path()
-    return when (arcs.size) {
-        0 -> path
-        1 -> {
-            val i = arcs.first()
-//            val c = if (i >= 0)
-            path
+    if (arcs.isContinuous) { // idk about drawing non-continuous ones
+        arcs.intersectionPoints.firstOrNull()?.let { startPoint ->
+            path.moveTo(startPoint.x.toFloat(), startPoint.y.toFloat())
         }
-        else -> {
-            path
-            TODO()
+        for (i in arcs.indices) {
+            when (val circle = arcs.circles[i]) {
+                is Line -> {
+                    val nextPoint = arcs.intersectionPoints[(i + 1) % arcs.size]!!
+                    path.lineTo(nextPoint.x.toFloat(), nextPoint.y.toFloat())
+                }
+                is Circle -> {
+                    path.arcTo(
+                        Rect(circle.center, circle.radius.toFloat()),
+                        startAngleDegrees = arcs.startAngles[i],
+                        sweepAngleDegrees = arcs.sweepAngles[i],
+                        forceMoveTo = false
+                    )
+                }
+            }
         }
+        path.close() // just in case
     }
+    return path
 }

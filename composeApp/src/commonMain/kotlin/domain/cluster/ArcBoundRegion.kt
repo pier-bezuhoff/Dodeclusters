@@ -67,6 +67,10 @@ data class ConcreteArcBoundRegion(
     val borderColor: ColorAsCss?,
 ) {
     @Transient
+    val size: Int = circles.size
+    @Transient
+    val indices: IntRange = circles.indices
+    @Transient
     val isContinuous: Boolean = intersectionPoints.none { it == null }
     @Transient
     val rects: List<Rect> = circles.map { circle ->
