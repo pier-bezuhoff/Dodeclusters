@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 data class Cluster(
     val circles: List<CircleOrLine>,
     /** union of parts comprised of circle intersections */
-    val parts: List<ClusterPart> = emptyList(),
+    val parts: List<LogicalRegion> = emptyList(),
 ) {
     fun toConstellation(): Constellation =
         Constellation(

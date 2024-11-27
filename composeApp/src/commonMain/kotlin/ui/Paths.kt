@@ -8,8 +8,8 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.EPSILON2
 import data.geometry.Line
-import domain.cluster.ClusterPart
-import domain.cluster.ConcreteArcBoundRegion
+import domain.cluster.LogicalRegion
+import domain.cluster.ConcreteArcPath
 import getPlatform
 import kotlin.math.abs
 import kotlin.math.pow
@@ -90,7 +90,7 @@ fun chessboardPath(
 private val maxRadius = getPlatform().maxCircleRadius
 fun part2path(
     circles: List<CircleOrLine?>,
-    part: ClusterPart,
+    part: LogicalRegion,
     visibleRect: Rect
 ): Path {
     val ins = part.insides.mapNotNull { circles[it] }
@@ -214,24 +214,28 @@ fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
     }
 }
 
-// Q: does it track inside-vs-outside?
+// Q: how does it track inside-vs-outside?
 fun arcs2path(
-    arcs: ConcreteArcBoundRegion,
+    arcs: ConcreteArcPath,
 ): Path {
     val path = Path()
     if (arcs.isContinuous) { // idk about drawing non-continuous ones
         arcs.intersectionPoints.firstOrNull()?.let { startPoint ->
             path.moveTo(startPoint.x.toFloat(), startPoint.y.toFloat())
         }
-        for (i in arcs.indices) {
-            when (val circle = arcs.circles[i]) {
+        val indices =
+            if (arcs.isClosed) arcs.indices
+            else 0 until (arcs.size - 1) // ignore last arc for non-closed contour
+        for (i in indices) {
+            when (arcs.circles[i]) {
                 is Line -> {
-                    val nextPoint = arcs.intersectionPoints[(i + 1) % arcs.size]!!
+                    val cyclicNextIndex = (i + 1) % arcs.size
+                    val nextPoint = arcs.intersectionPoints[cyclicNextIndex]!!
                     path.lineTo(nextPoint.x.toFloat(), nextPoint.y.toFloat())
                 }
                 is Circle -> {
                     path.arcTo(
-                        Rect(circle.center, circle.radius.toFloat()),
+                        rect = arcs.rects[i],
                         startAngleDegrees = arcs.startAngles[i],
                         sweepAngleDegrees = arcs.sweepAngles[i],
                         forceMoveTo = false
@@ -239,7 +243,8 @@ fun arcs2path(
                 }
             }
         }
-        path.close() // just in case
+        if (arcs.isClosed)
+            path.close() // just in case
     }
     return path
 }

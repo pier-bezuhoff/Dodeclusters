@@ -7,7 +7,7 @@ import data.geometry.CircleOrLine
 import data.geometry.Line
 import domain.ColorCssSerializer
 import domain.cluster.Cluster
-import domain.cluster.ClusterPart
+import domain.cluster.LogicalRegion
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -63,7 +63,7 @@ data class DdcV2(
             val indices: List<Int>,
             val circles: List<CircleOrLine>,
             /** circle indices used parts shall be Ddc-global circle indices, the one consistent with cluster.indices */
-            val parts: List<ClusterPart>,
+            val parts: List<LogicalRegion>,
             val filled: Boolean = DEFAULT_CLUSTER_FILLED,
             /** circle indices used shall be Ddc-global circle indices, the one consistent with cluster.indices and circle.index */
             val rule: List<Int> = DEFAULT_CLUSTER_RULE,
@@ -241,7 +241,7 @@ internal data class Indentation(val indentLevel: Int) {
             encode("c", line.c),
         )
 
-    fun encodeClusterPart(part: ClusterPart): String =
+    fun encodeClusterPart(part: LogicalRegion): String =
         encodeListItem(
             "insides: " + encodeIntSequence(part.insides.sorted()),
             encode("outsides", encodeIntSequence(part.outsides.sorted())),

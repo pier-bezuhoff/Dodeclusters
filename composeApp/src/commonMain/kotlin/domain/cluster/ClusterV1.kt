@@ -21,7 +21,7 @@ data class ClusterV1(
         Cluster(
             circles,
             parts.map {
-                ClusterPart(
+                LogicalRegion(
                     insides = it.insides,
                     outsides = it.outsides,
                     fillColor = it.fillColor,

@@ -47,7 +47,7 @@ data class DdcV1(
             val indices: List<Int>,
             val circles: List<data.geometry.Circle>,
             /** circle indices used parts shall be Ddc-global circle indices, the one consistent with cluster.indices */
-            val parts: List<domain.cluster.ClusterPart>,
+            val parts: List<domain.cluster.LogicalRegion>,
             val filled: Boolean = DdcV2.DEFAULT_CLUSTER_FILLED,
             /** circle indices used shall be Ddc-global circle indices, the one consistent with cluster.indices and circle.index */
             val rule: List<Int> = DdcV2.DEFAULT_CLUSTER_RULE,

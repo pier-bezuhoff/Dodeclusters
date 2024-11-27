@@ -9,7 +9,7 @@ import com.github.ajalt.colormath.model.RGB
 import com.github.ajalt.colormath.transform.interpolate
 import domain.Indices
 import domain.Ix
-import domain.cluster.ClusterPart
+import domain.cluster.LogicalRegion
 import domain.io.DdcV2
 import kotlin.math.exp
 
@@ -168,7 +168,7 @@ class DdcPresenter(
                             indices = listOf(token.index, token.index),
                             circles = listOf(token.toCircle()),
                             parts = listOf(
-                                ClusterPart(
+                                LogicalRegion(
                                     insides = setOf(0),
                                     outsides = emptySet(),
                                     fillColor = token.fillColor ?: DdcV2.DEFAULT_CIRCLE_FILL_COLOR,

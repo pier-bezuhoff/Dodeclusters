@@ -2,35 +2,36 @@ package domain.cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.util.fastZipWithNext
 import data.geometry.Circle
 import data.geometry.CircleOrLine
-import data.geometry.Line
 import data.geometry.Point
 import domain.ColorAsCss
-import domain.zip3
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
-@Serializable
-@Immutable
 /**
  * @param[arcs] [List] of indices (_starting from 1!_) of circles from which the
  * arcs are chosen, __prefixed__ by +/- depending on whether the direction of
- * the arc corresponds to the direction of the circle
+ * the arc coincides with the direction of the circle
+ * @param[isClosed] when `false` the last arc is considered invisible and only used
+ * to denote start & end points
  * */
-data class ArcBoundRegion(
+@Immutable
+@Serializable
+@SerialName("arcPath")
+data class AbstractArcPath(
     // NOTE: cyclic order doesn't matter, but reversing it alternates between one of
     //  2 possible regions that arise when not considering circle order
-    @SerialName("arcIndicesStartingFrom1WithSignIndicatingReversedDirection")
+    @SerialName("arcIndicesStartingFrom1WithMinusIndicatingReversedDirection")
     val arcs: List<Int>,
+    val isClosed: Boolean,
     val fillColor: ColorAsCss?,
     val borderColor: ColorAsCss?,
 ) {
     // previous arc: external orientation
     // next arc: internal orientation
-    fun toConcrete(allCircles: List<CircleOrLine>): ConcreteArcBoundRegion {
+    fun toConcrete(allCircles: List<CircleOrLine>): ConcreteArcPath {
         val circles = arcs.map { i ->
             if (i > 0) allCircles[i-1]
             else allCircles[i-1].reversed()
@@ -49,20 +50,23 @@ data class ArcBoundRegion(
                 intersectionPoints.add(intersection.firstOrNull())
             }
         }
-        return ConcreteArcBoundRegion(
-            circles, intersectionPoints, fillColor, borderColor
+        return ConcreteArcPath(
+            circles, intersectionPoints, isClosed, fillColor, borderColor
         )
     }
 }
 
+// to distinguish in/out, connect any point to-the-left to the infinity and
+// count how many arcs the line intersects
 /**
  * @param[intersectionPoints] `null`s correspond to non-intersecting circles
  * */
-@Serializable
 @Immutable
-data class ConcreteArcBoundRegion(
+@Serializable
+data class ConcreteArcPath(
     val circles: List<CircleOrLine>,
     val intersectionPoints: List<Point?>,
+    val isClosed: Boolean,
     val fillColor: ColorAsCss?,
     val borderColor: ColorAsCss?,
 ) {
@@ -114,7 +118,3 @@ data class ConcreteArcBoundRegion(
         require(circles.size == intersectionPoints.size)
     }
 }
-
-class NonContinuousArcContourError(
-    vararg circles: CircleOrLine,
-) : IllegalArgumentException("Non-continuous arc-contour $circles")

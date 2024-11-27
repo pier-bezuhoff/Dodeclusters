@@ -41,10 +41,10 @@ import domain.PartialArgList
 import domain.PointSnapResult
 import domain.angleDeg
 import domain.cluster.Cluster
-import domain.cluster.ClusterPart
+import domain.cluster.LogicalRegion
 import domain.cluster.ClusterV1
 import domain.cluster.Constellation
-import domain.compressPart
+import domain.compressConstraints
 import domain.expressions.CircleConstruct
 import domain.expressions.Expr
 import domain.expressions.Expression
@@ -98,7 +98,7 @@ class EditClusterViewModel : ViewModel() {
     // MAYBE: fuse points & circles
     val points: SnapshotStateList<Point?> = mutableStateListOf()
     val circles: SnapshotStateList<CircleOrLine?> = mutableStateListOf()
-    val parts: SnapshotStateList<ClusterPart> = mutableStateListOf()
+    val regions: SnapshotStateList<LogicalRegion> = mutableStateListOf()
     private var expressions: ExpressionForest = ExpressionForest( // stub
         initialExpressions = emptyMap(),
         get = { null },
@@ -258,7 +258,7 @@ class EditClusterViewModel : ViewModel() {
         val nullCircles = circles.indices.filter { circles[it] == null }
         val circleReindexing = reindexingMap(circles.indices, nullCircles.toSet())
         val realCircles = circles.filterNotNull()
-        val reindexedParts = parts.map { part ->
+        val reindexedParts = regions.map { part ->
             part.copy(
                 insides = part.insides.map { circleReindexing[it]!! }.toSet(),
                 outsides = part.outsides.map { circleReindexing[it]!! }.toSet(),
@@ -390,7 +390,7 @@ class EditClusterViewModel : ViewModel() {
     private fun loadConstellation(constellation: Constellation) {
         circleSelection = emptyList()
         pointSelection = emptyList()
-        parts.clear()
+        regions.clear()
         circleColors.clear()
         points.clear()
         circles.clear()
@@ -424,7 +424,7 @@ class EditClusterViewModel : ViewModel() {
             } }
         )
         expressions.reEval() // calculates all dependent objects
-        parts.addAll(constellation.parts)
+        regions.addAll(constellation.parts)
         circleColors.putAll(constellation.circleColors)
     }
 
@@ -481,7 +481,7 @@ class EditClusterViewModel : ViewModel() {
                     ))
                 }
             },
-            parts = parts.map { part ->
+            parts = regions.map { part ->
                 part.copy(
                     insides = part.insides.map { circleReindexing[it]!! }.toSet(),
                     outsides = part.outsides.map { circleReindexing[it]!! }.toSet(),
@@ -636,7 +636,7 @@ class EditClusterViewModel : ViewModel() {
     ) {
         require(oldIndices.size == newIndices.size)
         val old2new = oldIndices.zip(newIndices).toMap()
-        val newParts = parts.filter {
+        val newParts = regions.filter {
             oldIndices.containsAll(it.insides) && oldIndices.containsAll(it.outsides)
         }.map { part ->
             val newInsides: Set<Ix>
@@ -648,13 +648,13 @@ class EditClusterViewModel : ViewModel() {
                 newInsides = part.insides.map { old2new[it]!! }.toSet()
                 newOutsides = part.outsides.map { old2new[it]!! }.toSet()
             }
-            ClusterPart(
+            LogicalRegion(
                 insides = newInsides,
                 outsides = newOutsides,
                 fillColor = part.fillColor
             )
         }
-        parts.addAll(newParts)
+        regions.addAll(newParts)
     }
 
     fun deleteSelectedPointsAndCircles() {
@@ -679,17 +679,17 @@ class EditClusterViewModel : ViewModel() {
                 .toSet()
             // FIX: there's been an incident of select-all > delete > out-of-bounds 6/6 here
             val deletedCircles = whatsGone.mapNotNull { circles[it] }
-            val oldParts = parts.toList()
+            val oldParts = regions.toList()
             circleSelection = emptyList()
-            parts.clear()
+            regions.clear()
             for (ix in whatsGone)
                 circles[ix] = null
-            parts.addAll(
+            regions.addAll(
                 oldParts
                     // to avoid stray chessboard selections
                     .filterNot { (ins, _, _) -> ins.isNotEmpty() && ins.minus(whatsGone).isEmpty() }
                     .map { (ins, outs, fillColor) ->
-                        ClusterPart(
+                        LogicalRegion(
                             insides = ins.minus(whatsGone),
                             outsides = outs.minus(whatsGone),
                             fillColor = fillColor
@@ -844,16 +844,16 @@ class EditClusterViewModel : ViewModel() {
     private fun selectPartAt(
         visiblePosition: Offset,
         boundingCircles: List<Ix>? = null
-    ): Pair<ClusterPart, ClusterPart> {
+    ): Pair<LogicalRegion, LogicalRegion> {
         val position = absolute(visiblePosition)
         val delimiters = boundingCircles ?: circles.indices
         val ins = delimiters // NOTE: doesn't include circles that the point lies on
             .filter { ix -> circles[ix]?.hasInside(position) ?: false }
         val outs = delimiters
             .filter { ix -> circles[ix]?.hasOutside(position) ?: false }
-        val (essentialIns, essentialOuts) = compressPart(circles, ins, outs)
-        val part0 = ClusterPart(ins.toSet(), outs.toSet(), regionColor)
-        val part = ClusterPart(
+        val (essentialIns, essentialOuts) = compressConstraints(circles, ins, outs)
+        val part0 = LogicalRegion(ins.toSet(), outs.toSet(), regionColor)
+        val part = LogicalRegion(
 //            insides = ins.toSet(),
 //            outsides = outs.toSet(),
             insides = essentialIns,
@@ -870,37 +870,37 @@ class EditClusterViewModel : ViewModel() {
     ) {
         displayChessboardPattern = false
         val (part, part0) = selectPartAt(visiblePosition, boundingCircles)
-        val outerParts = parts.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
+        val outerParts = regions.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
         if (outerParts.isEmpty()) {
-            recordCommand(Command.FILL_REGION, listOf(parts.size))
-            parts.add(part)
+            recordCommand(Command.FILL_REGION, listOf(regions.size))
+            regions.add(part)
             if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
                 circleSelection = (part.insides + part.outsides).toList()
             }
             println("added $part")
         } else {
-            val sameExistingPart = parts.singleOrNull {
+            val sameExistingPart = regions.singleOrNull {
                 part.insides == it.insides && part.outsides == it.outsides
             }
             recordCommand(Command.FILL_REGION, unique = true)
             if (sameExistingPart != null) {
-                parts.remove(sameExistingPart)
+                regions.remove(sameExistingPart)
                 if (part == sameExistingPart) {
                     println("removed $sameExistingPart")
                 } else { // we are trying to change color im guessing
-                    parts.add(sameExistingPart.copy(fillColor = part.fillColor))
+                    regions.add(sameExistingPart.copy(fillColor = part.fillColor))
                     if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
                         circleSelection = (part.insides + part.outsides).toList()
                     }
                     println("recolored $sameExistingPart")
                 }
             } else {
-                parts.removeAll(outerParts)
+                regions.removeAll(outerParts)
                 if (
                     outerParts.all { it.fillColor == outerParts[0].fillColor } &&
                     outerParts[0].fillColor != part.fillColor
                 ) { // we are trying to change color im guessing
-                    parts.addAll(outerParts.map { it.copy(fillColor = part.fillColor) })
+                    regions.addAll(outerParts.map { it.copy(fillColor = part.fillColor) })
                     println("recolored parts [${outerParts.joinToString(prefix = "\n", separator = ";\n")}]")
                 } else {
                     println("removed parts [${outerParts.joinToString(prefix = "\n", separator = ";\n")}]")
@@ -930,7 +930,7 @@ class EditClusterViewModel : ViewModel() {
 
     // MAYBE: wrap into state that depends only on [parts] for caching
     fun getColorsByMostUsed(): List<Color> =
-        parts
+        regions
             .flatMap { part ->
                 part.borderColor?.let { listOf(part.fillColor, it) }
                     ?: listOf(part.fillColor)
@@ -1127,7 +1127,7 @@ class EditClusterViewModel : ViewModel() {
     fun deleteAllParts() {
         recordCommand(Command.DELETE, unique = true)
         displayChessboardPattern = false
-        parts.clear()
+        regions.clear()
     }
 
     fun cancelSelectionAsToolArgPrompt() {
@@ -1457,7 +1457,7 @@ class EditClusterViewModel : ViewModel() {
                         if (part0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
                             toggleSelectAll()
                         } else {
-                            parts
+                            regions
                                 .withIndex()
                                 .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
                                 .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }

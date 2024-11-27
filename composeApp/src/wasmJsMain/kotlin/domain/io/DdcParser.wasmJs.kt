@@ -5,7 +5,7 @@ import data.geometry.Circle
 import data.geometry.Line
 import domain.ColorCssSerializer
 import domain.ColorULongSerializer
-import domain.cluster.ClusterPart
+import domain.cluster.LogicalRegion
 import kotlinx.serialization.json.Json
 
 // i suppose i don't need this anymore...
@@ -71,7 +71,7 @@ private fun _parseDdc(content: String): DdcV2 {
                             }
                         },
                         parts = jsCluster.parts.map { part ->
-                            ClusterPart(
+                            LogicalRegion(
                                 insides = part.insides.map { it.toInt() }.toSet(),
                                 outsides = part.outsides.map { it.toInt() }.toSet(),
                                 fillColor = part.fillColor.parseColor() ?: DdcV2.DEFAULT_CLUSTER_FILL_COLOR,
@@ -126,7 +126,7 @@ private fun _parseOldDdc(content: String): DdcV1 {
                             Circle(circle.x, circle.y, circle.radius)
                         },
                         parts = jsCluster.parts.map { part ->
-                            ClusterPart(
+                            LogicalRegion(
                                 insides = part.insides.map { it.toInt() }.toSet(),
                                 outsides = part.outsides.map { it.toInt() }.toSet(),
                                 fillColor = part.fillColor.parseColor() ?: DdcV2.DEFAULT_CLUSTER_FILL_COLOR,

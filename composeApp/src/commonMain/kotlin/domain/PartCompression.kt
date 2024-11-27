@@ -5,17 +5,18 @@ import data.geometry.CircleOrLine
 import data.geometry.EPSILON
 import data.geometry.Line
 import data.geometry.Point
+import domain.cluster.AbstractArcPath
 
 /** [ins] and [outs] delimiters must not contain `null` circles */
-fun compressPart(
+fun compressConstraints(
     circles: List<CircleOrLine?>,
     ins: List<Ix>,
     outs: List<Ix>,
 ): Pair<Set<Ix>, Set<Ix>> {
     val (sievedIns, sievedOuts) =
-        compressPartByRelativeContainment(circles, ins, outs)
+        compressConstraintsByRelativeContainment(circles, ins, outs)
     val (essentialInsIxs, essentialOutsIxs) =
-        compressPartByIntersectionPoints(
+        compressConstraintsByIntersectionPoints(
             sievedIns.map { circles[it]!! },
             sievedOuts.map { circles[it]!! }
         )
@@ -24,7 +25,7 @@ fun compressPart(
     return Pair(essentialIns.toSet(), essentialOuts.toSet())
 }
 
-fun compressPartByRelativeContainment(
+fun compressConstraintsByRelativeContainment(
     circles: List<CircleOrLine?>,
     ins: List<Ix>,
     outs: List<Ix>,
@@ -55,14 +56,14 @@ fun compressPartByRelativeContainment(
 
 // TODO: skip extremely small arcs (they can lead to display artifacts)
 /** Filters out all unused 'in' and 'out' separators by checking intersection points */
-fun compressPartByIntersectionPoints(
+fun compressConstraintsByIntersectionPoints(
     ins: List<CircleOrLine>,
     outs: List<CircleOrLine>,
 ): Pair<List<Ix>, List<Ix>> {
 
     fun testIfPointFitsOurRequirements(point: Point): Boolean =
         ins.all { it.checkPositionEpsilon(point) <= 0 } && // inside or bordering ins
-                outs.all { it.checkPositionEpsilon(point) >= 0 } // outside or bordering outs
+        outs.all { it.checkPositionEpsilon(point) >= 0 } // outside or bordering outs
 
     val allCircles = ins + outs
     val n = allCircles.size
@@ -149,7 +150,7 @@ fun compressPartByIntersectionPoints(
                 if (repeatIx == -1) { // new ip
                     val itFits =
                         essentialIns.all { ins[it].checkPositionEpsilon(ip) <= 0 } && // inside or bordering ins
-                                essentialOuts.all { outs[it].checkPositionEpsilon(ip) >= 0 } // outside or bordering outs
+                        essentialOuts.all { outs[it].checkPositionEpsilon(ip) >= 0 } // outside or bordering outs
                     if (itFits)
                         extendedIntersections.add(ip)
                 }
@@ -175,4 +176,95 @@ fun compressPartByIntersectionPoints(
         }
     }
     return Pair(essentialIns, essentialOuts)
+}
+
+private sealed interface Arc {
+    val circleIndex: Ix
+    data class Normal(
+        override val circleIndex: Ix,
+        val startPointIndex: Ix,
+        val endPointIndex: Ix,
+    ) : Arc
+    data class Full(
+        override val circleIndex: Ix,
+    ) : Arc
+}
+
+
+fun constraints2arcpaths(
+    ins: List<Ix>,
+    outs: List<Ix>,
+    allCircles: List<CircleOrLine>,
+): List<AbstractArcPath> {
+    val inCircles = ins.map { allCircles[it] }
+    val outCircles = outs.map { allCircles[it] }
+
+    fun testIfPointFitsOurRequirements(point: Point): Boolean =
+        inCircles.all { it.checkPositionEpsilon(point) <= 0 } && // inside or bordering ins
+        outCircles.all { it.checkPositionEpsilon(point) >= 0 } // outside or bordering outs
+
+    val n = allCircles.size
+    val intersections = mutableListOf<Point>()
+    // circle ix -> ip ixs
+    val circle2points: List<MutableSet<Int>> =
+        allCircles.indices.map { mutableSetOf() }
+    // compute all distinct intersections bordering our region, noting which circles they belong to
+    for (i in 0 until n) {
+        for (j in (i+1) until n) {
+            val c1 = allCircles[i]
+            val c2 = allCircles[j]
+            val ips = Circle.calculateIntersectionPoints(c1, c2)
+            for (ip in ips) {
+                val repeatIx = intersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
+                if (repeatIx == -1) { // new ip
+                    val itFits = testIfPointFitsOurRequirements(ip)
+                    if (itFits) {
+                        val ix = intersections.size
+                        intersections.add(ip)
+                        circle2points[i].add(ix)
+                        circle2points[j].add(ix)
+                    }
+                } else {
+                    circle2points[i].add(repeatIx)
+                    circle2points[j].add(repeatIx)
+                }
+            }
+        }
+    }
+    val arcs = mutableSetOf<Arc>()
+    // find all the circles arcs of which define the edges of our region
+    for (i in 0 until n) {
+        val c = allCircles[i]
+        val orderedIPs = c.orderPoints(circle2points[i].map { intersections[it] })
+        val m = orderedIPs.size
+        if (m == 0) {
+            val mid = c.order2point(0.0) // no ips, checking random point on c
+            val itFits = testIfPointFitsOurRequirements(mid)
+            if (itFits) {
+                arcs.add(Arc.Full(i))
+            }
+        } else {
+            for (k in 0 until m) {
+                // TODO: keep track of 'order' and calculate arc length to skip extremely small arcs
+                val ip2: Point = orderedIPs[k]
+                val ip1: Point =
+                    if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY)
+                        Point.CONFORMAL_INFINITY // ?
+                    else {
+                        val prevK =
+                            if (k == 0)
+                                m - 1
+                            else k - 1
+                        orderedIPs[prevK]
+                    }
+                val mid: Point = c.pointInBetween(ip1, ip2)
+                val itFits = testIfPointFitsOurRequirements(mid)
+                if (itFits) {
+                    arcs.add(Arc.Normal(i, intersections.indexOf(ip1), intersections.indexOf(ip2)))
+                }
+            }
+        }
+    }
+    val paths = mutableListOf<AbstractArcPath>()
+    return paths
 }

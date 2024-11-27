@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import domain.ColorAsCss
 import domain.Ix
-import domain.cluster.ClusterPart
+import domain.cluster.LogicalRegion
 import domain.cluster.Constellation
 import domain.expressions.CircleConstruct
 import domain.expressions.PointConstruct
@@ -46,7 +46,7 @@ data class DdcV3(
         @Serializable
         @SerialName("ArcPathToken")
         data class ArcPath( // TODO: replace with better suited ArcPath format
-            val arcPath: ClusterPart,
+            val arcPath: LogicalRegion,
             // intersections, ordered directed circles, fill&border colors, filled or nay
         ) : Token
     }

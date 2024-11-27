@@ -8,7 +8,7 @@ import domain.ColorCssSerializer
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Line
-import domain.cluster.ClusterPart
+import domain.cluster.LogicalRegion
 import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import kotlin.math.hypot
@@ -70,7 +70,7 @@ $allCircles
 fun partMask(
     circles: List<CircleOrLine>,
     partIndex: Int,
-    part: ClusterPart,
+    part: LogicalRegion,
     visibleRect: Rect
 ): String {
     val insides = part.insides.map { circles[it] }

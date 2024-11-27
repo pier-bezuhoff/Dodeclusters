@@ -5,8 +5,6 @@ import domain.ColorAsCss
 import domain.io.DdcV2
 import kotlinx.serialization.Serializable
 
-// TODO: replace parts Cluster.Part (which can be disjunctive regions) with
-//  arc-paths, based on ordered lists of intersection points and directed circles
 // MAYBE: we can alternatively use 1 BooleanArray[circles.size] to specify part bounds
 //  out of the circles, and another BooleanArray[insides.size + outsides.size] to specify
 //  which are in and which are out
@@ -16,7 +14,7 @@ import kotlinx.serialization.Serializable
  * */
 @Serializable
 @Immutable
-data class ClusterPart(
+data class LogicalRegion(
     /** indices of interior circles */
     val insides: Set<Int>,
     /** indices of bounding complementary circles */
@@ -26,13 +24,13 @@ data class ClusterPart(
     val borderColor: ColorAsCss? = DdcV2.DEFAULT_CLUSTER_BORDER_COLOR,
 ) {
     override fun toString(): String =
-        """ClusterPart(
+        """LogicalRegion(
 in = [${insides.joinToString()}],
 out = [${outsides.joinToString()}],
 fillColor = $fillColor, borderColor = $borderColor)"""
 
     /** ruff semiorder ⊆ on delimited regions; only goes off indices */
-    infix fun isObviouslyInside(otherPart: ClusterPart): Boolean =
+    infix fun isObviouslyInside(otherPart: LogicalRegion): Boolean =
         // the more intersections the smaller the delimited region is
         insides.containsAll(otherPart.insides) &&
         outsides.containsAll(otherPart.outsides)

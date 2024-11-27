@@ -555,7 +555,7 @@ private fun DrawScope.drawParts(
             }
         }
     } else {
-        for (part in viewModel.parts) {
+        for (part in viewModel.regions) {
             val path = part2path(viewModel.circles, part, visibleRect)
             if (viewModel.showWireframes) {
                 drawPath(
