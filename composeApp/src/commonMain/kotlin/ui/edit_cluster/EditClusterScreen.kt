@@ -693,13 +693,16 @@ fun CategoryButton(
         )
     if (defaultTool == null) {
         require(category.icon != null) { "no category.icon or category.default specified" }
-        SimpleButton(
-            iconPainter = painterResource(category.icon),
-            name = stringResource(category.name),
-            modifier = categoryModifier,
-            iconModifier = categoryModifier,
-        ) {
-            viewModel.switchToCategory(category, togglePanel = true)
+        val name = stringResource(category.name)
+        WithTooltip(name) {
+            SimpleButton(
+                iconPainter = painterResource(category.icon),
+                name = name,
+                modifier = categoryModifier,
+                iconModifier = categoryModifier,
+            ) {
+                viewModel.switchToCategory(category, togglePanel = true)
+            }
         }
     } else {
         Crossfade(defaultTool) {

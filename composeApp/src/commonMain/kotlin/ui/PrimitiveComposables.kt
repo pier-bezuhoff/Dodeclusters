@@ -172,11 +172,13 @@ fun OnOffButton(
 // BUG: on Android this triggers exit from the immersive mode
 //  because of popup realization, more here:
 // https://androidx.tech/artifacts/compose.material3/material3-android/1.3.0-source/androidMain/androidx/compose/material3/internal/BasicTooltip.android.kt.html
+/**
+ * @param[tooltipDuration] in milliseconds
+ * */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WithTooltip(
     description: String,
-    /** in milliseconds */
     tooltipDuration: Long = 5_000,
     content: @Composable () -> Unit
 ) {

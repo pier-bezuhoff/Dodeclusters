@@ -265,6 +265,70 @@ fun constraints2arcpaths(
             }
         }
     }
+    if (arcs.isEmpty())
+        return emptyList()
+    val arcsByStart: MutableMap<Ix, List<Arc.Normal>> = arcs
+        .filterIsInstance<Arc.Normal>()
+        .distinct()
+        .groupBy { it.startPointIndex }
+        .toMutableMap()
+    var focus = arcsByStart.keys.first()
+    var arcPath: List<Arc.Normal> = emptyList()
     val paths = mutableListOf<AbstractArcPath>()
+    while (arcsByStart.isNotEmpty()) {
+        val possibleContinuations = arcsByStart[focus] ?: emptyList()
+        when (possibleContinuations.size) {
+            0 -> {
+                arcsByStart.remove(focus)
+                if (arcPath.isNotEmpty()) {
+                    paths.add(AbstractArcPath(
+                        arcPath.map { 1 + it.circleIndex },
+                        isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
+                    ))
+                }
+                arcPath = emptyList()
+                focus = arcsByStart.keys.first()
+            }
+            1 -> {
+                val arc = possibleContinuations.single()
+                arcsByStart.remove(focus)
+                arcPath = arcPath + arc
+                focus = arc.endPointIndex
+            }
+            else -> {
+                val currentCircle = arcPath.lastOrNull()?.circleIndex
+                if (currentCircle == null) {
+                    val arc = possibleContinuations.first()
+                    arcsByStart[focus] = possibleContinuations.drop(1)
+                    arcPath = arcPath + arc
+                    focus = arc.endPointIndex
+                } else { // in general we want to hop onto a different circle each time
+                    val diffContinuations = possibleContinuations.filterNot { it.circleIndex == currentCircle }
+                    if (diffContinuations.isEmpty()) {
+                        println("constraints2arcpaths: no diff-circle arcs but multiple choices @ ip#$focus")
+                        val arc = possibleContinuations.first()
+                        arcsByStart[focus] = possibleContinuations.drop(1)
+                        arcPath = arcPath + arc
+                        focus = arc.endPointIndex
+                    } else {
+                        val arc = diffContinuations.first()
+                        arcsByStart[focus] = possibleContinuations - arc
+                        arcPath = arcPath + arc
+                        focus = arc.endPointIndex
+                    }
+                }
+            }
+        }
+    }
+    if (arcPath.isNotEmpty()) {
+        paths.add(AbstractArcPath(
+            arcPath.map { 1 + it.circleIndex },
+            isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
+        ))
+    }
+    val fullArcs = arcs.filterIsInstance<Arc.Full>()
+    for (fullArc in fullArcs) {
+        paths.add(AbstractArcPath(listOf(fullArc.circleIndex + 1)))
+    }
     return paths
 }

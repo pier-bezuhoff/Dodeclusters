@@ -25,9 +25,9 @@ data class AbstractArcPath(
     //  2 possible regions that arise when not considering circle order
     @SerialName("arcIndicesStartingFrom1WithMinusIndicatingReversedDirection")
     val arcs: List<Int>,
-    val isClosed: Boolean,
-    val fillColor: ColorAsCss?,
-    val borderColor: ColorAsCss?,
+    val isClosed: Boolean = true,
+    val fillColor: ColorAsCss? = null,
+    val borderColor: ColorAsCss? = null,
 ) {
     // previous arc: external orientation
     // next arc: internal orientation
