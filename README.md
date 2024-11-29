@@ -1,9 +1,22 @@
 # Dodeclusters
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-### Conformal vector graphics editor: treating points, circles and straight lines equally
+### Circle-based vector graphics editor
 
 ![Dodeclusters](docs/02inf-art.png)
+
+## Features
+- ♾️ Infinite canvas, infinite zoom, infinite precision<sup>\*</sup>
+- ⬤ Powerful circle geometry instrumentation: treating points, circles and straight lines uniformly
+- 💬 Simple & intuitive design with interactive tips & brief descriptions
+- 💯 Cross-platform (mobile + desktop + browser)
+- 🌲 Dynamic expression-dependency tree
+- 📜 Undo/redo history & auto-save
+- 💾 Custom YAML-derived file format + Safe SVG export
+- ✌ Smart gestures: drag-and-drop, swipe coloring & swip selection, keyboard shortcuts
+- 🌘 Light/dark mode (*WIP*, for now as a URL argument `?theme=light` or `?theme=dark`)
+
+\*: objects are related via dynamic expressions and child node formulae are recalculated when moving parents or zooming in/out
 
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform), targeting
 - [x] Desktop (Windows, Linux)

@@ -249,7 +249,7 @@ fun constraints2arcpaths(
                 val ip2: Point = orderedIPs[k]
                 val ip1: Point =
                     if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY)
-                        Point.CONFORMAL_INFINITY // ?
+                        TODO("why") // Point.CONFORMAL_INFINITY // ?
                     else {
                         val prevK =
                             if (k == 0)
