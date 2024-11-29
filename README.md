@@ -1,4 +1,6 @@
-# Dodeclusters
+# Dodeclusters ֍
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+![Static Badge](https://img.shields.io/badge/status-beta-violet)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
 ### Circle-based vector graphics editor
@@ -6,17 +8,17 @@
 ![Dodeclusters](docs/02inf-art.png)
 
 ## Features
-- ♾️ Infinite canvas, infinite zoom, infinite precision<sup>\*</sup>
-- ⬤ Powerful circle geometry instrumentation: treating points, circles and straight lines uniformly
-- 💬 Simple & intuitive design with interactive tips & brief descriptions
-- 💯 Cross-platform (mobile + desktop + browser)
-- 🌲 Dynamic expression-dependency tree
-- 📜 Undo/redo history & auto-save
-- 💾 Custom YAML-derived file format + Safe SVG export
-- ✌ Smart gestures: drag-and-drop, swipe coloring & swip selection, keyboard shortcuts
-- 🌘 Light/dark mode (*WIP*, for now as a URL argument `?theme=light` or `?theme=dark`)
+♾️ Infinite canvas, infinite zoom, infinite precision<sup>\*</sup>  
+⬤ Powerful circle geometry instrumentation: treating points, circles and straight lines uniformly  
+💬 Simple & intuitive design with interactive tips & brief descriptions  
+💯 Cross-platform (mobile + desktop + browser)  
+🌲 Dynamic expression-dependency tree  
+📜 Undo/redo history & auto-save  
+💾 Custom YAML-derived file format + Safe SVG export  
+✌ Smart gestures: drag-and-drop, swipe coloring & swip selection, keyboard shortcuts  
+🌘 Light/dark mode (*WIP*, for now as a URL argument `?theme=light` or `?theme=dark`)  
 
-\*: objects are related via dynamic expressions and child node formulae are recalculated when moving parents or zooming in/out
+\*: objects are related via dynamic expressions and child nodes' formulae are recalculated when moving parents or zooming in/out
 
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform), targeting
 - [x] Desktop (Windows, Linux)
@@ -31,7 +33,7 @@ with vector graphics editor ~ Inkscape
 and specific type of animations ~ [Möbius transformations](https://en.wikipedia.org/wiki/M%C3%B6bius_transformation) and possibly [Lie sphere geometry](https://en.wikipedia.org/wiki/Lie_sphere_geometry)  
 
 > [!NOTE]
-> This project is in beta
+> This project is in beta, beware of bugs and breaking changes
 
 ## Installation
 [Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch.  
