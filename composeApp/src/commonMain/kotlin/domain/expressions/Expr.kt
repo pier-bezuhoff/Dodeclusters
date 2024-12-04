@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
+import domain.Ix
 import domain.expressions.Expr.OneToMany
 import domain.expressions.Expr.OneToOne
 import kotlinx.serialization.SerialName
@@ -14,13 +15,13 @@ typealias ExprResult = List<GCircle?>
 interface ExprLike {
     val parameters: Parameters
     // each arg can in turn be computed as an expression, making up Forest-like data structure
-    val args: List<Indexed>
+    val args: List<Ix>
 }
 
 // workaround for kotlinx.serialization bug https://github.com/Kotlin/kotlinx.serialization/issues/2785
 private data class E(
     override val parameters: Parameters,
-    override val args: List<Indexed>
+    override val args: List<Ix>
 ) : ExprLike
 
 /**
@@ -47,47 +48,47 @@ sealed interface Expr : ExprLike {
     @SerialName("IncidentPoint")
     data class Incidence(
         override val parameters: IncidenceParameters,
-        val carrier: Indexed.Circle,
+        val carrier: Ix,
     ) : OneToOne, ExprLike by E(parameters, listOf(carrier))
     @Serializable
     @SerialName("CircleByCenterAndRadius")
     data class CircleByCenterAndRadius(
-        val center: Indexed.Point,
-        val radiusPoint: Indexed.Point
+        val center: Ix,
+        val radiusPoint: Ix
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(center, radiusPoint))
     // MAYBE: allow ImaginaryCircle or Point to be output for further use
     @Serializable
     @SerialName("CircleBy3PerpendicularObjects")
     data class CircleBy3Points( // order-less
-        val object1: Indexed,
-        val object2: Indexed,
-        val object3: Indexed,
+        val object1: Ix,
+        val object2: Ix,
+        val object3: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2, object3))
     @Serializable
     @SerialName("CircleBy2ObjectsFromItsPencilAndPerpendicularObject")
     data class CircleByPencilAndPoint(
-        val pencilObject1: Indexed,
-        val pencilObject2: Indexed,
-        val perpendicularObject: Indexed,
+        val pencilObject1: Ix,
+        val pencilObject2: Ix,
+        val perpendicularObject: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(pencilObject1, pencilObject2, perpendicularObject))
     @Serializable
     @SerialName("LineBy2PerpendicularObjects")
     data class LineBy2Points( // order-less
-        val object1: Indexed,
-        val object2: Indexed,
+        val object1: Ix,
+        val object2: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2))
     @Serializable
     @SerialName("CircleInversion")
     data class CircleInversion(
-        val target: Indexed,
-        val engine: Indexed.Circle,
+        val target: Ix,
+        val engine: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(target, engine))
 
     @Serializable
     @SerialName("Intersection")
     data class Intersection( // order-less
-        val circle1: Indexed.Circle,
-        val circle2: Indexed.Circle,
+        val circle1: Ix,
+        val circle2: Ix,
     ) : OneToMany, ExprLike by E(Parameters.None, listOf(circle1, circle2))
     // TODO: point-point line interpolation
     // FIX: 1/2 of 90deg angle flickers, use orientation in tandem with inBetween parameter
@@ -95,36 +96,36 @@ sealed interface Expr : ExprLike {
     @SerialName("CircleInterpolation")
     data class CircleInterpolation(
         override val parameters: InterpolationParameters,
-        val startCircle: Indexed.Circle,
-        val endCircle: Indexed.Circle,
+        val startCircle: Ix,
+        val endCircle: Ix,
     ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
     @Serializable
     @SerialName("CircleExtrapolation")
     data class CircleExtrapolation(
         override val parameters: ExtrapolationParameters,
-        val startCircle: Indexed.Circle,
-        val endCircle: Indexed.Circle,
+        val startCircle: Ix,
+        val endCircle: Ix,
     ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
     @Serializable
     @SerialName("LoxodromicMotion")
     data class LoxodromicMotion( // TODO: add backwards steps
         override val parameters: LoxodromicMotionParameters,
-        val divergencePoint: Indexed.Point,
-        val convergencePoint: Indexed.Point,
-        val target: Indexed,
+        val divergencePoint: Ix,
+        val convergencePoint: Ix,
+        val target: Ix,
     ) : OneToMany, ExprLike by E(parameters, listOf(divergencePoint, convergencePoint, target))
 
     // MAYBE: inline
     fun eval(
-        get: (Indexed) -> GCircle?,
+        get: (Ix) -> GCircle?,
     ): ExprResult {
-        val g = { ix: Indexed ->
+        val g = { ix: Ix ->
             get(ix) ?: throw NullPointerException() // i miss MonadError
-        }
-        val c = { ix: Indexed.Circle ->
+        } // MAYBE: rework using Raise<Error>.doStuff() : T
+        val c = { ix: Ix ->
             get(ix) as? CircleOrLine ?: throw NullPointerException()
         }
-        val p = { ix: Indexed.Point ->
+        val p = { ix: Ix ->
             get(ix) as? Point ?: throw NullPointerException()
         }
         try {
@@ -188,17 +189,16 @@ sealed interface Expr : ExprLike {
     }
 
     // MAYBE: inline
-    @Throws(ClassCastException::class)
     fun mapArgs(
-        reIndexer: (Indexed) -> Indexed,
+        reIndexer: (Ix) -> Ix,
     ): Expr =
         when (this) {
             is Incidence -> copy(
-                carrier = reIndexer(carrier) as Indexed.Circle
+                carrier = reIndexer(carrier)
             )
             is CircleByCenterAndRadius -> copy(
-                center = reIndexer(center) as Indexed.Point,
-                radiusPoint = reIndexer(radiusPoint) as Indexed.Point,
+                center = reIndexer(center),
+                radiusPoint = reIndexer(radiusPoint),
             )
             is CircleBy3Points -> copy(
                 object1 = reIndexer(object1),
@@ -216,23 +216,23 @@ sealed interface Expr : ExprLike {
             )
             is CircleInversion -> copy(
                 target = reIndexer(target),
-                engine = reIndexer(engine) as Indexed.Circle
+                engine = reIndexer(engine),
             )
             is Intersection -> copy(
-                circle1 = reIndexer(circle1) as Indexed.Circle,
-                circle2 = reIndexer(circle2) as Indexed.Circle,
+                circle1 = reIndexer(circle1),
+                circle2 = reIndexer(circle2),
             )
             is CircleInterpolation -> copy(
-                startCircle = reIndexer(startCircle) as Indexed.Circle,
-                endCircle = reIndexer(endCircle) as Indexed.Circle,
+                startCircle = reIndexer(startCircle),
+                endCircle = reIndexer(endCircle),
             )
             is CircleExtrapolation -> copy(
-                startCircle = reIndexer(startCircle) as Indexed.Circle,
-                endCircle = reIndexer(endCircle) as Indexed.Circle,
+                startCircle = reIndexer(startCircle),
+                endCircle = reIndexer(endCircle),
             )
             is LoxodromicMotion -> copy(
-                divergencePoint = reIndexer(divergencePoint) as Indexed.Point,
-                convergencePoint = reIndexer(convergencePoint) as Indexed.Point,
+                divergencePoint = reIndexer(divergencePoint),
+                convergencePoint = reIndexer(convergencePoint),
                 target = reIndexer(target)
             )
         }

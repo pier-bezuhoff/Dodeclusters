@@ -56,6 +56,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import data.geometry.CircleOrLine
+import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.collapse
@@ -218,7 +220,7 @@ fun EditClusterScreen(
             if (viewModel.partialArgList?.isFull == true) {
                 val (startCircle, endCircle) = viewModel.partialArgList!!.args
                     .map {
-                        viewModel.circles[(it as Arg.CircleIndex).index]!!
+                        viewModel.objects[(it as Arg.CircleIndex).index] as CircleOrLine
                     }
                 CircleInterpolationDialog(
                     startCircle, endCircle,
@@ -232,7 +234,7 @@ fun EditClusterScreen(
             if (viewModel.partialArgList?.isFull == true) {
                 val (startCircle, endCircle) = viewModel.partialArgList!!.args
                     .map {
-                        viewModel.circles[(it as Arg.CircleIndex).index]!!
+                        viewModel.objects[(it as Arg.CircleIndex).index] as CircleOrLine
                     }
                 CircleExtrapolationDialog(
                     startCircle, endCircle,
@@ -249,7 +251,7 @@ fun EditClusterScreen(
                     .map { it as Arg.Point }
                     .map { when (it) {
                         is Arg.Point.XY -> it.toPoint()
-                        is Arg.Point.Index -> viewModel.points[it.index]
+                        is Arg.Point.Index -> viewModel.objects[it.index] as? Point
                     } }
                 if (divergencePoint != null && convergencePoint != null) {
                     LoxodromicMotionDialog(

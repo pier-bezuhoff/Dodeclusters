@@ -28,7 +28,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -72,7 +71,6 @@ import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
 import ui.visibleHalfPlanePath
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -231,8 +229,8 @@ private fun SelectionsCanvas(
                     viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection
                 )
             ) {
-                val circles = viewModel.circleSelection
-                    .mapNotNull { viewModel.circles[it] }
+                val circles = viewModel.selection
+                    .mapNotNull { viewModel.objects[it] as? CircleOrLine }
                 for (circle in circles) {
                     // alpha = where selection lines are shown
                     // dst out = erase the BG rectangle => show hatching thats drawn behind it
@@ -456,35 +454,35 @@ private fun DrawScope.drawCircles(
     pointRadius: Float
 ) {
     if (viewModel.circleSelectionIsActive) {
-        for ((ix, circle) in viewModel.circles.withIndex()) {
-            if (circle != null && ix !in viewModel.circleSelection) {
+        for ((ix, circle) in viewModel.objects.withIndex()) {
+            if (circle is CircleOrLine && ix !in viewModel.selection) {
                 val color =
-                    viewModel.circleColors[ix] ?:
-                    if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
+                    viewModel.objectColors[ix] ?:
+                    if (viewModel.isFree(ix)) freeCircleColor else circleColor
                 drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
             }
         }
     } else {
-        for ((ix, circle) in viewModel.circles.withIndex()) {
-            if (circle != null) {
+        for ((ix, circle) in viewModel.objects.withIndex()) {
+            if (circle is CircleOrLine) {
                 val color =
-                    viewModel.circleColors[ix] ?:
-                    if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
+                    viewModel.objectColors[ix] ?:
+                    if (viewModel.isFree(ix)) freeCircleColor else circleColor
                 drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
             }
         }
     }
     if (viewModel.pointSelectionIsActive) {
-        for ((ix, point) in viewModel.points.withIndex()) {
-            if (point != null && ix !in viewModel.pointSelection) {
-                val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
+        for ((ix, point) in viewModel.objects.withIndex()) {
+            if (point is Point && ix !in viewModel.selection) {
+                val color = if (viewModel.isFree(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
         }
     } else {
-        for ((ix, point) in viewModel.points.withIndex()) {
-            if (point != null) {
-                val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
+        for ((ix, point) in viewModel.objects.withIndex()) {
+            if (point is Point) {
+                val color = if (viewModel.isFree(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
         }
@@ -505,11 +503,11 @@ private fun DrawScope.drawSelectedCircles(
         (viewModel.circleSelectionIsActive ||
         viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection)
     ) {
-        for (ix in viewModel.circleSelection) {
-            val circle = viewModel.circles[ix]
-            if (circle != null) {
+        for (ix in viewModel.selection) {
+            val circle = viewModel.objects[ix]
+            if (circle is CircleOrLine) {
                 val color =
-                    viewModel.circleColors[ix] ?:
+                    viewModel.objectColors[ix] ?:
                     selectedCircleColor
                 drawCircleOrLine(
                     circle, visibleRect, color,
@@ -526,7 +524,7 @@ private fun DrawScope.drawSelectedCircles(
         }
     }
     if (viewModel.pointSelectionIsActive) {
-        val points = viewModel.pointSelection.mapNotNull { viewModel.points[it] }
+        val points = viewModel.selection.mapNotNull { viewModel.objects[it] as? Point }
         for (point in points) {
             drawCircle(selectedPointColor, pointRadius, point.toOffset())
         }
@@ -542,21 +540,21 @@ private fun DrawScope.drawParts(
     // NOTE: buggy on extreme zoom-in
     if (viewModel.displayChessboardPattern) {
         if (viewModel.showWireframes) {
-            for (circle in viewModel.circles)
-                if (circle != null)
+            for (circle in viewModel.objects)
+                if (circle is CircleOrLine)
                     drawCircleOrLine(circle, visibleRect, viewModel.regionColor, style = circleStroke)
         } else {
             if (viewModel.chessboardPatternStartsColored)
                 drawRect(viewModel.regionColor, visibleRect.topLeft, visibleRect.size)
             // FIX: flickering, eg when altering spirals
-            for (circle in viewModel.circles) { // it used to work poorly but is good now for some reason
-                if (circle != null)
+            for (circle in viewModel.objects) { // it used to work poorly but is good now for some reason
+                if (circle is CircleOrLine)
                     drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
             }
         }
     } else {
         for (part in viewModel.regions) {
-            val path = part2path(viewModel.circles, part, visibleRect)
+            val path = part2path(viewModel.objects.map { it as? CircleOrLine }, part, visibleRect)
             if (viewModel.showWireframes) {
                 drawPath(
                     path,
@@ -597,16 +595,16 @@ private fun DrawScope.drawPartialConstructs(
         for (arg in args)
             when (arg) {
                 is Arg.CircleIndex -> {
-                    val circle = viewModel.circles[arg.index]
-                    if (circle != null)
+                    val circle = viewModel.objects[arg.index]
+                    if (circle is CircleOrLine)
                         drawCircleOrLine(
                             circle,
                             visibleRect, creationPrototypeColor, style = circleStroke
                         )
                 }
                 is Arg.Point.Index -> {
-                    val center = viewModel.points[arg.index]
-                    if (center != null)
+                    val center = viewModel.objects[arg.index]
+                    if (center is Point)
                         drawCircle(
                             color = creationPrototypeColor,
                             radius = creationPointRadius,
@@ -620,8 +618,8 @@ private fun DrawScope.drawPartialConstructs(
                         center = arg.toOffset()
                     )
                 is Arg.CircleOrPoint.Point.Index -> {
-                    val center = viewModel.points[arg.index]
-                    if (center != null)
+                    val center = viewModel.objects[arg.index]
+                    if (center is Point)
                         drawCircle(
                             color = creationPrototypeColor,
                             radius = creationPointRadius,
@@ -635,8 +633,8 @@ private fun DrawScope.drawPartialConstructs(
                         center = arg.toOffset()
                     )
                 is Arg.CircleOrPoint.CircleIndex -> {
-                    val circle = viewModel.circles[arg.index]
-                    if (circle != null)
+                    val circle = viewModel.objects[arg.index]
+                    if (circle is CircleOrLine)
                         drawCircleOrLine(
                             circle,
                             visibleRect, creationPrototypeColor, style = circleStroke
@@ -644,13 +642,13 @@ private fun DrawScope.drawPartialConstructs(
                 }
                 is Arg.CircleAndPointIndices -> {
                     for (ix in arg.circleIndices) {
-                        val circle = viewModel.circles[ix]
-                        if (circle != null)
+                        val circle = viewModel.objects[ix]
+                        if (circle is CircleOrLine)
                             drawCircleOrLine(circle, visibleRect, creationPrototypeColor, style = circleStroke)
                     }
                     for (ix in arg.pointIndices) {
-                        val point = viewModel.points[ix]
-                        if (point != null)
+                        val point = viewModel.objects[ix]
+                        if (point is Point)
                             drawCircle(
                                 color = creationPrototypeColor,
                                 radius = creationPointRadius,
@@ -785,7 +783,7 @@ private fun DrawScope.drawHandles(
         val iconSize = Size(iconDim, iconDim)
         when (viewModel.handleConfig) {
             is HandleConfig.SingleCircle -> {
-                val selectedCircle = viewModel.circles[viewModel.circleSelection.single()]
+                val selectedCircle = viewModel.objects[viewModel.selection.single()]
                 if (selectedCircle is Circle) {
                     val right = selectedCircle.center + Offset(selectedCircle.radius.toFloat(), 0f)
                     drawLine( // radius marker

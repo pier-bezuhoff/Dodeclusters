@@ -22,23 +22,15 @@ sealed interface Expression {
     ) : Expression
 }
 
-@Throws(ClassCastException::class)
 inline fun reIndexExpression(
     expression: Expression,
-    crossinline pointReIndexer: (Ix) -> Ix,
-    crossinline circleReIndexer: (Ix) -> Ix,
+    crossinline reIndexer: (Ix) -> Ix,
 ): Expression =
     when (expression) {
-        is Expression.Just -> expression.copy(expression.expr.mapArgs { ix ->
-            when (ix) {
-                is Indexed.Point -> Indexed.Point(pointReIndexer(ix.index))
-                is Indexed.Circle -> Indexed.Circle(circleReIndexer(ix.index))
-            }
-        } as Expr.OneToOne)
-        is Expression.OneOf -> expression.copy(expression.expr.mapArgs { ix ->
-            when (ix) {
-                is Indexed.Point -> Indexed.Point(pointReIndexer(ix.index))
-                is Indexed.Circle -> Indexed.Circle(circleReIndexer(ix.index))
-            }
-        } as Expr.OneToMany)
+        is Expression.Just -> expression.copy(
+            expression.expr.mapArgs { reIndexer(it) } as Expr.OneToOne
+        )
+        is Expression.OneOf -> expression.copy(
+            expression.expr.mapArgs { reIndexer(it) } as Expr.OneToMany
+        )
     }

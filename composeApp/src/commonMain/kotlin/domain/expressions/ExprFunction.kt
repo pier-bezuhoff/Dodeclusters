@@ -1,6 +1,7 @@
 package domain.expressions
 
 import androidx.compose.runtime.Immutable
+import domain.Ix
 import kotlinx.serialization.Serializable
 
 // not sure it is of use
@@ -43,11 +44,11 @@ fun expr2fun(expr: Expr): ExprFunction =
 fun fun2expr(
     exprFunction: ExprFunction,
     parameters: Parameters,
-    args: List<Indexed>
+    args: List<Ix>
 ): Expr =
     when (exprFunction) {
         ExprFunction.OneToOne.INCIDENCE ->
-            Expr.Incidence(parameters as IncidenceParameters, args.first() as Indexed.Circle)
+            Expr.Incidence(parameters as IncidenceParameters, args.first())
         ExprFunction.OneToOne.CIRCLE_BY_CENTER_AND_RADIUS -> TODO()
         ExprFunction.OneToOne.CIRCLE_BY_3_POINTS -> TODO()
         ExprFunction.OneToOne.CIRCLE_BY_PENCIL_AND_POINT -> TODO()

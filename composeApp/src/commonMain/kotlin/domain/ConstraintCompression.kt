@@ -117,7 +117,8 @@ fun compressConstraintsByIntersectionPoints(
                 val ip2 = orderedIPs[k]
                 val mid: Point =
                     if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY) {
-                        c.pointInBetween(Point.CONFORMAL_INFINITY, ip2)
+                        // cyclic order is valid everywhere (on circles & lines) EXCEPT the first point on a line
+                        c.pointInBetween(Point.CONFORMAL_INFINITY, ip2) // (-inf; #0)
                     } else {
                         val prevK =
                             if (k == 0)
@@ -232,7 +233,7 @@ fun constraints2arcpaths(
         }
     }
     val arcs = mutableSetOf<Arc>()
-    // find all the circles arcs of which define the edges of our region
+    // find all the circles, arcs of which define the edges of our region
     for (i in 0 until n) {
         val c = allCircles[i]
         val orderedIPs = c.orderPoints(circle2points[i].map { intersections[it] })
@@ -248,9 +249,10 @@ fun constraints2arcpaths(
                 // TODO: keep track of 'order' and calculate arc length to skip extremely small arcs
                 val ip2: Point = orderedIPs[k]
                 val ip1: Point =
-                    if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY)
-                        TODO("why") // Point.CONFORMAL_INFINITY // ?
-                    else {
+                    if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY) {
+                        // cyclic order is valid everywhere (on circles & lines) EXCEPT the first point on a line
+                        Point.CONFORMAL_INFINITY // (-inf; #0)
+                    } else {
                         val prevK =
                             if (k == 0)
                                 m - 1
