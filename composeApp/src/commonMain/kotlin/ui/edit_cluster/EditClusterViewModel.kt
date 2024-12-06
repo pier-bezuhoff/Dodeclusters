@@ -29,6 +29,7 @@ import data.geometry.ArcPath
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
+import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.Point
 import domain.Arg
@@ -93,7 +94,6 @@ import kotlin.time.Duration.Companion.seconds
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
 class EditClusterViewModel : ViewModel() {
-    // MAYBE: fuse points & circles
     val objects: SnapshotStateList<GCircle?> = mutableStateListOf()
     val regions: SnapshotStateList<LogicalRegion> = mutableStateListOf()
     private var expressions: ExpressionForest = ExpressionForest( // stub
@@ -392,7 +392,7 @@ class EditClusterViewModel : ViewModel() {
                     is ObjectConstruct.ConcreteCircle -> it.circle
                     is ObjectConstruct.ConcreteLine -> it.line
                     is ObjectConstruct.ConcretePoint -> it.point
-                    is ObjectConstruct.Dynamic -> null
+                    is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
                 }
             }
         )
@@ -417,28 +417,36 @@ class EditClusterViewModel : ViewModel() {
             originalIndices = objects.indices,
             deletedIndices = deleted
         )
-        return Constellation(
-            objects = objects.indices.mapNotNull { ix ->
-                val e = expressions.expressions[ix]
-                if (e == null) {
-                    val point = objects[ix] as? Point
-                    if (point == null)
-                        null
-                    else
-                        ObjectConstruct.ConcretePoint(point)
-                } else {
-                    ObjectConstruct.Dynamic(
-                        reIndexExpression(e, reIndexer = { reindexing[it]!! })
-                    )
+        val objectConstructs = objects.indices.mapNotNull { ix ->
+            val e = expressions.expressions[ix]
+            if (e == null) {
+                when (val o = objects[ix]) {
+                    is Point -> ObjectConstruct.ConcretePoint(o)
+                    is Line -> ObjectConstruct.ConcreteLine(o)
+                    is Circle -> ObjectConstruct.ConcreteCircle(o)
+                    else -> null
                 }
-            },
-            parts = regions.map { part ->
-                part.copy(
-                    insides = part.insides.map { reindexing[it]!! }.toSet(),
-                    outsides = part.outsides.map { reindexing[it]!! }.toSet(),
+            } else {
+                ObjectConstruct.Dynamic(
+                    // since children are auto-deleted with their parent we can !! safely
+                    reIndexExpression(e, reIndexer = { reindexing[it]!! })
                 )
-            },
-            objectColors = objectColors.toMap()
+            }
+        }
+        val logicalRegions = regions.mapNotNull { part ->
+            val insides = part.insides.mapNotNull { reindexing[it] }.toSet()
+            val outsides = part.outsides.mapNotNull { reindexing[it] }.toSet()
+            if (insides.isEmpty() && outsides.isEmpty())
+                null
+            else
+                part.copy(insides = insides, outsides = outsides)
+        }
+        return Constellation(
+            objects = objectConstructs,
+            parts = logicalRegions,
+            objectColors = objectColors.mapNotNull { (ix, color) ->
+                reindexing[ix]?.let { it to color }
+            }.toMap()
         )
     }
 
@@ -467,7 +475,7 @@ class EditClusterViewModel : ViewModel() {
     private fun loadState(state: State) {
         submode = SubMode.None
         loadConstellation(state.constellation)
-        selection = state.selection
+        selection = state.selection.filter { it in objects.indices } // just in case
         centerizeTo(state.centerX, state.centerY)
     }
 
@@ -765,7 +773,11 @@ class EditClusterViewModel : ViewModel() {
                 distance / priority
             }
             ?.let { (ix, _) -> ix }
-            ?.also { println("select circle #$it: ${objects[it]} <- expr: ${expressions.expressions[it]}") }
+            ?.also {
+                // NOTE: this is printed twice when tapping on a circle in
+                //  drag mode, since both onDown & onTap trigger it once
+                println("select circle #$it: ${objects[it]} <- expr: ${expressions.expressions[it]}")
+            }
     }
 
     fun reselectCircleAt(visiblePosition: Offset): Boolean {
@@ -2381,8 +2393,9 @@ class EditClusterViewModel : ViewModel() {
             originalIndices = objects.indices,
             deletedIndices = deleted
         )
+        val constellation = toConstellation()
         return State(
-            constellation = toConstellation(),
+            constellation = constellation,
             // FIX: idk from where, but sometimes it gets null's after select-all
             selection = selection.mapNotNull { reindexing[it] },
             centerX = center.x,

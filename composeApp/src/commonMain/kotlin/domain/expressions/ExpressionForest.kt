@@ -19,6 +19,10 @@ private const val UNCALCULATED_TIER: Tier = -1
 /** stub tier for forever-deleted object index */
 private const val ABANDONED_TIER: Tier = -2
 
+/**
+ * Class for managing expressions
+ * @param[get] [GCircle]s are stored separately by design, so we have to access them somehow
+ * @param[set] used to set updated objects when calling [update] or [reEval] */
 class ExpressionForest(
     initialExpressions: Map<Ix, Expression?>, // pls include all possible indices
     // find indexed args -> downscale them -> eval expr -> upscale result
@@ -238,6 +242,7 @@ class ExpressionForest(
 //        }
     }
 
+    /** Re-evaluates all expressions and [set]s updated results */
     fun reEval() {
         val cache = mutableMapOf<Expr.OneToMany, ExprResult>()
         val deps = tier2ixs.drop(1) // no need to calc for tier 0

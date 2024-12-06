@@ -19,6 +19,26 @@ data class Constellation(
     // using unfilled single-circle ClusterPart with borderColor
     val objectColors: Map<Ix, ColorAsCss> = emptyMap(),
 ) {
+    init {
+        val allObjectIndices = objects.indices.toSet()
+        require(
+            objects
+                .filterIsInstance<ObjectConstruct.Dynamic>()
+                .all {
+                    it.expression.expr.args.all { arg ->
+                        arg in allObjectIndices
+                    }
+                }
+        ) { "Invalid expressions in Constellation.objects of $this" }
+        require(parts.all { region ->
+            region.insides.all { it in allObjectIndices } &&
+            region.outsides.all { it in allObjectIndices }
+        }) { "Invalid Constellation.parts of $this" }
+        require(objectColors.keys.all { it in allObjectIndices }) {
+            "Invalid Constellation.objectColors of $this"
+        }
+    }
+
     fun toExpressionMap(): Map<Ix, Expression?> =
         objects.mapIndexed { ix, o ->
             when (o) {
