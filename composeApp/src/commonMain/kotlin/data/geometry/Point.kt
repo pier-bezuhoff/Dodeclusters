@@ -69,6 +69,10 @@ data class Point(
     }
 }
 
+enum class RegionPointLocation {
+    IN, OUT, BORDERING
+}
+
 /** CCW angle from [start] to [end] in (-[PI]; [PI]] */
 fun calculateAngle(center: Point, start: Point, end: Point): Double {
     val v1x = start.x - center.x

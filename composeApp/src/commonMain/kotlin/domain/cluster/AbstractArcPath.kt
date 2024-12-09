@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Rect
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Point
+import data.geometry.RegionPointLocation
 import domain.ColorAsCss
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -116,5 +117,13 @@ data class ConcreteArcPath(
 
     init {
         require(circles.size == intersectionPoints.size)
+    }
+
+    fun calculatePointLocation(point: Point): RegionPointLocation {
+        // test if the point lies on any of the arcs
+        // construct straight line through the point (prob horizontal, eastward)
+        // check how it intersects the arcs, and order those intersections along the line
+        // if unresolvable, choose another straight line
+        TODO()
     }
 }
