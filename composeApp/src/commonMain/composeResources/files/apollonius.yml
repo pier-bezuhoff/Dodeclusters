@@ -1,107 +1,59 @@
-name: "apollonius-lec"
-bestCenterX: -198.0
-bestCenterY: -235.125
-points:
+name: "apollonius2"
+bestCenterX: 905.0
+bestCenterY: 557.875
+objects:
   0:
-    Point:
-      type: "PointExpression"
-      expression:
-        type: "OneOf"
-        expr:
-          type: "Intersection"
-          circle1:
-            index: 0
-          circle2:
-            index: 7
-        outputIndex: 0
+    construct:
+      type: "ConcreteCircle"
+      circle:
+        x: 797.3856811523438
+        y: 377.8025817871094
+        radius: 172.29712125630314
   1:
-    Point:
-      type: "PointExpression"
-      expression:
-        type: "OneOf"
-        expr:
-          type: "Intersection"
-          circle1:
-            index: 0
-          circle2:
-            index: 7
-        outputIndex: 1
+    construct:
+      type: "ConcreteCircle"
+      circle:
+        x: 968.462646484375
+        y: 502.1766357421875
+        radius: 186.7786507018511
   2:
-    Point:
-      type: "PointExpression"
-      expression:
-        type: "OneOf"
-        expr:
-          type: "Intersection"
-          circle1:
-            index: 1
-          circle2:
-            index: 6
-        outputIndex: 0
+    construct:
+      type: "ConcreteCircle"
+      circle:
+        x: 803.7994384765625
+        y: 587.1007080078125
+        radius: 219.47683031221948
   3:
-    Point:
-      type: "PointExpression"
+    construct:
+      type: "DynamicExpression"
       expression:
         type: "OneOf"
         expr:
-          type: "Intersection"
-          circle1:
-            index: 1
-          circle2:
-            index: 6
-        outputIndex: 1
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 1
+            inBetween: true
+          startCircle: 2
+          endCircle: 0
+        outputIndex: 0
+    color: "#4c371b"
   4:
-    Point:
-      type: "PointExpression"
+    construct:
+      type: "DynamicExpression"
       expression:
         type: "OneOf"
         expr:
-          type: "Intersection"
-          circle1:
-            index: 2
-          circle2:
-            index: 8
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 1
+            inBetween: true
+          startCircle: 1
+          endCircle: 2
         outputIndex: 0
+    color: "#4c371b"
   5:
-    Point:
-      type: "PointExpression"
-      expression:
-        type: "OneOf"
-        expr:
-          type: "Intersection"
-          circle1:
-            index: 2
-          circle2:
-            index: 8
-        outputIndex: 1
-circles:
-  0:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
-        x: -398.4137268066406
-        y: -178.3775634765625
-        radius: 190.2502249131204
-  1:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
-        x: -412.08905029296875
-        y: -328.748291015625
-        radius: 217.15852331354148
-  2:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
-        x: -163.73599243164063
-        y: -179.48727416992188
-        radius: 189.11368939536248
-  3:
-    CircleOrLine:
-      type: "CircleOrLineExpression"
+    construct:
+      type: "DynamicExpression"
       expression:
         type: "OneOf"
         expr:
@@ -109,123 +61,119 @@ circles:
           parameters:
             nInterjacents: 1
             inBetween: true
-          startCircle:
-            index: 0
-          endCircle:
-            index: 1
+          startCircle: 1
+          endCircle: 0
         outputIndex: 0
-    borderColor: "#4c371b"
-  4:
-    CircleOrLine:
-      type: "CircleOrLineExpression"
-      expression:
-        type: "OneOf"
-        expr:
-          type: "CircleInterpolation"
-          parameters:
-            nInterjacents: 1
-            inBetween: true
-          startCircle:
-            index: 0
-          endCircle:
-            index: 2
-        outputIndex: 0
-    borderColor: "#4c371b"
-  5:
-    CircleOrLine:
-      type: "CircleOrLineExpression"
-      expression:
-        type: "OneOf"
-        expr:
-          type: "CircleInterpolation"
-          parameters:
-            nInterjacents: 1
-            inBetween: true
-          startCircle:
-            index: 1
-          endCircle:
-            index: 2
-        outputIndex: 0
-    borderColor: "#4c371b"
+    color: "#4c371b"
   6:
-    CircleOrLine:
-      type: "CircleOrLineExpression"
+    construct:
+      type: "DynamicExpression"
       expression:
         type: "Just"
         expr:
           type: "CircleBy2ObjectsFromItsPencilAndPerpendicularObject"
-          pencilObject1:
-            type: "CircleWithIndex"
-            index: 3
-          pencilObject2:
-            type: "CircleWithIndex"
-            index: 5
-          perpendicularObject:
-            type: "CircleWithIndex"
-            index: 1
+          pencilObject1: 4
+          pencilObject2: 5
+          perpendicularObject: 1
   7:
-    CircleOrLine:
-      type: "CircleOrLineExpression"
+    construct:
+      type: "DynamicExpression"
       expression:
         type: "Just"
         expr:
           type: "CircleBy2ObjectsFromItsPencilAndPerpendicularObject"
-          pencilObject1:
-            type: "CircleWithIndex"
-            index: 3
-          pencilObject2:
-            type: "CircleWithIndex"
-            index: 4
-          perpendicularObject:
-            type: "CircleWithIndex"
-            index: 0
+          pencilObject1: 4
+          pencilObject2: 3
+          perpendicularObject: 2
   8:
-    CircleOrLine:
-      type: "CircleOrLineExpression"
+    construct:
+      type: "DynamicExpression"
       expression:
         type: "Just"
         expr:
           type: "CircleBy2ObjectsFromItsPencilAndPerpendicularObject"
-          pencilObject1:
-            type: "CircleWithIndex"
-            index: 5
-          pencilObject2:
-            type: "CircleWithIndex"
-            index: 4
-          perpendicularObject:
-            type: "CircleWithIndex"
-            index: 2
+          pencilObject1: 5
+          pencilObject2: 3
+          perpendicularObject: 0
   9:
-    CircleOrLine:
-      type: "CircleOrLineExpression"
+    construct:
+      type: "DynamicExpression"
       expression:
-        type: "Just"
+        type: "OneOf"
         expr:
-          type: "CircleBy3PerpendicularObjects"
-          object1:
-            type: "PointWithIndex"
-            index: 1
-          object2:
-            type: "PointWithIndex"
-            index: 3
-          object3:
-            type: "PointWithIndex"
-            index: 4
-    borderColor: "#6fd4f5"
+          type: "Intersection"
+          circle1: 2
+          circle2: 7
+        outputIndex: 0
   10:
-    CircleOrLine:
-      type: "CircleOrLineExpression"
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1: 2
+          circle2: 7
+        outputIndex: 1
+  11:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1: 0
+          circle2: 8
+        outputIndex: 0
+  12:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1: 0
+          circle2: 8
+        outputIndex: 1
+  13:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1: 1
+          circle2: 6
+        outputIndex: 0
+  14:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "Intersection"
+          circle1: 1
+          circle2: 6
+        outputIndex: 1
+  15:
+    construct:
+      type: "DynamicExpression"
       expression:
         type: "Just"
         expr:
           type: "CircleBy3PerpendicularObjects"
-          object1:
-            type: "PointWithIndex"
-            index: 0
-          object2:
-            type: "PointWithIndex"
-            index: 2
-          object3:
-            type: "PointWithIndex"
-            index: 5
-    borderColor: "#6fd4f5"
+          object1: 10
+          object2: 12
+          object3: 14
+    color: "#6fd4f5"
+  16:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "CircleBy3PerpendicularObjects"
+          object1: 9
+          object2: 11
+          object3: 13
+    color: "#6fd4f5"
