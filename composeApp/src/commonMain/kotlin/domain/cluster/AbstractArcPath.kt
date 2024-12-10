@@ -77,6 +77,9 @@ data class ConcreteArcPath(
     val indices: IntRange = circles.indices
     @Transient
     val isContinuous: Boolean = intersectionPoints.none { it == null }
+    /** Whether it contains inside the CONFORMAL_INFINITY point */
+    @Transient
+    val isBounded: Boolean = isClosed && isContinuous
     @Transient
     val rects: List<Rect> = circles.map { circle ->
         if (circle is Circle)
@@ -119,11 +122,14 @@ data class ConcreteArcPath(
         require(circles.size == intersectionPoints.size)
     }
 
-    fun calculatePointLocation(point: Point): RegionPointLocation {
+    // good reference algorithms: https://en.wikipedia.org/wiki/Point_in_polygon
+    fun calculatePointLocation(point: Point): RegionPointLocation? {
         // test if the point lies on any of the arcs
         // construct straight line through the point (prob horizontal, eastward)
         // check how it intersects the arcs, and order those intersections along the line
         // if unresolvable, choose another straight line
+        if (!isClosed)
+            return null
         TODO()
     }
 }

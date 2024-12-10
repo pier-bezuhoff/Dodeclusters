@@ -507,14 +507,12 @@ class EditClusterViewModel : ViewModel() {
     private fun recordCommand(
         command: Command,
         targets: List<Ix>? = null,
-        circleTarget: Ix? = null,
-        pointTarget: Ix? = null,
         unique: Boolean = false,
     ) {
         val tag = if (unique) {
             Command.Tag.Unique()
         } else {
-            val allTargets = (targets ?: emptyList()) + listOfNotNull(circleTarget) + listOfNotNull(pointTarget).map { -it-1 }
+            val allTargets = targets ?: emptyList()
             if (allTargets.isEmpty()) {
                 null
             } else {
@@ -2376,9 +2374,20 @@ class EditClusterViewModel : ViewModel() {
             else -> true
         }
 
+    // update objects at news.keys with news.values and invalidate their dependencies
+    fun change(news: Map<Ix, GCircle?>, command: Command = Command.MOVE) {
+        val changedIndices = news.keys.toList()
+        recordCommand(command, changedIndices)
+        for ((ix, o) in news) {
+            objects[ix] = o
+        }
+        expressions.update(changedIndices)
+        // invalidate parts when needed
+        TODO()
+    }
 
-    fun GCircle.downscale(): GCircle = scale(0.0, 0.0, DOWNSCALING_FACTOR)
-    fun GCircle.upscale(): GCircle = scale(0.0, 0.0, UPSCALING_FACTOR)
+    private fun GCircle.downscale(): GCircle = scale(0.0, 0.0, DOWNSCALING_FACTOR)
+    private fun GCircle.upscale(): GCircle = scale(0.0, 0.0, UPSCALING_FACTOR)
     private fun CircleOrLine.downscale(): CircleOrLine = scale(0.0, 0.0, DOWNSCALING_FACTOR)
     private fun CircleOrLine.upscale(): CircleOrLine = scale(0.0, 0.0, UPSCALING_FACTOR)
     private fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)

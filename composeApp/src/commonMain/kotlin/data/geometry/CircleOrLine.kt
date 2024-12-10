@@ -20,6 +20,13 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
     /** -1 = inside, 0 on the circle, +1 = outside; also
      * returns 0 when the distance is in (-[EPSILON]; +[EPSILON]) */
     fun checkPositionEpsilon(point: Point): Int
+    fun calculateLocation(point: Point): RegionPointLocation =
+        when (checkPositionEpsilon(point)) {
+            0 -> RegionPointLocation.BORDERING
+            1 -> RegionPointLocation.OUT
+            -1 -> RegionPointLocation.IN
+            else -> throw IllegalStateException("Never")
+        }
     fun hasInside(point: Offset): Boolean =
         checkPosition(point) < 0
     fun hasOutside(point: Offset): Boolean =
