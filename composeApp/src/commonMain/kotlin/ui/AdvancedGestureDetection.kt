@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateRotation
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
@@ -100,18 +101,30 @@ suspend fun PointerInputScope.detectTransformGestures(
     }
 }
 
-// Xiaomi on 3+ pointer events:
-// "cancle motionEvent because of threeGesture detecting"
+// Xiaomi on 3+ pointer events: "cancle motionEvent because of threeGesture detecting"
 /**
- * patched detectTapGestures to additionally count max pressed pointers for onTap
- * note: onTap/pointerCount works only on Android, but Xiaomi steals 3+ pointer events
+ * Patched detectTapGestures to additionally count max pressed pointers for onTap, and
+ * to simplify [onDown]/[onUp] handling
+ *
+ * note: onTap/pointerCount with 2+ pointers works only on Android, BUT Xiaomi steals 3+ pointer events
+ *
+ * Possible callback sequences (excluding up-cancellations):
+ *
+ * [onDown] -> [onLongPress] -> [onUp] .
+ *
+ * [onDown] -> [onUp] -> [onTap] .
+ *
+ * [onDown] -> [onUp] -> [onDown] -> [onUp] -> [onDoubleTap] .
+ *
+ * [onDown] -> [onUp] -> [onDown] -> [onTap] -> [onLongPress] -> [onUp] .
+ * Note how in the last sequence the 1st [onTap] only happens after the 2nd [onDown]
  * */
 suspend fun PointerInputScope.detectTapGesturesCountingPointers(
-    onDoubleTap: ((position: Offset) -> Unit)? = null,
-    onLongPress: ((position: Offset) -> Unit)? = null,
     onDown: ((position: Offset) -> Unit)? = null,
+    onLongPress: ((position: Offset) -> Unit)? = null,
     onUp: ((position: Offset) -> Unit)? = null,
-    onTap: ((position: Offset, pointerCount: Int) -> Unit)? = null
+    onTap: ((position: Offset, pointerCount: Int) -> Unit)? = null,
+    onDoubleTap: ((position: Offset) -> Unit)? = null,
 ) = coroutineScope {
     awaitEachGesture {
         val down = awaitFirstDown()
@@ -122,14 +135,14 @@ suspend fun PointerInputScope.detectTapGesturesCountingPointers(
         } ?: (Long.MAX_VALUE / 2)
         var maxPressedPointerCount = 1
         var upOrCancel: PointerInputChange? = null
-        try {
-            // wait for first tap up or long press
+        try { // wait for first tap or long press
             upOrCancel = withTimeout(longPressTimeout) {
-                val (change, count) = waitForUpOrCancellationCountingPointers()
-                maxPressedPointerCount = max(maxPressedPointerCount, count)
+                val (change, count) = waitForUpOrCancellationCountingPointers() // throws on long press
+                maxPressedPointerCount = count
                 change
             }
             if (upOrCancel != null) {
+                // first tap was successful, but we shall check for double-tap before invoking it
                 upOrCancel.consume()
                 onUp?.invoke(down.position)
             }
@@ -138,36 +151,31 @@ suspend fun PointerInputScope.detectTapGesturesCountingPointers(
             maxPressedPointerCount = consumeUntilUpCountingPointers()
             onUp?.invoke(down.position)
         }
-        if (upOrCancel != null) {
-            // tap was successful.
-            if (onDoubleTap == null) {
-                onTap?.invoke(upOrCancel.position, maxPressedPointerCount) // no need to check for double-tap.
-            } else {
-                // check for second tap
+        if (upOrCancel != null) { // first tap was successful.
+            if (onDoubleTap == null) { // no need to check for double-tap.
+                onTap?.invoke(upOrCancel.position, maxPressedPointerCount)
+            } else { // check for second tap
                 val secondDown = awaitSecondDown(upOrCancel)
-                if (secondDown == null) {
-                    onTap?.invoke(upOrCancel.position, maxPressedPointerCount) // no valid second tap started
-                } else {
-                    // Second tap down detected
+                if (secondDown == null) { // no valid second tap started
+                    onTap?.invoke(upOrCancel.position, maxPressedPointerCount)
+                } else { // Second tap down detected
                     onDown?.invoke(secondDown.position)
-                    try {
-                        // Might have a long second press as the second tap
+                    try { // Might have a long second press as the second tap
                         withTimeout(longPressTimeout) {
                             val (secondUp, count) = waitForUpOrCancellationCountingPointers()
-                            maxPressedPointerCount = max(maxPressedPointerCount, count)
-                            if (secondUp != null) {
+                            maxPressedPointerCount = count
+                            if (secondUp != null) { // second tap successful => double-tap gesture
                                 secondUp.consume()
                                 onUp?.invoke(secondDown.position)
                                 onDoubleTap(secondUp.position)
-                            } else {
+                            } else { // second tap cancelled, invoking belated FIRST tap
                                 onTap?.invoke(upOrCancel.position, maxPressedPointerCount)
                             }
                         }
                     } catch (e: PointerEventTimeoutCancellationException) {
                         // The first tap was valid, but the second tap is a long press.
-                        // notify for the first tap
+                        // invoking belated FIRST tap & following it (2nd) long press
                         onTap?.invoke(upOrCancel.position, maxPressedPointerCount)
-                        // notify for the long press
                         onLongPress?.invoke(secondDown.position)
                         maxPressedPointerCount = consumeUntilUpCountingPointers()
                         onUp?.invoke(secondDown.position)
@@ -184,6 +192,7 @@ suspend fun PointerInputScope.detectTapGesturesCountingPointers(
  * change has been consumed or a pointer down change event was already consumed in the given
  * pass. If the gesture was not canceled, the final up change is returned or `null` if the
  * event was canceled.
+ * @return [Pair](the change, maximum number of pressed pointers during the wait)
  */
 suspend fun AwaitPointerEventScope.waitForUpOrCancellationCountingPointers(
     pass: PointerEventPass = PointerEventPass.Main
@@ -192,8 +201,7 @@ suspend fun AwaitPointerEventScope.waitForUpOrCancellationCountingPointers(
     while (true) {
         val event = awaitPointerEvent(pass)
         maxPressedPointerCount = max(maxPressedPointerCount, event.changes.count { it.pressed })
-        if (event.changes.fastAll { it.changedToUp() }) {
-            // All pointers are up
+        if (event.changes.fastAll { it.changedToUp() }) { // All pointers are up
             return event.changes[0] to maxPressedPointerCount
         }
         if (event.changes.fastAny {
@@ -215,6 +223,7 @@ suspend fun AwaitPointerEventScope.waitForUpOrCancellationCountingPointers(
 /**
  * Consumes all pointer events until nothing is pressed and then returns. This method assumes
  * that something is currently pressed.
+ * @return maximum number of pointers pressed during the ordeal
  */
 private suspend fun AwaitPointerEventScope.consumeUntilUpCountingPointers(): Int {
     var maxPressedPointerCount = 1
@@ -227,6 +236,7 @@ private suspend fun AwaitPointerEventScope.consumeUntilUpCountingPointers(): Int
     return maxPressedPointerCount
 }
 
+// exposed internal fun
 /**
  * Waits for [ViewConfiguration.doubleTapTimeoutMillis] for a second press event. If a
  * second press event is received before the time out, it is returned or `null` is returned

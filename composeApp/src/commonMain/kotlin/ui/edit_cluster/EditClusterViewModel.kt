@@ -1412,7 +1412,8 @@ class EditClusterViewModel : ViewModel() {
     }
 
     // pointer input callbacks
-    // onDown -> onTap -> onUp
+    // onDown -> onUp -> onTap OR
+    // onDown -> onUp -> onDown! -> onTap -> onUp
     fun onTap(position: Offset, pointerCount: Int) {
 //        println("onTap(pointerCount = $pointerCount)")
         // 2-finger tap for undo (works only on Android afaik)

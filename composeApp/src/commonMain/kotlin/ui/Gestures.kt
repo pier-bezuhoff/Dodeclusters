@@ -44,9 +44,20 @@ inline fun Modifier.reactiveCanvas(
         }
         .pointerInput(*keys) {
             detectTapGesturesCountingPointers(
-                onDown = { position -> onDown(position) },
-                onUp = { position ->  onUp(position) },
-                onTap = { position, pointerCount -> onTap(position, pointerCount) }
+                onDown = { position ->
+//                    println("onDown")
+                    onDown(position)
+                },
+                onUp = { position ->
+//                    println("onUp")
+                    onUp(position)
+                },
+                onTap = { position, pointerCount ->
+//                    println("onTap(n=$pointerCount)")
+                    onTap(position, pointerCount)
+                },
+//                onLongPress = { println("onLongPress") },
+//                onDoubleTap = { println("onDoubleTap") },
             )
         }
         // NOTE: the latter pointInput-s *can* consume events before passing it higher
