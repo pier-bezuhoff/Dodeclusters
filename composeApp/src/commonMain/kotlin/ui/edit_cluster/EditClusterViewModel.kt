@@ -1414,6 +1414,7 @@ class EditClusterViewModel : ViewModel() {
     // pointer input callbacks
     // onDown -> onTap -> onUp
     fun onTap(position: Offset, pointerCount: Int) {
+//        println("onTap(pointerCount = $pointerCount)")
         // 2-finger tap for undo (works only on Android afaik)
         if (TWO_FINGER_TAP_FOR_UNDO && pointerCount == 2) {
             if (undoIsEnabled)
@@ -2044,7 +2045,7 @@ class EditClusterViewModel : ViewModel() {
             val realized = args.map {
                 when (it) {
                     is Arg.Point.Index -> it.index
-                    is Arg.Point.XY -> createNewFreePoint(it.toPoint())
+                    is Arg.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
             val newCircle = expressions.addSoloExpression(
@@ -2237,7 +2238,6 @@ class EditClusterViewModel : ViewModel() {
         params: LoxodromicMotionParameters,
     ) {
         openedDialog = null
-        recordCreateCommand()
         val argList = partialArgList!!
         val args = argList.args
         val objArg = args[0] as Arg.CircleAndPointIndices
@@ -2246,8 +2246,9 @@ class EditClusterViewModel : ViewModel() {
         val (divergence, convergence) = args.drop(1).take(2)
             .map { when (val arg = it as Arg.Point) {
                 is Arg.Point.Index -> arg.index
-                is Arg.Point.XY -> createNewFreePoint(arg.toPoint())
+                is Arg.Point.XY -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
             } }
+        recordCreateCommand()
         val allNewCircles = mutableListOf<CircleOrLine?>()
         val allNewPoints = mutableListOf<Point?>()
         for (circleIndex in targetCircleIndices) {
@@ -2418,7 +2419,10 @@ class EditClusterViewModel : ViewModel() {
                 loadNewConstellation(Constellation.SAMPLE)
                 centerizeTo(0f, 0f)
             } else {
-                val state = getPlatform().lastStateStore.get()
+                val result = runCatching { // NOTE: can fail crash when underlying ECVM.State format changes
+                    getPlatform().lastStateStore.get()
+                }
+                val state = result.getOrNull()
                 if (state == null) {
                     loadNewConstellation(Constellation.SAMPLE)
                     centerizeTo(0f, 0f)
