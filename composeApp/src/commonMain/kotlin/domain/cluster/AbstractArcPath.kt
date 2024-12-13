@@ -2,14 +2,18 @@ package domain.cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.PathIterator
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Point
 import data.geometry.RegionPointLocation
+import data.geometry.calculateAngle
 import domain.ColorAsCss
+import domain.TAU
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.math.PI
 
 /**
  * @param[arcs] [List] of indices (_starting from 1!_) of circles from which the
@@ -130,6 +134,27 @@ data class ConcreteArcPath(
         // if unresolvable, choose another straight line
         if (!isClosed)
             return null
+        var windingAngle: Double = 0.0
+        for (i in indices) {
+            val arcStart = intersectionPoints[i]!! // closed arcpath => all intersections are present
+            val arcEnd = intersectionPoints[(i + 1) % size]!!
+            val circle = circles[i]
+            val location = circle.calculateLocation(point)
+            if (location == RegionPointLocation.BORDERING && "point order" == "lies on the arc")
+                return RegionPointLocation.BORDERING
+            val angle = calculateAngle(point, arcStart, arcEnd) // positive => we are 'in'
+            if (circle is Circle) {
+                val outside = circle.hasOutsideEpsilon(point)
+                val outwardArc = angle < 0
+                if (outside == outwardArc) {
+                    windingAngle += angle
+                } else
+                    windingAngle += angle - TAU
+            } else {
+                windingAngle += angle
+            }
+        }
+        val soThePointIsOutside = windingAngle > 0.1
         TODO()
     }
 }

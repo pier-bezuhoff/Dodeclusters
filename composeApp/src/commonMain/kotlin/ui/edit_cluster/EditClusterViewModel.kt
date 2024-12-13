@@ -136,6 +136,8 @@ class EditClusterViewModel : ViewModel() {
     /** which style to use when drawing parts: true = stroke, false = fill */
     var showWireframes: Boolean by mutableStateOf(false)
         private set
+    var showDirectionArrows: Boolean by mutableStateOf(DRAW_ARROWS_ON_SELECTED_CIRCLES)
+        private set
     /** applies to [SelectionMode.Region]:
      * only use circles present in the [selection] to determine which parts to fill */
     var restrictRegionsToSelection: Boolean by mutableStateOf(false)
@@ -2354,6 +2356,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.Redo -> redo()
             is EditClusterTool.CustomAction -> {} // custom handlers
             EditClusterTool.CompleteArcPath -> completeArcPath()
+            EditClusterTool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
             EditClusterTool.AddBackgroundImage -> TODO("issues..")
         }
     }
@@ -2371,6 +2374,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
+            EditClusterTool.ToggleDirectionArrows -> showDirectionArrows
 //            EditClusterTool.Palette -> openedDialog == DialogType.REGION_COLOR_PICKER
             is EditClusterTool.MultiArg -> mode == ToolMode.correspondingTo(tool)
             else -> true

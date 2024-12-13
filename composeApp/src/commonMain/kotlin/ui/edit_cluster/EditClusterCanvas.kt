@@ -180,7 +180,7 @@ fun BoxScope.EditClusterCanvas(
             if (viewModel.selectionIsLocked) {
                 LockedCircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
             } else {
-                CircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
+                CircleSelectionContextActions(viewModel.canvasSize, viewModel.showDirectionArrows, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
             }
         } else if (viewModel.pointSelectionIsActive) {
             PointSelectionContextActions(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel::toolAction)
@@ -514,7 +514,7 @@ private fun DrawScope.drawSelectedCircles(
                     alpha = thiccSelectionCircleAlpha,
                     style = circleThiccStroke
                 )
-                if (EditClusterViewModel.DRAW_ARROWS_ON_SELECTED_CIRCLES) {
+                if (viewModel.showDirectionArrows) {
                     if (patchForAndroid)
                         drawArrowsPatchedForAndroid(circle, visibleRect, color)
                     else
@@ -884,6 +884,7 @@ fun BoxScope.LockedCircleSelectionContextActions(
 @Composable
 fun BoxScope.CircleSelectionContextActions(
     canvasSize: IntSize,
+    showDirectionArrows: Boolean,
     toolAction: (EditClusterTool) -> Unit,
     getMostCommonCircleColorInSelection: () -> Color?,
 ) {
@@ -928,7 +929,7 @@ fun BoxScope.CircleSelectionContextActions(
             bottomRightModifier,
             onClick = toolAction
         )
-        if (EditClusterViewModel.DRAW_ARROWS_ON_SELECTED_CIRCLES) {
+        if (showDirectionArrows) {
             SimpleToolButton(
                 EditClusterTool.SwapDirection,
                 bottomMidModifier,

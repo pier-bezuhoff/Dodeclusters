@@ -7,7 +7,7 @@ import kotlin.math.roundToInt
 
 // we unironically need Prelude for kotlin...
 
-/** 2*[PI], 1 whole turn */
+/** 2*[PI], 360°, 1 whole turn */
 const val TAU: Double = 2*PI
 
 /** Index */
