@@ -14,6 +14,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.math.PI
+import kotlin.math.abs
 
 /**
  * @param[arcs] [List] of indices (_starting from 1!_) of circles from which the
@@ -113,12 +114,15 @@ data class ConcreteArcPath(
         val nextIndex = (ix + 1).mod(circles.size)
         val nextPoint = intersectionPoints[nextIndex]
         if (circle is Circle && previousPoint != null && nextPoint != null) {
+            if (size == 1 && previousPoint == nextPoint) { // singular full circle case
+                return@mapIndexed 360f
+            }
             val startAngle = startAngles[ix]
             val endAngle = circle.point2angle(nextPoint)
             if (circle.isCCW)
-                (startAngle - endAngle).rem(360f)
+                (startAngle - endAngle) % 360f
             else
-                (endAngle - startAngle).rem(360f)
+                (endAngle - startAngle) % 360f
         } else 0f
     }
 
@@ -134,27 +138,58 @@ data class ConcreteArcPath(
         // if unresolvable, choose another straight line
         if (!isClosed)
             return null
+        if (size == 1 && circles[0] is Circle) { // single full circle case
+            val circle = circles[0] as Circle
+            return circle.calculateLocation(point)
+        }
+        // cumulative winding angle == 0 => the point is inside
         var windingAngle: Double = 0.0
         for (i in indices) {
             val arcStart = intersectionPoints[i]!! // closed arcpath => all intersections are present
             val arcEnd = intersectionPoints[(i + 1) % size]!!
             val circle = circles[i]
             val location = circle.calculateLocation(point)
-            if (location == RegionPointLocation.BORDERING && "point order" == "lies on the arc")
-                return RegionPointLocation.BORDERING
+            if (location == RegionPointLocation.BORDERING) {
+                val inBetween = circle.orderIsInBetween(
+                    circle.point2order(point),
+                    circle.point2order(arcStart),
+                    circle.point2order(arcEnd),
+                )
+                if (inBetween)
+                    return RegionPointLocation.BORDERING
+            }
             val angle = calculateAngle(point, arcStart, arcEnd) // positive => we are 'in'
-            if (circle is Circle) {
-                val outside = circle.hasOutsideEpsilon(point)
-                val outwardArc = angle < 0
-                if (outside == outwardArc) {
-                    windingAngle += angle
-                } else
-                    windingAngle += angle - TAU
+            if (circle is Circle) { // circular arcs require a patch
+                val angleIsCCW = angle >= 0.0
+                val dAngle = if (angleIsCCW) { // positive, CCW angle
+                    if (circle.isCCW) { // extruding arc doesn't matter
+                        angle
+                    } else { // intruding arc
+                        if (circle.hasInsideEpsilon(point))
+                            angle
+                        else
+                            angle - TAU
+                    }
+                } else { // negative, CW angle
+                    if (circle.isCCW) { // intruding arc
+                        if (circle.hasOutsideEpsilon(point))
+                            angle
+                        else angle + TAU
+                    } else { // extruding arc doesn't matter
+                        angle
+                    }
+                }
+                println("winding angle += $dAngle (angle = $angle)")
+                windingAngle += dAngle
             } else {
+                println("winding angle += $angle")
                 windingAngle += angle
             }
         }
-        val soThePointIsOutside = windingAngle > 0.1
-        TODO()
+        val soThePointIsOutside = abs(windingAngle) > 0.1 // small threshold just in case
+        return if (soThePointIsOutside == isBounded)
+            RegionPointLocation.OUT
+        else
+            RegionPointLocation.IN
     }
 }

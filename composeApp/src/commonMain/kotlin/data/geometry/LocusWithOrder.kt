@@ -14,6 +14,7 @@ sealed interface LocusWithOrder {
     fun point2order(point: Point): Double
     fun order2point(order: Double): Point
     fun orderInBetween(order1: Double, order2: Double): Double
+    fun orderIsInBetween(order: Double, startOrder: Double, endOrder: Double): Boolean
 
     fun orderPoints(points: Collection<Point>): List<Point> =
         points.sortedBy { point2order(it) }

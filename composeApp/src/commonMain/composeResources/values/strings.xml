@@ -35,7 +35,7 @@
     <string name="hide_ui_name">Hide UI</string>
     <string name="hide_ui_description">Hide UI for 30s</string>
     <string name="toggle_direction_arrows_name">Show/hide arrows</string>
-    <string name="toggle_direction_arrows_description">Show/hide arrows indicating direction of circles and lines</string>
+    <string name="toggle_direction_arrows_description">Show/hide arrows indicating direction of selected circles and lines</string>
     <string name="palette_name">Palette</string>
     <string name="palette_description">Pick colors</string>
     <string name="applied_color_name">Applied color</string>

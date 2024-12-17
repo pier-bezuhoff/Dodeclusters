@@ -29,7 +29,6 @@ import data.geometry.ArcPath
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
-import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.Point
 import domain.Arg
@@ -136,7 +135,7 @@ class EditClusterViewModel : ViewModel() {
     /** which style to use when drawing parts: true = stroke, false = fill */
     var showWireframes: Boolean by mutableStateOf(false)
         private set
-    var showDirectionArrows: Boolean by mutableStateOf(DRAW_ARROWS_ON_SELECTED_CIRCLES)
+    var showDirectionArrows: Boolean by mutableStateOf(DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES)
         private set
     /** applies to [SelectionMode.Region]:
      * only use circles present in the [selection] to determine which parts to fill */
@@ -943,7 +942,7 @@ class EditClusterViewModel : ViewModel() {
                     IncidenceParameters(order),
                     snapResult.circleIndex
                 )
-                recordCommand(Command.CREATE, unique = true)
+                recordCreateCommand()
                 val newPoint = expressions.addSoloExpression(expr) as Point
                 val newIx = objects.size
                 addObjects(listOf(newPoint.upscale()))
@@ -1670,7 +1669,7 @@ class EditClusterViewModel : ViewModel() {
         val ix = selection.first()
         val free = !LOCK_DEPENDENT_OBJECT || isFree(ix)
         if (free) {
-            recordCommand(Command.MOVE, targets = listOf(ix)) // have to distinguish from circle indices ig
+            recordCommand(Command.MOVE, targets = listOf(ix))
             val excludedSnapTargets = expressions.children
                 .getOrElse(ix) { emptySet() }
                 .filter { objects[it] is CircleOrLine }
@@ -1678,6 +1677,21 @@ class EditClusterViewModel : ViewModel() {
             objects[ix] = snapped(c, excludePoints = true, excludedCircles = excludedSnapTargets).result
             expressions.changeToFree(ix)
             expressions.update(listOf(ix))
+        } else {
+            val expr = expressions.expressions[ix]?.expr
+            if (expr is Expr.Incidence) {
+                recordCommand(Command.MOVE, targets = listOf(ix))
+                val carrierIndex = expr.carrier
+                val carrier = objects[carrierIndex] as CircleOrLine
+                val newPoint = carrier.project(Point.fromOffset(c))
+                val order = carrier.downscale().point2order(newPoint.downscale())
+                val newExpr = Expr.Incidence(
+                    IncidenceParameters(order),
+                    carrierIndex
+                )
+                objects[ix] = expressions.changeExpression(ix, newExpr)
+                expressions.update(listOf(ix))
+            }
         }
     }
 
@@ -2037,7 +2051,7 @@ class EditClusterViewModel : ViewModel() {
         val argList = partialArgList!!
         val args = argList.args.map { it as Arg.Point }
         recordCreateCommand()
-        if (args.all { it is Arg.Point.XY }) {
+        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.Point.XY }) {
             val newCircle = computeCircleByCenterAndRadius(
                 center = (args[0] as Arg.Point.XY).toPoint().downscale(),
                 radiusPoint = (args[1] as Arg.Point.XY).toPoint().downscale(),
@@ -2068,7 +2082,7 @@ class EditClusterViewModel : ViewModel() {
             it as Arg.CircleOrPoint
         }
         recordCreateCommand()
-        if (args.all { it is Arg.CircleOrPoint.Point.XY }) {
+        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.CircleOrPoint.Point.XY }) {
             val (p1, p2, p3) = args.map {
                 (it as Arg.CircleOrPoint.Point.XY).toPoint().downscale()
             }
@@ -2082,7 +2096,7 @@ class EditClusterViewModel : ViewModel() {
                     is Arg.CircleOrPoint.Point.Index -> it.index
                     is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
-            }.sorted()
+            }.sorted() // NOTE: sorting can reverse intended direction
             val newCircle = expressions.addSoloExpression(
                 Expr.CircleBy3Points(
                     object1 = realized[0],
@@ -2101,7 +2115,7 @@ class EditClusterViewModel : ViewModel() {
             it as Arg.CircleOrPoint
         }
         recordCreateCommand()
-        if (args.all { it is Arg.CircleOrPoint.Point.XY }) {
+        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.CircleOrPoint.Point.XY }) {
             val (p1, p2, p3) = args.map {
                 (it as Arg.CircleOrPoint.Point.XY).toPoint().downscale()
             }
@@ -2134,7 +2148,7 @@ class EditClusterViewModel : ViewModel() {
             it as Arg.CircleOrPoint
         }
         recordCreateCommand()
-        if (args.all { it is Arg.CircleOrPoint.Point.XY }) {
+        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.CircleOrPoint.Point.XY }) {
             val (p1, p2) = args.map {
                 (it as Arg.CircleOrPoint.Point.XY).toPoint().downscale()
             }
@@ -2490,7 +2504,10 @@ class EditClusterViewModel : ViewModel() {
         const val LOCK_DEPENDENT_OBJECT = true
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true
-        const val DRAW_ARROWS_ON_SELECTED_CIRCLES = false
+        const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
+        /** when constructing object depending on not-yet-existing points,
+         * always create them. In contrast to replacing expression with static circle */
+        const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 200.0
         const val DOWNSCALING_FACTOR = 1/UPSCALING_FACTOR

@@ -139,6 +139,10 @@ data class Circle(
             order1 + (2* PI - (order1 - order2))/2.0
 //        val half = (order2 - order1).mod(2*PI)/2.0
 
+    override fun orderIsInBetween(order: Double, startOrder: Double, endOrder: Double): Boolean {
+        TODO()
+    }
+
     override fun translate(vector: Offset): Circle =
         Circle(center + vector, radius, isCCW)
 

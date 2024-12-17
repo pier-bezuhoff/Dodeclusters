@@ -138,6 +138,11 @@ data class Line(
         else // order2 < order1
             order1 - (order1 - order2)/2.0
 
+    override fun orderIsInBetween(order: Double, startOrder: Double, endOrder: Double): Boolean {
+        require(startOrder <= endOrder) { "Line segment has incorrect start-end orders" }
+        return order in startOrder..endOrder
+    }
+
     override fun translate(vector: Offset): Line =
        Line(a, b, c - (a*vector.x + b*vector.y))
 
