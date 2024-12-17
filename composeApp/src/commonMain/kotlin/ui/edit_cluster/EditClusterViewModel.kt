@@ -738,20 +738,15 @@ class EditClusterViewModel : ViewModel() {
             ?.also { println("select point #$it: ${objects[it]} <- ${expressions.expressions[it]}") }
     }
 
-    fun reselectPointAt(visiblePosition: Offset): Boolean {
+    /** [selectPoint] around [visiblePosition] while prioritizing free points */
+    fun selectPointAt(visiblePosition: Offset): Ix? {
         val points = objects.map { it as? Point }
         val nearPointIndex = selectPoint(points, visiblePosition,
             priorityTargets = points.indices
                 .filter { expressions.expressions[it] == null }
                 .toSet()
         )
-        if (nearPointIndex == null) {
-            selection = listOf()
-            return false
-        } else {
-            selection = listOf(nearPointIndex)
-            return true
-        }
+        return nearPointIndex
     }
 
     fun selectCircle(
@@ -779,23 +774,19 @@ class EditClusterViewModel : ViewModel() {
             }
     }
 
-    fun reselectCircleAt(visiblePosition: Offset): Boolean {
+    /** [selectCircle] around [visiblePosition] while prioritizing free circles */
+    fun selectCircleAt(visiblePosition: Offset): Ix? {
         val circles = objects.map { it as? CircleOrLine }
         val nearCircleIndex = selectCircle(circles, visiblePosition,
             priorityTargets = circles.indices
                 .filter { expressions.expressions[it] == null }
                 .toSet()
         )
-        selection = emptyList()
-        if (nearCircleIndex == null) {
-            return false
-        } else {
-            selection += nearCircleIndex
-            return true
-        }
+        return nearCircleIndex
     }
 
-    fun reselectCirclesAt(visiblePosition: Offset): Ix? {
+    /** [selectCircle] & add/remove it from selection if it's new/already in */
+    fun xorSelectCircleAt(visiblePosition: Offset): Ix? {
         val circles = objects.map { it as? CircleOrLine }
         return selectCircle(circles, visiblePosition)?.also { ix ->
             if (ix in selection)
@@ -1269,16 +1260,22 @@ class EditClusterViewModel : ViewModel() {
             }
             // NOTE: this enables drag-only behavior, you lose your selection when grabbing new circle
             if (mode == SelectionMode.Drag && submode is SubMode.None) {
-                val reselected = reselectPointAt(visiblePosition)
-                if (reselected) {
-                    selection = emptyList()
+                val selectedPointIndex = selectPointAt(visiblePosition)
+                if (selectedPointIndex != null) {
+                    selection = listOf(selectedPointIndex)
                 } else {
-                    val previouslySelectedCircle = selection.firstOrNull()
-                    reselectCircleAt(visiblePosition)
-                    if (previouslySelectedCircle != null && selection.isEmpty()) {
-                        selection += previouslySelectedCircle
+                    val previouslySelectedCircle = selection.firstOrNull()?.let { ix ->
+                        if (objects[ix] is CircleOrLine)
+                            ix
+                        else null
+                    }
+                    val selectedCircleIndex = selectCircleAt(visiblePosition)
+                    selection = if (previouslySelectedCircle != null && selectedCircleIndex == null) {
+                        listOf(previouslySelectedCircle)
                         // we keep previous selection in case we want to drag it
                         // but it can still be discarded in onTap
+                    } else {
+                        listOfNotNull(selectedCircleIndex)
                     }
                 }
             } else {
@@ -1424,15 +1421,14 @@ class EditClusterViewModel : ViewModel() {
         } else if (showCircles) { // select circle(s)/region
             when (mode) {
                 SelectionMode.Drag -> {
-                    val pointReselected = reselectPointAt(position)
-                    if (pointReselected)
-                        selection = emptyList()
-                    else
-                        reselectCircleAt(position)
+                    // val selectedPointIndex = reselectPointAt(position)
+                    // points are insta-dropped when the pointer is up (unlike circles)
+                    val selectedCircleIndex = selectCircleAt(position)
+                    selection = listOfNotNull(selectedCircleIndex)
                 }
                 SelectionMode.Multiselect -> {
                     // (re)-select part
-                    val selectedCircleIx = reselectCirclesAt(position)
+                    val selectedCircleIx = xorSelectCircleAt(position)
                     if (selectedCircleIx == null) { // try to select bounding circles of the selected part
                         val (part, part0) = selectPartAt(position)
                         if (part0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
@@ -1665,7 +1661,6 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun dragPoint(c: Offset) {
-        // dragging point
         val ix = selection.first()
         val free = !LOCK_DEPENDENT_OBJECT || isFree(ix)
         if (free) {
@@ -1689,7 +1684,8 @@ class EditClusterViewModel : ViewModel() {
                     IncidenceParameters(order),
                     carrierIndex
                 )
-                objects[ix] = expressions.changeExpression(ix, newExpr)
+                objects[ix] = newPoint
+                expressions.changeExpression(ix, newExpr)
                 expressions.update(listOf(ix))
             }
         }
@@ -2507,7 +2503,7 @@ class EditClusterViewModel : ViewModel() {
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         /** when constructing object depending on not-yet-existing points,
          * always create them. In contrast to replacing expression with static circle */
-        const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
+        const val ALWAYS_CREATE_ADDITIONAL_POINTS = true
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 200.0
         const val DOWNSCALING_FACTOR = 1/UPSCALING_FACTOR
