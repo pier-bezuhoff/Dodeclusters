@@ -6,6 +6,7 @@ import domain.ColorAsCss
 import domain.Ix
 import domain.expressions.Expression
 import domain.expressions.ObjectConstruct
+import domain.expressions.reIndex
 import kotlinx.serialization.Serializable
 
 // aka ClusterV3.2
@@ -40,14 +41,16 @@ data class Constellation(
     }
 
     fun toExpressionMap(): Map<Ix, Expression?> =
-        objects.mapIndexed { ix, o ->
+        objects.mapIndexed { ix0, o ->
+            val ix = ix0 - FIRST_INDEX
             when (o) {
-                is ObjectConstruct.Dynamic -> ix to o.expression
+                is ObjectConstruct.Dynamic -> ix to o.expression.reIndex { it - FIRST_INDEX }
                 else -> ix to null
             }
         }.toMap()
 
     companion object {
+        const val FIRST_INDEX: Int = 0
         val SAMPLE = Constellation(
             objects = listOf(
                 Circle(0.0, 0.0, 200.0),

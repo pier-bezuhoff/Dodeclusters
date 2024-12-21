@@ -2,45 +2,56 @@ package domain.cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.PathIterator
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.GCircle
 import data.geometry.Point
 import data.geometry.RegionPointLocation
 import data.geometry.calculateAngle
 import domain.ColorAsCss
+import domain.Ix
 import domain.TAU
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlin.math.PI
 import kotlin.math.abs
 
 /**
- * @param[arcs] [List] of indices (_starting from 1!_) of circles from which the
+ * @param[arcs] [List] of indices (_starting from 1!_) of circles/lines from which the
  * arcs are chosen, __prefixed__ by +/- depending on whether the direction of
- * the arc coincides with the direction of the circle
+ * the arc coincides with the direction of the circle/line. When not [isClosed] the first and
+ * the last indices specify start/end points in addition
  * @param[isClosed] when `false` the last arc is considered invisible and only used
  * to denote start & end points
  * */
 @Immutable
 @Serializable
-@SerialName("arcPath")
-data class AbstractArcPath(
+@SerialName("ArcPath")
+sealed interface ArcPath {
+    @SerialName("arcIndicesStartingFrom1WithMinusIndicatingReversedDirection")
+    val arcs: List<Int>
+    val borderColor: ColorAsCss?
+}
+
+@Immutable
+@Serializable
+@SerialName("ClosedArcPath")
+data class ClosedArcPath(
     // NOTE: cyclic order doesn't matter, but reversing it alternates between one of
     //  2 possible regions that arise when not considering circle order
     @SerialName("arcIndicesStartingFrom1WithMinusIndicatingReversedDirection")
-    val arcs: List<Int>,
-    val isClosed: Boolean = true,
+    override val arcs: List<Int>,
     val fillColor: ColorAsCss? = null,
-    val borderColor: ColorAsCss? = null,
-) {
+    override val borderColor: ColorAsCss? = null,
+) : ArcPath {
+
     // previous arc: external orientation
     // next arc: internal orientation
-    fun toConcrete(allCircles: List<CircleOrLine>): ConcreteArcPath {
+    fun toConcrete(allObjects: List<GCircle?>): ConcreteClosedArcPath {
         val circles = arcs.map { i ->
-            if (i > 0) allCircles[i-1]
-            else allCircles[i-1].reversed()
+            val circleOrLine = allObjects[i-1] as CircleOrLine
+            if (i > 0) circleOrLine
+            else circleOrLine.reversed()
         }
         val intersectionPoints: MutableList<Point?> = mutableListOf()
         if (arcs.size > 1) {
@@ -56,11 +67,26 @@ data class AbstractArcPath(
                 intersectionPoints.add(intersection.firstOrNull())
             }
         }
-        return ConcreteArcPath(
-            circles, intersectionPoints, isClosed, fillColor, borderColor
+        return ConcreteClosedArcPath(
+            circles, intersectionPoints, isClosed = false, fillColor, borderColor
         )
     }
 }
+
+@Immutable
+@Serializable
+@SerialName("OpenArcPath")
+data class OpenArcPath(
+    val startPoint: Ix,
+    val endPoint: Ix,
+    @SerialName("arcIndicesStartingFrom1WithMinusIndicatingReversedDirection")
+    override val arcs: List<Int>,
+    override val borderColor: ColorAsCss? = null,
+) : ArcPath
+
+@Immutable
+@Serializable
+sealed interface ConcreteArcPath
 
 // to distinguish in/out, connect any point to-the-left to the infinity and
 // count how many arcs the line intersects
@@ -69,13 +95,13 @@ data class AbstractArcPath(
  * */
 @Immutable
 @Serializable
-data class ConcreteArcPath(
+data class ConcreteClosedArcPath(
     val circles: List<CircleOrLine>,
     val intersectionPoints: List<Point?>,
     val isClosed: Boolean,
     val fillColor: ColorAsCss?,
     val borderColor: ColorAsCss?,
-) {
+) : ConcreteArcPath {
     @Transient
     val size: Int = circles.size
     @Transient
@@ -151,9 +177,9 @@ data class ConcreteArcPath(
             val location = circle.calculateLocation(point)
             if (location == RegionPointLocation.BORDERING) {
                 val inBetween = circle.orderIsInBetween(
-                    circle.point2order(point),
-                    circle.point2order(arcStart),
-                    circle.point2order(arcEnd),
+                    order = circle.point2order(point),
+                    startOrder = circle.point2order(arcStart),
+                    endOrder = circle.point2order(arcEnd),
                 )
                 if (inBetween)
                     return RegionPointLocation.BORDERING

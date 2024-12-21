@@ -5,7 +5,7 @@ import data.geometry.CircleOrLine
 import data.geometry.EPSILON
 import data.geometry.Line
 import data.geometry.Point
-import domain.cluster.AbstractArcPath
+import domain.cluster.ArcPath
 
 /** [ins] and [outs] delimiters must not contain `null` circles */
 fun compressConstraints(
@@ -196,7 +196,7 @@ fun constraints2arcpaths(
     ins: List<Ix>,
     outs: List<Ix>,
     allCircles: List<CircleOrLine>,
-): List<AbstractArcPath> {
+): List<ArcPath> {
     val inCircles = ins.map { allCircles[it] }
     val outCircles = outs.map { allCircles[it] }
 
@@ -276,14 +276,14 @@ fun constraints2arcpaths(
         .toMutableMap()
     var focus = arcsByStart.keys.first()
     var arcPath: List<Arc.Normal> = emptyList()
-    val paths = mutableListOf<AbstractArcPath>()
+    val paths = mutableListOf<ArcPath>()
     while (arcsByStart.isNotEmpty()) {
         val possibleContinuations = arcsByStart[focus] ?: emptyList()
         when (possibleContinuations.size) {
             0 -> {
                 arcsByStart.remove(focus)
                 if (arcPath.isNotEmpty()) {
-                    paths.add(AbstractArcPath(
+                    paths.add(ArcPath(
                         arcPath.map { 1 + it.circleIndex },
                         isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
                     ))
@@ -323,14 +323,14 @@ fun constraints2arcpaths(
         }
     }
     if (arcPath.isNotEmpty()) {
-        paths.add(AbstractArcPath(
+        paths.add(ArcPath(
             arcPath.map { 1 + it.circleIndex },
             isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
         ))
     }
     val fullArcs = arcs.filterIsInstance<Arc.Full>()
     for (fullArc in fullArcs) {
-        paths.add(AbstractArcPath(listOf(fullArc.circleIndex + 1)))
+        paths.add(ArcPath(listOf(fullArc.circleIndex + 1)))
     }
     return paths
 }

@@ -25,11 +25,11 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import data.geometry.ArcPath
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Line
+import data.geometry.PartialArcPath
 import data.geometry.Point
 import domain.Arg
 import domain.ArgType
@@ -40,10 +40,11 @@ import domain.Ix
 import domain.PartialArgList
 import domain.PointSnapResult
 import domain.angleDeg
+import domain.cluster.ArcPath
 import domain.cluster.Cluster
-import domain.cluster.LogicalRegion
 import domain.cluster.ClusterV1
 import domain.cluster.Constellation
+import domain.cluster.LogicalRegion
 import domain.compressConstraints
 import domain.expressions.Expr
 import domain.expressions.ExpressionForest
@@ -56,7 +57,7 @@ import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeLineBy2Points
-import domain.expressions.reIndexExpression
+import domain.expressions.reIndex
 import domain.filterIndices
 import domain.io.DdcV1
 import domain.io.DdcV2
@@ -201,7 +202,9 @@ class EditClusterViewModel : ViewModel() {
     var openedDialog: DialogType? by mutableStateOf(null)
         private set
 
-    var arcPathUnderConstruction: ArcPath? by mutableStateOf(null)
+    var partialArcPath: PartialArcPath? by mutableStateOf(null)
+        private set
+    var arcPaths: List<ArcPath> by mutableStateOf(emptyList())
         private set
 
     var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
@@ -430,7 +433,7 @@ class EditClusterViewModel : ViewModel() {
             } else {
                 ObjectConstruct.Dynamic(
                     // since children are auto-deleted with their parent we can !! safely
-                    reIndexExpression(e, reIndexer = { reindexing[it]!! })
+                    e.reIndex(reIndexer = { reindexing[it]!! })
                 )
             }
         }
@@ -508,12 +511,13 @@ class EditClusterViewModel : ViewModel() {
     private fun recordCommand(
         command: Command,
         targets: List<Ix>? = null,
+        target: Ix? = null,
         unique: Boolean = false,
     ) {
         val tag = if (unique) {
             Command.Tag.Unique()
         } else {
-            val allTargets = targets ?: emptyList()
+            val allTargets = targets ?: listOfNotNull(target)
             if (allTargets.isEmpty()) {
                 null
             } else {
@@ -702,7 +706,7 @@ class EditClusterViewModel : ViewModel() {
         }
         mode = newMode
         submode = SubMode.None
-        arcPathUnderConstruction = null
+        partialArcPath = null
     }
 
     fun absolute(visiblePosition: Offset): Offset =
@@ -1167,7 +1171,7 @@ class EditClusterViewModel : ViewModel() {
                 }
             }
             expressions.update(freeObjects)
-        } else if (mode == ToolMode.ARC_PATH && arcPathUnderConstruction != null) {
+        } else if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
 //            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
         } else { // NOTE: scaling everything instead of canvas can produce more artifacts
             val targets = objects.indices.toList()
@@ -1374,30 +1378,30 @@ class EditClusterViewModel : ViewModel() {
                         }
                         else -> if (mode == ToolMode.ARC_PATH) {
                             val absolutePoint = snapped(absolute(visiblePosition)).result
-                            val arcPath = arcPathUnderConstruction
-                            arcPathUnderConstruction = if (arcPath == null) {
-                                ArcPath(
+                            val arcPath = partialArcPath
+                            partialArcPath = if (arcPath == null) {
+                                PartialArcPath(
                                     startPoint = absolutePoint,
-                                    focus = ArcPath.Focus.StartPoint
+                                    focus = PartialArcPath.Focus.StartPoint
                                 )
                             } else {
                                 if (isCloseEnoughToSelect(arcPath.startPoint.toOffset(), visiblePosition)) {
-                                    arcPath.copy(focus = ArcPath.Focus.StartPoint)
+                                    arcPath.copy(focus = PartialArcPath.Focus.StartPoint)
                                 } else {
                                     val pointIx = arcPath.points.indexOfFirst {
                                         isCloseEnoughToSelect(it.toOffset(), visiblePosition)
                                     }
                                     if (pointIx != -1) {
-                                        arcPath.copy(focus = ArcPath.Focus.Point(pointIx))
+                                        arcPath.copy(focus = PartialArcPath.Focus.Point(pointIx))
                                     } else {
                                         val midpointIx = arcPath.midpoints.indexOfFirst {
                                             isCloseEnoughToSelect(it.toOffset(), visiblePosition)
                                         }
                                         if (midpointIx != -1) {
-                                            arcPath.copy(focus = ArcPath.Focus.MidPoint(midpointIx))
+                                            arcPath.copy(focus = PartialArcPath.Focus.MidPoint(midpointIx))
                                         } else {
                                             arcPath.addNewPoint(absolutePoint)
-                                                .copy(focus = ArcPath.Focus.Point(arcPath.points.size))
+                                                .copy(focus = PartialArcPath.Focus.Point(arcPath.points.size))
                                         }
                                     }
                                 }
@@ -1664,18 +1668,18 @@ class EditClusterViewModel : ViewModel() {
         val ix = selection.first()
         val free = !LOCK_DEPENDENT_OBJECT || isFree(ix)
         if (free) {
-            recordCommand(Command.MOVE, targets = listOf(ix))
-            val excludedSnapTargets = expressions.children
+            recordCommand(Command.MOVE, target = ix)
+            val childCircles = expressions.children
                 .getOrElse(ix) { emptySet() }
                 .filter { objects[it] is CircleOrLine }
                 .toSet()
-            objects[ix] = snapped(c, excludePoints = true, excludedCircles = excludedSnapTargets).result
+            objects[ix] = snapped(c, excludePoints = true, excludedCircles = childCircles).result
             expressions.changeToFree(ix)
             expressions.update(listOf(ix))
         } else {
             val expr = expressions.expressions[ix]?.expr
             if (expr is Expr.Incidence) {
-                recordCommand(Command.MOVE, targets = listOf(ix))
+                recordCommand(Command.MOVE, target = ix)
                 val carrierIndex = expr.carrier
                 val carrier = objects[carrierIndex] as CircleOrLine
                 val newPoint = carrier.project(Point.fromOffset(c))
@@ -1832,7 +1836,7 @@ class EditClusterViewModel : ViewModel() {
             val absolutePoint = result.result
             if (mode == ToolMode.ARC_PATH) {
                 // TODO: if last with n>=3, snap to start
-                arcPathUnderConstruction = arcPathUnderConstruction?.moveFocused(absolutePoint)
+                partialArcPath = partialArcPath?.moveFocused(absolutePoint)
             } else if (
                 mode is ToolMode &&
                 partialArgList?.currentArgType == ArgType.Point
@@ -2013,7 +2017,7 @@ class EditClusterViewModel : ViewModel() {
             KeyboardAction.CANCEL -> when (mode) { // reset mode
                 is ToolMode -> {
                     partialArgList = partialArgList?.let { PartialArgList(it.signature) }
-                    arcPathUnderConstruction = null
+                    partialArcPath = null
                 }
                 is SelectionMode -> {
                     selection = emptyList()
@@ -2304,10 +2308,10 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun completeArcPath() {
-        require(arcPathUnderConstruction != null)
+        require(partialArcPath != null)
         // only add circles
         // since `part`itioning in-arcpath region is rather involved
-        arcPathUnderConstruction?.let { arcPath ->
+        partialArcPath?.let { arcPath ->
             recordCreateCommand()
             val newCircles: List<CircleOrLine> = arcPath.circles
                 .mapIndexed { j, circle ->
@@ -2322,7 +2326,7 @@ class EditClusterViewModel : ViewModel() {
                 }
             createNewCircles(newCircles)
         }
-        arcPathUnderConstruction = null
+        partialArcPath = null
     }
 
     private fun completePoint() {

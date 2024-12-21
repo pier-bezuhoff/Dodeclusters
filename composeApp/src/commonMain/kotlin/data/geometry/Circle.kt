@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import data.kmath_complex.ComplexField
 import data.kmath_complex.r
 import data.kmath_complex.r2
+import domain.TAU
 import domain.rotateBy
 import domain.toComplex
 import kotlinx.serialization.SerialName
@@ -116,7 +117,7 @@ data class Circle(
     fun point2angle(point: Point): Float =
         atan2(-point.y + y, point.x - x).toDegree().toFloat()
 
-    /** CCW order starting from the East: ENWS */
+    /** CCW order in [-[PI]; +[PI]] starting from the East: ENWS */
     override fun point2order(point: Point): Double {
         // NOTE: atan2 uses CCW y-top, x-right coordinates
         //  so we negate y for CCW direction
@@ -140,7 +141,22 @@ data class Circle(
 //        val half = (order2 - order1).mod(2*PI)/2.0
 
     override fun orderIsInBetween(order: Double, startOrder: Double, endOrder: Double): Boolean {
-        TODO()
+        val o = (order + TAU) % TAU
+        val start = (startOrder + TAU) % TAU
+        val end = (endOrder + TAU) % TAU
+        return if (isCCW) {
+            if (start <= end) {
+                o in start..end
+            } else { // the arc contains order=0
+                o in start..0.0 || o in 0.0..end
+            }
+        } else {
+            if (end <= start) { // CW circle order is reversed
+                o in end..start
+            } else {
+                o in end..0.0 || o in 0.0..start
+            }
+        }
     }
 
     override fun translate(vector: Offset): Circle =

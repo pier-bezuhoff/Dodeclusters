@@ -189,7 +189,7 @@ sealed interface Expr : ExprLike {
     }
 
     // MAYBE: inline
-    fun mapArgs(
+    fun reIndex(
         reIndexer: (Ix) -> Ix,
     ): Expr =
         when (this) {

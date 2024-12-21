@@ -22,15 +22,14 @@ sealed interface Expression {
     ) : Expression
 }
 
-inline fun reIndexExpression(
-    expression: Expression,
+inline fun Expression.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
 ): Expression =
-    when (expression) {
-        is Expression.Just -> expression.copy(
-            expression.expr.mapArgs { reIndexer(it) } as Expr.OneToOne
+    when (this) {
+        is Expression.Just -> copy(
+            expr.reIndex { reIndexer(it) } as Expr.OneToOne
         )
-        is Expression.OneOf -> expression.copy(
-            expression.expr.mapArgs { reIndexer(it) } as Expr.OneToMany
+        is Expression.OneOf -> copy(
+            expr.reIndex { reIndexer(it) } as Expr.OneToMany
         )
     }

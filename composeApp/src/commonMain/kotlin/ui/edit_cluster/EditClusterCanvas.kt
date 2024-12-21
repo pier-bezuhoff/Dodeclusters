@@ -186,7 +186,7 @@ fun BoxScope.EditClusterCanvas(
             PointSelectionContextActions(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel::toolAction)
         } else if (
             viewModel.mode == ToolMode.ARC_PATH &&
-            viewModel.arcPathUnderConstruction?.nArcs?.let { it >= 1 } == true
+            viewModel.partialArcPath?.nArcs?.let { it >= 1 } == true
         ) {
             ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
         }
@@ -729,7 +729,7 @@ private fun DrawScope.drawPartialConstructs(
                     )
             }
         }
-        ToolMode.ARC_PATH -> viewModel.arcPathUnderConstruction?.let { arcPath ->
+        ToolMode.ARC_PATH -> viewModel.partialArcPath?.let { arcPath ->
             drawCircle(
                 color = creationPrototypeColor,
                 radius = creationPointRadius,

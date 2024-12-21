@@ -10,7 +10,7 @@ import kotlin.math.hypot
 
 // BUG: arcs often break when moving diff pts
 @Immutable
-data class ArcPath(
+data class PartialArcPath(
     val startPoint: Point,
     val points: List<Point> = emptyList(),
     val midpoints: List<Point> = emptyList(),
@@ -41,7 +41,7 @@ data class ArcPath(
         if (j == 0) startPoint
         else points[j - 1]
 
-    fun addNewPoint(newPoint: Point): ArcPath = copy(
+    fun addNewPoint(newPoint: Point): PartialArcPath = copy(
         startPoint = startPoint,
         points = points + newPoint, midpoints = midpoints + lastPoint.middle(newPoint),
         circles = circles + null,
@@ -49,10 +49,10 @@ data class ArcPath(
     )
 
     // i=0 is startPoint
-    fun updatePoint(i: Int, newPoint: Point): ArcPath =
+    fun updatePoint(i: Int, newPoint: Point): PartialArcPath =
         // TODO: moving start or end when closed
         if (i == 0) {
-            if (points.size == 0) {
+            if (points.isEmpty()) {
                 copy(startPoint = newPoint)
             } else { // only forward
                 val point = startPoint
@@ -130,7 +130,7 @@ data class ArcPath(
             )
         }
 
-    fun updateMidpoint(j: Int, newMidpoint: Point): ArcPath {
+    fun updateMidpoint(j: Int, newMidpoint: Point): PartialArcPath {
         val start = previousPoint(j)
         val end = points[j]
         val newCircle = GeneralizedCircle.perp3(
@@ -152,7 +152,7 @@ data class ArcPath(
         )
     }
 
-    fun moveFocused(newPoint: Point): ArcPath =
+    fun moveFocused(newPoint: Point): PartialArcPath =
         when (focus) {
             Focus.StartPoint -> updatePoint(0, newPoint)
             is Focus.Point -> updatePoint(focus.index + 1, newPoint)
@@ -160,17 +160,14 @@ data class ArcPath(
             null -> this
         }
 
-    fun closeLoop(): ArcPath =
+    fun closeLoop(): PartialArcPath =
         addNewPoint(startPoint).copy(closed = true)
 
-    fun deletePoint(i: Int): ArcPath {
+    fun deletePoint(i: Int): PartialArcPath {
         // rm point[i]
         // and flatten 2 adjacent arcs
         TODO()
     }
-
-    fun scale(zoom: Float): ArcPath =
-        TODO("Scale")
 }
 
 /**

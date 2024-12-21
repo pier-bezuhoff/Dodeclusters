@@ -9,7 +9,7 @@ import data.geometry.CircleOrLine
 import data.geometry.EPSILON2
 import data.geometry.Line
 import domain.cluster.LogicalRegion
-import domain.cluster.ConcreteArcPath
+import domain.cluster.ConcreteClosedArcPath
 import getPlatform
 import kotlin.math.abs
 import kotlin.math.pow
@@ -216,7 +216,7 @@ fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
 
 // Q: how does it track inside-vs-outside?
 fun arcs2path(
-    arcs: ConcreteArcPath,
+    arcs: ConcreteClosedArcPath,
 ): Path {
     val path = Path()
     if (arcs.isContinuous) { // idk about drawing non-continuous ones
