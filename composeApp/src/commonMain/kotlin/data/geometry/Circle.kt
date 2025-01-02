@@ -145,7 +145,7 @@ data class Circle(
             order1 + (2* PI - (order1 - order2))/2.0
 //        val half = (order2 - order1).mod(2*PI)/2.0
 
-    override fun orderIsInBetween(order: Double, startOrder: Double, endOrder: Double): Boolean {
+    override fun orderIsInBetween(startOrder: Double, order: Double, endOrder: Double): Boolean {
         val o = (order + TAU) % TAU
         val start = (startOrder + TAU) % TAU
         val end = (endOrder + TAU) % TAU

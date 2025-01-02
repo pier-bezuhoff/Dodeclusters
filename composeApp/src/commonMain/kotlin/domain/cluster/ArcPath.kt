@@ -5,12 +5,14 @@ import androidx.compose.ui.geometry.Rect
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
+import data.geometry.Line
 import data.geometry.Point
 import data.geometry.RegionPointLocation
 import data.geometry.calculateAngle
 import domain.ColorAsCss
 import domain.Ix
 import domain.TAU
+import domain.filterIndices
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -51,7 +53,7 @@ data class ClosedArcPath(
         val circles = arcs.map { i ->
             val circleOrLine = allObjects[i-1] as CircleOrLine
             if (i > 0) circleOrLine
-            else circleOrLine.reversed()
+            else circleOrLine.reversed() // Q: why
         }
         val intersectionPoints: MutableList<Point> = mutableListOf()
         if (arcs.size > 1) {
@@ -77,19 +79,42 @@ data class ClosedArcPath(
 
 /** Non-looping arc-path
  *
- * Assumption: [startPoint] lies on [arcs]`.first()` and
- * [endPoint] lies on [arcs]`.last()`
+ * Assumption: the point @ [startPointIndex] lies on [arcs]`.first()` and
+ * the point @ [endPointIndex] lies on [arcs]`.last()`
  * */
 @Immutable
 @Serializable
 @SerialName("OpenArcPath")
 data class OpenArcPath(
-    val startPoint: Ix,
-    val endPoint: Ix,
+    val startPointIndex: Ix,
+    val endPointIndex: Ix,
     @SerialName("arcIndicesStartingFrom1WithMinusIndicatingReversedDirection")
     override val arcs: List<Int>,
     override val borderColor: ColorAsCss? = null,
-) : ArcPath
+) : ArcPath {
+
+    fun toConcrete(allObjects: List<GCircle?>): ConcreteOpenArcPath? {
+        val circles = arcs.map { i ->
+            val circleOrLine = allObjects[i-1] as? CircleOrLine
+            circleOrLine ?: return null
+        }
+        val startPoint = (allObjects[startPointIndex] as? Point) ?: return null
+        val endPoint = (allObjects[endPointIndex] as? Point) ?: return null
+        val intersectionPoints: MutableList<Point> = mutableListOf(startPoint)
+        for (ix in arcs.indices.drop(1)) {
+            val previous = circles[ix - 1]
+            val next = circles[ix]
+            val intersection = Circle.calculateIntersectionPoints(next, previous)
+            // order of intersection points is stable
+            val point = intersection.firstOrNull() ?: return null
+            intersectionPoints.add(point)
+        }
+        intersectionPoints.add(endPoint)
+        return ConcreteOpenArcPath(
+            circles, intersectionPoints, borderColor
+        )
+    }
+}
 
 @Immutable
 @Serializable
@@ -111,7 +136,8 @@ data class ConcreteClosedArcPath(
     val indices: IntRange = circles.indices
     /** Whether it contains inside the CONFORMAL_INFINITY point */
     @Transient
-    val isBounded: Boolean = TODO("i need to think about it")
+    val isBounded: Boolean =
+        TODO("i need to think about it")
     @Transient
     val rects: List<Rect> = circles.map { circle ->
         if (circle is Circle)
@@ -158,47 +184,60 @@ data class ConcreteClosedArcPath(
     }
 
     // good reference algorithms: https://en.wikipedia.org/wiki/Point_in_polygon
-    fun calculatePointLocation(point: Point): RegionPointLocation {
-        // test if the point lies on any of the arcs
+    fun calculateLocationEpsilon(point: Point): RegionPointLocation {
+        if (point == Point.CONFORMAL_INFINITY) {
+            return if (isBounded) RegionPointLocation.OUT
+            else if (
+                circles.filterIndices { it is Line }
+                    .any { ix ->
+                        val line = circles[ix] as Line
+                        val start = intersectionPoints[ix]
+                        val end = intersectionPoints[(ix + 1) % size]
+                        line.pointIsInBetween(start, point, end)
+                    }
+            ) RegionPointLocation.BORDERING
+            else RegionPointLocation.IN
+        }
+        // another algo to test if the point lies on any of the arcs:
         // construct straight line through the point (prob horizontal, eastward)
         // check how it intersects the arcs, and order those intersections along the line
         // if unresolvable, choose another straight line
-        if (size == 1 && circles[0] is Circle) { // single full circle case
-            val circle = circles[0] as Circle
+        if (size == 1) { // single full circle case, or half-plane case
+            val circle = circles[0]
             return circle.calculateLocationEpsilon(point)
         }
         // cumulative winding angle == 0 => the point is inside
-        var windingAngle: Double = 0.0
+        var windingAngle = 0.0
         for (i in indices) {
             val arcStart = intersectionPoints[i] // closed arcpath => all intersections are present
             val arcEnd = intersectionPoints[(i + 1) % size]
             val circle = circles[i]
             val location = circle.calculateLocationEpsilon(point)
             if (location == RegionPointLocation.BORDERING) {
-                val inBetween = circle.orderIsInBetween(
-                    order = circle.point2order(point),
-                    startOrder = circle.point2order(arcStart),
-                    endOrder = circle.point2order(arcEnd),
-                )
-                if (inBetween)
+                if (circle.pointIsInBetween(arcStart, point, arcEnd))
+                    // alternative condition: (angle >= 0) != circle.isCCW
                     return RegionPointLocation.BORDERING
             }
             val angle = calculateAngle(point, arcStart, arcEnd) // positive => we are 'in'
+            // helpful pic: https://photos.app.goo.gl/4Ac99BKa16PHLQ9aA
+            // alt hosting: https://imgur.com/a/UbZZgAo
             if (circle is Circle) { // circular arcs require a patch
                 val angleIsCCW = angle >= 0.0
                 val dAngle = if (angleIsCCW) { // positive, CCW angle
                     if (circle.isCCW) { // extruding arc doesn't matter
                         angle
                     } else { // intruding arc
-                        if (circle.hasInsideEpsilon(point))
+                        if (location == RegionPointLocation.IN)
                             angle
+                        // if location == bordering we would have returned already, so no worries
                         else
                             angle - TAU
                     }
                 } else { // negative, CW angle
                     if (circle.isCCW) { // intruding arc
-                        if (circle.hasOutsideEpsilon(point))
+                        if (location == RegionPointLocation.OUT)
                             angle
+                        // if location == bordering we would have returned already, so no worries
                         else angle + TAU
                     } else { // extruding arc doesn't matter
                         angle
@@ -211,7 +250,7 @@ data class ConcreteClosedArcPath(
                 windingAngle += angle
             }
         }
-        println("calculatePointLocation($point): windingAngle = $windingAngle")
+        println("calculateLocationEpsilon($point): windingAngle = $windingAngle")
         val soThePointIsOutside = abs(windingAngle) > 0.1 // small threshold just in case
         return if (soThePointIsOutside == isBounded)
             RegionPointLocation.OUT
@@ -232,14 +271,11 @@ data class ConcreteOpenArcPath(
 ) : ConcreteArcPath {
     @Transient
     val startPoint: Point = intersectionPoints.first()
-
     @Transient
     val endPoint: Point = intersectionPoints.last()
-
     /** number of arcs in the path, aka [circles]`.size` */
     @Transient
     val size: Int = circles.size
-
     @Transient
     val rects: List<Rect> = circles.map { circle ->
         if (circle is Circle)
