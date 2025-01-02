@@ -1161,7 +1161,7 @@ class EditClusterViewModel : ViewModel() {
                             absolute(canvasSize.center.toOffset())
                         else rect.center
                     for (ix in freeObjects) {
-                        objects[ix] = (objects[ix] as? CircleOrLine)?.scale(center, zoom)
+                        objects[ix] = (objects[ix] as? CircleOrLine)?.scaled(center, zoom)
                         adjustIncidentPoints(
                             parentIx = ix,
                             centroid = center,
@@ -1180,7 +1180,7 @@ class EditClusterViewModel : ViewModel() {
             for (ix in objects.indices) {
                 when (val obj = objects[ix]) {
                     is CircleOrLine -> {
-                        objects[ix] = obj.scale(center, zoom)
+                        objects[ix] = obj.scaled(center, zoom)
                         adjustIncidentPoints(
                             parentIx = ix,
                             centroid = center,
@@ -1518,7 +1518,7 @@ class EditClusterViewModel : ViewModel() {
             recordCommand(Command.SCALE, targets = listOf(h.ix))
             val circle = objects[h.ix] as? CircleOrLine
             val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
-            objects[h.ix] = circle?.scale(sm.center, scaleFactor)
+            objects[h.ix] = circle?.scaled(sm.center, scaleFactor)
             adjustIncidentPoints(
                 parentIx = h.ix,
                 centroid = sm.center,
@@ -1542,7 +1542,7 @@ class EditClusterViewModel : ViewModel() {
                 if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
                 else newAngle
             val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
-            objects[h.ix] = (objects[h.ix] as? CircleOrLine)?.rotate(center, angle1)
+            objects[h.ix] = (objects[h.ix] as? CircleOrLine)?.rotated(center, angle1)
             adjustIncidentPoints(
                 parentIx = h.ix,
                 centroid = center,
@@ -1562,7 +1562,7 @@ class EditClusterViewModel : ViewModel() {
             val centerToCurrent = centerToHandle + pan
             val scaleFactor = centerToCurrent.getDistance()/centerToHandle.getDistance()
             for (ix in freeCircles) {
-                objects[ix] = (objects[ix] as? CircleOrLine)?.scale(center, scaleFactor)
+                objects[ix] = (objects[ix] as? CircleOrLine)?.scaled(center, scaleFactor)
                 adjustIncidentPoints(
                     parentIx = ix,
                     centroid = center,
@@ -1583,7 +1583,7 @@ class EditClusterViewModel : ViewModel() {
             val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
             for (ix in freeCircles) {
                 val circle = objects[ix] as? CircleOrLine
-                objects[ix] = circle?.scale(sm.center, scaleFactor)
+                objects[ix] = circle?.scaled(sm.center, scaleFactor)
                 adjustIncidentPoints(
                     parentIx = ix,
                     centroid = sm.center,
@@ -1612,7 +1612,7 @@ class EditClusterViewModel : ViewModel() {
         val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
         for (ix in freeCircles) {
             val circle = objects[ix] as? CircleOrLine
-            objects[ix] = circle?.rotate(sm.center, angle1)
+            objects[ix] = circle?.rotated(sm.center, angle1)
             adjustIncidentPoints(
                 parentIx = ix,
                 centroid = sm.center,
@@ -1636,9 +1636,9 @@ class EditClusterViewModel : ViewModel() {
             when (val circle = objects[ix] as? CircleOrLine) {
                 is Circle -> {
                     objects[ix] = circle
-                        .translate(pan)
-                        .scale(circle.center, zoom)
-                        .rotate(circle.center, rotationAngle)
+                        .translated(pan)
+                        .scaled(circle.center, zoom)
+                        .rotated(circle.center, rotationAngle)
                     adjustIncidentPoints(
                         parentIx = ix,
                         translation = pan,
@@ -1649,8 +1649,8 @@ class EditClusterViewModel : ViewModel() {
                 }
                 is Line -> {
                     objects[ix] = circle
-                        .translate(pan)
-                        .rotate(c, rotationAngle)
+                        .translated(pan)
+                        .rotated(c, rotationAngle)
                     adjustIncidentPoints(
                         parentIx = ix,
                         translation = pan,
@@ -1712,7 +1712,7 @@ class EditClusterViewModel : ViewModel() {
             recordCommand(Command.MOVE, targets = freeCircles)
             when (val circle = objects[ix] as? CircleOrLine) {
                 is Circle -> {
-                    objects[ix] = circle.translate(pan).scale(circle.center, zoom)
+                    objects[ix] = circle.translated(pan).scaled(circle.center, zoom)
                     adjustIncidentPoints(
                         parentIx = ix,
                         translation = pan,
@@ -1721,7 +1721,7 @@ class EditClusterViewModel : ViewModel() {
                     )
                 }
                 is Line -> {
-                    objects[ix] = circle.translate(pan)
+                    objects[ix] = circle.translated(pan)
                     adjustIncidentPoints(
                         parentIx = ix,
                         translation = pan
@@ -1734,9 +1734,9 @@ class EditClusterViewModel : ViewModel() {
             for (ix in freeCircles) {
                 val circle = objects[ix] as? CircleOrLine
                 objects[ix] = circle
-                    ?.translate(pan)
-                    ?.scale(c, zoom)
-                    ?.rotate(c, rotationAngle)
+                    ?.translated(pan)
+                    ?.scaled(c, zoom)
+                    ?.rotated(c, rotationAngle)
                 adjustIncidentPoints(
                     parentIx = ix,
                     translation = pan,
@@ -2408,8 +2408,8 @@ class EditClusterViewModel : ViewModel() {
 
     private fun GCircle.downscale(): GCircle = scale(0.0, 0.0, DOWNSCALING_FACTOR)
     private fun GCircle.upscale(): GCircle = scale(0.0, 0.0, UPSCALING_FACTOR)
-    private fun CircleOrLine.downscale(): CircleOrLine = scale(0.0, 0.0, DOWNSCALING_FACTOR)
-    private fun CircleOrLine.upscale(): CircleOrLine = scale(0.0, 0.0, UPSCALING_FACTOR)
+    private fun CircleOrLine.downscale(): CircleOrLine = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
+    private fun CircleOrLine.upscale(): CircleOrLine = scaled(0.0, 0.0, UPSCALING_FACTOR)
     private fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)
     private fun Point.upscale(): Point = scale(0.0, 0.0, UPSCALING_FACTOR)
 

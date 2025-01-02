@@ -36,7 +36,7 @@ fun cluster2svg(
 ): String {
     val visibleRect = Rect(0f, 0f, width, height)
     val tr = Offset(-startX, -startY)
-    val circles = cluster.circles.map { it.translate(tr) }
+    val circles = cluster.circles.map { it.translated(tr) }
     val partClipsAndMasks = cluster.parts.withIndex()
         .joinToString("\n") { (i, part) ->
             partMask(circles, i, part, visibleRect)
@@ -173,7 +173,7 @@ fun cluster2svgCheckPattern(
     val circles = cluster.circles
         .mapIndexed { i, c ->
             INDENT1 + formatCircleOrLine(
-                c.translate(tr), visibleRect,
+                c.translated(tr), visibleRect,
                 fill = bg,
                 prefix = "id=\"$circleNamePrefix$i\""
             )

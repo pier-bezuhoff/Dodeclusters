@@ -69,8 +69,11 @@ data class Point(
     }
 }
 
+/** A point is either [IN] a region, [BORDERING] it or [OUT]side of it */
 enum class RegionPointLocation {
-    IN, OUT, BORDERING
+    IN,
+    BORDERING,
+    OUT,
 }
 
 /** CCW angle from [start] to [end] in (-[PI]; [PI]] */

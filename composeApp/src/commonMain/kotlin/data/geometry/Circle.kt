@@ -87,29 +87,34 @@ data class Circle(
     fun distanceBetweenCenters(circle: Circle): Double =
         hypot(x - circle.x, y - circle.y)
 
-    /** -1 = inside, 0 on the circle, +1 = outside */
-    override fun checkPosition(point: Offset): Int {
+    override fun calculateLocation(point: Offset): RegionPointLocation {
         val distance = (center - point).getDistance()
         val r = radius.toFloat()
         return when {
-            distance < r -> if (isCCW) -1 else +1
-            distance == r -> 0
-            distance > r -> if (isCCW) +1 else -1
+            distance < r ->
+                if (isCCW) RegionPointLocation.IN
+                else RegionPointLocation.OUT
+            distance == r -> RegionPointLocation.BORDERING // this prob never happens, strict double equality
+            distance > r ->
+                if (isCCW) RegionPointLocation.OUT
+                else RegionPointLocation.IN
             else -> throw IllegalStateException("Illegal comparison")
         }
     }
 
-    /** -1 = inside, 0 on the circle, +1 = outside */
-    override fun checkPositionEpsilon(point: Point): Int {
-        if (point == Point.CONFORMAL_INFINITY)
-            return if (isCCW) +1 else -1
+    override fun calculateLocationEpsilon(point: Point): RegionPointLocation {
+        if (point == Point.CONFORMAL_INFINITY) {
+            return if (isCCW) RegionPointLocation.OUT else RegionPointLocation.IN
+        }
         val distance = hypot(point.x - x, point.y - y)
-        return if (abs(radius - distance) < EPSILON)
-            0
-        else if (distance < radius)
-            if (isCCW) -1 else +1
-        else // outside
-            if (isCCW) +1 else -1
+        return if (abs(radius - distance) < EPSILON) {
+            RegionPointLocation.BORDERING
+        } else if (distance < radius) {
+            if (isCCW) RegionPointLocation.IN else RegionPointLocation.OUT
+        } else {
+            // outside
+            if (isCCW) RegionPointLocation.OUT else RegionPointLocation.IN
+        }
     }
 
     /** @return angle in degrees [[-180°; 180°]] measured from East up to the [point] along
@@ -159,22 +164,22 @@ data class Circle(
         }
     }
 
-    override fun translate(vector: Offset): Circle =
+    override fun translated(vector: Offset): Circle =
         Circle(center + vector, radius, isCCW)
 
-    override fun scale(focus: Offset, zoom: Float): Circle {
+    override fun scaled(focus: Offset, zoom: Float): Circle {
         val newOffset = (center - focus) * zoom + focus
         return Circle(newOffset, zoom * radius, isCCW)
     }
 
-    override fun scale(focusX: Double, focusY: Double, zoom: Double): Circle {
+    override fun scaled(focusX: Double, focusY: Double, zoom: Double): Circle {
         val newX = (x - focusX) * zoom + focusX
         val newY = (y - focusY) * zoom + focusY
         return Circle(newX, newY, zoom * radius, isCCW)
     }
 
-    override fun rotate(focus: Offset, angleDeg: Float): Circle {
-        val newOffset = (center - focus).rotateBy(angleDeg) + focus
+    override fun rotated(focus: Offset, angleInDegrees: Float): Circle {
+        val newOffset = (center - focus).rotateBy(angleInDegrees) + focus
         return Circle(newOffset, radius, isCCW)
     }
 

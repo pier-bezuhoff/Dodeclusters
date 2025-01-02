@@ -13,37 +13,30 @@ import kotlin.math.sqrt
 sealed interface CircleOrLine : GCircle, LocusWithOrder {
     fun project(point: Point): Point
     fun distanceFrom(point: Point): Double
-    fun distanceFrom(point: Offset): Double =
-        distanceFrom(Point.fromOffset(point))
-    /** <0 = inside, 0 on the circle, >0 = outside */
-    fun checkPosition(point: Offset): Int
-    /** -1 = inside, 0 on the circle, +1 = outside; also
-     * returns 0 when the distance is in (-[EPSILON]; +[EPSILON]) */
-    fun checkPositionEpsilon(point: Point): Int
-    fun calculateLocation(point: Point): RegionPointLocation =
-        when (checkPositionEpsilon(point)) {
-            0 -> RegionPointLocation.BORDERING
-            1 -> RegionPointLocation.OUT
-            -1 -> RegionPointLocation.IN
-            else -> throw IllegalStateException("Never")
-        }
+    fun distanceFrom(point: Offset): Double
+    fun calculateLocation(point: Offset): RegionPointLocation
+    /** @return [RegionPointLocation.BORDERING] when the distance is in (-[EPSILON]; +[EPSILON]) */
+    fun calculateLocationEpsilon(point: Point): RegionPointLocation
     fun hasInside(point: Offset): Boolean =
-        checkPosition(point) < 0
+        calculateLocation(point) == RegionPointLocation.IN
     fun hasOutside(point: Offset): Boolean =
-        checkPosition(point) > 0
+        calculateLocation(point) == RegionPointLocation.OUT
     fun hasInsideEpsilon(point: Point): Boolean =
-        checkPositionEpsilon(point) < 0
+        calculateLocationEpsilon(point) == RegionPointLocation.IN
     fun hasOutsideEpsilon(point: Point): Boolean =
-        checkPositionEpsilon(point) > 0
+        calculateLocationEpsilon(point) == RegionPointLocation.OUT
+    /** = [point] is bordering `this` (within [EPSILON] distance) */
+    fun hasBorderingEpsilon(point: Point): Boolean =
+        calculateLocationEpsilon(point) == RegionPointLocation.BORDERING
     /** partial order ⊆ on circles (treated as either inside or outside regions) */
     infix fun isInside(circle: CircleOrLine): Boolean
     /** partial order ⊇ on circles (treated as either inside or outside regions)
      * `A isOutside B` == A ⊆ Bꟲ*/
     infix fun isOutside(circle: CircleOrLine): Boolean
-    fun translate(vector: Offset): CircleOrLine
-    fun scale(focus: Offset, zoom: Float): CircleOrLine
-    override fun scale(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
-    fun rotate(focus: Offset, angleDeg: Float): CircleOrLine
+    fun translated(vector: Offset): CircleOrLine
+    fun scaled(focus: Offset, zoom: Float): CircleOrLine
+    fun scaled(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
+    fun rotated(focus: Offset, angleInDegrees: Float): CircleOrLine
     override fun reversed(): CircleOrLine
 }
 
