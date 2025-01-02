@@ -35,7 +35,7 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
     infix fun isOutside(circle: CircleOrLine): Boolean
     fun translated(vector: Offset): CircleOrLine
     fun scaled(focus: Offset, zoom: Float): CircleOrLine
-    fun scaled(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
+    override fun scaled(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
     fun rotated(focus: Offset, angleInDegrees: Float): CircleOrLine
     override fun reversed(): CircleOrLine
 }

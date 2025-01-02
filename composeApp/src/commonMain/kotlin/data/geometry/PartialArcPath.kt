@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import domain.TAU
+import domain.cluster.ArcPath
 import domain.signNonZero
 import domain.updated
 import kotlin.math.PI
@@ -168,6 +169,9 @@ data class PartialArcPath(
         // and flatten 2 adjacent arcs
         TODO()
     }
+
+    fun toArcPath(): ArcPath =
+        TODO()
 }
 
 /**

@@ -141,7 +141,7 @@ data class ConcreteClosedArcPath(
         val nextIndex = (ix + 1).mod(circles.size)
         val nextPoint = intersectionPoints[nextIndex]
         if (circle is Circle) {
-            if (size == 1 && previousPoint == nextPoint) { // singular full circle case
+            if (size == 1) { // singular full circle case
                 return@mapIndexed 360f
             }
             val startAngle = startAngles[ix]
@@ -220,20 +220,25 @@ data class ConcreteClosedArcPath(
     }
 }
 
+/**
+ * @param[intersectionPoints] include `startPoint` and `endPoint`
+ * */
 @Immutable
 @Serializable
 data class ConcreteOpenArcPath(
-    val startPoint: Point,
-    val endPoint: Point,
     val circles: List<CircleOrLine>,
     val intersectionPoints: List<Point>,
     val borderColor: ColorAsCss?,
 ) : ConcreteArcPath {
     @Transient
-    val size: Int = circles.size
+    val startPoint: Point = intersectionPoints.first()
 
     @Transient
-    val indices: IntRange = circles.indices
+    val endPoint: Point = intersectionPoints.last()
+
+    /** number of arcs in the path, aka [circles]`.size` */
+    @Transient
+    val size: Int = circles.size
 
     @Transient
     val rects: List<Rect> = circles.map { circle ->
@@ -248,12 +253,13 @@ data class ConcreteOpenArcPath(
      * [reference](https://developer.android.com/reference/android/graphics/Path#arcTo(android.graphics.RectF,%20float,%20float))
      * */
     @Transient
-    val startAngles: List<Float> = circles.zip(intersectionPoints) { circle, startPoint ->
-        if (circle is Circle)
-            (360 - circle.point2angle(startPoint)) % 360
-        else
-            0f
-    }
+    val startAngles: List<Float> =
+        circles.zip(intersectionPoints.dropLast(1)) { circle, startPoint ->
+            if (circle is Circle)
+                (360 - circle.point2angle(startPoint)) % 360
+            else
+                0f
+        }
 
     /**
      * clockwise, [0°; 360°)
@@ -262,15 +268,11 @@ data class ConcreteOpenArcPath(
      */
     @Transient
     val sweepAngles: List<Float> = circles.mapIndexed { ix, circle ->
-        val previousPoint = intersectionPoints[ix]
-        val nextIndex = (ix + 1).mod(circles.size)
+        val nextIndex = (ix + 1) % size
         val nextPoint = intersectionPoints[nextIndex]
         if (circle is Circle) {
-            if (size == 1 && previousPoint == nextPoint) { // singular full circle case
-                return@mapIndexed 360f
-            }
             val startAngle = startAngles[ix]
-            val endAngle = circle.point2angle(nextPoint)
+            val endAngle = circle.point2angle(nextPoint) // [-180; +180]
             if (circle.isCCW)
                 (360 + startAngle - endAngle) % 360f
             else
@@ -280,7 +282,7 @@ data class ConcreteOpenArcPath(
 
     init {
         require(size >= 1)
-        require(intersectionPoints.size == size)
+        require(intersectionPoints.size == size + 1)
         require(circles.first().hasBorderingEpsilon(startPoint))
         require(circles.last().hasBorderingEpsilon(endPoint))
     }

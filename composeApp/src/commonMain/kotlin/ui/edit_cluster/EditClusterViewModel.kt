@@ -1188,7 +1188,7 @@ class EditClusterViewModel : ViewModel() {
                         )
                     }
                     is Point -> {
-                        objects[ix] = obj.scale(center, zoom)
+                        objects[ix] = obj.scaled(center, zoom)
                     }
                     else -> {}
                 }
@@ -1570,7 +1570,7 @@ class EditClusterViewModel : ViewModel() {
                 )
             }
             for (ix in freePoints) {
-                objects[ix] = (objects[ix] as? Point)?.scale(center, scaleFactor)
+                objects[ix] = (objects[ix] as? Point)?.scaled(center, scaleFactor)
             }
             expressions.update(freeCircles + freePoints)
         }
@@ -1592,7 +1592,7 @@ class EditClusterViewModel : ViewModel() {
             }
             for (ix in freePoints) {
                 val point = objects[ix] as? Point
-                objects[ix] = point?.scale(sm.center, scaleFactor)
+                objects[ix] = point?.scaled(sm.center, scaleFactor)
             }
             submode = sm.copy(sliderPercentage = newPercentage)
             expressions.update(freeCircles + freePoints)
@@ -1621,7 +1621,7 @@ class EditClusterViewModel : ViewModel() {
         }
         for (ix in freePoints) {
             val point = objects[ix] as? Point
-            objects[ix] = point?.rotate(sm.center, angle1)
+            objects[ix] = point?.rotated(sm.center, angle1)
         }
         submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
         expressions.update(freeCircles + freePoints)
@@ -1748,9 +1748,9 @@ class EditClusterViewModel : ViewModel() {
             for (ix in freePoints) {
                 val point = objects[ix] as? Point
                 objects[ix] = point
-                    ?.translate(pan)
-                    ?.scale(c, zoom)
-                    ?.rotate(c, rotationAngle)
+                    ?.translated(pan)
+                    ?.scaled(c, zoom)
+                    ?.rotated(c, rotationAngle)
             }
         }
         expressions.update(freeCircles + freePoints)
@@ -1959,9 +1959,9 @@ class EditClusterViewModel : ViewModel() {
         val ix2point = expressions.getIncidentPoints(parentIx)
             .associateWith { child ->
                 val newPoint = (objects[child] as? Point)
-                    ?.translate(translation)
-                    ?.scale(centroid, zoom)
-                    ?.rotate(centroid, rotationAngle)
+                    ?.translated(translation)
+                    ?.scaled(centroid, zoom)
+                    ?.rotated(centroid, rotationAngle)
                 newPoint?.downscale()
             }
         expressions.adjustIncidentPointExpressions(ix2point)
@@ -2406,12 +2406,12 @@ class EditClusterViewModel : ViewModel() {
         TODO()
     }
 
-    private fun GCircle.downscale(): GCircle = scale(0.0, 0.0, DOWNSCALING_FACTOR)
-    private fun GCircle.upscale(): GCircle = scale(0.0, 0.0, UPSCALING_FACTOR)
+    private fun GCircle.downscale(): GCircle = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
+    private fun GCircle.upscale(): GCircle = scaled(0.0, 0.0, UPSCALING_FACTOR)
     private fun CircleOrLine.downscale(): CircleOrLine = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
     private fun CircleOrLine.upscale(): CircleOrLine = scaled(0.0, 0.0, UPSCALING_FACTOR)
-    private fun Point.downscale(): Point = scale(0.0, 0.0, DOWNSCALING_FACTOR)
-    private fun Point.upscale(): Point = scale(0.0, 0.0, UPSCALING_FACTOR)
+    private fun Point.downscale(): Point = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
+    private fun Point.upscale(): Point = scaled(0.0, 0.0, UPSCALING_FACTOR)
 
     fun saveState(): State {
         val center = computeAbsoluteCenter() ?: Offset.Zero
