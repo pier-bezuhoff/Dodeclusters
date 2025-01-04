@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -38,6 +39,9 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
     override fun scaled(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
     fun rotated(focus: Offset, angleInDegrees: Float): CircleOrLine
     override fun reversed(): CircleOrLine
+    /** @return tangent line to `this` object at [point], if the
+     * [point] is not incident to `this` object, [project] it onto `this` object */
+    fun tangentAt(point: Point): Line
 }
 
 /** Result of intersecting 2 [CircleOrLine]s */
@@ -112,7 +116,7 @@ fun calculateIntersection(
             val distance = hypot(px - cx, py - cy)
             if (distance > r + EPSILON) {
                 CircleLineIntersection.None
-            } else if (abs(distance - r) < EPSILON) { // they touch (hold hands ///)
+            } else if (abs(distance - r) < EPSILON) { // they touch (hold hands >///<)
                 CircleLineIntersection.Tangent(Point(px, py))
             } else {
                 val pToIntersection = sqrt(r.pow(2) - distance * distance)
@@ -139,8 +143,8 @@ fun calculateIntersection(
             if (abs(r1 - r2) > d + EPSILON || d > r1 + r2 + EPSILON) {
                 CircleLineIntersection.None
             } else if (
-                abs(abs(r1 - r2) - d) < EPSILON || // inner touch
-                abs(d - r1 - r2) < EPSILON // outer touch
+                abs(abs(r1 - r2) - d) < EPSILON || // inner touch "o)" <_<
+                abs(d - r1 - r2) < EPSILON // outer touch oo
             ) {
                 CircleLineIntersection.Tangent(Point(x1 + dcx / d * r1, y1 + dcy / d * r1))
             } else {
@@ -165,3 +169,43 @@ fun calculateIntersection(
         else -> throw IllegalStateException("Never")
     }
 }
+
+sealed interface SegmentPoint {
+    val point: Point
+    data class Vertex(override val point: Point) : SegmentPoint
+    data class Interior(override val point: Point) : SegmentPoint
+}
+
+fun CircleOrLine.calculateSegmentTopLeft(start: Point, end: Point): SegmentPoint =
+    when (this) {
+        is Line ->
+            SegmentPoint.Vertex(
+                if (abs(start.y - end.y) < EPSILON) {
+                    if (start.x < end.x) start else end
+                } else if (start.y < end.y) start
+                else end
+            )
+        is Circle -> {
+            val angle1 = (point2angle(start) + 360f) % 360f // [0; 360)
+            val angle2 = (point2angle(end) + 360f) % 360f
+            val startAngle = if (isCCW) angle1 else angle2
+            var endAngle = if (isCCW) angle2 else angle1
+            if (endAngle < startAngle)
+                endAngle += 360f // (360; 720)
+            val a = (startAngle - 90.0)/360.0
+            val b = (endAngle - 90.0)/360.0
+            val segmentContainsNorth = ceil(a) <= b
+            if (segmentContainsNorth) {
+                SegmentPoint.Interior(
+                    Point(x, y - radius) // north
+                )
+            } else {
+                SegmentPoint.Vertex(
+                    if (abs(start.y - end.y) < EPSILON) {
+                        if (start.x < end.x) start else end
+                    } else if (start.y < end.y) start
+                    else end
+                )
+            }
+        }
+    }

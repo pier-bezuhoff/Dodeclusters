@@ -2,7 +2,8 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 
-/** Represents totally ordered set of points isomorphic to `ℝ[0; 1]` or `S¹` */
+/** Represents totally ordered set of points isomorphic to `ℝ[0; 1]` or `S¹`
+ * with `order` being local 1 dimensional coordinate */
 @Immutable
 sealed interface LocusWithOrder {
     /** Reverses the order of points within */

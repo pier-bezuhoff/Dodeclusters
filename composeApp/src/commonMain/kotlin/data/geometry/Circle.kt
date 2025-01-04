@@ -6,11 +6,11 @@ import data.kmath_complex.ComplexField
 import data.kmath_complex.r
 import data.kmath_complex.r2
 import domain.TAU
+import domain.degrees
 import domain.rotateBy
 import domain.toComplex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import ui.colorpicker.toDegree
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -82,7 +82,8 @@ data class Circle(
         abs((point - center).getDistance() - radius)
 
     override fun distanceFrom(point: Point): Double =
-        abs(hypot(point.x - x, point.y - y) - radius)
+        if (point == Point.CONFORMAL_INFINITY) Double.POSITIVE_INFINITY
+        else abs(hypot(point.x - x, point.y - y) - radius)
 
     fun distanceBetweenCenters(circle: Circle): Double =
         hypot(x - circle.x, y - circle.y)
@@ -117,10 +118,10 @@ data class Circle(
         }
     }
 
-    /** @return angle in degrees [[-180°; 180°]] measured from East up to the [point] along
-     * `this` circle counterclockwise (irrespective of its [isCCW] direction) */
-    fun point2angle(point: Point): Float =
-        atan2(-point.y + y, point.x - x).toDegree().toFloat()
+    override fun point2angle(point: Point): Float {
+        require(point != Point.CONFORMAL_INFINITY && point != centerPoint)
+        return atan2(-point.y + y, point.x - x).degrees
+    }
 
     /** CCW order in [-[PI]; +[PI]] starting from the East: ENWS */
     override fun point2order(point: Point): Double {
@@ -185,6 +186,19 @@ data class Circle(
 
     override fun reversed(): Circle =
         copy(isCCW = !isCCW)
+
+    /** tangent line at [project]`(point)`, directed along the circle */
+    override fun tangentAt(point: Point): Line {
+        val p2cx = x - point.x // center-to-point
+        val p2cy = y - point.y
+        val l = hypot(p2cx, p2cy)
+        val sign = if (isCCW) +1 else -1 // if the circle is CCW, it is to the left of the tangent
+        val a = sign*p2cx/l // normal
+        val b = sign*p2cy/l
+        val (baseX, baseY) = project(point)
+        val c = -a*baseX - b*baseY
+        return Line(a, b, c)
+    }
 
     /** "⭗" case, anti-symmetric in args */
     infix fun isIn(circle: Circle): Boolean =

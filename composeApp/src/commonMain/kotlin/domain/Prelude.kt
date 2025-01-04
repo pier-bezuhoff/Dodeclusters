@@ -43,6 +43,14 @@ fun signNonZero(x: Double): Int =
 fun Double.divideWithRemainder(divisor: Double): Double =
     floor(this/divisor)
 
+/** radian-to-degree conversion */
+inline val Double.degrees: Float get() =
+    (this*180/PI).toFloat()
+
+/** degree-to-radian conversion */
+inline val Float.radians: Double get() =
+    this*PI/180.0
+
 inline fun <reified A, reified B> tryCatch2(
     crossinline tryBlock: () -> Unit,
     crossinline catchBlock: (Exception) -> Unit,

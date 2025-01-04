@@ -73,8 +73,10 @@ data class Line(
         )
     }
 
-    /** Project Point([x], [y]) down onto this line */
+    /** Project Point(x, y) down onto this line */
     override fun project(point: Point): Point {
+        if (point == Point.CONFORMAL_INFINITY)
+            return point
         val (x, y) = point
         val t = b*x - a*y
         val n2 = a*a + b*b
@@ -88,7 +90,8 @@ data class Line(
         abs(a*point.x + b*point.y + c)/norm
 
     override fun distanceFrom(point: Point): Double =
-        abs(a*point.x + b*point.y + c)/norm
+        if (point == Point.CONFORMAL_INFINITY) 0.0
+        else abs(a*point.x + b*point.y + c)/norm
 
     override fun calculateLocation(point: Offset): RegionPointLocation {
         val m = -(a * point.x + b * point.y + c)
@@ -201,6 +204,9 @@ data class Line(
                 l1.a == -l2.a && l1.b == -l2.b && l1.c <= -l2.c // MAYBE: use epsilon eq here
             }
         }
+
+    override fun tangentAt(point: Point): Line =
+        this
 
     companion object {
         fun by2Points(p1: Offset, p2: Offset): Line {
