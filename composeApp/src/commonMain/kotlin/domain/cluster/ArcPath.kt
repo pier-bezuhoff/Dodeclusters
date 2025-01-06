@@ -126,30 +126,23 @@ data class OpenArcPath(
 }
 
 @Immutable
-@Serializable
 sealed interface ConcreteArcPath
 
 // to distinguish in/out, connect any point to-the-left to the infinity and
 // count how many arcs the line intersects, or the winding algorithm
 @Immutable
-@Serializable
 data class ConcreteClosedArcPath(
     val circles: List<CircleOrLine>,
     val intersectionPoints: List<Point>,
     val fillColor: ColorAsCss?,
     val borderColor: ColorAsCss?,
 ) : ConcreteArcPath {
-    @Transient
     val size: Int = circles.size
-    @Transient
     val indices: IntRange = circles.indices
-    @Transient
     val isCCW: Boolean = calculateOrientation()
     /** Whether it contains inside the CONFORMAL_INFINITY point */
-    @Transient
     val isBounded: Boolean =
         isCCW && !intersectionPoints.contains(Point.CONFORMAL_INFINITY)
-    @Transient
     val rects: List<Rect> = circles.map { circle ->
         if (circle is Circle)
             Rect(circle.center, circle.radius.toFloat())
@@ -160,7 +153,6 @@ data class ConcreteClosedArcPath(
      *
      * [reference](https://developer.android.com/reference/android/graphics/Path#arcTo(android.graphics.RectF,%20float,%20float))
      * */
-    @Transient
     val startAngles: List<Float> = circles.zip(intersectionPoints) { circle, startPoint ->
         if (circle is Circle)
             (360f - circle.point2angle(startPoint)) % 360
@@ -172,7 +164,6 @@ data class ConcreteClosedArcPath(
      *
      * [reference](https://developer.android.com/reference/android/graphics/Path#arcTo(android.graphics.RectF,%20float,%20float))
      */
-    @Transient
     val sweepAngles: List<Float> = circles.mapIndexed { ix, circle ->
         val nextIndex = (ix + 1) % size
         val nextPoint = intersectionPoints[nextIndex]
@@ -441,20 +432,15 @@ data class ConcreteClosedArcPath(
  * @param[intersectionPoints] include `startPoint` and `endPoint`
  * */
 @Immutable
-@Serializable
 data class ConcreteOpenArcPath(
     val circles: List<CircleOrLine>,
     val intersectionPoints: List<Point>,
     val borderColor: ColorAsCss?,
 ) : ConcreteArcPath {
-    @Transient
     val startPoint: Point = intersectionPoints.first()
-    @Transient
     val endPoint: Point = intersectionPoints.last()
     /** number of arcs in the path, aka [circles]`.size` */
-    @Transient
     val size: Int = circles.size
-    @Transient
     val rects: List<Rect> = circles.map { circle ->
         if (circle is Circle)
             Rect(circle.center, circle.radius.toFloat())
@@ -466,7 +452,6 @@ data class ConcreteOpenArcPath(
      *
      * [reference](https://developer.android.com/reference/android/graphics/Path#arcTo(android.graphics.RectF,%20float,%20float))
      * */
-    @Transient
     val startAngles: List<Float> =
         circles.zip(intersectionPoints.dropLast(1)) { circle, startPoint ->
             if (circle is Circle)
@@ -480,7 +465,6 @@ data class ConcreteOpenArcPath(
      *
      * [reference](https://developer.android.com/reference/android/graphics/Path#arcTo(android.graphics.RectF,%20float,%20float))
      */
-    @Transient
     val sweepAngles: List<Float> = circles.mapIndexed { ix, circle ->
         val nextIndex = (ix + 1) % size
         val nextPoint = intersectionPoints[nextIndex]

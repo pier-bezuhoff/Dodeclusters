@@ -10,7 +10,7 @@ data class ImaginaryCircle(
     val y: Double,
     val radius: Double,
 ) : GCircle {
-    override fun scale(focusX: Double, focusY: Double, zoom: Double): ImaginaryCircle {
+    override fun scaled(focusX: Double, focusY: Double, zoom: Double): ImaginaryCircle {
         val newX = (x - focusX) * zoom + focusX
         val newY = (y - focusY) * zoom + focusY
         return ImaginaryCircle(newX, newY, radius*zoom)

@@ -80,7 +80,7 @@ enum class RegionPointLocation {
     OUT,
 }
 
-/** CCW angle from [start] to [end] in (-[PI]; [PI]] */
+/** CCW angle from [start] to [end] in `[-PI; PI]` */
 fun calculateAngle(center: Point, start: Point, end: Point): Double {
     val v1x = start.x - center.x
     val v1y = start.y - center.y

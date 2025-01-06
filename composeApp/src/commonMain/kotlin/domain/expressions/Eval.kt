@@ -15,13 +15,8 @@ fun computeCircleByCenterAndRadius(
     radiusPoint: Point
 ): Circle? {
     val radius = hypot(radiusPoint.x - center.x, radiusPoint.y - center.y)
-    return if (radius == 0.0) null
-    else
-        Circle(
-            center.x,
-            center.y,
-            hypot(radiusPoint.x - center.x, radiusPoint.y - center.y)
-        )
+    return if (radius == 0.0 || radius == Double.POSITIVE_INFINITY || radius.isNaN()) null
+    else Circle(center.x, center.y, radius)
 }
 
 // NOTE: can produce non-CCW circle;

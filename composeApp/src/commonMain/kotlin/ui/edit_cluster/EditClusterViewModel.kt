@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.util.fastCbrt
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -25,8 +26,11 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
+import data.geometry.ArcPathCircle
+import data.geometry.ArcPathPoint
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.EPSILON
 import data.geometry.GCircle
 import data.geometry.Line
 import data.geometry.PartialArcPath
@@ -196,8 +200,8 @@ class EditClusterViewModel : ViewModel() {
     var defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters()
         private set
 
-    private val _circleAnimations: MutableSharedFlow<CircleAnimation> = MutableSharedFlow()
-    val circleAnimations: SharedFlow<CircleAnimation> = _circleAnimations.asSharedFlow()
+    private val _animations: MutableSharedFlow<ObjectAnimation> = MutableSharedFlow()
+    val animations: SharedFlow<ObjectAnimation> = _animations.asSharedFlow()
 
     var openedDialog: DialogType? by mutableStateOf(null)
         private set
@@ -544,7 +548,7 @@ class EditClusterViewModel : ViewModel() {
     ) =
         createNewCircles(listOf(newCircle))
 
-    /** Append [newCircles] to [circles] and queue circle entrance animation
+    /** Append [newCircles] to [objects] and queue circle entrance animation
      * */
     fun createNewCircles(
         newCircles: List<CircleOrLine?>,
@@ -561,7 +565,7 @@ class EditClusterViewModel : ViewModel() {
             addObjects(normalizedCircles)
             selection = (prevSize until objects.size).filter { objects[it] != null }
             viewModelScope.launch {
-                _circleAnimations.emit(
+                _animations.emit(
                     CircleAnimation.Entrance(validNewCircles)
                 )
             }
@@ -595,7 +599,7 @@ class EditClusterViewModel : ViewModel() {
             copyParts(selection, newIndices.toList())
             selection = newIndices.toList()
             viewModelScope.launch {
-                _circleAnimations.emit(
+                _animations.emit(
                     CircleAnimation.ReEntrance(copiedCircles)
                 )
             }
@@ -658,7 +662,7 @@ class EditClusterViewModel : ViewModel() {
                 )
                 val deletedCircles = deletedCircleIndices.mapNotNull { objects[it] as? CircleOrLine }
                 viewModelScope.launch {
-                    _circleAnimations.emit(
+                    _animations.emit(
                         CircleAnimation.Exit(deletedCircles)
                     )
                 }
@@ -1307,7 +1311,7 @@ class EditClusterViewModel : ViewModel() {
                                 val newArg2 = Arg.Point.XY(result.result)
                                 partialArgList = partialArgList!!
                                     .addArg(newArg, confirmThisArg = true)
-                                    .addArg(newArg2, confirmThisArg = true)
+                                    .addArg(newArg2, confirmThisArg = false)
                                     .copy(lastSnap = result)
                             } else {
                                 partialArgList = partialArgList!!
@@ -1381,15 +1385,15 @@ class EditClusterViewModel : ViewModel() {
                             val arcPath = partialArcPath
                             partialArcPath = if (arcPath == null) {
                                 PartialArcPath(
-                                    startPoint = absolutePoint,
+                                    startVertex = ArcPathPoint.Free(absolutePoint),
                                     focus = PartialArcPath.Focus.StartPoint
                                 )
                             } else {
-                                if (isCloseEnoughToSelect(arcPath.startPoint.toOffset(), visiblePosition)) {
+                                if (isCloseEnoughToSelect(arcPath.startVertex.point.toOffset(), visiblePosition)) {
                                     arcPath.copy(focus = PartialArcPath.Focus.StartPoint)
                                 } else {
-                                    val pointIx = arcPath.points.indexOfFirst {
-                                        isCloseEnoughToSelect(it.toOffset(), visiblePosition)
+                                    val pointIx = arcPath.vertices.indexOfFirst {
+                                        isCloseEnoughToSelect(it.point.toOffset(), visiblePosition)
                                     }
                                     if (pointIx != -1) {
                                         arcPath.copy(focus = PartialArcPath.Focus.Point(pointIx))
@@ -1400,8 +1404,8 @@ class EditClusterViewModel : ViewModel() {
                                         if (midpointIx != -1) {
                                             arcPath.copy(focus = PartialArcPath.Focus.MidPoint(midpointIx))
                                         } else {
-                                            arcPath.addNewPoint(absolutePoint)
-                                                .copy(focus = PartialArcPath.Focus.Point(arcPath.points.size))
+                                            arcPath.addNewVertex(ArcPathPoint.Free(absolutePoint))
+                                                .copy(focus = PartialArcPath.Focus.Point(arcPath.vertices.size))
                                         }
                                     }
                                 }
@@ -1425,15 +1429,26 @@ class EditClusterViewModel : ViewModel() {
         } else if (showCircles) { // select circle(s)/region
             when (mode) {
                 SelectionMode.Drag -> {
-                    // val selectedPointIndex = reselectPointAt(position)
-                    // points are insta-dropped when the pointer is up (unlike circles)
-                    val selectedCircleIndex = selectCircleAt(position)
-                    selection = listOfNotNull(selectedCircleIndex)
+                    var selectedIndex = selectPointAt(position)
+                    selection = listOfNotNull(selectedIndex)
+                    if (selectedIndex == null) {
+                        selectedIndex = selectCircleAt(position)
+                        selection = listOfNotNull(selectedIndex)
+                    }
+                    if (selectedIndex != null) {
+                        val parents = expressions.immediateParentsOf(selectedIndex)
+                            .mapNotNull { objects[it] }
+                        if (parents.isNotEmpty()) {
+                            viewModelScope.launch {
+                                _animations.emit(ObjectAnimation.Highlight(parents))
+                            }
+                        }
+                    }
                 }
                 SelectionMode.Multiselect -> {
                     // (re)-select part
-                    val selectedCircleIx = xorSelectCircleAt(position)
-                    if (selectedCircleIx == null) { // try to select bounding circles of the selected part
+                    val selectedCircleIndex = xorSelectCircleAt(position)
+                    if (selectedCircleIndex == null) { // try to select bounding circles of the selected part
                         val (part, part0) = selectPartAt(position)
                         if (part0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
                             toggleSelectAll()
@@ -1461,6 +1476,14 @@ class EditClusterViewModel : ViewModel() {
                                     }
                             }
                         }
+                    } else if (selection == listOf(selectedCircleIndex)) {
+                        val parents = expressions.immediateParentsOf(selectedCircleIndex)
+                            .mapNotNull { objects[it] }
+                        if (parents.isNotEmpty()) {
+                            viewModelScope.launch {
+                                _animations.emit(ObjectAnimation.Highlight(parents))
+                            }
+                        }
                     }
                 }
                 SelectionMode.Region -> {
@@ -1473,13 +1496,13 @@ class EditClusterViewModel : ViewModel() {
                         }
                     }
                 }
-                ToolMode.CIRCLE_BY_CENTER_AND_RADIUS ->
-                    if (FAST_CENTERED_CIRCLE && partialArgList!!.lastArgIsConfirmed) {
-                        partialArgList = partialArgList!!.copy(
-                            args = partialArgList!!.args.dropLast(1),
-                            lastSnap = null
-                        )
-                    }
+                ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> {}
+//                    if (FAST_CENTERED_CIRCLE && partialArgList!!.lastArgIsConfirmed) {
+//                        partialArgList = partialArgList!!.copy(
+//                            args = partialArgList!!.args.dropLast(1),
+//                            lastSnap = null
+//                        )
+//                    }
                 ToolMode.ARC_PATH -> {
                     // when 3+ points, tap on the start closes the loop
                 }
@@ -1873,10 +1896,10 @@ class EditClusterViewModel : ViewModel() {
         cancelSelectionAsToolArgPrompt()
         when (mode) {
             SelectionMode.Drag -> {
-                val selectedCircles = selection.filter { objects[it] is CircleOrLine }
-                val selectedPoints = selection.filter { objects[it] is Point }
-                if (selectedCircles.isEmpty() && selectedPoints.isNotEmpty() && visiblePosition != null) {
-                    // MAYBE: try to re-attach free points
+//                val selectedCircles = selection.filter { objects[it] is CircleOrLine }
+//                val selectedPoints = selection.filter { objects[it] is Point }
+//                if (selectedCircles.isEmpty() && selectedPoints.isNotEmpty() && visiblePosition != null) {
+                // MAYBE: try to re-attach free points
 //                    val ix = selectedPoints.first()
 //                    val excludedSnapTargets = expressions.children
 //                        .getOrElse(Indexed.Point(ix)) { emptySet() }
@@ -1888,18 +1911,31 @@ class EditClusterViewModel : ViewModel() {
 //                        excludePoints = true,
 //                        excludedCircles = excludedSnapTargets
 //                    )
-                    // should we: set to null and replace with a new point
-                    // try to find existing one? smth else?
+                // should we: set to null and replace with a new point
+                // try to find existing one? smth else?
 //                    realizePointCircleSnap(result)
 //                    println("attach $result")
-                }
+//                }
             }
             ToolMode.ARC_PATH -> {}
             is ToolMode -> {
+                val pArgList = partialArgList
                 // we only confirm args in onUp, they are created in onDown etc.
-                val newArg = when (val arg = partialArgList?.currentArg) {
+                val newArg = when (val arg = pArgList?.currentArg) {
                     is Arg.Point -> visiblePosition?.let {
+                        val args = pArgList.args
                         val realized = realizePointCircleSnap(snapped(absolute(visiblePosition)))
+                        if (mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS && FAST_CENTERED_CIRCLE && args.size == 2) {
+                            val firstPoint: Point =
+                                when (val first = args.first() as Arg.Point) {
+                                    is Arg.Point.Index -> objects[first.index] as Point
+                                    is Arg.Point.XY -> first.toPoint()
+                                }
+                            val pointsAreTooClose = firstPoint.distanceFrom(realized.result) < EPSILON
+                            if (pointsAreTooClose) { // haxxz
+                                partialArgList = pArgList.copy(args = args.dropLast(1), lastSnap = null)
+                            }
+                        }
                         when (realized) {
                             is PointSnapResult.Free -> Arg.Point.XY(realized.result)
                             is PointSnapResult.Eq -> Arg.Point.Index(realized.pointIndex)
@@ -2309,23 +2345,26 @@ class EditClusterViewModel : ViewModel() {
 
     fun completeArcPath() {
         require(partialArcPath != null)
-        // only add circles
-        // since `part`itioning in-arcpath region is rather involved
         partialArcPath?.let { arcPath ->
             recordCreateCommand()
             val newCircles: List<CircleOrLine> = arcPath.circles
                 .mapIndexed { j, circle ->
                     when (circle) {
-                        is Circle -> circle
-                        null -> Line.by2Points(
-                            arcPath.previousPoint(j),
-                            arcPath.points[j]
-                        )
+                        is ArcPathCircle.Eq -> null
+                        is ArcPathCircle.Free -> when (val c = circle.circle) {
+                            is Circle -> c
+                            null -> Line.by2Points(
+                                arcPath.previousVertex(j).point,
+                                arcPath.vertices[j].point
+                            )
+                            else -> throw IllegalStateException("Never")
+                        }
                         else -> throw IllegalStateException("Never")
                     }
-                }
+                }.filterNotNull()
             createNewCircles(newCircles)
         }
+        // TODO: in addition add the new arc-path
         partialArcPath = null
     }
 
@@ -2505,6 +2544,9 @@ class EditClusterViewModel : ViewModel() {
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
+        /** Allow moving non-free object IF all of it's lvl1 parents/dependecies are free by
+         * moving all of its parent with it */ // geogebra-like
+        const val INVERSION_OF_CONTROL_LVL1 = false
         /** when constructing object depending on not-yet-existing points,
          * always create them. In contrast to replacing expression with static circle */
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = true

@@ -2,6 +2,7 @@ package ui.edit_cluster
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
+import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
@@ -112,28 +114,43 @@ fun BoxScope.EditClusterCanvas(
         DodeclustersColors.strongSalad
     val selectedPointColor = selectedCircleColor
     val clusterPathAlpha = 1f
-        //0.7f
+    //0.7f
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
     val maxDecayAlpha = 0.2f
     val fullDecayDuration = 1_500 // millis
     val alpha0To1Duration = fullDecayDuration/30
     val alpha1To0Duration = fullDecayDuration*29/30
-    val animations: MutableMap<CircleAnimation, Animatable<Float, AnimationVector1D>> =
+    val maxHighlightAlpha = 0.5f
+    val highlight0To1Duration = 20
+    val highlight1To0Duration = 500
+    val animations: MutableMap<ObjectAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableMapOf() }
     val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch { // listen to circle animations
-        viewModel.circleAnimations.collect { event ->
-            launch {
-                val animatable = Animatable(0f)
-                animations[event] = animatable
-                animatable.animateTo(maxDecayAlpha, tween(alpha0To1Duration, easing = LinearEasing))
-                animatable.animateTo(
-                    targetValue = 0f,
-                    tween(alpha1To0Duration, easing = LinearEasing),
+        viewModel.animations.collect { event ->
+            when (event) {
+                is CircleAnimation -> launch { // parallel multiplexer structure
+                    val animatable = Animatable(0f)
+                    animations[event] = animatable
+                    animatable.animateTo(maxDecayAlpha, tween(alpha0To1Duration, easing = LinearEasing))
+                    animatable.animateTo(
+                        targetValue = 0f,
+                        tween(alpha1To0Duration, easing = FastOutLinearInEasing),
 //                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
-                )
-                animations.remove(event) // idk, this might be bad
+                    )
+                    animations.remove(event) // idk, this might be bad
+                }
+                is ObjectAnimation.Highlight -> launch {
+                    val animatable = Animatable(0f)
+                    animations[event] = animatable
+                    animatable.animateTo(maxHighlightAlpha, tween(highlight0To1Duration, easing = LinearEasing))
+                    animatable.animateTo(
+                        targetValue = 0f,
+                        tween(highlight1To0Duration, easing = FastOutLinearInEasing),
+                    )
+                    animations.remove(event) // idk, this might be bad
+                }
             }
         }
     }
@@ -411,22 +428,27 @@ private fun DrawScope.drawArrowsPatchedForAndroid(
 }
 
 private fun DrawScope.drawAnimation(
-    animations: Map<CircleAnimation, Animatable<Float, AnimationVector1D>>,
+    animations: Map<ObjectAnimation, Animatable<Float, AnimationVector1D>>,
     visibleRect: Rect
 ) {
     val visibleScreenPath = Path().apply { addRect(visibleRect) }
-    for ((circleAnimation, decayAlpha) in animations) {
-        for (circle in circleAnimation.circles) {
-            val color = when (circleAnimation) {
+    for ((animation, alpha) in animations) {
+        for (circle in animation.objects) {
+            val color = when (animation) {
                 is CircleAnimation.Entrance -> Color.Green
                 is CircleAnimation.ReEntrance -> Color.Blue
                 is CircleAnimation.Exit -> Color.Red
+                is ObjectAnimation.Highlight -> DodeclustersColors.skyBlue
             }
             when (circle) {
                 is Circle -> {
-                    val path = circle2path(circle) // MAYBE: excessive, it optimizes naught
+                    val path = circle2path(circle)
                     path.op(path, visibleScreenPath, PathOperation.Intersect)
-                    drawPath(path, color, alpha = decayAlpha.value)
+                    val style =
+                        if (animation is ObjectAnimation.Highlight)
+                            Stroke(20f)
+                        else Fill
+                    drawPath(path, color, style = style, alpha = alpha.value)
                 }
                 is Line -> {
                     val maxDim = visibleRect.maxDimension
@@ -434,10 +456,15 @@ private fun DrawScope.drawAnimation(
                     val direction =  circle.directionVector
                     val farBack = pointClosestToScreenCenter - direction * maxDim
                     val farForward = pointClosestToScreenCenter + direction * maxDim
-                    drawLine(color, farBack, farForward, strokeWidth = 20f, alpha = decayAlpha.value)
+                    drawLine(color, farBack, farForward, strokeWidth = 20f, alpha = alpha.value)
 //                    val path = visibleHalfPlanePath(circle, visibleRect)
 //                    drawPath(path, color, alpha = decayAlpha.value)
                 }
+                is Point -> {
+                    val pointRadius = 10f
+                    drawCircle(color, pointRadius, circle.toOffset(), alpha = alpha.value)
+                }
+                is ImaginaryCircle -> {}
             }
         }
     }
@@ -733,13 +760,13 @@ private fun DrawScope.drawPartialConstructs(
             drawCircle(
                 color = creationPrototypeColor,
                 radius = creationPointRadius,
-                center = arcPath.startPoint.toOffset()
+                center = arcPath.startVertex.point.toOffset()
             )
             val path = Path()
-            path.moveTo(arcPath.startPoint.x.toFloat(), arcPath.startPoint.y.toFloat())
-            for (i in arcPath.points.indices) {
-                val point = arcPath.points[i].toOffset()
-                when (val circle = arcPath.circles[i]) {
+            path.moveTo(arcPath.startVertex.point.x.toFloat(), arcPath.startVertex.point.y.toFloat())
+            for (i in arcPath.vertices.indices) {
+                val point = arcPath.vertices[i].point.toOffset()
+                when (val circle = arcPath.circles[i].circle) {
                     is Circle -> path.arcToRad(
                         Rect(circle.center, circle.radius.toFloat()),
                         arcPath.startAngles[i].toFloat(),

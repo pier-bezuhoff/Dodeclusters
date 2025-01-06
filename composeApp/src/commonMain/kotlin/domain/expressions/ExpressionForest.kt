@@ -339,4 +339,7 @@ class ExpressionForest(
             }
         }
     }
+
+    fun immediateParentsOf(childIx: Ix): List<Ix> =
+        expressions[childIx]?.expr?.args.orEmpty()
 }

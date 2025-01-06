@@ -219,32 +219,28 @@ fun arcs2path(
     arcs: ConcreteClosedArcPath,
 ): Path {
     val path = Path()
-    if (arcs.isContinuous) { // idk about drawing non-continuous ones
-        arcs.intersectionPoints.firstOrNull()?.let { startPoint ->
-            path.moveTo(startPoint.x.toFloat(), startPoint.y.toFloat())
-        }
-        val indices =
-            if (arcs.isClosed) arcs.indices
-            else 0 until (arcs.size - 1) // ignore last arc for non-closed contour
-        for (i in indices) {
-            when (arcs.circles[i]) {
-                is Line -> {
-                    val cyclicNextIndex = (i + 1) % arcs.size
-                    val nextPoint = arcs.intersectionPoints[cyclicNextIndex]!!
-                    path.lineTo(nextPoint.x.toFloat(), nextPoint.y.toFloat())
-                }
-                is Circle -> {
-                    path.arcTo(
-                        rect = arcs.rects[i],
-                        startAngleDegrees = arcs.startAngles[i],
-                        sweepAngleDegrees = arcs.sweepAngles[i],
-                        forceMoveTo = false
-                    )
-                }
+    // idk about drawing non-continuous ones
+    arcs.intersectionPoints.firstOrNull()?.let { startPoint ->
+        path.moveTo(startPoint.x.toFloat(), startPoint.y.toFloat())
+    }
+    val indices = arcs.indices
+    for (i in indices) {
+        when (arcs.circles[i]) {
+            is Line -> {
+                val cyclicNextIndex = (i + 1) % arcs.size
+                val nextPoint = arcs.intersectionPoints[cyclicNextIndex]!!
+                path.lineTo(nextPoint.x.toFloat(), nextPoint.y.toFloat())
+            }
+            is Circle -> {
+                path.arcTo(
+                    rect = arcs.rects[i],
+                    startAngleDegrees = arcs.startAngles[i],
+                    sweepAngleDegrees = arcs.sweepAngles[i],
+                    forceMoveTo = false
+                )
             }
         }
-        if (arcs.isClosed)
-            path.close() // just in case
     }
+    path.close() // just in case
     return path
 }
