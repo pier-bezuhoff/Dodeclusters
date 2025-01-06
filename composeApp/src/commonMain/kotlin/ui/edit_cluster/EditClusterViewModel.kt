@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
-import androidx.compose.ui.util.fastCbrt
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -495,7 +494,6 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun addObjects(objs: List<GCircle?>) {
-        val size0 = objects.size
         objects.addAll(objs)
     }
 
@@ -638,11 +636,10 @@ class EditClusterViewModel : ViewModel() {
         if (showCircles && selection.isNotEmpty() && mode.isSelectingCircles()) {
             recordCommand(Command.DELETE, unique = true)
             val toBeDeleted = expressions.deleteNodes(selection)
-            val deletedCircleIndices = selection
+            val deletedCircleIndices = toBeDeleted
                 .filter { objects[it] is CircleOrLine }
                 .toSet()
             if (deletedCircleIndices.isNotEmpty()) {
-                // FIX: there's been an incident of select-all > delete > out-of-bounds 6/6 here
                 val oldParts = regions.toList()
                 regions.clear()
                 regions.addAll(
@@ -1440,7 +1437,7 @@ class EditClusterViewModel : ViewModel() {
                             .mapNotNull { objects[it] }
                         if (parents.isNotEmpty()) {
                             viewModelScope.launch {
-                                _animations.emit(ObjectAnimation.Highlight(parents))
+                                _animations.emit(HighlightAnimation(parents))
                             }
                         }
                     }
@@ -1481,7 +1478,7 @@ class EditClusterViewModel : ViewModel() {
                             .mapNotNull { objects[it] }
                         if (parents.isNotEmpty()) {
                             viewModelScope.launch {
-                                _animations.emit(ObjectAnimation.Highlight(parents))
+                                _animations.emit(HighlightAnimation(parents))
                             }
                         }
                     }

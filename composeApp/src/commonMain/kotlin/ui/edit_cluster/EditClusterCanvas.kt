@@ -117,37 +117,20 @@ fun BoxScope.EditClusterCanvas(
     //0.7f
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
-    val maxDecayAlpha = 0.2f
-    val fullDecayDuration = 1_500 // millis
-    val alpha0To1Duration = fullDecayDuration/30
-    val alpha1To0Duration = fullDecayDuration*29/30
-    val maxHighlightAlpha = 0.5f
-    val highlight0To1Duration = 20
-    val highlight1To0Duration = 500
-    val animations: MutableMap<ObjectAnimation, Animatable<Float, AnimationVector1D>> =
+    val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableMapOf() }
     val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch { // listen to circle animations
         viewModel.animations.collect { event ->
             when (event) {
-                is CircleAnimation -> launch { // parallel multiplexer structure
+                is ColoredContourAnimation -> launch { // parallel multiplexer structure
                     val animatable = Animatable(0f)
                     animations[event] = animatable
-                    animatable.animateTo(maxDecayAlpha, tween(alpha0To1Duration, easing = LinearEasing))
+                    animatable.animateTo(event.maxAlpha, tween(event.alpha01Duration, easing = LinearEasing))
                     animatable.animateTo(
                         targetValue = 0f,
-                        tween(alpha1To0Duration, easing = FastOutLinearInEasing),
+                        tween(event.alpha10Duration, easing = FastOutLinearInEasing),
 //                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
-                    )
-                    animations.remove(event) // idk, this might be bad
-                }
-                is ObjectAnimation.Highlight -> launch {
-                    val animatable = Animatable(0f)
-                    animations[event] = animatable
-                    animatable.animateTo(maxHighlightAlpha, tween(highlight0To1Duration, easing = LinearEasing))
-                    animatable.animateTo(
-                        targetValue = 0f,
-                        tween(highlight1To0Duration, easing = FastOutLinearInEasing),
                     )
                     animations.remove(event) // idk, this might be bad
                 }
@@ -428,26 +411,20 @@ private fun DrawScope.drawArrowsPatchedForAndroid(
 }
 
 private fun DrawScope.drawAnimation(
-    animations: Map<ObjectAnimation, Animatable<Float, AnimationVector1D>>,
+    animations: Map<ColoredContourAnimation, Animatable<Float, AnimationVector1D>>,
     visibleRect: Rect
 ) {
     val visibleScreenPath = Path().apply { addRect(visibleRect) }
     for ((animation, alpha) in animations) {
         for (circle in animation.objects) {
-            val color = when (animation) {
-                is CircleAnimation.Entrance -> Color.Green
-                is CircleAnimation.ReEntrance -> Color.Blue
-                is CircleAnimation.Exit -> Color.Red
-                is ObjectAnimation.Highlight -> DodeclustersColors.skyBlue
-            }
+            val color = animation.color
             when (circle) {
                 is Circle -> {
                     val path = circle2path(circle)
                     path.op(path, visibleScreenPath, PathOperation.Intersect)
                     val style =
-                        if (animation is ObjectAnimation.Highlight)
-                            Stroke(20f)
-                        else Fill
+                        if (animation.fillCircle) Fill
+                        else Stroke(20f)
                     drawPath(path, color, style = style, alpha = alpha.value)
                 }
                 is Line -> {
@@ -461,7 +438,7 @@ private fun DrawScope.drawAnimation(
 //                    drawPath(path, color, alpha = decayAlpha.value)
                 }
                 is Point -> {
-                    val pointRadius = 10f
+                    val pointRadius = 15f
                     drawCircle(color, pointRadius, circle.toOffset(), alpha = alpha.value)
                 }
                 is ImaginaryCircle -> {}
