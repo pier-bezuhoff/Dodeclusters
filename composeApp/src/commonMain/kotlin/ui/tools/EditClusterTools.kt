@@ -137,7 +137,7 @@ import domain.SIGNATURE_INDEXED_AND_CIRCLE
 import domain.SIGNATURE_N_POINTS_PLACEHOLDER
 import domain.Signature
 import domain.io.DdcV2
-import domain.io.DdcV3
+import domain.io.DdcV4
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
 import org.jetbrains.compose.resources.StringResource
@@ -185,8 +185,8 @@ sealed class EditClusterTool(
         Res.string.save_cluster_name,
         icon = Res.drawable.save
     ) {
-        const val DEFAULT_NAME = DdcV3.DEFAULT_NAME
-        const val EXTENSION = DdcV3.DEFAULT_EXTENSION // yml
+        const val DEFAULT_NAME = DdcV4.DEFAULT_NAME
+        const val EXTENSION = DdcV4.DEFAULT_EXTENSION // yml
         val otherDisplayedExtensions = setOf("yaml", "ddc", "ddu")
         const val MIME_TYPE = "application/yaml"
     }

@@ -5,23 +5,7 @@ import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
 import kotlinx.serialization.SerializationException
 
-val Yaml4DdcV3 = Yaml(
-    configuration = YamlConfiguration(
-        encodeDefaults = true,
-        strictMode = false,
-        polymorphismStyle = PolymorphismStyle.Property
-    )
-)
-
-val Yaml4DdcV2 = Yaml(
-    configuration = YamlConfiguration(
-        encodeDefaults = true,
-        strictMode = false,
-        polymorphismStyle = PolymorphismStyle.Property
-    )
-)
-
-val Yaml4DdcV1 = Yaml(
+val yaml = Yaml(
     configuration = YamlConfiguration(
         encodeDefaults = true,
         strictMode = false,
@@ -31,13 +15,17 @@ val Yaml4DdcV1 = Yaml(
 
 // TODO: coroutines
 @Throws(SerializationException::class, IllegalArgumentException::class)
+fun parseDdcV4(content: String): DdcV4 =
+    yaml.decodeFromString(DdcV4.serializer(), content)
+
+@Throws(SerializationException::class, IllegalArgumentException::class)
 fun parseDdcV3(content: String): DdcV3 =
-    Yaml4DdcV3.decodeFromString(DdcV3.serializer(), content)
+    yaml.decodeFromString(DdcV3.serializer(), content)
 
 @Throws(SerializationException::class, IllegalArgumentException::class)
 fun parseDdcV2(content: String): DdcV2 =
-    Yaml4DdcV2.decodeFromString(DdcV2.serializer(), content)
+    yaml.decodeFromString(DdcV2.serializer(), content)
 
 @Throws(SerializationException::class, IllegalArgumentException::class)
 fun parseDdcV1(content: String): DdcV1 =
-    Yaml4DdcV1.decodeFromString(DdcV1.serializer(), content)
+    yaml.decodeFromString(DdcV1.serializer(), content)

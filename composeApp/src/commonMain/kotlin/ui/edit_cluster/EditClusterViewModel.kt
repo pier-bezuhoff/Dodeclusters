@@ -64,12 +64,13 @@ import domain.expressions.reIndex
 import domain.filterIndices
 import domain.io.DdcV1
 import domain.io.DdcV2
-import domain.io.DdcV3
+import domain.io.DdcV4
 import domain.io.cluster2svg
 import domain.io.cluster2svgCheckPattern
 import domain.io.parseDdcV1
 import domain.io.parseDdcV2
 import domain.io.parseDdcV3
+import domain.io.parseDdcV4
 import domain.reindexingMap
 import domain.snapAngle
 import domain.snapPointToCircles
@@ -246,7 +247,7 @@ class EditClusterViewModel : ViewModel() {
                 strictMode = false,
                 polymorphismStyle = PolymorphismStyle.Property,
             )
-        ).encodeToString(DdcV3.from(toConstellation()).copy(
+        ).encodeToString(DdcV4.from(toConstellation()).copy(
             name = name,
             bestCenterX = computeAbsoluteCenter()?.x,
             bestCenterY = computeAbsoluteCenter()?.y,
@@ -296,8 +297,26 @@ class EditClusterViewModel : ViewModel() {
     fun loadFromYaml(yaml: String) {
         tryCatch2<SerializationException, IllegalArgumentException>(
             {
-                val ddc = parseDdcV3(yaml)
+                val ddc = parseDdcV4(yaml)
                 val constellation = ddc.toConstellation()
+                loadNewConstellation(constellation)
+                centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
+                displayChessboardPattern = ddc.chessboardPattern
+                chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
+            },
+            { e ->
+                e.printStackTrace()
+                println("Failed to parse DdcV4->yaml, falling back to DdcV3->yaml")
+                loadDdcV3FromYaml(yaml)
+            }
+        )
+    }
+
+    fun loadDdcV3FromYaml(yaml: String) {
+        tryCatch2<SerializationException, IllegalArgumentException>(
+            {
+                val ddc = parseDdcV3(yaml)
+                val constellation = ddc.toConstellation().toConstellation()
                 loadNewConstellation(constellation)
                 centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
                 displayChessboardPattern = ddc.chessboardPattern
