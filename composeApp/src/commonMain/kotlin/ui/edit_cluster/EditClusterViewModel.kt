@@ -505,7 +505,9 @@ class EditClusterViewModel : ViewModel() {
     }
 
     /** Use BEFORE modifying the state by the [command]!
-     * let s_i := history[[i]], c_i := commands[[i]]
+     *
+     * let `s_i := history[i], c_i := commands[i]`
+     *
      * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ...
      *
      * [unique] flag guarantees snapshotting new state for [history]
@@ -1436,6 +1438,8 @@ class EditClusterViewModel : ViewModel() {
                         val parents = expressions.immediateParentsOf(selectedIndex)
                             .mapNotNull { objects[it] }
                         if (parents.isNotEmpty()) {
+                            // TODO: move this into onUp to clearly comunicate
+                            //  that the object you try to move is locked
                             viewModelScope.launch {
                                 _animations.emit(HighlightAnimation(parents))
                             }

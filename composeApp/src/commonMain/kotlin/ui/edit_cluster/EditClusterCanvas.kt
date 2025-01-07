@@ -163,7 +163,7 @@ fun BoxScope.EditClusterCanvas(
     ) {
         translate(viewModel.translation.x, viewModel.translation.y) {
             val visibleRect = size.toRect().translate(-viewModel.translation)
-            drawAnimation(animations, visibleRect)
+            drawAnimation(animations, visibleRect, strokeWidth)
             // TODO: hoist VM here
             drawParts(viewModel, visibleRect, clusterPathAlpha, circleStroke)
             if (viewModel.showCircles)
@@ -412,8 +412,11 @@ private fun DrawScope.drawArrowsPatchedForAndroid(
 
 private fun DrawScope.drawAnimation(
     animations: Map<ColoredContourAnimation, Animatable<Float, AnimationVector1D>>,
-    visibleRect: Rect
+    visibleRect: Rect,
+    strokeWidth: Float,
 ) {
+    val borderStrokeWidth = 8*strokeWidth
+    val pointRadius = 6*strokeWidth
     val visibleScreenPath = Path().apply { addRect(visibleRect) }
     for ((animation, alpha) in animations) {
         for (circle in animation.objects) {
@@ -424,7 +427,7 @@ private fun DrawScope.drawAnimation(
                     path.op(path, visibleScreenPath, PathOperation.Intersect)
                     val style =
                         if (animation.fillCircle) Fill
-                        else Stroke(20f)
+                        else Stroke(borderStrokeWidth)
                     drawPath(path, color, style = style, alpha = alpha.value)
                 }
                 is Line -> {
@@ -433,12 +436,11 @@ private fun DrawScope.drawAnimation(
                     val direction =  circle.directionVector
                     val farBack = pointClosestToScreenCenter - direction * maxDim
                     val farForward = pointClosestToScreenCenter + direction * maxDim
-                    drawLine(color, farBack, farForward, strokeWidth = 20f, alpha = alpha.value)
+                    drawLine(color, farBack, farForward, strokeWidth = borderStrokeWidth, alpha = alpha.value)
 //                    val path = visibleHalfPlanePath(circle, visibleRect)
 //                    drawPath(path, color, alpha = decayAlpha.value)
                 }
                 is Point -> {
-                    val pointRadius = 15f
                     drawCircle(color, pointRadius, circle.toOffset(), alpha = alpha.value)
                 }
                 is ImaginaryCircle -> {}

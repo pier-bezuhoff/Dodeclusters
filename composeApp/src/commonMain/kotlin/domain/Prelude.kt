@@ -68,3 +68,8 @@ inline fun <reified A, reified B> tryCatch2(
         finallyBlock()
     }
 }
+
+/** To be used in `when` pattern matching in cases that should NEVER be reached */
+@Throws(IllegalStateException::class)
+fun never(): Nothing =
+    throw IllegalStateException("Never")
