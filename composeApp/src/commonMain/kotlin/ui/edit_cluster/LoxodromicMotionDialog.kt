@@ -89,6 +89,7 @@ data class DefaultLoxodromicMotionParameters(
     )
 }
 
+// FIX: cancel+ok row is OOB in landscape
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun LoxodromicMotionDialog(
@@ -115,14 +116,14 @@ fun LoxodromicMotionDialog(
     ) {
         hideSystemBars()
         Surface(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(horizontal = 16.dp),
             shape = RoundedCornerShape(24.dp)
         ) {
             val fontSize =
                 if (compactWidth) 14.sp
                 else 24.sp
             Column(
-                Modifier.padding(8.dp),
+                Modifier.padding(horizontal = 8.dp),
                 horizontalAlignment = Alignment.Start
             ) {
                 Title(smallerFont = compactWidth)
