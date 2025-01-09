@@ -51,6 +51,7 @@ inline val Double.degrees: Float get() =
 inline val Float.radians: Double get() =
     this*PI/180.0
 
+// sum types doko
 inline fun <reified A, reified B> tryCatch2(
     crossinline tryBlock: () -> Unit,
     crossinline catchBlock: (Exception) -> Unit,

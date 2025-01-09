@@ -7,8 +7,8 @@ import kotlinx.serialization.Serializable
 
 // potential optimization: represent point indices as
 // -(i+1) while circle indices are +i
-@Serializable
 @Immutable
+@Serializable
 sealed interface _Indexed {
     val index: Ix
 

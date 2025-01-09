@@ -4,13 +4,12 @@ import androidx.compose.runtime.Immutable
 import domain.Ix
 import domain.expressions.Expr
 import domain.expressions.Expression
-import domain.never
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /** Single-output expression from [expr] */
-@Serializable
 @Immutable
+@Serializable
 sealed interface _Expression {
     val expr: _Expr
 
@@ -45,27 +44,3 @@ sealed interface _Expression {
             }, e.outputIndex)
         }
 }
-
-@Throws(ClassCastException::class)
-inline fun _reIndexExpression(
-    expression: _Expression,
-    crossinline pointReIndexer: (Ix) -> Ix,
-    crossinline circleReIndexer: (Ix) -> Ix,
-): _Expression =
-    when (expression) {
-        is _Expression.Just -> expression.copy(expression.expr.mapArgs { ix ->
-            when (ix) {
-                is _Indexed.Point -> _Indexed.Point(pointReIndexer(ix.index))
-                is _Indexed.Circle -> _Indexed.Circle(circleReIndexer(ix.index))
-                else -> never()
-            }
-        } as _Expr.OneToOne)
-        is _Expression.OneOf -> expression.copy(expression.expr.mapArgs { ix ->
-            when (ix) {
-                is _Indexed.Point -> _Indexed.Point(pointReIndexer(ix.index))
-                is _Indexed.Circle -> _Indexed.Circle(circleReIndexer(ix.index))
-                else -> never()
-            }
-        } as _Expr.OneToMany)
-        else -> never()
-    }

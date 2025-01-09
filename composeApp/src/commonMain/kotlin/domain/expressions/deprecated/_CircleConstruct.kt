@@ -5,8 +5,8 @@ import data.geometry.CircleOrLine
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Serializable
 @Immutable
+@Serializable
 sealed interface _CircleConstruct {
     @Serializable
     @SerialName("ConcreteCircleOrLine")

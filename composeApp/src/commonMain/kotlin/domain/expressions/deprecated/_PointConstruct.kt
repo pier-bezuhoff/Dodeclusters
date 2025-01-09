@@ -5,8 +5,8 @@ import data.geometry.Point
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Serializable
 @Immutable
+@Serializable
 sealed interface _PointConstruct {
     @Serializable
     @SerialName("ConcretePoint")

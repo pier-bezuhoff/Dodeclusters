@@ -47,8 +47,8 @@ private data class _E(
  * a collection of numbers
  * @param[args] Indexed links to dynamic point/line/circle arguments
  * */
-@Serializable
 @Immutable
+@Serializable
 sealed interface _Expr : _ExprLike {
 
     @Serializable
