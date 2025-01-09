@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -118,7 +119,7 @@ fun BoxScope.EditClusterCanvas(
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
-        remember { mutableMapOf() }
+        remember { mutableStateMapOf() }
     val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch { // listen to circle animations
         viewModel.animations.collect { event ->
@@ -417,7 +418,9 @@ private fun DrawScope.drawAnimation(
 ) {
     val borderStrokeWidth = 8*strokeWidth
     val pointRadius = 6*strokeWidth
-    val visibleScreenPath = Path().apply { addRect(visibleRect) }
+    val visibleScreenPath = Path().apply {
+        addRect(visibleRect.inflate(10*strokeWidth))
+    }
     for ((animation, alpha) in animations) {
         for (circle in animation.objects) {
             val color = animation.color

@@ -33,7 +33,7 @@ data class HighlightAnimation(
     override val objects: List<GCircle>,
     override val color: ColorAsCss = DodeclustersColors.skyBlue,
 ) : ColoredContourAnimation {
-    override val maxAlpha: Float = 0.5f
+    override val maxAlpha: Float = 0.6f
     override val alpha01Duration: Int = 20
     override val alpha10Duration: Int = 500
     override val fillCircle: Boolean = false

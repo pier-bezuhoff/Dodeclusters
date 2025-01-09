@@ -70,3 +70,32 @@ fun computeIncidence(
     carrier: CircleOrLine,
 ): Point =
     carrier.order2point(params.order)
+
+/**
+ * *Sagitta* of a circular arc is the distance from the
+ * midpoint of the arc to the midpoint of its chord.
+ *
+ * @param[chordStart] and [chordEnd] are 2 points on the circle forming a directed chord.
+ *
+ * @param[params] is the ratio of `sagitta : chord length`, signed. Positive
+ * being to the left of the directed chord (assuming right-hand xOy system).
+ *
+ * @return circle thru [chordStart] and [chordEnd], with radius scaling proportionally
+ * to the chord length
+ * */
+fun computeCircleBy2PointsAndSagittaRatio(
+    params: SagittaRatioParameters,
+    chordStart: Point,
+    chordEnd: Point,
+): CircleOrLine? {
+    val chordMidX = (chordStart.x + chordEnd.x)/2.0
+    val chordMidY = (chordStart.y + chordEnd.y)/2.0
+    val sagittaX = params.sagittaRatio*(chordStart.y - chordEnd.y)
+    val sagittaY = params.sagittaRatio*(-chordStart.x + chordEnd.x)
+    val arcPoint = Point(chordMidX + sagittaX, chordMidY + sagittaY)
+    return GeneralizedCircle.perp3(
+        GeneralizedCircle.fromGCircle(chordStart),
+        GeneralizedCircle.fromGCircle(arcPoint),
+        GeneralizedCircle.fromGCircle(chordEnd),
+    )?.toGCircle() as? CircleOrLine
+}

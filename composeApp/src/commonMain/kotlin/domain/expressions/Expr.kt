@@ -29,9 +29,9 @@ private data class E(
  * either [OneToOne] or [OneToMany]
  *
  * Whenever the order of [args] doesn't matter, enforce index-increasing order
- * @param[parameters] Static parameters used in the expression, generally
+ * @property[parameters] Static parameters used in the expression, generally
  * a collection of numbers
- * @param[args] Indexed links to dynamic point/line/circle arguments
+ * @property[args] Indexed links to dynamic point/line/circle arguments
  * */
 @Serializable
 @Immutable
@@ -83,6 +83,13 @@ sealed interface Expr : ExprLike {
         val target: Ix,
         val engine: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(target, engine))
+    @Serializable
+    @SerialName("CircleBy2PointsAndSagittaRatio")
+    data class CircleBy2PointsAndSagittaRatio(
+        override val parameters: SagittaRatioParameters,
+        val chordStartPoint: Ix,
+        val chordEndPoint: Ix,
+    ) : OneToOne, ExprLike by E(parameters, listOf(chordStartPoint, chordEndPoint))
 
     @Serializable
     @SerialName("Intersection")
@@ -159,6 +166,11 @@ sealed interface Expr : ExprLike {
                             g(target),
                             g(engine)
                         )
+                        is CircleBy2PointsAndSagittaRatio -> computeCircleBy2PointsAndSagittaRatio(
+                            parameters,
+                            p(chordStartPoint),
+                            p(chordEndPoint),
+                        )
                     }
                     listOf(result)
                 }
@@ -217,6 +229,10 @@ sealed interface Expr : ExprLike {
             is CircleInversion -> copy(
                 target = reIndexer(target),
                 engine = reIndexer(engine),
+            )
+            is CircleBy2PointsAndSagittaRatio -> copy(
+                chordStartPoint = reIndexer(chordStartPoint),
+                chordEndPoint = reIndexer(chordEndPoint),
             )
             is Intersection -> copy(
                 circle1 = reIndexer(circle1),

@@ -49,3 +49,9 @@ data class LoxodromicMotionParameters(
     val nSteps: Int,
 ) : Parameters
 
+@Serializable
+@Immutable
+data class SagittaRatioParameters(
+    val sagittaRatio: Double
+) : Parameters
+

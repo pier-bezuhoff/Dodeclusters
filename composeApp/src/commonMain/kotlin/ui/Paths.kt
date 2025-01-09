@@ -215,7 +215,6 @@ fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
     }
 }
 
-// Q: how does it track inside-vs-outside?
 fun ConcreteClosedArcPath.toPath(): Path {
     val path = Path()
     intersectionPoints.firstOrNull()?.let { startPoint ->

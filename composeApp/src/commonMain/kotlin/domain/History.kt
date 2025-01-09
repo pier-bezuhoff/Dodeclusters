@@ -1,5 +1,6 @@
 package domain
 
+// MAYBE: additionally collapse same-tag different-targets when history buffer overflows
 // TODO: create tests
 // MAYBE: reset lastCommandTag every VM.onUp
 // s_i := [past][[i]],

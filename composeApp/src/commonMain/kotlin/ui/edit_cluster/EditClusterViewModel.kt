@@ -90,6 +90,7 @@ import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
+import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
@@ -222,6 +223,9 @@ class EditClusterViewModel : ViewModel() {
     /** min tap/grab distance to select an object */
     private var tapRadius = getPlatform().tapRadius
 
+    private var dragDownedWithNothing = true
+    private var movementAfterDown = false
+
     init {
         launchRestore()
     }
@@ -305,8 +309,8 @@ class EditClusterViewModel : ViewModel() {
                 chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
             },
             { e ->
-                e.printStackTrace()
                 println("Failed to parse DdcV4->yaml, falling back to DdcV3->yaml")
+                e.printStackTrace()
                 loadDdcV3FromYaml(yaml)
             }
         )
@@ -323,8 +327,8 @@ class EditClusterViewModel : ViewModel() {
                 chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
             },
             { e ->
-                e.printStackTrace()
                 println("Failed to parse DdcV3->yaml, falling back to DdcV2->yaml")
+                e.printStackTrace()
                 loadDdcV2FromYaml(yaml)
             }
         )
@@ -343,9 +347,9 @@ class EditClusterViewModel : ViewModel() {
                 displayChessboardPattern = ddc.chessboardPattern
                 chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
             },
-            { e1 ->
-                e1.printStackTrace()
+            { e ->
                 println("Failed to parse DdcV2->yaml, falling back to DdcV1->yaml")
+                e.printStackTrace()
                 loadDdcV1FromYaml(yaml)
             }
         )
@@ -362,9 +366,9 @@ class EditClusterViewModel : ViewModel() {
                 loadNewConstellation(cluster.toConstellation())
                 centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
             },
-            { e2 ->
-                e2.printStackTrace()
+            { e ->
                 println("Failed to parse DdcV1->yaml, falling back to ClusterV1->json")
+                e.printStackTrace()
                 loadClusterV1FromJson(yaml) // NOTE: for backwards compat
             }
         )
@@ -381,8 +385,8 @@ class EditClusterViewModel : ViewModel() {
                 loadNewConstellation(cluster1.toCluster().toConstellation())
             },
             { e ->
-                e.printStackTrace()
                 println("Failed to parse ClusterV1->json")
+                e.printStackTrace()
             }
         )
     }
@@ -1237,6 +1241,8 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun onDown(visiblePosition: Offset) {
+        dragDownedWithNothing = false
+        movementAfterDown = false
         // reset grabbed thingies
         if (showCircles) {
             when (val h = handleConfig) {
@@ -1297,6 +1303,7 @@ class EditClusterViewModel : ViewModel() {
                     }
                     val selectedCircleIndex = selectCircleAt(visiblePosition)
                     selection = if (previouslySelectedCircle != null && selectedCircleIndex == null) {
+                        dragDownedWithNothing = true
                         listOf(previouslySelectedCircle)
                         // we keep previous selection in case we want to drag it
                         // but it can still be discarded in onTap
@@ -1453,17 +1460,6 @@ class EditClusterViewModel : ViewModel() {
                         selectedIndex = selectCircleAt(position)
                         selection = listOfNotNull(selectedIndex)
                     }
-                    if (selectedIndex != null) {
-                        val parents = expressions.immediateParentsOf(selectedIndex)
-                            .mapNotNull { objects[it] }
-                        if (parents.isNotEmpty()) {
-                            // TODO: move this into onUp to clearly comunicate
-                            //  that the object you try to move is locked
-                            viewModelScope.launch {
-                                _animations.emit(HighlightAnimation(parents))
-                            }
-                        }
-                    }
                 }
                 SelectionMode.Multiselect -> {
                     // (re)-select part
@@ -1494,14 +1490,6 @@ class EditClusterViewModel : ViewModel() {
                                     } else {
                                         selection = emptyList()
                                     }
-                            }
-                        }
-                    } else if (selection == listOf(selectedCircleIndex)) {
-                        val parents = expressions.immediateParentsOf(selectedCircleIndex)
-                            .mapNotNull { objects[it] }
-                        if (parents.isNotEmpty()) {
-                            viewModelScope.launch {
-                                _animations.emit(HighlightAnimation(parents))
                             }
                         }
                     }
@@ -1801,6 +1789,7 @@ class EditClusterViewModel : ViewModel() {
 
     // MAYBE: handle key arrows as panning
     fun onPanZoomRotate(pan: Offset, centroid: Offset, zoom: Float, rotationAngle: Float) {
+        movementAfterDown = true
         val c = absolute(centroid)
         val selectedCircles = selection.filter { objects[it] is CircleOrLine }
         val selectedPoints = selection.filter { objects[it] is Point }
@@ -1916,26 +1905,7 @@ class EditClusterViewModel : ViewModel() {
         cancelSelectionAsToolArgPrompt()
         when (mode) {
             SelectionMode.Drag -> {
-//                val selectedCircles = selection.filter { objects[it] is CircleOrLine }
-//                val selectedPoints = selection.filter { objects[it] is Point }
-//                if (selectedCircles.isEmpty() && selectedPoints.isNotEmpty() && visiblePosition != null) {
                 // MAYBE: try to re-attach free points
-//                    val ix = selectedPoints.first()
-//                    val excludedSnapTargets = expressions.children
-//                        .getOrElse(Indexed.Point(ix)) { emptySet() }
-//                        .filterIsInstance<Indexed.Circle>()
-//                        .map { it.index }
-//                        .toSet()
-//                    val result = snapped(
-//                        absolute(visiblePosition),
-//                        excludePoints = true,
-//                        excludedCircles = excludedSnapTargets
-//                    )
-                // should we: set to null and replace with a new point
-                // try to find existing one? smth else?
-//                    realizePointCircleSnap(result)
-//                    println("attach $result")
-//                }
             }
             ToolMode.ARC_PATH -> {}
             is ToolMode -> {
@@ -1984,6 +1954,12 @@ class EditClusterViewModel : ViewModel() {
         if (partialArgList?.isFull == true) {
             completeToolMode()
         }
+        if ((mode == SelectionMode.Drag && (!dragDownedWithNothing || movementAfterDown) || mode == SelectionMode.Multiselect) &&
+            submode is SubMode.None &&
+            selection.none { isFree(it) }
+        ) {
+            highlightSelectionParents() // signal locked state to the user
+        }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) // haxx
             toolbarState = toolbarState.copy(activeTool = EditClusterTool.Multiselect)
         if (submode !is SubMode.FlowFill)
@@ -1999,6 +1975,19 @@ class EditClusterViewModel : ViewModel() {
     fun onLongDrag(delta: Offset) {}
     fun onLongDragCancel() {}
     fun onLongDragEnd() {}
+
+    private fun highlightSelectionParents() {
+        val allParents = selection.flatMap { selectedIndex ->
+            expressions.immediateParentsOf(selectedIndex)
+                .minus(selection)
+                .mapNotNull { objects[it] }
+        }
+        if (allParents.isNotEmpty()) {
+            viewModelScope.launch {
+                _animations.emit(HighlightAnimation(allParents))
+            }
+        }
+    }
 
     /**
      * transform points incident to the circle #[parentIx] via
@@ -2364,7 +2353,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun completeArcPath() {
-        require(partialArcPath != null)
+        require(partialArcPath != null) { "Cannot complete non-existent arc path: illegal state" }
         partialArcPath?.let { arcPath ->
             recordCreateCommand()
             val newCircles: List<CircleOrLine> = arcPath.circles
