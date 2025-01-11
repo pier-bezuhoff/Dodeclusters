@@ -3,7 +3,6 @@ package data.geometry
 import androidx.compose.runtime.Immutable
 import domain.Ix
 import domain.TAU
-import domain.cluster.ArcPath
 import domain.signNonZero
 import domain.updated
 import kotlin.math.PI
@@ -18,7 +17,8 @@ sealed interface ArcPathPoint {
     data class Eq(override val point: Point, val index: Ix) : Vertex
     /** The vertex is incident to a carrier object @ [carrierIndex] */
     data class Incident(override val point: Point, val carrierIndex: Ix) : Vertex
-    /** The vertex is the 1st intersection of [carrier1Index] and [carrier2Index] */
+    /** The vertex is the 1st intersection of [carrier1Index] and [carrier2Index].
+     * Before using this check if such point already exists and use [Eq] in if it does */
     data class Intersection(override val point: Point, val carrier1Index: Ix, val carrier2Index: Ix) : Vertex
     /** Midpoints should not be constrained, always free */
 //    data class Midpoint(override val point: Point) : ArcPathPoint
@@ -37,11 +37,14 @@ sealed interface ArcPathCircle {
 data class PartialArcPath(
     val startVertex: ArcPathPoint.Vertex,
     val vertices: List<ArcPathPoint.Vertex> = emptyList(),
+    // if midpoint snaps to an existing circle, it should be
+    // marked by setting corresponding circle as Eq
     val midpoints: List<Point> = emptyList(),
     val circles: List<ArcPathCircle> = emptyList(),
     val startAngles: List<Double> = emptyList(),
     val sweepAngles: List<Double> = emptyList(),
-    val closed: Boolean = false,
+    val isClosed: Boolean = false,
+    /** Grabbed node: any vertex or midpoint */
     val focus: Focus? = null,
 ) {
     val lastVertex: ArcPathPoint.Vertex get() =
@@ -189,7 +192,7 @@ data class PartialArcPath(
         }
 
     fun closeLoop(): PartialArcPath =
-        addNewVertex(startVertex).copy(closed = true)
+        addNewVertex(startVertex).copy(isClosed = true)
 
     fun deleteVertex(i: Int): PartialArcPath {
         // rm point[i]

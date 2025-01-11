@@ -355,7 +355,7 @@ data class ConcreteClosedArcPath(
         }
         println("calculateLocationEpsilon($point): windingAngle = ${windingAngle.degrees}")
         val threshold = 0.1 // small threshold just in case
-        val soThePointIsOutside = abs(windingAngle) > 0.1
+        val soThePointIsOutside = abs(windingAngle) > threshold
         return if (soThePointIsOutside == isBounded) // not that simple sadly, consider ∠-shape
             RegionPointLocation.OUT
         else

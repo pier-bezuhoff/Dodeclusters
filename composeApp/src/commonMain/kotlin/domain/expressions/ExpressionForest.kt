@@ -121,6 +121,26 @@ class ExpressionForest(
     }
 
     /** don't forget to upscale the result afterwards! */
+    fun addMultiExpression(expression: Expression.OneOf): GCircle? {
+        val expr = expression.expr
+        val result = expr.eval(get)[expression.outputIndex]
+        val ix = calculateNextIndex()
+        val tier = computeTier(ix, expr)
+        expressions[ix] = expression
+        expr.args.forEach { parentIx ->
+            children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
+        }
+        ix2tier[ix] = tier
+        if (tier < tier2ixs.size) {
+            tier2ixs[tier] = tier2ixs[tier] + ix
+        } else { // no hopping over tiers, we good
+            tier2ixs.add(setOf(ix))
+        }
+        println("$ix -> $expression -> $result")
+        return result
+    }
+
+    /** don't forget to upscale the result afterwards! */
     fun addMultiExpression(expr: Expr.OneToMany): ExprResult {
         val result = expr.eval(get)
         val ix0 = calculateNextIndex()
@@ -138,8 +158,14 @@ class ExpressionForest(
                 tier2ixs.add(setOf(ix))
             }
         }
-        println("$ix0 -> $expr -> $result")
+        println("$ix0:${ix0+result.size} -> $expr -> $result")
         return result
+    }
+
+    fun findExpression(expression: Expression): Ix? {
+        return expressions.entries
+            .firstOrNull { (_, e) -> e == expression }
+            ?.key
     }
 
     /** The new node still inherits its previous children */

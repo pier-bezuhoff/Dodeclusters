@@ -50,16 +50,19 @@ import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
 import domain.compressConstraints
 import domain.expressions.Expr
+import domain.expressions.Expression
 import domain.expressions.ExpressionForest
 import domain.expressions.ExtrapolationParameters
 import domain.expressions.IncidenceParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.ObjectConstruct
+import domain.expressions.SagittaRatioParameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeLineBy2Points
+import domain.expressions.computeSagittaRatio
 import domain.expressions.reIndex
 import domain.filterIndices
 import domain.io.DdcV1
@@ -90,7 +93,6 @@ import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
-import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
@@ -514,6 +516,11 @@ class EditClusterViewModel : ViewModel() {
         submode = SubMode.None
         undoIsEnabled = history.undoIsEnabled
         redoIsEnabled = history.redoIsEnabled
+    }
+
+    private fun addObject(obj: GCircle?): Ix {
+        objects.add(obj)
+        return objects.size - 1
     }
 
     private fun addObjects(objs: List<GCircle?>) {
@@ -1954,7 +1961,8 @@ class EditClusterViewModel : ViewModel() {
         if (partialArgList?.isFull == true) {
             completeToolMode()
         }
-        if ((mode == SelectionMode.Drag && (!dragDownedWithNothing || movementAfterDown) || mode == SelectionMode.Multiselect) &&
+        val dragMoveOrTapSomething = mode == SelectionMode.Drag && (movementAfterDown || !dragDownedWithNothing)
+        if ((dragMoveOrTapSomething || mode == SelectionMode.Multiselect) &&
             submode is SubMode.None &&
             selection.none { isFree(it) }
         ) {
@@ -2354,17 +2362,73 @@ class EditClusterViewModel : ViewModel() {
 
     fun completeArcPath() {
         require(partialArcPath != null) { "Cannot complete non-existent arc path: illegal state" }
-        partialArcPath?.let { arcPath ->
+        partialArcPath?.let { pArcPath ->
             recordCreateCommand()
-            val newCircles: List<CircleOrLine> = arcPath.circles
+            val vertices =
+                if (pArcPath.isClosed)
+                    listOf(pArcPath.startVertex) + pArcPath.vertices.dropLast(1)
+                else listOf(pArcPath.startVertex) + pArcPath.vertices
+            val vertexIndices: List<Ix> = vertices.map { vertex ->
+                when (vertex) {
+                    is ArcPathPoint.Eq -> vertex.index
+                    is ArcPathPoint.Free -> {
+                        expressions.addFree()
+                        addObject(vertex.point)
+                    }
+                    is ArcPathPoint.Incident -> {
+                        val carrier = objects[vertex.carrierIndex] as CircleOrLine
+                        val order = carrier.downscale().point2order(vertex.point.downscale())
+                        val point = expressions.addSoloExpression(
+                            Expr.Incidence(IncidenceParameters(order), vertex.carrierIndex)
+                        ) as Point
+                        addObject(point)
+                    }
+                    is ArcPathPoint.Intersection -> {
+                        val expression = Expression.OneOf(
+                            Expr.Intersection(vertex.carrier1Index, vertex.carrier2Index),
+                            outputIndex = 0
+                        )
+                        val point = expressions.addMultiExpression(expression) as Point
+                        addObject(point)
+                    }
+                }
+            }
+            val circleIndices = mutableSetOf<Ix>()
+            for (j in pArcPath.circles.indices) {
+                when (val c = pArcPath.circles[j]) {
+                    is ArcPathCircle.Eq -> {
+                        circleIndices.add(c.index)
+                    }
+                    is ArcPathCircle.Free -> {
+                        val previous = vertexIndices[j]
+                        val next = vertexIndices[(j + 1) % vertexIndices.size]
+                        val circle = c.circle
+                        if (circle == null) {
+                            val expr = Expr.LineBy2Points(previous, next)
+                            val line = expressions.addSoloExpression(expr) as Line
+                            TODO("line by 2 points")
+                        } else {
+                            val sagittaRatio = computeSagittaRatio(circle, objects[previous] as Point, objects[next] as Point)
+                            val expr = Expr.CircleBy2PointsAndSagittaRatio(
+                                SagittaRatioParameters(sagittaRatio),
+                                previous, next
+                            )
+                            val circle1 = expressions.addSoloExpression(expr) as CircleOrLine
+                            TODO("sagitta")
+                        }
+                    }
+                }
+            }
+            // and create [abstract] arc path
+            val newCircles: List<CircleOrLine> = pArcPath.circles
                 .mapIndexed { j, circle ->
                     when (circle) {
                         is ArcPathCircle.Eq -> null
                         is ArcPathCircle.Free -> when (val c = circle.circle) {
                             is Circle -> c
                             null -> Line.by2Points(
-                                arcPath.previousVertex(j).point,
-                                arcPath.vertices[j].point
+                                pArcPath.previousVertex(j).point,
+                                pArcPath.vertices[j].point
                             )
                             else -> throw IllegalStateException("Never")
                         }
@@ -2373,7 +2437,6 @@ class EditClusterViewModel : ViewModel() {
                 }.filterNotNull()
             createNewCircles(newCircles)
         }
-        // TODO: in addition add the new arc-path
         partialArcPath = null
     }
 

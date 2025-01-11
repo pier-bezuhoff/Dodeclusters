@@ -2,11 +2,13 @@ package domain.expressions
 
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.EPSILON
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.Line
 import data.geometry.Point
 import kotlin.math.hypot
+import kotlin.math.sign
 
 // eval for one-to-one functions
 
@@ -88,14 +90,46 @@ fun computeCircleBy2PointsAndSagittaRatio(
     chordStart: Point,
     chordEnd: Point,
 ): CircleOrLine? {
+    if (chordStart == chordEnd || chordStart == Point.CONFORMAL_INFINITY || chordEnd == Point.CONFORMAL_INFINITY)
+        return null
+    val sagittaRatio = params.sagittaRatio
+    val chordX  = chordEnd.x - chordStart.x
+    val chordY  = chordEnd.y - chordStart.y
+    val chordLength = hypot(chordX, chordY)
+    val sagitta = sagittaRatio * chordLength
+    if (sagitta < EPSILON)
+        return Line.by2Points(chordStart, chordEnd)
     val chordMidX = (chordStart.x + chordEnd.x)/2.0
     val chordMidY = (chordStart.y + chordEnd.y)/2.0
-    val sagittaX = params.sagittaRatio*(chordStart.y - chordEnd.y)
-    val sagittaY = params.sagittaRatio*(-chordStart.x + chordEnd.x)
-    val arcPoint = Point(chordMidX + sagittaX, chordMidY + sagittaY)
-    return GeneralizedCircle.perp3(
-        GeneralizedCircle.fromGCircle(chordStart),
-        GeneralizedCircle.fromGCircle(arcPoint),
-        GeneralizedCircle.fromGCircle(chordEnd),
-    )?.toGCircle() as? CircleOrLine
+    val radius = (4*sagitta + chordLength/sagittaRatio)/8.0
+    val apothem = radius - sagitta
+    return Circle(
+        x = chordMidX + apothem*chordY/chordLength,
+        y = chordMidY - apothem*chordX/chordLength,
+        radius = radius
+    )
+//    val sagittaX = params.sagittaRatio*(chordStart.y - chordEnd.y)
+//    val sagittaY = params.sagittaRatio*(-chordStart.x + chordEnd.x)
+//    val arcPoint = Point(chordMidX + sagittaX, chordMidY + sagittaY)
+//    return GeneralizedCircle.perp3(
+//        GeneralizedCircle.fromGCircle(chordStart),
+//        GeneralizedCircle.fromGCircle(arcPoint),
+//        GeneralizedCircle.fromGCircle(chordEnd),
+//    )?.toGCircle() as? CircleOrLine
+}
+
+fun computeSagittaRatio(
+    circle: Circle,
+    chordStart: Point,
+    chordEnd: Point,
+): Double {
+    val chordMidX = (chordStart.x + chordEnd.x)/2.0
+    val chordMidY = (chordStart.y + chordEnd.y)/2.0
+    val chordX = chordEnd.x - chordStart.x
+    val chordY = chordEnd.y - chordStart.y
+    val apothemX = chordMidX - circle.x
+    val apothemY = chordMidY - circle.y
+    val sign = sign(chordX*apothemY - chordY*apothemX)
+    val sagitta = circle.radius - hypot(apothemX, apothemY)
+    return sign*sagitta/hypot(chordX, chordY)
 }
