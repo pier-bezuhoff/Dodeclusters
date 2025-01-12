@@ -165,6 +165,9 @@
     <string name="choose_name">Choose a name</string>
     <string name="name">Name</string>
     <string name="open_file">Open file</string>
+    <!-- snackbar messages -->
+    <string name="locked_objects_notice">These objects are pinned, detach them to move</string>
+    <string name="locked_object_notice">This object is pinned, detach it to move</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

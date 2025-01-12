@@ -81,10 +81,14 @@ import domain.snapPointToPoints
 import domain.sortedByFrequency
 import domain.tryCatch2
 import getPlatform
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -205,6 +209,9 @@ class EditClusterViewModel : ViewModel() {
 
     private val _animations: MutableSharedFlow<ObjectAnimation> = MutableSharedFlow()
     val animations: SharedFlow<ObjectAnimation> = _animations.asSharedFlow()
+
+    val snackbarMessages: MutableSharedFlow<SnackbarMessage> =
+        MutableSharedFlow(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     var openedDialog: DialogType? by mutableStateOf(null)
         private set
@@ -1466,6 +1473,7 @@ class EditClusterViewModel : ViewModel() {
                     if (selectedIndex == null) {
                         selectedIndex = selectCircleAt(position)
                         selection = listOfNotNull(selectedIndex)
+                        highlightSelectionParents()
                     }
                 }
                 SelectionMode.Multiselect -> {
@@ -1486,6 +1494,7 @@ class EditClusterViewModel : ViewModel() {
                                     val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
                                     if (bounds != selectedCircles.toSet()) {
                                         selection = bounds.toList()
+                                        highlightSelectionParents()
                                     } else {
                                         selection = emptyList()
                                     }
@@ -1494,11 +1503,15 @@ class EditClusterViewModel : ViewModel() {
                                     val bounds: Set<Ix> = part.insides + part.outsides
                                     if (bounds != selectedCircles.toSet()) {
                                         selection = bounds.toList()
+                                        highlightSelectionParents()
                                     } else {
                                         selection = emptyList()
                                     }
                             }
                         }
+                    } else {
+                        if (selectedCircleIndex in selection)
+                            highlightSelectionParents()
                     }
                 }
                 SelectionMode.Region -> {
@@ -1961,12 +1974,12 @@ class EditClusterViewModel : ViewModel() {
         if (partialArgList?.isFull == true) {
             completeToolMode()
         }
-        val dragMoveOrTapSomething = mode == SelectionMode.Drag && (movementAfterDown || !dragDownedWithNothing)
-        if ((dragMoveOrTapSomething || mode == SelectionMode.Multiselect) &&
+        if ((mode == SelectionMode.Drag || mode == SelectionMode.Multiselect) &&
+            movementAfterDown &&
             submode is SubMode.None &&
             selection.none { isFree(it) }
         ) {
-            highlightSelectionParents() // signal locked state to the user
+            highlightSelectionParents()
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) // haxx
             toolbarState = toolbarState.copy(activeTool = EditClusterTool.Multiselect)
@@ -1984,13 +1997,20 @@ class EditClusterViewModel : ViewModel() {
     fun onLongDragCancel() {}
     fun onLongDragEnd() {}
 
+    /** Signals locked state to the user with animation & snackbar message */
     private fun highlightSelectionParents() {
         val allParents = selection.flatMap { selectedIndex ->
             expressions.immediateParentsOf(selectedIndex)
-                .minus(selection)
+                .minus(selection.toSet())
                 .mapNotNull { objects[it] }
         }
         if (allParents.isNotEmpty()) {
+            if (movementAfterDown) {
+                if (selection.size == 1)
+                    snackbarMessages.tryEmit(SnackbarMessage.LOCKED_OBJECT_NOTICE)
+                else
+                    snackbarMessages.tryEmit(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
+            }
             viewModelScope.launch {
                 _animations.emit(HighlightAnimation(allParents))
             }

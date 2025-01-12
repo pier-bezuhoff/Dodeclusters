@@ -158,5 +158,8 @@
     <string name="choose_name">Выберите название</string>
     <string name="name">Название</string>
     <string name="open_file">Открыть файл</string>
+    <!-- snackbar messages -->
+    <string name="locked_objects_notice">Объекты закрплены, открепите их чтобы перемещать</string>
+    <string name="locked_object_notice">Объект закрплён, открепите его чтобы перемещать</string>
 
 </resources>
