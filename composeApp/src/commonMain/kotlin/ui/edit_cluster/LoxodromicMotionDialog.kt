@@ -89,7 +89,6 @@ data class DefaultLoxodromicMotionParameters(
     )
 }
 
-// FIX: cancel+ok row is OOB in landscape
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun LoxodromicMotionDialog(
