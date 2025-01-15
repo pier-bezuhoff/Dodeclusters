@@ -2,34 +2,28 @@
 <html lang="en" prefix="og: https://ogp.me/ns#">
     <head>
         <meta charset="UTF-8" />
+        <link rel="icon" href="favicon.ico" sizes="48x48" />
+        <link rel="icon" type="image/svg+xml" href="favicon-128x128.svg" sizes="any" />
         <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-        <link rel="icon" type="image/svg+xml" href="favicon-128x128.svg" />
-        <link rel="icon" href="favicon.ico" />
-        <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
         <link rel="manifest" href="site.webmanifest" />
         <link rel="mask-icon" href="safari-pinned-tab.svg" color="#5bbad5" />
         <meta name="msapplication-TileColor" content="#00aba9" />
         <meta name="theme-color" content="#ffffff" />
-        <meta name="description" content="Conformal editor: vector graphics using only circles" />
+        <meta name="description" content="Circle-based vector graphics editor" />
         <meta content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=3,user-scalable=yes" name="viewport" />
         <link rel="canonical" href="https://pier-bezuhoff.github.io/Dodeclusters/">
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://pier-bezuhoff.github.io/Dodeclusters/" />
         <meta property="og:title" content="Dodeclusters Web App" />
         <meta property="og:site_name" content="Dodeclusters" />
-        <meta property="og:description" content="Conformal editor: vector graphics using only circles" />
+        <meta property="og:description" content="Circle-based vector graphics editor" />
         <meta property="og:image" content="https://raw.githubusercontent.com/pier-bezuhoff/Dodeclusters/master/docs/02inf-art.png" />
         <title>Dodeclusters Web</title>
         <script type="application/javascript" src="composeApp.js"></script>
         <meta name="google-site-verification" content="yKOpXb8Zc0SJds3eFMCCXDqQp52QWU2oVZR0exhXWxU" />
     </head>
     <body>
-        <!-- body with singular canvas bugs out Lighthouse performance causing NO_LCP -->
-        <h1 style="display: none">
-            Dodeclusters: Circle-based vector graphic editor online, everything
-            out of circular arcs.
-        </h1>
+        <!-- NOTE: body with singular canvas bugs out Lighthouse performance causing NO_LCP -->
         <canvas id="ComposeTarget"></canvas>
     </body>
 </html>
