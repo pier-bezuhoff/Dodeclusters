@@ -1,8 +1,10 @@
 package domain.cluster
 
 import androidx.compose.runtime.Immutable
+import data.geometry.Circle
 import data.geometry.CircleOrLine
-import domain.expressions.CircleConstruct
+import data.geometry.Line
+import domain.expressions.ObjectConstruct
 import kotlinx.serialization.Serializable
 
 // ClusterV2
@@ -15,8 +17,12 @@ data class Cluster(
 ) {
     fun toConstellation(): Constellation =
         Constellation(
-            points = emptyList(),
-            circles = circles.map { CircleConstruct.Concrete(it) },
+            objects = circles.map { c ->
+                when (c) {
+                    is Circle -> ObjectConstruct.ConcreteCircle(c)
+                    is Line -> ObjectConstruct.ConcreteLine(c)
+                }
+            },
             parts = parts
         )
 }

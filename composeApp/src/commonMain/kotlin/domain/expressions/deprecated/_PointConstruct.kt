@@ -1,21 +1,21 @@
-package domain.expressions
+package domain.expressions.deprecated
 
 import androidx.compose.runtime.Immutable
 import data.geometry.Point
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Serializable
 @Immutable
-sealed interface PointConstruct {
+@Serializable
+sealed interface _PointConstruct {
     @Serializable
     @SerialName("ConcretePoint")
     data class Concrete(
         val point: Point
-    ) : PointConstruct
+    ) : _PointConstruct
     @Serializable
     @SerialName("PointExpression")
     data class Dynamic(
-        val expression: Expression
-    ) : PointConstruct
+        val expression: _Expression
+    ) : _PointConstruct
 }

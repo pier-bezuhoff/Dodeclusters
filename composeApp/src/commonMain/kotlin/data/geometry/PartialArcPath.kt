@@ -1,6 +1,7 @@
 package data.geometry
 
 import androidx.compose.runtime.Immutable
+import domain.Ix
 import domain.TAU
 import domain.signNonZero
 import domain.updated
@@ -8,27 +9,49 @@ import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.hypot
 
+sealed interface ArcPathPoint {
+    sealed interface Vertex : ArcPathPoint
+    val point: Point
+    data class Free(override val point: Point) : Vertex
+    /** The vertex already exists as a point @ [index] */
+    data class Eq(override val point: Point, val index: Ix) : Vertex
+    /** The vertex is incident to a carrier object @ [carrierIndex] */
+    data class Incident(override val point: Point, val carrierIndex: Ix) : Vertex
+    /** The vertex is the 1st intersection of [carrier1Index] and [carrier2Index].
+     * Before using this check if such point already exists and use [Eq] in if it does */
+    data class Intersection(override val point: Point, val carrier1Index: Ix, val carrier2Index: Ix) : Vertex
+    /** Midpoints should not be constrained, always free */
+//    data class Midpoint(override val point: Point) : ArcPathPoint
+}
+
+sealed interface ArcPathCircle {
+    /** `null` corresponds to a [Line] */
+    val circle: Circle?
+    data class Free(override val circle: Circle?) : ArcPathCircle
+    /** The circle or line already exists @ [index] */
+    data class Eq(override val circle: Circle?, val index: Ix) : ArcPathCircle
+}
+
 // BUG: arcs often break when moving diff pts
 @Immutable
-data class ArcPath(
-    val startPoint: Point,
-    val points: List<Point> = emptyList(),
+data class PartialArcPath(
+    val startVertex: ArcPathPoint.Vertex,
+    val vertices: List<ArcPathPoint.Vertex> = emptyList(),
+    // if midpoint snaps to an existing circle, it should be
+    // marked by setting corresponding circle as Eq
     val midpoints: List<Point> = emptyList(),
-    // null Circle corresponds to a Line
-    val circles: List<Circle?> = emptyList(),
+    val circles: List<ArcPathCircle> = emptyList(),
     val startAngles: List<Double> = emptyList(),
     val sweepAngles: List<Double> = emptyList(),
-    val closed: Boolean = false,
+    val isClosed: Boolean = false,
+    /** Grabbed node: any vertex or midpoint */
     val focus: Focus? = null,
 ) {
-    val lastPoint: Point get() =
-        points.lastOrNull() ?: startPoint
-
-    val allAnchors: List<Point> get() =
-        listOf(startPoint) + points
+    val lastVertex: ArcPathPoint.Vertex get() =
+        vertices.lastOrNull() ?: startVertex
 
     val nArcs: Int get() =
-        points.size
+        vertices.size
 
     @Immutable
     sealed interface Focus {
@@ -37,26 +60,27 @@ data class ArcPath(
         data class MidPoint(val index: Int) : Focus
     }
 
-    fun previousPoint(j: Int): Point =
-        if (j == 0) startPoint
-        else points[j - 1]
+    fun previousVertex(j: Int): ArcPathPoint.Vertex =
+        if (j == 0) startVertex
+        else vertices[j - 1]
 
-    fun addNewPoint(newPoint: Point): ArcPath = copy(
-        startPoint = startPoint,
-        points = points + newPoint, midpoints = midpoints + lastPoint.middle(newPoint),
-        circles = circles + null,
+    fun addNewVertex(newVertex: ArcPathPoint.Vertex): PartialArcPath = copy(
+        startVertex = startVertex,
+        vertices = vertices + newVertex, midpoints = midpoints + lastVertex.point.middle(newVertex.point),
+        circles = circles + ArcPathCircle.Free(null),
         startAngles = startAngles + 0.0, sweepAngles = sweepAngles + 0.0
     )
 
     // i=0 is startPoint
-    fun updatePoint(i: Int, newPoint: Point): ArcPath =
+    fun updateVertex(i: Int, newVertex: ArcPathPoint.Vertex): PartialArcPath =
         // TODO: moving start or end when closed
         if (i == 0) {
-            if (points.size == 0) {
-                copy(startPoint = newPoint)
+            val newPoint = newVertex.point
+            if (vertices.isEmpty()) {
+                copy(startVertex = newVertex)
             } else { // only forward
-                val point = startPoint
-                val nextPoint = points[0]
+                val point = startVertex.point
+                val nextPoint = vertices[0].point
                 val newMidpoint = updateMidpointFromMovingEnd(point, nextPoint, midpoints[0], newPoint)
                 val newNextCircle = GeneralizedCircle.perp3(
                     GeneralizedCircle.fromGCircle(newPoint),
@@ -68,17 +92,18 @@ data class ArcPath(
                         calculateStartAngle(newPoint, newNextCircle)
                     else 0.0
                 copy(
-                    startPoint = newPoint, points = points,
+                    startVertex = newVertex, vertices = vertices,
                     midpoints = midpoints.updated(0, newMidpoint),
-                    circles = circles.updated(0, newNextCircle),
+                    circles = circles.updated(0, ArcPathCircle.Free(newNextCircle)),
                     startAngles = startAngles.updated(0, newNextStartAngle),
                     sweepAngles = sweepAngles // sweep angle stays the same
                 )
             }
-        } else if (i == points.size) { // only backward
+        } else if (i == vertices.size) { // only backward
+            val newPoint = newVertex.point
             val j = i - 1
-            val point = points[j]
-            val previousPoint = previousPoint(j)
+            val point = vertices[j].point
+            val previousPoint = previousVertex(j).point
             val newMidpoint = updateMidpointFromMovingEnd(point, previousPoint, midpoints[j], newPoint)
             val newPreviousCircle = GeneralizedCircle.perp3(
                 GeneralizedCircle.fromGCircle(previousPoint),
@@ -90,17 +115,18 @@ data class ArcPath(
                     calculateStartAngle(previousPoint, newPreviousCircle)
                 else 0.0
             copy(
-                startPoint = startPoint, points = points.updated(j, newPoint),
+                startVertex = startVertex, vertices = vertices.updated(j, newVertex),
                 midpoints = midpoints.updated(j, newMidpoint),
-                circles = circles.updated(j, newPreviousCircle),
+                circles = circles.updated(j, ArcPathCircle.Free(newPreviousCircle)),
                 startAngles = startAngles.updated(j, newPreviousStartAngle),
                 sweepAngles = sweepAngles // sweep angle stays the same
             )
         } else { // backward + forward
+            val newPoint = newVertex.point
             val j = i - 1
-            val point = points[j]
-            val previousPoint = previousPoint(j)
-            val nextPoint = points[j + 1]
+            val point = vertices[j].point
+            val previousPoint = previousVertex(j).point
+            val nextPoint = vertices[j + 1].point
             val newPreviousMidpoint = updateMidpointFromMovingEnd(point, previousPoint, midpoints[j], newPoint)
             val newPreviousCircle = GeneralizedCircle.perp3(
                 GeneralizedCircle.fromGCircle(previousPoint),
@@ -122,17 +148,19 @@ data class ArcPath(
                     calculateStartAngle(newPoint, newNextCircle)
                 else 0.0
             copy(
-                startPoint = startPoint, points = points.updated(j, newPoint),
+                startVertex = startVertex, vertices = vertices.updated(j, newVertex),
                 midpoints = midpoints.updated(j, newPreviousMidpoint).updated(i, newNextMidpoint),
-                circles = circles.updated(j, newPreviousCircle).updated(i, newNextCircle),
+                circles = circles
+                    .updated(j, ArcPathCircle.Free(newPreviousCircle))
+                    .updated(i, ArcPathCircle.Free(newNextCircle)),
                 startAngles = startAngles.updated(j, newPreviousStartAngle).updated(i, newNextStartAngle),
                 sweepAngles = sweepAngles // sweep angle stays the same
             )
         }
 
-    fun updateMidpoint(j: Int, newMidpoint: Point): ArcPath {
-        val start = previousPoint(j)
-        val end = points[j]
+    fun updateMidpoint(j: Int, newMidpoint: Point): PartialArcPath {
+        val start = previousVertex(j).point
+        val end = vertices[j].point
         val newCircle = GeneralizedCircle.perp3(
             GeneralizedCircle.fromGCircle(start),
             GeneralizedCircle.fromGCircle(newMidpoint),
@@ -146,36 +174,37 @@ data class ArcPath(
             else calculateSweepAngle(start, newMidpoint, end, newCircle)
         return copy(
             midpoints = midpoints.updated(j, newMidpoint),
-            circles = circles.updated(j, newCircle),
+            circles = circles.updated(j, ArcPathCircle.Free(newCircle)),
             startAngles = startAngles.updated(j, newStartAngle),
             sweepAngles = sweepAngles.updated(j, newSweepAngle)
         )
     }
 
-    fun moveFocused(newPoint: Point): ArcPath =
+    // TODO: snapping to create smooth connection between arcs (their circles are to touch tangentially)
+    //  also snap to existing points, intersections, existing circle=arc, incidence with existing circles
+    //  + snap midpoints to straight segment
+    fun moveFocused(newPoint: Point): PartialArcPath =
         when (focus) {
-            Focus.StartPoint -> updatePoint(0, newPoint)
-            is Focus.Point -> updatePoint(focus.index + 1, newPoint)
+            Focus.StartPoint -> updateVertex(0, ArcPathPoint.Free(newPoint))
+            is Focus.Point -> updateVertex(focus.index + 1, ArcPathPoint.Free(newPoint))
             is Focus.MidPoint -> updateMidpoint(focus.index, newPoint)
             null -> this
         }
 
-    fun closeLoop(): ArcPath =
-        addNewPoint(startPoint).copy(closed = true)
+    fun closeLoop(): PartialArcPath =
+        addNewVertex(startVertex).copy(isClosed = true)
 
-    fun deletePoint(i: Int): ArcPath {
+    fun deleteVertex(i: Int): PartialArcPath {
         // rm point[i]
         // and flatten 2 adjacent arcs
+        // or mk the deleted point into a new midpoint for its 2 neighbors
         TODO()
     }
-
-    fun scale(zoom: Float): ArcPath =
-        TODO("Scale")
 }
 
 /**
  * when [start] -> [newStart],
- * how moves the arc [midpoint]?
+ * how does the arc's [midpoint] move?
  *
  * Also works for moving end
  * */
@@ -204,7 +233,7 @@ private fun updateMidpointFromMovingEnd(
     )
 }
 
-/** From the East, clockwise */
+/** From the East, clockwise, in `[0; 2*PI]` */
 private fun calculateStartAngle(start: Point, circle: Circle): Double {
     val x = circle.x - start.x
     val y = circle.y - start.y
@@ -213,6 +242,7 @@ private fun calculateStartAngle(start: Point, circle: Circle): Double {
     return PI + atan2(y, x) // CCW and reversed y-axis cancel each other
 }
 
+/** Clockwise, `(-2*PI; 2*PI)` */
 private fun calculateSweepAngle(start: Point, midpoint: Point, end: Point, circle: Circle): Double {
     val angle = calculateAngle(circle.centerPoint, start, end)
     val midAngle = calculateAngle(circle.centerPoint, start, midpoint)
@@ -220,7 +250,7 @@ private fun calculateSweepAngle(start: Point, midpoint: Point, end: Point, circl
     val midAngle1 = (midAngle + TAU) % TAU
     val otherArc = midAngle1 > angle1
     return if (otherArc)
-        angle1 - TAU
+        angle1 - TAU // i think thats correct?
     else
         angle1
 }

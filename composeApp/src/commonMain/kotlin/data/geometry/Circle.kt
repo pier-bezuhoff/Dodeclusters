@@ -5,11 +5,12 @@ import androidx.compose.ui.geometry.Offset
 import data.kmath_complex.ComplexField
 import data.kmath_complex.r
 import data.kmath_complex.r2
+import domain.TAU
+import domain.degrees
 import domain.rotateBy
 import domain.toComplex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import ui.colorpicker.toDegree
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -41,11 +42,13 @@ data class Circle(
      * */
     val isCCW: Boolean = true,
 ) : UndirectedCircle {
-    val center: Offset get() =
-        Offset(x.toFloat(), y.toFloat())
+    val center: Offset
+        get() =
+            Offset(x.toFloat(), y.toFloat())
 
-    val centerPoint: Point get() =
-        Point(x, y)
+    val centerPoint: Point
+        get() =
+            Point(x, y)
 
     val r2: Double get() =
         radius * radius
@@ -55,10 +58,10 @@ data class Circle(
     }
 
     constructor(center: Offset, radius: Double, isCCW: Boolean = true) :
-        this(center.x.toDouble(), center.y.toDouble(), radius, isCCW)
+            this(center.x.toDouble(), center.y.toDouble(), radius, isCCW)
 
     constructor(center: Offset, radius: Float, isCCW: Boolean = true) :
-        this(center.x.toDouble(), center.y.toDouble(), radius.toDouble(), isCCW)
+            this(center.x.toDouble(), center.y.toDouble(), radius.toDouble(), isCCW)
 
     override fun project(point: Point): Point {
         val (x1, y1) = point
@@ -70,8 +73,8 @@ data class Circle(
         val vy = y1 - y
         val vLength = hypot(vx, vy)
         return Point(
-            x + (vx/vLength)*radius,
-            y + (vy/vLength)*radius
+            x + (vx / vLength) * radius,
+            y + (vy / vLength) * radius
         )
     }
 
@@ -79,42 +82,48 @@ data class Circle(
         abs((point - center).getDistance() - radius)
 
     override fun distanceFrom(point: Point): Double =
-        abs(hypot(point.x - x, point.y - y) - radius)
+        if (point == Point.CONFORMAL_INFINITY) Double.POSITIVE_INFINITY
+        else abs(hypot(point.x - x, point.y - y) - radius)
 
     fun distanceBetweenCenters(circle: Circle): Double =
         hypot(x - circle.x, y - circle.y)
 
-    /** -1 = inside, 0 on the circle, +1 = outside */
-    override fun checkPosition(point: Offset): Int {
+    override fun calculateLocation(point: Offset): RegionPointLocation {
         val distance = (center - point).getDistance()
         val r = radius.toFloat()
         return when {
-            distance < r -> if (isCCW) -1 else +1
-            distance == r -> 0
-            distance > r -> if (isCCW) +1 else -1
+            distance < r ->
+                if (isCCW) RegionPointLocation.IN
+                else RegionPointLocation.OUT
+            distance == r -> RegionPointLocation.BORDERING // this prob never happens, strict double equality
+            distance > r ->
+                if (isCCW) RegionPointLocation.OUT
+                else RegionPointLocation.IN
             else -> throw IllegalStateException("Illegal comparison")
         }
     }
 
-    /** -1 = inside, 0 on the circle, +1 = outside */
-    override fun checkPositionEpsilon(point: Point): Int {
-        if (point == Point.CONFORMAL_INFINITY)
-            return if (isCCW) +1 else -1
+    override fun calculateLocationEpsilon(point: Point): RegionPointLocation {
+        if (point == Point.CONFORMAL_INFINITY) {
+            return if (isCCW) RegionPointLocation.OUT else RegionPointLocation.IN
+        }
         val distance = hypot(point.x - x, point.y - y)
-        return if (abs(radius - distance) < EPSILON)
-            0
-        else if (distance < radius)
-            if (isCCW) -1 else +1
-        else // outside
-            if (isCCW) +1 else -1
+        return if (abs(radius - distance) < EPSILON) {
+            RegionPointLocation.BORDERING
+        } else if (distance < radius) {
+            if (isCCW) RegionPointLocation.IN else RegionPointLocation.OUT
+        } else {
+            // outside
+            if (isCCW) RegionPointLocation.OUT else RegionPointLocation.IN
+        }
     }
 
-    /** @return angle in degrees [[-180°; 180°]] measured from East up to the [point] along
-     * `this` circle counterclockwise (irrespective of its [isCCW] direction) */
-    fun point2angle(point: Point): Float =
-        atan2(-point.y + y, point.x - x).toDegree().toFloat()
+    override fun point2angle(point: Point): Float {
+        require(point != Point.CONFORMAL_INFINITY && point != centerPoint)
+        return atan2(-point.y + y, point.x - x).degrees
+    }
 
-    /** CCW order starting from the East: ENWS */
+    /** CCW order in [-[PI]; +[PI]] starting from the East: ENWS */
     override fun point2order(point: Point): Double {
         // NOTE: atan2 uses CCW y-top, x-right coordinates
         //  so we negate y for CCW direction
@@ -134,30 +143,62 @@ data class Circle(
         if (order2 > order1)
             order1 + (order2 - order1)/2.0
         else // includes order1 == order2 case
-            order1 + (2*PI - (order1 - order2))/2.0
+            order1 + (2* PI - (order1 - order2))/2.0
 //        val half = (order2 - order1).mod(2*PI)/2.0
 
-    override fun translate(vector: Offset): Circle =
+    override fun orderIsInBetween(startOrder: Double, order: Double, endOrder: Double): Boolean {
+        val o = (order + TAU) % TAU
+        val start = (startOrder + TAU) % TAU
+        val end = (endOrder + TAU) % TAU
+        return if (isCCW) {
+            if (start <= end) {
+                o in start..end
+            } else { // the arc contains order=0
+                o in start..0.0 || o in 0.0..end
+            }
+        } else {
+            if (end <= start) { // CW circle order is reversed
+                o in end..start
+            } else {
+                o in end..0.0 || o in 0.0..start
+            }
+        }
+    }
+
+    override fun translated(vector: Offset): Circle =
         Circle(center + vector, radius, isCCW)
 
-    override fun scale(focus: Offset, zoom: Float): Circle {
+    override fun scaled(focus: Offset, zoom: Float): Circle {
         val newOffset = (center - focus) * zoom + focus
         return Circle(newOffset, zoom * radius, isCCW)
     }
 
-    override fun scale(focusX: Double, focusY: Double, zoom: Double): Circle {
+    override fun scaled(focusX: Double, focusY: Double, zoom: Double): Circle {
         val newX = (x - focusX) * zoom + focusX
         val newY = (y - focusY) * zoom + focusY
         return Circle(newX, newY, zoom * radius, isCCW)
     }
 
-    override fun rotate(focus: Offset, angleDeg: Float): Circle {
-        val newOffset = (center - focus).rotateBy(angleDeg) + focus
+    override fun rotated(focus: Offset, angleInDegrees: Float): Circle {
+        val newOffset = (center - focus).rotateBy(angleInDegrees) + focus
         return Circle(newOffset, radius, isCCW)
     }
 
     override fun reversed(): Circle =
         copy(isCCW = !isCCW)
+
+    /** tangent line at [project]`(point)`, directed along the circle */
+    override fun tangentAt(point: Point): Line {
+        val p2cx = x - point.x // center-to-point
+        val p2cy = y - point.y
+        val l = hypot(p2cx, p2cy)
+        val sign = if (isCCW) +1 else -1 // if the circle is CCW, it is to the left of the tangent
+        val a = sign*p2cx/l // normal
+        val b = sign*p2cy/l
+        val (baseX, baseY) = project(point)
+        val c = -a*baseX - b*baseY
+        return Line(a, b, c)
+    }
 
     /** "⭗" case, anti-symmetric in args */
     infix fun isIn(circle: Circle): Boolean =
@@ -230,7 +271,7 @@ data class Circle(
         val p0x = hereX + nx * rho // closest point on the line to <here>
         val p0y = hereY + ny * rho
         val c = -p0x*nx - p0y*ny
-        return Line(nx*directionSign, ny*directionSign, c*directionSign)
+        return Line(nx * directionSign, ny * directionSign, c * directionSign)
     }
 
     companion object {
@@ -248,7 +289,7 @@ data class Circle(
                 val w = (z3 - z1)/(z2 - z1)
                 if (abs(w.im) <= EPSILON) // z1, z2, z3 are collinear
                     return almostALine(p1, p2)
-                val c = (z2 - z1)*(w - w.r2)/(2.0*w.im*i) + z1
+                val c = (z2 - z1)*(w - w.r2)/(2.0*w.im* i) + z1
                 val r = (z1 - c).r
                 return Circle(c.re, c.im, r)
             }
@@ -264,7 +305,7 @@ data class Circle(
                 val v = z2 - z1
                 if (v.r <= EPSILON)
                     throw IllegalArgumentException("Not a line: 2 line points $p1 and $p2 near-coincide")
-                val center = (z1 + z2)/2 + veryBigRadius*(v/v.r)*i
+                val center = (z1 + z2)/2 + veryBigRadius*(v/v.r)* i
                 return Circle(center.re, center.im, veryBigRadius)
             }
         }
@@ -314,7 +355,7 @@ data class Circle(
                             r == Double.POSITIVE_INFINITY -> // return a line
                                 throw NumberFormatException("Not a circle")
                             x == x0 && y == y0 ->
-                                Circle(x, y, r*r / r0)
+                                Circle(x, y, r * r / r0)
                             else -> {
                                 val dx = x0 - x
                                 val dy = y0 - y
@@ -350,13 +391,13 @@ data class Circle(
                     val (a1, b1, c1) = circle1
                     val (a2, b2, c2) = circle2
                     val w = a1*b2 - a2*b1
-                    if (abs(w/circle1.norm/circle2.norm) < EPSILON) { // parallel condition
+                    if (abs(w / circle1.norm / circle2.norm) < EPSILON) { // parallel condition
                         listOf(Point.CONFORMAL_INFINITY)
                     } else {
                         val wx = b1*c2 - b2*c1 // det in homogenous coordinates
                         val wy = a2*c1 - a1*c2
                         // we know that w != 0 (non-parallel)
-                        val p = Point(wx/w, wy/w)
+                        val p = Point(wx / w, wy / w)
                         val q = Point.CONFORMAL_INFINITY
                         if (circle1.directionX*a2 + circle1.directionY*b2 >= 0)
                             listOf(p, q)
@@ -373,11 +414,11 @@ data class Circle(
                     } else if (abs(distance - r) < EPSILON) { // they touch (hold hands ///)
                         listOf(Point(px, py))
                     } else {
-                        val pToIntersection = sqrt(r.pow(2) - distance*distance)
+                        val pToIntersection = sqrt(r.pow(2) - distance * distance)
                         val vx = circle1.directionX
                         val vy = circle1.directionY
-                        val p = Point(px + vx*pToIntersection, py + vy*pToIntersection)
-                        val q = Point(px - vx*pToIntersection, py - vy*pToIntersection)
+                        val p = Point(px + vx * pToIntersection, py + vy * pToIntersection)
+                        val q = Point(px - vx * pToIntersection, py - vy * pToIntersection)
                         val s = circle1.pointInBetween(p, q) // directed segment p->s->q
                         if (circle2.hasInsideEpsilon(s))
                             listOf(p, q)
@@ -402,13 +443,13 @@ data class Circle(
                         abs(abs(r1 - r2) - d) < EPSILON || // inner touch
                         abs(d - r1 - r2) < EPSILON // outer touch
                     ) {
-                        listOf(Point(x1 + dcx/d*r1, y1 + dcy/d*r1))
+                        listOf(Point(x1 + dcx / d * r1, y1 + dcy / d * r1))
                     } else {
                         val dr2 = r12 - r22
                         // reference (0->1, 1->2):
                         // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
                         val a = (d2 + dr2)/(2 * d)
-                        val h = sqrt(r12 - a*a)
+                        val h = sqrt(r12 - a * a)
                         val pcx = x1 + a * dcx / d
                         val pcy = y1 + a * dcy / d
                         val vx = h * dcx / d
@@ -425,63 +466,4 @@ data class Circle(
                 else -> throw IllegalStateException("Never")
             }
     }
-}
-
-@Immutable
-sealed interface UndirectedCircle : CircleOrLine {
-    val x: Double
-    val y: Double
-    val radius: Double
-}
-
-@Serializable
-@Immutable
-sealed interface CircleOrLine : GCircle, LocusWithOrder {
-    fun project(point: Point): Point
-    fun distanceFrom(point: Point): Double
-    fun distanceFrom(point: Offset): Double =
-        distanceFrom(Point.fromOffset(point))
-    /** <0 = inside, 0 on the circle, >0 = outside */
-    fun checkPosition(point: Offset): Int
-    /** -1 = inside, 0 on the circle, +1 = outside; also
-     * returns 0 when the distance is in (-[EPSILON]; +[EPSILON]) */
-    fun checkPositionEpsilon(point: Point): Int
-    fun hasInside(point: Offset): Boolean =
-        checkPosition(point) < 0
-    fun hasOutside(point: Offset): Boolean =
-        checkPosition(point) > 0
-    fun hasInsideEpsilon(point: Point): Boolean =
-        checkPositionEpsilon(point) < 0
-    fun hasOutsideEpsilon(point: Point): Boolean =
-        checkPositionEpsilon(point) > 0
-    /** partial order ⊆ on circles (treated as either inside or outside regions) */
-    infix fun isInside(circle: CircleOrLine): Boolean
-    /** partial order ⊇ on circles (treated as either inside or outside regions)
-     * `A isOutside B` == A ⊆ Bꟲ*/
-    infix fun isOutside(circle: CircleOrLine): Boolean
-    fun translate(vector: Offset): CircleOrLine
-    fun scale(focus: Offset, zoom: Float): CircleOrLine
-    override fun scale(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
-    fun rotate(focus: Offset, angleDeg: Float): CircleOrLine
-    override fun reversed(): CircleOrLine
-}
-
-/** Represents totally ordered set of points isomorphic to ℝ or S¹ */
-@Immutable
-sealed interface LocusWithOrder {
-    /** Either reverses the order of points within or does nothing ig */
-    fun reversed(): LocusWithOrder
-    // Constraints:
-    // order2point(point2order(p)) === p
-    // point2order(order2point(o)) === o
-    /** sort points on the circle in the order they lie on it (starting from wherever) */
-    fun point2order(point: Point): Double
-    fun order2point(order: Double): Point
-    fun orderInBetween(order1: Double, order2: Double): Double
-
-    fun orderPoints(points: Collection<Point>): List<Point> =
-        points.sortedBy { point2order(it) }
-
-    fun pointInBetween(point1: Point, point2: Point) =
-        order2point(orderInBetween(point2order(point1), point2order(point2)))
 }

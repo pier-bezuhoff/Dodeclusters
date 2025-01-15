@@ -3,7 +3,6 @@ package data.geometry
 import androidx.compose.runtime.Immutable
 import domain.signNonZero
 import kotlinx.serialization.Serializable
-import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.acosh
@@ -14,7 +13,7 @@ import kotlin.math.sqrt
 /** A circle, line, imaginary circle or point */
 @Immutable
 sealed interface GCircle {
-    fun scale(focusX: Double, focusY: Double, zoom: Double): GCircle
+    fun scaled(focusX: Double, focusY: Double, zoom: Double): GCircle
 }
 
 // TODO: Clifford algebra (geometric product + other operations)

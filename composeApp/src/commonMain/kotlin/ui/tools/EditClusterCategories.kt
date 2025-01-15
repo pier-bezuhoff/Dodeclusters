@@ -57,6 +57,7 @@ sealed class EditClusterCategory(
         listOf(
             EditClusterTool.ShowCircles,
 //            EditClusterTool.ToggleFilledOrOutline,
+            EditClusterTool.ToggleDirectionArrows,
             EditClusterTool.HideUI,
         ),
         defaultables = emptyList(),

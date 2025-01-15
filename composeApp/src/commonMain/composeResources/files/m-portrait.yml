@@ -1,188 +1,165 @@
-name: "m-portrait"
+name: "m-portrait2"
 bestCenterX: 960.0
 bestCenterY: 501.5
-circles:
+objects:
   0:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 727.8306274414063
         y: 375.89794921875
         radius: 276.5496929615601
   1:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 751.3397827148438
         y: 331.6552734375
         radius: 280.8455946305902
   2:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 350.7078857421875
         y: 203.27606201171875
         radius: 137.88759746694979
   3:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 1223.105224609375
         y: 658.90087890625
         radius: 298.17048303517674
   4:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 1240.266357421875
         y: 643.014404296875
         radius: 298.17048303517674
   5:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 1279.9927978515625
         y: 812.1995849609375
         radius: 407.24002409489964
   6:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 1339.7823486328125
         y: 798.0576171875
         radius: 448.9848342192406
   7:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 1171.30029296875
         y: 597.0608520507813
         radius: 215.69114771085805
   8:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 1183.71484375
         y: 585.5687866210938
         radius: 215.69114771085805
   9:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 346.2421875
         y: 533.7926025390625
         radius: 195.65388865641455
   10:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 457.775634765625
         y: 307.6529541015625
         radius: 72.65585832983575
   11:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 469.0887451171875
         y: 598.335205078125
         radius: 493.401123422833
   12:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 580.0123901367188
         y: 310.5482177734375
         radius: 40.56856381811942
   13:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 1265.46044921875
         y: 894.060546875
         radius: 474.61610519440563
   14:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 1320.582763671875
         y: 932.3302001953125
         radius: 523.2674116010619
   15:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 566.9862060546875
         y: 313.1981201171875
         radius: 19.159924882585823
   16:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 571.1868896484375
         y: 355.5255126953125
         radius: 149.4966243242658
   17:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 536.3463134765625
         y: 369.626708984375
         radius: 149.4966243242658
   18:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 630.3246459960938
         y: 232.60198974609375
         radius: 44.1157816957779
   19:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 810.9307861328125
         y: 323.0142822265625
         radius: 38.89061194400529
   20:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 760.2275390625
         y: 335.991943359375
         radius: 87.00163518371701
   21:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 1048.0078125
         y: 375.9676513671875
         radius: 270.18148767049934
   22:
-    CircleOrLine:
-      type: "ConcreteCircleOrLine"
-      circleOrLine:
-        type: "circle"
+    construct:
+      type: "ConcreteCircle"
+      circle:
         x: 798.3011474609375
         y: 378.5919189453125
         radius: 64.07141400593682

@@ -34,6 +34,8 @@
     <string name="toggle_filled_or_outline_description">Switch between showing only region borders vs filled insides</string>
     <string name="hide_ui_name">Hide UI</string>
     <string name="hide_ui_description">Hide UI for 30s</string>
+    <string name="toggle_direction_arrows_name">Show/hide arrows</string>
+    <string name="toggle_direction_arrows_description">Show/hide arrows indicating direction of selected circles and lines</string>
     <string name="palette_name">Palette</string>
     <string name="palette_description">Pick colors</string>
     <string name="applied_color_name">Applied color</string>
@@ -163,6 +165,10 @@
     <string name="choose_name">Choose a name</string>
     <string name="name">Name</string>
     <string name="open_file">Open file</string>
+    <!-- snackbar messages -->
+    <string name="locked_objects_notice">These objects are pinned, detach them to move</string>
+    <string name="locked_object_notice">This object is pinned, detach it to move</string>
+    <string name="imaginary_circle_notice">Construction resulted in an imaginary circle (invisible but present)</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

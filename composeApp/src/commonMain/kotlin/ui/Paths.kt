@@ -9,7 +9,8 @@ import data.geometry.CircleOrLine
 import data.geometry.EPSILON2
 import data.geometry.Line
 import domain.cluster.LogicalRegion
-import domain.cluster.ConcreteArcPath
+import domain.cluster.ConcreteClosedArcPath
+import domain.cluster.ConcreteOpenArcPath
 import getPlatform
 import kotlin.math.abs
 import kotlin.math.pow
@@ -214,37 +215,51 @@ fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
     }
 }
 
-// Q: how does it track inside-vs-outside?
-fun arcs2path(
-    arcs: ConcreteArcPath,
-): Path {
+fun ConcreteClosedArcPath.toPath(): Path {
     val path = Path()
-    if (arcs.isContinuous) { // idk about drawing non-continuous ones
-        arcs.intersectionPoints.firstOrNull()?.let { startPoint ->
-            path.moveTo(startPoint.x.toFloat(), startPoint.y.toFloat())
-        }
-        val indices =
-            if (arcs.isClosed) arcs.indices
-            else 0 until (arcs.size - 1) // ignore last arc for non-closed contour
-        for (i in indices) {
-            when (arcs.circles[i]) {
-                is Line -> {
-                    val cyclicNextIndex = (i + 1) % arcs.size
-                    val nextPoint = arcs.intersectionPoints[cyclicNextIndex]!!
-                    path.lineTo(nextPoint.x.toFloat(), nextPoint.y.toFloat())
-                }
-                is Circle -> {
-                    path.arcTo(
-                        rect = arcs.rects[i],
-                        startAngleDegrees = arcs.startAngles[i],
-                        sweepAngleDegrees = arcs.sweepAngles[i],
-                        forceMoveTo = false
-                    )
-                }
+    intersectionPoints.firstOrNull()?.let { startPoint ->
+        path.moveTo(startPoint.x.toFloat(), startPoint.y.toFloat())
+    }
+    for (i in indices) {
+        when (circles[i]) {
+            is Line -> {
+                val cyclicNextIndex = (i + 1) % size
+                val nextPoint = intersectionPoints[cyclicNextIndex]
+                path.lineTo(nextPoint.x.toFloat(), nextPoint.y.toFloat())
+            }
+            is Circle -> {
+                path.arcTo(
+                    rect = rects[i],
+                    startAngleDegrees = startAngles[i],
+                    sweepAngleDegrees = sweepAngles[i],
+                    forceMoveTo = false
+                )
             }
         }
-        if (arcs.isClosed)
-            path.close() // just in case
+    }
+    path.close() // just in case
+    return path
+}
+
+fun ConcreteOpenArcPath.toPath(): Path {
+    val path = Path()
+    path.moveTo(startPoint.x.toFloat(), startPoint.y.toFloat())
+    for ((i, circle) in circles.withIndex()) {
+        when (circle) {
+            is Line -> {
+                // there are 1 more intersection points than circles in open arc path
+                val nextPoint = intersectionPoints[i + 1]
+                path.lineTo(nextPoint.x.toFloat(), nextPoint.y.toFloat())
+            }
+            is Circle -> {
+                path.arcTo(
+                    rect = rects[i],
+                    startAngleDegrees = startAngles[i],
+                    sweepAngleDegrees = sweepAngles[i],
+                    forceMoveTo = false
+                )
+            }
+        }
     }
     return path
 }

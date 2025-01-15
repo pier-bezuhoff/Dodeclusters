@@ -46,7 +46,7 @@ fun combinations(n: Int, r: Int): Sequence<List<Int>> = sequence {
 fun <T> Iterable<T>.updated(index: Int, newElement: T): List<T> =
     this.toMutableList().apply { this[index] = newElement }
 
-fun reindexingMap(originalIndices: IntRange, deletedIndices: Set<Ix>): Map<Ix, Ix> {
+fun reindexingMap(originalIndices: Iterable<Ix>, deletedIndices: Set<Ix>): Map<Ix, Ix> {
     val re = mutableMapOf<Ix, Ix>()
     var shift = 0
     for (ix in originalIndices) {

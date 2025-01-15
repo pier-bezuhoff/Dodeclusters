@@ -38,6 +38,10 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -47,15 +51,20 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import data.geometry.CircleOrLine
+import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.collapse
@@ -79,6 +88,8 @@ import domain.io.OpenFileButton
 import domain.io.SaveData
 import domain.io.SaveFileButton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -114,12 +125,19 @@ fun EditClusterScreen(
     val viewModel: EditClusterViewModel = viewModel(
         factory = EditClusterViewModel.Factory
     )
+    val snackbarHostState = remember { SnackbarHostState() }
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(
         modifier =
         if (keyboardActions == null)
             Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
         else Modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) { data ->
+            Snackbar(data,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        } },
         floatingActionButton = {
             if (!isLandscape && viewModel.showUI) {
                 // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
@@ -218,7 +236,7 @@ fun EditClusterScreen(
             if (viewModel.partialArgList?.isFull == true) {
                 val (startCircle, endCircle) = viewModel.partialArgList!!.args
                     .map {
-                        viewModel.circles[(it as Arg.CircleIndex).index]!!
+                        viewModel.objects[(it as Arg.CircleIndex).index] as CircleOrLine
                     }
                 CircleInterpolationDialog(
                     startCircle, endCircle,
@@ -232,7 +250,7 @@ fun EditClusterScreen(
             if (viewModel.partialArgList?.isFull == true) {
                 val (startCircle, endCircle) = viewModel.partialArgList!!.args
                     .map {
-                        viewModel.circles[(it as Arg.CircleIndex).index]!!
+                        viewModel.objects[(it as Arg.CircleIndex).index] as CircleOrLine
                     }
                 CircleExtrapolationDialog(
                     startCircle, endCircle,
@@ -249,7 +267,7 @@ fun EditClusterScreen(
                     .map { it as Arg.Point }
                     .map { when (it) {
                         is Arg.Point.XY -> it.toPoint()
-                        is Arg.Point.Index -> viewModel.points[it.index]
+                        is Arg.Point.Index -> viewModel.objects[it.index] as? Point
                     } }
                 if (divergencePoint != null && convergencePoint != null) {
                     LoxodromicMotionDialog(
@@ -290,6 +308,12 @@ fun EditClusterScreen(
                     }
                 }
             }
+        }
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.snackbarMessages.collectLatest { message ->
+            // TODO: move on-selection action prompt here instead
+            snackbarHostState.showSnackbar(getString(message.stringResource), duration = message.duration)
         }
     }
 }

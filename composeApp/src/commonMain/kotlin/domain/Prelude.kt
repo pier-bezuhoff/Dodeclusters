@@ -7,7 +7,7 @@ import kotlin.math.roundToInt
 
 // we unironically need Prelude for kotlin...
 
-/** 2*[PI], 1 whole turn */
+/** 2*[PI], 360°, 1 whole turn */
 const val TAU: Double = 2*PI
 
 /** Index */
@@ -43,6 +43,15 @@ fun signNonZero(x: Double): Int =
 fun Double.divideWithRemainder(divisor: Double): Double =
     floor(this/divisor)
 
+/** radian-to-degree conversion */
+inline val Double.degrees: Float get() =
+    (this*180/PI).toFloat()
+
+/** degree-to-radian conversion */
+inline val Float.radians: Double get() =
+    this*PI/180.0
+
+// sum types doko
 inline fun <reified A, reified B> tryCatch2(
     crossinline tryBlock: () -> Unit,
     crossinline catchBlock: (Exception) -> Unit,
@@ -60,3 +69,8 @@ inline fun <reified A, reified B> tryCatch2(
         finallyBlock()
     }
 }
+
+/** To be used in `when` pattern matching in cases that should NEVER be reached */
+@Throws(IllegalStateException::class)
+fun never(): Nothing =
+    throw IllegalStateException("Never")

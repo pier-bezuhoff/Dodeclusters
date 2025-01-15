@@ -67,6 +67,7 @@ import dodeclusters.composeapp.generated.resources.flow_fill_name
 import dodeclusters.composeapp.generated.resources.flow_multiselect_description
 import dodeclusters.composeapp.generated.resources.flow_multiselect_name
 import dodeclusters.composeapp.generated.resources.fullscreen
+import dodeclusters.composeapp.generated.resources.hide_haired_arrow
 import dodeclusters.composeapp.generated.resources.hide_layers
 import dodeclusters.composeapp.generated.resources.hide_ui_description
 import dodeclusters.composeapp.generated.resources.hide_ui_name
@@ -114,6 +115,8 @@ import dodeclusters.composeapp.generated.resources.spiral
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_name
+import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_description
+import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_name
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_description
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_name
 import dodeclusters.composeapp.generated.resources.toggle_select_all_description
@@ -123,6 +126,7 @@ import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.upload
 import dodeclusters.composeapp.generated.resources.visible_circle
+import dodeclusters.composeapp.generated.resources.visible_haired_arrow
 import domain.SIGNATURE_1_POINT
 import domain.SIGNATURE_2_CIRCLES
 import domain.SIGNATURE_2_GENERALIZED_CIRCLES
@@ -133,7 +137,7 @@ import domain.SIGNATURE_INDEXED_AND_CIRCLE
 import domain.SIGNATURE_N_POINTS_PLACEHOLDER
 import domain.Signature
 import domain.io.DdcV2
-import domain.io.DdcV3
+import domain.io.DdcV4
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
 import org.jetbrains.compose.resources.StringResource
@@ -181,8 +185,8 @@ sealed class EditClusterTool(
         Res.string.save_cluster_name,
         icon = Res.drawable.save
     ) {
-        const val DEFAULT_NAME = DdcV3.DEFAULT_NAME
-        const val EXTENSION = DdcV3.DEFAULT_EXTENSION // yml
+        const val DEFAULT_NAME = DdcV4.DEFAULT_NAME
+        const val EXTENSION = DdcV4.DEFAULT_EXTENSION // yml
         val otherDisplayedExtensions = setOf("yaml", "ddc", "ddu")
         const val MIME_TYPE = "application/yaml"
     }
@@ -274,6 +278,12 @@ sealed class EditClusterTool(
         Res.string.hide_ui_name,
         Res.string.hide_ui_description,
         Res.drawable.fullscreen
+    )
+    data object ToggleDirectionArrows: Switch(
+        Res.string.toggle_direction_arrows_name,
+        Res.string.toggle_direction_arrows_description,
+        Res.drawable.visible_haired_arrow,
+        Res.drawable.hide_haired_arrow,
     )
     data object AddBackgroundImage: Action(
         Res.string.stub,

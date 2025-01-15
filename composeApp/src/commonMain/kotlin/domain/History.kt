@@ -1,5 +1,6 @@
 package domain
 
+// MAYBE: additionally collapse same-tag different-targets when history buffer overflows
 // TODO: create tests
 // MAYBE: reset lastCommandTag every VM.onUp
 // s_i := [past][[i]],
@@ -10,16 +11,17 @@ package domain
 // s0  s1  s2 ... s_k    | s_k+1 |      s_k+2     s_k+3
 // ^ undo's = past       |  ^^^current state  \  ^^ redo's = future
 class History<S>(
-    val saveState: () -> S,
-    val loadState: (S) -> Unit,
+    private val saveState: () -> S,
+    private val loadState: (S) -> Unit,
+    private val historySize: Int = 100,
 ) {
     // tagged & grouped gap buffer with 'attention'/recency
     private var lastCommand: Command? = null
     private var lastCommandTag: Command.Tag? = null
     // we group history by commands and record it only when the new command differs from the previous one
     // past -> now -> future
-    private val past = ArrayDeque<S>(HISTORY_SIZE)
-    private val future = ArrayDeque<S>(HISTORY_SIZE)
+    private val past = ArrayDeque<S>(historySize)
+    private val future = ArrayDeque<S>(historySize)
     val undoIsEnabled: Boolean get() =
         past.isNotEmpty()
     val redoIsEnabled: Boolean get() =
@@ -36,10 +38,11 @@ class History<S>(
             command != lastCommand ||
             tag != null && lastCommandTag != null && tag != lastCommandTag
         ) {
-            if (past.size == HISTORY_SIZE) {
+            if (past.size == historySize) {
                 past.removeAt(1) // preserve the original @ 0
             }
-            past.addLast(saveState())
+            val state = saveState()
+            past.addLast(state)
             lastCommand = command
             lastCommandTag = tag
         }
@@ -83,9 +86,5 @@ class History<S>(
         future.clear()
         lastCommand = null
         lastCommandTag = null
-    }
-
-    companion object {
-        const val HISTORY_SIZE = 100
     }
 }

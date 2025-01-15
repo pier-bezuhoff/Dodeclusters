@@ -73,8 +73,10 @@ data class Line(
         )
     }
 
-    /** Project Point([x], [y]) down onto this line */
+    /** Project Point(x, y) down onto this line */
     override fun project(point: Point): Point {
+        if (point == Point.CONFORMAL_INFINITY)
+            return point
         val (x, y) = point
         val t = b*x - a*y
         val n2 = a*a + b*b
@@ -88,22 +90,26 @@ data class Line(
         abs(a*point.x + b*point.y + c)/norm
 
     override fun distanceFrom(point: Point): Double =
-        abs(a*point.x + b*point.y + c)/norm
+        if (point == Point.CONFORMAL_INFINITY) 0.0
+        else abs(a*point.x + b*point.y + c)/norm
 
-    /** <0 = inside, 0 on the line, >0 = outside */
-    override fun checkPosition(point: Offset): Int =
-        -(a*point.x + b*point.y + c).compareTo(0.0)
+    override fun calculateLocation(point: Offset): RegionPointLocation {
+        val m = -(a * point.x + b * point.y + c)
+        return if (m < 0) RegionPointLocation.IN
+        else if (m > 0) RegionPointLocation.OUT
+        else RegionPointLocation.BORDERING
+    }
 
-    override fun checkPositionEpsilon(point: Point): Int {
+    override fun calculateLocationEpsilon(point: Point): RegionPointLocation {
         if (point == Point.CONFORMAL_INFINITY)
-            return 0
+            return RegionPointLocation.BORDERING
         val t = (a*point.x + b*point.y + c)/norm
         return if (abs(t) < EPSILON)
-            0
+            RegionPointLocation.BORDERING
         else if (t > 0) // inside
-            -1
+            RegionPointLocation.IN
         else // outside
-            +1
+            RegionPointLocation.OUT
     }
 
     // conf_inf < projection along line direction; order 0 = project(0,0)
@@ -138,23 +144,29 @@ data class Line(
         else // order2 < order1
             order1 - (order1 - order2)/2.0
 
-    override fun translate(vector: Offset): Line =
+    override fun orderIsInBetween(startOrder: Double, order: Double, endOrder: Double): Boolean {
+        return if (startOrder <= endOrder)
+            order in startOrder..endOrder
+        else order <= endOrder || startOrder <= order // segment contains infinity
+    }
+
+    override fun translated(vector: Offset): Line =
        Line(a, b, c - (a*vector.x + b*vector.y))
 
-    override fun scale(focus: Offset, zoom: Float): Line {
+    override fun scaled(focus: Offset, zoom: Float): Line {
         // dist1 -> zoom * dist 1
         val newC = zoom*(a*focus.x + b*focus.y + c) - a*focus.x - b*focus.y
         return Line(a, b, newC)
     }
 
-    override fun scale(focusX: Double, focusY: Double, zoom: Double): Line {
+    override fun scaled(focusX: Double, focusY: Double, zoom: Double): Line {
         // dist1 -> zoom * dist 1
         val newC = zoom*(a*focusX + b*focusY + c) - a*focusX - b*focusY
         return Line(a, b, newC)
     }
 
-    override fun rotate(focus: Offset, angleDeg: Float): Line {
-        val newNormal = normalVector.rotateBy(angleDeg)
+    override fun rotated(focus: Offset, angleInDegrees: Float): Line {
+        val newNormal = normalVector.rotateBy(angleInDegrees)
         val newA = newNormal.x.toDouble()
         val newB = newNormal.y.toDouble()
         val newC = (hypot(newA, newB)/hypot(a, b)) * (a*focus.x + b*focus.y + c) - newA*focus.x - newB*focus.y
@@ -192,6 +204,9 @@ data class Line(
                 l1.a == -l2.a && l1.b == -l2.b && l1.c <= -l2.c // MAYBE: use epsilon eq here
             }
         }
+
+    override fun tangentAt(point: Point): Line =
+        this
 
     companion object {
         fun by2Points(p1: Offset, p2: Offset): Line {

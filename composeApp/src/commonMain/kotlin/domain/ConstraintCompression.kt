@@ -5,7 +5,9 @@ import data.geometry.CircleOrLine
 import data.geometry.EPSILON
 import data.geometry.Line
 import data.geometry.Point
-import domain.cluster.AbstractArcPath
+import data.geometry.RegionPointLocation
+import domain.cluster.ArcPath
+import domain.cluster.ClosedArcPath
 
 /** [ins] and [outs] delimiters must not contain `null` circles */
 fun compressConstraints(
@@ -62,8 +64,8 @@ fun compressConstraintsByIntersectionPoints(
 ): Pair<List<Ix>, List<Ix>> {
 
     fun testIfPointFitsOurRequirements(point: Point): Boolean =
-        ins.all { it.checkPositionEpsilon(point) <= 0 } && // inside or bordering ins
-        outs.all { it.checkPositionEpsilon(point) >= 0 } // outside or bordering outs
+        ins.all { it.calculateLocationEpsilon(point) != RegionPointLocation.OUT } && // inside or bordering ins
+        outs.all { it.calculateLocationEpsilon(point) != RegionPointLocation.IN } // outside or bordering outs
 
     val allCircles = ins + outs
     val n = allCircles.size
@@ -117,7 +119,8 @@ fun compressConstraintsByIntersectionPoints(
                 val ip2 = orderedIPs[k]
                 val mid: Point =
                     if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY) {
-                        c.pointInBetween(Point.CONFORMAL_INFINITY, ip2)
+                        // cyclic order is valid everywhere (on circles & lines) EXCEPT the first point on a line
+                        c.pointInBetween(Point.CONFORMAL_INFINITY, ip2) // (-inf; #0)
                     } else {
                         val prevK =
                             if (k == 0)
@@ -149,8 +152,8 @@ fun compressConstraintsByIntersectionPoints(
                 val repeatIx = extendedIntersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
                 if (repeatIx == -1) { // new ip
                     val itFits =
-                        essentialIns.all { ins[it].checkPositionEpsilon(ip) <= 0 } && // inside or bordering ins
-                        essentialOuts.all { outs[it].checkPositionEpsilon(ip) >= 0 } // outside or bordering outs
+                        essentialIns.all { ins[it].calculateLocationEpsilon(ip) != RegionPointLocation.OUT } && // inside or bordering ins
+                        essentialOuts.all { outs[it].calculateLocationEpsilon(ip) != RegionPointLocation.IN } // outside or bordering outs
                     if (itFits)
                         extendedIntersections.add(ip)
                 }
@@ -195,13 +198,13 @@ fun constraints2arcpaths(
     ins: List<Ix>,
     outs: List<Ix>,
     allCircles: List<CircleOrLine>,
-): List<AbstractArcPath> {
+): List<ClosedArcPath> {
     val inCircles = ins.map { allCircles[it] }
     val outCircles = outs.map { allCircles[it] }
 
     fun testIfPointFitsOurRequirements(point: Point): Boolean =
-        inCircles.all { it.checkPositionEpsilon(point) <= 0 } && // inside or bordering ins
-        outCircles.all { it.checkPositionEpsilon(point) >= 0 } // outside or bordering outs
+        inCircles.all { it.calculateLocationEpsilon(point) != RegionPointLocation.OUT } && // inside or bordering ins
+        outCircles.all { it.calculateLocationEpsilon(point) != RegionPointLocation.IN } // outside or bordering outs
 
     val n = allCircles.size
     val intersections = mutableListOf<Point>()
@@ -232,7 +235,7 @@ fun constraints2arcpaths(
         }
     }
     val arcs = mutableSetOf<Arc>()
-    // find all the circles arcs of which define the edges of our region
+    // find all the circles, arcs of which define the edges of our region
     for (i in 0 until n) {
         val c = allCircles[i]
         val orderedIPs = c.orderPoints(circle2points[i].map { intersections[it] })
@@ -248,9 +251,10 @@ fun constraints2arcpaths(
                 // TODO: keep track of 'order' and calculate arc length to skip extremely small arcs
                 val ip2: Point = orderedIPs[k]
                 val ip1: Point =
-                    if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY)
-                        TODO("why") // Point.CONFORMAL_INFINITY // ?
-                    else {
+                    if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY) {
+                        // cyclic order is valid everywhere (on circles & lines) EXCEPT the first point on a line
+                        Point.CONFORMAL_INFINITY // (-inf; #0)
+                    } else {
                         val prevK =
                             if (k == 0)
                                 m - 1
@@ -274,17 +278,19 @@ fun constraints2arcpaths(
         .toMutableMap()
     var focus = arcsByStart.keys.first()
     var arcPath: List<Arc.Normal> = emptyList()
-    val paths = mutableListOf<AbstractArcPath>()
+    val paths = mutableListOf<ClosedArcPath>()
     while (arcsByStart.isNotEmpty()) {
         val possibleContinuations = arcsByStart[focus] ?: emptyList()
         when (possibleContinuations.size) {
             0 -> {
                 arcsByStart.remove(focus)
                 if (arcPath.isNotEmpty()) {
-                    paths.add(AbstractArcPath(
-                        arcPath.map { 1 + it.circleIndex },
-                        isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
-                    ))
+                    val isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
+                    if (isClosed)
+                        paths.add(ClosedArcPath(
+                            vertices = TODO(),
+                            arcs = arcPath.map { 1 + it.circleIndex }
+                        ))
                 }
                 arcPath = emptyList()
                 focus = arcsByStart.keys.first()
@@ -321,14 +327,22 @@ fun constraints2arcpaths(
         }
     }
     if (arcPath.isNotEmpty()) {
-        paths.add(AbstractArcPath(
-            arcPath.map { 1 + it.circleIndex },
-            isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
-        ))
+        val isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
+        if (isClosed)
+            paths.add(ClosedArcPath(
+                vertices =
+                    if (arcPath.size == 1) emptyList()
+                    else TODO(),
+                arcs = arcPath.map { 1 + it.circleIndex })
+            )
     }
     val fullArcs = arcs.filterIsInstance<Arc.Full>()
     for (fullArc in fullArcs) {
-        paths.add(AbstractArcPath(listOf(fullArc.circleIndex + 1)))
+        val i = fullArc.circleIndex
+        paths.add(ClosedArcPath(
+            vertices = emptyList(),
+            arcs = listOf(i + 1))
+        )
     }
     return paths
 }

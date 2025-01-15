@@ -2,6 +2,7 @@ package ui.edit_cluster
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -18,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -28,7 +30,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -53,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GeneralizedCircle
+import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
@@ -72,7 +74,6 @@ import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
 import ui.visibleHalfPlanePath
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -114,28 +115,27 @@ fun BoxScope.EditClusterCanvas(
         DodeclustersColors.strongSalad
     val selectedPointColor = selectedCircleColor
     val clusterPathAlpha = 1f
-        //0.7f
+    //0.7f
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
-    val maxDecayAlpha = 0.2f
-    val fullDecayDuration = 1_500 // millis
-    val alpha0To1Duration = fullDecayDuration/30
-    val alpha1To0Duration = fullDecayDuration*29/30
-    val animations: MutableMap<CircleAnimation, Animatable<Float, AnimationVector1D>> =
-        remember { mutableMapOf() }
+    val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
+        remember { mutableStateMapOf() }
     val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch { // listen to circle animations
-        viewModel.circleAnimations.collect { event ->
-            launch {
-                val animatable = Animatable(0f)
-                animations[event] = animatable
-                animatable.animateTo(maxDecayAlpha, tween(alpha0To1Duration, easing = LinearEasing))
-                animatable.animateTo(
-                    targetValue = 0f,
-                    tween(alpha1To0Duration, easing = LinearEasing),
+        viewModel.animations.collect { event ->
+            // MAYBE: keep track of Job's created by launch'es in case we need to cancel them prematurely
+            when (event) {
+                is ColoredContourAnimation -> launch { // parallel multiplexer structure
+                    val animatable = Animatable(0f)
+                    animations[event] = animatable
+                    animatable.animateTo(event.maxAlpha, tween(event.alpha01Duration, easing = LinearEasing))
+                    animatable.animateTo(
+                        targetValue = 0f,
+                        tween(event.alpha10Duration, easing = FastOutLinearInEasing),
 //                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
-                )
-                animations.remove(event) // idk, this might be bad
+                    )
+                    animations.remove(event) // idk, this might be bad
+                }
             }
         }
     }
@@ -165,11 +165,11 @@ fun BoxScope.EditClusterCanvas(
     ) {
         translate(viewModel.translation.x, viewModel.translation.y) {
             val visibleRect = size.toRect().translate(-viewModel.translation)
-            drawAnimation(animations, visibleRect)
             // TODO: hoist VM here
             drawParts(viewModel, visibleRect, clusterPathAlpha, circleStroke)
+            drawAnimation(animations, visibleRect, strokeWidth)
             if (viewModel.showCircles)
-                drawCircles(viewModel, visibleRect, circleColor, freeCircleColor, circleStroke, pointColor, freePointColor, pointRadius)
+                drawObjects(viewModel, visibleRect, circleColor, freeCircleColor, circleStroke, pointColor, freePointColor, pointRadius)
             drawSelectedCircles(viewModel, visibleRect, selectedCircleColor, thiccSelectionCircleAlpha, circleThiccStroke, selectedPointColor, pointRadius)
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, scaleIndicatorColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
@@ -182,13 +182,13 @@ fun BoxScope.EditClusterCanvas(
             if (viewModel.selectionIsLocked) {
                 LockedCircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
             } else {
-                CircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
+                CircleSelectionContextActions(viewModel.canvasSize, viewModel.showDirectionArrows, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
             }
         } else if (viewModel.pointSelectionIsActive) {
             PointSelectionContextActions(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel::toolAction)
         } else if (
             viewModel.mode == ToolMode.ARC_PATH &&
-            viewModel.arcPathUnderConstruction?.nArcs?.let { it >= 1 } == true
+            viewModel.partialArcPath?.nArcs?.let { it >= 1 } == true
         ) {
             ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
         }
@@ -231,8 +231,8 @@ private fun SelectionsCanvas(
                     viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection
                 )
             ) {
-                val circles = viewModel.circleSelection
-                    .mapNotNull { viewModel.circles[it] }
+                val circles = viewModel.selection
+                    .mapNotNull { viewModel.objects[it] as? CircleOrLine }
                 for (circle in circles) {
                     // alpha = where selection lines are shown
                     // dst out = erase the BG rectangle => show hatching thats drawn behind it
@@ -413,22 +413,26 @@ private fun DrawScope.drawArrowsPatchedForAndroid(
 }
 
 private fun DrawScope.drawAnimation(
-    animations: Map<CircleAnimation, Animatable<Float, AnimationVector1D>>,
-    visibleRect: Rect
+    animations: Map<ColoredContourAnimation, Animatable<Float, AnimationVector1D>>,
+    visibleRect: Rect,
+    strokeWidth: Float,
 ) {
-    val visibleScreenPath = Path().apply { addRect(visibleRect) }
-    for ((circleAnimation, decayAlpha) in animations) {
-        for (circle in circleAnimation.circles) {
-            val color = when (circleAnimation) {
-                is CircleAnimation.Entrance -> Color.Green
-                is CircleAnimation.ReEntrance -> Color.Blue
-                is CircleAnimation.Exit -> Color.Red
-            }
+    val borderStrokeWidth = 8*strokeWidth
+    val pointRadius = 6*strokeWidth
+    val visibleScreenPath = Path().apply {
+        addRect(visibleRect.inflate(10*strokeWidth))
+    }
+    for ((animation, alpha) in animations) {
+        for (circle in animation.objects) {
+            val color = animation.color
             when (circle) {
                 is Circle -> {
-                    val path = circle2path(circle) // MAYBE: excessive, it optimizes naught
+                    val path = circle2path(circle)
                     path.op(path, visibleScreenPath, PathOperation.Intersect)
-                    drawPath(path, color, alpha = decayAlpha.value)
+                    val style =
+                        if (animation.fillCircle) Fill
+                        else Stroke(borderStrokeWidth)
+                    drawPath(path, color, style = style, alpha = alpha.value)
                 }
                 is Line -> {
                     val maxDim = visibleRect.maxDimension
@@ -436,16 +440,20 @@ private fun DrawScope.drawAnimation(
                     val direction =  circle.directionVector
                     val farBack = pointClosestToScreenCenter - direction * maxDim
                     val farForward = pointClosestToScreenCenter + direction * maxDim
-                    drawLine(color, farBack, farForward, strokeWidth = 20f, alpha = decayAlpha.value)
+                    drawLine(color, farBack, farForward, strokeWidth = borderStrokeWidth, alpha = alpha.value)
 //                    val path = visibleHalfPlanePath(circle, visibleRect)
 //                    drawPath(path, color, alpha = decayAlpha.value)
                 }
+                is Point -> {
+                    drawCircle(color, pointRadius, circle.toOffset(), alpha = alpha.value)
+                }
+                is ImaginaryCircle -> {}
             }
         }
     }
 }
 
-private fun DrawScope.drawCircles(
+private fun DrawScope.drawObjects(
     viewModel: EditClusterViewModel,
     visibleRect: Rect,
     circleColor: Color,
@@ -456,35 +464,35 @@ private fun DrawScope.drawCircles(
     pointRadius: Float
 ) {
     if (viewModel.circleSelectionIsActive) {
-        for ((ix, circle) in viewModel.circles.withIndex()) {
-            if (circle != null && ix !in viewModel.circleSelection) {
+        for ((ix, circle) in viewModel.objects.withIndex()) {
+            if (circle is CircleOrLine && ix !in viewModel.selection) {
                 val color =
-                    viewModel.circleColors[ix] ?:
-                    if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
+                    viewModel.objectColors[ix] ?:
+                    if (viewModel.isFree(ix)) freeCircleColor else circleColor
                 drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
             }
         }
     } else {
-        for ((ix, circle) in viewModel.circles.withIndex()) {
-            if (circle != null) {
+        for ((ix, circle) in viewModel.objects.withIndex()) {
+            if (circle is CircleOrLine) {
                 val color =
-                    viewModel.circleColors[ix] ?:
-                    if (viewModel.isFreeCircle(ix)) freeCircleColor else circleColor
+                    viewModel.objectColors[ix] ?:
+                    if (viewModel.isFree(ix)) freeCircleColor else circleColor
                 drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
             }
         }
     }
     if (viewModel.pointSelectionIsActive) {
-        for ((ix, point) in viewModel.points.withIndex()) {
-            if (point != null && ix !in viewModel.pointSelection) {
-                val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
+        for ((ix, point) in viewModel.objects.withIndex()) {
+            if (point is Point && ix !in viewModel.selection) {
+                val color = if (viewModel.isFree(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
         }
     } else {
-        for ((ix, point) in viewModel.points.withIndex()) {
-            if (point != null) {
-                val color = if (viewModel.isFreePoint(ix)) freePointColor else pointColor
+        for ((ix, point) in viewModel.objects.withIndex()) {
+            if (point is Point) {
+                val color = if (viewModel.isFree(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
         }
@@ -505,18 +513,18 @@ private fun DrawScope.drawSelectedCircles(
         (viewModel.circleSelectionIsActive ||
         viewModel.mode == SelectionMode.Region && viewModel.restrictRegionsToSelection)
     ) {
-        for (ix in viewModel.circleSelection) {
-            val circle = viewModel.circles[ix]
-            if (circle != null) {
+        for (ix in viewModel.selection) {
+            val circle = viewModel.objects[ix]
+            if (circle is CircleOrLine) {
                 val color =
-                    viewModel.circleColors[ix] ?:
+                    viewModel.objectColors[ix] ?:
                     selectedCircleColor
                 drawCircleOrLine(
                     circle, visibleRect, color,
                     alpha = thiccSelectionCircleAlpha,
                     style = circleThiccStroke
                 )
-                if (EditClusterViewModel.DRAW_ARROWS_ON_SELECTED_CIRCLES) {
+                if (viewModel.showDirectionArrows) {
                     if (patchForAndroid)
                         drawArrowsPatchedForAndroid(circle, visibleRect, color)
                     else
@@ -526,7 +534,7 @@ private fun DrawScope.drawSelectedCircles(
         }
     }
     if (viewModel.pointSelectionIsActive) {
-        val points = viewModel.pointSelection.mapNotNull { viewModel.points[it] }
+        val points = viewModel.selection.mapNotNull { viewModel.objects[it] as? Point }
         for (point in points) {
             drawCircle(selectedPointColor, pointRadius, point.toOffset())
         }
@@ -542,21 +550,21 @@ private fun DrawScope.drawParts(
     // NOTE: buggy on extreme zoom-in
     if (viewModel.displayChessboardPattern) {
         if (viewModel.showWireframes) {
-            for (circle in viewModel.circles)
-                if (circle != null)
+            for (circle in viewModel.objects)
+                if (circle is CircleOrLine)
                     drawCircleOrLine(circle, visibleRect, viewModel.regionColor, style = circleStroke)
         } else {
             if (viewModel.chessboardPatternStartsColored)
                 drawRect(viewModel.regionColor, visibleRect.topLeft, visibleRect.size)
             // FIX: flickering, eg when altering spirals
-            for (circle in viewModel.circles) { // it used to work poorly but is good now for some reason
-                if (circle != null)
+            for (circle in viewModel.objects) { // it used to work poorly but is good now for some reason
+                if (circle is CircleOrLine)
                     drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
             }
         }
     } else {
         for (part in viewModel.regions) {
-            val path = part2path(viewModel.circles, part, visibleRect)
+            val path = part2path(viewModel.objects.map { it as? CircleOrLine }, part, visibleRect)
             if (viewModel.showWireframes) {
                 drawPath(
                     path,
@@ -597,16 +605,16 @@ private fun DrawScope.drawPartialConstructs(
         for (arg in args)
             when (arg) {
                 is Arg.CircleIndex -> {
-                    val circle = viewModel.circles[arg.index]
-                    if (circle != null)
+                    val circle = viewModel.objects[arg.index]
+                    if (circle is CircleOrLine)
                         drawCircleOrLine(
                             circle,
                             visibleRect, creationPrototypeColor, style = circleStroke
                         )
                 }
                 is Arg.Point.Index -> {
-                    val center = viewModel.points[arg.index]
-                    if (center != null)
+                    val center = viewModel.objects[arg.index]
+                    if (center is Point)
                         drawCircle(
                             color = creationPrototypeColor,
                             radius = creationPointRadius,
@@ -620,8 +628,8 @@ private fun DrawScope.drawPartialConstructs(
                         center = arg.toOffset()
                     )
                 is Arg.CircleOrPoint.Point.Index -> {
-                    val center = viewModel.points[arg.index]
-                    if (center != null)
+                    val center = viewModel.objects[arg.index]
+                    if (center is Point)
                         drawCircle(
                             color = creationPrototypeColor,
                             radius = creationPointRadius,
@@ -635,8 +643,8 @@ private fun DrawScope.drawPartialConstructs(
                         center = arg.toOffset()
                     )
                 is Arg.CircleOrPoint.CircleIndex -> {
-                    val circle = viewModel.circles[arg.index]
-                    if (circle != null)
+                    val circle = viewModel.objects[arg.index]
+                    if (circle is CircleOrLine)
                         drawCircleOrLine(
                             circle,
                             visibleRect, creationPrototypeColor, style = circleStroke
@@ -644,13 +652,13 @@ private fun DrawScope.drawPartialConstructs(
                 }
                 is Arg.CircleAndPointIndices -> {
                     for (ix in arg.circleIndices) {
-                        val circle = viewModel.circles[ix]
-                        if (circle != null)
+                        val circle = viewModel.objects[ix]
+                        if (circle is CircleOrLine)
                             drawCircleOrLine(circle, visibleRect, creationPrototypeColor, style = circleStroke)
                     }
                     for (ix in arg.pointIndices) {
-                        val point = viewModel.points[ix]
-                        if (point != null)
+                        val point = viewModel.objects[ix]
+                        if (point is Point)
                             drawCircle(
                                 color = creationPrototypeColor,
                                 radius = creationPointRadius,
@@ -731,17 +739,17 @@ private fun DrawScope.drawPartialConstructs(
                     )
             }
         }
-        ToolMode.ARC_PATH -> viewModel.arcPathUnderConstruction?.let { arcPath ->
+        ToolMode.ARC_PATH -> viewModel.partialArcPath?.let { arcPath ->
             drawCircle(
                 color = creationPrototypeColor,
                 radius = creationPointRadius,
-                center = arcPath.startPoint.toOffset()
+                center = arcPath.startVertex.point.toOffset()
             )
             val path = Path()
-            path.moveTo(arcPath.startPoint.x.toFloat(), arcPath.startPoint.y.toFloat())
-            for (i in arcPath.points.indices) {
-                val point = arcPath.points[i].toOffset()
-                when (val circle = arcPath.circles[i]) {
+            path.moveTo(arcPath.startVertex.point.x.toFloat(), arcPath.startVertex.point.y.toFloat())
+            for (i in arcPath.vertices.indices) {
+                val point = arcPath.vertices[i].point.toOffset()
+                when (val circle = arcPath.circles[i].circle) {
                     is Circle -> path.arcToRad(
                         Rect(circle.center, circle.radius.toFloat()),
                         arcPath.startAngles[i].toFloat(),
@@ -785,7 +793,7 @@ private fun DrawScope.drawHandles(
         val iconSize = Size(iconDim, iconDim)
         when (viewModel.handleConfig) {
             is HandleConfig.SingleCircle -> {
-                val selectedCircle = viewModel.circles[viewModel.circleSelection.single()]
+                val selectedCircle = viewModel.objects[viewModel.selection.single()]
                 if (selectedCircle is Circle) {
                     val right = selectedCircle.center + Offset(selectedCircle.radius.toFloat(), 0f)
                     drawLine( // radius marker
@@ -886,6 +894,7 @@ fun BoxScope.LockedCircleSelectionContextActions(
 @Composable
 fun BoxScope.CircleSelectionContextActions(
     canvasSize: IntSize,
+    showDirectionArrows: Boolean,
     toolAction: (EditClusterTool) -> Unit,
     getMostCommonCircleColorInSelection: () -> Color?,
 ) {
@@ -930,7 +939,7 @@ fun BoxScope.CircleSelectionContextActions(
             bottomRightModifier,
             onClick = toolAction
         )
-        if (EditClusterViewModel.DRAW_ARROWS_ON_SELECTED_CIRCLES) {
+        if (showDirectionArrows) {
             SimpleToolButton(
                 EditClusterTool.SwapDirection,
                 bottomMidModifier,
