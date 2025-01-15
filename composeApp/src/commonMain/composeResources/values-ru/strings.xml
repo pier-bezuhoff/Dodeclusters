@@ -161,5 +161,6 @@
     <!-- snackbar messages -->
     <string name="locked_objects_notice">Объекты закрплены, открепите их чтобы перемещать</string>
     <string name="locked_object_notice">Объект закрплён, открепите его чтобы перемещать</string>
+    <string name="imaginary_circle_notice">Результат построения содержит мнимые окружности (не отрисованы)</string>
 
 </resources>

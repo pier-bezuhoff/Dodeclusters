@@ -287,7 +287,10 @@ fun constraints2arcpaths(
                 if (arcPath.isNotEmpty()) {
                     val isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
                     if (isClosed)
-                        paths.add(ClosedArcPath(arcPath.map { 1 + it.circleIndex }))
+                        paths.add(ClosedArcPath(
+                            vertices = TODO(),
+                            arcs = arcPath.map { 1 + it.circleIndex }
+                        ))
                 }
                 arcPath = emptyList()
                 focus = arcsByStart.keys.first()
@@ -326,11 +329,20 @@ fun constraints2arcpaths(
     if (arcPath.isNotEmpty()) {
         val isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
         if (isClosed)
-            paths.add(ClosedArcPath(arcPath.map { 1 + it.circleIndex }))
+            paths.add(ClosedArcPath(
+                vertices =
+                    if (arcPath.size == 1) emptyList()
+                    else TODO(),
+                arcs = arcPath.map { 1 + it.circleIndex })
+            )
     }
     val fullArcs = arcs.filterIsInstance<Arc.Full>()
     for (fullArc in fullArcs) {
-        paths.add(ClosedArcPath(listOf(fullArc.circleIndex + 1)))
+        val i = fullArc.circleIndex
+        paths.add(ClosedArcPath(
+            vertices = emptyList(),
+            arcs = listOf(i + 1))
+        )
     }
     return paths
 }

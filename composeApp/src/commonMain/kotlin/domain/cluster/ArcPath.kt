@@ -22,6 +22,7 @@ import domain.degrees
 import domain.filterIndices
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -36,7 +37,7 @@ import kotlin.math.sqrt
 @Serializable
 @SerialName("ArcPath")
 sealed interface ArcPath {
-//    val vertices: List<Ix>
+    val vertices: List<Ix>
     @SerialName("arcIndicesStartingFrom1WithMinusIndicatingReversedDirection")
     val arcs: List<Int>
     val borderColor: ColorAsCss?
@@ -49,36 +50,29 @@ sealed interface ArcPath {
 data class ClosedArcPath(
     // NOTE: cyclic order doesn't matter, but reversing it alternates between one of
     //  2 possible regions that arise when not considering circle order
+    override val vertices: List<Ix>,
     @SerialName("arcIndicesStartingFrom1WithMinusIndicatingReversedDirection")
     override val arcs: List<Int>,
     val fillColor: ColorAsCss? = null,
     override val borderColor: ColorAsCss? = null,
 ) : ArcPath {
 
-    // previous arc: external orientation
-    // next arc: internal orientation
+    init {
+        if (arcs.size == 1)
+            require(vertices.isEmpty())
+        else
+            require(vertices.size == arcs.size)
+    }
+
     // TODO: when consecutive arcs dont intersect, fuse them the other way thru conformal infinity
     fun toConcrete(allObjects: List<GCircle?>): ConcreteClosedArcPath? {
         val circles = arcs.map { i ->
-            val circleOrLine = allObjects[i-1] as CircleOrLine
+            val circleOrLine = allObjects[i-1] as? CircleOrLine ?: return null
             if (i > 0) circleOrLine
-            else circleOrLine.reversed() // Q: why
+            else circleOrLine.reversed()
         }
-        val intersectionPoints: MutableList<Point> = mutableListOf()
-        if (arcs.size > 1) {
-            var previous: CircleOrLine = circles.last()
-            var next: CircleOrLine = circles.first()
-            var intersection: List<Point> = Circle.calculateIntersectionPoints(next, previous)
-            val startingPoint = intersection.firstOrNull() ?: return null
-            intersectionPoints.add(startingPoint)
-            for (ix in arcs.indices.drop(1)) {
-                previous = circles[ix - 1]
-                next = circles[ix]
-                intersection = Circle.calculateIntersectionPoints(next, previous)
-                // order of intersection points is stable
-                val point = intersection.firstOrNull() ?: return null
-                intersectionPoints.add(point)
-            }
+        val intersectionPoints = vertices.map {
+            allObjects[it] as? Point ?: return null
         }
         return ConcreteClosedArcPath(
             circles, intersectionPoints, fillColor, borderColor
@@ -87,38 +81,28 @@ data class ClosedArcPath(
 }
 
 /** Non-looping arc-path
- *
- * Assumption: the point @ [startPointIndex] lies on [arcs]`.first()` and
- * the point @ [endPointIndex] lies on [arcs]`.last()`
  * */
 @Immutable
 @Serializable
 @SerialName("OpenArcPath")
 data class OpenArcPath(
-    val startPointIndex: Ix,
-    val endPointIndex: Ix,
+    override val vertices: List<Ix>,
     @SerialName("arcIndicesStartingFrom1WithMinusIndicatingReversedDirection")
     override val arcs: List<Int>,
     override val borderColor: ColorAsCss? = null,
 ) : ArcPath {
 
+    init {
+        require(vertices.size == arcs.size + 1)
+    }
+
     fun toConcrete(allObjects: List<GCircle?>): ConcreteOpenArcPath? {
         val circles = arcs.map { i ->
-            val circleOrLine = allObjects[i-1] as? CircleOrLine
-            circleOrLine ?: return null
+            allObjects[i-1] as? CircleOrLine ?: return null
         }
-        val startPoint = (allObjects[startPointIndex] as? Point) ?: return null
-        val endPoint = (allObjects[endPointIndex] as? Point) ?: return null
-        val intersectionPoints: MutableList<Point> = mutableListOf(startPoint)
-        for (ix in arcs.indices.drop(1)) {
-            val previous = circles[ix - 1]
-            val next = circles[ix]
-            val intersection = Circle.calculateIntersectionPoints(next, previous)
-            // order of intersection points is stable
-            val point = intersection.firstOrNull() ?: return null
-            intersectionPoints.add(point)
+        val intersectionPoints = vertices.map {
+            allObjects[it] as? Point ?: return null
         }
-        intersectionPoints.add(endPoint)
         return ConcreteOpenArcPath(
             circles, intersectionPoints, borderColor
         )
@@ -182,6 +166,7 @@ data class ConcreteClosedArcPath(
 
     init {
         require(circles.size == intersectionPoints.size)
+        // require that all vertices lie on neighboring arcs
     }
 
     fun hasBorderingEpsilon(point: Point): Boolean =
@@ -481,8 +466,7 @@ data class ConcreteOpenArcPath(
     init {
         require(size >= 1)
         require(intersectionPoints.size == size + 1)
-        require(circles.first().hasBorderingEpsilon(startPoint))
-        require(circles.last().hasBorderingEpsilon(endPoint))
+        // require that all vertices lie on neighboring arcs
     }
 }
 

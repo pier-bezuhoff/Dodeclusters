@@ -322,7 +322,7 @@ class ExpressionForest(
         }
     }
 
-    private fun getAllChildren(parentIx: Ix): Set<Ix> {
+    fun getAllChildren(parentIx: Ix): Set<Ix> {
         val childs = children[parentIx] ?: emptySet()
         val allChilds = childs.toMutableSet()
         for (child in childs) {
@@ -368,4 +368,32 @@ class ExpressionForest(
 
     fun immediateParentsOf(childIx: Ix): List<Ix> =
         expressions[childIx]?.expr?.args.orEmpty()
+
+    fun findIntersectionIndex(circleIndex1: Ix, circleIndex2: Ix): Ix? {
+        // find point that is incident to both
+        return expressions.keys.firstOrNull { pointIndex ->
+            pointIndex != circleIndex1 && pointIndex != circleIndex2 &&
+                testDependentIncidence(pointIndex, circleIndex1) && testDependentIncidence(pointIndex, circleIndex2)
+        }
+    }
+
+    fun testDependentIncidence(pointIndex: Ix, carrierIndex: Ix): Boolean {
+        val pointExpr = expressions[pointIndex]?.expr
+        val directIncidence = pointExpr is Expr.Incidence && pointExpr.carrier == carrierIndex
+        val indirectIncidence = when (val carrierExpr = expressions[carrierIndex]?.expr) {
+            is Expr.CircleByCenterAndRadius -> carrierExpr.radiusPoint == pointIndex
+            is Expr.CircleBy3Points -> carrierExpr.object1 == pointIndex || carrierExpr.object2 == pointIndex || carrierExpr.object3 == pointIndex
+            is Expr.CircleBy2PointsAndSagittaRatio -> carrierExpr.chordStartPoint == pointIndex || carrierExpr.chordEndPoint == pointIndex
+            // if pencil has 2 intersections than those 2 shall also be tested if we are being diligent
+            is Expr.CircleByPencilAndPoint ->
+                carrierExpr.perpendicularObject == pointIndex || pointExpr is Expr.Intersection && (
+                    pointExpr.circle1 == carrierExpr.pencilObject1 && pointExpr.circle2 == carrierExpr.pencilObject2 ||
+                    pointExpr.circle1 == carrierExpr.pencilObject2 && pointExpr.circle2 == carrierExpr.pencilObject1
+                )
+            is Expr.LineBy2Points -> carrierExpr.object1 == pointIndex || carrierExpr.object2 == pointIndex
+            // there could exist even more indirect incidence tbh
+            else -> false
+        }
+        return directIncidence || indirectIncidence
+    }
 }

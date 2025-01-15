@@ -168,6 +168,7 @@
     <!-- snackbar messages -->
     <string name="locked_objects_notice">These objects are pinned, detach them to move</string>
     <string name="locked_object_notice">This object is pinned, detach it to move</string>
+    <string name="imaginary_circle_notice">Construction resulted in an imaginary circle (invisible but present)</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>
