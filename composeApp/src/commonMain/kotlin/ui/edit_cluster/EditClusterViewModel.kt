@@ -580,14 +580,14 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun createNewCircle(
-        newCircle: CircleOrLine?,
+        newCircle: GCircle?,
     ) =
         createNewCircles(listOf(newCircle))
 
     /** Append [newCircles] to [objects] and queue circle entrance animation
      * */
     fun createNewCircles(
-        newCircles: List<CircleOrLine?>,
+        newCircles: List<GCircle?>,
     ) {
         val normalizedCircles = newCircles.map {
             if (it is Circle && it.radius <= 0)
@@ -602,7 +602,7 @@ class EditClusterViewModel : ViewModel() {
             selection = (prevSize until objects.size).filter { objects[it] != null }
             viewModelScope.launch {
                 _animations.emit(
-                    CircleAnimation.Entrance(validNewCircles)
+                    CircleAnimation.Entrance(validNewCircles.filterIsInstance<CircleOrLine>())
                 )
             }
         } else { // all nulls
@@ -2001,6 +2001,7 @@ class EditClusterViewModel : ViewModel() {
     /** Signals locked state to the user with animation & snackbar message */
     private fun highlightSelectionParents() {
         val allParents = selection.flatMap { selectedIndex ->
+            // MAYBE: still highlight Incident.carrier BUT do not notify as if locked
             if (isConstrained(selectedIndex)) emptyList() // exclude semi-free Expr.Incidence
             else expressions.immediateParentsOf(selectedIndex)
                 .minus(selection.toSet())
@@ -2179,8 +2180,7 @@ class EditClusterViewModel : ViewModel() {
                     object3 = realized[2],
                 ),
             )
-            val newCircle = newGCircle as? CircleOrLine
-            createNewCircle(newCircle?.upscale())
+            createNewCircle(newGCircle?.upscale())
             if (newGCircle is ImaginaryCircle)
                 snackbarMessages.tryEmit(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
@@ -2653,7 +2653,7 @@ class EditClusterViewModel : ViewModel() {
         const val INVERSION_OF_CONTROL_LVL1 = false
         /** when constructing object depending on not-yet-existing points,
          * always create them. In contrast to replacing expression with static circle */
-        const val ALWAYS_CREATE_ADDITIONAL_POINTS = true
+        const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 200.0
         const val DOWNSCALING_FACTOR = 1/UPSCALING_FACTOR

@@ -28,23 +28,23 @@ fun computeCircleBy3Points(
     point1: GCircle,
     point2: GCircle,
     point3: GCircle,
-): CircleOrLine? =
+): GCircle? =
     GeneralizedCircle.perp3(
         GeneralizedCircle.fromGCircle(point1),
         GeneralizedCircle.fromGCircle(point2),
         GeneralizedCircle.fromGCircle(point3),
-    )?.toGCircle() as? CircleOrLine
+    )?.toGCircle()
 
 fun computeCircleByPencilAndPoint(
     circle1: GCircle,
     circle2: GCircle,
     point: GCircle,
-): CircleOrLine? =
+): GCircle? =
     GeneralizedCircle.parallel2perp1(
         GeneralizedCircle.fromGCircle(circle1),
         GeneralizedCircle.fromGCircle(circle2),
         GeneralizedCircle.fromGCircle(point),
-    )?.toGCircle() as? CircleOrLine
+    )?.toGCircle()
 
 fun computeLineBy2Points(
     point1: GCircle,

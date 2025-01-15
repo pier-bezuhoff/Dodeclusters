@@ -128,7 +128,7 @@ sealed interface Expr : ExprLike {
     ): ExprResult {
         val g = { ix: Ix ->
             get(ix) ?: throw NullPointerException() // i miss MonadError
-        } // MAYBE: rework using Raise<Error>.doStuff() : T
+        } // MAYBE: rework using Raise<Error>.doStuff(): T
         val c = { ix: Ix ->
             get(ix) as? CircleOrLine ?: throw NullPointerException()
         }

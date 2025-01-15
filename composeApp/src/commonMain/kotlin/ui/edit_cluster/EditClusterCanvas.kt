@@ -165,11 +165,11 @@ fun BoxScope.EditClusterCanvas(
     ) {
         translate(viewModel.translation.x, viewModel.translation.y) {
             val visibleRect = size.toRect().translate(-viewModel.translation)
-            drawAnimation(animations, visibleRect, strokeWidth)
             // TODO: hoist VM here
             drawParts(viewModel, visibleRect, clusterPathAlpha, circleStroke)
+            drawAnimation(animations, visibleRect, strokeWidth)
             if (viewModel.showCircles)
-                drawCircles(viewModel, visibleRect, circleColor, freeCircleColor, circleStroke, pointColor, freePointColor, pointRadius)
+                drawObjects(viewModel, visibleRect, circleColor, freeCircleColor, circleStroke, pointColor, freePointColor, pointRadius)
             drawSelectedCircles(viewModel, visibleRect, selectedCircleColor, thiccSelectionCircleAlpha, circleThiccStroke, selectedPointColor, pointRadius)
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, scaleIndicatorColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
@@ -453,7 +453,7 @@ private fun DrawScope.drawAnimation(
     }
 }
 
-private fun DrawScope.drawCircles(
+private fun DrawScope.drawObjects(
     viewModel: EditClusterViewModel,
     visibleRect: Rect,
     circleColor: Color,
