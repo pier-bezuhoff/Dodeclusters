@@ -9,6 +9,7 @@ import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.hypot
 
+@Immutable
 sealed interface ArcPathPoint {
     sealed interface Vertex : ArcPathPoint
     val point: Point

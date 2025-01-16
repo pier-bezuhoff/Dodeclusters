@@ -21,8 +21,8 @@ sealed interface GCircle {
  * Conformal-projective CGA representation of circles/lines/points/imaginary circles
  * via homogenous coordinates.
  * */
-@Serializable
 @Immutable
+@Serializable
 data class GeneralizedCircle(
     /** e_0 projection, homogenous scaling factor
      *

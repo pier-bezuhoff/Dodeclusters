@@ -16,9 +16,9 @@ import kotlin.math.sign
  *
  * Normal vector points "inside"/to the "left" direction,
  * "inside" = to the "left" side of the line*/
-@SerialName("line")
-@Serializable
 @Immutable
+@Serializable
+@SerialName("line")
 data class Line(
     val a: Double,
     val b: Double,

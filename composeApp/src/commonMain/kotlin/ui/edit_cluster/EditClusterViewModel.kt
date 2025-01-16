@@ -51,19 +51,16 @@ import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
 import domain.compressConstraints
 import domain.expressions.Expr
-import domain.expressions.Expression
 import domain.expressions.ExpressionForest
 import domain.expressions.ExtrapolationParameters
 import domain.expressions.IncidenceParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.ObjectConstruct
-import domain.expressions.SagittaRatioParameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeLineBy2Points
-import domain.expressions.computeSagittaRatio
 import domain.expressions.reIndex
 import domain.filterIndices
 import domain.io.DdcV1
@@ -579,34 +576,31 @@ class EditClusterViewModel : ViewModel() {
         recordCommand(Command.CREATE, unique = true)
     }
 
-    fun createNewCircle(
-        newCircle: GCircle?,
-    ) =
-        createNewCircles(listOf(newCircle))
+    fun createNewGCircle(newGCircle: GCircle?) =
+        createNewGCircles(listOf(newGCircle))
 
-    /** Append [newCircles] to [objects] and queue circle entrance animation
-     * */
-    fun createNewCircles(
-        newCircles: List<GCircle?>,
+    /** Append [newGCircles] to [objects] and queue circle entrance animation */
+    fun createNewGCircles(
+        newGCircles: List<GCircle?>,
     ) {
-        val normalizedCircles = newCircles.map {
-            if (it is Circle && it.radius <= 0)
+        val normalizedGCircles = newGCircles.map {
+            if (it is Circle && it.radius <= 0) // Q: idk why, does it ever happen?
                 null
             else it
         }
-        val validNewCircles = normalizedCircles.filterNotNull()
-        if (validNewCircles.isNotEmpty()) {
+        val validNewGCircles = normalizedGCircles.filterNotNull()
+        if (validNewGCircles.isNotEmpty()) {
             showCircles = true
             val prevSize = objects.size
-            addObjects(normalizedCircles)
+            addObjects(normalizedGCircles)
             selection = (prevSize until objects.size).filter { objects[it] != null }
             viewModelScope.launch {
                 _animations.emit(
-                    CircleAnimation.Entrance(validNewCircles.filterIsInstance<CircleOrLine>())
+                    CircleAnimation.Entrance(validNewGCircles.filterIsInstance<CircleOrLine>())
                 )
             }
         } else { // all nulls
-            objects.addAll(normalizedCircles)
+            objects.addAll(normalizedGCircles)
             selection = emptyList()
         }
     }
@@ -1167,7 +1161,7 @@ class EditClusterViewModel : ViewModel() {
         )
         showCircles = true
         recordCreateCommand()
-        createNewCircles(listOf(horizontalLine, verticalLine))
+        createNewGCircles(listOf(horizontalLine, verticalLine))
         expressions.addFree()
         expressions.addFree()
         switchToMode(SelectionMode.Multiselect)
@@ -2133,7 +2127,7 @@ class EditClusterViewModel : ViewModel() {
                 radiusPoint = (args[1] as Arg.Point.XY).toPoint().downscale(),
             )?.upscale()
             expressions.addFree()
-            createNewCircle(newCircle)
+            createNewGCircle(newCircle)
         } else {
             val realized = args.map {
                 when (it) {
@@ -2147,7 +2141,7 @@ class EditClusterViewModel : ViewModel() {
                     radiusPoint = realized[1]
                 ),
             ) as? CircleOrLine
-            createNewCircle(newCircle?.upscale())
+            createNewGCircle(newCircle?.upscale())
         }
         partialArgList = PartialArgList(argList.signature)
     }
@@ -2164,7 +2158,7 @@ class EditClusterViewModel : ViewModel() {
             }
             val newCircle = computeCircleBy3Points(p1, p2, p3)
             expressions.addFree()
-            createNewCircle(newCircle?.upscale())
+            createNewGCircle(newCircle?.upscale())
         } else {
             val realized = args.map {
                 when (it) {
@@ -2180,7 +2174,7 @@ class EditClusterViewModel : ViewModel() {
                     object3 = realized[2],
                 ),
             )
-            createNewCircle(newGCircle?.upscale())
+            createNewGCircle(newGCircle?.upscale())
             if (newGCircle is ImaginaryCircle)
                 snackbarMessages.tryEmit(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
@@ -2199,7 +2193,7 @@ class EditClusterViewModel : ViewModel() {
             }
             val newCircle = computeCircleByPencilAndPoint(p1, p2, p3)
             expressions.addFree()
-            createNewCircle(newCircle?.upscale())
+            createNewGCircle(newCircle?.upscale())
         } else {
             val realized = args.map {
                 when (it) {
@@ -2216,7 +2210,7 @@ class EditClusterViewModel : ViewModel() {
                 ),
             )
             val newCircle = newGCircle as? CircleOrLine
-            createNewCircle(newCircle?.upscale())
+            createNewGCircle(newCircle?.upscale())
             if (newGCircle is ImaginaryCircle)
                 snackbarMessages.tryEmit(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
@@ -2235,7 +2229,7 @@ class EditClusterViewModel : ViewModel() {
             }
             val newCircle = computeLineBy2Points(p1, p2)
             expressions.addFree()
-            createNewCircle(newCircle?.upscale())
+            createNewGCircle(newCircle?.upscale())
         } else {
             val realized = args.map {
                 when (it) {
@@ -2250,7 +2244,7 @@ class EditClusterViewModel : ViewModel() {
                     object2 = realized[1],
                 ),
             ) as? CircleOrLine
-            createNewCircle(newCircle?.upscale())
+            createNewGCircle(newCircle?.upscale())
         }
         partialArgList = PartialArgList(argList.signature)
     }
@@ -2261,31 +2255,39 @@ class EditClusterViewModel : ViewModel() {
         val targetCircleIxs = objArg.circleIndices
         val targetPointIxs = objArg.pointIndices
         val invertingCircleIndex = (argList.args[1] as Arg.CircleIndex).index
-        val newCircles = targetCircleIxs.mapNotNull { circleIx ->
-            val newCircle = expressions.addSoloExpression(
+        recordCreateCommand()
+        val newGCircles = targetCircleIxs.mapNotNull { circleIx ->
+            val newGCircle = expressions.addSoloExpression(
                 Expr.CircleInversion(circleIx, invertingCircleIndex),
-            ) as? CircleOrLine
-            newCircle?.upscale()
+            )
+            newGCircle?.upscale()
 //            when (val newCircle = result.toDirectedCircleOrLine()) {
 //                is DirectedCircle -> newCircle.toCircle() to !newCircle.inside
 //                is Line -> newCircle to false
 //                else -> null
 //            }
         }
-        recordCreateCommand()
         val newPoints = targetPointIxs.mapNotNull { pointIx ->
             val newPoint = expressions.addSoloExpression(
                 Expr.CircleInversion(pointIx, invertingCircleIndex)
             ) as? Point
             newPoint?.upscale()
         }
-        createNewCircles(newCircles)
+        createNewGCircles(newGCircles)
         copyParts(
             targetCircleIxs,
-            ((objects.size - newCircles.size) until objects.size).toList(),
+            ((objects.size - newGCircles.size) until objects.size).toList(),
             flipInAndOut = true
         )
         addObjects(newPoints)
+        val resultSize = newGCircles.size + newPoints.size
+        val shift = objects.size - resultSize // prev total size
+        for ((i, sourceIndex) in (targetCircleIxs + targetPointIxs).withIndex()) {
+            if (objectColors.containsKey(sourceIndex)) {
+                val correspondingIx = i + shift
+                objectColors[correspondingIx] = objectColors[sourceIndex]!!
+            }
+        }
         partialArgList = PartialArgList(argList.signature)
     }
 
@@ -2300,7 +2302,7 @@ class EditClusterViewModel : ViewModel() {
             Expr.CircleInterpolation(params, startCircleIx, endCircleIx),
         )
         val newCircles = newGCircles.map { if (it is CircleOrLine?) it?.upscale() else null }
-        createNewCircles(newCircles)
+        createNewGCircles(newCircles)
         partialArgList = PartialArgList(argList.signature)
         defaultInterpolationParameters = DefaultInterpolationParameters(params)
         if (newGCircles.any { it is ImaginaryCircle })
@@ -2324,7 +2326,7 @@ class EditClusterViewModel : ViewModel() {
         val newCircles = expressions.addMultiExpression(
             Expr.CircleExtrapolation(params, startCircleIx, endCircleIx),
         ).map { if (it is CircleOrLine?) it?.upscale() else null }
-        createNewCircles(newCircles)
+        createNewGCircles(newCircles)
         partialArgList = PartialArgList(argList.signature)
         defaultExtrapolationParameters = DefaultExtrapolationParameters(params)
     }
@@ -2374,7 +2376,7 @@ class EditClusterViewModel : ViewModel() {
             allNewPoints.addAll(newPoints)
         }
         val size0 = objects.size
-        createNewCircles(allNewCircles)
+        createNewGCircles(allNewCircles)
         val n = params.nSteps + 1
         repeat(n) { i ->
             val newIndices = targetCircleIndices.indices.map { j ->
@@ -2467,7 +2469,7 @@ class EditClusterViewModel : ViewModel() {
                         else -> never()
                     }
                 }.filterNotNull()
-            createNewCircles(newCircles)
+            createNewGCircles(newCircles)
         }
         partialArcPath = null
     }

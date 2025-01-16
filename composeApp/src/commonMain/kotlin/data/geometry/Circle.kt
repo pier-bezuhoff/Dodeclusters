@@ -26,9 +26,9 @@ const val EPSILON2: Double = EPSILON*EPSILON
 /** Circle with center ([x], [y]) and [radius]
  * @param[isCCW] Counterclockwise or clockwise direction (_in_ vs _out_)
  * */
-@SerialName("circle")
-@Serializable
 @Immutable
+@Serializable
+@SerialName("circle")
 data class Circle(
     override val x: Double,
     override val y: Double,

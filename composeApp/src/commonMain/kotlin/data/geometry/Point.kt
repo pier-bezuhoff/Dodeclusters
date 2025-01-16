@@ -9,9 +9,9 @@ import kotlinx.serialization.Serializable
 import kotlin.math.atan2
 import kotlin.math.hypot
 
+@Immutable
 @Serializable
 @SerialName("point")
-@Immutable
 data class Point(
     val x: Double,
     val y: Double

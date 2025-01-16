@@ -9,8 +9,8 @@ import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-@Serializable
 @Immutable
+@Serializable
 sealed interface CircleOrLine : GCircle, LocusWithOrder {
     fun project(point: Point): Point
     fun distanceFrom(point: Point): Double

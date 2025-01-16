@@ -20,8 +20,8 @@ import kotlin.math.sqrt
  *
  * NB: can be not normalized, but `R*R.reversed = scalar`
  * */
-@Serializable
 @Immutable
+@Serializable
 data class Rotor(
     val s: Double,
     val xy: Double,
