@@ -45,6 +45,7 @@ import domain.PartialArgList
 import domain.PointSnapResult
 import domain.angleDeg
 import domain.cluster.ArcPath
+import domain.ChessboardPattern
 import domain.cluster.Cluster
 import domain.cluster.ClusterV1
 import domain.cluster.Constellation
@@ -149,10 +150,7 @@ class EditClusterViewModel : ViewModel() {
      * only use circles present in the [selection] to determine which parts to fill */
     var restrictRegionsToSelection: Boolean by mutableStateOf(false)
         private set
-    var displayChessboardPattern: Boolean by mutableStateOf(false)
-        private set
-    /** true = background starts colored */
-    var chessboardPatternStartsColored: Boolean by mutableStateOf(true)
+    var chessboardPattern: ChessboardPattern by mutableStateOf(ChessboardPattern.NONE)
         private set
 
     val circleSelectionIsActive: Boolean by derivedStateOf {
@@ -260,8 +258,8 @@ class EditClusterViewModel : ViewModel() {
             name = name,
             bestCenterX = computeAbsoluteCenter()?.x,
             bestCenterY = computeAbsoluteCenter()?.y,
-            chessboardPattern = displayChessboardPattern,
-            chessboardPatternStartsColored = chessboardPatternStartsColored,
+            chessboardPattern = chessboardPattern != ChessboardPattern.NONE,
+            chessboardPatternStartsColored = chessboardPattern == ChessboardPattern.STARTS_COLORED,
         ))
     }
 
@@ -279,9 +277,10 @@ class EditClusterViewModel : ViewModel() {
             realCircles, reindexedParts
         )
         val start = absolute(Offset.Zero)
-        return if (displayChessboardPattern)
+        return if (chessboardPattern != ChessboardPattern.NONE)
             cluster2svgCheckPattern(
-                cluster = cluster, backgroundColor = regionColor, chessboardPatternStartsColored = chessboardPatternStartsColored,
+                cluster = cluster, backgroundColor = regionColor,
+                chessboardPatternStartsColored = chessboardPattern == ChessboardPattern.STARTS_COLORED,
                 startX = start.x, startY = start.y,
                 width = canvasSize.width.toFloat(), height = canvasSize.height.toFloat()
             )
@@ -310,8 +309,10 @@ class EditClusterViewModel : ViewModel() {
                 val constellation = ddc.toConstellation()
                 loadNewConstellation(constellation)
                 centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
-                displayChessboardPattern = ddc.chessboardPattern
-                chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
+                chessboardPattern =
+                    if (!ddc.chessboardPattern) ChessboardPattern.NONE
+                    else if (ddc.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
+                    else ChessboardPattern.STARTS_TRANSPARENT
             },
             { e ->
                 println("Failed to parse DdcV4->yaml, falling back to DdcV3->yaml")
@@ -328,8 +329,10 @@ class EditClusterViewModel : ViewModel() {
                 val constellation = ddc.toConstellation().toConstellation()
                 loadNewConstellation(constellation)
                 centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
-                displayChessboardPattern = ddc.chessboardPattern
-                chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
+                chessboardPattern =
+                    if (!ddc.chessboardPattern) ChessboardPattern.NONE
+                    else if (ddc.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
+                    else ChessboardPattern.STARTS_TRANSPARENT
             },
             { e ->
                 println("Failed to parse DdcV3->yaml, falling back to DdcV2->yaml")
@@ -349,8 +352,10 @@ class EditClusterViewModel : ViewModel() {
                     .toCluster()
                 loadNewConstellation(cluster.toConstellation())
                 centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
-                displayChessboardPattern = ddc.chessboardPattern
-                chessboardPatternStartsColored = ddc.chessboardPatternStartsColored
+                chessboardPattern =
+                    if (!ddc.chessboardPattern) ChessboardPattern.NONE
+                    else if (ddc.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
+                    else ChessboardPattern.STARTS_TRANSPARENT
             },
             { e ->
                 println("Failed to parse DdcV2->yaml, falling back to DdcV1->yaml")
@@ -406,8 +411,7 @@ class EditClusterViewModel : ViewModel() {
     // MAYBE: make a suspend function + add load spinner
     fun loadNewConstellation(constellation: Constellation) {
         showPromptToSetActiveSelectionAsToolArg = false
-        displayChessboardPattern = false
-        chessboardPatternStartsColored = true
+        chessboardPattern = ChessboardPattern.NONE
         translation = Offset.Zero
         loadConstellation(constellation)
         // reset history on load
@@ -512,6 +516,7 @@ class EditClusterViewModel : ViewModel() {
         loadConstellation(state.constellation)
         selection = state.selection.filter { it in objects.indices } // just in case
         centerizeTo(state.centerX, state.centerY)
+        chessboardPattern = state.chessboardPattern
     }
 
     private fun resetTransients() {
@@ -864,7 +869,7 @@ class EditClusterViewModel : ViewModel() {
         boundingCircles: List<Ix>? = null,
         setSelectionToRegionBounds: Boolean = false
     ) {
-        displayChessboardPattern = false
+        chessboardPattern = ChessboardPattern.NONE
         val (part, part0) = selectPartAt(visiblePosition, boundingCircles)
         val outerParts = regions.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
         if (outerParts.isEmpty()) {
@@ -1068,15 +1073,11 @@ class EditClusterViewModel : ViewModel() {
         restrictRegionsToSelection = !restrictRegionsToSelection
     }
 
-    fun applyChessboardPatter() {
-        if (!displayChessboardPattern) {
-            displayChessboardPattern = true
-            chessboardPatternStartsColored = true
-        } else if (chessboardPatternStartsColored) {
-            chessboardPatternStartsColored = false
-        } else {
-            displayChessboardPattern = false
-            chessboardPatternStartsColored = true
+    fun toggleChessboardPattern() {
+        chessboardPattern = when (chessboardPattern) {
+            ChessboardPattern.NONE -> ChessboardPattern.STARTS_COLORED
+            ChessboardPattern.STARTS_COLORED -> ChessboardPattern.STARTS_TRANSPARENT
+            ChessboardPattern.STARTS_TRANSPARENT -> ChessboardPattern.NONE
         }
     }
 
@@ -1118,7 +1119,7 @@ class EditClusterViewModel : ViewModel() {
     // MAYBE: replace with select-all->delete in invisible-circles part manipulation mode
     fun deleteAllParts() {
         recordCommand(Command.DELETE, unique = true)
-        displayChessboardPattern = false
+        chessboardPattern = ChessboardPattern.NONE
         regions.clear()
     }
 
@@ -2494,7 +2495,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.ToggleSelectAll -> toggleSelectAll()
             EditClusterTool.Region -> switchToMode(SelectionMode.Region)
             EditClusterTool.FlowFill -> activateFlowFill()
-            EditClusterTool.FillChessboardPattern -> applyChessboardPatter()
+            EditClusterTool.FillChessboardPattern -> toggleChessboardPattern()
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             EditClusterTool.DeleteAllParts -> deleteAllParts()
             EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selected circles only
@@ -2529,7 +2530,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.ToggleSelectAll -> selection.containsAll(objects.filterIndices { it is CircleOrLine })
             EditClusterTool.Region -> mode == SelectionMode.Region && submode !is SubMode.FlowFill
             EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
-            EditClusterTool.FillChessboardPattern -> chessboardPatternStartsColored
+            EditClusterTool.FillChessboardPattern -> chessboardPattern != ChessboardPattern.STARTS_TRANSPARENT
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
@@ -2570,10 +2571,11 @@ class EditClusterViewModel : ViewModel() {
         val constellation = toConstellation()
         return State(
             constellation = constellation,
-            // FIX: idk from where, but sometimes it gets null's after select-all
+            // Q: idk from where, but sometimes it gets null's after select-all
             selection = selection.mapNotNull { reindexing[it] },
             centerX = center.x,
             centerY = center.y,
+            chessboardPattern = chessboardPattern
         )
     }
 
@@ -2604,6 +2606,7 @@ class EditClusterViewModel : ViewModel() {
         }
         selection = state.selection
         centerizeTo(state.centerX, state.centerY)
+        chessboardPattern = state.chessboardPattern
     }
 
     /** caches latest [State] using platform-specific local storage */
@@ -2630,6 +2633,7 @@ class EditClusterViewModel : ViewModel() {
         // NOTE: saving VM.translation instead has some issues
         val centerX: Float,
         val centerY: Float,
+        val chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
     )
 
     companion object {
@@ -2652,7 +2656,7 @@ class EditClusterViewModel : ViewModel() {
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         /** Allow moving non-free object IF all of it's lvl1 parents/dependecies are free by
          * moving all of its parent with it */ // geogebra-like
-        const val INVERSION_OF_CONTROL_LVL1 = false
+        val INVERSION_OF_CONTROL = InversionOfControl.NONE
         /** when constructing object depending on not-yet-existing points,
          * always create them. In contrast to replacing expression with static circle */
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
@@ -2663,4 +2667,13 @@ class EditClusterViewModel : ViewModel() {
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)
     }
+}
+
+enum class InversionOfControl {
+    /** All non-free, non-constrained objects are locked */
+    NONE,
+    /** You can move dependent objects with all their parents as long as all of the parents are free */
+    LEVEL_1,
+    /** You can move dependent objects with all their parents */
+    LEVEL_INFINITY
 }

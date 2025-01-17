@@ -61,6 +61,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Arg
+import domain.ChessboardPattern
 import domain.rotateBy
 import getPlatform
 import kotlinx.coroutines.launch
@@ -548,13 +549,14 @@ private fun DrawScope.drawParts(
     circleStroke: DrawStyle,
 ) {
     // NOTE: buggy on extreme zoom-in
-    if (viewModel.displayChessboardPattern) {
+    val chessboardPattern = viewModel.chessboardPattern
+    if (chessboardPattern != ChessboardPattern.NONE) {
         if (viewModel.showWireframes) {
             for (circle in viewModel.objects)
                 if (circle is CircleOrLine)
                     drawCircleOrLine(circle, visibleRect, viewModel.regionColor, style = circleStroke)
         } else {
-            if (viewModel.chessboardPatternStartsColored)
+            if (chessboardPattern == ChessboardPattern.STARTS_COLORED)
                 drawRect(viewModel.regionColor, visibleRect.topLeft, visibleRect.size)
             // FIX: flickering, eg when altering spirals
             for (circle in viewModel.objects) { // it used to work poorly but is good now for some reason
