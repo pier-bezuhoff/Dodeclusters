@@ -12,6 +12,8 @@ import dodeclusters.composeapp.generated.resources.applied_color_name
 import dodeclusters.composeapp.generated.resources.arc_path_arg_descriptions
 import dodeclusters.composeapp.generated.resources.arc_path_description
 import dodeclusters.composeapp.generated.resources.arc_path_name
+import dodeclusters.composeapp.generated.resources.change_background_description
+import dodeclusters.composeapp.generated.resources.change_background_name
 import dodeclusters.composeapp.generated.resources.chessboard
 import dodeclusters.composeapp.generated.resources.chessboard_reflected
 import dodeclusters.composeapp.generated.resources.circle
@@ -286,10 +288,10 @@ sealed class EditClusterTool(
         Res.drawable.hide_haired_arrow,
     )
     data object AddBackgroundImage: Action(
-        Res.string.stub,
-        Res.string.stub,
+        Res.string.change_background_name,
+        Res.string.change_background_description,
         Res.drawable.add_image
-    ) // NOTE: critical multiplatform image decoding is in compose-multiplatform-1.7.0-alpha03
+    ) // NOTE: critical multiplatform image decoding is available now
 
     data object Palette: Action(
         Res.string.palette_name,

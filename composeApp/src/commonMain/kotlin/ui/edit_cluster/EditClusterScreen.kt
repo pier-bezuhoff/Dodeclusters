@@ -55,6 +55,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -170,7 +171,13 @@ fun EditClusterScreen(
         floatingActionButtonPosition = FabPosition.End
     ) {
         Surface {
-            Box {
+            Box(Modifier
+                .drawBehind {
+                    viewModel.backgroundColor?.let { backgroundColor ->
+                        drawRect(backgroundColor, size = size)
+                    }
+                }
+            ) {
                 EditClusterCanvas(viewModel)
                 if (viewModel.showUI) {
                     ToolDescription(
@@ -231,6 +238,14 @@ fun EditClusterScreen(
                 initialColor = initialColor,
                 onDismissRequest = viewModel::dismissCircleColorPicker,
                 onConfirm = viewModel::setNewCircleColor
+            )
+        }
+        DialogType.BACKGROUND_COLOR_PICKER -> {
+            val initialColor = viewModel.backgroundColor ?: MaterialTheme.colorScheme.background
+            ColorPickerDialog(
+                initialColor = initialColor,
+                onDismissRequest = viewModel::dismissBackgroundColorPicker,
+                onConfirm = viewModel::setNewBackgroundColor,
             )
         }
         DialogType.CIRCLE_INTERPOLATION -> {

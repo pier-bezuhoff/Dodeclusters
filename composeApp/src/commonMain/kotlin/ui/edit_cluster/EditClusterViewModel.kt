@@ -138,6 +138,7 @@ class EditClusterViewModel : ViewModel() {
         private set
     /** custom colors for circle/line borders or points */
     val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
+    var backgroundColor: Color? by mutableStateOf(null)
     val hiddenObjects: Set<Ix> by mutableStateOf(emptySet()) // TODO
     var showCircles: Boolean by mutableStateOf(true)
         private set
@@ -445,6 +446,7 @@ class EditClusterViewModel : ViewModel() {
         expressions.reEval() // calculates all dependent objects
         regions.addAll(constellation.parts)
         objectColors.putAll(constellation.objectColors)
+        backgroundColor = constellation.backgroundColor
     }
 
     fun toConstellation(): Constellation {
@@ -485,7 +487,8 @@ class EditClusterViewModel : ViewModel() {
             parts = logicalRegions,
             objectColors = objectColors.mapNotNull { (ix, color) ->
                 reindexing[ix]?.let { it to color }
-            }.toMap()
+            }.toMap(),
+            backgroundColor = backgroundColor
         )
     }
 
@@ -1115,7 +1118,16 @@ class EditClusterViewModel : ViewModel() {
     fun dismissCircleColorPicker() {
         openedDialog = null
     }
-    
+
+    fun setNewBackgroundColor(color: Color) {
+        backgroundColor = color
+        openedDialog = null
+    }
+
+    fun dismissBackgroundColorPicker() {
+        openedDialog = null
+    }
+
     // MAYBE: replace with select-all->delete in invisible-circles part manipulation mode
     fun deleteAllParts() {
         recordCommand(Command.DELETE, unique = true)
@@ -2518,7 +2530,8 @@ class EditClusterViewModel : ViewModel() {
             is EditClusterTool.CustomAction -> {} // custom handlers
             EditClusterTool.CompleteArcPath -> completeArcPath()
             EditClusterTool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
-            EditClusterTool.AddBackgroundImage -> TODO("issues..")
+            // TODO: 2 options: solid color or external image
+            EditClusterTool.AddBackgroundImage -> openedDialog = DialogType.BACKGROUND_COLOR_PICKER
         }
     }
 

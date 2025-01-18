@@ -19,6 +19,7 @@ data class Constellation(
     // purely decorative, the "real" border color can be specified
     // using unfilled single-circle ClusterPart with borderColor
     val objectColors: Map<Ix, ColorAsCss> = emptyMap(),
+    val backgroundColor: ColorAsCss? = null
 ) {
     init {
         val allObjectIndices = objects.indices.toSet()

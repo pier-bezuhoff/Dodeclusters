@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 enum class DialogType {
     REGION_COLOR_PICKER,
     CIRCLE_COLOR_PICKER,
+    BACKGROUND_COLOR_PICKER,
     CIRCLE_INTERPOLATION,
     CIRCLE_EXTRAPOLATION,
     LOXODROMIC_MOTION,

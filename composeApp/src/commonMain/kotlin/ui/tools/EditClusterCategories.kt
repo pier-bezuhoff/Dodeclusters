@@ -59,6 +59,7 @@ sealed class EditClusterCategory(
 //            EditClusterTool.ToggleFilledOrOutline,
             EditClusterTool.ToggleDirectionArrows,
             EditClusterTool.HideUI,
+            EditClusterTool.AddBackgroundImage,
         ),
         defaultables = emptyList(),
         icon = Res.drawable.visible
