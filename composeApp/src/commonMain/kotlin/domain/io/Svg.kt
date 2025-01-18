@@ -24,23 +24,28 @@ import kotlin.math.hypot
 private const val INDENT = "  "
 private const val INDENT1 = INDENT
 private const val INDENT2 = INDENT + INDENT
+// MAYBE: implement https://stackoverflow.com/a/4756461/7143065
+// MAYBE: prepend with user-specified [file]name
 private const val desc = """<desc>Created in Dodeclusters.</desc>"""
 
 // TODO: chessboard pattern
+// MAYBE: just pass already computed objects to make it more straightforward
 fun constellation2svg(
     constellation: Constellation,
+    startX: Float, startY: Float,
     width: Float, height: Float,
     encodeCirclesAndPoints: Boolean = true,
     chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
     chessboardCellColor: Color = Color.White,
 ): String = buildString {
+    val tr = Offset(-startX, -startY)
     val objects: MutableList<GCircle?> = mutableListOf()
     objects.addAll(
         constellation.objects.map {
             when (it) {
-                is ObjectConstruct.ConcreteCircle -> it.circle
-                is ObjectConstruct.ConcreteLine -> it.line
-                is ObjectConstruct.ConcretePoint -> it.point
+                is ObjectConstruct.ConcreteCircle -> it.circle.translated(tr)
+                is ObjectConstruct.ConcreteLine -> it.line.translated(tr)
+                is ObjectConstruct.ConcretePoint -> it.point.translated(tr)
                 is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
             }
         }
@@ -65,12 +70,35 @@ fun constellation2svg(
     when (chessboardPattern) {
         ChessboardPattern.NONE -> {
             constellation.parts.forEach { part ->
+                val fillColorString = Json.encodeToString(ColorCssSerializer, part.fillColor).trim('"')
+//                val strokeColorString = Json.encodeToString(ColorCssSerializer, part.borderColor).trim('"')
                 val path = part2path(circlesOrLines, part, visibleRect)
-                appendLine(path.toSvg(asDocument = false))
+                // BUG: appears to be bugged, spits d="M x y Z"
+                val pathData = path.toSvg(asDocument = false)
+                println("$part -> $pathData")
+                appendLine("""<path d="$pathData" fill="$fillColorString"/>""")
             }
         }
-        ChessboardPattern.STARTS_COLORED -> TODO()
-        ChessboardPattern.STARTS_TRANSPARENT -> TODO()
+        ChessboardPattern.STARTS_COLORED -> {
+            appendLine(
+                chessboardPath(
+                    objects.filterIsInstance<CircleOrLine>(),
+                    color = chessboardCellColor,
+                    visibleRect = visibleRect,
+                    startsColored = true
+                )
+            )
+        }
+        ChessboardPattern.STARTS_TRANSPARENT -> {
+            appendLine(
+                chessboardPath(
+                    objects.filterIsInstance<CircleOrLine>(),
+                    color = chessboardCellColor,
+                    visibleRect = visibleRect,
+                    startsColored = false
+                )
+            )
+        }
     }
     if (encodeCirclesAndPoints) {
         val defaultObjectColor = Color(0xFF_D4BE51).copy(alpha = 0.6f) // accentColorDark
@@ -83,13 +111,64 @@ fun constellation2svg(
                     formatCircleOrLineStroke(o, inflatedVisibleRect, stroke = colorString)
                 )
                 is Point -> appendLine(
-                    """<circle cx="${o.x}" cy="${o.y}" r="$pointRadius" fill="$colorString">"""
+                    """<circle cx="${o.x}" cy="${o.y}" r="$pointRadius" fill="$colorString"/>"""
                 )
                 else -> {}
             }
         }
     }
     appendLine("</svg>")
+}
+
+private fun chessboardPath(
+    circles: List<CircleOrLine>,
+    color: Color,
+    visibleRect: Rect,
+    startsColored: Boolean = true,
+): String = buildString {
+    appendLine("<path d=\"")
+    if (startsColored)
+        appendLine(
+            "M ${visibleRect.left} ${visibleRect.top} " +
+                    "L ${visibleRect.right} ${visibleRect.top} " +
+                    "L ${visibleRect.right} ${visibleRect.bottom} " +
+                    "L ${visibleRect.left} ${visibleRect.bottom} " +
+                    "z "
+        )
+    for (circle in circles) {
+        when (circle) {
+            is Circle -> {
+                // reference: https://stackoverflow.com/a/10477334
+                val r = circle.radius
+                appendLine(
+                    "M ${circle.x} ${circle.y} " +
+                            "m $r 0 " +
+                            "a $r $r 0 1 0 ${-2*r} 0 " +
+                            "a $r $r 0 1 0 ${2*r} 0 " +
+                            "z "
+                )
+            }
+            is Line -> {
+                val pointClosestToScreenCenter = circle.project(visibleRect.center)
+                val direction = circle.directionVector
+                val normal = circle.normalVector
+                val diagonal = hypot(visibleRect.width, visibleRect.height)
+                val farBack = pointClosestToScreenCenter - direction * diagonal
+                val farForward = pointClosestToScreenCenter + direction * diagonal
+                val farForwardIn = farForward + normal * diagonal
+                val farBackIn = farBack + normal * diagonal
+                appendLine(
+                    "M ${farBack.x} ${farBack.y} " +
+                            "L ${farForward.x} ${farForward.y} " +
+                            "L ${farForwardIn.x} ${farForwardIn.y} " +
+                            "L ${farBackIn.x} ${farBackIn.y} " +
+                            "z "
+                )
+            }
+        }
+    }
+    val colorString = Json.encodeToString(ColorCssSerializer, color).trim('"')
+    append("""" fill="$colorString" fill-rule="evenodd"/>""")
 }
 
 // TODO: make a dialog with encodeCircles + other options and
@@ -106,6 +185,7 @@ fun cluster2svg(
     width: Float, height: Float,
     encodeAllCircles: Boolean = false,
 ): String {
+    // BUG: breaks bc of point (?)
     val visibleRect = Rect(0f, 0f, width, height)
     val tr = Offset(-startX, -startY)
     val circles = cluster.circles.map { it.translated(tr) }
@@ -208,10 +288,10 @@ private fun formatCircleOrLine(circle: CircleOrLine, visibleRect: Rect, fill: St
     }
 }
 
-private fun formatCircleOrLineStroke(circle: CircleOrLine, visibleRect: Rect, stroke: String = "black", prefix: String = "", postfix: String = ""): String {
+private fun formatCircleOrLineStroke(circle: CircleOrLine, visibleRect: Rect, stroke: String = "black", fill: String = "none", prefix: String = "", postfix: String = ""): String {
     val pre = if (prefix.isBlank()) "" else "$prefix "
     return when (circle) {
-        is Circle -> """<circle ${pre}cx="${circle.x}" cy="${circle.y}" r="${circle.radius}" stroke="$stroke" $postfix/>"""
+        is Circle -> """<circle ${pre}cx="${circle.x}" cy="${circle.y}" r="${circle.radius}" fill="$fill" stroke="$stroke" $postfix/>"""
         is Line -> {
             val pointClosestToScreenCenter = circle.project(visibleRect.center)
             val direction = circle.directionVector

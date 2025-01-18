@@ -46,6 +46,7 @@ import domain.PointSnapResult
 import domain.angleDeg
 import domain.cluster.ArcPath
 import domain.ChessboardPattern
+import domain.ColorAsCss
 import domain.cluster.Cluster
 import domain.cluster.ClusterV1
 import domain.cluster.Constellation
@@ -69,6 +70,7 @@ import domain.io.DdcV2
 import domain.io.DdcV4
 import domain.io.cluster2svg
 import domain.io.cluster2svgCheckPattern
+import domain.io.constellation2svg
 import domain.io.parseDdcV1
 import domain.io.parseDdcV2
 import domain.io.parseDdcV3
@@ -247,24 +249,29 @@ class EditClusterViewModel : ViewModel() {
         canvasSize = newCanvasSize
     }
 
-    fun saveAsYaml(name: String = DdcV2.DEFAULT_NAME): String {
+    fun saveAsYaml(name: String = DdcV4.DEFAULT_NAME): String {
         // Q: there seemingly was an issue with saving circleColors on Android
-        return Yaml(
-            configuration = YamlConfiguration(
-                encodeDefaults = false,
-                strictMode = false,
-                polymorphismStyle = PolymorphismStyle.Property,
-            )
-        ).encodeToString(DdcV4.from(toConstellation()).copy(
+        return YamlEncoding.encodeToString(DdcV4.from(toConstellation()).copy(
             name = name,
             bestCenterX = computeAbsoluteCenter()?.x,
             bestCenterY = computeAbsoluteCenter()?.y,
             chessboardPattern = chessboardPattern != ChessboardPattern.NONE,
             chessboardPatternStartsColored = chessboardPattern == ChessboardPattern.STARTS_COLORED,
+            initialRegionColor = regionColor
         ))
     }
 
     fun exportAsSvg(name: String = DdcV4.DEFAULT_NAME): String {
+        val start = absolute(Offset.Zero)
+//        return constellation2svg(
+//            toConstellation(),
+//            width = canvasSize.width.toFloat(),
+//            height = canvasSize.height.toFloat(),
+//            startX = start.x, startY = start.y,
+//            encodeCirclesAndPoints = true,
+//            chessboardPattern = ChessboardPattern.NONE, //chessboardPattern,
+//            chessboardCellColor = regionColor
+//        )
         val nulls = objects.filterIndices { it == null }
         val reindexing = reindexingMap(objects.indices, nulls.toSet())
         val realCircles = objects.mapNotNull { it as? CircleOrLine }
@@ -277,21 +284,30 @@ class EditClusterViewModel : ViewModel() {
         val cluster = Cluster(
             realCircles, reindexedParts
         )
-        val start = absolute(Offset.Zero)
-        return if (chessboardPattern != ChessboardPattern.NONE)
-            cluster2svgCheckPattern(
-                cluster = cluster, backgroundColor = regionColor,
-                chessboardPatternStartsColored = chessboardPattern == ChessboardPattern.STARTS_COLORED,
+        return if (chessboardPattern != ChessboardPattern.NONE) {
+//            cluster2svgCheckPattern(
+//                cluster = cluster, backgroundColor = regionColor,
+//                chessboardPatternStartsColored = chessboardPattern == ChessboardPattern.STARTS_COLORED,
+//                startX = start.x, startY = start.y,
+//                width = canvasSize.width.toFloat(), height = canvasSize.height.toFloat()
+//            )
+            constellation2svg(
+                toConstellation(),
+                width = canvasSize.width.toFloat(),
+                height = canvasSize.height.toFloat(),
                 startX = start.x, startY = start.y,
-                width = canvasSize.width.toFloat(), height = canvasSize.height.toFloat()
+                encodeCirclesAndPoints = true,
+                chessboardPattern = chessboardPattern,
+                chessboardCellColor = regionColor
             )
-        else
+        } else {
             cluster2svg(
                 cluster = cluster,
                 backgroundColor = null,
                 startX = start.x, startY = start.y,
                 width = canvasSize.width.toFloat(), height = canvasSize.height.toFloat()
             )
+        }
     }
 
     private fun computeAbsoluteCenter(): Offset? =
@@ -314,6 +330,9 @@ class EditClusterViewModel : ViewModel() {
                     if (!ddc.chessboardPattern) ChessboardPattern.NONE
                     else if (ddc.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
                     else ChessboardPattern.STARTS_TRANSPARENT
+                ddc.initialRegionColor?.let {
+                    regionColor = it
+                }
             },
             { e ->
                 println("Failed to parse DdcV4->yaml, falling back to DdcV3->yaml")
@@ -520,6 +539,9 @@ class EditClusterViewModel : ViewModel() {
         selection = state.selection.filter { it in objects.indices } // just in case
         centerizeTo(state.centerX, state.centerY)
         chessboardPattern = state.chessboardPattern
+        state.regionColor?.let {
+            regionColor = it
+        }
     }
 
     private fun resetTransients() {
@@ -2589,7 +2611,8 @@ class EditClusterViewModel : ViewModel() {
             selection = selection.mapNotNull { reindexing[it] },
             centerX = center.x,
             centerY = center.y,
-            chessboardPattern = chessboardPattern
+            chessboardPattern = chessboardPattern,
+            regionColor = regionColor,
         )
     }
 
@@ -2621,6 +2644,9 @@ class EditClusterViewModel : ViewModel() {
         selection = state.selection
         centerizeTo(state.centerX, state.centerY)
         chessboardPattern = state.chessboardPattern
+        state.regionColor?.let {
+            regionColor = it
+        }
     }
 
     /** caches latest [State] using platform-specific local storage */
@@ -2639,8 +2665,8 @@ class EditClusterViewModel : ViewModel() {
     }
 
     /** Be careful to pass *only* strictly immutable args by __copying__ */
-    @Serializable
     @Immutable
+    @Serializable
     data class State(
         val constellation: Constellation,
         val selection: List<Ix>,
@@ -2648,6 +2674,7 @@ class EditClusterViewModel : ViewModel() {
         val centerX: Float,
         val centerY: Float,
         val chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
+        val regionColor: ColorAsCss? = null,
     )
 
     companion object {
@@ -2657,6 +2684,13 @@ class EditClusterViewModel : ViewModel() {
                 EditClusterViewModel()
             }
         }
+        val YamlEncoding = Yaml(
+            configuration = YamlConfiguration(
+                encodeDefaults = false,
+                strictMode = false,
+                polymorphismStyle = PolymorphismStyle.Property,
+            )
+        )
 
         const val LOW_ACCURACY_FACTOR = 1.5f
         const val HUD_ZOOM_INCREMENT = 1.1f // == +10%
