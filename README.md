@@ -105,11 +105,7 @@ output directory: `composeApp/build/outputs/apk/debug/`
 To run applications built with Kotlin/Wasm in a browser, you need a browser supporting [wasm garbage collection feature](https://github.com/WebAssembly/gc):  
 - For **Chrome** and **Chromium-based** browsers (Edge, Brave etc.), it **should just work** since version 119.
 - For **Firefox** 120+ it **should just work**.
-- For **Firefox** 119:
-  1. Open `about:config` in the browser.
-  2. Enable **javascript.options.wasm_gc**.
-  3. Refresh the page.  
-- For **Safari** it is _NOT_ implemented as of now (October 2024), _but_ it has been previewed.
+- For **Safari** it should work starting from version 18.2+.
 - [Relevant Wasm compatibility table.](https://webassembly.org/features/#table-row-gc)
 
 For more information see https://kotl.in/wasm_help/.
