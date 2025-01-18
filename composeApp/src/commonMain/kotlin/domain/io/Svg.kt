@@ -66,9 +66,11 @@ fun constellation2svg(
         val bg = Json.encodeToString(ColorCssSerializer, it).trim('"')
         appendLine(formatRect(visibleRect, bg))
     }
-    val circlesOrLines = objects.map { it as? CircleOrLine }
     when (chessboardPattern) {
         ChessboardPattern.NONE -> {
+            // https://youtrack.jetbrains.com/issue/CMP-7418/Path.toSvg-is-completely-broken
+            TODO("bs")
+            val circlesOrLines = objects.map { it as? CircleOrLine }
             constellation.parts.forEach { part ->
                 val fillColorString = Json.encodeToString(ColorCssSerializer, part.fillColor).trim('"')
 //                val strokeColorString = Json.encodeToString(ColorCssSerializer, part.borderColor).trim('"')

@@ -272,18 +272,6 @@ class EditClusterViewModel : ViewModel() {
 //            chessboardPattern = ChessboardPattern.NONE, //chessboardPattern,
 //            chessboardCellColor = regionColor
 //        )
-        val nulls = objects.filterIndices { it == null }
-        val reindexing = reindexingMap(objects.indices, nulls.toSet())
-        val realCircles = objects.mapNotNull { it as? CircleOrLine }
-        val reindexedParts = regions.map { part ->
-            part.copy(
-                insides = part.insides.map { reindexing[it]!! }.toSet(),
-                outsides = part.outsides.map { reindexing[it]!! }.toSet(),
-            )
-        }
-        val cluster = Cluster(
-            realCircles, reindexedParts
-        )
         return if (chessboardPattern != ChessboardPattern.NONE) {
 //            cluster2svgCheckPattern(
 //                cluster = cluster, backgroundColor = regionColor,
@@ -296,11 +284,23 @@ class EditClusterViewModel : ViewModel() {
                 width = canvasSize.width.toFloat(),
                 height = canvasSize.height.toFloat(),
                 startX = start.x, startY = start.y,
-                encodeCirclesAndPoints = true,
+                encodeCirclesAndPoints = showCircles,
                 chessboardPattern = chessboardPattern,
                 chessboardCellColor = regionColor
             )
-        } else {
+        } else { // ...not great
+            val nulls = objects.filterIndices { it !is CircleOrLine }
+            val reindexing = reindexingMap(objects.indices, nulls.toSet())
+            val realCircles = objects.mapNotNull { it as? CircleOrLine }
+            val reindexedParts = regions.map { part ->
+                part.copy(
+                    insides = part.insides.map { reindexing[it]!! }.toSet(),
+                    outsides = part.outsides.map { reindexing[it]!! }.toSet(),
+                )
+            }
+            val cluster = Cluster(
+                realCircles, reindexedParts
+            )
             cluster2svg(
                 cluster = cluster,
                 backgroundColor = null,
