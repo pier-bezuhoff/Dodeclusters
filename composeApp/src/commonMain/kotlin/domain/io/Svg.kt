@@ -3,13 +3,21 @@ package domain.io
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toSvg
 import domain.cluster.Cluster
 import domain.ColorCssSerializer
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.GCircle
 import data.geometry.Line
+import data.geometry.Point
+import domain.ChessboardPattern
+import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
+import domain.expressions.ExpressionForest
+import domain.expressions.ObjectConstruct
 import kotlinx.serialization.json.Json
+import ui.part2path
 import ui.theme.DodeclustersColors
 import kotlin.math.hypot
 
@@ -18,10 +26,74 @@ private const val INDENT1 = INDENT
 private const val INDENT2 = INDENT + INDENT
 private const val desc = """<desc>Created in Dodeclusters.</desc>"""
 
+// TODO: chessboard pattern
+fun constellation2svg(
+    constellation: Constellation,
+    width: Float, height: Float,
+    encodeCirclesAndPoints: Boolean = true,
+    chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
+    chessboardCellColor: Color = Color.White,
+): String = buildString {
+    val objects: MutableList<GCircle?> = mutableListOf()
+    objects.addAll(
+        constellation.objects.map {
+            when (it) {
+                is ObjectConstruct.ConcreteCircle -> it.circle
+                is ObjectConstruct.ConcreteLine -> it.line
+                is ObjectConstruct.ConcretePoint -> it.point
+                is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
+            }
+        }
+    )
+    val upscalingFactor = 200.0
+    val downscalingFactor = 1.0/upscalingFactor
+    val expressions = ExpressionForest(
+        constellation.toExpressionMap(),
+        get = { ix -> objects[ix]?.scaled(0.0, 0.0, downscalingFactor) },
+        set = { ix, o -> objects[ix] = o?.scaled(0.0, 0.0, upscalingFactor) }
+    )
+    expressions.reEval()
+    val visibleRect = Rect(0f, 0f, width, height)
+    val inflatedVisibleRect = visibleRect.inflate(100f)
+    appendLine("""<svg xmlns="http://www.w3.org/2000/svg" width="$width" height="$height" viewBox="0.0 0.0 $width $height">""")
+    appendLine(desc)
+    constellation.backgroundColor?.let {
+        val bg = Json.encodeToString(ColorCssSerializer, it).trim('"')
+        appendLine(formatRect(visibleRect, bg))
+    }
+    val circlesOrLines = objects.map { it as? CircleOrLine }
+    when (chessboardPattern) {
+        ChessboardPattern.NONE -> {
+            constellation.parts.forEach { part ->
+                val path = part2path(circlesOrLines, part, visibleRect)
+                appendLine(path.toSvg(asDocument = false))
+            }
+        }
+        ChessboardPattern.STARTS_COLORED -> TODO()
+        ChessboardPattern.STARTS_TRANSPARENT -> TODO()
+    }
+    if (encodeCirclesAndPoints) {
+        val defaultObjectColor = Color(0xFF_D4BE51).copy(alpha = 0.6f) // accentColorDark
+        val pointRadius = 5f
+        objects.forEachIndexed { ix, o ->
+            val color = constellation.objectColors[ix] ?: defaultObjectColor
+            val colorString = Json.encodeToString(ColorCssSerializer, color).trim('"')
+            when (o) {
+                is CircleOrLine -> appendLine(
+                    formatCircleOrLineStroke(o, inflatedVisibleRect, stroke = colorString)
+                )
+                is Point -> appendLine(
+                    """<circle cx="${o.x}" cy="${o.y}" r="$pointRadius" fill="$colorString">"""
+                )
+                else -> {}
+            }
+        }
+    }
+    appendLine("</svg>")
+}
+
 // TODO: make a dialog with encodeCircles + other options and
 //  a disclaimer about border-only export being unimplemented
-// NOTE: ksvg doesn't support wasm yet + my use case is relatively formulaic
-// NOTE: Path.toSvg is coming soon (tm) to compose.ui.graphics
 // NOTE: "For reliable results cross-browser, use numbers with no more
 //  than 2 digits after the decimal and four digits before it." -- im gonna ignore this
 // NOTE: this intersection-based way of rendering svg is quite slow for larger clusters
@@ -132,6 +204,23 @@ private fun formatCircleOrLine(circle: CircleOrLine, visibleRect: Rect, fill: St
                     "L ${farBackIn.x} ${farBackIn.y} " +
                     "z"
             """<path ${pre}d="$d" fill="$fill" $postfix/>"""
+        }
+    }
+}
+
+private fun formatCircleOrLineStroke(circle: CircleOrLine, visibleRect: Rect, stroke: String = "black", prefix: String = "", postfix: String = ""): String {
+    val pre = if (prefix.isBlank()) "" else "$prefix "
+    return when (circle) {
+        is Circle -> """<circle ${pre}cx="${circle.x}" cy="${circle.y}" r="${circle.radius}" stroke="$stroke" $postfix/>"""
+        is Line -> {
+            val pointClosestToScreenCenter = circle.project(visibleRect.center)
+            val direction = circle.directionVector
+            val diagonal = hypot(visibleRect.width, visibleRect.height)
+            val farBack = pointClosestToScreenCenter - direction * diagonal
+            val farForward = pointClosestToScreenCenter + direction * diagonal
+            val d = "M ${farBack.x} ${farBack.y} " +
+                    "L ${farForward.x} ${farForward.y} "
+            """<path ${pre}d="$d" stroke="$stroke" $postfix/>"""
         }
     }
 }

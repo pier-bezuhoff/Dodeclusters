@@ -264,7 +264,7 @@ class EditClusterViewModel : ViewModel() {
         ))
     }
 
-    fun exportAsSvg(name: String = DdcV2.DEFAULT_NAME): String {
+    fun exportAsSvg(name: String = DdcV4.DEFAULT_NAME): String {
         val nulls = objects.filterIndices { it == null }
         val reindexing = reindexingMap(objects.indices, nulls.toSet())
         val realCircles = objects.mapNotNull { it as? CircleOrLine }
@@ -2676,7 +2676,7 @@ class EditClusterViewModel : ViewModel() {
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 200.0
-        const val DOWNSCALING_FACTOR = 1/UPSCALING_FACTOR
+        const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)
