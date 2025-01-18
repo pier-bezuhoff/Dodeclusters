@@ -1,6 +1,6 @@
 [versions]
-dodeclusters-versionCode = "3"
-dodeclusters-version = "0.3.0"
+dodeclusters-versionCode = "4"
+dodeclusters-version = "0.4.0"
 # NOTE: Andorid 15 (api 35) is already out, but
 #  you need AndroidStudio 2024.2.1 & agp 8.6.0,
 #  see https://developer.android.com/build/releases/gradle-plugin#api-level-support
@@ -8,15 +8,15 @@ android-compileSdk = "34"
 android-minSdk = "24" # = Android 7.0 Nougat
 android-targetSdk = "34"
 
-kotlin = "2.0.21"
+kotlin = "2.1.0"
 # latest compatible with this Android Studio version, but is far ahead of
 # the one that is officially supported by KMP 1.6.11 (agp 8.3.*)
 agp = "8.5.2"
-compose-multiplatform = "1.7.0" # aligns with compose-multiplatform version
+compose-multiplatform = "1.7.3"
 #noinspection GradleDependency
-jetpack-compose = "1.7.4" # check github compose-multiplatform/release for the one compatible
+jetpack-compose = "1.7.6" # check github compose-multiplatform/release for the one compatible
 # https://github.com/JetBrains/compose-multiplatform/releases/tag/v1.7.0
-kotlinx-serialization = "1.7.3"
+kotlinx-serialization = "1.8.0"
 kotlinx-coroutines = "1.9.0"
 androidx-activityCompose = "1.9.3"
 #noinspection GradleDependency
@@ -24,7 +24,7 @@ androidx-core-ktx = "1.13.1" # do not update, 1.15.0 requires api 35
 lifecycle-viewmodel = "2.8.3"
 window-size-klass = "0.5.0"
 colormath = "3.6.0"
-kaml = "0.62.2"
+kaml = "0.67.0"
 kstore = "0.9.1"
 appdirs = "1.2.0"
 

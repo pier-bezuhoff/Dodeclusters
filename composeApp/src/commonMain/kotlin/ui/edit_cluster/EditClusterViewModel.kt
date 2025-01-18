@@ -1243,12 +1243,13 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun swapDirectionsOfSelectedCircles() {
-        for (ix in selection) {
+        for (ix in selection) { // no recording (idk why)
             val obj = objects[ix]
             if (obj is CircleOrLine && isFree(ix)) {
                 objects[ix] = obj.reversed()
             }
         }
+        expressions.update(selection)
     }
 
     fun onDown(visiblePosition: Offset) {
@@ -1563,7 +1564,7 @@ class EditClusterViewModel : ViewModel() {
     private fun scaleViaSliderSingleCircle(pan: Offset, h: HandleConfig.SingleCircle, sm: SubMode.ScaleViaSlider) {
         val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
         if (sm.sliderPercentage != newPercentage) {
-            recordCommand(Command.SCALE, targets = listOf(h.ix))
+            recordCommand(Command.SCALE, target = h.ix)
             val circle = objects[h.ix] as? CircleOrLine
             val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
             objects[h.ix] = circle?.scaled(sm.center, scaleFactor)
@@ -1580,7 +1581,7 @@ class EditClusterViewModel : ViewModel() {
     private fun rotateSingleCircle(pan: Offset, c: Offset, h: HandleConfig.SingleCircle, sm: SubMode.Rotate) {
         val free = !LOCK_DEPENDENT_OBJECT || isFree(h.ix)
         if (free) {
-            recordCommand(Command.ROTATE, targets = listOf(h.ix))
+            recordCommand(Command.ROTATE, target = h.ix)
             val center = sm.center
             val centerToCurrent = c - center
             val centerToPreviousHandle = centerToCurrent - pan
@@ -1998,7 +1999,7 @@ class EditClusterViewModel : ViewModel() {
         val allParents = selection.flatMap { selectedIndex ->
             // MAYBE: still highlight Incident.carrier BUT do not notify as if locked
             if (isConstrained(selectedIndex)) emptyList() // exclude semi-free Expr.Incidence
-            else expressions.immediateParentsOf(selectedIndex)
+            else expressions.getImmediateParents(selectedIndex)
                 .minus(selection.toSet())
                 .mapNotNull { objects[it] }
         }

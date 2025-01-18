@@ -366,11 +366,11 @@ class ExpressionForest(
         }
     }
 
-    fun immediateParentsOf(childIx: Ix): List<Ix> =
+    fun getImmediateParents(childIx: Ix): List<Ix> =
         expressions[childIx]?.expr?.args.orEmpty()
 
     fun findExistingIntersectionIndex(circleIndex1: Ix, circleIndex2: Ix): Ix? {
-        // Q: what outputIndex tho?
+        // Q: what about outputIndex tho?
         // find point that is incident to both
         return expressions.keys.firstOrNull { pointIndex ->
             pointIndex != circleIndex1 && pointIndex != circleIndex2 &&

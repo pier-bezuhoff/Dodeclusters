@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -141,6 +142,7 @@ fun BoxScope.EditClusterCanvas(
         }
     }
 //    SelectionsCanvas(modifier, viewModel, selectionLinesColor, backgroundColor, selectedCircleColor, circleThiccStroke, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha)
+    // key(viewModel.objectAlterationTrigger) { Canvas(...) }
     Canvas(
         modifier
             // NOTE: turned off long press for now (also inside of reactiveCanvas)
