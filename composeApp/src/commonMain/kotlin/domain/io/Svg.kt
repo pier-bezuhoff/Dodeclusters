@@ -3,15 +3,14 @@ package domain.io
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toSvg
-import domain.cluster.Cluster
-import domain.ColorCssSerializer
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Line
 import data.geometry.Point
 import domain.ChessboardPattern
+import domain.ColorCssSerializer
+import domain.cluster.Cluster
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
 import domain.expressions.ExpressionForest
@@ -27,8 +26,13 @@ private const val INDENT2 = INDENT + INDENT
 // MAYBE: implement https://stackoverflow.com/a/4756461/7143065
 // MAYBE: prepend with user-specified [file]name
 private const val desc = """<desc>Created in Dodeclusters.</desc>"""
+private const val highlightClass = "highlightable"
+private const val defs = """<defs>
+    <style><![CDATA[
+        .$highlightClass:hover { filter: brightness(150%); }
+    ]]></style>
+</defs>"""
 
-// TODO: chessboard pattern
 // MAYBE: just pass already computed objects to make it more straightforward
 fun constellation2svg(
     constellation: Constellation,
@@ -62,22 +66,21 @@ fun constellation2svg(
     val inflatedVisibleRect = visibleRect.inflate(100f)
     appendLine("""<svg xmlns="http://www.w3.org/2000/svg" width="$width" height="$height" viewBox="0.0 0.0 $width $height">""")
     appendLine(desc)
+//    appendLine(defs)
     constellation.backgroundColor?.let {
         val bg = Json.encodeToString(ColorCssSerializer, it).trim('"')
         appendLine(formatRect(visibleRect, bg))
     }
     when (chessboardPattern) {
         ChessboardPattern.NONE -> {
-            // https://youtrack.jetbrains.com/issue/CMP-7418/Path.toSvg-is-completely-broken
-            TODO("bs")
             val circlesOrLines = objects.map { it as? CircleOrLine }
             constellation.parts.forEach { part ->
                 val fillColorString = Json.encodeToString(ColorCssSerializer, part.fillColor).trim('"')
 //                val strokeColorString = Json.encodeToString(ColorCssSerializer, part.borderColor).trim('"')
                 val path = part2path(circlesOrLines, part, visibleRect)
-                // BUG: appears to be bugged, spits d="M x y Z"
-                val pathData = path.toSvg(asDocument = false)
-                println("$part -> $pathData")
+                // NOTE: path.toSvg is bugged for elliptic/circular arcs (not yet implemented)
+                //  https://youtrack.jetbrains.com/issue/CMP-7418/Path.toSvg-is-completely-broken
+                val pathData = path.toCircularSvg()
                 appendLine("""<path d="$pathData" fill="$fillColorString"/>""")
             }
         }
@@ -105,15 +108,16 @@ fun constellation2svg(
     if (encodeCirclesAndPoints) {
         val defaultObjectColor = Color(0xFF_D4BE51).copy(alpha = 0.6f) // accentColorDark
         val pointRadius = 5f
+        val highlightClassString = """class="highlightable" """
         objects.forEachIndexed { ix, o ->
             val color = constellation.objectColors[ix] ?: defaultObjectColor
             val colorString = Json.encodeToString(ColorCssSerializer, color).trim('"')
             when (o) {
                 is CircleOrLine -> appendLine(
-                    formatCircleOrLineStroke(o, inflatedVisibleRect, stroke = colorString)
+                    formatCircleOrLineStroke(o, inflatedVisibleRect, stroke = colorString, prefix = highlightClassString)
                 )
                 is Point -> appendLine(
-                    """<circle cx="${o.x}" cy="${o.y}" r="$pointRadius" fill="$colorString"/>"""
+                    """<circle ${highlightClassString}cx="${o.x}" cy="${o.y}" r="$pointRadius" fill="$colorString"/>"""
                 )
                 else -> {}
             }

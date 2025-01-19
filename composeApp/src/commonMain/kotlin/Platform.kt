@@ -11,6 +11,7 @@ interface Platform {
     val maxCircleRadius: Float
     val lastStateStore: KStore<EditClusterViewModel.State>
     fun saveLastState(state: EditClusterViewModel.State)
+    // MAYBE: also save history (to a separate store) for UX
     fun scrollToZoom(yDelta: Float): Float
 
     companion object {

@@ -18,6 +18,8 @@
     <string name="toggle_select_all_description">Выделить всё/снять выделение</string>
     <string name="hide_ui_name">Скрыть интерфейс</string>
     <string name="hide_ui_description">Скрыть интерфейс на 30с</string>
+    <string name="toggle_direction_arrows_name">Показать/спрятать стрелки</string>
+    <string name="toggle_direction_arrows_description">Показать/спрятать стрелки, указывающие направление выделенных окружностей/прямых</string>
     <string name="change_background_name">Поменять фон</string>
     <string name="change_background_description">Поменять цвет фона</string>
     <string name="region_name">Области</string>

@@ -25,7 +25,7 @@ Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multipla
 - [x] Android 7.0+ (SDK 24+)
 - [x] Web (via [Wasm](#Web-Wasm-compatibility))
 - [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries), for now 
-  only works as a web app thru Chrome/Firefox
+  only works as a web app
 
 ## End goal
 Combine interactive designs ~ Geogebra  

@@ -263,51 +263,15 @@ class EditClusterViewModel : ViewModel() {
 
     fun exportAsSvg(name: String = DdcV4.DEFAULT_NAME): String {
         val start = absolute(Offset.Zero)
-//        return constellation2svg(
-//            toConstellation(),
-//            width = canvasSize.width.toFloat(),
-//            height = canvasSize.height.toFloat(),
-//            startX = start.x, startY = start.y,
-//            encodeCirclesAndPoints = true,
-//            chessboardPattern = ChessboardPattern.NONE, //chessboardPattern,
-//            chessboardCellColor = regionColor
-//        )
-        return if (chessboardPattern != ChessboardPattern.NONE) {
-//            cluster2svgCheckPattern(
-//                cluster = cluster, backgroundColor = regionColor,
-//                chessboardPatternStartsColored = chessboardPattern == ChessboardPattern.STARTS_COLORED,
-//                startX = start.x, startY = start.y,
-//                width = canvasSize.width.toFloat(), height = canvasSize.height.toFloat()
-//            )
-            constellation2svg(
-                toConstellation(),
-                width = canvasSize.width.toFloat(),
-                height = canvasSize.height.toFloat(),
-                startX = start.x, startY = start.y,
-                encodeCirclesAndPoints = showCircles,
-                chessboardPattern = chessboardPattern,
-                chessboardCellColor = regionColor
-            )
-        } else { // ...not great
-            val nulls = objects.filterIndices { it !is CircleOrLine }
-            val reindexing = reindexingMap(objects.indices, nulls.toSet())
-            val realCircles = objects.mapNotNull { it as? CircleOrLine }
-            val reindexedParts = regions.map { part ->
-                part.copy(
-                    insides = part.insides.map { reindexing[it]!! }.toSet(),
-                    outsides = part.outsides.map { reindexing[it]!! }.toSet(),
-                )
-            }
-            val cluster = Cluster(
-                realCircles, reindexedParts
-            )
-            cluster2svg(
-                cluster = cluster,
-                backgroundColor = null,
-                startX = start.x, startY = start.y,
-                width = canvasSize.width.toFloat(), height = canvasSize.height.toFloat()
-            )
-        }
+        return constellation2svg(
+            toConstellation(),
+            width = canvasSize.width.toFloat(),
+            height = canvasSize.height.toFloat(),
+            startX = start.x, startY = start.y,
+            encodeCirclesAndPoints = showCircles,
+            chessboardPattern = chessboardPattern,
+            chessboardCellColor = regionColor
+        )
     }
 
     private fun computeAbsoluteCenter(): Offset? =
@@ -2028,6 +1992,13 @@ class EditClusterViewModel : ViewModel() {
     fun onLongDragCancel() {}
     fun onLongDragEnd() {}
 
+    private fun queueSnackbarMessage(snackbarMessage: SnackbarMessage) {
+        viewModelScope.launch {
+            // tryEmit apparently hangs the app on Windows/Chrome
+            snackbarMessages.emit(snackbarMessage)
+        }
+    }
+
     /** Signals locked state to the user with animation & snackbar message */
     private fun highlightSelectionParents() {
         val allParents = selection.flatMap { selectedIndex ->
@@ -2040,9 +2011,9 @@ class EditClusterViewModel : ViewModel() {
         if (allParents.isNotEmpty()) {
             if (movementAfterDown) {
                 if (selection.size == 1)
-                    snackbarMessages.tryEmit(SnackbarMessage.LOCKED_OBJECT_NOTICE)
+                    queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
                 else
-                    snackbarMessages.tryEmit(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
+                    queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
             }
             viewModelScope.launch {
                 _animations.emit(HighlightAnimation(allParents))
@@ -2212,7 +2183,7 @@ class EditClusterViewModel : ViewModel() {
             )
             createNewGCircle(newGCircle?.upscale())
             if (newGCircle is ImaginaryCircle)
-                snackbarMessages.tryEmit(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
         partialArgList = PartialArgList(argList.signature)
     }
@@ -2248,7 +2219,7 @@ class EditClusterViewModel : ViewModel() {
             val newCircle = newGCircle as? CircleOrLine
             createNewGCircle(newCircle?.upscale())
             if (newGCircle is ImaginaryCircle)
-                snackbarMessages.tryEmit(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
         partialArgList = PartialArgList(argList.signature)
     }
@@ -2342,7 +2313,7 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
         defaultInterpolationParameters = DefaultInterpolationParameters(params)
         if (newGCircles.any { it is ImaginaryCircle })
-            snackbarMessages.tryEmit(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+            queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
     }
 
     fun resetCircleInterpolation() {
