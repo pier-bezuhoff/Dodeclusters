@@ -327,7 +327,9 @@ fun EditClusterScreen(
         }
     }
     LaunchedEffect(viewModel) {
-        viewModel.snackbarMessages.collectLatest { message ->
+        // TEST
+//        viewModel.snackbarMessages.collectLatest { message ->
+        viewModel.snackbarMessages.collect { message ->
             // TODO: move on-selection action prompt here instead
             snackbarHostState.showSnackbar(getString(message.stringResource), duration = message.duration)
         }
