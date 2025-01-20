@@ -1996,10 +1996,10 @@ class EditClusterViewModel : ViewModel() {
     fun onLongDragEnd() {}
 
     private fun queueSnackbarMessage(snackbarMessage: SnackbarMessage) {
-        viewModelScope.launch {
-            // tryEmit apparently hangs the app on Windows/Chrome
-            snackbarMessages.emit(snackbarMessage)
-        }
+        snackbarMessages.tryEmit(snackbarMessage)
+//        viewModelScope.launch {
+//            snackbarMessages.emit(snackbarMessage)
+//        }
     }
 
     /** Signals locked state to the user with animation & snackbar message */

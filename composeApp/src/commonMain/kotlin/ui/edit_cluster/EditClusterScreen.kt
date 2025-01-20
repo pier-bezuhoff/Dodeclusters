@@ -327,11 +327,11 @@ fun EditClusterScreen(
         }
     }
     LaunchedEffect(viewModel) {
-        // TEST
-//        viewModel.snackbarMessages.collectLatest { message ->
-        viewModel.snackbarMessages.collect { message ->
-            // TODO: move on-selection action prompt here instead
-            snackbarHostState.showSnackbar(getString(message.stringResource), duration = message.duration)
+        viewModel.snackbarMessages.collectLatest { message ->
+            // NOTE: snackbar hangs windows/chrome apparently
+//            snackbarHostState.showSnackbar(getString(message.stringResource), duration = message.duration)
+            // MAYBE: move on-selection action prompt here instead
+            println(getString(message.stringResource))
         }
     }
 }
