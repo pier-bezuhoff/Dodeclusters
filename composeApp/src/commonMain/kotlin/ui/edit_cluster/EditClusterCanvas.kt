@@ -114,12 +114,10 @@ fun BoxScope.EditClusterCanvas(
     val freeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
     val pointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
     val freePointColor = freeCircleColor
-    val selectedCircleColor =
+    val selectedCircleColor = DodeclustersColors.strongSalad
 //        MaterialTheme.colorScheme.primary
-        DodeclustersColors.strongSalad
     val selectedPointColor = selectedCircleColor
-    val clusterPathAlpha = 1f
-    //0.7f
+    val clusterPathAlpha = 1f //0.7f
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
@@ -130,13 +128,14 @@ fun BoxScope.EditClusterCanvas(
             // MAYBE: keep track of Job's created by launch'es in case we need to cancel them prematurely
             when (event) {
                 is ColoredContourAnimation -> launch { // parallel multiplexer structure
+                    animations[event]?.stop()
                     val animatable = Animatable(0f)
                     animations[event] = animatable
                     animatable.animateTo(event.maxAlpha, tween(event.alpha01Duration, easing = LinearEasing))
                     animatable.animateTo(
                         targetValue = 0f,
                         tween(event.alpha10Duration, easing = FastOutLinearInEasing),
-//                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
+            //                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
                     )
                     animations.remove(event) // idk, this might be bad
                 }

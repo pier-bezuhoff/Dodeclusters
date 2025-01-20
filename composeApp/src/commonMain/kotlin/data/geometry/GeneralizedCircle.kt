@@ -80,6 +80,18 @@ data class GeneralizedCircle(
     val isImaginaryCircle: Boolean get() =
         !isLine && r2 <= -EPSILON2
 
+    operator fun times(a: Double): GeneralizedCircle {
+        return GeneralizedCircle(w * a, x * a, y * a, z * a)
+    }
+
+    operator fun times(a: Float): GeneralizedCircle {
+        return GeneralizedCircle(w * a, x * a, y * a, z * a)
+    }
+
+    operator fun times(a: Int): GeneralizedCircle {
+        return GeneralizedCircle(w * a, x * a, y * a, z * a)
+    }
+
     operator fun times(a: Number): GeneralizedCircle {
         val a0 = a.toDouble()
         return GeneralizedCircle(w * a0, x * a0, y * a0, z * a0)
@@ -364,12 +376,13 @@ data class GeneralizedCircle(
             val (w1, x1, y1, z1) = c1
             val (w2, x2, y2, z2) = c2
             val (w3, x3, y3, z3) = c3
-            // det-like totally antisymmetric product
+            // determinant-like totally antisymmetric product
             val w = w1*x2*y3 - w1*x3*y2 - w2*x1*y3 + w2*x3*y1 + w3*x1*y2 - w3*x2*y1
             val x = -w1*y2*z3 + w1*y3*z2 + w2*y1*z3 - w2*y3*z1 - w3*y1*z2 + w3*y2*z1
             val y = w1*x2*z3 - w1*x3*z2 - w2*x1*z3 + w2*x3*z1 + w3*x1*z2 - w3*x2*z1
             val z = -x1*y2*z3 + x1*y3*z2 + x2*y1*z3 - x2*y3*z1 - x3*y1*z2 + x3*y2*z1
             if (is0000(w,x,y,z)) {
+                // case of c1-c2-c3 being in the same pencil
                 println("GeneralizedCircle.perp3 resulted in near-zero: ($w, $x, $y, $z) aka 0 or infinite number of solutions")
                 return null
             }

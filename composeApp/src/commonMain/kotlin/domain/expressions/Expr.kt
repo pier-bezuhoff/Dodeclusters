@@ -56,10 +56,9 @@ sealed interface Expr : ExprLike {
         val center: Ix,
         val radiusPoint: Ix
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(center, radiusPoint))
-    // MAYBE: allow ImaginaryCircle or Point to be output for further use
     @Serializable
     @SerialName("CircleBy3PerpendicularObjects")
-    data class CircleBy3Points( // order-less
+    data class CircleBy3Points(
         val object1: Ix,
         val object2: Ix,
         val object3: Ix,
@@ -73,7 +72,7 @@ sealed interface Expr : ExprLike {
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(pencilObject1, pencilObject2, perpendicularObject))
     @Serializable
     @SerialName("LineBy2PerpendicularObjects")
-    data class LineBy2Points( // order-less
+    data class LineBy2Points(
         val object1: Ix,
         val object2: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2))
@@ -93,7 +92,7 @@ sealed interface Expr : ExprLike {
 
     @Serializable
     @SerialName("Intersection")
-    data class Intersection( // order-less
+    data class Intersection(
         val circle1: Ix,
         val circle2: Ix,
     ) : OneToMany, ExprLike by E(Parameters.None, listOf(circle1, circle2))

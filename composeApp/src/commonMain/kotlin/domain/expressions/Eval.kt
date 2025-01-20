@@ -12,6 +12,7 @@ import kotlin.math.sign
 
 // eval for one-to-one functions
 
+// MAYBE: return singular Point when center == radiusPoint
 fun computeCircleByCenterAndRadius(
     center: Point,
     radiusPoint: Point
@@ -21,9 +22,7 @@ fun computeCircleByCenterAndRadius(
     else Circle(center.x, center.y, radius)
 }
 
-// NOTE: can produce non-CCW circle;
-//  presently args are sorted by index, which removes possibility to select
-//  their cyclic order, so we cant choose resulting CCW
+// NOTE: can produce non-CCW circle
 fun computeCircleBy3Points(
     point1: GCircle,
     point2: GCircle,
@@ -33,7 +32,7 @@ fun computeCircleBy3Points(
         GeneralizedCircle.fromGCircle(point1),
         GeneralizedCircle.fromGCircle(point2),
         GeneralizedCircle.fromGCircle(point3),
-    )?.toGCircle()
+    )?.times(-1)?.toGCircle() // -1 for proper direction (left-hand xOy coordinates)
 
 fun computeCircleByPencilAndPoint(
     circle1: GCircle,
@@ -46,14 +45,15 @@ fun computeCircleByPencilAndPoint(
         GeneralizedCircle.fromGCircle(point),
     )?.toGCircle()
 
+// for 2 intersecting lines the result is inf. point, but we return null
 fun computeLineBy2Points(
     point1: GCircle,
     point2: GCircle
 ): Line? =
     GeneralizedCircle.perp3(
-        GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
         GeneralizedCircle.fromGCircle(point1),
         GeneralizedCircle.fromGCircle(point2),
+        GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
     )?.toGCircle() as? Line
 
 fun computeCircleInversion(

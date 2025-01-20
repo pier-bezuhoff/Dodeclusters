@@ -978,7 +978,7 @@ class EditClusterViewModel : ViewModel() {
             }
             is PointSnapResult.Intersection -> {
                 val point = snapResult.result
-                val (ix1, ix2) = listOf(snapResult.circle1Index, snapResult.circle2index).sorted()
+                val (ix1, ix2) = listOf(snapResult.circle1Index, snapResult.circle2index)
                 val expr = Expr.Intersection(ix1, ix2)
                 // TODO: lookup if it already exists
 //                val sameExpr = expressions.expressions.filter { (_, e) -> e?.expr == expr }
@@ -2176,7 +2176,7 @@ class EditClusterViewModel : ViewModel() {
                     is Arg.CircleOrPoint.Point.Index -> it.index
                     is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
-            }.sorted() // NOTE: sorting can reverse intended direction
+            }
             val newGCircle = expressions.addSoloExpression(
                 Expr.CircleBy3Points(
                     object1 = realized[0],
@@ -2237,9 +2237,9 @@ class EditClusterViewModel : ViewModel() {
             val (p1, p2) = args.map {
                 (it as Arg.CircleOrPoint.Point.XY).toPoint().downscale()
             }
-            val newCircle = computeLineBy2Points(p1, p2)
+            val newGCircle = computeLineBy2Points(p1, p2)
             expressions.addFree()
-            createNewGCircle(newCircle?.upscale())
+            createNewGCircle(newGCircle?.upscale())
         } else {
             val realized = args.map {
                 when (it) {
@@ -2247,14 +2247,14 @@ class EditClusterViewModel : ViewModel() {
                     is Arg.CircleOrPoint.Point.Index -> it.index
                     is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
-            }.sorted()
-            val newCircle = expressions.addSoloExpression(
+            }
+            val newGCircle = expressions.addSoloExpression(
                 Expr.LineBy2Points(
                     object1 = realized[0],
                     object2 = realized[1],
                 ),
-            ) as? CircleOrLine
-            createNewGCircle(newCircle?.upscale())
+            )
+            createNewGCircle(newGCircle?.upscale())
         }
         partialArgList = PartialArgList(argList.signature)
     }
