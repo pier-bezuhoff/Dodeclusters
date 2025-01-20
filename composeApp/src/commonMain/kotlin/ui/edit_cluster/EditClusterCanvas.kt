@@ -125,7 +125,6 @@ fun BoxScope.EditClusterCanvas(
     val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch { // listen to circle animations
         viewModel.animations.collect { event ->
-            // MAYBE: keep track of Job's created by launch'es in case we need to cancel them prematurely
             when (event) {
                 is ColoredContourAnimation -> launch { // parallel multiplexer structure
                     animations[event]?.stop()
@@ -137,7 +136,7 @@ fun BoxScope.EditClusterCanvas(
                         tween(event.alpha10Duration, easing = FastOutLinearInEasing),
             //                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
                     )
-                    animations.remove(event) // idk, this might be bad
+                    animations.remove(event)
                 }
             }
         }
