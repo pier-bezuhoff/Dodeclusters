@@ -106,11 +106,18 @@ fun constellation2svg(
         }
     }
     if (encodeCirclesAndPoints) {
-        val defaultObjectColor = Color(0xFF_D4BE51).copy(alpha = 0.6f) // accentColorDark
+        // colors mimic EditClusterCanvas setup
+        val circleColor = Color(0xFF_D4BE51).copy(alpha = 0.6f) // accentColorDark
+        val freeCircleColor = Color(0xFF_F5BD6F) // highAccentColorDark
+        val pointColor = Color(0xFF_D4BE51).copy(alpha = 0.7f) // accentColorDark
         val pointRadius = 5f
-        val highlightClassString = """class="highlightable" """
+        val highlightClassString = """class="$highlightClass" """
         objects.forEachIndexed { ix, o ->
-            val color = constellation.objectColors[ix] ?: defaultObjectColor
+            val color = constellation.objectColors[ix] ?: when {
+                o is Point -> pointColor
+                expressions.expressions[ix] == null -> freeCircleColor
+                else -> circleColor
+            }
             val colorString = Json.encodeToString(ColorCssSerializer, color).trim('"')
             when (o) {
                 is CircleOrLine -> appendLine(

@@ -666,23 +666,26 @@ class EditClusterViewModel : ViewModel() {
                 .filter { objects[it] is CircleOrLine }
                 .toSet()
             if (deletedCircleIndices.isNotEmpty()) {
+                val everythingIsDeleted = deletedCircleIndices.containsAll(objects.filterIndices { it is CircleOrLine })
                 val oldParts = regions.toList()
                 regions.clear()
-                regions.addAll(
-                    oldParts
-                        // to avoid stray chessboard selections
-                        .filterNot { (ins, _, _) ->
-                            ins.isNotEmpty() && ins.minus(deletedCircleIndices).isEmpty()
-                        }
-                        .map { (ins, outs, fillColor) ->
-                            LogicalRegion(
-                                insides = ins.minus(deletedCircleIndices),
-                                outsides = outs.minus(deletedCircleIndices),
-                                fillColor = fillColor
-                            )
-                        }
-                        .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
-                )
+                if (!everythingIsDeleted) {
+                    regions.addAll(
+                        oldParts
+                            // to avoid stray chessboard selections
+                            .filterNot { (ins, _, _) ->
+                                ins.isNotEmpty() && ins.minus(deletedCircleIndices).isEmpty()
+                            }
+                            .map { (ins, outs, fillColor) ->
+                                LogicalRegion(
+                                    insides = ins.minus(deletedCircleIndices),
+                                    outsides = outs.minus(deletedCircleIndices),
+                                    fillColor = fillColor
+                                )
+                            }
+                            .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
+                    )
+                }
                 val deletedCircles = deletedCircleIndices.mapNotNull { objects[it] as? CircleOrLine }
                 viewModelScope.launch {
                     _animations.emit(
