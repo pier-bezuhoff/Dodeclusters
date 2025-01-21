@@ -37,6 +37,8 @@ import data.geometry.PartialArcPath
 import data.geometry.Point
 import domain.Arg
 import domain.ArgType
+import domain.ChessboardPattern
+import domain.ColorAsCss
 import domain.Command
 import domain.History
 import domain.Indices
@@ -45,9 +47,6 @@ import domain.PartialArgList
 import domain.PointSnapResult
 import domain.angleDeg
 import domain.cluster.ArcPath
-import domain.ChessboardPattern
-import domain.ColorAsCss
-import domain.cluster.Cluster
 import domain.cluster.ClusterV1
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
@@ -68,8 +67,6 @@ import domain.filterIndices
 import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV4
-import domain.io.cluster2svg
-import domain.io.cluster2svgCheckPattern
 import domain.io.constellation2svg
 import domain.io.parseDdcV1
 import domain.io.parseDdcV2
@@ -141,6 +138,7 @@ class EditClusterViewModel : ViewModel() {
     /** custom colors for circle/line borders or points */
     val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
     var backgroundColor: Color? by mutableStateOf(null)
+        private set
     val hiddenObjects: Set<Ix> by mutableStateOf(emptySet()) // TODO
     var showCircles: Boolean by mutableStateOf(true)
         private set
@@ -929,7 +927,9 @@ class EditClusterViewModel : ViewModel() {
             }
             .sortedByFrequency()
 
-    // snap priority: points > circles
+    /** Try to snap [absolutePosition] to some existing object or their intersection.
+     * Snap priority: points > circles
+     * */
     fun snapped(
         absolutePosition: Offset,
         excludePoints: Boolean = false,
@@ -980,41 +980,41 @@ class EditClusterViewModel : ViewModel() {
                 val point = snapResult.result
                 val (ix1, ix2) = listOf(snapResult.circle1Index, snapResult.circle2index)
                 val expr = Expr.Intersection(ix1, ix2)
-                // TODO: lookup if it already exists
-//                val sameExpr = expressions.expressions.filter { (_, e) -> e?.expr == expr }
-//                val output1Ix = sameExpr.entries
-//                    .firstOrNull { (_, e) -> e is Expression.OneOf && e.outputIndex == 0 }
-//                    ?.key as? Indexed.Point
-//                val output2Ix = sameExpr.entries
-//                    .firstOrNull { (_, e) -> e is Expression.OneOf && e.outputIndex == 1 }
-//                    ?.key as? Indexed.Point
-//                if (output1Ix != null && output2Ix != null) {
-//                    // good
-//                    // find closest and return
-//                } else if (output1Ix == null && output2Ix != null) {
-//                    // add 1st
-//                } else if (output1Ix != null && output2Ix == null) {
-//                    // add 2st
-//                } else { // both are absent
-//                    // add both
-//                }
-                // check if both outputIndices are present
-                // if not, add the other
-                val j = objects.size
-                recordCommand(Command.CREATE, unique = true)
-                val ps = expressions.addMultiExpression(expr)
-                    .map { it as? Point }
-                    .map { it?.upscale() }
-                addObjects(ps)
-                val (p1, p2) = ps
-                // we dont know in which order Circle.intersection will output these points...
-                // (maybe we do but im blanking)
-                val realIndex = if (
-                    (p1?.distanceFrom(point) ?: Double.POSITIVE_INFINITY) <=
-                    (p2?.distanceFrom(point) ?: Double.POSITIVE_INFINITY)
-                ) j
-                else j+1
-                PointSnapResult.Eq(snapResult.result, realIndex)
+                val possibleExistingIntersections =
+                    expressions.findExistingIntersectionIndices(ix1, ix2)
+                        .filter { objects[it] is Point }
+                val closestIndex = possibleExistingIntersections.minByOrNull {
+                    val p = objects[it] as Point
+                    p.distanceFrom(point)
+                }
+                val intersectionSnapDistance = 1.5 * tapRadius.toDouble() // magic number
+                if (closestIndex != null &&
+                    point.distanceFrom(objects[closestIndex] as Point) <= intersectionSnapDistance
+                ) {
+                    PointSnapResult.Eq(objects[closestIndex] as Point, closestIndex)
+                } else {
+                    // check if both outputIndices are present
+                    // if not, add the other
+                    val j = objects.size
+                    recordCommand(Command.CREATE, unique = true)
+                    val intersections = Circle.calculateIntersectionPoints(
+                        objects[ix1] as CircleOrLine,
+                        objects[ix2] as CircleOrLine
+                    ) // TODO: dont create second intersection if it exists already
+                    val ps = expressions.addMultiExpression(expr)
+                        .map { it as? Point }
+                        .map { it?.upscale() }
+                    addObjects(ps)
+                    val (p1, p2) = ps
+                    // we dont know in which order Circle.intersection will output these points...
+                    // (maybe we do but im blanking)
+                    val realIndex = if (
+                        (p1?.distanceFrom(point) ?: Double.POSITIVE_INFINITY) <=
+                        (p2?.distanceFrom(point) ?: Double.POSITIVE_INFINITY)
+                    ) j
+                    else j+1
+                    PointSnapResult.Eq(snapResult.result, realIndex)
+                }
             }
         }
 
@@ -1035,7 +1035,7 @@ class EditClusterViewModel : ViewModel() {
         val everythingIsSelected = selection.containsAll(objects.filterIndices { it is CircleOrLine })
         if (everythingIsSelected) {
             selection = emptyList()
-        } else {
+        } else { // maybe select Imaginary's and nulls too
             selection = objects.filterIndices { it is Point || it is CircleOrLine }
         }
     }
@@ -1177,7 +1177,7 @@ class EditClusterViewModel : ViewModel() {
         if (showCircles && mode.isSelectingCircles() && freeObjects.isNotEmpty()) {
             when (freeObjects.size) {
                 1 -> {
-                    recordCommand(Command.CHANGE_RADIUS, targets = freeObjects)
+                    recordCommand(Command.SCALE, targets = freeObjects)
                     val ix = freeObjects.single()
                     when (val circle = objects[ix]) {
                         is Circle -> {
@@ -1543,21 +1543,13 @@ class EditClusterViewModel : ViewModel() {
         val circle = objects[h.ix] as? CircleOrLine
         val free = !LOCK_DEPENDENT_OBJECT || isFree(h.ix)
         if (free) {
-            recordCommand(Command.CHANGE_RADIUS, targets = listOf(h.ix))
             if (circle is Circle) {
                 val center = sm.center
                 val r = (c - center).getDistance()
-                objects[h.ix] = circle.copy(radius = r.toDouble())
-                // no need to adjust children when scaling Circle
-                expressions.update(listOf(ix))
+                transform(listOf(ix), focus = center, zoom = (r/circle.radius).toFloat())
             } else if (circle is Line) {
                 val center = circle.project(c)
-                adjustIncidentPoints(
-                    parentIx = h.ix,
-                    centroid = center,
-                    zoom = zoom
-                )
-                expressions.update(listOf(ix))
+                transform(listOf(ix), focus = center, zoom = zoom)
             }
         }
     }
@@ -1565,24 +1557,15 @@ class EditClusterViewModel : ViewModel() {
     private fun scaleViaSliderSingleCircle(pan: Offset, h: HandleConfig.SingleCircle, sm: SubMode.ScaleViaSlider) {
         val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
         if (sm.sliderPercentage != newPercentage) {
-            recordCommand(Command.SCALE, target = h.ix)
-            val circle = objects[h.ix] as? CircleOrLine
             val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
-            objects[h.ix] = circle?.scaled(sm.center, scaleFactor)
-            adjustIncidentPoints(
-                parentIx = h.ix,
-                centroid = sm.center,
-                zoom = scaleFactor
-            )
+            transform(listOf(h.ix), focus = sm.center, zoom = scaleFactor)
             submode = sm.copy(sliderPercentage = newPercentage)
-            expressions.update(listOf(h.ix))
         }
     }
 
     private fun rotateSingleCircle(pan: Offset, c: Offset, h: HandleConfig.SingleCircle, sm: SubMode.Rotate) {
         val free = !LOCK_DEPENDENT_OBJECT || isFree(h.ix)
         if (free) {
-            recordCommand(Command.ROTATE, target = h.ix)
             val center = sm.center
             val centerToCurrent = c - center
             val centerToPreviousHandle = centerToCurrent - pan
@@ -1592,65 +1575,32 @@ class EditClusterViewModel : ViewModel() {
                 if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
                 else newAngle
             val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
-            objects[h.ix] = (objects[h.ix] as? CircleOrLine)?.rotated(center, angle1)
-            adjustIncidentPoints(
-                parentIx = h.ix,
-                centroid = center,
-                rotationAngle = angle1
-            )
+            transform(listOf(h.ix), focus = center, rotationAngle = angle1)
             submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
-            expressions.update(listOf(h.ix))
         }
     }
 
-    private fun scaleSeveralCircles(pan: Offset, freeCircles: Indices, freePoints: Indices, freeTargets: Indices) {
+    private fun scaleSeveralCircles(pan: Offset, targets: List<Ix>) {
         getSelectionRect()?.let { rect ->
-            recordCommand(Command.SCALE, targets = freeTargets)
             val scaleHandlePosition = rect.topRight
             val center = rect.center
             val centerToHandle = scaleHandlePosition - center
             val centerToCurrent = centerToHandle + pan
             val scaleFactor = centerToCurrent.getDistance()/centerToHandle.getDistance()
-            for (ix in freeCircles) {
-                objects[ix] = (objects[ix] as? CircleOrLine)?.scaled(center, scaleFactor)
-                adjustIncidentPoints(
-                    parentIx = ix,
-                    centroid = center,
-                    zoom = scaleFactor
-                )
-            }
-            for (ix in freePoints) {
-                objects[ix] = (objects[ix] as? Point)?.scaled(center, scaleFactor)
-            }
-            expressions.update(freeCircles + freePoints)
+            transform(targets, focus = center, zoom = scaleFactor)
         }
     }
 
-    private fun scaleViaSliderSeveralCircles(pan: Offset, sm: SubMode.ScaleViaSlider, freeCircles: Indices, freePoints: Indices, freeTargets: Indices) {
+    private fun scaleViaSliderSeveralCircles(pan: Offset, sm: SubMode.ScaleViaSlider, targets: List<Ix>) {
         val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
         if (sm.sliderPercentage != newPercentage) {
-            recordCommand(Command.SCALE, targets = freeTargets)
             val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
-            for (ix in freeCircles) {
-                val circle = objects[ix] as? CircleOrLine
-                objects[ix] = circle?.scaled(sm.center, scaleFactor)
-                adjustIncidentPoints(
-                    parentIx = ix,
-                    centroid = sm.center,
-                    zoom = scaleFactor
-                )
-            }
-            for (ix in freePoints) {
-                val point = objects[ix] as? Point
-                objects[ix] = point?.scaled(sm.center, scaleFactor)
-            }
+            transform(targets, focus = sm.center, zoom = scaleFactor)
             submode = sm.copy(sliderPercentage = newPercentage)
-            expressions.update(freeCircles + freePoints)
         }
     }
 
-    private fun rotateSeveralCircles(pan: Offset, c: Offset, sm: SubMode.Rotate, freeCircles: Indices, freePoints: Indices, freeTargets: Indices) {
-        recordCommand(Command.ROTATE, targets = freeTargets)
+    private fun rotateSeveralCircles(pan: Offset, c: Offset, sm: SubMode.Rotate, targets: List<Ix>) {
         val center = sm.center
         val centerToCurrent = c - center
         val centerToPreviousHandle = centerToCurrent - pan
@@ -1660,21 +1610,8 @@ class EditClusterViewModel : ViewModel() {
             if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
             else newAngle
         val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
-        for (ix in freeCircles) {
-            val circle = objects[ix] as? CircleOrLine
-            objects[ix] = circle?.rotated(sm.center, angle1)
-            adjustIncidentPoints(
-                parentIx = ix,
-                centroid = sm.center,
-                rotationAngle = angle1
-            )
-        }
-        for (ix in freePoints) {
-            val point = objects[ix] as? Point
-            objects[ix] = point?.rotated(sm.center, angle1)
-        }
+        transform(targets, focus = sm.center, rotationAngle = angle1)
         submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
-        expressions.update(freeCircles + freePoints)
     }
 
     // dragging circle: move + scale radius
@@ -1682,35 +1619,7 @@ class EditClusterViewModel : ViewModel() {
         val ix = selection.single()
         val free = !LOCK_DEPENDENT_OBJECT || isFree(ix)
         if (free) {
-            recordCommand(Command.MOVE, targets = listOf(ix))
-            when (val circle = objects[ix] as? CircleOrLine) {
-                is Circle -> {
-                    objects[ix] = circle
-                        .translated(pan)
-                        .scaled(circle.center, zoom)
-                        .rotated(circle.center, rotationAngle)
-                    adjustIncidentPoints(
-                        parentIx = ix,
-                        translation = pan,
-                        centroid = circle.center,
-                        zoom = zoom,
-                        rotationAngle = rotationAngle
-                    )
-                }
-                is Line -> {
-                    objects[ix] = circle
-                        .translated(pan)
-                        .rotated(c, rotationAngle)
-                    adjustIncidentPoints(
-                        parentIx = ix,
-                        translation = pan,
-                        centroid = c,
-                        rotationAngle = rotationAngle
-                    )
-                }
-                null -> {}
-            }
-            expressions.update(listOf(ix))
+            transform(listOf(ix), translation = pan, zoom = zoom, rotationAngle = rotationAngle)
         }
     }
 
@@ -1718,30 +1627,34 @@ class EditClusterViewModel : ViewModel() {
         val ix = selection.first()
         val free = !LOCK_DEPENDENT_OBJECT || isFree(ix)
         if (free) {
-            recordCommand(Command.MOVE, target = ix)
             val childCircles = expressions.getAllChildren(ix)
                 .filter { objects[it] is CircleOrLine }
                 .toSet()
-            objects[ix] = snapped(c, excludePoints = true, excludedCircles = childCircles).result
-            expressions.changeToFree(ix)
-            expressions.update(listOf(ix))
+            val newPoint = snapped(c, excludePoints = true, excludedCircles = childCircles).result
+            transform(
+                listOf(ix),
+                translation = newPoint.toOffset() - (objects[ix] as Point).toOffset(),
+                beforeUpdatingExpressions = {
+                    expressions.changeToFree(ix)
+                }
+            )
         } else {
             val expr = expressions.expressions[ix]?.expr
             if (expr is Expr.Incidence) {
-                recordCommand(Command.MOVE, target = ix)
-                val carrierIndex = expr.carrier
-                val carrier = objects[carrierIndex] as CircleOrLine
-                val newPoint = carrier.project(Point.fromOffset(c))
-                val order = carrier.downscale().point2order(newPoint.downscale())
-                val newExpr = Expr.Incidence(
-                    IncidenceParameters(order),
-                    carrierIndex
-                )
-                objects[ix] = newPoint
-                expressions.changeExpression(ix, newExpr)
-                expressions.update(listOf(ix))
+                slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, cursorLocation = c)
             }
         }
+    }
+
+    private fun slidePointAcrossCarrier(pointIndex: Ix, carrierIndex: Ix, cursorLocation: Offset) {
+        recordCommand(Command.MOVE, target = pointIndex)
+        val carrier = objects[carrierIndex] as CircleOrLine
+        val newPoint = carrier.project(Point.fromOffset(cursorLocation))
+        val order = carrier.downscale().point2order(newPoint.downscale())
+        val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
+        objects[pointIndex] = newPoint
+        expressions.changeExpression(pointIndex, newExpr)
+        expressions.update(listOf(pointIndex))
     }
 
     private fun dragCirclesOrPoints(pan: Offset, c: Offset, zoom: Float, rotationAngle: Float) {
@@ -1757,52 +1670,74 @@ class EditClusterViewModel : ViewModel() {
             else selectedPoints
         val freeTargets = freeCircles + freePoints
         if (freeCircles.size == 1 && freePoints.isEmpty()) { // move + scale radius
-            val ix = freeCircles.single()
-            recordCommand(Command.MOVE, targets = freeCircles)
-            when (val circle = objects[ix] as? CircleOrLine) {
+            transform(freeCircles, translation = pan, zoom = zoom)
+        } else if (freeCircles.size > 1) { // scale radius & position
+            transform(freeTargets, translation = pan, focus = c, zoom = zoom, rotationAngle = rotationAngle)
+        }
+    }
+
+    /** Apply [translation];scaling;rotation to [targets] (that are all assumed free).
+     *
+     * Scaling and rotation are wrt. fixed [focus] by the factor of
+     * [zoom] and by [rotationAngle] degrees. If [focus] is [Offset.Unspecified] for
+     * each circle choose its center, for each point -- itself, for each line -- screen center
+     * projected onto it
+     * */
+    private inline fun transform(
+        targets: List<Ix>,
+        translation: Offset = Offset.Zero,
+        focus: Offset = Offset.Unspecified,
+        zoom: Float = 1f,
+        rotationAngle: Float = 0f,
+        crossinline beforeUpdatingExpressions: () -> Unit = {},
+    ) {
+        val requiresTranslation = translation != Offset.Zero
+        val requiresZoom = zoom != 1f
+        val requiresRotation = rotationAngle != 0f
+        if (requiresTranslation)
+            recordCommand(Command.MOVE, targets)
+        else if (requiresZoom)
+            recordCommand(Command.SCALE, targets) // scale & rotate case doesn't happen usually
+        else
+            recordCommand(Command.ROTATE, targets)
+        val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
+        for (ix in targets) {
+            when (val o = objects[ix]) {
                 is Circle -> {
-                    objects[ix] = circle.translated(pan).scaled(circle.center, zoom)
-                    adjustIncidentPoints(
-                        parentIx = ix,
-                        translation = pan,
-                        centroid = circle.center,
-                        zoom = zoom
-                    )
+                    val f = if (focus == Offset.Unspecified) o.center else focus
+                    objects[ix] = o.translated(translation).scaled(f, zoom).rotated(f, rotationAngle)
+                    if (requiresRotation)
+                        adjustIncidentPoints(
+                            parentIx = ix,
+                            centroid = f,
+                            rotationAngle = rotationAngle
+                        )
                 }
                 is Line -> {
-                    objects[ix] = circle.translated(pan)
+                    val f = if (focus == Offset.Unspecified)
+                        o.project(screenCenter)
+                    else focus
+                    objects[ix] = o.translated(translation).rotated(f, rotationAngle)
                     adjustIncidentPoints(
                         parentIx = ix,
-                        translation = pan
+                        translation = translation,
+                        centroid = f,
+                        zoom = zoom,
+                        rotationAngle = rotationAngle
                     )
                 }
+                is Point -> {
+                    if (focus == Offset.Unspecified)
+                        objects[ix] = o.translated(translation)
+                    else
+                        objects[ix] = o.translated(translation).scaled(focus, zoom).rotated(focus, rotationAngle)
+                }
+                is ImaginaryCircle -> {} // there is no free ImaginaryCircle's as of now
                 null -> {}
             }
-        } else if (freeCircles.size > 1) { // scale radius & position
-            recordCommand(Command.MOVE, targets = freeTargets)
-            for (ix in freeCircles) {
-                val circle = objects[ix] as? CircleOrLine
-                objects[ix] = circle
-                    ?.translated(pan)
-                    ?.scaled(c, zoom)
-                    ?.rotated(c, rotationAngle)
-                adjustIncidentPoints(
-                    parentIx = ix,
-                    translation = pan,
-                    centroid = c,
-                    zoom = zoom,
-                    rotationAngle = rotationAngle
-                )
-            }
-            for (ix in freePoints) {
-                val point = objects[ix] as? Point
-                objects[ix] = point
-                    ?.translated(pan)
-                    ?.scaled(c, zoom)
-                    ?.rotated(c, rotationAngle)
-            }
         }
-        expressions.update(freeCircles + freePoints)
+        beforeUpdatingExpressions()
+        expressions.update(targets)
     }
 
     // MAYBE: handle key arrows as panning
@@ -1835,11 +1770,11 @@ class EditClusterViewModel : ViewModel() {
                     if (freeTargets.isNotEmpty())
                         when (val sm = submode) {
                             is SubMode.Scale ->
-                                scaleSeveralCircles(pan = pan, freeCircles = freeCircles, freePoints = freePoints, freeTargets = freeTargets)
+                                scaleSeveralCircles(pan, freeTargets)
                             is SubMode.ScaleViaSlider ->
-                                scaleViaSliderSeveralCircles(pan = pan, sm = sm, freeCircles = freeCircles, freePoints = freePoints, freeTargets = freeTargets)
+                                scaleViaSliderSeveralCircles(pan = pan, sm = sm, targets = freeTargets)
                             is SubMode.Rotate ->
-                                rotateSeveralCircles(pan = pan, c = c, sm = sm, freeCircles = freeCircles, freePoints = freePoints, freeTargets = freeTargets)
+                                rotateSeveralCircles(pan = pan, c = c, sm = sm, targets = freeTargets)
                             else -> {}
                         }
                 }
@@ -1996,7 +1931,7 @@ class EditClusterViewModel : ViewModel() {
     fun onLongDragEnd() {}
 
     private fun queueSnackbarMessage(snackbarMessage: SnackbarMessage) {
-        snackbarMessages.tryEmit(snackbarMessage)
+//        snackbarMessages.tryEmit(snackbarMessage)
 //        viewModelScope.launch {
 //            snackbarMessages.emit(snackbarMessage)
 //        }
@@ -2644,7 +2579,7 @@ class EditClusterViewModel : ViewModel() {
     data class State(
         val constellation: Constellation,
         val selection: List<Ix>,
-        // NOTE: saving VM.translation instead has some issues
+        // NOTE: saving VM.translation instead has issues (on desktop window size rapidly passes thru 3 sizes)
         val centerX: Float,
         val centerY: Float,
         val chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,

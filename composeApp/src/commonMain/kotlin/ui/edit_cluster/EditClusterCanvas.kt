@@ -166,12 +166,6 @@ fun BoxScope.EditClusterCanvas(
 //                renderEffect = BlurEffect(20f, 20f) // funi
             )
     ) {
-
-//        val path = Path()
-//        path.addOval(Rect(Offset(0f, 0f), 10f))
-//        val pathData = path.toSvg(asDocument = false)
-//        println(pathData) // -> "M10.0 0.0Z"
-
         translate(viewModel.translation.x, viewModel.translation.y) {
             val visibleRect = size.toRect().translate(-viewModel.translation)
             // TODO: hoist VM here

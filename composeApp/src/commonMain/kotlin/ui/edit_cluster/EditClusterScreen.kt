@@ -127,7 +127,7 @@ fun EditClusterScreen(
     val viewModel: EditClusterViewModel = viewModel(
         factory = EditClusterViewModel.Factory
     )
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(
         modifier =

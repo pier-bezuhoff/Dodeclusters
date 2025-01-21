@@ -37,7 +37,7 @@ and specific type of animations ~ [Möbius transformations](https://en.wikipedia
 
 ## Installation
 [Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch.  
-Executables for Linux, Window and Android can be found in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
+Executables for Linux, Window and Android can be found in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/) or [on Google Drive](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=sharing).
 
 ### Windows
 1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/tag/v0.2.0) go to `assets` and download `windows.zip`
@@ -49,7 +49,7 @@ Executables for Linux, Window and Android can be found in the assets [attached t
 1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/) go to `assets` and download `linux.zip`
 2. Unarchive it
 3. Go into folder `com.pierbezuhoff.dodeclusters/bin`, you'll find executable file `com.pierbezuhoff.dodeclusters`
-4. `chmod +x` it and you can run it as `./com.pierbezuhoff.dodeclusters`
+4. `chmod +x` it and you can run it as `./com.pierbezuhoff.dodeclusters` (bundled with JVM)
 
 ### Android
 You can find the apk in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).

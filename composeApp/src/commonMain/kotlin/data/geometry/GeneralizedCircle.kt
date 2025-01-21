@@ -1,6 +1,7 @@
 package data.geometry
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.geometry.Offset
 import domain.signNonZero
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
@@ -14,6 +15,7 @@ import kotlin.math.sqrt
 @Immutable
 sealed interface GCircle {
     fun scaled(focusX: Double, focusY: Double, zoom: Double): GCircle
+    fun translated(vector: Offset): GCircle
 }
 
 // TODO: Clifford algebra (geometric product + other operations)

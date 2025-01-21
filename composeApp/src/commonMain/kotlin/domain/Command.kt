@@ -5,9 +5,9 @@ import androidx.compose.runtime.Immutable
 /** used for grouping VM.UiState changes into batches for history keeping */
 @Immutable
 enum class Command {
+    /** [MOVE] can include scale and rotate commands if they are done simultaneously (e.g. touch screen) */
     MOVE,
-    CHANGE_RADIUS, SCALE,
-    ROTATE,
+    SCALE, ROTATE,
     DUPLICATE, DELETE,
     CREATE,
     FILL_REGION,

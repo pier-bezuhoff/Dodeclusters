@@ -31,14 +31,17 @@ data class Point(
                 hypot(point.x - x, point.y - y)
         }
 
-    fun translated(vector: Offset): Point =
+    override fun translated(vector: Offset): Point =
         Point(x + vector.x, y + vector.y)
 
     fun scaled(focus: Offset, zoom: Float): Point =
         if (this == CONFORMAL_INFINITY)
             CONFORMAL_INFINITY
         else
-            fromOffset((toOffset() - focus) * zoom + focus)
+            Point(
+                (x - focus.x) * zoom + focus.x,
+                (y - focus.y) * zoom + focus.y,
+            )
 
     override fun scaled(focusX: Double, focusY: Double, zoom: Double): Point {
         val newX = (x - focusX) * zoom + focusX

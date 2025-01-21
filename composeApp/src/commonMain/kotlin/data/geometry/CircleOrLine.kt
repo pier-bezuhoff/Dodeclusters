@@ -34,7 +34,7 @@ sealed interface CircleOrLine : GCircle, LocusWithOrder {
     /** partial order ⊇ on circles (treated as either inside or outside regions)
      * `A isOutside B` == A ⊆ Bꟲ*/
     infix fun isOutside(circle: CircleOrLine): Boolean
-    fun translated(vector: Offset): CircleOrLine
+    override fun translated(vector: Offset): CircleOrLine
     fun scaled(focus: Offset, zoom: Float): CircleOrLine
     override fun scaled(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
     fun rotated(focus: Offset, angleInDegrees: Float): CircleOrLine
