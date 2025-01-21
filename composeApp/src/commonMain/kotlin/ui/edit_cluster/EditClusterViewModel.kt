@@ -206,7 +206,8 @@ class EditClusterViewModel : ViewModel() {
     val animations: SharedFlow<ObjectAnimation> = _animations.asSharedFlow()
 
     val snackbarMessages: MutableSharedFlow<SnackbarMessage> =
-        MutableSharedFlow(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+        MutableSharedFlow(extraBufferCapacity = 1)
+//        MutableSharedFlow(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     var openedDialog: DialogType? by mutableStateOf(null)
         private set
@@ -1931,7 +1932,7 @@ class EditClusterViewModel : ViewModel() {
     fun onLongDragEnd() {}
 
     private fun queueSnackbarMessage(snackbarMessage: SnackbarMessage) {
-//        snackbarMessages.tryEmit(snackbarMessage)
+        snackbarMessages.tryEmit(snackbarMessage)
 //        viewModelScope.launch {
 //            snackbarMessages.emit(snackbarMessage)
 //        }
