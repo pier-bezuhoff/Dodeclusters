@@ -1,7 +1,6 @@
 package domain.expressions
 
 import data.geometry.CircleOrLine
-import data.geometry.EPSILON
 import data.geometry.GCircle
 import data.geometry.Point
 import domain.Ix
@@ -369,6 +368,13 @@ class ExpressionForest(
 
     fun getImmediateParents(childIx: Ix): List<Ix> =
         expressions[childIx]?.expr?.args.orEmpty()
+
+    tailrec fun getAllParents(childs: List<Ix>, _result: Set<Ix> = emptySet()): Set<Ix> {
+        val immediateParents = childs.flatMap { getImmediateParents(it) }
+        if (immediateParents.isEmpty())
+            return _result
+        return getAllParents(immediateParents.minus(childs.toSet()), _result + immediateParents.toSet())
+    }
 
     fun findExistingIntersectionIndices(circleIndex1: Ix, circleIndex2: Ix): List<Ix> {
         // find points that are incident to both

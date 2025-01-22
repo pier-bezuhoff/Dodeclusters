@@ -41,7 +41,6 @@ import domain.ChessboardPattern
 import domain.ColorAsCss
 import domain.Command
 import domain.History
-import domain.Indices
 import domain.Ix
 import domain.PartialArgList
 import domain.PointSnapResult
@@ -80,7 +79,6 @@ import domain.snapPointToPoints
 import domain.sortedByFrequency
 import domain.tryCatch2
 import getPlatform
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -96,7 +94,6 @@ import ui.tools.EditClusterTool
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
-// TODO: act(indices, command) for all direct circles modifications
 // MAYBE: use UiState functional pattern + StateFlow's instead of this mess
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
@@ -1677,6 +1674,28 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
+    private inline fun transformWhatWeCan(
+        targets: List<Ix>,
+        translation: Offset = Offset.Zero,
+        focus: Offset = Offset.Unspecified,
+        zoom: Float = 1f,
+        rotationAngle: Float = 0f,
+        crossinline beforeUpdatingExpressions: () -> Unit = {},
+    ) {
+        val actualTargets =
+            when (INVERSION_OF_CONTROL) {
+                InversionOfControl.NONE -> targets.filter { isFree(it) }
+                InversionOfControl.LEVEL_1 -> {
+                    val parents = targets.flatMap { expressions.getImmediateParents(it) }
+                    parents.filter { isFree(it) }
+                }
+                InversionOfControl.LEVEL_INFINITY -> {
+                    targets + expressions.getAllParents(targets).toList()
+                }
+            }
+        transform(actualTargets, translation, focus, zoom, rotationAngle, beforeUpdatingExpressions)
+    }
+
     /** Apply [translation];scaling;rotation to [targets] (that are all assumed free).
      *
      * Scaling and rotation are wrt. fixed [focus] by the factor of
@@ -1692,6 +1711,8 @@ class EditClusterViewModel : ViewModel() {
         rotationAngle: Float = 0f,
         crossinline beforeUpdatingExpressions: () -> Unit = {},
     ) {
+        if (targets.isEmpty())
+            return
         val requiresTranslation = translation != Offset.Zero
         val requiresZoom = zoom != 1f
         val requiresRotation = rotationAngle != 0f
