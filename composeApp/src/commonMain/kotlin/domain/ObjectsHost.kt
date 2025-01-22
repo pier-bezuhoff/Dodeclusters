@@ -24,8 +24,8 @@ private const val IMAGINARY_CIRCLE_TYPE = 5
 // This is definitely NOT premature optimization...
 /**
  * @property[size] size of [objectTypes]
- * @property[objectTypes] types of every 3 elements of [objectParameters]
- * @property[objectParameters] every 3 elements represent 3 parameters of an object.
+ * @property[objectTypes] types of 3-element batches in [objectParameters]
+ * @property[objectParameters] every 3-element batch represents 3 parameters of an object.
  * For [CIRCLE_TYPE] it's (x,y,radius),
  * for [LINE_TYPE]: (a,b,c),
  * for [POINT_TYPE]: (x,y,?),
@@ -53,8 +53,8 @@ class ObjectsHost {
         // i think doing this manually is faster than using MutableList
         // because of no unboxing
         if (requiredSize > maxSize) {
-            val k = 1 + (requiredSize - maxSize) / SIZE_INCREASE
-            maxSize += SIZE_INCREASE * k
+            val k = 1 + (requiredSize - maxSize) / SIZE_INCREMENT
+            maxSize += SIZE_INCREMENT * k
             objectTypes = IntArray(maxSize) { if (it < size) objectTypes[it] else NULL_TYPE }
             objectParameters = DoubleArray(3*maxSize) { i ->
                 if (i < size3)
@@ -95,7 +95,7 @@ class ObjectsHost {
         _ids.update { it + 1 }
     }
 
-    fun clearIndices(indices: List<Ix>) {
+    fun clearObjects(indices: List<Ix>) {
         for (ix in indices)
             objectTypes[ix] = NULL_TYPE
         _ids.update { it + 1 }
@@ -171,8 +171,7 @@ class ObjectsHost {
         val dx = vector.x.toDouble()
         val dy = vector.y.toDouble()
         for (ix in indices) {
-            when (objectTypes[ix]) {
-                // inlined GCircle.translated
+            when (objectTypes[ix]) { // inlined GCircle.translated
                 CIRCLE_CCW_TYPE, CIRCLE_CW_TYPE, POINT_TYPE -> {
                     objectParameters[3*ix] += dx
                     objectParameters[3*ix + 1] += dy
@@ -181,17 +180,13 @@ class ObjectsHost {
 //                    Line(a, b, c - (a*vector.x + b*vector.y))
                     objectParameters[3*ix + 2] -= objectParameters[3*ix]*dx + objectParameters[3*ix + 1]*dy
                 }
-//                IMAGINARY_CIRCLE_TYPE -> { // always dependent for now
-//                    objectParameters[3*ix] += dx
-//                    objectParameters[3*ix + 1] += dy
-//                }
+//                IMAGINARY_CIRCLE_TYPE -> {} // always dependent for now
                 else -> {}
             }
         }
         _ids.update { it + 1 }
     }
 
-    // can be inlined for even better performance
     fun updateObjects(updatedObjects: Map<Ix, GCircle?>) {
         for ((ix, o) in updatedObjects) {
             val startOffset = 3*ix
@@ -226,7 +221,8 @@ class ObjectsHost {
     }
 
     companion object {
-        /** When new objects overflow [maxSize] it will increase by [SIZE_INCREASE] by copying existing [objectParameters] */
-        private const val SIZE_INCREASE = 100
+        /** When new objects overflow [maxSize] it will increase by
+         * [SIZE_INCREMENT] via copying existing [objectParameters] & [objectTypes] */
+        private const val SIZE_INCREMENT = 100
     }
 }

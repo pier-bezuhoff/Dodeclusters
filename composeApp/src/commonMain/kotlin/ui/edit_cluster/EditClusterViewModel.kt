@@ -1953,7 +1953,7 @@ class EditClusterViewModel : ViewModel() {
     fun onLongDragEnd() {}
 
     private fun queueSnackbarMessage(snackbarMessage: SnackbarMessage) {
-        snackbarMessages.tryEmit(snackbarMessage)
+//        snackbarMessages.tryEmit(snackbarMessage)
 //        viewModelScope.launch {
 //            snackbarMessages.emit(snackbarMessage)
 //        }
