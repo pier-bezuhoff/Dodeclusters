@@ -1,6 +1,8 @@
 package data.geometry
 
+import androidx.compose.ui.geometry.Offset
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -118,4 +120,28 @@ class CircleTest {
         assertFalse(unBig.isOutside(line))
         assertFalse(unSmol2.isOutside(line))
     }
+
+    @Test
+    fun testTransformed() {
+        val smol = Circle(100.0, -200.0, 5.0)
+        val translation = Offset(20f, -50f)
+        val focus = Offset(105f, -200f)
+        val zoom = 4f
+        val rotationAngle = 30f
+        assertAlmostEquals(
+            smol.translated(translation).scaled(focus, zoom).rotated(focus, rotationAngle),
+            smol.transformed(translation, focus, zoom, rotationAngle),
+        )
+    }
 }
+
+fun assertAlmostEquals(
+    expected: GCircle,
+    actual: GCircle,
+    message: String = "",
+    epsilon: Double = 1e-3
+) = assertAlmostEquals(
+    GeneralizedCircle.fromGCircle(expected),
+    GeneralizedCircle.fromGCircle(actual),
+    message, epsilon
+)

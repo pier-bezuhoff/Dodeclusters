@@ -177,7 +177,9 @@ data class Line(
     }
 
     override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): Line {
-        val (focusX, focusY) = focus
+        val (focusX, focusY) =
+            if (focus == Offset.Unspecified) order2point(0.0).toOffset()
+            else focus
         var c1: Double = c
         c1 -= a*translation.x + b*translation.y
         c1 = zoom*(a*focusX + b*focusY + c1) // - a*focusX - b*focusY // added back when rotating

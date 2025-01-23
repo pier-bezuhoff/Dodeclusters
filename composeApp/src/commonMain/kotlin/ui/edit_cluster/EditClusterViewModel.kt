@@ -14,9 +14,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -29,7 +27,6 @@ import data.geometry.ArcPathCircle
 import data.geometry.ArcPathPoint
 import data.geometry.Circle
 import data.geometry.CircleOrLine
-import data.geometry.EPSILON
 import data.geometry.GCircle
 import data.geometry.ImaginaryCircle
 import data.geometry.Line
@@ -1171,21 +1168,15 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun scaleSelection(zoom: Float) {
-        val freeObjects = selection.filter { isFree(it) }
-        if (showCircles && mode.isSelectingCircles() && freeObjects.isNotEmpty()) {
-            when (freeObjects.size) {
-                1 -> {
-                    transform(freeObjects, zoom = zoom)
-                }
-                else -> {
-                    val rect = getSelectionRect()
-                    val center =
-                        if (rect == null || rect.minDimension >= 5_000)
-                            computeAbsoluteCenter() ?: Offset.Zero
-                        else rect.center
-                    transform(freeObjects, focus = center, zoom = zoom)
-                }
-            }
+        if (showCircles && mode.isSelectingCircles() && selection.isNotEmpty()) {
+            val rect = getSelectionRect()
+            val focus =
+                if (selection.size == 1 && isFree(selection.single()))
+                    Offset.Unspecified
+                else if (rect == null || rect.minDimension >= 5_000)
+                    computeAbsoluteCenter() ?: Offset.Zero
+                else rect.center
+            transformWhatWeCan(selection, focus = focus, zoom = zoom)
         } else if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
 //            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
         } else { // NOTE: scaling everything instead of canvas can produce more artifacts
@@ -1505,10 +1496,10 @@ class EditClusterViewModel : ViewModel() {
         if (circle is Circle) {
             val center = sm.center
             val r = (c - center).getDistance()
-            transform(listOf(ix), focus = center, zoom = (r/circle.radius).toFloat())
+            transformWhatWeCan(listOf(ix), focus = center, zoom = (r/circle.radius).toFloat())
         } else if (circle is Line) {
             val center = circle.project(c)
-            transform(listOf(ix), focus = center, zoom = zoom)
+            transformWhatWeCan(listOf(ix), focus = center, zoom = zoom)
         }
     }
 
@@ -1516,7 +1507,7 @@ class EditClusterViewModel : ViewModel() {
         val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
         if (sm.sliderPercentage != newPercentage) {
             val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
-            transform(listOf(h.ix), focus = sm.center, zoom = scaleFactor)
+            transformWhatWeCan(listOf(h.ix), focus = sm.center, zoom = scaleFactor)
             submode = sm.copy(sliderPercentage = newPercentage)
         }
     }
@@ -1531,7 +1522,7 @@ class EditClusterViewModel : ViewModel() {
             if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
             else newAngle
         val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
-        transform(listOf(h.ix), focus = center, rotationAngle = angle1)
+        transformWhatWeCan(listOf(h.ix), focus = center, rotationAngle = angle1)
         submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
     }
 
@@ -1627,15 +1618,22 @@ class EditClusterViewModel : ViewModel() {
             expressions.update(it)
         },
     ) {
-        val actualTargets =
+        val actualTargets: List<Ix> =
             when (INVERSION_OF_CONTROL) {
                 InversionOfControl.NONE -> targets.filter { isFree(it) }
                 InversionOfControl.LEVEL_1 -> {
-                    val parents = targets.flatMap { expressions.getImmediateParents(it) }
-                    targets + parents.filter { isFree(it) }
+                    targets.flatMap { targetIx ->
+                        if (isFree(targetIx)) {
+                            listOf(targetIx)
+                        } else {
+                            val parents = expressions.getImmediateParents(targetIx)
+                            if (parents.all { isFree(it) }) parents
+                            else emptyList()
+                        }
+                    }.distinct()
                 }
                 InversionOfControl.LEVEL_INFINITY -> {
-                    targets + expressions.getAllParents(targets).toList()
+                    (targets.toSet() + expressions.getAllParents(targets)).toList()
                 }
             }
         transform(actualTargets, translation, focus, zoom, rotationAngle, updateExpressions)
@@ -1840,7 +1838,7 @@ class EditClusterViewModel : ViewModel() {
                                     is Arg.Point.Index -> objects[first.index] as Point
                                     is Arg.Point.XY -> first.toPoint()
                                 }
-                            val pointsAreTooClose = firstPoint.distanceFrom(realized.result) < EPSILON
+                            val pointsAreTooClose = firstPoint.distanceFrom(realized.result) < 1e-3
                             if (pointsAreTooClose) { // haxxz
                                 partialArgList = pArgList.copy(args = args.dropLast(1), lastSnap = null)
                             }

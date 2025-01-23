@@ -190,13 +190,13 @@ data class Circle(
         if (focus != Offset.Unspecified) {
             val (focusX, focusY) = focus
             // cmp. Offset.rotateBy & zoom and rotation are commutative
-            newX -= focusX
-            newY -= focusY
+            val dx = newX - focusX
+            val dy = newY - focusY
             val phi: Double = rotationAngle * PI/180.0
             val cosPhi = cos(phi)
             val sinPhi = sin(phi)
-            newX = (newX * cosPhi - newY * sinPhi) * zoom + focusX
-            newY = (newX * sinPhi + newY * cosPhi) * zoom + focusX
+            newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
+            newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
         } // tbf because of T;S;R order it is not completely accurate
         return Circle(newX, newY, zoom * radius, isCCW = isCCW)
     }

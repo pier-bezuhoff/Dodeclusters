@@ -130,7 +130,7 @@ class ObjectsHost {
                         x -= focusX
                         y -= focusY
                         x = (x * cosPhi - y * sinPhi) * zoom + focusX
-                        y = (x * sinPhi + y * cosPhi) * zoom + focusX
+                        y = (x * sinPhi + y * cosPhi) * zoom + focusY
                     } // tbf because of T;S;R order it is not completely accurate
                     objectParameters[3*ix]  = x
                     objectParameters[3*ix + 1] = y
@@ -157,7 +157,7 @@ class ObjectsHost {
                         x -= focusX
                         y -= focusY
                         x = (x * cosPhi - y * sinPhi) * zoom + focusX
-                        y = (x * sinPhi + y * cosPhi) * zoom + focusX
+                        y = (x * sinPhi + y * cosPhi) * zoom + focusY
                     } // tbf because of T;S;R order it is not completely accurate
                     objectParameters[3*ix]  = x
                     objectParameters[3*ix + 1] = y
