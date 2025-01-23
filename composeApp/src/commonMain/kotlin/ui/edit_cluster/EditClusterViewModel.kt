@@ -213,6 +213,7 @@ class EditClusterViewModel : ViewModel() {
         private set
     var arcPaths: List<ArcPath> by mutableStateOf(emptyList())
         private set
+//    val pathCache: MutableMap<Ix, Path?> = mutableMapOf()
 
     var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
         private set
@@ -2228,11 +2229,6 @@ class EditClusterViewModel : ViewModel() {
                 Expr.CircleInversion(circleIx, invertingCircleIndex),
             )
             newGCircle?.upscale()
-//            when (val newCircle = result.toDirectedCircleOrLine()) {
-//                is DirectedCircle -> newCircle.toCircle() to !newCircle.inside
-//                is Line -> newCircle to false
-//                else -> null
-//            }
         }
         val newPoints = targetPointIxs.mapNotNull { pointIx ->
             val newPoint = expressions.addSoloExpression(

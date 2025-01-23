@@ -199,6 +199,69 @@ sealed interface Expr : ExprLike {
         }
     }
 
+    // this eval should be much faster (test)
+    fun eval(objects: List<GCircle?>): ExprResult {
+        return when (this) {
+            // idt it's worth to polymorphism eval
+            is OneToOne -> {
+                val result = when (this) {
+                    is Incidence -> computeIncidence(
+                        parameters,
+                        objects[carrier] as? CircleOrLine ?: return emptyList(),
+                    )
+                    is CircleByCenterAndRadius -> computeCircleByCenterAndRadius(
+                        objects[center] as? Point ?: return emptyList(),
+                        objects[radiusPoint] as? Point ?: return emptyList(),
+                    )
+                    is CircleBy3Points -> computeCircleBy3Points(
+                        objects[object1] ?: return emptyList(),
+                        objects[object2] ?: return emptyList(),
+                        objects[object3] ?: return emptyList(),
+                    )
+                    is CircleByPencilAndPoint -> computeCircleByPencilAndPoint(
+                        objects[pencilObject1] ?: return emptyList(),
+                        objects[pencilObject2] ?: return emptyList(),
+                        objects[perpendicularObject] ?: return emptyList(),
+                    )
+                    is LineBy2Points -> computeLineBy2Points(
+                        objects[object1] ?: return emptyList(),
+                        objects[object2] ?: return emptyList(),
+                    )
+                    is CircleInversion -> computeCircleInversion(
+                        objects[target] ?: return emptyList(),
+                        objects[engine] ?: return emptyList(),
+                    )
+                    is CircleBy2PointsAndSagittaRatio -> computeCircleBy2PointsAndSagittaRatio(
+                        parameters,
+                        objects[chordStartPoint] as? Point ?: return emptyList(),
+                        objects[chordEndPoint] as? Point ?: return emptyList(),
+                    )
+                }
+                listOf(result)
+            }
+            is Intersection -> computeIntersection(
+                objects[circle1] as? CircleOrLine ?: return emptyList(),
+                objects[circle2] as? CircleOrLine ?: return emptyList(),
+            )
+            is CircleInterpolation -> computeCircleInterpolation(
+                parameters,
+                objects[startCircle] as? CircleOrLine ?: return emptyList(),
+                objects[endCircle] as? CircleOrLine ?: return emptyList(),
+            )
+            is CircleExtrapolation -> computeCircleExtrapolation(
+                parameters,
+                objects[startCircle] as? CircleOrLine ?: return emptyList(),
+                objects[endCircle] as? CircleOrLine ?: return emptyList(),
+            )
+            is LoxodromicMotion -> computeLoxodromicMotion(
+                parameters,
+                objects[divergencePoint] as? Point ?: return emptyList(),
+                objects[convergencePoint] as? Point ?: return emptyList(),
+                objects[target] ?: return emptyList(),
+            )
+        }
+    }
+
     // MAYBE: inline
     fun reIndex(
         reIndexer: (Ix) -> Ix,

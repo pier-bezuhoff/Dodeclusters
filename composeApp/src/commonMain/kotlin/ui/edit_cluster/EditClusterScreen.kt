@@ -322,14 +322,14 @@ fun EditClusterScreen(
             }
         }
     }
-    LaunchedEffect(viewModel) {
-        viewModel.snackbarMessages.collectLatest { message ->
-            // NOTE: snackbar hangs windows/chrome apparently (?)
-//            snackbarHostState.showSnackbar(getString(message.stringResource), duration = message.duration)
-            // MAYBE: move on-selection action prompt here instead
+//    LaunchedEffect(viewModel) {
+//        viewModel.snackbarMessages.collectLatest { message ->
+//            // NOTE: snackbar hangs windows/chrome apparently (?)
+////            snackbarHostState.showSnackbar(getString(message.stringResource), duration = message.duration)
+//            // MAYBE: move on-selection action prompt here instead
 //            println(getString(message.stringResource))
-        }
-    }
+//        }
+//    }
 }
 
 /** Loads all tool icons and caches them.

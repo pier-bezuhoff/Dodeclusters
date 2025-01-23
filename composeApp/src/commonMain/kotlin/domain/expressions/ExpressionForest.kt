@@ -20,13 +20,13 @@ private const val UNCALCULATED_TIER: Tier = -1
 private const val ABANDONED_TIER: Tier = -2
 
 /**
- * Class for managing expressions
+ * Class for managing expressions (AST controller)
  * @param[get] [GCircle]s are stored separately by design, so we have to access them somehow
  * @param[set] used to set updated objects when calling [update] or [reEval] */
 class ExpressionForest(
     initialExpressions: Map<Ix, Expression?>, // pls include all possible indices
     // find indexed args -> downscale them -> eval expr -> upscale result
-    private val get: (Ix) -> GCircle?,
+    private val get: (Ix) -> GCircle?, // TODO: replace with params for every functino that needs these 2
     private val set: (Ix, GCircle?) -> Unit,
 ) {
     // for the VM.circles list null's correspond to unrealized outputs of multi-functions

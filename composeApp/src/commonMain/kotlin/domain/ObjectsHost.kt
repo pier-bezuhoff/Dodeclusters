@@ -36,6 +36,8 @@ private const val IMAGINARY_CIRCLE_TYPE = 5
  * Not thread-safe, so beware
  * */
 class ObjectsHost {
+    // cmp: MutableDoubleList from kotlin collections
+    // reference: https://developer.android.com/reference/kotlin/androidx/collection/MutableDoubleList
     var size = 0
     private var maxSize = 100
     var objectTypes: IntArray = IntArray(maxSize)

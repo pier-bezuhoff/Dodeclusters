@@ -19,6 +19,12 @@ kotlin {
             commonWebpackConfig {
                 outputFileName = "composeApp.js"
             }
+            testTask {
+                useKarma {
+                    useChromium()
+                    useFirefox()
+                }
+            }
         }
         binaries.executable()
     }

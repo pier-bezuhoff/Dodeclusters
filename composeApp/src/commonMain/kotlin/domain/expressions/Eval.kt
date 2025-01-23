@@ -5,6 +5,7 @@ import data.geometry.CircleOrLine
 import data.geometry.EPSILON
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
+import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.Point
 import kotlin.math.hypot
@@ -59,11 +60,21 @@ fun computeLineBy2Points(
 fun computeCircleInversion(
     target: GCircle,
     engine: GCircle
-): GCircle {
+): GCircle? {
     val engineGC = GeneralizedCircle.fromGCircle(engine)
     val targetGC = GeneralizedCircle.fromGCircle(target)
     val result = engineGC.applyTo(targetGC)
-    return result.toGCircle()
+    val gCircle = result.toGCircle()
+    return when (target) {
+        is Point -> when (gCircle) {
+            is Point -> gCircle
+            is Circle -> Point(gCircle.x, gCircle.y)
+            is ImaginaryCircle -> Point(gCircle.x, gCircle.y)
+            else -> null
+        }
+        is CircleOrLine -> gCircle as? CircleOrLine
+        is ImaginaryCircle -> gCircle as? ImaginaryCircle
+    }
 }
 
 // MAYBE: just repeat obj transformations for tier=0 carrier incident points
