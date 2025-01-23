@@ -5,15 +5,14 @@ import android.app.Activity
 import android.app.RecoverableSecurityException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -24,6 +23,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -36,6 +37,7 @@ import kotlinx.coroutines.flow.update
 import setFilesDir
 import ui.LifecycleEvent
 import ui.theme.DodeclustersColors
+import java.io.File
 import java.io.FileNotFoundException
 
 class MainActivity : ComponentActivity() {
@@ -43,6 +45,49 @@ class MainActivity : ComponentActivity() {
         MutableSharedFlow(replay = 1)
     private val ddcFlow: MutableStateFlow<String?> = MutableStateFlow(null)
     private val anchorUriFlow: MutableStateFlow<Uri?> = MutableStateFlow(null)
+    private val altLauncher: ActivityResultLauncher<Array<String>> = registerForActivityResult(
+        contract = object : ActivityResultContracts.OpenDocument() {
+            override fun createIntent(context: Context, input: Array<String>): Intent {
+                return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    super.createIntent(context, input)
+                        .putExtra(DocumentsContract.EXTRA_INITIAL_URI, anchorUriFlow.value)
+                } else {
+                    super.createIntent(context, input)
+                }
+            }
+        }
+    ) { uri: Uri? ->
+        uri?.let {
+            val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION // or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            applicationContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
+            val newDdcContent = getContentFromExternalImplicitIntent(uri, useRecoveryLauncher = false, useAltLauncher = false)
+            if (newDdcContent != null)
+                ddcFlow.update { newDdcContent }
+        }
+    }
+    private val recoveryLauncher: ActivityResultLauncher<IntentSenderRequest> =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+            it.data?.let { intent ->
+                intent.data?.let { uri ->
+                    val newDdcContent = getContentFromExternalImplicitIntent(uri, useRecoveryLauncher = false)
+                    if (newDdcContent != null)
+                        ddcFlow.update { newDdcContent }
+                }
+            }
+        }
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            anchorUriFlow.value?.let { uri ->
+                val newDdcContent = getContentFromExternalImplicitIntent(uri)
+                if (newDdcContent != null)
+                    ddcFlow.update { newDdcContent }
+            }
+        } else {
+            println("permission denied :(")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,41 +123,10 @@ class MainActivity : ComponentActivity() {
             // this horrendous mess looks smart but is actually very stupid
 //            var ddcContent by remember { mutableStateOf<String?>(null) }
             val ddcContent by ddcFlow.collectAsStateWithLifecycle()
-            val anchorUri by anchorUriFlow.collectAsStateWithLifecycle()
-            val altLauncher: ManagedActivityResultLauncher<Array<String>, Uri?> = rememberLauncherForActivityResult(
-                contract = object : ActivityResultContracts.OpenDocument() {
-                    override fun createIntent(context: Context, input: Array<String>): Intent {
-                        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            super.createIntent(context, input)
-                                .putExtra(DocumentsContract.EXTRA_INITIAL_URI, anchorUri)
-                        } else {
-                            super.createIntent(context, input)
-                        }
-                    }
-                }
-            ) { uri ->
-                uri?.let {
-                    val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION // or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                    applicationContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
-                    val newDdcContent = getContentFromExternalImplicitIntent(uri)
-                    if (newDdcContent != null)
-                        ddcFlow.update { newDdcContent }
-                }
-            }
-            val recoveryLauncher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult> =
-                rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
-                    it.data?.let { intent ->
-                        intent.data?.let { uri ->
-                            val newDdcContent = getContentFromExternalImplicitIntent(uri, altLauncher)
-                            if (newDdcContent != null)
-                                ddcFlow.update { newDdcContent }
-                        }
-                    }
-                }
             LaunchedEffect(Unit) {
                 if (intent.action in setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT))
                     intent.data?.let {
-                        val newDdcContent = getContentFromExternalImplicitIntent(it, altLauncher, recoveryLauncher)
+                        val newDdcContent = getContentFromExternalImplicitIntent(it)
                         if (newDdcContent != null)
                             ddcFlow.update { newDdcContent }
                     }
@@ -146,29 +160,45 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.data?.let { uri ->
-            val newDdcContent = getContentFromExternalImplicitIntent(uri, null)
+            val newDdcContent = getContentFromExternalImplicitIntent(uri)
             if (newDdcContent != null)
                 ddcFlow.update { newDdcContent }
         }
     }
 
+    private fun checkPermissions() {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q)
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+    }
+
     /** check AndroidManifest for inputs */
     private fun getContentFromExternalImplicitIntent(
         uri: Uri,
-        altLauncher: ManagedActivityResultLauncher<Array<String>, Uri?>? = null,
-        recoveryLauncher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult>? = null
+        useRecoveryLauncher: Boolean = true,
+        useAltLauncher: Boolean = true,
     ): String? {
         anchorUriFlow.update { uri }
         var content: String? = null
         println("incoming Uri.path: ${uri.path} <- $uri")
+        val contentUri = if (uri.scheme == "file" && uri.path != null) {
+            val file = File(uri.path!!)
+             FileProvider.getUriForFile(applicationContext, "${applicationContext.packageName}.fileprovider", file)
+                 .also { println("file:// uri changed into content:// uri: $it") }
+        } else {
+            uri
+        }
+        applicationContext.grantUriPermission(applicationContext.packageName, contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        checkPermissions()
         if (setOf(".ddc", ".yaml", ".yml")
-            .any { uri.path?.endsWith(it, ignoreCase = true) == true } || uri.path?.contains("encoded") == true
+            .any { contentUri.path?.endsWith(it, ignoreCase = true) == true } || contentUri.path?.contains("encoded") == true
         ) {
             try {
-                content = readDdcFromUri(applicationContext, uri)
+                content = readDdcFromUri(applicationContext, contentUri)
             } catch (e: SecurityException) {
                 // Q = API 29 = Android 10
-                if (recoveryLauncher != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (useRecoveryLauncher && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     // TODO: test this
                     val recoverableSecurityException =
                         e as? RecoverableSecurityException ?: throw RuntimeException(e.message, e)
@@ -179,16 +209,17 @@ class MainActivity : ComponentActivity() {
                     )
                 } else {
                     e.printStackTrace()
-                    altLauncher?.launch(arrayOf("application/*"))
+                    if (useAltLauncher)
+                        altLauncher.launch(arrayOf("application/*"))
                 }
             } catch (e: FileNotFoundException) {
-                // BUG: breaks when trying to open a .ddc/.yaml via Dodeclusters from
-                //  Total Commander (permission denied)
                 e.printStackTrace()
-                altLauncher?.launch(arrayOf("application/*"))
+                if (useAltLauncher)
+                    altLauncher.launch(arrayOf("application/*"))
             }
         } else {
-            altLauncher?.launch(arrayOf("application/*"))
+            if (useAltLauncher)
+                altLauncher.launch(arrayOf("application/*"))
         }
         return content
     }

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Share files from the external storage root -->
+    <external-path name="external_files" path="." />
+    <!-- Share files from the app's internal cache directory -->
+    <cache-path name="cache_files" path="." />
+    <!-- Share files from the app's internal files directory -->
+    <files-path name="internal_files" path="." />
+    <!-- Share files from the external cache directory -->
+    <external-cache-path name="external_cache_files" path="." />
+    <!-- Share files from the external files directory -->
+    <external-files-path name="external_app_files" path="." />
+</paths>
