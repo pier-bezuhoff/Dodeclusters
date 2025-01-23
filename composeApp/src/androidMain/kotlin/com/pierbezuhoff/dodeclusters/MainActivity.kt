@@ -19,12 +19,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,8 +28,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import domain.io.readDdcFromUri
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import setFilesDir
 import ui.LifecycleEvent
 import ui.theme.DodeclustersColors
@@ -42,6 +41,8 @@ import java.io.FileNotFoundException
 class MainActivity : ComponentActivity() {
     private val lifecycleEvents: MutableSharedFlow<LifecycleEvent> =
         MutableSharedFlow(replay = 1)
+    private val ddcFlow: MutableStateFlow<String?> = MutableStateFlow(null)
+    private val anchorUriFlow: MutableStateFlow<Uri?> = MutableStateFlow(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,14 +76,15 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             // this horrendous mess looks smart but is actually very stupid
-            var ddcContent by remember { mutableStateOf<String?>(null) }
-            val anchorUri = remember { mutableStateOf<Uri?>(null) }
+//            var ddcContent by remember { mutableStateOf<String?>(null) }
+            val ddcContent by ddcFlow.collectAsStateWithLifecycle()
+            val anchorUri by anchorUriFlow.collectAsStateWithLifecycle()
             val altLauncher: ManagedActivityResultLauncher<Array<String>, Uri?> = rememberLauncherForActivityResult(
                 contract = object : ActivityResultContracts.OpenDocument() {
                     override fun createIntent(context: Context, input: Array<String>): Intent {
                         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             super.createIntent(context, input)
-                                .putExtra(DocumentsContract.EXTRA_INITIAL_URI, anchorUri.value)
+                                .putExtra(DocumentsContract.EXTRA_INITIAL_URI, anchorUri)
                         } else {
                             super.createIntent(context, input)
                         }
@@ -92,18 +94,28 @@ class MainActivity : ComponentActivity() {
                 uri?.let {
                     val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION // or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     applicationContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
-                    ddcContent = getContentFromExternalImplicitIntent(uri, anchorUri)
+                    val newDdcContent = getContentFromExternalImplicitIntent(uri)
+                    if (newDdcContent != null)
+                        ddcFlow.update { newDdcContent }
                 }
             }
             val recoveryLauncher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult> =
                 rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
                     it.data?.let { intent ->
-                        ddcContent = intent.data?.let { uri -> getContentFromExternalImplicitIntent(uri, anchorUri, altLauncher) }
+                        intent.data?.let { uri ->
+                            val newDdcContent = getContentFromExternalImplicitIntent(uri, altLauncher)
+                            if (newDdcContent != null)
+                                ddcFlow.update { newDdcContent }
+                        }
                     }
                 }
             LaunchedEffect(Unit) {
                 if (intent.action in setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT))
-                    ddcContent = intent.data?.let { getContentFromExternalImplicitIntent(it, anchorUri, altLauncher, recoveryLauncher) }
+                    intent.data?.let {
+                        val newDdcContent = getContentFromExternalImplicitIntent(it, altLauncher, recoveryLauncher)
+                        if (newDdcContent != null)
+                            ddcFlow.update { newDdcContent }
+                    }
             }
             val view = LocalView.current
             val isDarkTheme = isSystemInDarkTheme()
@@ -126,21 +138,29 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
+        // MAYBE: it's better to use suspend emit
         lifecycleEvents.tryEmit(LifecycleEvent.SaveUIState)
         super.onSaveInstanceState(outState)
     }
 
-    // BUG: doesn't handle implicit intents from gdrive anymore
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.data?.let { uri ->
+            val newDdcContent = getContentFromExternalImplicitIntent(uri, null)
+            if (newDdcContent != null)
+                ddcFlow.update { newDdcContent }
+        }
+    }
+
     /** check AndroidManifest for inputs */
     private fun getContentFromExternalImplicitIntent(
         uri: Uri,
-        anchorUri: MutableState<Uri?>,
         altLauncher: ManagedActivityResultLauncher<Array<String>, Uri?>? = null,
         recoveryLauncher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult>? = null
     ): String? {
-        anchorUri.value = uri
+        anchorUriFlow.update { uri }
         var content: String? = null
-        println("incoming Uri.path: ${uri.path}")
+        println("incoming Uri.path: ${uri.path} <- $uri")
         if (setOf(".ddc", ".yaml", ".yml")
             .any { uri.path?.endsWith(it, ignoreCase = true) == true } || uri.path?.contains("encoded") == true
         ) {
