@@ -6,9 +6,12 @@ import domain.rotateBy
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sign
+import kotlin.math.sin
 
 /** [a]*x + [b]*y + [c] = 0
  *
@@ -171,6 +174,20 @@ data class Line(
         val newB = newNormal.y.toDouble()
         val newC = (hypot(newA, newB)/hypot(a, b)) * (a*focus.x + b*focus.y + c) - newA*focus.x - newB*focus.y
         return Line(newA, newB, newC)
+    }
+
+    override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): Line {
+        val (focusX, focusY) = focus
+        var c1: Double = c
+        c1 -= a*translation.x + b*translation.y
+        c1 = zoom*(a*focusX + b*focusY + c1) // - a*focusX - b*focusY // added back when rotating
+        val phi: Double = rotationAngle * PI/180.0
+        val cosPhi = cos(phi)
+        val sinPhi = sin(phi)
+        val a1 = a * cosPhi - b * sinPhi
+        val b1 = a * sinPhi + b * cosPhi
+        c1 = (hypot(a1, b1)/hypot(a, b)) * c1 - a1*focusX - b1*focusY
+        return Line(a1, b1, c1)
     }
 
     override fun reversed(): Line =

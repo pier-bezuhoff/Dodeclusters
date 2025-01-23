@@ -177,9 +177,7 @@ class EditClusterViewModel : ViewModel() {
     // MAYBE: show quick prompt/popup instead of button
     val selectionIsLocked: Boolean by derivedStateOf {
         selectionIsLockedTrigger // haxxz
-        LOCK_DEPENDENT_OBJECT && (
-            selection.all { objects[it] == null || !isFree(it) }
-        )
+        selection.all { objects[it] == null || !isFree(it) }
     }
 
     // NOTE: history doesn't survive background app kill
@@ -682,6 +680,9 @@ class EditClusterViewModel : ViewModel() {
                             }
                             .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
                     )
+                } else {
+                    if (chessboardPattern == ChessboardPattern.STARTS_COLORED)
+                        chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
                 }
                 val deletedCircles = deletedCircleIndices.mapNotNull { objects[it] as? CircleOrLine }
                 viewModelScope.launch {
@@ -1170,67 +1171,28 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun scaleSelection(zoom: Float) {
-        val freeObjects =
-            if (LOCK_DEPENDENT_OBJECT) selection.filter { isFree(it) }
-            else selection
+        val freeObjects = selection.filter { isFree(it) }
         if (showCircles && mode.isSelectingCircles() && freeObjects.isNotEmpty()) {
             when (freeObjects.size) {
                 1 -> {
-                    recordCommand(Command.SCALE, targets = freeObjects)
-                    val ix = freeObjects.single()
-                    when (val circle = objects[ix]) {
-                        is Circle -> {
-                            objects[ix] = circle.copy(radius = zoom * circle.radius)
-                            adjustIncidentPoints(
-                                parentIx = ix,
-                                centroid = circle.center,
-                                zoom = zoom
-                            )
-                        }
-                        else -> {}
-                    }
+                    transform(freeObjects, zoom = zoom)
                 }
                 else -> {
-                    recordCommand(Command.SCALE, targets = freeObjects)
                     val rect = getSelectionRect()
                     val center =
                         if (rect == null || rect.minDimension >= 5_000)
-                            absolute(canvasSize.center.toOffset())
+                            computeAbsoluteCenter() ?: Offset.Zero
                         else rect.center
-                    for (ix in freeObjects) {
-                        objects[ix] = (objects[ix] as? CircleOrLine)?.scaled(center, zoom)
-                        adjustIncidentPoints(
-                            parentIx = ix,
-                            centroid = center,
-                            zoom = zoom
-                        )
-                    }
+                    transform(freeObjects, focus = center, zoom = zoom)
                 }
             }
-            expressions.update(freeObjects)
         } else if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
 //            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
         } else { // NOTE: scaling everything instead of canvas can produce more artifacts
             val targets = objects.indices.toList()
-            recordCommand(Command.SCALE, targets = targets)
-            val center = absolute(canvasSize.center.toOffset())
-            for (ix in objects.indices) {
-                when (val obj = objects[ix]) {
-                    is CircleOrLine -> {
-                        objects[ix] = obj.scaled(center, zoom)
-                        adjustIncidentPoints(
-                            parentIx = ix,
-                            centroid = center,
-                            zoom = zoom
-                        )
-                    }
-                    is Point -> {
-                        objects[ix] = obj.scaled(center, zoom)
-                    }
-                    else -> {}
-                }
-            }
+            val center = computeAbsoluteCenter() ?: Offset.Zero
             // no need to recompute expressions here
+            transform(targets, focus = center, zoom = zoom, updateExpressions = {})
         }
     }
 
@@ -1540,16 +1502,13 @@ class EditClusterViewModel : ViewModel() {
     private fun scaleSingleCircle(c: Offset, zoom: Float, h: HandleConfig.SingleCircle, sm: SubMode.Scale) {
         val ix = h.ix
         val circle = objects[h.ix] as? CircleOrLine
-        val free = !LOCK_DEPENDENT_OBJECT || isFree(h.ix)
-        if (free) {
-            if (circle is Circle) {
-                val center = sm.center
-                val r = (c - center).getDistance()
-                transform(listOf(ix), focus = center, zoom = (r/circle.radius).toFloat())
-            } else if (circle is Line) {
-                val center = circle.project(c)
-                transform(listOf(ix), focus = center, zoom = zoom)
-            }
+        if (circle is Circle) {
+            val center = sm.center
+            val r = (c - center).getDistance()
+            transform(listOf(ix), focus = center, zoom = (r/circle.radius).toFloat())
+        } else if (circle is Line) {
+            val center = circle.project(c)
+            transform(listOf(ix), focus = center, zoom = zoom)
         }
     }
 
@@ -1563,20 +1522,17 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun rotateSingleCircle(pan: Offset, c: Offset, h: HandleConfig.SingleCircle, sm: SubMode.Rotate) {
-        val free = !LOCK_DEPENDENT_OBJECT || isFree(h.ix)
-        if (free) {
-            val center = sm.center
-            val centerToCurrent = c - center
-            val centerToPreviousHandle = centerToCurrent - pan
-            val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
-            val newAngle = sm.angle + angle
-            val snappedAngle =
-                if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
-                else newAngle
-            val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
-            transform(listOf(h.ix), focus = center, rotationAngle = angle1)
-            submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
-        }
+        val center = sm.center
+        val centerToCurrent = c - center
+        val centerToPreviousHandle = centerToCurrent - pan
+        val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
+        val newAngle = sm.angle + angle
+        val snappedAngle =
+            if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
+            else newAngle
+        val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
+        transform(listOf(h.ix), focus = center, rotationAngle = angle1)
+        submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
     }
 
     private fun scaleSeveralCircles(pan: Offset, targets: List<Ix>) {
@@ -1586,7 +1542,7 @@ class EditClusterViewModel : ViewModel() {
             val centerToHandle = scaleHandlePosition - center
             val centerToCurrent = centerToHandle + pan
             val scaleFactor = centerToCurrent.getDistance()/centerToHandle.getDistance()
-            transform(targets, focus = center, zoom = scaleFactor)
+            transformWhatWeCan(targets, focus = center, zoom = scaleFactor)
         }
     }
 
@@ -1594,7 +1550,7 @@ class EditClusterViewModel : ViewModel() {
         val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
         if (sm.sliderPercentage != newPercentage) {
             val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
-            transform(targets, focus = sm.center, zoom = scaleFactor)
+            transformWhatWeCan(targets, focus = sm.center, zoom = scaleFactor)
             submode = sm.copy(sliderPercentage = newPercentage)
         }
     }
@@ -1609,42 +1565,38 @@ class EditClusterViewModel : ViewModel() {
             if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
             else newAngle
         val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
-        transform(targets, focus = sm.center, rotationAngle = angle1)
+        transformWhatWeCan(targets, focus = sm.center, rotationAngle = angle1)
         submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
     }
 
     // dragging circle: move + scale radius
     private fun dragCircle(pan: Offset, c: Offset, zoom: Float, rotationAngle: Float) {
         val ix = selection.single()
-        val free = !LOCK_DEPENDENT_OBJECT || isFree(ix)
-        if (free) {
-            transform(listOf(ix), translation = pan, zoom = zoom, rotationAngle = rotationAngle)
-        }
+        transformWhatWeCan(listOf(ix), translation = pan, zoom = zoom, rotationAngle = rotationAngle)
     }
 
     private fun dragPoint(c: Offset) {
         val ix = selection.first()
-        val free = !LOCK_DEPENDENT_OBJECT || isFree(ix)
-        if (free) {
+        val expr = expressions.expressions[ix]?.expr
+        if (!isFree(ix) && expr is Expr.Incidence) {
+            slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, cursorLocation = c)
+        } else {
             val childCircles = expressions.getAllChildren(ix)
                 .filter { objects[it] is CircleOrLine }
                 .toSet()
             val newPoint = snapped(c, excludePoints = true, excludedCircles = childCircles).result
-            transform(
+            transformWhatWeCan(
                 listOf(ix),
                 translation = newPoint.toOffset() - (objects[ix] as Point).toOffset(),
-                beforeUpdatingExpressions = {
+                updateExpressions = {
                     expressions.changeToFree(ix)
+                    expressions.update(listOf(ix))
                 }
             )
-        } else {
-            val expr = expressions.expressions[ix]?.expr
-            if (expr is Expr.Incidence) {
-                slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, cursorLocation = c)
-            }
         }
     }
 
+    // special case that is not handled by trnasform()
     private fun slidePointAcrossCarrier(pointIndex: Ix, carrierIndex: Ix, cursorLocation: Offset) {
         recordCommand(Command.MOVE, target = pointIndex)
         val carrier = objects[carrierIndex] as CircleOrLine
@@ -1657,44 +1609,36 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun dragCirclesOrPoints(pan: Offset, c: Offset, zoom: Float, rotationAngle: Float) {
-        val selectedCircles = selection.filter { objects[it] is CircleOrLine }
-        val selectedPoints = selection.filter { objects[it] is Point }
-        val freeCircles =
-            if (LOCK_DEPENDENT_OBJECT)
-                selectedCircles.filter { isFree(it) }
-            else selectedCircles
-        val freePoints =
-            if (LOCK_DEPENDENT_OBJECT)
-                selectedPoints.filter { isFree(it) }
-            else selectedPoints
-        val freeTargets = freeCircles + freePoints
-        if (freeCircles.size == 1 && freePoints.isEmpty()) { // move + scale radius
-            transform(freeCircles, translation = pan, zoom = zoom)
-        } else if (freeCircles.size > 1) { // scale radius & position
-            transform(freeTargets, translation = pan, focus = c, zoom = zoom, rotationAngle = rotationAngle)
+        val targets = selection.filter {
+            val o = objects[it]
+            o is CircleOrLine || o is Point
         }
+        transformWhatWeCan(targets, translation = pan, focus = c, zoom = zoom, rotationAngle = rotationAngle)
     }
 
+    /** Wrapper around [transform] that adjust [targets] based on [INVERSION_OF_CONTROL] */
     private inline fun transformWhatWeCan(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-        crossinline beforeUpdatingExpressions: () -> Unit = {},
+        crossinline updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
+            expressions.update(it)
+        },
     ) {
         val actualTargets =
             when (INVERSION_OF_CONTROL) {
                 InversionOfControl.NONE -> targets.filter { isFree(it) }
                 InversionOfControl.LEVEL_1 -> {
                     val parents = targets.flatMap { expressions.getImmediateParents(it) }
-                    parents.filter { isFree(it) }
+                    targets + parents.filter { isFree(it) }
                 }
                 InversionOfControl.LEVEL_INFINITY -> {
                     targets + expressions.getAllParents(targets).toList()
                 }
             }
-        transform(actualTargets, translation, focus, zoom, rotationAngle, beforeUpdatingExpressions)
+        transform(actualTargets, translation, focus, zoom, rotationAngle, updateExpressions)
     }
 
     /** Apply [translation];scaling;rotation to [targets] (that are all assumed free).
@@ -1710,7 +1654,9 @@ class EditClusterViewModel : ViewModel() {
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-        crossinline beforeUpdatingExpressions: () -> Unit = {},
+        crossinline updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
+            expressions.update(it)
+        },
     ) {
         if (targets.isEmpty())
             return
@@ -1723,44 +1669,51 @@ class EditClusterViewModel : ViewModel() {
             recordCommand(Command.SCALE, targets) // scale & rotate case doesn't happen usually
         else
             recordCommand(Command.ROTATE, targets)
-        val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
-        for (ix in targets) {
-            when (val o = objects[ix]) {
-                is Circle -> {
-                    val f = if (focus == Offset.Unspecified) o.center else focus
-                    objects[ix] = o.translated(translation).scaled(f, zoom).rotated(f, rotationAngle)
-                    if (requiresRotation)
+        if (!requiresZoom && !requiresRotation) {
+            for (ix in targets) {
+                val o = objects[ix]
+                objects[ix] = o?.translated(translation)
+                if (o is Line)
+                    adjustIncidentPoints(parentIx = ix, translation = translation)
+            }
+        } else {
+            val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
+            for (ix in targets) {
+                when (val o = objects[ix]) {
+                    is Circle -> {
+                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
+                        if (requiresRotation) {
+                            adjustIncidentPoints(
+                                parentIx = ix,
+                                centroid = focus,
+                                rotationAngle = rotationAngle
+                            )
+                        }
+                    }
+                    is Line -> {
+                        val f = if (focus == Offset.Unspecified)
+                            o.project(screenCenter)
+                        else focus
+                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
                         adjustIncidentPoints(
                             parentIx = ix,
+                            translation = translation,
                             centroid = f,
+                            zoom = zoom,
                             rotationAngle = rotationAngle
                         )
+                    }
+                    is Point -> {
+                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
+                    }
+                    is ImaginaryCircle -> {
+                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
+                    }
+                    null -> {}
                 }
-                is Line -> {
-                    val f = if (focus == Offset.Unspecified)
-                        o.project(screenCenter)
-                    else focus
-                    objects[ix] = o.translated(translation).rotated(f, rotationAngle)
-                    adjustIncidentPoints(
-                        parentIx = ix,
-                        translation = translation,
-                        centroid = f,
-                        zoom = zoom,
-                        rotationAngle = rotationAngle
-                    )
-                }
-                is Point -> {
-                    if (focus == Offset.Unspecified)
-                        objects[ix] = o.translated(translation)
-                    else
-                        objects[ix] = o.translated(translation).scaled(focus, zoom).rotated(focus, rotationAngle)
-                }
-                is ImaginaryCircle -> {} // there is no free ImaginaryCircle's as of now
-                null -> {}
             }
         }
-        beforeUpdatingExpressions()
-        expressions.update(targets)
+        updateExpressions(targets)
     }
 
     // MAYBE: handle key arrows as panning
@@ -1781,25 +1734,15 @@ class EditClusterViewModel : ViewModel() {
                     }
                 }
                 is HandleConfig.SeveralCircles -> {
-                    val freeCircles =
-                        if (LOCK_DEPENDENT_OBJECT)
-                            selectedCircles.filter { isFree(it) }
-                        else selectedCircles
-                    val freePoints =
-                        if (LOCK_DEPENDENT_OBJECT)
-                            selectedPoints.filter { isFree(it) }
-                        else selectedPoints
-                    val freeTargets = freeCircles + freePoints
-                    if (freeTargets.isNotEmpty())
-                        when (val sm = submode) {
-                            is SubMode.Scale ->
-                                scaleSeveralCircles(pan, freeTargets)
-                            is SubMode.ScaleViaSlider ->
-                                scaleViaSliderSeveralCircles(pan = pan, sm = sm, targets = freeTargets)
-                            is SubMode.Rotate ->
-                                rotateSeveralCircles(pan = pan, c = c, sm = sm, targets = freeTargets)
-                            else -> {}
-                        }
+                    when (val sm = submode) {
+                        is SubMode.Scale ->
+                            scaleSeveralCircles(pan, selection)
+                        is SubMode.ScaleViaSlider ->
+                            scaleViaSliderSeveralCircles(pan = pan, sm = sm, targets = selection)
+                        is SubMode.Rotate ->
+                            rotateSeveralCircles(pan = pan, c = c, sm = sm, targets = selection)
+                        else -> {}
+                    }
                 }
                 else -> {}
             }
@@ -2038,7 +1981,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun processKeyboardAction(action: KeyboardAction) {
-//        println("processing $action")
+        println("processing $action")
         when (action) {
             KeyboardAction.SELECT_ALL -> {
                 if (!mode.isSelectingCircles() || !showCircles) // more intuitive behavior
@@ -2625,13 +2568,12 @@ class EditClusterViewModel : ViewModel() {
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
-        const val LOCK_DEPENDENT_OBJECT = true
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         /** Allow moving non-free object IF all of it's lvl1 parents/dependecies are free by
          * moving all of its parent with it */ // geogebra-like
-        val INVERSION_OF_CONTROL = InversionOfControl.NONE
+        val INVERSION_OF_CONTROL = InversionOfControl.LEVEL_1
         /** when constructing object depending on not-yet-existing points,
          * always create them. In contrast to replacing expression with static circle */
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false

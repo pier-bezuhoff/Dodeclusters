@@ -16,6 +16,13 @@ import kotlin.math.sqrt
 sealed interface GCircle {
     fun scaled(focusX: Double, focusY: Double, zoom: Double): GCircle
     fun translated(vector: Offset): GCircle
+    /** @param[rotationAngle] CCW in degrees */
+    fun transformed(
+        translation: Offset,
+        focus: Offset = Offset.Unspecified,
+        zoom: Float = 1f,
+        rotationAngle: Float = 0f
+    ): GCircle
 }
 
 // TODO: Clifford algebra (geometric product + other operations)
@@ -385,7 +392,7 @@ data class GeneralizedCircle(
             val z = -x1*y2*z3 + x1*y3*z2 + x2*y1*z3 - x2*y3*z1 - x3*y1*z2 + x3*y2*z1
             if (is0000(w,x,y,z)) {
                 // case of c1-c2-c3 being in the same pencil
-                println("GeneralizedCircle.perp3 resulted in near-zero: ($w, $x, $y, $z) aka 0 or infinite number of solutions")
+//                println("GeneralizedCircle.perp3 resulted in near-zero: ($w, $x, $y, $z) aka 0 or infinite number of solutions")
                 return null
             }
             if (listOf(w,x,y,z).any { it.isNaN() || it.isInfinite() }) {

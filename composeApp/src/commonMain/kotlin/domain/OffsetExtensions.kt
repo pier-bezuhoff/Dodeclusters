@@ -16,7 +16,8 @@ import kotlin.math.sin
  *
  * See: [Rotation matrix](https://en.wikipedia.org/wiki/Rotation_matrix)
  */
-fun Offset.rotateBy(angle: Float): Offset {
+@Suppress("NOTHING_TO_INLINE")
+inline fun Offset.rotateBy(angle: Float): Offset {
     val angleInRadians = angle * PI / 180
     return Offset(
         (x * cos(angleInRadians) - y * sin(angleInRadians)).toFloat(),

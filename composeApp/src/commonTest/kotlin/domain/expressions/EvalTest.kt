@@ -26,10 +26,10 @@ class EvalTest {
                 val r = 100*min(abs(Random.nextDouble()),1e-3)
                 val c = Circle(x, y, r)
                 val c1 = computeCircleInversion(c, circle)
-                assertTrue(c1 is CircleOrLine?, "circle(circle) is CircleOrLine: $circle $ $c = $c1")
+                assertTrue(c1 is CircleOrLine?, "circle(circle) is CircleOrLine?: $circle $ $c = $c1")
                 val p = Point(x, y)
                 val p1 = computeCircleInversion(p, circle)
-                assertTrue(p1 is Point?, "circle(point) is Point: $circle $ $p = $p1")
+                assertTrue(p1 is Point?, "circle(point) is Point?: $circle $ $p = $p1")
             }
         }
     }

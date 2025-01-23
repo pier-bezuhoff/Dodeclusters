@@ -6,8 +6,11 @@ import androidx.compose.ui.geometry.isFinite
 import domain.rotateBy
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.math.PI
 import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.sin
 
 @Immutable
 @Serializable
@@ -55,6 +58,23 @@ data class Point(
     fun rotated(focus: Offset, angleDeg: Float): Point {
         val newOffset = (toOffset() - focus).rotateBy(angleDeg) + focus
         return fromOffset(newOffset)
+    }
+
+    override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): Point {
+        var newX: Double = x + translation.x
+        var newY: Double = y + translation.y
+        if (focus != Offset.Unspecified) {
+            val (focusX, focusY) = focus
+            // cmp. Offset.rotateBy & zoom and rotation are commutative
+            newX -= focusX
+            newY -= focusY
+            val phi: Double = rotationAngle * PI/180.0
+            val cosPhi = cos(phi)
+            val sinPhi = sin(phi)
+            newX = (newX * cosPhi - newY * sinPhi) * zoom + focusX
+            newY = (newX * sinPhi + newY * cosPhi) * zoom + focusX
+        } // tbf because of T;S;R order it is not completely accurate
+        return Point(newX, newY)
     }
 
     /** = `(this + point)/2` */
