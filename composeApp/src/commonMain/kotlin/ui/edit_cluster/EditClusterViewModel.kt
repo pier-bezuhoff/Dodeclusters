@@ -75,6 +75,7 @@ import domain.snapPointToCircles
 import domain.snapPointToPoints
 import domain.sortedByFrequency
 import domain.tryCatch2
+import domain.updated
 import getPlatform
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -968,9 +969,9 @@ class EditClusterViewModel : ViewModel() {
                     snapResult.circleIndex
                 )
                 recordCreateCommand()
-                val newPoint = expressions.addSoloExpression(expr) as Point
+                val newPoint = (expressions.addSoloExpression(expr) as Point).upscale()
                 val newIx = objects.size
-                addObjects(listOf(newPoint.upscale()))
+                addObjects(listOf(newPoint))
                 PointSnapResult.Eq(newPoint, newIx)
             }
             is PointSnapResult.Intersection -> {
@@ -1293,17 +1294,20 @@ class EditClusterViewModel : ViewModel() {
                     when (partialArgList?.nextArgType) {
                         ArgType.Point -> {
                             val result = snapped(absolute(visiblePosition))
-                            val newArg = when (result) {
-                                is PointSnapResult.Eq -> Arg.Point.Index(result.pointIndex)
-                                else -> Arg.Point.XY(result.result)
-                            }
                             if (FAST_CENTERED_CIRCLE && mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS && partialArgList!!.currentArg == null) {
+                                // we have to realize the first point here so we don't forget its
+                                // snap after panning
+                                val newArg = realizePointCircleSnap(result).toArgPoint()
                                 val newArg2 = Arg.Point.XY(result.result)
                                 partialArgList = partialArgList!!
                                     .addArg(newArg, confirmThisArg = true)
                                     .addArg(newArg2, confirmThisArg = false)
                                     .copy(lastSnap = result)
                             } else {
+                                val newArg = when (result) {
+                                    is PointSnapResult.Eq -> Arg.Point.Index(result.pointIndex)
+                                    else -> Arg.Point.XY(result.result)
+                                }
                                 partialArgList = partialArgList!!
                                     .addArg(newArg, confirmThisArg = false)
                                     .copy(lastSnap = result)
@@ -1831,21 +1835,29 @@ class EditClusterViewModel : ViewModel() {
                 val newArg = when (val arg = pArgList?.currentArg) {
                     is Arg.Point -> visiblePosition?.let {
                         val args = pArgList.args
-                        val realized = realizePointCircleSnap(snapped(absolute(visiblePosition)))
+                        val snap = snapped(absolute(visiblePosition))
+                        // we cant realize it here since for fast circles the first point already has been
+                        // realized in onDown and we don't know yet if we moved far enough from it to
+                        // create the second point
                         if (mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS && FAST_CENTERED_CIRCLE && args.size == 2) {
                             val firstPoint: Point =
                                 when (val first = args.first() as Arg.Point) {
                                     is Arg.Point.Index -> objects[first.index] as Point
                                     is Arg.Point.XY -> first.toPoint()
                                 }
-                            val pointsAreTooClose = firstPoint.distanceFrom(realized.result) < 1e-3
+                            val pointsAreTooClose = firstPoint.distanceFrom(snap.result) < 1e-3
                             if (pointsAreTooClose) { // haxxz
-                                partialArgList = pArgList.copy(args = args.dropLast(1), lastSnap = null)
+                                partialArgList = pArgList.copy(
+                                    args = args.dropLast(1),
+                                    lastArgIsConfirmed = true,
+                                    lastSnap = null
+                                )
+                                null
+                            } else {
+                                realizePointCircleSnap(snap).toArgPoint()
                             }
-                        }
-                        when (realized) {
-                            is PointSnapResult.Free -> Arg.Point.XY(realized.result)
-                            is PointSnapResult.Eq -> Arg.Point.Index(realized.pointIndex)
+                        } else {
+                            realizePointCircleSnap(snap).toArgPoint()
                         }
                     }
                     is Arg.CircleIndex -> null
@@ -2592,3 +2604,9 @@ enum class InversionOfControl {
     /** You can move dependent objects with all their parents */
     LEVEL_INFINITY
 }
+
+private fun PointSnapResult.PointToPoint.toArgPoint(): Arg.Point =
+    when (this) {
+        is PointSnapResult.Free -> Arg.Point.XY(this.result)
+        is PointSnapResult.Eq -> Arg.Point.Index(this.pointIndex)
+    }

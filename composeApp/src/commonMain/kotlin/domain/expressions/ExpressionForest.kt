@@ -211,9 +211,9 @@ class ExpressionForest(
         recomputeChildrenTiers(ix)
         val result = newExpr.eval(get)
         return result.firstOrNull()
-            .also {
-                println("change $ix -> $newExpr -> $result")
-            }
+//            .also {
+//                println("change $ix -> $newExpr -> $result")
+//            }
     }
 
     /**
