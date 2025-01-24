@@ -13,7 +13,7 @@ enum class Command {
     FILL_REGION,
     CHANGE_COLOR,
     CHANGE_EXPRESSION,
-    /** records canvas translations and scaling */
+//    /** records canvas translations and scaling */
 //    CHANGE_POV,
     ;
 

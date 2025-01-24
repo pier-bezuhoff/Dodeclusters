@@ -1125,6 +1125,7 @@ class EditClusterViewModel : ViewModel() {
             ?.key
 
     fun setNewCircleColor(color: Color) {
+        recordCommand(Command.CHANGE_COLOR)
         for (ix in selection) {
             objectColors[ix] = color
         }
@@ -1136,6 +1137,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun setNewBackgroundColor(color: Color) {
+        recordCommand(Command.CHANGE_COLOR)
         backgroundColor = color
         openedDialog = null
     }
