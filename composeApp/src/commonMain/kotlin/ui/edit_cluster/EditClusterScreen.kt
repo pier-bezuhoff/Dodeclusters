@@ -86,8 +86,6 @@ import domain.io.OpenFileButton
 import domain.io.SaveData
 import domain.io.SaveFileButton
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collectLatest
-import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -95,6 +93,7 @@ import ui.DisableableButton
 import ui.LifecycleEvent
 import ui.OnOffButton
 import ui.SimpleButton
+import ui.ThreeIconButton
 import ui.TwoIconButton
 import ui.WithTooltip
 import ui.isCompact
@@ -566,6 +565,7 @@ private fun ToolbarPortrait(viewModel: EditClusterViewModel, compact: Boolean, m
                     compact = compact,
                     regionColor = viewModel.regionColor,
                     isToolEnabled = viewModel::toolPredicate,
+                    isToolAlternativeEnabled = viewModel::toolAlternativePredicate,
                     selectTool = viewModel::selectTool,
                     getColorsByMostUsed = viewModel::getColorsByMostUsed,
                     hidePanel = viewModel::hidePanel,
@@ -599,6 +599,7 @@ private fun ToolbarLandscape(viewModel: EditClusterViewModel, compact: Boolean, 
                     compact = compact,
                     regionColor = viewModel.regionColor,
                     isToolEnabled = viewModel::toolPredicate,
+                    isToolAlternativeEnabled = viewModel::toolAlternativePredicate,
                     selectTool = viewModel::selectTool,
                     getColorsByMostUsed = viewModel::getColorsByMostUsed,
                     hidePanel = viewModel::hidePanel,
@@ -764,6 +765,7 @@ private fun HorizontalPanel(
     compact: Boolean,
     regionColor: Color,
     isToolEnabled: (EditClusterTool) -> Boolean,
+    isToolAlternativeEnabled: (EditClusterTool) -> Boolean,
     selectTool: (EditClusterTool) -> Unit,
     getColorsByMostUsed: () -> List<Color>,
     hidePanel: () -> Unit,
@@ -793,6 +795,7 @@ private fun HorizontalPanel(
             ToolButton(
                 tool = tool,
                 enabled = isToolEnabled(tool),
+                alternative = isToolAlternativeEnabled(tool),
                 regionColor = regionColor,
                 modifier = toolModifier,
                 onClick = selectTool
@@ -830,6 +833,7 @@ private fun VerticalPanel(
     compact: Boolean,
     regionColor: Color,
     isToolEnabled: (EditClusterTool) -> Boolean,
+    isToolAlternativeEnabled: (EditClusterTool) -> Boolean,
     selectTool: (EditClusterTool) -> Unit,
     getColorsByMostUsed: () -> List<Color>,
     hidePanel: () -> Unit,
@@ -860,6 +864,7 @@ private fun VerticalPanel(
             ToolButton(
                 tool = tool,
                 enabled = isToolEnabled(tool),
+                alternative = isToolAlternativeEnabled(tool),
                 regionColor = regionColor,
                 modifier = toolModifier,
                 onClick = selectTool
@@ -896,6 +901,7 @@ private fun VerticalPanel(
 fun ToolButton(
     tool: EditClusterTool,
     enabled: Boolean,
+    alternative: Boolean = false,
     regionColor: Color,
     tint: Color = LocalContentColor.current,
     modifier: Modifier = Modifier.padding(4.dp),
@@ -922,6 +928,19 @@ fun ToolButton(
                         tint = tool.color,
                     )
                 }
+            }
+            is EditClusterTool.FillChessboardPattern -> {
+                ThreeIconButton(
+                    iconPainter = icon,
+                    alternativeIconPainter = painterResource(tool.alternativeEnabledIcon),
+                    disabledIconPainter = painterResource(tool.disabledIcon!!),
+                    name = name,
+                    enabled = enabled,
+                    alternative = alternative,
+                    modifier = modifier,
+                    tint = tint,
+                    onClick = callback
+                )
             }
             is Tool.InstantAction -> {
                 SimpleButton(

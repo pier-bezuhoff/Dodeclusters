@@ -2446,7 +2446,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.ToggleSelectAll -> selection.containsAll(objects.filterIndices { it is CircleOrLine })
             EditClusterTool.Region -> mode == SelectionMode.Region && submode !is SubMode.FlowFill
             EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
-            EditClusterTool.FillChessboardPattern -> chessboardPattern != ChessboardPattern.STARTS_TRANSPARENT
+            EditClusterTool.FillChessboardPattern -> chessboardPattern != ChessboardPattern.NONE
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
             EditClusterTool.ShowCircles -> showCircles
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
@@ -2454,6 +2454,14 @@ class EditClusterViewModel : ViewModel() {
 //            EditClusterTool.Palette -> openedDialog == DialogType.REGION_COLOR_PICKER
             is EditClusterTool.MultiArg -> mode == ToolMode.correspondingTo(tool)
             else -> true
+        }
+
+    /** alternative enabled, mainly for 3-state buttons */
+    fun toolAlternativePredicate(tool: EditClusterTool): Boolean =
+        when (tool) {
+            EditClusterTool.FillChessboardPattern ->
+                chessboardPattern == ChessboardPattern.STARTS_TRANSPARENT
+            else -> false
         }
 
     // update objects at news.keys with news.values and invalidate their dependencies

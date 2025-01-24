@@ -140,6 +140,43 @@ fun TwoIconButton(
     }
 }
 
+/** 3 states:
+ * 1. [enabled]=true & [alternative]=false
+ * 2. [enabled]=true & [alternative]=true
+ * 3. [enabled]=false & [alternative]={unspecified}
+ * */
+@Composable
+fun ThreeIconButton(
+    iconPainter: Painter,
+    alternativeIconPainter: Painter,
+    disabledIconPainter: Painter,
+    name: String,
+    enabled: Boolean,
+    alternative: Boolean,
+    modifier: Modifier = Modifier,
+    tint: Color = LocalContentColor.current,
+    onClick: () -> Unit
+) {
+    IconToggleButton(
+        checked = enabled,
+        onCheckedChange = { onClick() },
+        modifier = modifier,
+        colors = IconButtonDefaults.iconToggleButtonColors(
+            checkedContentColor = tint // no need for color variation since we have a diff icon
+        )
+    ) {
+        Icon(
+            if (enabled) {
+                if (alternative) alternativeIconPainter
+                else iconPainter
+            }
+            else disabledIconPainter,
+            contentDescription = name,
+            modifier = modifier
+        )
+    }
+}
+
 @Composable
 fun OnOffButton(
     iconPainter: Painter,

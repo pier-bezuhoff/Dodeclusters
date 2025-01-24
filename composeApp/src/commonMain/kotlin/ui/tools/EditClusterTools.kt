@@ -15,6 +15,7 @@ import dodeclusters.composeapp.generated.resources.arc_path_name
 import dodeclusters.composeapp.generated.resources.change_background_description
 import dodeclusters.composeapp.generated.resources.change_background_name
 import dodeclusters.composeapp.generated.resources.chessboard
+import dodeclusters.composeapp.generated.resources.chessboard_crossed
 import dodeclusters.composeapp.generated.resources.chessboard_reflected
 import dodeclusters.composeapp.generated.resources.circle
 import dodeclusters.composeapp.generated.resources.circle_3_points
@@ -219,6 +220,7 @@ sealed class EditClusterTool(
         Res.string.drag_description,
         Res.drawable.drag_mode_1_circle
     )
+    // rectangular select
     data object Multiselect: Switch(
         Res.string.multiselect_name,
         Res.string.multiselect_description,
@@ -250,8 +252,10 @@ sealed class EditClusterTool(
         Res.string.fill_chessboard_pattern_name,
         Res.string.fill_chessboard_pattern_description,
         Res.drawable.chessboard,
-        Res.drawable.chessboard_reflected,
-    )
+        Res.drawable.chessboard_crossed,
+    ) {
+        val alternativeEnabledIcon = Res.drawable.chessboard_reflected
+    }
     data object RestrictRegionToSelection: Switch(
         Res.string.restrict_region_to_selection_name,
         Res.string.restrict_region_to_selection_description,
