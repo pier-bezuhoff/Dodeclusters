@@ -1,31 +1,39 @@
 package data.geometry
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import domain.filterIndices
-import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
+
+fun Rect.Companion.fromCorners(corner1: Offset, corner2: Offset): Rect {
+    val topLeft = Offset(min(corner1.x, corner2.x), min(corner1.y, corner2.y))
+    val bottomRight = Offset(max(corner1.x, corner2.x), max(corner1.y, corner2.y))
+    return Rect(topLeft, bottomRight)
+}
 
 fun selectWithRectangle(objects: List<GCircle?>, rect: Rect): List<Int> =
     objects.filterIndices { o ->
         if (o == null)
             false
         else
-            testIfObjectIsInRectangle(o, rect)
+            testObjectRectangleCollision(o, rect)
     }
 
-fun testIfObjectIsInRectangle(obj: GCircle, rect: Rect): Boolean =
+/** Rectangle collider */
+fun testObjectRectangleCollision(obj: GCircle, rect: Rect): Boolean =
     when (obj) {
-        is Circle -> {
-            val diagonal = hypot(rect.width, rect.height)
+        is Circle -> { // wrong
             testHorizontalSegmentCircleIntersections(rect.top, rect.left, rect.right, obj) ||
             testHorizontalSegmentCircleIntersections(rect.bottom, rect.left, rect.right, obj) ||
             testVerticalSegmentCircleIntersections(rect.left, rect.top, rect.bottom, obj) ||
             testVerticalSegmentCircleIntersections(rect.right, rect.top, rect.bottom, obj) ||
             // we know there is no intersections at this point
-            rect.contains(obj.center) && 2*obj.radius <= diagonal
+            rect.contains(obj.center) && 2*obj.radius <= rect.minDimension
         }
-        is Line -> {
+        is Line -> { // wrong
             testHorizontalSegmentLineIntersection(rect.top, rect.left, rect.right, obj) ||
             testHorizontalSegmentLineIntersection(rect.bottom, rect.left, rect.right, obj) ||
             testVerticalSegmentLineIntersection(rect.left, rect.top, rect.bottom, obj) ||

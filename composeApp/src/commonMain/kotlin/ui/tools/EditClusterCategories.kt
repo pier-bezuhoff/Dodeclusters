@@ -34,7 +34,7 @@ sealed class EditClusterCategory(
             EditClusterTool.FlowSelect,
             EditClusterTool.ToggleSelectAll,
         ),
-        defaultables = listOf(0, 1)
+        defaultables = listOf(0)
     ) { // ~mode-like
         // potentially add:
         // submode2: xor selection logic

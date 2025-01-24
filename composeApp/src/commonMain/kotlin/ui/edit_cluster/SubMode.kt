@@ -2,12 +2,11 @@ package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import domain.cluster.LogicalRegion
 import kotlinx.serialization.Serializable
 
-@Serializable
 @Immutable
+@Serializable
 /** Additional mode accompanying [Mode] and
  * carrying [SubMode]-specific relevant data, also
  * they have specific behavior for VM.[onPanZoom] */
@@ -27,7 +26,8 @@ sealed interface SubMode {
     ) : SubMode
 
     data class RectangularSelect(
-        val rect: Rect = Rect.Zero
+        val corner1: Offset? = null,
+        val corner2: Offset? = null,
     ) : SubMode
     data class FlowSelect(
         val lastQualifiedPart: LogicalRegion? = null

@@ -60,6 +60,7 @@ import data.geometry.GeneralizedCircle
 import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.Point
+import data.geometry.fromCorners
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
@@ -814,7 +815,7 @@ private fun DrawScope.drawHandles(
             }
             is HandleConfig.SeveralCircles -> {
                 val rectSubmode = viewModel.submode as? SubMode.RectangularSelect
-                val noHandles = rectSubmode != null && rectSubmode.rect.size != Size.Zero
+                val noHandles = rectSubmode?.corner1 != null && rectSubmode?.corner2 != null
                 if (!noHandles) {
                     viewModel.getSelectionRect()?.let { selectionRect ->
                         drawRect( // selection rect
@@ -850,13 +851,17 @@ private fun DrawScope.drawHandles(
             }
             null -> {}
         }
-        (viewModel.submode as? SubMode.RectangularSelect)?.rect?.let { rect ->
-            drawRect(
-                color = selectionMarkingsColor,
-                topLeft = rect.topLeft,
-                size = rect.size,
-                style = dottedStroke,
-            )
+        (viewModel.submode as? SubMode.RectangularSelect)?.let { rectSubmode ->
+            val (corner1, corner2) = rectSubmode
+            if (corner1 != null && corner2 != null) {
+                val rect = Rect.fromCorners(corner1, corner2)
+                drawRect(
+                    color = selectionMarkingsColor,
+                    topLeft = rect.topLeft,
+                    size = rect.size,
+                    style = dottedStroke,
+                )
+            }
         }
         (viewModel.submode as? SubMode.Rotate)?.let { (center, angle) ->
             val currentDirection = Offset(0f, -1f).rotateBy(angle.toFloat())

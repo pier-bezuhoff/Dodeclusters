@@ -33,6 +33,7 @@ import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.PartialArcPath
 import data.geometry.Point
+import data.geometry.fromCorners
 import data.geometry.selectWithRectangle
 import domain.Arg
 import domain.ArgType
@@ -96,6 +97,7 @@ import kotlin.time.Duration.Companion.seconds
 // MAYBE: use UiState functional pattern + StateFlow's instead of this mess
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
+@Suppress("MemberVisibilityCanBePrivate")
 class EditClusterViewModel : ViewModel() {
     val objects: SnapshotStateList<GCircle?> = mutableStateListOf()
     val regions: SnapshotStateList<LogicalRegion> = mutableStateListOf()
@@ -1286,13 +1288,13 @@ class EditClusterViewModel : ViewModel() {
                 }
             } else {
                 if (mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect) {
-                    val oldRect = (submode as SubMode.RectangularSelect).rect
-                    submode = if (oldRect == Rect.Zero) {
-                        SubMode.RectangularSelect(Rect(absolute(visiblePosition), Size.Zero))
-                    } else if (oldRect.size == Size.Zero) {
-                        SubMode.RectangularSelect(Rect(oldRect.topLeft, absolute(visiblePosition)))
+                    val (corner1, corner2) = submode as SubMode.RectangularSelect
+                    submode = if (corner1 == null) {
+                        SubMode.RectangularSelect(absolute(visiblePosition))
+                    } else if (corner2 == null) {
+                        SubMode.RectangularSelect(corner1, absolute(visiblePosition))
                     } else {
-                        SubMode.RectangularSelect(Rect(absolute(visiblePosition), Size.Zero))
+                        SubMode.RectangularSelect(absolute(visiblePosition))
                     }
                 } else if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
                     val (_, qualifiedPart) = selectPartAt(visiblePosition)
@@ -1765,10 +1767,10 @@ class EditClusterViewModel : ViewModel() {
                 else -> {}
             }
             if (mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect) {
-                val topLeft = (submode as SubMode.RectangularSelect).rect.topLeft
-                val rect = Rect(topLeft, c)
+                val corner1 = (submode as SubMode.RectangularSelect).corner1
+                val rect = Rect.fromCorners(corner1 ?: c, c)
                 selection = selectWithRectangle(objects, rect)
-                submode = SubMode.RectangularSelect(rect)
+                submode = SubMode.RectangularSelect(corner1, c)
             } else if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
                 val qualifiedPart = (submode as SubMode.FlowSelect).lastQualifiedPart
                 val (_, newQualifiedPart) = selectPartAt(centroid)
@@ -1912,16 +1914,17 @@ class EditClusterViewModel : ViewModel() {
             highlightSelectionParents()
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect && visiblePosition != null) {
-            val oldRect = (submode as SubMode.RectangularSelect).rect
-            if (oldRect.size != Size.Zero) {
-                val rect = Rect(oldRect.topLeft, absolute(visiblePosition))
+            val (corner1, corner2) = submode as SubMode.RectangularSelect
+            if (corner1 != null && corner2 != null) {
+                val newCorner2 = absolute(visiblePosition)
+                val rect = Rect.fromCorners(corner1, newCorner2)
                 selection = selectWithRectangle(objects, rect)
-                submode = SubMode.RectangularSelect(rect)
+                submode = SubMode.RectangularSelect(corner1, corner2)
             }
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) // haxx
             toolbarState = toolbarState.copy(activeTool = EditClusterTool.Multiselect)
-        if (submode !is SubMode.FlowFill || submode !is SubMode.RectangularSelect)
+        if (submode !is SubMode.FlowFill)
             submode = SubMode.None
     }
 
@@ -2471,7 +2474,8 @@ class EditClusterViewModel : ViewModel() {
     fun toolPredicate(tool: EditClusterTool): Boolean =
         when (tool) { // NOTE: i think this has to return State<Boolean> to work properly
             EditClusterTool.Drag -> mode == SelectionMode.Drag
-            EditClusterTool.Multiselect -> mode == SelectionMode.Multiselect && submode !is SubMode.FlowSelect
+            EditClusterTool.Multiselect -> mode == SelectionMode.Multiselect &&
+                submode !is SubMode.FlowSelect && submode !is SubMode.RectangularSelect
             EditClusterTool.RectangularSelect -> mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect
             EditClusterTool.FlowSelect -> mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
             EditClusterTool.ToggleSelectAll -> selection.containsAll(objects.filterIndices { it is CircleOrLine })
@@ -2494,18 +2498,6 @@ class EditClusterViewModel : ViewModel() {
                 chessboardPattern == ChessboardPattern.STARTS_TRANSPARENT
             else -> false
         }
-
-    // update objects at news.keys with news.values and invalidate their dependencies
-    fun change(news: Map<Ix, GCircle?>, command: Command = Command.MOVE) {
-        val changedIndices = news.keys.toList()
-        recordCommand(command, changedIndices)
-        for ((ix, o) in news) {
-            objects[ix] = o
-        }
-        expressions.update(changedIndices)
-        // invalidate parts when needed
-        TODO()
-    }
 
     private fun GCircle.downscale(): GCircle = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
     private fun GCircle.upscale(): GCircle = scaled(0.0, 0.0, UPSCALING_FACTOR)
