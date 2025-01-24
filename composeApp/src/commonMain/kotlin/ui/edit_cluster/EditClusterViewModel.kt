@@ -11,6 +11,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -32,6 +33,7 @@ import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.PartialArcPath
 import data.geometry.Point
+import data.geometry.selectWithRectangle
 import domain.Arg
 import domain.ArgType
 import domain.ChessboardPattern
@@ -75,7 +77,6 @@ import domain.snapPointToCircles
 import domain.snapPointToPoints
 import domain.sortedByFrequency
 import domain.tryCatch2
-import domain.updated
 import getPlatform
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -1016,6 +1017,12 @@ class EditClusterViewModel : ViewModel() {
             }
         }
 
+    fun activateRectangularSelect() {
+        switchToMode(SelectionMode.Multiselect)
+        selection = emptyList()
+        submode = SubMode.RectangularSelect()
+    }
+
     fun activateFlowSelect() {
         switchToMode(SelectionMode.Multiselect)
         selection = emptyList()
@@ -1278,7 +1285,16 @@ class EditClusterViewModel : ViewModel() {
                     }
                 }
             } else {
-                if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
+                if (mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect) {
+                    val oldRect = (submode as SubMode.RectangularSelect).rect
+                    submode = if (oldRect == Rect.Zero) {
+                        SubMode.RectangularSelect(Rect(absolute(visiblePosition), Size.Zero))
+                    } else if (oldRect.size == Size.Zero) {
+                        SubMode.RectangularSelect(Rect(oldRect.topLeft, absolute(visiblePosition)))
+                    } else {
+                        SubMode.RectangularSelect(Rect(absolute(visiblePosition), Size.Zero))
+                    }
+                } else if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
                     val (_, qualifiedPart) = selectPartAt(visiblePosition)
                     submode = SubMode.FlowSelect(qualifiedPart)
                 } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
@@ -1748,7 +1764,12 @@ class EditClusterViewModel : ViewModel() {
                 }
                 else -> {}
             }
-            if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
+            if (mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect) {
+                val topLeft = (submode as SubMode.RectangularSelect).rect.topLeft
+                val rect = Rect(topLeft, c)
+                selection = selectWithRectangle(objects, rect)
+                submode = SubMode.RectangularSelect(rect)
+            } else if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
                 val qualifiedPart = (submode as SubMode.FlowSelect).lastQualifiedPart
                 val (_, newQualifiedPart) = selectPartAt(centroid)
                 if (qualifiedPart == null) {
@@ -1890,9 +1911,17 @@ class EditClusterViewModel : ViewModel() {
         ) {
             highlightSelectionParents()
         }
+        if (mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect && visiblePosition != null) {
+            val oldRect = (submode as SubMode.RectangularSelect).rect
+            if (oldRect.size != Size.Zero) {
+                val rect = Rect(oldRect.topLeft, absolute(visiblePosition))
+                selection = selectWithRectangle(objects, rect)
+                submode = SubMode.RectangularSelect(rect)
+            }
+        }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) // haxx
             toolbarState = toolbarState.copy(activeTool = EditClusterTool.Multiselect)
-        if (submode !is SubMode.FlowFill)
+        if (submode !is SubMode.FlowFill || submode !is SubMode.RectangularSelect)
             submode = SubMode.None
     }
 
@@ -2406,6 +2435,7 @@ class EditClusterViewModel : ViewModel() {
         when (tool) {
             EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
             EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect)
+            EditClusterTool.RectangularSelect -> activateRectangularSelect()
             EditClusterTool.FlowSelect -> activateFlowSelect()
             EditClusterTool.ToggleSelectAll -> toggleSelectAll()
             EditClusterTool.Region -> switchToMode(SelectionMode.Region)
@@ -2442,6 +2472,7 @@ class EditClusterViewModel : ViewModel() {
         when (tool) { // NOTE: i think this has to return State<Boolean> to work properly
             EditClusterTool.Drag -> mode == SelectionMode.Drag
             EditClusterTool.Multiselect -> mode == SelectionMode.Multiselect && submode !is SubMode.FlowSelect
+            EditClusterTool.RectangularSelect -> mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect
             EditClusterTool.FlowSelect -> mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
             EditClusterTool.ToggleSelectAll -> selection.containsAll(objects.filterIndices { it is CircleOrLine })
             EditClusterTool.Region -> mode == SelectionMode.Region && submode !is SubMode.FlowFill

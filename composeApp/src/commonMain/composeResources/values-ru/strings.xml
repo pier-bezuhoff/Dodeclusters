@@ -12,6 +12,8 @@
     <string name="drag_description">Режим перетаскивания окружностей по одной</string>
     <string name="multiselect_name">Выбор многих</string>
     <string name="multiselect_description">Режим выбора групп окружностей</string>
+    <string name="rectangular_select_name">Прямоугольное выделение</string>
+    <string name="rectangular_select_description">Режим выбора объектов прямоугольным выделением</string>
     <string name="flow_multiselect_name">Свайп-выбор</string>
     <string name="flow_multiselect_description">Режим выделения окружностей проводя курсором по ним</string>
     <string name="toggle_select_all_name">Выделить всё/снять выделение</string>

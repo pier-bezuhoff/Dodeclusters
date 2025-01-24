@@ -813,39 +813,50 @@ private fun DrawScope.drawHandles(
                 }
             }
             is HandleConfig.SeveralCircles -> {
-                viewModel.getSelectionRect()?.let { selectionRect ->
-                    drawRect( // selection rect
-                        color = selectionMarkingsColor,
-                        topLeft = selectionRect.topLeft,
-                        size = selectionRect.size,
-                        style = dottedStroke,
-                    )
-                    // scale handle
-                    drawCircle(
-                        color = scaleIconColor,
-                        radius = handleRadius/4f,
-                        center = selectionRect.topRight,
-                    )
-                    translate(selectionRect.right - iconDim/2, selectionRect.top - iconDim/2) {
-                        with (scaleIcon) {
-                            draw(iconSize, colorFilter = ColorFilter.tint(scaleIconColor))
+                val rectSubmode = viewModel.submode as? SubMode.RectangularSelect
+                val noHandles = rectSubmode != null && rectSubmode.rect.size != Size.Zero
+                if (!noHandles) {
+                    viewModel.getSelectionRect()?.let { selectionRect ->
+                        drawRect( // selection rect
+                            color = selectionMarkingsColor,
+                            topLeft = selectionRect.topLeft,
+                            size = selectionRect.size,
+                            style = dottedStroke,
+                        )
+                        // scale handle
+                        drawCircle(
+                            color = scaleIconColor,
+                            radius = handleRadius/4f,
+                            center = selectionRect.topRight,
+                        )
+                        translate(selectionRect.right - iconDim/2, selectionRect.top - iconDim/2) {
+                            with (scaleIcon) {
+                                draw(iconSize, colorFilter = ColorFilter.tint(scaleIconColor))
+                            }
                         }
-                    }
-                    // rotate handle icon
-                    drawCircle( // scale handle
-                        color = rotateIconColor,
-                        radius = handleRadius/4f,
-                        center = selectionRect.bottomRight,
-                    )
-                    translate(selectionRect.right - iconDim/2, selectionRect.bottom - iconDim/2) {
-                        with (rotateIcon) {
-                            draw(iconSize, colorFilter = ColorFilter.tint(rotateIconColor))
+                        // rotate handle icon
+                        drawCircle( // scale handle
+                            color = rotateIconColor,
+                            radius = handleRadius/4f,
+                            center = selectionRect.bottomRight,
+                        )
+                        translate(selectionRect.right - iconDim/2, selectionRect.bottom - iconDim/2) {
+                            with (rotateIcon) {
+                                draw(iconSize, colorFilter = ColorFilter.tint(rotateIconColor))
+                            }
                         }
                     }
                 }
             }
-
             null -> {}
+        }
+        (viewModel.submode as? SubMode.RectangularSelect)?.rect?.let { rect ->
+            drawRect(
+                color = selectionMarkingsColor,
+                topLeft = rect.topLeft,
+                size = rect.size,
+                style = dottedStroke,
+            )
         }
         (viewModel.submode as? SubMode.Rotate)?.let { (center, angle) ->
             val currentDirection = Offset(0f, -1f).rotateBy(angle.toFloat())

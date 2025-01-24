@@ -30,9 +30,11 @@ sealed class EditClusterCategory(
         Res.string.multiselect_category_name,
         listOf(
             EditClusterTool.Multiselect,
+            EditClusterTool.RectangularSelect,
             EditClusterTool.FlowSelect,
             EditClusterTool.ToggleSelectAll,
-        )
+        ),
+        defaultables = listOf(0, 1)
     ) { // ~mode-like
         // potentially add:
         // submode2: xor selection logic

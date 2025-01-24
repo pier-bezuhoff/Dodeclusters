@@ -2,6 +2,7 @@ package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import domain.cluster.LogicalRegion
 import kotlinx.serialization.Serializable
 
@@ -25,6 +26,9 @@ sealed interface SubMode {
         val snappedAngle: Double = 0.0
     ) : SubMode
 
+    data class RectangularSelect(
+        val rect: Rect = Rect.Zero
+    ) : SubMode
     data class FlowSelect(
         val lastQualifiedPart: LogicalRegion? = null
     ) : SubMode

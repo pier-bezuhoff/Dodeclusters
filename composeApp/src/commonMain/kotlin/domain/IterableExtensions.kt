@@ -1,14 +1,14 @@
 package domain
 
-fun <T> Iterable<T>.filterIndices(
-    predicate: (T) -> Boolean
+inline fun <T> Iterable<T>.filterIndices(
+    crossinline predicate: (T) -> Boolean
 ): List<Int> =
     this.withIndex()
         .filter { (_, t) -> predicate(t) }
         .map { (i, _) -> i }
 
-fun <T> Iterable<T>.partitionIndices(
-    predicate: (T) -> Boolean
+inline fun <T> Iterable<T>.partitionIndices(
+    crossinline predicate: (T) -> Boolean
 ): Pair<List<Int>, List<Int>> =
     this.withIndex()
         .partition { (_, t) -> predicate(t) }
@@ -78,7 +78,8 @@ fun <T> List<T>.indexOfOrNull(element: T): Int? {
         index
 }
 
-fun <T> Iterable<T>.collectionSizeOrDefault(default: Int): Int = if (this is Collection<*>) this.size else default
+fun <T> Iterable<T>.collectionSizeOrDefault(default: Int): Int =
+    if (this is Collection<*>) this.size else default
 
 /**
  * Returns a list of values built from the elements of `this` collection,

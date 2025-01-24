@@ -51,6 +51,7 @@ import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.delete_name
 import dodeclusters.composeapp.generated.resources.deselect
 import dodeclusters.composeapp.generated.resources.detach_name
+import dodeclusters.composeapp.generated.resources.dotted_rectangle
 import dodeclusters.composeapp.generated.resources.drag_description
 import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
 import dodeclusters.composeapp.generated.resources.drag_name
@@ -99,6 +100,8 @@ import dodeclusters.composeapp.generated.resources.palette_name
 import dodeclusters.composeapp.generated.resources.pick_circle_color_description
 import dodeclusters.composeapp.generated.resources.pick_circle_color_name
 import dodeclusters.composeapp.generated.resources.propeller
+import dodeclusters.composeapp.generated.resources.rectangular_select_description
+import dodeclusters.composeapp.generated.resources.rectangular_select_name
 import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.region_description
@@ -220,11 +223,15 @@ sealed class EditClusterTool(
         Res.string.drag_description,
         Res.drawable.drag_mode_1_circle
     )
-    // rectangular select
     data object Multiselect: Switch(
         Res.string.multiselect_name,
         Res.string.multiselect_description,
         Res.drawable.multiselect
+    )
+    data object RectangularSelect: Switch(
+        Res.string.rectangular_select_name,
+        Res.string.rectangular_select_description,
+        Res.drawable.dotted_rectangle
     )
     data object FlowSelect: Switch(
         Res.string.flow_multiselect_name,
