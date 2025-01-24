@@ -11,7 +11,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -603,21 +602,36 @@ class EditClusterViewModel : ViewModel() {
             recordCreateCommand()
         objects.add(point)
         val newIx = expressions.addFree()
-        require(newIx == objects.size - 1)
+        require(newIx == objects.size - 1) { "Incorrect index retrieved from expression.addFree() during createNewFreePoint()" }
         return newIx
     }
 
     fun duplicateSelectedCircles() {
         if (mode.isSelectingCircles()) {
             recordCommand(Command.DUPLICATE, selection)
-            val copiedCircles = selection.mapNotNull { objects[it] as? CircleOrLine } // preserves selection order
+            val copiedIndexedCircles = selection.mapNotNull { ix ->
+                (objects[ix] as? CircleOrLine)?.let { ix to it }
+            } // preserves selection order
+            val copiedCircles = copiedIndexedCircles.map { it.second }
+            val copiedIndexedPoints = selection.mapNotNull { ix ->
+                (objects[ix] as? Point)?.let { ix to it }
+            } // preserves selection order
+            val copiedPoints = copiedIndexedPoints.map { it.second }
             val oldSize = objects.size
             addObjects(copiedCircles)
-            val newIndices = oldSize until oldSize + copiedCircles.size
-            for (ix in newIndices)
+            addObjects(copiedPoints)
+            val sourceIndices = copiedIndexedCircles.map { it.first } + copiedIndexedPoints.map { it.first }
+            for (ix in sourceIndices)
                 expressions.addFree()
-            copyParts(selection, newIndices.toList())
-            selection = newIndices.toList()
+            for ((i, sourceIndex) in sourceIndices.withIndex()) {
+                if (objectColors.containsKey(sourceIndex)) {
+                    val correspondingIx = i + oldSize
+                    objectColors[correspondingIx] = objectColors[sourceIndex]!!
+                }
+            }
+            val newCircleIndices = oldSize until oldSize + copiedCircles.size
+            copyRegions(copiedIndexedCircles.map { it.first }, newCircleIndices.toList())
+            selection = (oldSize until objects.size).toList()
             viewModelScope.launch {
                 _animations.emit(
                     CircleAnimation.ReEntrance(copiedCircles)
@@ -626,14 +640,20 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    private fun copyParts(
+    /**
+     * Copy [LogicalRegion]s defined by [oldIndices] onto [newIndices].
+     * [oldIndices].size must be [newIndices].size
+     * @param[flipInAndOut] when `true` new region's insides use old region's outsides and
+     * and vice versa
+     * */
+    private fun copyRegions(
         oldIndices: List<Ix>,
         newIndices: List<Ix>,
         flipInAndOut: Boolean = false,
     ) {
-        require(oldIndices.size == newIndices.size)
+        require(oldIndices.size == newIndices.size) { "Original size doesn't match target size during copyRegions($oldIndices, $newIndices, $flipInAndOut)" }
         val old2new = oldIndices.zip(newIndices).toMap()
-        val newParts = regions.filter {
+        val newRegions = regions.filter {
             oldIndices.containsAll(it.insides) && oldIndices.containsAll(it.outsides)
         }.map { part ->
             val newInsides: Set<Ix>
@@ -651,7 +671,7 @@ class EditClusterViewModel : ViewModel() {
                 fillColor = part.fillColor
             )
         }
-        regions.addAll(newParts)
+        regions.addAll(newRegions)
     }
 
     fun deleteSelectedPointsAndCircles() {
@@ -1144,7 +1164,7 @@ class EditClusterViewModel : ViewModel() {
                 tool is EditClusterTool.MultiArg &&
                 tool.signature.argTypes.first() == ArgType.CircleAndPointIndices &&
                 selection.isNotEmpty()
-            )
+            ) { "Illegal state in setActiveSelectionAsToolArg(): tool = $tool, selection == $selection" }
         }
         partialArgList = partialArgList!!.addArg(
             Arg.CircleAndPointIndices(
@@ -2053,9 +2073,8 @@ class EditClusterViewModel : ViewModel() {
     private fun completeToolMode() {
         val toolMode = mode
         val argList = partialArgList
-        require(argList != null && argList.isFull && argList.isValid && argList.lastArgIsConfirmed) { "Invalid partialArgList $argList" }
-        require(toolMode is ToolMode && toolMode.signature == argList.signature) { "Invalid signature: $toolMode's ${(toolMode as ToolMode).signature} != ${argList.signature}" }
-        // TODO: realize args when needed
+        require(argList != null && argList.isFull && argList.isValid && argList.lastArgIsConfirmed) { "Invalid partialArgList in completeToolMode(): $argList" }
+        require(toolMode is ToolMode && toolMode.signature == argList.signature) { "Invalid signature in completeToolMode(): $toolMode's ${(toolMode as ToolMode).signature} != ${argList.signature}" }
         when (toolMode) {
             ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> completeCircleByCenterAndRadius()
             ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
@@ -2209,20 +2228,19 @@ class EditClusterViewModel : ViewModel() {
         val targetPointIxs = objArg.pointIndices
         val invertingCircleIndex = (argList.args[1] as Arg.CircleIndex).index
         recordCreateCommand()
-        val newGCircles = targetCircleIxs.mapNotNull { circleIx ->
-            val newGCircle = expressions.addSoloExpression(
+        val newGCircles = targetCircleIxs.map { circleIx ->
+            expressions.addSoloExpression(
                 Expr.CircleInversion(circleIx, invertingCircleIndex),
-            )
-            newGCircle?.upscale()
+            )?.upscale()
         }
-        val newPoints = targetPointIxs.mapNotNull { pointIx ->
+        val newPoints = targetPointIxs.map { pointIx ->
             val newPoint = expressions.addSoloExpression(
                 Expr.CircleInversion(pointIx, invertingCircleIndex)
             ) as? Point
             newPoint?.upscale()
         }
         createNewGCircles(newGCircles)
-        copyParts(
+        copyRegions(
             targetCircleIxs,
             ((objects.size - newGCircles.size) until objects.size).toList(),
             flipInAndOut = true
@@ -2330,7 +2348,7 @@ class EditClusterViewModel : ViewModel() {
             val newIndices = targetCircleIndices.indices.map { j ->
                 size0 + i + j*n
             }
-            copyParts(targetCircleIndices, newIndices)
+            copyRegions(targetCircleIndices, newIndices)
         }
         addObjects(allNewPoints)
         partialArgList = PartialArgList(argList.signature)
@@ -2343,7 +2361,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun completeArcPath() {
-        require(partialArcPath != null) { "Cannot complete non-existent arc path: illegal state" }
+        require(partialArcPath != null) { "Cannot complete non-existent arc path during completeArcPath()" }
         partialArcPath?.let { pArcPath ->
             recordCreateCommand()
 //            val vertices =
