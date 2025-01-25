@@ -614,7 +614,7 @@ class EditClusterViewModel : ViewModel() {
      * that those expressions follow the order of [sourceIndex2NewTrajectory]`.flatten()`, but
      * the objects themselves are yet to be added to [objects]. In addition set
      * new objects that are circles/lines/points as [selection].
-     * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, []new trajectory of objects])]`,
+     * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`,
      * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
      * @param[circleAnimationInit] given list of circles/lines queue [CircleAnimation]
      * constructed by this block. Use `{ null }` if no animation is required.
@@ -624,28 +624,39 @@ class EditClusterViewModel : ViewModel() {
         flipRegionsInAndOut: Boolean = false,
         crossinline circleAnimationInit: (List<CircleOrLine>) -> CircleAnimation? = { null },
     ) {
-        val sourceIndices = sourceIndex2NewTrajectory.map { it.first }
         val oldSize = objects.size
         val newObjects = sourceIndex2NewTrajectory.flatMap { it.second }
         addObjects(newObjects) // row-column order
-        for ((i, sourceIndex) in sourceIndices.withIndex()) {
+        var outputIndex = oldSize - 1
+        sourceIndex2NewTrajectory.forEach { (sourceIndex, trajectory) ->
             if (objectColors.containsKey(sourceIndex)) {
-                val correspondingIx = oldSize + i
-                objectColors[correspondingIx] = objectColors[sourceIndex]!!
+                val sourceColor = objectColors[sourceIndex]!!
+                trajectory.forEach { _ ->
+                    outputIndex += 1
+                    objectColors[outputIndex] = sourceColor
+                }
             }
         }
-        sourceIndex2NewTrajectory.mapIndexed { rowIx, (ix, trajectory) ->
+        outputIndex = oldSize - 1
+        sourceIndex2NewTrajectory.map { (ix, trajectory) ->
             trajectory.map { o ->
-                (o as? CircleOrLine)?.let { ix to it }
-            } // Column<Row<(Ix to CircleOrLine)?>>
+                outputIndex += 1
+                if (o is CircleOrLine)
+                    Pair(ix, outputIndex)
+                else
+                    null
+            } // Column<Row<(OG Ix, new Ix)?>>
         }.transpose().forEach { trajectoryStageSlice ->
+            // Column<(OG Ix, new Ix)>
+            val nonNullSlice = trajectoryStageSlice.filterNotNull()
+            // for each stage in the trajectory we try to copy regions
+            if (nonNullSlice.isNotEmpty())
+                copyRegions(
+                    oldIndices = nonNullSlice.map { it.first },
+                    newIndices = nonNullSlice.map { it.second },
+                    flipInAndOut = flipRegionsInAndOut
+                )
         }
-        TODO()
-//        copyRegions(
-//            oldIndices = sourceIndicesOfNewCircles,
-//            newIndices = newIndicesOfCircles,
-//            flipInAndOut = flipRegionsInAndOut
-//        )
         selection = (oldSize until objects.size).filter { ix ->
             objects[ix] is CircleOrLine || objects[ix] is Point
         }
@@ -1148,6 +1159,7 @@ class EditClusterViewModel : ViewModel() {
         showCircles = !showCircles
         if (!showCircles && mode is ToolMode)
             switchToMode(SelectionMode.Drag)
+        selection = emptyList()
     }
 
     fun hidePanel() {
@@ -2312,8 +2324,8 @@ class EditClusterViewModel : ViewModel() {
                 Expr.CircleInversion(ix, invertingCircleIndex),
             )?.upscale()
         }
-        copyRegionsAndStyles(newIndexedGCircles, flipRegionsInAndOut = true) { circles ->
-            CircleAnimation.Entrance(circles)
+        copyRegionsAndStyles(newIndexedGCircles, flipRegionsInAndOut = true) {
+            CircleAnimation.Entrance(it)
         }
         partialArgList = PartialArgList(argList.signature)
     }
@@ -2373,45 +2385,24 @@ class EditClusterViewModel : ViewModel() {
         val objArg = args[0] as Arg.CircleAndPointIndices
         val targetCircleIndices = objArg.circleIndices
         val targetPointsIndices = objArg.pointIndices
+        recordCreateCommand()
         val (divergence, convergence) = args.drop(1).take(2)
             .map { when (val arg = it as Arg.Point) {
                 is Arg.Point.Index -> arg.index
                 is Arg.Point.XY -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
             } }
-        recordCreateCommand()
-        val allNewCircles = mutableListOf<CircleOrLine?>()
-        val allNewPoints = mutableListOf<Point?>()
-        for (circleIndex in targetCircleIndices) {
-            val newCircles = expressions.addMultiExpression(
-                Expr.LoxodromicMotion(
-                    params,
-                    divergence, convergence,
-                    circleIndex
-                ),
-            ).map { if (it is CircleOrLine?) it?.upscale() else null }
-            // MAYBE: notify for imaginary circle result
-            allNewCircles.addAll(newCircles)
-        }
-        for (pointIndex in targetPointsIndices) {
-            val newPoints = expressions.addMultiExpression(
-                Expr.LoxodromicMotion(
-                    params,
-                    divergence, convergence,
-                    pointIndex
-                ),
-            ).map { if (it is Point?) it?.upscale() else null }
-            allNewPoints.addAll(newPoints)
-        }
-        val size0 = objects.size
-        createNewGCircles(allNewCircles)
-        val n = params.nSteps + 1
-        repeat(n) { i ->
-            val newIndices = targetCircleIndices.indices.map { j ->
-                size0 + i + j*n
+        val targetIndices = targetCircleIndices + targetPointsIndices
+        copyRegionsAndStylesForNewTrajectories(
+            sourceIndex2NewTrajectory = targetIndices.map { targetIndex ->
+                targetIndex to expressions.addMultiExpression(
+                    Expr.LoxodromicMotion(
+                        params,
+                        divergence, convergence,
+                        targetIndex
+                    ),
+                ).map { it?.upscale() } // multi expression creates a whole trajectory at a time
             }
-            copyRegions(targetCircleIndices, newIndices)
-        }
-        addObjects(allNewPoints)
+        ) { CircleAnimation.Entrance(it) }
         partialArgList = PartialArgList(argList.signature)
         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params)
     }
