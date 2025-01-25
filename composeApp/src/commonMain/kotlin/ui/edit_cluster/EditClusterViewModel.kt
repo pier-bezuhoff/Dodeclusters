@@ -50,6 +50,7 @@ import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
 import domain.compressConstraints
 import domain.expressions.Expr
+import domain.expressions.Expression
 import domain.expressions.ExpressionForest
 import domain.expressions.ExtrapolationParameters
 import domain.expressions.IncidenceParameters
@@ -59,6 +60,7 @@ import domain.expressions.ObjectConstruct
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
+import domain.expressions.computeIntersection
 import domain.expressions.computeLineBy2Points
 import domain.expressions.reIndex
 import domain.filterIndices
@@ -1102,27 +1104,27 @@ class EditClusterViewModel : ViewModel() {
                 ) {
                     PointSnapResult.Eq(objects[closestIndex] as Point, closestIndex)
                 } else {
-                    // check if both outputIndices are present
-                    // if not, add the other
-                    val j = objects.size
+                    // check if both outputIndices are present, if not add the other
+                    val oldSize = objects.size
                     recordCommand(Command.CREATE, unique = true)
-                    val intersections = Circle.calculateIntersectionPoints(
+                    val intersectionOutputIndex = computeIntersection(
                         objects[ix1] as CircleOrLine,
                         objects[ix2] as CircleOrLine
-                    ) // TODO: dont create second intersection if it exists already
-                    val ps = expressions.addMultiExpression(expr)
-                        .map { it as? Point }
-                        .map { it?.upscale() }
-                    addObjects(ps)
-                    val (p1, p2) = ps
-                    // we dont know in which order Circle.intersection will output these points...
-                    // (maybe we do but im blanking)
-                    val realIndex = if (
-                        (p1?.distanceFrom(point) ?: Double.POSITIVE_INFINITY) <=
-                        (p2?.distanceFrom(point) ?: Double.POSITIVE_INFINITY)
-                    ) j
-                    else j+1
-                    PointSnapResult.Eq(snapResult.result, realIndex)
+                    ).withIndex().minBy { (_, p) ->
+                        p?.let { point.distanceFrom(p) } ?: Double.POSITIVE_INFINITY
+                    }.index
+                    if (closestIndex != null) { // far intersection already exists
+                        val p = expressions.addMultiExpression(Expression.OneOf(expr, intersectionOutputIndex))
+                            as Point
+                        addObject(p.upscale())
+                        PointSnapResult.Eq(snapResult.result, oldSize)
+                    } else {
+                        val ps = expressions.addMultiExpression(expr)
+                            .map { it as? Point }
+                            .map { it?.upscale() }
+                        addObjects(ps)
+                        PointSnapResult.Eq(snapResult.result, oldSize + intersectionOutputIndex)
+                    }
                 }
             }
         }
