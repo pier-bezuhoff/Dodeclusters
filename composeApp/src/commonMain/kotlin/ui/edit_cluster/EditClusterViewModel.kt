@@ -76,6 +76,7 @@ import domain.snapAngle
 import domain.snapPointToCircles
 import domain.snapPointToPoints
 import domain.sortedByFrequency
+import domain.transpose
 import domain.tryCatch2
 import getPlatform
 import kotlinx.coroutines.delay
@@ -606,37 +607,113 @@ class EditClusterViewModel : ViewModel() {
         return newIx
     }
 
+    /** Add objects from [sourceIndex2NewTrajectory] to [objects], while
+     * copying regions (for [CircleOrLine]s) and [objectColors] from original
+     * indices specified in [sourceIndex2NewTrajectory].
+     * We assume that appropriate expressions has already been created and
+     * that those expressions follow the order of [sourceIndex2NewTrajectory]`.flatten()`, but
+     * the objects themselves are yet to be added to [objects]. In addition set
+     * new objects that are circles/lines/points as [selection].
+     * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, []new trajectory of objects])]`,
+     * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
+     * @param[circleAnimationInit] given list of circles/lines queue [CircleAnimation]
+     * constructed by this block. Use `{ null }` if no animation is required.
+     * */
+    private inline fun copyRegionsAndStylesForNewTrajectories(
+        sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
+        flipRegionsInAndOut: Boolean = false,
+        crossinline circleAnimationInit: (List<CircleOrLine>) -> CircleAnimation? = { null },
+    ) {
+        val sourceIndices = sourceIndex2NewTrajectory.map { it.first }
+        val oldSize = objects.size
+        val newObjects = sourceIndex2NewTrajectory.flatMap { it.second }
+        addObjects(newObjects) // row-column order
+        for ((i, sourceIndex) in sourceIndices.withIndex()) {
+            if (objectColors.containsKey(sourceIndex)) {
+                val correspondingIx = oldSize + i
+                objectColors[correspondingIx] = objectColors[sourceIndex]!!
+            }
+        }
+        sourceIndex2NewTrajectory.mapIndexed { rowIx, (ix, trajectory) ->
+            trajectory.map { o ->
+                (o as? CircleOrLine)?.let { ix to it }
+            } // Column<Row<(Ix to CircleOrLine)?>>
+        }.transpose().forEach { trajectoryStageSlice ->
+        }
+        TODO()
+//        copyRegions(
+//            oldIndices = sourceIndicesOfNewCircles,
+//            newIndices = newIndicesOfCircles,
+//            flipInAndOut = flipRegionsInAndOut
+//        )
+        selection = (oldSize until objects.size).filter { ix ->
+            objects[ix] is CircleOrLine || objects[ix] is Point
+        }
+        circleAnimationInit(newObjects.filterIsInstance<CircleOrLine>())?.let { circleAnimation ->
+            viewModelScope.launch {
+                _animations.emit(circleAnimation)
+            }
+        }
+    }
+
+    /** Add objects from [sourceIndex2NewObject] to [objects], while
+     * copying regions (for [CircleOrLine]s) and [objectColors] from original
+     * indices specified in [sourceIndex2NewObject].
+     * We assume that appropriate expressions has already been created and
+     * that those expressions follow the order of [sourceIndex2NewObject], but
+     * the objects themselves are yet to be added to [objects]. In addition set
+     * new objects that are circles/lines/points as [selection].
+     * @param[sourceIndex2NewObject] `[(original index ~ style source, new object)]`, note that
+     * original indices CAN repeat (tho its regions will be copied only once even for the repeats).
+     * @param[circleAnimationInit] given list of circles/lines queue [CircleAnimation]
+     * constructed by this block. Use `{ null }` if no animation is required.
+     * */
+    private inline fun copyRegionsAndStyles(
+        sourceIndex2NewObject: List<Pair<Ix, GCircle?>>,
+        flipRegionsInAndOut: Boolean = false,
+        crossinline circleAnimationInit: (List<CircleOrLine>) -> CircleAnimation? = { null },
+    ) {
+        val sourceIndices = sourceIndex2NewObject.map { it.first }
+        @Suppress("UNCHECKED_CAST")
+        val ix2circle: List<Pair<Ix, CircleOrLine>> = sourceIndex2NewObject
+            .filter { it.second is CircleOrLine } // filterIsInstance doesn't work on Pair<*, *> (Java type erasure)
+                as List<Pair<Ix, CircleOrLine>>
+        val sourceIndicesOfNewCircles = ix2circle.map { it.first }
+        val oldSize = objects.size
+        addObjects(sourceIndex2NewObject.map { it.second })
+        for ((i, sourceIndex) in sourceIndices.withIndex()) {
+            if (objectColors.containsKey(sourceIndex)) {
+                val correspondingIx = oldSize + i
+                objectColors[correspondingIx] = objectColors[sourceIndex]!!
+            }
+        }
+        val newIndicesOfCircles = sourceIndex2NewObject
+            .filterIndices { (_, o) -> o is CircleOrLine }
+            .map { oldSize + it }
+        copyRegions(
+            oldIndices = sourceIndicesOfNewCircles,
+            newIndices = newIndicesOfCircles,
+            flipInAndOut = flipRegionsInAndOut
+        )
+        selection = (oldSize until objects.size).filter { ix ->
+            objects[ix] is CircleOrLine || objects[ix] is Point
+        }
+        circleAnimationInit(ix2circle.map { it.second })?.let { circleAnimation ->
+            viewModelScope.launch {
+                _animations.emit(circleAnimation)
+            }
+        }
+    }
+
     fun duplicateSelectedCircles() {
         if (mode.isSelectingCircles()) {
             recordCommand(Command.DUPLICATE, selection)
-            val copiedIndexedCircles = selection.mapNotNull { ix ->
-                (objects[ix] as? CircleOrLine)?.let { ix to it }
-            } // preserves selection order
-            val copiedCircles = copiedIndexedCircles.map { it.second }
-            val copiedIndexedPoints = selection.mapNotNull { ix ->
-                (objects[ix] as? Point)?.let { ix to it }
-            } // preserves selection order
-            val copiedPoints = copiedIndexedPoints.map { it.second }
-            val oldSize = objects.size
-            addObjects(copiedCircles)
-            addObjects(copiedPoints)
-            val sourceIndices = copiedIndexedCircles.map { it.first } + copiedIndexedPoints.map { it.first }
-            for (ix in sourceIndices)
+            val toBeCopied = selection.filter { objects[it] is CircleOrLine || objects[it] is Point }
+            copyRegionsAndStyles(toBeCopied.map { it to objects[it] }) { circles ->
+                CircleAnimation.ReEntrance(circles)
+            }
+            for (ix in toBeCopied)
                 expressions.addFree()
-            for ((i, sourceIndex) in sourceIndices.withIndex()) {
-                if (objectColors.containsKey(sourceIndex)) {
-                    val correspondingIx = i + oldSize
-                    objectColors[correspondingIx] = objectColors[sourceIndex]!!
-                }
-            }
-            val newCircleIndices = oldSize until oldSize + copiedCircles.size
-            copyRegions(copiedIndexedCircles.map { it.first }, newCircleIndices.toList())
-            selection = (oldSize until objects.size).toList()
-            viewModelScope.launch {
-                _animations.emit(
-                    CircleAnimation.ReEntrance(copiedCircles)
-                )
-            }
         }
     }
 
@@ -1623,10 +1700,10 @@ class EditClusterViewModel : ViewModel() {
             transformWhatWeCan(
                 listOf(ix),
                 translation = newPoint.toOffset() - (objects[ix] as Point).toOffset(),
-                updateExpressions = {
-                    expressions.changeToFree(ix)
-                    expressions.update(listOf(ix))
-                }
+//                updateExpressions = {
+//                    expressions.changeToFree(ix)
+//                    expressions.update(listOf(ix))
+//                }
             )
         }
     }
@@ -2230,31 +2307,13 @@ class EditClusterViewModel : ViewModel() {
         val targetPointIxs = objArg.pointIndices
         val invertingCircleIndex = (argList.args[1] as Arg.CircleIndex).index
         recordCreateCommand()
-        val newGCircles = targetCircleIxs.map { circleIx ->
-            expressions.addSoloExpression(
-                Expr.CircleInversion(circleIx, invertingCircleIndex),
+        val newIndexedGCircles = (targetCircleIxs + targetPointIxs).map { ix ->
+            ix to expressions.addSoloExpression(
+                Expr.CircleInversion(ix, invertingCircleIndex),
             )?.upscale()
         }
-        val newPoints = targetPointIxs.map { pointIx ->
-            val newPoint = expressions.addSoloExpression(
-                Expr.CircleInversion(pointIx, invertingCircleIndex)
-            ) as? Point
-            newPoint?.upscale()
-        }
-        createNewGCircles(newGCircles)
-        copyRegions(
-            targetCircleIxs,
-            ((objects.size - newGCircles.size) until objects.size).toList(),
-            flipInAndOut = true
-        )
-        addObjects(newPoints)
-        val resultSize = newGCircles.size + newPoints.size
-        val shift = objects.size - resultSize // prev total size
-        for ((i, sourceIndex) in (targetCircleIxs + targetPointIxs).withIndex()) {
-            if (objectColors.containsKey(sourceIndex)) {
-                val correspondingIx = i + shift
-                objectColors[correspondingIx] = objectColors[sourceIndex]!!
-            }
+        copyRegionsAndStyles(newIndexedGCircles, flipRegionsInAndOut = true) { circles ->
+            CircleAnimation.Entrance(circles)
         }
         partialArgList = PartialArgList(argList.signature)
     }

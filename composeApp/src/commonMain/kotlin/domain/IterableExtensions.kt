@@ -106,3 +106,12 @@ inline fun <A, B, C, R> Iterable<A>.zip3(
     return list
 }
 
+/** aka zipN (non-truncating), when some lists are shorter than required they are
+ * filled with [filler] */
+@Suppress("NOTHING_TO_INLINE")
+inline fun <T> List<List<T>>.transpose(filler: T? = null): List<List<T?>> {
+    val maxSize = this.maxOfOrNull { it.size } ?: return emptyList()
+    return (0 until maxSize).map { i ->
+        this.map { row -> row.getOrElse(i) { filler } }
+    }
+}
