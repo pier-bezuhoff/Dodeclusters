@@ -281,6 +281,8 @@ class ExpressionForest(
         }
     }
 
+    /** Copies those expressions whose dependencies are also in [sourceIndices].
+     * REQUIRES all used object to had been added already */
     fun copyExpressionsWithDependencies(sourceIndices: List<Ix>) {
         val sources = sourceIndices.toSet()
         val oldSize = expressions.size
@@ -291,7 +293,6 @@ class ExpressionForest(
             val e = expressions[sourceIndex]
             if (e != null && e.expr.args.all { it in sources }) {
                 val newExpr = e.expr.reIndex { oldIx -> source2new[oldIx]!! }
-                // TODO: requires parents objects existing to eval
                 when (e) {
                     is Expression.Just -> {
                         addSoloExpression(

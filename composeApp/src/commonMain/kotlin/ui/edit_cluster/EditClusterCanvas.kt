@@ -6,7 +6,6 @@ import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,7 +45,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.toSvg
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -170,7 +167,7 @@ fun BoxScope.EditClusterCanvas(
         translate(viewModel.translation.x, viewModel.translation.y) {
             val visibleRect = size.toRect().translate(-viewModel.translation)
             // TODO: hoist VM here
-            drawParts(viewModel, visibleRect, clusterPathAlpha, circleStroke)
+            drawRegions(viewModel, visibleRect, clusterPathAlpha, circleStroke)
             drawAnimation(animations, visibleRect, strokeWidth)
             if (viewModel.showCircles)
                 drawObjects(viewModel, visibleRect, circleColor, freeCircleColor, circleStroke, pointColor, freePointColor, pointRadius)
@@ -545,7 +542,7 @@ private fun DrawScope.drawSelectedCircles(
     }
 }
 
-private fun DrawScope.drawParts(
+private fun DrawScope.drawRegions(
     viewModel: EditClusterViewModel,
     visibleRect: Rect,
     clusterPathAlpha: Float,
@@ -568,25 +565,25 @@ private fun DrawScope.drawParts(
             }
         }
     }
-    for (part in viewModel.regions) {
-        val path = part2path(viewModel.objects.map { it as? CircleOrLine }, part, visibleRect)
+    for (region in viewModel.regions) {
+        val path = part2path(viewModel.objects.map { it as? CircleOrLine }, region, visibleRect)
         if (viewModel.showWireframes) {
             drawPath(
                 path,
-                color = part.fillColor,
+                color = region.fillColor,
                 alpha = clusterPathAlpha,
                 style = circleStroke
             )
         } else {
             drawPath( // drawing stroke+fill to prevent seams
                 path,
-                color = part.borderColor ?: part.fillColor,
+                color = region.borderColor ?: region.fillColor,
                 alpha = clusterPathAlpha,
                 style = circleStroke
             )
             drawPath(
                 path,
-                color = part.fillColor,
+                color = region.fillColor,
                 alpha = clusterPathAlpha,
                 style = Fill,
             )

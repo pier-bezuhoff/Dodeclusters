@@ -612,7 +612,7 @@ class EditClusterViewModel : ViewModel() {
     /** Add objects from [sourceIndex2NewTrajectory] to [objects], while
      * copying regions (for [CircleOrLine]s) and [objectColors] from original
      * indices specified in [sourceIndex2NewTrajectory].
-     * We assume that appropriate expressions has already been created and
+     * We assume that appropriate expressions were/will be created and
      * that those expressions follow the order of [sourceIndex2NewTrajectory]`.flatten()`, but
      * the objects themselves are yet to be added to [objects]. In addition set
      * new objects that are circles/lines/points as [selection].
@@ -672,7 +672,7 @@ class EditClusterViewModel : ViewModel() {
     /** Add objects from [sourceIndex2NewObject] to [objects], while
      * copying regions (for [CircleOrLine]s) and [objectColors] from original
      * indices specified in [sourceIndex2NewObject].
-     * We assume that appropriate expressions has already been created and
+     * We assume that appropriate expressions were/will be created separately and
      * that those expressions follow the order of [sourceIndex2NewObject], but
      * the objects themselves are yet to be added to [objects]. In addition set
      * new objects that are circles/lines/points as [selection].
@@ -725,8 +725,7 @@ class EditClusterViewModel : ViewModel() {
             copyRegionsAndStyles(toBeCopied.map { it to objects[it] }) { circles ->
                 CircleAnimation.ReEntrance(circles)
             }
-            for (ix in toBeCopied)
-                expressions.addFree()
+            expressions.copyExpressionsWithDependencies(toBeCopied)
         }
     }
 
