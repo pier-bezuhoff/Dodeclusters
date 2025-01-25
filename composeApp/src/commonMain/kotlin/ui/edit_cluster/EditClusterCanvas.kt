@@ -567,30 +567,29 @@ private fun DrawScope.drawParts(
                     drawCircleOrLine(circle, visibleRect, viewModel.regionColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
             }
         }
-    } else {
-        for (part in viewModel.regions) {
-            val path = part2path(viewModel.objects.map { it as? CircleOrLine }, part, visibleRect)
-            if (viewModel.showWireframes) {
-                drawPath(
-                    path,
-                    color = part.fillColor,
-                    alpha = clusterPathAlpha,
-                    style = circleStroke
-                )
-            } else {
-                drawPath( // drawing stroke+fill to prevent seams
-                    path,
-                    color = part.borderColor ?: part.fillColor,
-                    alpha = clusterPathAlpha,
-                    style = circleStroke
-                )
-                drawPath(
-                    path,
-                    color = part.fillColor,
-                    alpha = clusterPathAlpha,
-                    style = Fill,
-                )
-            }
+    }
+    for (part in viewModel.regions) {
+        val path = part2path(viewModel.objects.map { it as? CircleOrLine }, part, visibleRect)
+        if (viewModel.showWireframes) {
+            drawPath(
+                path,
+                color = part.fillColor,
+                alpha = clusterPathAlpha,
+                style = circleStroke
+            )
+        } else {
+            drawPath( // drawing stroke+fill to prevent seams
+                path,
+                color = part.borderColor ?: part.fillColor,
+                alpha = clusterPathAlpha,
+                style = circleStroke
+            )
+            drawPath(
+                path,
+                color = part.fillColor,
+                alpha = clusterPathAlpha,
+                style = Fill,
+            )
         }
     }
 }

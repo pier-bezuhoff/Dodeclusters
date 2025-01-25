@@ -2571,6 +2571,7 @@ class EditClusterViewModel : ViewModel() {
             else -> false
         }
 
+    // NOTE: downscaling each arg for eval is an extreme performance bottleneck (4 - 15 times)
     private fun GCircle.downscale(): GCircle = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
     private fun GCircle.upscale(): GCircle = scaled(0.0, 0.0, UPSCALING_FACTOR)
     private fun CircleOrLine.downscale(): CircleOrLine = scaled(0.0, 0.0, DOWNSCALING_FACTOR)

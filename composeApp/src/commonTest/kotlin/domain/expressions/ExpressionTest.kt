@@ -5,12 +5,17 @@ import data.geometry.GCircle
 import data.geometry.Point
 import domain.cluster.Constellation
 import ui.edit_cluster.EditClusterViewModel
+import kotlin.math.abs
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Duration
 import kotlin.time.measureTime
 
 class ExpressionTest {
+    enum class Variation {
+        V1, V2, V3, V4
+    }
 
     val constellation = Constellation(
         listOf(
@@ -29,7 +34,6 @@ class ExpressionTest {
         emptyList()
     )
 
-    /*
     @Test
     fun performanceTest() {
         val objects = mutableListOf<GCircle?>()
@@ -54,43 +58,50 @@ class ExpressionTest {
         )
         ast.reEval()
         println(objects)
-        measureTime {
-            repeat(1000) {
-                ast.reEval(objects)
+        /*
+        val variationTimes: MutableMap<Variation, Duration> = mutableMapOf(
+            Variation.V1 to Duration.ZERO,
+            Variation.V2 to Duration.ZERO,
+            Variation.V3 to Duration.ZERO,
+            Variation.V4 to Duration.ZERO,
+        )
+        repeat(10_000) {
+            val variation = Random.nextInt().let { k ->
+                when (abs(k) % 4) {
+                    1 -> Variation.V1
+                    2 -> Variation.V2
+                    3 -> Variation.V3
+                    0 -> Variation.V4
+                    else -> TODO()
+                }
             }
-        }.also { println("ref pass: $it") }
-        measureTime {
-            repeat(1000) {
-                ast.reEval()
+            variationTimes[variation] = variationTimes[variation]!! + when (variation) {
+                Variation.V1 -> measureTime {
+                    repeat(10) {
+                        ast.reEval()
+                    }
+                }
+                Variation.V2 -> measureTime {
+                    repeat(10) {
+                        ast._reEval(objects)
+                    }
+                }
+                Variation.V3 -> measureTime {
+                    repeat(10) {
+                        ast.__reEval(objects)
+                    }
+                }
+                Variation.V4 -> measureTime {
+                }
             }
-        }.also { println("get/set: $it") }
-        measureTime {
-            repeat(1000) {
-                ast.reEval(objects)
-            }
-        }.also { println("ref pass: $it") }
-        measureTime {
-            repeat(1000) {
-                ast.reEval()
-            }
-        }.also { println("get/set: $it") }
-        measureTime {
-            repeat(1000) {
-                ast.reEval(objects)
-            }
-        }.also { println("ref pass: $it") }
-        measureTime {
-            repeat(1000) {
-                ast.reEval()
-            }
-        }.also { println("get/set: $it") }
-        measureTime {
-            repeat(1000) {
-                ast.reEval(objects)
-            }
-        }.also { println("ref pass: $it") }
+        }
+        println("\nno-inline eval: ${variationTimes[Variation.V1]}")
+        println("direct array access: ${variationTimes[Variation.V2]}")
+        println("direct array access + downscaling: ${variationTimes[Variation.V3]}")
+//        println("inline return: ${variationTimes[Variation.V4]}")
+
+         */
         assertTrue(true)
     }
-     */
 
 }

@@ -281,6 +281,35 @@ class ExpressionForest(
         }
     }
 
+    fun copyExpressionsWithDependencies(sourceIndices: List<Ix>) {
+        val sources = sourceIndices.toSet()
+        val oldSize = expressions.size
+        val source2new = sourceIndices.mapIndexed { i, sourceIndex ->
+            sourceIndex to (oldSize + i)
+        }.toMap()
+        for (sourceIndex in sourceIndices) {
+            val e = expressions[sourceIndex]
+            if (e != null && e.expr.args.all { it in sources }) {
+                val newExpr = e.expr.reIndex { oldIx -> source2new[oldIx]!! }
+                // TODO: requires parents objects existing to eval
+                when (e) {
+                    is Expression.Just -> {
+                        addSoloExpression(
+                            newExpr as Expr.OneToOne
+                        )
+                    }
+                    is Expression.OneOf -> {
+                        addMultiExpression(
+                            Expression.OneOf(newExpr as Expr.OneToMany, e.outputIndex)
+                        )
+                    }
+                }
+            } else {
+                addFree()
+            }
+        }
+    }
+
     /**
      * tier 0 = free from deps, tier 1 = all deps are tier 0 at max...
      * tier k = all deps are tier (k-1) at max
