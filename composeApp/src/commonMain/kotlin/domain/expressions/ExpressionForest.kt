@@ -287,6 +287,9 @@ class ExpressionForest(
         }
     }
 
+    fun sortByTier(ixs: List<Ix>): List<Ix> =
+        ixs.sortedBy { ix2tier[it] }
+
     /** Copies those expressions whose dependencies are also in [sourceIndices].
      * REQUIRES all used object to had been added already */
     fun copyExpressionsWithDependencies(sourceIndices: List<Ix>) {

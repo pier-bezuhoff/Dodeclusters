@@ -720,8 +720,9 @@ class EditClusterViewModel : ViewModel() {
 
     fun duplicateSelectedCircles() {
         if (mode.isSelectingCircles()) {
-            recordCommand(Command.DUPLICATE, selection)
-            val toBeCopied = selection.filter { objects[it] is CircleOrLine || objects[it] is Point }
+            val toBeCopied = expressions.sortByTier(selection)
+                .filter { objects[it] is CircleOrLine || objects[it] is Point }
+            recordCommand(Command.DUPLICATE, toBeCopied)
             copyRegionsAndStyles(toBeCopied.map { it to objects[it] }) { circles ->
                 CircleAnimation.ReEntrance(circles)
             }
