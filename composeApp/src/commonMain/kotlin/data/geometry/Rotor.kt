@@ -32,8 +32,8 @@ data class Rotor(
     val pm: Double,
     // MAYBE: add the pseudo-scalar part (orientation-altering)
 ) {
-    // NOTE: in some cases [this]*[this] can contain non-scalar parts,
-    //  norm2 = ([this]*[this]).grade(0)
+    /** NOTE: in some cases `this`*`this.R` can contain non-scalar parts,
+      `norm2 = (this*this.reversed()).grade(0)` */
     val norm2 get() =
         s.pow(2) - xy.pow(2) - xp.pow(2) + xm.pow(2) - yp.pow(2) + ym.pow(2) + pm.pow(2)
 
@@ -84,9 +84,9 @@ data class Rotor(
         }
     }
 
-    /** Applies [this] rotor to the [target] and then leaves only grade=1 component
+    /** Applies `this` rotor to the [target] and then leaves only grade=1 component
      *
-     * [this] * [target] * [this].reversed() */
+     * `this * `[target]` * this.reversed()` */
     fun applyTo(target: GeneralizedCircle): GeneralizedCircle {
         val (w, x, y, z) = target
         val x1 = pm.pow(2)*x + pm*w*xm + pm*w*xp - 2*pm*xm*z + 2*pm*xp*z - s.pow(2)*x + s*w*xm + s*w*xp + 2*s*xm*z - 2*s*xp*z - 2*s*xy*y + w*xy*ym + w*xy*yp - x*xm.pow(2) + x*xp.pow(2) + x*xy.pow(2) + x*ym.pow(2) - x*yp.pow(2) - 2*xm*y*ym + 2*xp*y*yp + 2*xy*ym*z - 2*xy*yp*z

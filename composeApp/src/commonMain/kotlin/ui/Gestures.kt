@@ -18,6 +18,7 @@ inline fun Modifier.reactiveCanvas(
     // down triggers before tap/long press
     crossinline onDown: (position: Offset) -> Unit = { },
     crossinline onTap: (position: Offset, pointerCount: Int) -> Unit = { _, _ -> },
+    crossinline onLongPress: (position: Offset) -> Unit = { },
     crossinline onLongDragStart: (position: Offset) -> Unit = { },
     crossinline onLongDrag: (delta: Offset) -> Unit = { },
     crossinline onLongDragCancel: () -> Unit = { },
@@ -56,8 +57,11 @@ inline fun Modifier.reactiveCanvas(
 //                    println("onTap(n=$pointerCount)")
                     onTap(position, pointerCount)
                 },
-//                onLongPress = { println("onLongPress") },
-//                onDoubleTap = { println("onDoubleTap") },
+                onLongPress = { position ->
+//                    println("onLongPress")
+                    onLongPress(position)
+                },
+//                onDoubleTap = { println("onDoubleTap") }, // double tap detection is so-so
             )
         }
         // NOTE: the latter pointInput-s *can* consume events before passing it higher

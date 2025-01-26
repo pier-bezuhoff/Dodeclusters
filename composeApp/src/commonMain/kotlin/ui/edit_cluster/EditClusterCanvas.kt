@@ -150,6 +150,7 @@ fun BoxScope.EditClusterCanvas(
                 onDown = viewModel::onDown,
                 onPanZoomRotate = viewModel::onPanZoomRotate,
                 onVerticalScroll = viewModel::onVerticalScroll,
+                onLongPress = viewModel::onLongPress,
 //                onLongDragStart = viewModel::onLongDragStart,
 //                onLongDrag = viewModel::onLongDrag,
 //                onLongDragCancel = viewModel::onLongDragCancel,

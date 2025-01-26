@@ -938,6 +938,13 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
+    private fun findSiblingsAndParents(ix: Ix): List<Ix> {
+        val e = expressions.expressions[ix] ?: return emptyList()
+        val parents = e.expr.args
+        val siblings = expressions.findExpr(e.expr)
+        return siblings + parents
+    }
+
     // NOTE: part boundaries get messed up when we alter a big structure like spiral
     /** -> (compressed part, verbose part involving all circles) surrounding clicked position */
     private fun selectPartAt(
@@ -1081,7 +1088,7 @@ class EditClusterViewModel : ViewModel() {
                     snapResult.circleIndex
                 )
                 recordCreateCommand()
-                val newPoint = (expressions.addSoloExpression(expr) as Point).upscale()
+                val newPoint = (expressions.addSoloExpr(expr) as Point).upscale()
                 val newIx = objects.size
                 addObjects(listOf(newPoint))
                 PointSnapResult.Eq(newPoint, newIx)
@@ -1118,7 +1125,7 @@ class EditClusterViewModel : ViewModel() {
                         addObject(p.upscale())
                         PointSnapResult.Eq(snapResult.result, oldSize)
                     } else {
-                        val ps = expressions.addMultiExpression(expr)
+                        val ps = expressions.addMultiExpr(expr)
                             .map { it as? Point }
                             .map { it?.upscale() }
                         addObjects(ps)
@@ -2045,6 +2052,21 @@ class EditClusterViewModel : ViewModel() {
         scaleSelection(zoom)
     }
 
+    fun onLongPress(position: Offset) {
+        if (mode.isSelectingCircles()) {
+            selection.let {
+                if (it.size == 1) {
+                    val ix = it.single()
+                    val family = listOf(ix) + findSiblingsAndParents(ix)
+                    if (family.size > 1 && mode == SelectionMode.Drag) {
+                        switchToMode(SelectionMode.Multiselect)
+                        selection = family
+                    }
+                }
+            }
+        }
+    }
+
     fun onLongDragStart(position: Offset) {}
     fun onLongDrag(delta: Offset) {}
     fun onLongDragCancel() {}
@@ -2199,7 +2221,7 @@ class EditClusterViewModel : ViewModel() {
                     is Arg.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
-            val newCircle = expressions.addSoloExpression(
+            val newCircle = expressions.addSoloExpr(
                 Expr.CircleByCenterAndRadius(
                     center = realized[0],
                     radiusPoint = realized[1]
@@ -2231,7 +2253,7 @@ class EditClusterViewModel : ViewModel() {
                     is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
-            val newGCircle = expressions.addSoloExpression(
+            val newGCircle = expressions.addSoloExpr(
                 Expr.CircleBy3Points(
                     object1 = realized[0],
                     object2 = realized[1],
@@ -2266,7 +2288,7 @@ class EditClusterViewModel : ViewModel() {
                     is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
-            val newGCircle = expressions.addSoloExpression(
+            val newGCircle = expressions.addSoloExpr(
                 Expr.CircleByPencilAndPoint(
                     pencilObject1 = realized[0],
                     pencilObject2 = realized[1],
@@ -2302,7 +2324,7 @@ class EditClusterViewModel : ViewModel() {
                     is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
-            val newGCircle = expressions.addSoloExpression(
+            val newGCircle = expressions.addSoloExpr(
                 Expr.LineBy2Points(
                     object1 = realized[0],
                     object2 = realized[1],
@@ -2321,7 +2343,7 @@ class EditClusterViewModel : ViewModel() {
         val invertingCircleIndex = (argList.args[1] as Arg.CircleIndex).index
         recordCreateCommand()
         val newIndexedGCircles = (targetCircleIxs + targetPointIxs).map { ix ->
-            ix to expressions.addSoloExpression(
+            ix to expressions.addSoloExpr(
                 Expr.CircleInversion(ix, invertingCircleIndex),
             )?.upscale()
         }
@@ -2338,7 +2360,7 @@ class EditClusterViewModel : ViewModel() {
         val startCircleIx = args[0].index
         val endCircleIx = args[1].index
         recordCreateCommand()
-        val newGCircles = expressions.addMultiExpression(
+        val newGCircles = expressions.addMultiExpr(
             Expr.CircleInterpolation(params, startCircleIx, endCircleIx),
         )
         val newCircles = newGCircles.map { if (it is CircleOrLine?) it?.upscale() else null }
@@ -2363,7 +2385,7 @@ class EditClusterViewModel : ViewModel() {
         val startCircleIx = args[0].index
         val endCircleIx = args[1].index
         recordCreateCommand()
-        val newCircles = expressions.addMultiExpression(
+        val newCircles = expressions.addMultiExpr(
             Expr.CircleExtrapolation(params, startCircleIx, endCircleIx),
         ).map { if (it is CircleOrLine?) it?.upscale() else null }
         createNewGCircles(newCircles)
@@ -2395,7 +2417,7 @@ class EditClusterViewModel : ViewModel() {
         val targetIndices = targetCircleIndices + targetPointsIndices
         copyRegionsAndStylesForNewTrajectories(
             sourceIndex2NewTrajectory = targetIndices.map { targetIndex ->
-                targetIndex to expressions.addMultiExpression(
+                targetIndex to expressions.addMultiExpr(
                     Expr.LoxodromicMotion(
                         params,
                         divergence, convergence,

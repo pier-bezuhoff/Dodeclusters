@@ -100,7 +100,7 @@ class ExpressionForest(
     }
 
     /** don't forget to upscale the result afterwards! */
-    fun addSoloExpression(expr: Expr.OneToOne): GCircle? {
+    fun addSoloExpr(expr: Expr.OneToOne): GCircle? {
         val ix = calculateNextIndex()
         expressions[ix] = Expression.Just(expr)
         expr.args.forEach { parentIx ->
@@ -141,7 +141,7 @@ class ExpressionForest(
     }
 
     /** don't forget to upscale the result afterwards! */
-    fun addMultiExpression(expr: Expr.OneToMany): ExprResult {
+    fun addMultiExpr(expr: Expr.OneToMany): ExprResult {
         val result = expr.eval(get)
         val ix0 = calculateNextIndex()
         val tier = computeTier(ix0, expr)
@@ -166,6 +166,12 @@ class ExpressionForest(
         return expressions.entries
             .firstOrNull { (_, e) -> e == expression }
             ?.key
+    }
+
+    fun findExpr(expr: Expr): List<Ix> {
+        return expressions.entries
+            .filter { (_, e) -> e?.expr == expr }
+            .map { it.key }
     }
 
     /** The new node still inherits its previous children */
@@ -295,7 +301,7 @@ class ExpressionForest(
                 val newExpr = e.expr.reIndex { oldIx -> source2new[oldIx]!! }
                 when (e) {
                     is Expression.Just -> {
-                        addSoloExpression(
+                        addSoloExpr(
                             newExpr as Expr.OneToOne
                         )
                     }

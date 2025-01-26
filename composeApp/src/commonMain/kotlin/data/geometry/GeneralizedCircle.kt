@@ -189,9 +189,9 @@ data class GeneralizedCircle(
         this.normalizedPreservingDirection()*k + other.normalizedPreservingDirection()*(1 - k)
 
     /**
-     * Apply reflect [target] with respect to [this]
+     * Apply reflect [target] with respect to `this`
      *
-     * = [this].dual * [target].dual * [this].dual */
+     * = `this`.dual * [target].dual * `this`.dual */
     fun applyTo(target: GeneralizedCircle): GeneralizedCircle {
         val (w0,x0,y0,z0) = target
         return GeneralizedCircle(
@@ -203,7 +203,7 @@ data class GeneralizedCircle(
     }
 
     /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
-     * counting from [this] circle's side. [index]=0 being [this] circle. */
+     * counting from `this` circle's side. [index]=0 being `this` circle. */
     fun bisector(
         other: GeneralizedCircle,
         nOfSections: Int = 2,
@@ -218,7 +218,6 @@ data class GeneralizedCircle(
         val d = a scalarProduct b
         val coDirected = d >= 0.0
         val pencilType = a.calculatePencilType(b)
-        // TODO: imaginary/point output for consistency
         val maxInterpolationParameter = when (pencilType) {
             CirclePencilType.PARABOLIC -> 1.0
             CirclePencilType.ELLIPTIC -> {
@@ -236,6 +235,59 @@ data class GeneralizedCircle(
             else -> +1
         }
         val k = sign * inOutSign * index.toDouble()/nOfSections * maxInterpolationParameter
+        // exp(-k/2 * (a^b).normalized) >>> a
+        val bivector = Rotor.fromOuterProduct(a, b)
+            .normalized()
+//        println("pencil: ${a.calculatePencilType(b)}")
+//        println("maxK = $maxInterpolationParameter")
+//        println("k = $k, $index/$nOfSections")
+//        println("a = $a, plus=${a.ePlusProjection}, minus=${a.eMinusProjection}")
+//        println("b = $b, plus=${b.ePlusProjection}, minus=${b.eMinusProjection}")
+//        println("bivector = $bivector")
+//        println("bivector.norm2 = ${bivector.norm2}")
+        val rotor = (bivector * (-k/2.0)).exp()
+        val result = rotor.applyTo(a)
+//        println("rotor = $rotor")
+//        println("rotor.norm2 = ${bivector.norm2}")
+//        println("result = $result, plus=${result.ePlusProjection}, minus=${result.eMinusProjection}")
+        return result
+    }
+
+    /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
+     * counting from `this` circle's side. [index]=0 being `this` circle.
+     * @param[complementary] `false` => choose natural, based on `this` and
+     * [other]'s directions. `true` => choose the other one */
+    fun naturalBisector(
+        other: GeneralizedCircle,
+        nOfSections: Int = 2,
+        index: Int = 1,
+        complementary: Boolean = false,
+    ): GeneralizedCircle {
+        require(nOfSections >= 1)
+        // signifies relative direction of [this] wrt. [other]
+//        val sign = signNonZero(this.scalarProduct(other))
+        val a = this.normalizedPreservingDirection()
+        val b = other.normalizedPreservingDirection()
+        val d = a scalarProduct b
+        val coDirected = d >= 0.0
+        val pencilType = a.calculatePencilType(b)
+        val maxInterpolationParameter = when (pencilType) {
+            CirclePencilType.PARABOLIC -> 1.0
+            CirclePencilType.ELLIPTIC -> {
+//                val inBetweenSign = if (inBetween) -1 else +1
+                acos(d)
+            }
+            CirclePencilType.HYPERBOLIC -> acosh(abs(d))
+            null -> 0.0
+        }
+//        val inOutSign = when (pencilType) {
+//            CirclePencilType.ELLIPTIC -> {
+//                if (inBetween != coDirected) +1
+//                else -1
+//            }
+//            else -> +1
+//        }
+        val k = -index.toDouble()/nOfSections * maxInterpolationParameter
         // exp(-k/2 * (a^b).normalized) >>> a
         val bivector = Rotor.fromOuterProduct(a, b)
             .normalized()

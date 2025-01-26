@@ -23,18 +23,20 @@ fun computeIntersection(
     }
 }
 
-// TODO: GCircle output
 fun computeCircleInterpolation(
     params: InterpolationParameters, // bad: using ui dep in domain
     startCircle: CircleOrLine,
     endCircle: CircleOrLine,
-): List<CircleOrLine?> {
+): List<GCircle?> {
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val n = params.nInterjacents + 1
     val newCircles = (1 until n).map { i ->
-        val interjacent = start.bisector(end, nOfSections = n, index = i, inBetween = params.inBetween)
-        interjacent.toGCircle() as? CircleOrLine
+        val interjacent =
+//            start.affineCombination(end, 0.5)
+            start.bisector(end, nOfSections = n, index = i, inBetween = params.inBetween)
+//            start.naturalBisector(end, nOfSections = n, index = i)
+        interjacent.toGCircle()
     }
     return newCircles
 }
