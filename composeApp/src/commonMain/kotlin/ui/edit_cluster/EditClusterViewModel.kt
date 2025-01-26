@@ -976,7 +976,7 @@ class EditClusterViewModel : ViewModel() {
         boundingCircles: List<Ix>? = null,
         setSelectionToRegionBounds: Boolean = false
     ) {
-        chessboardPattern = ChessboardPattern.NONE
+//        chessboardPattern = ChessboardPattern.NONE
         val (part, part0) = selectPartAt(visiblePosition, boundingCircles)
         val outerParts = regions.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
         if (outerParts.isEmpty()) {
