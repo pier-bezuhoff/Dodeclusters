@@ -36,7 +36,10 @@ fun computeCircleInterpolation(
         val interjacent =
 //            start.affineCombination(end, 0.5)
 //            start.bisector(end, nOfSections = n, index = i, inBetween = params.inBetween)
-            start.naturalBisector(end, nOfSections = n, index = i, complementary = params.complementary)
+            start.naturalBisector(
+                if (params.complementary) -end else end,
+                nOfSections = n, index = i
+            )
         interjacent.toGCircle()
     }
     return newCircles

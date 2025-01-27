@@ -2715,9 +2715,9 @@ class EditClusterViewModel : ViewModel() {
         const val ENABLE_ANGLE_SNAPPING = true
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true
-        const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = true//false
+        const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         const val SHOW_IMAGINARY_CIRCLES = true
-        /** Allow moving non-free object IF all of it's lvl1 parents/dependecies are free by
+        /** Allow moving non-free object IF all of it's lvl1 parents/dependencies are free by
          * moving all of its parent with it */ // geogebra-like
         val INVERSION_OF_CONTROL = InversionOfControl.LEVEL_1
         /** when constructing object depending on not-yet-existing points,

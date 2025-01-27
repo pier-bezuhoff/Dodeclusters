@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import domain.never
 import domain.signNonZero
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
@@ -244,13 +245,12 @@ data class GeneralizedCircle(
 
     /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
      * counting from `this` circle's side. [index]=0 being `this` circle.
-     * @param[complementary] `false` => choose natural bisector, based on `this` and
-     * [other]'s directions ~ `A+B`. `true` => choose the other one ~ `A-B` */
+     * For complementary n-sector input -[other] instead of +[other]
+     * */
     fun naturalBisector(
         other: GeneralizedCircle,
         nOfSections: Int = 2,
         index: Int = 1,
-        complementary: Boolean = false,
     ): GeneralizedCircle {
         require(nOfSections >= 1)
         val a = this.normalizedPreservingDirection()
@@ -258,19 +258,21 @@ data class GeneralizedCircle(
         val d = a scalarProduct b // inversive distance
         val pencilType = a.calculatePencilType(b)
         val maxInterpolationParameter = when (pencilType) {
-            CirclePencilType.PARABOLIC -> 1.0
-            CirclePencilType.ELLIPTIC -> acos(d)
+            CirclePencilType.PARABOLIC -> 1.0 // |d| = 1
+            CirclePencilType.ELLIPTIC -> acos(d) // |d| < 1
             // Q: i think for negative d in acosh(d) it'd be imaginary circles?
-            CirclePencilType.HYPERBOLIC -> acosh(abs(d))
+            CirclePencilType.HYPERBOLIC -> acosh(abs(d)) // |d| > 1
             null -> 0.0
         } // natural logarithm of d for our weird numbers
         val fraction = index.toDouble()/nOfSections - 0.5
-        // NOTE: for imaginary circles this k is not very meaningful
+        // NOTE: for imaginary circles this k!=0.5 is not very meaningful
+        //  there is no meaningful "imaginary trisector"
+        //  tho maybe there can be defined an "imaginary 4-sector"?
         val k = -fraction * maxInterpolationParameter
         // exp(-k/2 * (a^b).normalized) >>> (a±b)
         val bivector = Rotor.fromOuterProduct(a, b).normalized()
         val rotor = (bivector * (-k/2.0)).exp()
-        val target = if (complementary) a - b else a + b
+        val target = a + b
         val result = rotor.applyTo(target.normalized())
         return result
     }
@@ -354,7 +356,7 @@ data class GeneralizedCircle(
                 // s0 = 0 => they are perpendicular
                 d0 < 1.0 -> CirclePencilType.ELLIPTIC
                 d0 > 1.0 -> CirclePencilType.HYPERBOLIC
-                else -> throw IllegalStateException("Never")
+                else -> never()
             }
         }
 
