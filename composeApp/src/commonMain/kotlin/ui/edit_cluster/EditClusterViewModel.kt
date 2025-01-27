@@ -268,7 +268,8 @@ class EditClusterViewModel : ViewModel() {
             startX = start.x, startY = start.y,
             encodeCirclesAndPoints = showCircles,
             chessboardPattern = chessboardPattern,
-            chessboardCellColor = regionColor
+            chessboardCellColor = regionColor,
+            name = name,
         )
     }
 
@@ -530,10 +531,12 @@ class EditClusterViewModel : ViewModel() {
     }
 
     /** Use BEFORE modifying the state by the [command]!
-     *
-     * let `s_i := history[i], c_i := commands[i]`
-     *
+     * Takes snapshot of present state and records it to history.
+     * ```
+     * s_i := history[i]
+     * c_i := commands[i]
      * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ...
+     * ```
      *
      * [unique] flag guarantees snapshotting new state for [history]
      * */
@@ -720,13 +723,17 @@ class EditClusterViewModel : ViewModel() {
 
     fun duplicateSelectedCircles() {
         if (mode.isSelectingCircles()) {
-            val toBeCopied = expressions.sortByTier(selection)
-                .filter { objects[it] is CircleOrLine || objects[it] is Point }
-            recordCommand(Command.DUPLICATE, toBeCopied)
-            copyRegionsAndStyles(toBeCopied.map { it to objects[it] }) { circles ->
-                CircleAnimation.ReEntrance(circles)
+            // pre-sorting is mandatory for expression copying to work properly
+            val toBeCopied = expressions.sortedByTier(
+                selection.filter { objects[it] is CircleOrLine || objects[it] is Point }
+            )
+            if (toBeCopied.isNotEmpty()) {
+                recordCommand(Command.DUPLICATE, toBeCopied)
+                copyRegionsAndStyles(toBeCopied.map { it to objects[it] }) { circles ->
+                    CircleAnimation.ReEntrance(circles)
+                }
+                expressions.copyExpressionsWithDependencies(toBeCopied)
             }
-            expressions.copyExpressionsWithDependencies(toBeCopied)
         }
     }
 
@@ -1073,7 +1080,7 @@ class EditClusterViewModel : ViewModel() {
         return p2cResult
     }
 
-    /** Adds a new point[[s]] with expression defined by [snapResult] when non-free
+    /** Adds a new point`s` with expression defined by [snapResult] when non-free
      * @return the same [snapResult] if [snapResult] is [PointSnapResult.Free], otherwise
      * [PointSnapResult.Eq] that points to the newly added point */
     private fun realizePointCircleSnap(snapResult: PointSnapResult): PointSnapResult.PointToPoint =
@@ -1157,10 +1164,10 @@ class EditClusterViewModel : ViewModel() {
         switchToMode(SelectionMode.Multiselect)
         showCircles = true
         val everythingIsSelected = selection.containsAll(objects.filterIndices { it is CircleOrLine })
-        if (everythingIsSelected) {
-            selection = emptyList()
+        selection = if (everythingIsSelected) {
+            emptyList()
         } else { // maybe select Imaginary's and nulls too
-            selection = objects.filterIndices { it is Point || it is CircleOrLine }
+            objects.filterIndices { it is Point || it is CircleOrLine }
         }
     }
 
@@ -1582,7 +1589,7 @@ class EditClusterViewModel : ViewModel() {
                                 .withIndex()
                                 .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
                                 .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }
-                                ?.let { (i, existingPart) ->
+                                ?.let { (_, existingPart) ->
                                     println("existing bound of $existingPart")
                                     val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
                                     if (bounds != selectedCircles.toSet()) {
@@ -1703,7 +1710,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     // dragging circle: move + scale radius
-    private fun dragCircle(pan: Offset, c: Offset, zoom: Float, rotationAngle: Float) {
+    private fun dragCircle(pan: Offset, zoom: Float, rotationAngle: Float) {
         val ix = selection.single()
         transformWhatWeCan(listOf(ix), translation = pan, zoom = zoom, rotationAngle = rotationAngle)
     }
@@ -1729,7 +1736,7 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    // special case that is not handled by trnasform()
+    // special case that is not handled by transform()
     private fun slidePointAcrossCarrier(pointIndex: Ix, carrierIndex: Ix, cursorLocation: Offset) {
         recordCommand(Command.MOVE, target = pointIndex)
         val carrier = objects[carrierIndex] as CircleOrLine
@@ -1919,7 +1926,7 @@ class EditClusterViewModel : ViewModel() {
                 }
             }
         } else if (mode == SelectionMode.Drag && selectedCircles.isNotEmpty() && showCircles) {
-            dragCircle(pan = pan, c = c, zoom = zoom, rotationAngle = rotationAngle)
+            dragCircle(pan = pan, zoom = zoom, rotationAngle = rotationAngle)
         } else if (mode == SelectionMode.Drag && selectedPoints.isNotEmpty() && showCircles) {
             dragPoint(c = c)
         } else if (
@@ -2068,12 +2075,13 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    fun onLongDragStart(position: Offset) {}
-    fun onLongDrag(delta: Offset) {}
-    fun onLongDragCancel() {}
-    fun onLongDragEnd() {}
+//    fun onLongDragStart(position: Offset) {}
+//    fun onLongDrag(delta: Offset) {}
+//    fun onLongDragCancel() {}
+//    fun onLongDragEnd() {}
 
     private fun queueSnackbarMessage(snackbarMessage: SnackbarMessage) {
+        // Q: idk how but somehow this breaks Windows/Chrome
 //        snackbarMessages.tryEmit(snackbarMessage)
 //        viewModelScope.launch {
 //            snackbarMessages.emit(snackbarMessage)
@@ -2180,7 +2188,6 @@ class EditClusterViewModel : ViewModel() {
                 is SelectionMode -> {
                     selection = emptyList()
                 }
-                else -> Unit
             }
         }
     }
@@ -2540,7 +2547,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.FillChessboardPattern -> toggleChessboardPattern()
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             EditClusterTool.DeleteAllParts -> deleteAllParts()
-            EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selected circles only
+            EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to seleclet `ted circles only
             EditClusterTool.ToggleFilledOrOutline -> showWireframes = !showWireframes
             EditClusterTool.HideUI -> hideUIFor30s()
             EditClusterTool.Palette -> openedDialog = DialogType.REGION_COLOR_PICKER

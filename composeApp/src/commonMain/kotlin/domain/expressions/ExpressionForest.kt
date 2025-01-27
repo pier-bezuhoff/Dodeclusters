@@ -287,11 +287,13 @@ class ExpressionForest(
         }
     }
 
-    fun sortByTier(ixs: List<Ix>): List<Ix> =
+    fun sortedByTier(ixs: List<Ix>): List<Ix> =
         ixs.sortedBy { ix2tier[it] }
 
     /** Copies those expressions whose dependencies are also in [sourceIndices].
-     * REQUIRES all used object to had been added already */
+     * REQUIRES all used object to had been added already. Additionally requires
+     * [sourceIndices] to be SORTED in a way that a parent comes before its
+     * child (e.g. via [sortedByTier]) */
     fun copyExpressionsWithDependencies(sourceIndices: List<Ix>) {
         val sources = sourceIndices.toSet()
         val oldSize = expressions.size

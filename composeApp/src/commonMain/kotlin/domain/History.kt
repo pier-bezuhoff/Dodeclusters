@@ -3,13 +3,17 @@ package domain
 // MAYBE: additionally collapse same-tag different-targets when history buffer overflows
 // TODO: create tests
 // MAYBE: reset lastCommandTag every VM.onUp
-// s_i := [past][[i]],
-// s_k+1 := current state (saveState())
-// s_k+i := future[i-2]
-// command c modifies previous state s_k into a new state s_k+1
-//                     c |       | c_1
-// s0  s1  s2 ... s_k    | s_k+1 |      s_k+2     s_k+3
-// ^ undo's = past       |  ^^^current state  \  ^^ redo's = future
+/**
+ * ```
+ * s_i := past[i]
+ * s_k+1 := current state (saveState())
+ * s_k+i := future[i-2]
+ * command c modifies previous state s_k into a new state s_k+1
+ *                     c |       | c_1
+ * s0  s1  s2 ... s_k    | s_k+1 |      s_k+2     s_k+3
+ * ^ undo’s = past       |  ^^^current state  \  ^^ redo’s = future
+ * ```
+ */
 class History<S>(
     private val saveState: () -> S,
     private val loadState: (S) -> Unit,
@@ -27,12 +31,18 @@ class History<S>(
     val redoIsEnabled: Boolean get() =
         future.isNotEmpty()
 
-    // past         | now | future
-    // og p1 p2     | n   | f1 f2 f3
-    // og ?p1 p2 ?n | _   |              |
     /** Use BEFORE modifying the state by the [command]!
-     * let s_i := history[[i]], c_i := commands[[i]]
-     * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ... */
+     * Records present state into history if the [command] is distinct from previous one.
+     * ```
+     * | past         | now | future   |
+     * | og p1 p2     | n   | f1 f2 f3 |
+     * | og ?p1 p2 ?n | _   |          |
+     *
+     * s_i := history[i]
+     * c_i := commands[i]
+     * s0 (aka original) -> c0 -> s1 -> c1 -> s2 ...
+     * ```
+     * */
     fun recordCommand(command: Command, tag: Command.Tag? = null) {
         if (lastCommand == null ||
             command != lastCommand ||

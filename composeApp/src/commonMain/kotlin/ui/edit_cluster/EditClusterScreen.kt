@@ -785,7 +785,7 @@ private fun HorizontalPanel(
         .horizontalScroll(scrollState)
         .offset(x = (-24).dp) // hide round corners to the left
         .background(
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
             RoundedCornerShape(24.dp)
         )
         .padding(start = 24.dp),
@@ -853,7 +853,7 @@ private fun VerticalPanel(
             .padding(start = 8.dp)
             .verticalScroll(scrollState)
             .background(
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                 RoundedCornerShape(24.dp)
             )
         ,
