@@ -19,10 +19,23 @@
         <meta property="og:image" content="https://raw.githubusercontent.com/pier-bezuhoff/Dodeclusters/master/docs/02inf-art.png" />
         <title>Dodeclusters Web</title>
         <script type="application/javascript" src="composeApp.js"></script>
+        <script>
+            window.addEventListener('load', function() {
+                const h1 = document.querySelector('h1');
+                const h2 = document.querySelector('h2');
+                if (h1) {
+                    h1.style.display = 'none';
+                }
+                if (h2) {
+                    h2.style.display = 'none';
+                }
+            });
+        </script>
         <meta name="google-site-verification" content="yKOpXb8Zc0SJds3eFMCCXDqQp52QWU2oVZR0exhXWxU" />
     </head>
     <body>
-        <!-- NOTE: body with singular canvas bugs out Lighthouse performance causing NO_LCP -->
+        <h1 style="text-align: center;">Welcome to Dodeclusters: the circle-based vector graphics editor!</h1>
+        <h2 style="text-align: center;">Loading Dodeclusters &#1421; ...</h2>
         <canvas id="ComposeTarget"></canvas>
     </body>
 </html>

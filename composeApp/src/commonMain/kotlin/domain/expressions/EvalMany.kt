@@ -5,6 +5,7 @@ import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.Point
+import domain.never
 import kotlin.math.PI
 
 // eval for one-to-many functions
@@ -19,7 +20,7 @@ fun computeIntersection(
         0 -> listOf(null, null)
         1 -> ips + null
         2 -> ips
-        else -> throw IllegalStateException("Never")
+        else -> never()
     }
 }
 

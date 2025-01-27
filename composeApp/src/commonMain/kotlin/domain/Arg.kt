@@ -48,8 +48,8 @@ sealed class Arg(val argType: ArgType) {
         }
     }
     data class CircleAndPointIndices(
-        val circleIndices: Indices,
-        val pointIndices: Indices = emptyList()
+        val circleIndices: List<Ix>,
+        val pointIndices: List<Ix> = emptyList()
     ) : Arg(ArgType.CircleAndPointIndices)
 }
 

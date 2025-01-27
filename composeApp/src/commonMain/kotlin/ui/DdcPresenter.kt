@@ -7,7 +7,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import com.github.ajalt.colormath.model.RGB
 import com.github.ajalt.colormath.transform.interpolate
-import domain.Indices
 import domain.Ix
 import domain.cluster.LogicalRegion
 import domain.io.DdcV2
@@ -26,9 +25,9 @@ class DdcPresenter(
     val circleCount: Int,
 
     val clusterFilled: List<Boolean>,
-    val clusterPartsIndices: List<Indices>,
-    val partInsides: List<Indices>,
-    val partOutsides: List<Indices>,
+    val clusterPartsIndices: List<List<Ix>>,
+    val partInsides: List<List<Ix>>,
+    val partOutsides: List<List<Ix>>,
     val partFillColor: List<Color>,
     val partBorderColor: List<Color?>,
 
@@ -37,7 +36,7 @@ class DdcPresenter(
     val ys: DoubleArray,
     /** negative radius = outside-circle, positive = inside-circle */
     val rs: DoubleArray,
-    val rules: List<Indices>
+    val rules: List<List<Ix>>
 ) {
     val clusterIndices = 0 until clusterCount
     val circleIndices = 0 until circleCount

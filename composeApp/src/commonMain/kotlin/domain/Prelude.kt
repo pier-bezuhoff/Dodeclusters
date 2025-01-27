@@ -10,10 +10,8 @@ import kotlin.math.roundToInt
 /** 2*[PI], 360°, 1 whole turn */
 const val TAU: Double = 2*PI
 
-/** Index */
+/** Index of an array */
 typealias Ix = Int
-/** indices */
-typealias Indices = List<Int>
 
 /** [fractionalDigits] = digits after the decimal point */
 fun Number.round(fractionalDigits: Int): Double {
@@ -71,6 +69,7 @@ inline fun <reified A, reified B> tryCatch2(
 }
 
 /** To be used in `when` pattern matching in cases that should NEVER be reached */
+@Suppress("NOTHING_TO_INLINE")
 @Throws(IllegalStateException::class)
-fun never(): Nothing =
+inline fun never(): Nothing =
     throw IllegalStateException("Never")
