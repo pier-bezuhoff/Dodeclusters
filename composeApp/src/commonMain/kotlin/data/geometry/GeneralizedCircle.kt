@@ -236,27 +236,16 @@ data class GeneralizedCircle(
         }
         val k = sign * inOutSign * index.toDouble()/nOfSections * maxInterpolationParameter
         // exp(-k/2 * (a^b).normalized) >>> a
-        val bivector = Rotor.fromOuterProduct(a, b)
-            .normalized()
-//        println("pencil: ${a.calculatePencilType(b)}")
-//        println("maxK = $maxInterpolationParameter")
-//        println("k = $k, $index/$nOfSections")
-//        println("a = $a, plus=${a.ePlusProjection}, minus=${a.eMinusProjection}")
-//        println("b = $b, plus=${b.ePlusProjection}, minus=${b.eMinusProjection}")
-//        println("bivector = $bivector")
-//        println("bivector.norm2 = ${bivector.norm2}")
+        val bivector = Rotor.fromOuterProduct(a, b).normalized()
         val rotor = (bivector * (-k/2.0)).exp()
         val result = rotor.applyTo(a)
-//        println("rotor = $rotor")
-//        println("rotor.norm2 = ${bivector.norm2}")
-//        println("result = $result, plus=${result.ePlusProjection}, minus=${result.eMinusProjection}")
         return result
     }
 
     /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
      * counting from `this` circle's side. [index]=0 being `this` circle.
-     * @param[complementary] `false` => choose natural, based on `this` and
-     * [other]'s directions. `true` => choose the other one */
+     * @param[complementary] `false` => choose natural bisector, based on `this` and
+     * [other]'s directions ~ `A+B`. `true` => choose the other one ~ `A-B` */
     fun naturalBisector(
         other: GeneralizedCircle,
         nOfSections: Int = 2,
@@ -264,49 +253,30 @@ data class GeneralizedCircle(
         complementary: Boolean = false,
     ): GeneralizedCircle {
         require(nOfSections >= 1)
-        // signifies relative direction of [this] wrt. [other]
-//        val sign = signNonZero(this.scalarProduct(other))
         val a = this.normalizedPreservingDirection()
         val b = other.normalizedPreservingDirection()
-        val d = a scalarProduct b
-        val coDirected = d >= 0.0
+        val d = a scalarProduct b // inversive distance
         val pencilType = a.calculatePencilType(b)
         val maxInterpolationParameter = when (pencilType) {
             CirclePencilType.PARABOLIC -> 1.0
-            CirclePencilType.ELLIPTIC -> {
-//                val inBetweenSign = if (inBetween) -1 else +1
-                acos(d)
-            }
+            CirclePencilType.ELLIPTIC -> acos(d)
+            // Q: i think for negative d in acosh(d) it'd be imaginary circles?
             CirclePencilType.HYPERBOLIC -> acosh(abs(d))
             null -> 0.0
-        }
-//        val inOutSign = when (pencilType) {
-//            CirclePencilType.ELLIPTIC -> {
-//                if (inBetween != coDirected) +1
-//                else -1
-//            }
-//            else -> +1
-//        }
-        val k = -index.toDouble()/nOfSections * maxInterpolationParameter
-        // exp(-k/2 * (a^b).normalized) >>> a
-        val bivector = Rotor.fromOuterProduct(a, b)
-            .normalized()
-//        println("pencil: ${a.calculatePencilType(b)}")
-//        println("maxK = $maxInterpolationParameter")
-//        println("k = $k, $index/$nOfSections")
-//        println("a = $a, plus=${a.ePlusProjection}, minus=${a.eMinusProjection}")
-//        println("b = $b, plus=${b.ePlusProjection}, minus=${b.eMinusProjection}")
-//        println("bivector = $bivector")
-//        println("bivector.norm2 = ${bivector.norm2}")
+        } // natural logarithm of d for our weird numbers
+        val fraction = index.toDouble()/nOfSections - 0.5
+        // NOTE: for imaginary circles this k is not very meaningful
+        val k = -fraction * maxInterpolationParameter
+        // exp(-k/2 * (a^b).normalized) >>> (a±b)
+        val bivector = Rotor.fromOuterProduct(a, b).normalized()
         val rotor = (bivector * (-k/2.0)).exp()
-        val result = rotor.applyTo(a)
-//        println("rotor = $rotor")
-//        println("rotor.norm2 = ${bivector.norm2}")
-//        println("result = $result, plus=${result.ePlusProjection}, minus=${result.eMinusProjection}")
+        val target = if (complementary) a - b else a + b
+        val result = rotor.applyTo(target.normalized())
         return result
     }
 
-    /** Recommended to pre-scale inputs in -10..10 range, cuz we are working with dimension cubed often */
+    /** Recommended to pre-scale inputs in -10..10 range, cuz
+     * we are working with dimension cubed often */
     fun loxodromicShift(
         start: GeneralizedCircle, end: GeneralizedCircle,
         angle: Double, logDilation: Double

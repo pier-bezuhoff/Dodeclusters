@@ -33,7 +33,12 @@ data class ExtrapolationParameters(
 @Immutable
 data class InterpolationParameters(
     val nInterjacents: Int,
+    /** Soft-deprecated.
+     * Unused except for informing change to DefaultInterpolationParameter and
+     * for backwards-compatibility */
     val inBetween: Boolean,
+    /** Direction-aware; `true` indicates non-natural n-sector choice */
+    val complementary: Boolean = inBetween // defaults to inBetween bc of o|o case
 ) : Parameters
 
 /**

@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.ImaginaryCircle
 import data.geometry.Line
@@ -115,6 +116,7 @@ fun BoxScope.EditClusterCanvas(
     val selectedCircleColor = DodeclustersColors.strongSalad
 //        MaterialTheme.colorScheme.primary
     val selectedPointColor = selectedCircleColor
+    val imaginaryCircleColor = Color.hsl(20f, 0.9f, 0.5f, alpha = 0.5f) // faded red
     val clusterPathAlpha = 1f //0.7f
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
@@ -171,7 +173,7 @@ fun BoxScope.EditClusterCanvas(
             drawRegions(viewModel, visibleRect, clusterPathAlpha, circleStroke)
             drawAnimation(animations, visibleRect, strokeWidth)
             if (viewModel.showCircles)
-                drawObjects(viewModel, visibleRect, circleColor, freeCircleColor, circleStroke, pointColor, freePointColor, pointRadius)
+                drawObjects(viewModel, viewModel.objects, visibleRect, circleColor, freeCircleColor, circleStroke, pointColor, freePointColor, pointRadius, imaginaryCircleColor, dottedStroke)
             drawSelectedCircles(viewModel, visibleRect, selectedCircleColor, thiccSelectionCircleAlpha, circleThiccStroke, selectedPointColor, pointRadius)
             drawPartialConstructs(viewModel, visibleRect, handleRadius, circleStroke, strokeWidth)
             drawHandles(viewModel, visibleRect, selectionMarkingsColor, scaleIconColor, scaleIndicatorColor, rotateIconColor, rotationIndicatorColor, handleRadius, iconDim, scaleIcon, rotateIcon, dottedStroke)
@@ -251,6 +253,10 @@ private fun SelectionsCanvas(
         }
     }
 }
+
+private val IMAGINARY_CIRCLE_PATH_EFFECT = PathEffect.dashPathEffect(
+    floatArrayOf(5f, 5f)
+)
 
 private fun DrawScope.drawCircleOrLine(
     circle: CircleOrLine,
@@ -457,42 +463,56 @@ private fun DrawScope.drawAnimation(
 
 private fun DrawScope.drawObjects(
     viewModel: EditClusterViewModel,
+    objects: List<GCircle?>,
     visibleRect: Rect,
     circleColor: Color,
     freeCircleColor: Color,
     circleStroke: Stroke,
     pointColor: Color,
     freePointColor: Color,
-    pointRadius: Float
+    pointRadius: Float,
+    imaginaryCircleColor: Color,
+    imaginaryCircleStroke: Stroke,
 ) {
+    val showImaginaryCircles = EditClusterViewModel.SHOW_IMAGINARY_CIRCLES
     if (viewModel.circleSelectionIsActive) {
-        for ((ix, circle) in viewModel.objects.withIndex()) {
+        for ((ix, circle) in objects.withIndex()) {
             if (circle is CircleOrLine && ix !in viewModel.selection) {
                 val color =
                     viewModel.objectColors[ix] ?:
                     if (viewModel.isFree(ix)) freeCircleColor else circleColor
                 drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
+            } else if (showImaginaryCircles && circle is ImaginaryCircle) {
+                drawCircleOrLine(
+                    Circle(circle.x, circle.y, circle.radius), visibleRect,
+                    color = imaginaryCircleColor, style = imaginaryCircleStroke
+                )
             }
         }
     } else {
-        for ((ix, circle) in viewModel.objects.withIndex()) {
+        for ((ix, circle) in objects.withIndex()) {
             if (circle is CircleOrLine) {
                 val color =
                     viewModel.objectColors[ix] ?:
                     if (viewModel.isFree(ix)) freeCircleColor else circleColor
                 drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
+            } else if (showImaginaryCircles && circle is ImaginaryCircle) {
+                drawCircleOrLine(
+                    Circle(circle.x, circle.y, circle.radius), visibleRect,
+                    color = imaginaryCircleColor, style = imaginaryCircleStroke
+                )
             }
         }
     }
     if (viewModel.pointSelectionIsActive) {
-        for ((ix, point) in viewModel.objects.withIndex()) {
+        for ((ix, point) in objects.withIndex()) {
             if (point is Point && ix !in viewModel.selection) {
                 val color = if (viewModel.isFree(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
         }
     } else {
-        for ((ix, point) in viewModel.objects.withIndex()) {
+        for ((ix, point) in objects.withIndex()) {
             if (point is Point) {
                 val color = if (viewModel.isFree(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())

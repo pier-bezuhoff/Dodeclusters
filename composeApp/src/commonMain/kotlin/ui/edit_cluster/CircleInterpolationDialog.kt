@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import data.geometry.CircleOrLine
-import data.geometry.CirclePencilType
 import data.geometry.GeneralizedCircle
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt1
@@ -66,7 +65,7 @@ data class DefaultInterpolationParameters(
 
     constructor(parameters: InterpolationParameters) : this(
         nInterjacents = parameters.nInterjacents,
-        inBetween = parameters.inBetween
+        inBetween = parameters.inBetween,
     )
 }
 
@@ -81,8 +80,7 @@ fun CircleInterpolationDialog(
 ) {
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
-    val pencilType = start.calculatePencilType(end)
-    // TODO: use sign on inversive distance to inform/flip inBetween
+    val coDirected = start.scalarProduct(end) >= 0
     val minCount = defaults.minCircleCount
     val maxCount = defaults.maxCircleCount
     val sliderState = remember { SliderState(
@@ -91,8 +89,6 @@ fun CircleInterpolationDialog(
         valueRange = minCount.toFloat()..maxCount.toFloat()
     ) }
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
-    val showInsideOutsideToggle =
-        pencilType == CirclePencilType.ELLIPTIC
     val (widthClass, heightClass) = calculateWindowSizeClass()
     val compactHeight = heightClass == WindowHeightSizeClass.Compact
     val okFontSize =
@@ -102,8 +98,8 @@ fun CircleInterpolationDialog(
     val onConfirm0 = { onConfirm(
         InterpolationParameters(
             sliderState.value.roundToInt(),
-            if (showInsideOutsideToggle) interpolateInBetween
-            else DefaultInterpolationParameters().inBetween
+            interpolateInBetween,
+            if (coDirected) !interpolateInBetween else interpolateInBetween
         )
     ) }
     Dialog(
@@ -119,7 +115,7 @@ fun CircleInterpolationDialog(
         ) {
             if (heightClass == WindowHeightSizeClass.Compact) {
                 CircleInterpolationHorizontalCompact(
-                    sliderState, showInsideOutsideToggle, interpolateInBetween,
+                    sliderState, interpolateInBetween,
                     setInterpolateInBetween = { interpolateInBetween = it },
                     onDismissRequest = onDismissRequest,
                     onConfirm = onConfirm0
@@ -131,13 +127,12 @@ fun CircleInterpolationDialog(
                     Title(smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
                     SliderText(sliderState)
                     Slider(sliderState, Modifier.padding(16.dp))
-                    if (showInsideOutsideToggle)
-                        InsideOutsideToggle(
-                            interpolateInBetween,
-                            setInterpolateInBetween = {
-                                interpolateInBetween = it
-                            }
-                        )
+                    InsideOutsideToggle(
+                        interpolateInBetween,
+                        setInterpolateInBetween = {
+                            interpolateInBetween = it
+                        }
+                    )
                     CancelOkRow(
                         onDismissRequest = onDismissRequest,
                         onConfirm = onConfirm0,
@@ -152,7 +147,6 @@ fun CircleInterpolationDialog(
 @Composable
 private fun CircleInterpolationHorizontalCompact(
     sliderState: SliderState,
-    showInsideOutsideToggle: Boolean,
     interpolateInBetween: Boolean,
     setInterpolateInBetween: (Boolean) -> Unit,
     onDismissRequest: () -> Unit,
@@ -163,7 +157,6 @@ private fun CircleInterpolationHorizontalCompact(
         horizontalAlignment = Alignment.Start
     ) {
         Title(smallerFont = true, Modifier.align(Alignment.CenterHorizontally))
-        if (showInsideOutsideToggle) {
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.fillMaxWidth(0.5f)) {
                     SliderText(sliderState)
@@ -173,14 +166,10 @@ private fun CircleInterpolationHorizontalCompact(
                         end = 16.dp
                     ))
                 }
-                Column() {
+                Column {
                     InsideOutsideToggle(interpolateInBetween, setInterpolateInBetween)
                 }
             }
-        } else {
-            SliderText(sliderState)
-            Slider(sliderState, Modifier.padding(16.dp))
-        }
         CancelOkRow(onDismissRequest, onConfirm, fontSize = 18.sp)
     }
 }

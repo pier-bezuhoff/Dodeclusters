@@ -103,11 +103,12 @@ import kotlin.time.Duration.Companion.seconds
 class EditClusterViewModel : ViewModel() {
     val objects: SnapshotStateList<GCircle?> = mutableStateListOf()
     val regions: SnapshotStateList<LogicalRegion> = mutableStateListOf()
-    private var expressions: ExpressionForest = ExpressionForest( // stub
+    var expressions: ExpressionForest = ExpressionForest( // stub
         initialExpressions = emptyMap(),
         get = { null },
         set = { _, _ -> }
     )
+        private set
 
     var mode: Mode by mutableStateOf(SelectionMode.Drag)
         private set
@@ -1037,7 +1038,8 @@ class EditClusterViewModel : ViewModel() {
         return Rect(left, top, right, bottom)
     }
 
-    fun isFree(circleIndex: Ix): Boolean =
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun isFree(circleIndex: Ix): Boolean =
         expressions.expressions[circleIndex] == null
 
     fun isConstrained(index: Ix): Boolean =
@@ -2269,8 +2271,8 @@ class EditClusterViewModel : ViewModel() {
                 ),
             )
             createNewGCircle(newGCircle?.upscale())
-            if (newGCircle is ImaginaryCircle)
-                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+//            if (newGCircle is ImaginaryCircle)
+//                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
         partialArgList = PartialArgList(argList.signature)
     }
@@ -2305,8 +2307,8 @@ class EditClusterViewModel : ViewModel() {
             )
             val newCircle = newGCircle as? CircleOrLine
             createNewGCircle(newCircle?.upscale())
-            if (newGCircle is ImaginaryCircle)
-                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+//            if (newGCircle is ImaginaryCircle)
+//                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
         partialArgList = PartialArgList(argList.signature)
     }
@@ -2371,7 +2373,7 @@ class EditClusterViewModel : ViewModel() {
         val newGCircles = expressions.addMultiExpr(
             Expr.CircleInterpolation(params, startCircleIx, endCircleIx),
         )
-        val newCircles = newGCircles.map { if (it is CircleOrLine?) it?.upscale() else null }
+        val newCircles = newGCircles.map { it?.upscale() }
         createNewGCircles(newCircles)
         partialArgList = PartialArgList(argList.signature)
         defaultInterpolationParameters = DefaultInterpolationParameters(params)
@@ -2393,10 +2395,10 @@ class EditClusterViewModel : ViewModel() {
         val startCircleIx = args[0].index
         val endCircleIx = args[1].index
         recordCreateCommand()
-        val newCircles = expressions.addMultiExpr(
+        val newGCircles = expressions.addMultiExpr(
             Expr.CircleExtrapolation(params, startCircleIx, endCircleIx),
-        ).map { if (it is CircleOrLine?) it?.upscale() else null }
-        createNewGCircles(newCircles)
+        ).map { it?.upscale() }
+        createNewGCircles(newGCircles)
         partialArgList = PartialArgList(argList.signature)
         defaultExtrapolationParameters = DefaultExtrapolationParameters(params)
     }
@@ -2713,7 +2715,8 @@ class EditClusterViewModel : ViewModel() {
         const val ENABLE_ANGLE_SNAPPING = true
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true
-        const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
+        const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = true//false
+        const val SHOW_IMAGINARY_CIRCLES = true
         /** Allow moving non-free object IF all of it's lvl1 parents/dependecies are free by
          * moving all of its parent with it */ // geogebra-like
         val INVERSION_OF_CONTROL = InversionOfControl.LEVEL_1
