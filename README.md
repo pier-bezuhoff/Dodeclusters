@@ -15,7 +15,7 @@
 🌲 Dynamic expression-dependency tree  
 📜 Undo/redo history & auto-save  
 💾 Custom YAML-derived file format + Safe SVG export  
-✌ Smart gestures: drag-and-drop, swipe coloring & swip selection, keyboard shortcuts  
+✌ Smart gestures: drag-and-drop, swipe coloring & swipe selection, keyboard shortcuts  
 🌘 Light/dark mode (*WIP*, for now as a URL argument `?theme=light` or `?theme=dark`)  
 
 \*: objects are related via dynamic expressions and child nodes' formulae are recalculated when moving parents or zooming in/out
@@ -40,7 +40,7 @@ and specific type of animations ~ [Möbius transformations](https://en.wikipedia
 Executables for Linux, Window and Android can be found in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/) or [on Google Drive](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=sharing).
 
 ### Windows
-1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/tag/v0.2.0) go to `assets` and download `windows.zip`
+1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/tag/v0.3.0) go to `assets` and download `windows.zip`
 2. Unarchive it
 3. In folder `com.pierbezuhoff.dodeclusters` find file `com.pierbezuhoff.dodeclusters.exe`
 4. Run it! That's it~ (it is bundled with JVM)
@@ -55,7 +55,7 @@ Executables for Linux, Window and Android can be found in the assets [attached t
 You can find the apk in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
 
 > [!NOTE]
-> Bundled binaries are likely behind the web version
+> Bundled binaries are likely behind web version
 
 ## Keyboard shortcuts
 - `Ctrl + A`: quickly select/deselect everything
@@ -78,7 +78,7 @@ You can find the apk in the assets [attached to the latest release](https://gith
 `./gradlew :composeApp:wasmJsBrowserDevelopmentRun`  
 
 ### Package for Windows/macOS/Linux
-Build platform-dependent package (run thru Github Actions using corresponding OS):  
+Build platform-dependent package (e.g. run thru Github Actions using corresponding OS):  
 `./gradlew composeApp:createDistributable`  
 output directory: `composeApp/build/compose/binaries/main/app/`  
 Same + use ProGuard to minify:  
