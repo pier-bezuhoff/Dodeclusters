@@ -26,7 +26,7 @@ data class Line(
     val a: Double,
     val b: Double,
     val c: Double
-) : GCircle, CircleOrLine {
+) : CircleOrLine {
 
     @Transient
     val norm: Double =

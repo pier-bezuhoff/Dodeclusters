@@ -7,6 +7,7 @@ import data.kmath_complex.r
 import data.kmath_complex.r2
 import domain.TAU
 import domain.degrees
+import domain.never
 import domain.rotateBy
 import domain.toComplex
 import kotlinx.serialization.SerialName
@@ -337,9 +338,9 @@ data class Circle(
          *
          * [ImaginaryCircle] -> [ImaginaryCircle] */
         fun invert(inverting: CircleOrLine, theOneBeingInverted: GCircle): GCircle {
-            val engine = GeneralizedCircle.fromGCircle(inverting).normalized()
-            val target = GeneralizedCircle.fromGCircle(theOneBeingInverted).normalized()
-            val result = engine.applyTo(target).normalized()
+            val engine = GeneralizedCircle.fromGCircle(inverting).normalizedPreservingDirection()
+            val target = GeneralizedCircle.fromGCircle(theOneBeingInverted).normalizedPreservingDirection()
+            val result = engine.applyTo(target).normalizedPreservingDirection()
             return result.toGCircle()
         }
 
@@ -480,7 +481,7 @@ data class Circle(
                             listOf(q, p)
                     }
                 }
-                else -> throw IllegalStateException("Never")
+                else -> never()
             }
     }
 }

@@ -27,6 +27,7 @@ import data.geometry.ArcPathCircle
 import data.geometry.ArcPathPoint
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.CircleOrLineOrImaginaryCircle
 import data.geometry.GCircle
 import data.geometry.ImaginaryCircle
 import data.geometry.Line
@@ -901,7 +902,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun selectCircle(
-        targets: List<CircleOrLine?>,
+        targets: List<CircleOrLineOrImaginaryCircle?>,
         visiblePosition: Offset,
         priorityTargets: Set<Ix> = emptySet(),
     ): Ix? {

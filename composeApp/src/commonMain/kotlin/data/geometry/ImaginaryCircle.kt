@@ -7,13 +7,15 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
+sealed interface CircleOrLineOrImaginaryCircle : GCircle
+
 @Immutable
 @Serializable
 data class ImaginaryCircle(
     val x: Double,
     val y: Double,
     val radius: Double,
-) : GCircle {
+) : CircleOrLineOrImaginaryCircle {
     override fun translated(vector: Offset): ImaginaryCircle =
         ImaginaryCircle(x + vector.x, y + vector.y, radius)
 
