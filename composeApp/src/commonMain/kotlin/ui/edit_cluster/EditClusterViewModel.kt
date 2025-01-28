@@ -2295,7 +2295,8 @@ class EditClusterViewModel : ViewModel() {
                 when (it) {
                     is Arg.CircleOrPoint.CircleIndex -> it.index
                     is Arg.CircleOrPoint.Point.Index -> it.index
-                    is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
+                    is Arg.CircleOrPoint.Point.XY ->
+                        createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
             val newGCircle = expressions.addSoloExpr(
@@ -2305,8 +2306,7 @@ class EditClusterViewModel : ViewModel() {
                     perpendicularObject = realized[2],
                 ),
             )
-            val newCircle = newGCircle as? CircleOrLine
-            createNewGCircle(newCircle?.upscale())
+            createNewGCircle(newGCircle?.upscale())
 //            if (newGCircle is ImaginaryCircle)
 //                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
@@ -2331,7 +2331,8 @@ class EditClusterViewModel : ViewModel() {
                 when (it) {
                     is Arg.CircleOrPoint.CircleIndex -> it.index
                     is Arg.CircleOrPoint.Point.Index -> it.index
-                    is Arg.CircleOrPoint.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
+                    is Arg.CircleOrPoint.Point.XY ->
+                        createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
             val newGCircle = expressions.addSoloExpr(

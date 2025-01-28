@@ -14,7 +14,7 @@ import domain.cluster.Constellation
 import domain.expressions.ExpressionForest
 import domain.expressions.ObjectConstruct
 import kotlinx.serialization.json.Json
-import ui.part2path
+import ui.region2path
 import kotlin.math.hypot
 
 private const val INDENT = "  " // nah i aint indenting dat
@@ -83,7 +83,7 @@ fun constellation2svg(
             constellation.parts.forEach { part ->
                 val fillColorString = Json.encodeToString(ColorCssSerializer, part.fillColor).trim('"')
 //                val strokeColorString = Json.encodeToString(ColorCssSerializer, part.borderColor).trim('"')
-                val path = part2path(circlesOrLines, part, visibleRect)
+                val path = region2path(circlesOrLines, part, visibleRect)
                 // NOTE: path.toSvg is bugged for elliptic/circular arcs (not yet implemented)
                 //  https://youtrack.jetbrains.com/issue/CMP-7418/Path.toSvg-is-completely-broken
                 val pathData = path.toCircularSvg()

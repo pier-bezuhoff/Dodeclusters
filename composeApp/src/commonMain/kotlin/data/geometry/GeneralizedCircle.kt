@@ -273,7 +273,7 @@ data class GeneralizedCircle(
         val bivector = Rotor.fromOuterProduct(a, b).normalized()
         val rotor = (bivector * (-k/2.0)).exp()
         val target = a + b
-        val result = rotor.applyTo(target.normalized())
+        val result = rotor.applyTo(target.normalizedPreservingDirection())
         return result
     }
 

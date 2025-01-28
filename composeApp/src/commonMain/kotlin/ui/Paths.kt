@@ -89,13 +89,19 @@ fun chessboardPath(
 }
 
 private val maxRadius = getPlatform().maxCircleRadius
-fun part2path(
+/**
+ * @param[circles] all delimiters, `null`s are to be interpreted as ∅ empty sets
+ * */
+fun region2path(
     circles: List<CircleOrLine?>,
-    part: LogicalRegion,
+    region: LogicalRegion,
     visibleRect: Rect
 ): Path {
-    val ins = part.insides.mapNotNull { circles[it] }
-    val outs = part.outsides.mapNotNull { circles[it] }
+    val ins = region.insides.mapNotNull { circles[it] }
+    if (ins.size < region.insides.size) { // null encountered
+        return Path() // intersection with empty set
+    }
+    val outs = region.outsides.mapNotNull { circles[it] }
     val circleInsides =
         ins.filter { it is Line || it is Circle && it.isCCW } +
         outs.filter { it is Circle && !it.isCCW }

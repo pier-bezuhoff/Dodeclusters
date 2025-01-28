@@ -71,7 +71,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.SimpleToolButton
 import ui.circle2path
-import ui.part2path
+import ui.region2path
 import ui.reactiveCanvas
 import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
@@ -242,7 +242,7 @@ private fun SelectionsCanvas(
                     // dst out = erase the BG rectangle => show hatching thats drawn behind it
                     drawCircleOrLine(circle, visibleRect, Color.Black, blendMode = BlendMode.DstOut)
                 }
-                for (circle in circles) { // MAYBE: draw circle outlines OVER parts
+                for (circle in circles) { // MAYBE: draw circle outlines OVER regions
                     drawCircleOrLine(
                         circle, visibleRect, selectedCircleColor,
                         alpha = thiccSelectionCircleAlpha,
@@ -587,7 +587,7 @@ private fun DrawScope.drawRegions(
         }
     }
     for (region in viewModel.regions) {
-        val path = part2path(viewModel.objects.map { it as? CircleOrLine }, region, visibleRect)
+        val path = region2path(viewModel.objects.map { it as? CircleOrLine }, region, visibleRect)
         if (viewModel.showWireframes) {
             drawPath(
                 path,
