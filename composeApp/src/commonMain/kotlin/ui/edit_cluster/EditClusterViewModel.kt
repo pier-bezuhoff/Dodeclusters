@@ -902,7 +902,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun selectCircle(
-        targets: List<CircleOrLineOrImaginaryCircle?>,
+        targets: List<CircleOrLine?>,
         visiblePosition: Offset,
         priorityTargets: Set<Ix> = emptySet(),
     ): Ix? {
