@@ -3,6 +3,7 @@ package domain
 import androidx.compose.runtime.Immutable
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.EPSILON
 import data.geometry.Line
 import data.geometry.Point
 import kotlin.math.abs
@@ -58,17 +59,29 @@ fun snapPointToPoints(
     points: List<Point?>,
     snapDistance: Double
 ): PointSnapResult.PointToPoint {
-    val ix = points
-        .mapIndexed { ix, p ->
-            ix to (p?.distanceFrom(point) ?: Double.POSITIVE_INFINITY)
-        }
-        .filter { (_, d) -> d <= snapDistance }
-        .minByOrNull { (_, d) -> d }
-        ?.first
-    return if (ix == null)
-        PointSnapResult.Free(point)
-    else
-        PointSnapResult.Eq(points[ix]!!, pointIndex = ix)
+    val withinSnapDistance = points.mapIndexed { ix, p ->
+        ix to (p?.distanceFrom(point) ?: Double.POSITIVE_INFINITY)
+    }.filter { (_, d) -> d <= snapDistance }
+    if (withinSnapDistance.isEmpty())
+        return PointSnapResult.Free(point)
+    // because of triple-intersects, we want to resolve them uniformly
+    // regardless of position, so natural points order is an easy choice.
+    val minDistance = withinSnapDistance.minOf { it.second }
+    val oldestButCloseEnough =
+        withinSnapDistance.first { it.second < minDistance + EPSILON }
+    val ix = oldestButCloseEnough.first
+    return PointSnapResult.Eq(points[ix]!!, pointIndex = ix)
+//    val ix = points
+//        .mapIndexed { ix, p ->
+//            ix to (p?.distanceFrom(point) ?: Double.POSITIVE_INFINITY)
+//        }
+//        .filter { (_, d) -> d <= snapDistance }
+//        .minByOrNull { (_, d) -> d }
+//        ?.first
+//    return if (ix == null)
+//        PointSnapResult.Free(point)
+//    else
+//        PointSnapResult.Eq(points[ix]!!, pointIndex = ix)
 }
 
 /** Project [point] onto the closest circle among [circles] that
@@ -102,6 +115,7 @@ fun snapPointToCircles(
             circleIndex = ix
         )
     } else {
+        // NOTE: triple intersections introduce chaos
         val (ix1, ix2) = closestCircles
         val c1 = circles[ix1]!!
         val c2 = circles[ix2]!!

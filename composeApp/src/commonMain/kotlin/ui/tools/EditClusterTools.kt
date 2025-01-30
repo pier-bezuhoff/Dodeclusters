@@ -109,6 +109,7 @@ import dodeclusters.composeapp.generated.resources.region_name
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_description
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_name
 import dodeclusters.composeapp.generated.resources.right_left
+import dodeclusters.composeapp.generated.resources.road
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.select_all
@@ -121,6 +122,7 @@ import dodeclusters.composeapp.generated.resources.spiral
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_name
+import dodeclusters.composeapp.generated.resources.three_sliders
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_description
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_name
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_description
@@ -435,5 +437,13 @@ sealed class EditClusterTool(
     data object SwapDirection: ContextAction(
         Res.string.swap_direction_name,
         icon = Res.drawable.right_left
+    )
+    data object DetailedAdjustment: ContextAction(
+        Res.string.stub,
+        icon = Res.drawable.three_sliders
+    )
+    data object InBetween: ContextAction(
+        Res.string.stub,
+        icon = Res.drawable.road
     )
 }

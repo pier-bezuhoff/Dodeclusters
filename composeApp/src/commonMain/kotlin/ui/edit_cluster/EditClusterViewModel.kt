@@ -573,7 +573,9 @@ class EditClusterViewModel : ViewModel() {
             }
     }
 
-    /** Use BEFORE modifying the state by the [Command.CREATE]! */
+    /** Use BEFORE modifying the state by the [Command.CREATE]!
+     * Takes snapshot of present state and records it to history.
+     * See [recordCommand] for more details. */
     private fun recordCreateCommand() {
         recordCommand(Command.CREATE, unique = true)
     }
@@ -586,7 +588,7 @@ class EditClusterViewModel : ViewModel() {
         newGCircles: List<GCircle?>,
     ) {
         val normalizedGCircles = newGCircles.map {
-            if (it is Circle && it.radius <= 0) // Q: idk why, does it ever happen?
+            if (it is Circle && it.radius <= 0) // Q: idk why are we doing it, does it ever happen?
                 null
             else it
         }
@@ -602,7 +604,7 @@ class EditClusterViewModel : ViewModel() {
                 )
             }
         } else { // all nulls
-            objects.addAll(normalizedGCircles)
+            addObjects(normalizedGCircles)
             selection = emptyList()
         }
     }
@@ -613,7 +615,7 @@ class EditClusterViewModel : ViewModel() {
     ): Ix {
         if (triggerRecording)
             recordCreateCommand()
-        objects.add(point)
+        addObject(point)
         val newIx = expressions.addFree()
         require(newIx == objects.size - 1) { "Incorrect index retrieved from expression.addFree() during createNewFreePoint()" }
         return newIx
@@ -1089,7 +1091,7 @@ class EditClusterViewModel : ViewModel() {
         return p2cResult
     }
 
-    /** Adds a new point`s` with expression defined by [snapResult] when non-free
+    /** Adds a new point(s) with expression defined by [snapResult] when non-free
      * @return the same [snapResult] if [snapResult] is [PointSnapResult.Free], otherwise
      * [PointSnapResult.Eq] that points to the newly added point */
     private fun realizePointCircleSnap(snapResult: PointSnapResult): PointSnapResult.PointToPoint =
@@ -2587,6 +2589,8 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
             // TODO: 2 options: solid color or external image
             EditClusterTool.AddBackgroundImage -> openedDialog = DialogType.BACKGROUND_COLOR_PICKER
+            EditClusterTool.DetailedAdjustment -> TODO()
+            EditClusterTool.InBetween -> TODO()
         }
     }
 

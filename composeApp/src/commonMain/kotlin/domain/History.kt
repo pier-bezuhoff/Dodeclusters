@@ -31,8 +31,8 @@ class History<S>(
     val redoIsEnabled: Boolean get() =
         future.isNotEmpty()
 
-    /** Use BEFORE modifying the state by the [command]!
-     * Records present state into history if the [command] is distinct from previous one.
+    /** Use BEFORE modifying state by the [command]!
+     * Records present state into history IF the [command] is distinct from previous one.
      * ```
      * | past         | now | future   |
      * | og p1 p2     | n   | f1 f2 f3 |

@@ -62,6 +62,7 @@ import data.geometry.Point
 import data.geometry.fromCorners
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
+import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Arg
 import domain.ChessboardPattern
@@ -263,10 +264,6 @@ private fun SelectionsCanvas(
         }
     }
 }
-
-private val IMAGINARY_CIRCLE_PATH_EFFECT = PathEffect.dashPathEffect(
-    floatArrayOf(5f, 5f)
-)
 
 private fun DrawScope.drawCircleOrLine(
     circle: CircleOrLine,
@@ -930,98 +927,6 @@ private inline fun DrawScope.drawHandles(
 }
 
 @Composable
-fun BoxScope.LockedCircleSelectionContextActions(
-    canvasSize: IntSize,
-    toolAction: (EditClusterTool) -> Unit,
-    getMostCommonCircleColorInSelection: () -> Color?
-) {
-    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
-        // duplicate & delete buttons
-        SimpleToolButton(
-            EditClusterTool.Duplicate,
-            topRightUnderScaleModifier,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.PickCircleColor,
-            halfBottomRightModifier,
-            tint = getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.Delete,
-            bottomRightModifier,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.Detach,
-            bottomLeftModifier,
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = toolAction
-        )
-    }
-}
-
-@Composable
-fun BoxScope.CircleSelectionContextActions(
-    canvasSize: IntSize,
-    showDirectionArrows: Boolean,
-    toolAction: (EditClusterTool) -> Unit,
-    getMostCommonCircleColorInSelection: () -> Color?,
-) {
-    // infinity button to the left-center
-    // + a way to trigger a visual effect over it
-//    SimpleButton(
-//        painterResource(Res.drawable.infinity),
-//        stringResource(Res.string.stub),
-//        Modifier.align(Alignment.CenterStart)
-//    ) {}
-    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
-        // expand & shrink buttons
-        SimpleToolButton(
-            EditClusterTool.Expand,
-            Modifier
-                .align(Alignment.TopStart)
-                .then(topRightModifier)
-            ,
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.Shrink,
-            scaleBottomRightModifier,
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = toolAction
-        )
-        // duplicate & delete buttons
-        SimpleToolButton(
-            EditClusterTool.Duplicate,
-            topRightUnderScaleModifier,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.PickCircleColor,
-            halfBottomRightModifier,
-            tint = getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.Delete,
-            bottomRightModifier,
-            onClick = toolAction
-        )
-        if (showDirectionArrows) {
-            SimpleToolButton(
-                EditClusterTool.SwapDirection,
-                bottomMidModifier,
-                tint = MaterialTheme.colorScheme.secondary,
-                onClick = toolAction
-            )
-        }
-    }
-}
-
-@Composable
 fun PointSelectionContextActions(
     canvasSize: IntSize,
     selectionIsLocked: Boolean,
@@ -1042,48 +947,6 @@ fun PointSelectionContextActions(
                 onClick = toolAction
             )
         }
-    }
-}
-
-@Composable
-fun BoxScope.CircleInterpolationInterface() {
-    // inBetween toggle
-    // settings icon to activate dialog
-    // ok button to confirm parameters
-    // n steps slider
-}
-
-// TODO: move it somewhere else, this location is bad
-@Composable
-fun BoxScope.ArcPathContextActions(
-    canvasSize: IntSize,
-    toolAction: (EditClusterTool) -> Unit,
-) {
-    val (w, h) = canvasSize
-    val verticalMargin = with (LocalDensity.current) {
-        (h*SelectionControlsPositions.RELATIVE_VERTICAL_MARGIN).toDp()
-    }
-    Button(
-        onClick = { toolAction(EditClusterTool.CompleteArcPath) },
-        Modifier // NOTE: this position is not optimal, especially for desktop
-            .align(Alignment.BottomEnd)
-            .offset(y = -verticalMargin)
-        ,
-        colors = ButtonDefaults.buttonColors()
-            .copy(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-    ) {
-        Icon(
-            painterResource(EditClusterTool.CompleteArcPath.icon),
-            stringResource(EditClusterTool.CompleteArcPath.name),
-        )
-        Spacer(Modifier.width(16.dp))
-        Text(
-            stringResource(EditClusterTool.CompleteArcPath.description),
-            style = MaterialTheme.typography.titleSmall
-        )
     }
 }
 
