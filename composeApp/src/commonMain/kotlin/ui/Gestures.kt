@@ -19,10 +19,10 @@ inline fun Modifier.reactiveCanvas(
     crossinline onDown: (position: Offset) -> Unit = { },
     crossinline onTap: (position: Offset, pointerCount: Int) -> Unit = { _, _ -> },
 //    crossinline onLongPress: (position: Offset) -> Unit = { },
-    crossinline onLongDragStart: (position: Offset) -> Unit = { },
-    crossinline onLongDrag: (delta: Offset) -> Unit = { },
-    crossinline onLongDragCancel: () -> Unit = { },
-    crossinline onLongDragEnd: () -> Unit = { },
+//    crossinline onLongDragStart: (position: Offset) -> Unit = { },
+//    crossinline onLongDrag: (delta: Offset) -> Unit = { },
+//    crossinline onLongDragCancel: () -> Unit = { },
+//    crossinline onLongDragEnd: () -> Unit = { },
 ): Modifier =
     this
         // alternative to zooming for desktop

@@ -83,13 +83,13 @@ import ui.tools.EditClusterTool
 import ui.visibleHalfPlanePath
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.time.measureTime
 
 @Composable
 fun BoxScope.EditClusterCanvas(
     viewModel: EditClusterViewModel,
     modifier: Modifier = Modifier
 ) {
+    // MAYBE: im supposed to remember { } all of these things
     val strokeWidth = with (LocalDensity.current) { 2.dp.toPx() }
     val circleStroke = Stroke(
         width = strokeWidth
@@ -146,6 +146,8 @@ fun BoxScope.EditClusterCanvas(
             }
         }
     }
+    if (viewModel.backgroundColor == null)
+        viewModel.backgroundColor = MaterialTheme.colorScheme.surface
 //    SelectionsCanvas(modifier, viewModel, selectionLinesColor, backgroundColor, selectedCircleColor, circleThiccStroke, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha)
     // key(viewModel.objectAlterationTrigger) { Canvas(...) }
     Canvas(
@@ -175,7 +177,7 @@ fun BoxScope.EditClusterCanvas(
 //        measureTime {
             translate(viewModel.translation.x, viewModel.translation.y) {
                 val visibleRect = size.toRect().translate(-viewModel.translation)
-                drawRegions(objects = viewModel.objects, regions = viewModel.regions, regionColor = viewModel.regionColor, chessboardPattern = viewModel.chessboardPattern, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, clusterPathAlpha = clusterPathAlpha, circleStroke = circleStroke)
+                drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, clusterPathAlpha = clusterPathAlpha, circleStroke = circleStroke)
                 drawAnimation(animations = animations, visibleRect = visibleRect, strokeWidth = strokeWidth)
                 if (viewModel.showCircles) {
                     drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
@@ -590,8 +592,8 @@ private fun DrawScope.drawSelectedCircles(
 private fun DrawScope.drawRegions(
     objects: List<GCircle?>,
     regions: List<LogicalRegion>,
-    regionColor: Color,
     chessboardPattern: ChessboardPattern,
+    chessboardColor: Color,
     showWireframes: Boolean,
     visibleRect: Rect,
     clusterPathAlpha: Float,
@@ -602,14 +604,14 @@ private fun DrawScope.drawRegions(
         if (showWireframes) {
             for (circle in objects)
                 if (circle is CircleOrLine)
-                    drawCircleOrLine(circle, visibleRect, regionColor, style = circleStroke)
+                    drawCircleOrLine(circle, visibleRect, chessboardColor, style = circleStroke)
         } else {
             if (chessboardPattern == ChessboardPattern.STARTS_COLORED)
-                drawRect(regionColor, visibleRect.topLeft, visibleRect.size)
+                drawRect(chessboardColor, visibleRect.topLeft, visibleRect.size)
             // FIX: flickering, eg when altering spirals
             for (circle in objects) { // it used to work poorly but is good now for some reason
                 if (circle is CircleOrLine)
-                    drawCircleOrLine(circle, visibleRect, regionColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
+                    drawCircleOrLine(circle, visibleRect, chessboardColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
             }
         }
     }

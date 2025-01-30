@@ -95,6 +95,7 @@ import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
 
 // MAYBE: use UiState functional pattern + StateFlow's instead of this mess
 // this class is obviously too big
@@ -143,7 +144,6 @@ class EditClusterViewModel : ViewModel() {
     /** custom colors for circle/line borders or points */
     val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
     var backgroundColor: Color? by mutableStateOf(null)
-        private set
 //    val hiddenObjects: Set<Ix> by mutableStateOf(emptySet()) // TODO
     var showCircles: Boolean by mutableStateOf(true)
         private set
@@ -157,6 +157,8 @@ class EditClusterViewModel : ViewModel() {
     var restrictRegionsToSelection: Boolean by mutableStateOf(false)
         private set
     var chessboardPattern: ChessboardPattern by mutableStateOf(ChessboardPattern.NONE)
+        private set
+    var chessboardColor: Color by mutableStateOf(regionColor)
         private set
 
     val circleSelectionIsActive: Boolean by derivedStateOf {
@@ -260,20 +262,20 @@ class EditClusterViewModel : ViewModel() {
             bestCenterY = computeAbsoluteCenter()?.y,
             chessboardPattern = chessboardPattern != ChessboardPattern.NONE,
             chessboardPatternStartsColored = chessboardPattern == ChessboardPattern.STARTS_COLORED,
-            initialRegionColor = regionColor
+            chessboardColor = chessboardColor
         ))
     }
 
     fun exportAsSvg(name: String = DdcV4.DEFAULT_NAME): String {
         val start = absolute(Offset.Zero)
         return constellation2svg(
-            toConstellation(),
+            constellation = toConstellation(),
             width = canvasSize.width.toFloat(),
             height = canvasSize.height.toFloat(),
             startX = start.x, startY = start.y,
             encodeCirclesAndPoints = showCircles,
             chessboardPattern = chessboardPattern,
-            chessboardCellColor = regionColor,
+            chessboardCellColor = chessboardColor,
             name = name,
         )
     }
@@ -298,8 +300,8 @@ class EditClusterViewModel : ViewModel() {
                     if (!ddc.chessboardPattern) ChessboardPattern.NONE
                     else if (ddc.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
                     else ChessboardPattern.STARTS_TRANSPARENT
-                ddc.initialRegionColor?.let {
-                    regionColor = it
+                ddc.chessboardColor?.let {
+                    chessboardColor = it
                 }
             },
             { e ->
@@ -1210,6 +1212,9 @@ class EditClusterViewModel : ViewModel() {
             ChessboardPattern.STARTS_COLORED -> ChessboardPattern.STARTS_TRANSPARENT
             ChessboardPattern.STARTS_TRANSPARENT -> ChessboardPattern.NONE
         }
+        if (chessboardPattern != ChessboardPattern.NONE) {
+            chessboardColor = regionColor
+        }
     }
 
     fun setNewRegionColor(color: Color) {
@@ -1867,7 +1872,9 @@ class EditClusterViewModel : ViewModel() {
                 }
             }
         }
+//        measureTime {
         updateExpressions(targets)
+//        }.also { println("update time: $it") }
     }
 
     // MAYBE: handle key arrows as panning
@@ -2067,7 +2074,10 @@ class EditClusterViewModel : ViewModel() {
         scaleSelection(zoom)
     }
 
+    // maybe enable it &
+    // make long drag = pan zoom
     fun onLongPress(position: Offset) {
+        // select siblings & parents for easy copy
         if (mode.isSelectingCircles()) {
             selection.let {
                 if (it.size == 1) {
@@ -2632,8 +2642,9 @@ class EditClusterViewModel : ViewModel() {
             selection = selection.mapNotNull { reindexing[it] },
             centerX = center.x,
             centerY = center.y,
-            chessboardPattern = chessboardPattern,
             regionColor = regionColor,
+            chessboardPattern = chessboardPattern,
+            chessboardColor = chessboardColor,
         )
     }
 
@@ -2664,9 +2675,12 @@ class EditClusterViewModel : ViewModel() {
         }
         selection = state.selection
         centerizeTo(state.centerX, state.centerY)
-        chessboardPattern = state.chessboardPattern
         state.regionColor?.let {
             regionColor = it
+        }
+        chessboardPattern = state.chessboardPattern
+        state.chessboardColor?.let {
+            chessboardColor = it
         }
     }
 
@@ -2694,8 +2708,9 @@ class EditClusterViewModel : ViewModel() {
         // NOTE: saving VM.translation instead has issues (on desktop window size rapidly passes thru 3 sizes)
         val centerX: Float,
         val centerY: Float,
-        val chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
         val regionColor: ColorAsCss? = null,
+        val chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
+        val chessboardColor: ColorAsCss? = null,
     )
 
     companion object {

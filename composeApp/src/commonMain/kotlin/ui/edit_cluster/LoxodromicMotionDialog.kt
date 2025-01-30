@@ -203,6 +203,7 @@ private fun AngleTextField(
         angleTFValue,
         onValueChange = { newValue ->
             angleTFValue = newValue
+            updateSlider()
         },
         modifier = modifier
             .onKeyEvent {
@@ -292,7 +293,7 @@ private fun DilationTextField(
     setDilation: (newDilation: Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val s = dilation.formatDecimals(2)
+    val s = dilation.formatDecimals(3)
     var dilationTFValue by remember(dilation) {
         mutableStateOf(TextFieldValue(s, TextRange(s.length)))
     }
@@ -306,6 +307,7 @@ private fun DilationTextField(
         dilationTFValue,
         onValueChange = { newValue ->
             dilationTFValue = newValue
+            updateSlider()
         },
         modifier = modifier
             .onKeyEvent {
@@ -364,6 +366,7 @@ private fun StepsTextField(
         stepsTFValue,
         onValueChange = { newValue ->
             stepsTFValue = newValue
+            updateSlider()
         },
         modifier = modifier
             .onKeyEvent {

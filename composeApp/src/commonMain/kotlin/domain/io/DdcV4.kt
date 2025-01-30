@@ -10,8 +10,8 @@ import domain.expressions.ObjectConstruct
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Serializable
 @Immutable
+@Serializable
 data class DdcV4(
     val name: String = DEFAULT_NAME,
     val backgroundColor: ColorAsCss? = DEFAULT_BACKGROUND_COLOR,
@@ -21,14 +21,14 @@ data class DdcV4(
     val chessboardPattern: Boolean = DEFAULT_CHESSBOARD_PATTERN,
     /** one of two possible starting chessboard phases, true=colored=bg filled with color */
     val chessboardPatternStartsColored: Boolean = DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED,
-    /** used with chessboard pattern, 2 colors are used: [initialRegionColor] and [backgroundColor] */
-    val initialRegionColor: ColorAsCss? = DEFAULT_INITIAL_REGION_COLOR,
+    /** used with chessboard pattern, 2 colors are used: [chessboardColor] and [backgroundColor] */
+    val chessboardColor: ColorAsCss? = DEFAULT_CHESSBOARD_COLOR,
     // using Map<Int, _> instead of list to force yaml to use numbered list
     val objects: Map<Ix, Token.Object>, // this disallows missing "objects" field, and produces exception on DdcV3
     val arcPaths: List<Token.ArcPath> = DEFAULT_ARC_PATHS,
 ) {
-    @Serializable
     @Immutable
+    @Serializable
     sealed interface Token {
         @Serializable
         @SerialName("ObjectToken")
@@ -81,6 +81,7 @@ data class DdcV4(
         val DEFAULT_BEST_CENTER_Y: Float? = null
         const val DEFAULT_CHESSBOARD_PATTERN = false
         const val DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED = true
+        val DEFAULT_CHESSBOARD_COLOR: Color? = null
         val DEFAULT_INITIAL_REGION_COLOR: Color? = null
         val DEFAULT_ARC_PATHS = emptyList<Token.ArcPath>()
     }

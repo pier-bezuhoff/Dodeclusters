@@ -122,19 +122,19 @@ fun EditClusterScreen(
     val viewModel: EditClusterViewModel = viewModel(
         factory = EditClusterViewModel.Factory
     )
-    val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
+//    val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(
         modifier =
         if (keyboardActions == null)
             Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
         else Modifier,
-        snackbarHost = { SnackbarHost(snackbarHostState) { data ->
-            Snackbar(data,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        } },
+//        snackbarHost = { SnackbarHost(snackbarHostState) { data ->
+//            Snackbar(data,
+//                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+//                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+//            )
+//        } },
         floatingActionButton = {
             if (!isLandscape && viewModel.showUI) {
                 // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)

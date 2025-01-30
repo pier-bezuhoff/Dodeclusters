@@ -4,6 +4,7 @@ import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Point
 import domain.Ix
+import kotlin.math.abs
 
 /**
  * tier = 0: free object,
@@ -140,10 +141,15 @@ class ExpressionForest(
 
     /** don't forget to upscale the result afterwards! */
     fun addMultiExpr(expr: Expr.OneToMany): ExprResult {
+        val periodicRotation =
+            expr is Expr.LoxodromicMotion && expr.parameters.dilation == 0.0 && abs(expr.parameters.angle) == 360f
         val result = expr.eval(get)
         val ix0 = calculateNextIndex()
         val tier = computeTier(ix0, expr)
-        repeat(result.size) { outputIndex ->
+        val resultSize =
+            if (periodicRotation) result.size - 1 // small hack to avoid duplicating original object
+            else result.size
+        repeat(resultSize) { outputIndex ->
             val ix = ix0 + outputIndex
             expressions[ix] = Expression.OneOf(expr, outputIndex)
             expr.args.forEach { parentIx ->
@@ -158,12 +164,6 @@ class ExpressionForest(
         }
         println("$ix0:${ix0+result.size} -> $expr -> $result")
         return result
-    }
-
-    fun findExpression(expression: Expression): Ix? {
-        return expressions.entries
-            .firstOrNull { (_, e) -> e == expression }
-            ?.key
     }
 
     fun findExpr(expr: Expr): List<Ix> {
