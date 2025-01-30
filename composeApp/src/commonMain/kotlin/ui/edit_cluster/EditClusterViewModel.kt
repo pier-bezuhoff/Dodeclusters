@@ -961,7 +961,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     // NOTE: part boundaries get messed up when we alter a big structure like spiral
-    /** -> (compressed part, verbose part involving all circles) surrounding clicked position */
+    /** @return (compressed part, verbose part involving all circles) surrounding clicked position */
     private fun selectPartAt(
         visiblePosition: Offset,
         boundingCircles: List<Ix>? = null
@@ -991,7 +991,6 @@ class EditClusterViewModel : ViewModel() {
         boundingCircles: List<Ix>? = null,
         setSelectionToRegionBounds: Boolean = false
     ) {
-//        chessboardPattern = ChessboardPattern.NONE
         val (part, part0) = selectPartAt(visiblePosition, boundingCircles)
         val outerParts = regions.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
         if (outerParts.isEmpty()) {
@@ -1002,7 +1001,7 @@ class EditClusterViewModel : ViewModel() {
             }
             println("added $part")
         } else {
-            val sameExistingPart = regions.singleOrNull {
+            val sameExistingPart = outerParts.singleOrNull {
                 part.insides == it.insides && part.outsides == it.outsides
             }
             recordCommand(Command.FILL_REGION, unique = true)
@@ -1018,6 +1017,7 @@ class EditClusterViewModel : ViewModel() {
                     println("recolored $sameExistingPart")
                 }
             } else {
+                // MAYBE: if there are many outerParts we dont delete them?
                 regions.removeAll(outerParts)
                 if (
                     outerParts.all { it.fillColor == outerParts[0].fillColor } &&
@@ -1207,6 +1207,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun toggleChessboardPattern() {
+        recordCommand(Command.FILL_REGION)
         chessboardPattern = when (chessboardPattern) {
             ChessboardPattern.NONE -> ChessboardPattern.STARTS_COLORED
             ChessboardPattern.STARTS_COLORED -> ChessboardPattern.STARTS_TRANSPARENT

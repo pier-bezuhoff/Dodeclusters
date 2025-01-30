@@ -395,6 +395,8 @@ data class Circle(
                 }
             }
 
+        private const val TANGENTIAL_TOUCH_EPSILON = 2 * EPSILON
+
         // NOTE: on android triple tangential intersections are brittle
         /** @return list of 0, 1 or 2 intersection points. When there are 2 intersection points,
          * they are ordered as follows:
@@ -410,7 +412,7 @@ data class Circle(
                     val (a1, b1, c1) = circle1
                     val (a2, b2, c2) = circle2
                     val w = a1*b2 - a2*b1
-                    if (abs(w / circle1.norm / circle2.norm) < EPSILON) { // parallel condition
+                    if (abs(w / circle1.norm / circle2.norm) < TANGENTIAL_TOUCH_EPSILON) { // parallel condition
                         listOf(Point.CONFORMAL_INFINITY)
                     } else {
                         val wx = b1*c2 - b2*c1 // det in homogenous coordinates
@@ -428,9 +430,9 @@ data class Circle(
                     val (cx, cy, r) = circle2
                     val (px, py) = circle1.project(Point(cx, cy))
                     val distance = hypot(px - cx, py - cy)
-                    if (distance > r + EPSILON) {
+                    if (distance >= r + TANGENTIAL_TOUCH_EPSILON) {
                         emptyList()
-                    } else if (abs(distance - r) < EPSILON) { // they touch (hold hands ///)
+                    } else if (abs(distance - r) < TANGENTIAL_TOUCH_EPSILON) { // they touch (hold hands ///)
                         listOf(Point(px, py))
                     } else {
                         val pToIntersection = sqrt(r.pow(2) - distance * distance)
@@ -456,11 +458,11 @@ data class Circle(
                     val dcy = y2 - y1
                     val d2 = dcx*dcx + dcy*dcy
                     val d = sqrt(d2) // distance between centers
-                    if (abs(r1 - r2) > d + EPSILON || d > r1 + r2 + EPSILON) {
+                    if (abs(r1 - r2) >= d + TANGENTIAL_TOUCH_EPSILON || d >= r1 + r2 + TANGENTIAL_TOUCH_EPSILON) {
                         emptyList()
                     } else if (
-                        abs(abs(r1 - r2) - d) < EPSILON || // inner touch
-                        abs(d - r1 - r2) < EPSILON // outer touch
+                        abs(abs(r1 - r2) - d) < TANGENTIAL_TOUCH_EPSILON || // inner touch
+                        abs(d - r1 - r2) < TANGENTIAL_TOUCH_EPSILON // outer touch
                     ) {
                         listOf(Point(x1 + dcx / d * r1, y1 + dcy / d * r1))
                     } else {
