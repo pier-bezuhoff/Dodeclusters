@@ -27,7 +27,6 @@ import data.geometry.ArcPathCircle
 import data.geometry.ArcPathPoint
 import data.geometry.Circle
 import data.geometry.CircleOrLine
-import data.geometry.CircleOrLineOrImaginaryCircle
 import data.geometry.GCircle
 import data.geometry.ImaginaryCircle
 import data.geometry.Line
@@ -45,7 +44,6 @@ import domain.Ix
 import domain.PartialArgList
 import domain.PointSnapResult
 import domain.angleDeg
-import domain.cluster.ArcPath
 import domain.cluster.ClusterV1
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
@@ -79,6 +77,7 @@ import domain.snapAngle
 import domain.snapPointToCircles
 import domain.snapPointToPoints
 import domain.sortedByFrequency
+import domain.toArgPoint
 import domain.transpose
 import domain.tryCatch2
 import getPlatform
@@ -102,7 +101,11 @@ import kotlin.time.Duration.Companion.seconds
 // TODO: decouple navigation & tools/categories
 @Suppress("MemberVisibilityCanBePrivate")
 class EditClusterViewModel : ViewModel() {
+    /** All existing [GCircle]s; `null`s correspond either to unrealized outputs of
+     * [Expr.OneToMany], or to forever deleted objects (they have `null` [expressions]),
+     * or (rarely) to mismatching type casts */
     val objects: SnapshotStateList<GCircle?> = mutableStateListOf()
+    /** Filled regions delimited by some objects from [objects] */
     val regions: SnapshotStateList<LogicalRegion> = mutableStateListOf()
     var expressions: ExpressionForest = ExpressionForest( // stub
         initialExpressions = emptyMap(),
@@ -141,7 +144,7 @@ class EditClusterViewModel : ViewModel() {
     val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
     var backgroundColor: Color? by mutableStateOf(null)
         private set
-    val hiddenObjects: Set<Ix> by mutableStateOf(emptySet()) // TODO
+//    val hiddenObjects: Set<Ix> by mutableStateOf(emptySet()) // TODO
     var showCircles: Boolean by mutableStateOf(true)
         private set
     /** which style to use when drawing parts: true = stroke, false = fill */
@@ -214,8 +217,8 @@ class EditClusterViewModel : ViewModel() {
 
     var partialArcPath: PartialArcPath? by mutableStateOf(null)
         private set
-    var arcPaths: List<ArcPath> by mutableStateOf(emptyList())
-        private set
+//    var arcPaths: List<ArcPath> by mutableStateOf(emptyList())
+//        private set
 //    val pathCache: MutableMap<Ix, Path?> = mutableMapOf()
 
     var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
@@ -1027,8 +1030,9 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    /** absolute positions */
-    fun getSelectionRect(): Rect? {
+    /** @return [Rect] using absolute positions */
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun getSelectionRect(): Rect? {
         val selectedCircles = selection.mapNotNull { objects[it] as? Circle }
         if (selectedCircles.isEmpty() || selection.any { objects[it] is Line })
             return null
@@ -2742,9 +2746,3 @@ enum class InversionOfControl {
     /** You can move dependent objects with all their parents */
     LEVEL_INFINITY
 }
-
-private fun PointSnapResult.PointToPoint.toArgPoint(): Arg.Point =
-    when (this) {
-        is PointSnapResult.Free -> Arg.Point.XY(this.result)
-        is PointSnapResult.Eq -> Arg.Point.Index(this.pointIndex)
-    }

@@ -157,7 +157,7 @@ fun BoxScope.EditClusterCanvas(
                 onDown = viewModel::onDown,
                 onPanZoomRotate = viewModel::onPanZoomRotate,
                 onVerticalScroll = viewModel::onVerticalScroll,
-                onLongPress = viewModel::onLongPress,
+//                onLongPress = viewModel::onLongPress,
 //                onLongDragStart = viewModel::onLongDragStart,
 //                onLongDrag = viewModel::onLongDrag,
 //                onLongDragCancel = viewModel::onLongDragCancel,
@@ -1041,6 +1041,14 @@ fun PointSelectionContextActions(
             )
         }
     }
+}
+
+@Composable
+fun BoxScope.CircleInterpolationInterface() {
+    // inBetween toggle
+    // settings icon to activate dialog
+    // ok button to confirm parameters
+    // n steps slider
 }
 
 // TODO: move it somewhere else, this location is bad

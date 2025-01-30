@@ -29,8 +29,8 @@ class ExpressionForest(
     private val get: (Ix) -> GCircle?, // TODO: replace with params for every functino that needs these 2
     private val set: (Ix, GCircle?) -> Unit,
 ) {
-    // for the VM.circles list null's correspond to unrealized outputs of multi-functions
-    // here null's correspond to free objects
+    // for the VM.objects list nulls correspond to unrealized outputs of multi-functions
+    // here nulls correspond to free objects
     val expressions: MutableMap<Ix, Expression?> = initialExpressions.toMutableMap()
 
     /** parent index -> set of all its children with *direct* dependency */
@@ -115,9 +115,7 @@ class ExpressionForest(
         }
         val result = expr.eval(get)
         return result.firstOrNull()
-            .also {
-                println("$ix -> $expr -> $result")
-            }
+            .also { println("$ix -> $expr -> $result") }
     }
 
     /** don't forget to upscale the result afterwards! */
@@ -223,7 +221,8 @@ class ExpressionForest(
     }
 
     /**
-     * delete [ixs] nodes and all of their children from the [ExpressionForest]
+     * Delete [ixs] nodes and all of their children from the [ExpressionForest] by
+     * setting [expressions]`[...] = null` and clearing [children], [ix2tier], [tier2ixs]
      * @return all the deleted nodes
      * */
     fun deleteNodes(ixs: List<Ix>): Set<Ix> {
@@ -320,6 +319,55 @@ class ExpressionForest(
                 addFree()
             }
         }
+    }
+
+    /**
+     * Change [Parameters] of all outputs of a given [Expr.OneToMany] to the one in [newExpr].
+     * Assumption: old expr and [newExpr] are of the same type.
+     * @param[targetIndices] indices of all [Expression.OneOf] of the given expression
+     * @param[maxRange] all indices that were ever used to hold results of the expr. They
+     * must start with [targetIndices], and then potentially contain `null`-ed indices.
+     * @return updated ([targetIndices], [maxRange])
+     * */
+    fun adjustMultiExpr(
+        targetIndices: List<Ix>,
+        maxRange: List<Ix>,
+        newExpr: Expr.OneToMany
+    ): Pair<List<Ix>, List<Ix>> {
+        val i0 = targetIndices.first()
+        val oldExpr = expressions[i0]!!.expr
+        require(oldExpr.args == newExpr.args && targetIndices.all { expressions[it] == oldExpr })
+        val tier = ix2tier[i0]!!
+//        val tier = computeTier(i0, newExpr)
+        var newMaxRange = maxRange
+        val result = newExpr.eval(get)
+        val sizeIncrease = result.size - targetIndices.size
+        val newTargetIndices: List<Ix>
+        if (sizeIncrease > 0) {
+            val sizeOverflow = result.size - targetIndices.size
+            if (sizeOverflow > 0) {
+                newMaxRange = newMaxRange + (expressions.size until expressions.size + sizeOverflow)
+            }
+            val addedIndices = newMaxRange.take(result.size).drop(targetIndices.size)
+            for (parentIx in newExpr.args)
+                children[parentIx] = (children[parentIx] ?: emptySet()) + addedIndices
+            tier2ixs[tier] = tier2ixs[tier] + addedIndices
+            for (ix in addedIndices)
+                ix2tier[ix] = tier
+            newTargetIndices = targetIndices + addedIndices
+        } else if (sizeIncrease == 0) {
+            newTargetIndices = targetIndices
+        } else {
+            val excessIndices = targetIndices.drop(result.size)
+            deleteNodes(excessIndices)
+            newTargetIndices = targetIndices.take(result.size)
+        }
+        for (i in result.indices) {
+            val ix = newTargetIndices[i]
+            expressions[ix] = Expression.OneOf(newExpr, outputIndex = i)
+            set(ix, result[i])
+        }
+        return Pair(newTargetIndices, newMaxRange)
     }
 
     /**

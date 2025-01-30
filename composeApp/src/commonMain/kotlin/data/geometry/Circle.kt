@@ -395,6 +395,7 @@ data class Circle(
                 }
             }
 
+        // NOTE: on android triple tangential intersections are brittle
         /** @return list of 0, 1 or 2 intersection points. When there are 2 intersection points,
          * they are ordered as follows:
          * [circle1] "needle" (internal orientation)

@@ -2,6 +2,7 @@ package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import domain.Ix
 import domain.cluster.LogicalRegion
 import kotlinx.serialization.Serializable
 
@@ -35,4 +36,16 @@ sealed interface SubMode {
     data class FlowFill(
         val lastQualifiedPart: LogicalRegion? = null
     ) : SubMode
+
+    /** sub-mode accompanying [ToolMode], that allows live adjustment of expression parameters */
+    sealed interface ToolExtra : SubMode
+    /**
+     * @property[outputIndices] indices containing outputs of this circle interpolation
+     * @property[maxOutputRange] contains [outputIndices] and additional `null`ed indices that
+     * were previously allocated for this circle interpolation
+     * */
+    data class CircleInterpolationExtra(
+        val outputIndices: List<Ix>,
+        val maxOutputRange: List<Ix>,
+    ) : ToolExtra // maybe allow it in Drag mode
 }
