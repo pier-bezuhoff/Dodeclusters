@@ -1,5 +1,6 @@
 package ui.edit_cluster
 
+import PlatformKind
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -7,22 +8,15 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -45,8 +39,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
@@ -62,7 +58,6 @@ import data.geometry.Point
 import data.geometry.fromCorners
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
-import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Arg
 import domain.ChessboardPattern
@@ -73,11 +68,10 @@ import domain.rotateBy
 import getPlatform
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.stringResource
 import ui.SimpleToolButton
 import ui.circle2path
-import ui.region2path
 import ui.reactiveCanvas
+import ui.region2path
 import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
@@ -129,6 +123,8 @@ fun BoxScope.EditClusterCanvas(
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableStateMapOf() }
     val coroutineScope = rememberCoroutineScope()
+    val screenshotableGraphicsLayer = rememberGraphicsLayer()
+    screenshotableGraphicsLayer.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
     coroutineScope.launch { // listen to circle animations
         viewModel.animations.collect { event ->
             when (event) {
@@ -144,6 +140,33 @@ fun BoxScope.EditClusterCanvas(
                     )
                     animations.remove(event)
                 }
+            }
+        }
+    }
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    coroutineScope.launch {
+        viewModel.takeScreenshotFlow.collect { deferred ->
+            if (deferred != null) {
+                screenshotableGraphicsLayer.record(density, layoutDirection, viewModel.canvasSize) {
+                    translate(viewModel.translation.x, viewModel.translation.y) {
+                        val visibleRect = size.toRect().translate(-viewModel.translation)
+                        drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, clusterPathAlpha = clusterPathAlpha, circleStroke = circleStroke)
+                        if (viewModel.showCircles) {
+                            drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
+                        }
+                        drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, showCircles = viewModel.showCircles, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius)
+                    }
+                }
+                var screenshotBitmap = screenshotableGraphicsLayer.toImageBitmap()
+                screenshotableGraphicsLayer.record(density, layoutDirection, viewModel.canvasSize) {
+                    viewModel.backgroundColor?.let { bgColor ->
+                        drawRect(bgColor)
+                    } // we have to do this to properly layer bg
+                    drawImage(screenshotBitmap)
+                }
+                screenshotBitmap = screenshotableGraphicsLayer.toImageBitmap()
+                deferred.complete(screenshotBitmap)
             }
         }
     }
@@ -207,6 +230,13 @@ fun BoxScope.EditClusterCanvas(
         ) {
             ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
         }
+    }
+}
+
+@Composable
+fun ScreenshotableCanvas(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+
     }
 }
 

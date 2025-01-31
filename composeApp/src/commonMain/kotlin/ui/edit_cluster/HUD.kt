@@ -17,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -137,6 +136,8 @@ fun BoxScope.CircleSelectionContextActions(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoxScope.CircleInterpolationInterface(
+    updateParameters: (InterpolationParameters) -> Unit,
+    openDetailsDialog: () -> Unit,
     defaults: DefaultInterpolationParameters,
 ) {
     val minCount = defaults.minCircleCount
@@ -153,18 +154,20 @@ fun BoxScope.CircleInterpolationInterface(
         if (coDirected) !interpolateInBetween else interpolateInBetween
     )
     LaunchedEffect(params) {
-        // upd VM
+        // MAYBE: instead of this just use VM.paramsFlow
+        updateParameters(params)
     }
     Column() {
         SimpleToolButton(EditClusterTool.DetailedAdjustment) {
-            // show dialog
+            openDetailsDialog()
+            // on confirm from dialog reset this submode
         }
         OnOffButton(
             painterResource(EditClusterTool.InBetween.icon),
             stringResource(EditClusterTool.InBetween.name),
             isOn = interpolateInBetween
         ) {
-            interpolateInBetween = !interpolateInBetween
+            interpolateInBetween = !interpolateInBetween // triggers params upd => triggers VM.updParams
         }
         Row {
             Icon( // icon for the slider

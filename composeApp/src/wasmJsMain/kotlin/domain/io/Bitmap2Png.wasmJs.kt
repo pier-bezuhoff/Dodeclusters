@@ -18,50 +18,65 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import com.github.ajalt.colormath.model.RGB
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.choose_name
 import dodeclusters.composeapp.generated.resources.name
 import dodeclusters.composeapp.generated.resources.ok_description
 import kotlinx.browser.document
-import kotlinx.browser.window
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import org.khronos.webgl.Uint8ClampedArray
+import org.khronos.webgl.set
+import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLAnchorElement
-import org.w3c.dom.events.Event
+import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.url.URL
-import org.w3c.files.Blob
-import org.w3c.files.BlobPropertyBag
+import kotlin.math.roundToInt
 
+// it aint working and hangs on download
 @Composable
-actual fun SaveFileButton(
+actual fun SaveBitmapAsPngButton(
     iconPainter: Painter,
     contentDescription: String,
-    saveData: SaveData<String>,
+    saveData: SaveData<Result<ImageBitmap>>,
     modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var openDialog by remember { mutableStateOf(false) }
-    var ddcName by remember { mutableStateOf(TextFieldValue(
+    var screenshotName by remember { mutableStateOf(
+        TextFieldValue(
         text = saveData.name,
         selection = TextRange(saveData.name.length) // important to insert cursor AT THE END
-    )) }
+    )
+    ) }
     val textFieldFocusRequester = remember { FocusRequester() }
 
     fun onConfirm() {
         openDialog = false
         coroutineScope.launch {
-            val data = saveData.copy(name = ddcName.text)
+            val data = saveData.copy(name = screenshotName.text)
             try {
-                downloadTextFile3(data.filename, data.prepareContent(ddcName.text))
-                onSaved(true)
+                data.prepareContent(screenshotName.text).fold(
+                    onSuccess = { bitmap ->
+                        downloadBitmapAsPng(bitmap, data.filename)
+                        onSaved(true)
+                    },
+                    onFailure = {
+                        onSaved(false)
+                    }
+                )
             } catch (e: Exception) {
                 onSaved(false)
             }
@@ -87,8 +102,8 @@ actual fun SaveFileButton(
             title = { Text(stringResource(Res.string.choose_name)) },
             text = {
                 OutlinedTextField(
-                    value = ddcName,
-                    onValueChange = { ddcName = it },
+                    value = screenshotName,
+                    onValueChange = { screenshotName = it },
                     label = { Text(stringResource(Res.string.name)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions( // smart ass enter capturing
@@ -112,53 +127,47 @@ actual fun SaveFileButton(
     }
 }
 
-// showSaveFilePicker() is still experimental, cmon js bros...
-
-// global js function
-external fun encodeURIComponent(str: String): String
-
-// saves as "download"
-fun downloadTextFile1(content: String) {
-    val contentType = "data:application/octet-stream"
-    val uriContent = contentType + "," + encodeURIComponent(content)
-    val newWindow = window.open(uriContent, "New document")
+private fun downloadBitmapAsPng(bitmap: ImageBitmap, filename: String) {
+    val canvas = document.createElement("canvas") as HTMLCanvasElement
+    canvas.width = bitmap.width
+    canvas.height = bitmap.height
+    val context = canvas.getContext("2d") as CanvasRenderingContext2D
+    val imageData = context.createImageData(bitmap.width.toDouble(), bitmap.height.toDouble())
+    val pixelData = imageData.data
+    val pixelMap = bitmap.toPixelMap()
+    for (y in 0 until pixelMap.height)
+        for (x in 0 until pixelMap.width) {
+            val color = pixelMap[x, y]
+            val rgba = RGB(color.red, color.green, color.blue, color.alpha)
+            // reference: https://developer.mozilla.org/en-US/docs/Web/API/ImageData
+            val i = (x + y * pixelMap.width) * 4
+            setMethodImplForUint8ClampedArray(pixelData, i + 0, rgba.redInt)
+            setMethodImplForUint8ClampedArray(pixelData, i + 1, rgba.greenInt)
+            setMethodImplForUint8ClampedArray(pixelData, i + 2, rgba.blueInt.coerceIn(0, 255))
+            setMethodImplForUint8ClampedArray(pixelData, i + 3, rgba.alphaInt)
+//            pixelData[i] = rgba.redInt.toByte() // r
+//            pixelData[i + 1] = rgba.greenInt.toByte() // g
+//            pixelData[i + 2] = rgba.blueInt.coerceIn(0, 255).toByte() // b
+//            pixelData[i + 3] = 255.toByte() //rgba.alphaInt.toByte() // a
+        }
+    context.putImageData(imageData, 0.0, 0.0)
+    canvas.toBlob({ blob ->
+        if (blob == null) {
+            println("failed to Globglogabgalab")
+        } else {
+            val link = document.createElement("a") as HTMLAnchorElement
+            link.href = URL.createObjectURL(blob)
+            link.download = filename
+            document.body?.appendChild(link)
+            link.click() // downloads fully transparent png
+            document.body?.removeChild(link)
+            URL.revokeObjectURL(link.href)
+        }
+    }, "image/png")
 }
 
-// saves as "download"
-fun downloadTextFile2(content: String) {
-    val contentType = "data:application/octet-stream"
-    val uriContent = contentType + "," + encodeURIComponent(content)
-    window.location.href = uriContent
-}
-
-// saves properly with given filename
-fun downloadTextFile3(filename: String, content: String) {
-    val blobContent = JsArray<JsAny?>()
-    blobContent[0] = content.toJsString()
-    // Q: why text/plain and not yaml mime or smth else?
-    val file = Blob(blobContent, BlobPropertyBag("text/plain"))
-    (document.createElement("a") as? HTMLAnchorElement)?.let { a ->
-        val url = URL.Companion.createObjectURL(file)
-        a.href = url
-        a.download = filename
-        document.body?.appendChild(a)
-        a.click()
-        document.body?.removeChild(a)
-        URL.revokeObjectURL(url)
-    }
-}
-
-// saves properly with given filename
-fun downloadTextFile4(filename: String, content: String) {
-    val contentType = "data:application/octet-stream"
-    val uriContent = contentType + ";charset=utf-8," + encodeURIComponent(content)
-    val a = document.createElement("a") as HTMLAnchorElement
-    a.href = uriContent
-    a.download = filename
-    (document.createEvent("MouseEvent") as? Event)?.let { event ->
-        event.initEvent("click", bubbles = true, cancelable = true)
-        a.dispatchEvent(event)
-    } ?: run {
-        a.click()
-    }
+// default one with bytes doesnt do sht
+@Suppress("UNUSED_PARAMETER")
+internal fun setMethodImplForUint8ClampedArray(obj: Uint8ClampedArray, index: Int, value: Int) {
+    js("obj[index] = value;")
 }

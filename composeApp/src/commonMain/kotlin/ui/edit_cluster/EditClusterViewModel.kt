@@ -12,6 +12,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,7 @@ import domain.expressions.IncidenceParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.ObjectConstruct
+import domain.expressions.Parameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
@@ -81,10 +83,14 @@ import domain.toArgPoint
 import domain.transpose
 import domain.tryCatch2
 import getPlatform
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -95,7 +101,6 @@ import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.measureTime
 
 // MAYBE: use UiState functional pattern + StateFlow's instead of this mess
 // this class is obviously too big
@@ -208,10 +213,15 @@ class EditClusterViewModel : ViewModel() {
         private set
 
     private val _animations: MutableSharedFlow<ObjectAnimation> = MutableSharedFlow()
+    // i'll be real this stupid practice is annoying and ugly & a hack
     val animations: SharedFlow<ObjectAnimation> = _animations.asSharedFlow()
 
+    val takeScreenshotFlow: MutableStateFlow<CompletableDeferred<ImageBitmap>?> =
+        MutableStateFlow(null)
+
     val snackbarMessages: MutableSharedFlow<SnackbarMessage> =
-        MutableSharedFlow(extraBufferCapacity = 1)
+        MutableSharedFlow()
+//        MutableSharedFlow(extraBufferCapacity = 1)
 //        MutableSharedFlow(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     var openedDialog: DialogType? by mutableStateOf(null)
@@ -2103,9 +2113,9 @@ class EditClusterViewModel : ViewModel() {
     private fun queueSnackbarMessage(snackbarMessage: SnackbarMessage) {
         // Q: idk how but somehow this breaks Windows/Chrome
 //        snackbarMessages.tryEmit(snackbarMessage)
-//        viewModelScope.launch {
-//            snackbarMessages.emit(snackbarMessage)
-//        }
+        viewModelScope.launch {
+            snackbarMessages.emit(snackbarMessage)
+        }
     }
 
     /** Signals locked state to the user with animation & snackbar message */
@@ -2555,6 +2565,64 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
+    fun updateParameters(parameters: Parameters) {
+        val sm = submode
+        if (sm is SubMode.ExprAdjustment)
+            when {
+                mode == ToolMode.CIRCLE_INTERPOLATION &&
+                sm.expr is Expr.CircleInterpolation &&
+                parameters is InterpolationParameters -> {
+                    val newExpr = sm.expr.copy(parameters = parameters)
+                    val (newIndices, newRange) = expressions.adjustMultiExpr(
+                        targetIndices = sm.outputIndices,
+                        maxRange = sm.maxOutputRange,
+                        newExpr = newExpr
+                    )
+                    submode = sm.copy(expr = newExpr, outputIndices = newIndices, maxOutputRange = newRange)
+                }
+            }
+    }
+
+    fun openDetailsDialog() {
+        openedDialog = when (mode) {
+            ToolMode.CIRCLE_INTERPOLATION -> DialogType.CIRCLE_INTERPOLATION
+            ToolMode.CIRCLE_EXTRAPOLATION -> DialogType.CIRCLE_EXTRAPOLATION
+            ToolMode.LOXODROMIC_MOTION -> DialogType.LOXODROMIC_MOTION
+            else -> null
+        }
+    }
+
+    /** @return Assigned [newInBetween] */
+    fun toggleInBetween(
+        newInBetween: Boolean? = null,
+        newComplementary: Boolean? = null,
+    ): Boolean? {
+        when (mode) {
+            ToolMode.CIRCLE_INTERPOLATION -> {
+                when (val s = submode) {
+                    is SubMode.ExprAdjustment -> {
+                        when (val expr = s.expr) {
+                            is Expr.CircleInterpolation -> {
+                                val newValue = newInBetween ?: !expr.parameters.inBetween
+                                submode = s.copy(expr = expr.copy(
+                                    expr.parameters.copy(
+                                        inBetween = newValue,
+                                        complementary = newComplementary ?: !expr.parameters.complementary
+                                    )
+                                ))
+                                return newValue
+                            }
+                            else -> {}
+                        }
+                    }
+                    else -> {}
+                }
+            }
+            else -> {}
+        }
+        return null
+    }
+
     fun toolAction(tool: EditClusterTool) {
 //        println("toolAction($tool)")
         when (tool) {
@@ -2589,7 +2657,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
             // TODO: 2 options: solid color or external image
             EditClusterTool.AddBackgroundImage -> openedDialog = DialogType.BACKGROUND_COLOR_PICKER
-            EditClusterTool.DetailedAdjustment -> TODO()
+            EditClusterTool.DetailedAdjustment -> openDetailsDialog()
             EditClusterTool.InBetween -> TODO()
         }
     }
@@ -2630,6 +2698,17 @@ class EditClusterViewModel : ViewModel() {
     private fun CircleOrLine.upscale(): CircleOrLine = scaled(0.0, 0.0, UPSCALING_FACTOR)
     private fun Point.downscale(): Point = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
     private fun Point.upscale(): Point = scaled(0.0, 0.0, UPSCALING_FACTOR)
+
+    suspend fun saveScreenshot(): Result<ImageBitmap> {
+        takeScreenshotFlow.update { deferred ->
+            deferred ?: CompletableDeferred()
+        }
+        takeScreenshotFlow.value?.let {
+            val bitmap = it.await()
+            takeScreenshotFlow.update { null }
+            return Result.success(bitmap)
+        } ?: return Result.failure(CancellationException("takeScreenshotFlow.value evaporated somehow"))
+    }
 
     fun saveState(): State {
         val center = computeAbsoluteCenter() ?: Offset.Zero

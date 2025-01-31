@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import domain.Ix
 import domain.cluster.LogicalRegion
+import domain.expressions.Expr
 import kotlinx.serialization.Serializable
 
 @Immutable
@@ -37,15 +38,15 @@ sealed interface SubMode {
         val lastQualifiedPart: LogicalRegion? = null
     ) : SubMode
 
-    /** sub-mode accompanying [ToolMode], that allows live adjustment of expression parameters */
-    sealed interface ToolExtra : SubMode
     /**
-     * @property[outputIndices] indices containing outputs of this circle interpolation
+    /** sub-mode accompanying [ToolMode], that allows live adjustment of expression parameters */
+     * @property[outputIndices] indices containing outputs of the multi expr we are adjusting
      * @property[maxOutputRange] contains [outputIndices] and additional `null`ed indices that
-     * were previously allocated for this circle interpolation
+     * were previously allocated for this multi expr
      * */
-    data class CircleInterpolationExtra(
+    data class ExprAdjustment(
+        val expr: Expr,
         val outputIndices: List<Ix>,
         val maxOutputRange: List<Ix>,
-    ) : ToolExtra // maybe allow it in Drag mode
+    ) : SubMode // maybe allow it in Drag mode
 }

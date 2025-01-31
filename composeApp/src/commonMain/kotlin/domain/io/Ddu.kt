@@ -358,7 +358,7 @@ private class DduWriter(private val ddu: Ddu) {
 
     private lateinit var stringBuilder: StringBuilder
     private val legacyGlobals: List<String> = listOf(
-        ddu.backgroundColor.fromColor(),
+        ddu.backgroundColor.toColorInt(),
         *ddu.restGlobals.toTypedArray()
     ).map { it.toString() }
 
@@ -416,14 +416,14 @@ private class DduWriter(private val ddu: Ddu) {
         writeLine("\ncircle:")
         with(circleFigure) {
             val fillInt = if (filled) 1 else 0
-            listOf(radius, x, y, fillColor.fromColor(), fillInt).forEach {
+            listOf(radius, x, y, fillColor.toColorInt(), fillInt).forEach {
                 writeLine(it.toString())
             }
             if (rule.isNotEmpty()) {
                 val prefix = if (!visible) "n" else ""
                 writeLine(prefix + rule.joinToString(separator = ""))
             }
-            borderColor?.fromColor()?.let {
+            borderColor?.toColorInt()?.let {
                 writeLine("borderColor: $it")
             }
         }
@@ -436,7 +436,7 @@ private class DduWriter(private val ddu: Ddu) {
         writeLine("circle:")
         with(circleFigure) {
             val fillInt = if (filled) 1 else 0
-            listOf(radius, x, y, fillColor.fromColor(), fillInt).forEach {
+            listOf(radius, x, y, fillColor.toColorInt(), fillInt).forEach {
                 writeLine(it.toString())
             }
             if (rule.isNotEmpty()) {
@@ -481,6 +481,6 @@ private val Int.blue: Int get() = this and 0x0000ff
 internal fun Int.toColor(): Color =
     Color(red = red, green = green, blue = blue)
 /** our color format -> C++ color int 0xRRGGBB */
-internal fun Color.fromColor(): Int =
+internal fun Color.toColorInt(): Int =
     toArgb() and 0xffffff
 

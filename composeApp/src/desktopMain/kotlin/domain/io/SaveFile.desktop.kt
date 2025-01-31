@@ -13,7 +13,6 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.window.AwtWindow
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.save_cluster_title
-import domain.io.SaveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -26,7 +25,7 @@ import java.io.IOException
 actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
-    saveData: SaveData,
+    saveData: SaveData<String>,
     modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
@@ -54,7 +53,7 @@ actual fun SaveFileButton(
                         if (directory != null)
                             lastDir = directory
                         val file = File(directory, filename)
-                        saveTextFile(saveData.content(file.nameWithoutExtension), file)
+                        saveTextFile(saveData.prepareContent(file.nameWithoutExtension), file)
                         onSaved(true)
                     } else
                         onSaved(false)
@@ -92,7 +91,7 @@ fun saveTextFile(content: String, originalFile: File) {
 }
 
 @Composable
-private fun SaveFileDialog(
+fun SaveFileDialog(
     parent: Frame? = null,
     defaultDir: String? = null,
     defaultFilename: String,

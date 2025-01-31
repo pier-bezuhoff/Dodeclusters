@@ -99,6 +99,7 @@ import dodeclusters.composeapp.generated.resources.palette_description
 import dodeclusters.composeapp.generated.resources.palette_name
 import dodeclusters.composeapp.generated.resources.pick_circle_color_description
 import dodeclusters.composeapp.generated.resources.pick_circle_color_name
+import dodeclusters.composeapp.generated.resources.png_export_name
 import dodeclusters.composeapp.generated.resources.propeller
 import dodeclusters.composeapp.generated.resources.rectangular_select_description
 import dodeclusters.composeapp.generated.resources.rectangular_select_name
@@ -202,9 +203,17 @@ sealed class EditClusterTool(
         Res.string.svg_export_name,
         icon = Res.drawable.upload
     ) {
-        const val DEFAULT_NAME = DdcV2.DEFAULT_NAME
+        const val DEFAULT_NAME = DdcV4.DEFAULT_NAME
         const val EXTENSION = "svg"
         const val MIME_TYPE = "image/svg+xml" // apparently this is highly contested (since svg can contain js)
+    }
+    data object PngExport: CustomAction(
+        Res.string.png_export_name,
+        icon = Res.drawable.upload
+    ) {
+        const val DEFAULT_NAME = "dodeclusters-screenshot"
+        const val EXTENSION = "png"
+        const val MIME_TYPE = "image/png"
     }
     data object OpenFile: CustomAction(
         Res.string.open_file_name,

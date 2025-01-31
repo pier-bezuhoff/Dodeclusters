@@ -21,7 +21,7 @@ import java.io.IOException
 actual fun SaveFileButton(
     iconPainter: Painter,
     contentDescription: String,
-    saveData: SaveData,
+    saveData: SaveData<String>,
     modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
@@ -47,7 +47,7 @@ actual fun SaveFileButton(
                     }
                     context.contentResolver.openFileDescriptor(uri, "w")?.use { parcelFileDescriptor ->
                         FileOutputStream(parcelFileDescriptor.fileDescriptor).use { outputStream ->
-                            val content = saveData.content(name ?: DdcV2.DEFAULT_NAME)
+                            val content = saveData.prepareContent(name ?: DdcV4.DEFAULT_NAME)
                             outputStream.write(content.toByteArray())
                             onSaved(true)
                         }

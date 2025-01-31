@@ -38,9 +38,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -50,12 +47,12 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
@@ -74,15 +71,19 @@ import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.lock_open
 import dodeclusters.composeapp.generated.resources.ok_name
+import dodeclusters.composeapp.generated.resources.road
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.shrink
+import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
+import dodeclusters.composeapp.generated.resources.three_sliders
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import domain.Arg
 import domain.PartialArgList
 import domain.io.DdcRepository
 import domain.io.LookupData
 import domain.io.OpenFileButton
+import domain.io.SaveBitmapAsPngButton
 import domain.io.SaveData
 import domain.io.SaveFileButton
 import kotlinx.coroutines.flow.Flow
@@ -190,6 +191,7 @@ fun EditClusterScreen(
                         redoIsEnabled = viewModel.redoIsEnabled,
                         saveAsYaml = viewModel::saveAsYaml,
                         exportAsSvg = viewModel::exportAsSvg,
+                        exportAsPng = viewModel::saveScreenshot,
                         loadFromYaml = { content ->
                             content?.let {
                                 viewModel.loadFromYaml(
@@ -352,7 +354,8 @@ fun preloadIcons() {
         // from canvas HUD
         Res.drawable.expand, Res.drawable.shrink,
         Res.drawable.copy, Res.drawable.delete_forever, Res.drawable.lock_open,
-        Res.drawable.rotate_counterclockwise
+        Res.drawable.rotate_counterclockwise,
+        Res.drawable.three_sliders, Res.drawable.three_dots_in_angle_brackets, Res.drawable.road,
     )) {
         painterResource(resource)
     }
@@ -454,6 +457,7 @@ fun EditClusterTopBar(
     redoIsEnabled: Boolean,
     saveAsYaml: (name: String) -> String,
     exportAsSvg: (name: String) -> String,
+    exportAsPng: suspend () -> Result<ImageBitmap>,
     loadFromYaml: (content: String?) -> Unit,
     undo: () -> Unit,
     redo: () -> Unit,
@@ -492,28 +496,42 @@ fun EditClusterTopBar(
                         extension = saveCluster.EXTENSION, // yml
                         otherDisplayedExtensions = saveCluster.otherDisplayedExtensions,
                         mimeType = saveCluster.MIME_TYPE,
-                        content = saveAsYaml
+                        prepareContent = saveAsYaml
                     ),
                     modifier = iconModifier
                 ) {
                     println(if (it) "saved" else "not saved")
                 }
             }
-            val svgExport = EditClusterTool.SvgExport
-            WithTooltip(stringResource(svgExport.description)) {
-                SaveFileButton(
-                    painterResource(svgExport.icon),
-                    stringResource(svgExport.name),
+            val pngExport = EditClusterTool.PngExport
+            WithTooltip(stringResource(pngExport.description)) {
+                SaveBitmapAsPngButton(
+                    painterResource(pngExport.icon),
+                    stringResource(pngExport.name),
                     saveData = SaveData(
-                        name = svgExport.DEFAULT_NAME,
-                        extension = svgExport.EXTENSION,
-                        mimeType = svgExport.MIME_TYPE,
-                        content = exportAsSvg
+                        name = pngExport.DEFAULT_NAME,
+                        extension = pngExport.EXTENSION,
+                        mimeType = pngExport.MIME_TYPE,
+                        prepareContent = { exportAsPng() }
                     ),
                     modifier = iconModifier
                 ) {
                     println(if (it) "exported" else "not exported")
                 }
+                val svgExport = EditClusterTool.SvgExport
+//                SaveFileButton(
+//                    painterResource(svgExport.icon),
+//                    stringResource(svgExport.name),
+//                    saveData = SaveData(
+//                        name = svgExport.DEFAULT_NAME,
+//                        extension = svgExport.EXTENSION,
+//                        mimeType = svgExport.MIME_TYPE,
+//                        content = exportAsSvg
+//                    ),
+//                    modifier = iconModifier
+//                ) {
+//                    println(if (it) "exported" else "not exported")
+//                }
             }
             WithTooltip(stringResource(EditClusterTool.OpenFile.description)) {
                 OpenFileButton(
