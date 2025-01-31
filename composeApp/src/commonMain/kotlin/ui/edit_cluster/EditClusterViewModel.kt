@@ -2474,6 +2474,10 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(EditClusterTool.LoxodromicMotion.signature)
     }
 
+    fun closeDialog() {
+        openedDialog = null
+    }
+
     fun completeArcPath() {
         require(partialArcPath != null) { "Cannot complete non-existent arc path during completeArcPath()" }
         partialArcPath?.let { pArcPath ->
@@ -2652,6 +2656,7 @@ class EditClusterViewModel : ViewModel() {
             is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
             EditClusterTool.Undo -> undo()
             EditClusterTool.Redo -> redo()
+            EditClusterTool.SaveCluster -> openedDialog = DialogType.SAVE_OPTIONS_DIALOG
             is EditClusterTool.CustomAction -> {} // custom handlers
             EditClusterTool.CompleteArcPath -> completeArcPath()
             EditClusterTool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows

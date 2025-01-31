@@ -9,6 +9,9 @@ import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.util.Base64
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -17,10 +20,20 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat.startActivity
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
+import java.nio.charset.Charset
 
+// FIX: pngs are smudged nonsense
+// reference: https://github.com/android/snippets/blob/latest/compose/snippets/src/main/java/com/example/compose/snippets/graphics/AdvancedGraphicsSnippets.kt
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 actual fun SaveBitmapAsPngButton(
     iconPainter: Painter,
@@ -29,56 +42,67 @@ actual fun SaveBitmapAsPngButton(
     modifier: Modifier,
     onSaved: (successful: Boolean) -> Unit
 ) {
-    // TODO
-}
-
-// reference: https://github.com/android/snippets/blob/latest/compose/snippets/src/main/java/com/example/compose/snippets/graphics/AdvancedGraphicsSnippets.kt
-//@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun BitmapFromComposableFullSnippet() {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-//    val writeStorageAccessState = rememberMultiplePermissionsState(
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//            // No permissions are needed on Android 10+ to add files in the shared storage
-//            emptyList()
-//        } else {
-//            listOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-//        }
-//    )
-    // This logic should live in your ViewModel - trigger a side effect to invoke URI sharing.
-    // checks permissions granted, and then saves the bitmap from a Picture that is already capturing content
-    // and shares it with the default share sheet.
-    fun shareBitmapFromComposable() {
-//        if (writeStorageAccessState.allPermissionsGranted) {
-//            coroutineScope.launch {
-//                val bitmap: ImageBitmap = TODO()
-//                val uri = bitmap.asAndroidBitmap().saveToDisk(context)
-//                shareBitmap(context, uri)
-//            }
-//        } else if (writeStorageAccessState.shouldShowRationale) {
-//            coroutineScope.launch {
-////                val result = snackbarHostState.showSnackbar(
-////                    message = "The storage permission is needed to save the image",
-////                    actionLabel = "Grant Access"
-////                )
-////                if (result == SnackbarResult.ActionPerformed) {
-////                    writeStorageAccessState.launchMultiplePermissionRequest()
-////                }
-//            }
-//        } else {
-////            writeStorageAccessState.launchMultiplePermissionRequest()
-//        }
+    val writeStorageAccessState = rememberMultiplePermissionsState(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // No permissions are needed on Android 10+ to add files in the shared storage
+            emptyList()
+        } else {
+            listOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+    )
+    IconButton(
+        onClick = {
+            if (writeStorageAccessState.allPermissionsGranted) {
+                coroutineScope.launch(Dispatchers.IO) {
+                    saveData.prepareContent(saveData.name).fold(
+                        onSuccess = { bitmap ->
+                            // something aint right
+                            saveBitmapToDisk(context, bitmap.asAndroidBitmap(), saveData.name)
+                            // way too silent, notifs doko
+                            onSaved(true)
+                        },
+                        onFailure = {
+                            onSaved(false)
+                        }
+                    )
+                }
+            } else if (writeStorageAccessState.shouldShowRationale) {
+//                coroutineScope.launch {
+//                val result = snackbarHostState.showSnackbar(
+//                    message = "The storage permission is needed to save the image",
+//                    actionLabel = "Grant Access"
+//                )
+//                if (result == SnackbarResult.ActionPerformed) {
+                    writeStorageAccessState.launchMultiplePermissionRequest()
+//                }
+//                }
+            } else {
+                writeStorageAccessState.launchMultiplePermissionRequest()
+            }
+        },
+        modifier = modifier,
+    ) {
+        Icon(iconPainter, contentDescription, modifier)
     }
 }
 
-private suspend fun Bitmap.saveToDisk(context: Context): Uri {
-    val file = File(
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-        "screenshot-${System.currentTimeMillis()}.png"
-    )
-    file.writeBitmap(this, Bitmap.CompressFormat.PNG, 100)
-    return scanFilePath(context, file.path) ?: throw Exception("File could not be saved")
+private suspend fun saveBitmapToDisk(context: Context, bitmap: Bitmap, name: String): Uri? {
+    val filename = "$name-${System.currentTimeMillis()}.png"
+    val picsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+    if (!picsDir.exists())
+        picsDir.mkdirs()
+    val file = File(picsDir, filename)
+    return withContext(Dispatchers.IO) {
+        FileOutputStream(file).buffered().use { output ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
+            output.flush()
+        }
+        val uri = scanFilePath(context, file.path)
+//        shareBitmap(context, uri)
+        uri
+    }
 }
 
 /**
@@ -98,13 +122,6 @@ private suspend fun scanFilePath(context: Context, filePath: String): Uri? {
                 continuation.resume(scannedUri) { cause, _, _ -> }
             }
         }
-    }
-}
-
-private fun File.writeBitmap(bitmap: Bitmap, format: Bitmap.CompressFormat, quality: Int) {
-    outputStream().use { out ->
-        bitmap.compress(format, quality, out)
-        out.flush()
     }
 }
 

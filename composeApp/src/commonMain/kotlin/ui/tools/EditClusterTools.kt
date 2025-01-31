@@ -113,6 +113,7 @@ import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.road
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
+import dodeclusters.composeapp.generated.resources.screenshot_pc
 import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.shark_fin_striped
 import dodeclusters.composeapp.generated.resources.show_circles_description
@@ -209,7 +210,7 @@ sealed class EditClusterTool(
     }
     data object PngExport: CustomAction(
         Res.string.png_export_name,
-        icon = Res.drawable.upload
+        icon = Res.drawable.screenshot_pc
     ) {
         const val DEFAULT_NAME = "dodeclusters-screenshot"
         const val EXTENSION = "png"

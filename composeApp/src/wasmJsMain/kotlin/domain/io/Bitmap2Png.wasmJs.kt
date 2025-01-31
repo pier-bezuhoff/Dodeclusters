@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
@@ -37,14 +36,11 @@ import kotlinx.browser.document
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.khronos.webgl.Uint8ClampedArray
-import org.khronos.webgl.set
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLAnchorElement
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.url.URL
-import kotlin.math.roundToInt
 
-// it aint working and hangs on download
 @Composable
 actual fun SaveBitmapAsPngButton(
     iconPainter: Painter,
@@ -139,16 +135,13 @@ private fun downloadBitmapAsPng(bitmap: ImageBitmap, filename: String) {
         for (x in 0 until pixelMap.width) {
             val color = pixelMap[x, y]
             val rgba = RGB(color.red, color.green, color.blue, color.alpha)
+            // reference: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/createImageData
             // reference: https://developer.mozilla.org/en-US/docs/Web/API/ImageData
             val i = (x + y * pixelMap.width) * 4
             setMethodImplForUint8ClampedArray(pixelData, i + 0, rgba.redInt)
             setMethodImplForUint8ClampedArray(pixelData, i + 1, rgba.greenInt)
             setMethodImplForUint8ClampedArray(pixelData, i + 2, rgba.blueInt.coerceIn(0, 255))
             setMethodImplForUint8ClampedArray(pixelData, i + 3, rgba.alphaInt)
-//            pixelData[i] = rgba.redInt.toByte() // r
-//            pixelData[i + 1] = rgba.greenInt.toByte() // g
-//            pixelData[i + 2] = rgba.blueInt.coerceIn(0, 255).toByte() // b
-//            pixelData[i + 3] = 255.toByte() //rgba.alphaInt.toByte() // a
         }
     context.putImageData(imageData, 0.0, 0.0)
     canvas.toBlob({ blob ->
@@ -166,7 +159,7 @@ private fun downloadBitmapAsPng(bitmap: ImageBitmap, filename: String) {
     }, "image/png")
 }
 
-// default one with bytes doesnt do sht
+// default one with bytes doesnt do sht: https://youtrack.jetbrains.com/issue/KT-24583/JS-Uint8ClampedArray-declaration-unusable
 @Suppress("UNUSED_PARAMETER")
 internal fun setMethodImplForUint8ClampedArray(obj: Uint8ClampedArray, index: Int, value: Int) {
     js("obj[index] = value;")

@@ -73,6 +73,7 @@ import dodeclusters.composeapp.generated.resources.lock_open
 import dodeclusters.composeapp.generated.resources.ok_name
 import dodeclusters.composeapp.generated.resources.road
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
+import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
@@ -189,9 +190,10 @@ fun EditClusterScreen(
                         compact = compact,
                         undoIsEnabled = viewModel.undoIsEnabled,
                         redoIsEnabled = viewModel.redoIsEnabled,
-                        saveAsYaml = viewModel::saveAsYaml,
-                        exportAsSvg = viewModel::exportAsSvg,
-                        exportAsPng = viewModel::saveScreenshot,
+//                        saveAsYaml = viewModel::saveAsYaml,
+//                        exportAsSvg = viewModel::exportAsSvg,
+//                        exportAsPng = viewModel::saveScreenshot,
+                        showSaveOptionsDialog = { viewModel.toolAction(EditClusterTool.SaveCluster) },
                         loadFromYaml = { content ->
                             content?.let {
                                 viewModel.loadFromYaml(
@@ -291,6 +293,15 @@ fun EditClusterScreen(
                     )
                 }
             }
+        }
+        DialogType.SAVE_OPTIONS_DIALOG -> {
+            SaveOptionsDialog(
+                saveAsYaml = viewModel::saveAsYaml,
+                exportAsSvg = viewModel::exportAsSvg,
+                exportAsPng = viewModel::saveScreenshot,
+                onDismissRequest = viewModel::closeDialog,
+                onConfirm = viewModel::closeDialog,
+            )
         }
         null -> {}
     }
@@ -455,9 +466,10 @@ fun EditClusterTopBar(
     compact: Boolean,
     undoIsEnabled: Boolean,
     redoIsEnabled: Boolean,
-    saveAsYaml: (name: String) -> String,
-    exportAsSvg: (name: String) -> String,
-    exportAsPng: suspend () -> Result<ImageBitmap>,
+//    saveAsYaml: (name: String) -> String,
+//    exportAsSvg: (name: String) -> String,
+//    exportAsPng: suspend () -> Result<ImageBitmap>,
+    showSaveOptionsDialog: () -> Unit,
     loadFromYaml: (content: String?) -> Unit,
     undo: () -> Unit,
     redo: () -> Unit,
@@ -487,38 +499,45 @@ fun EditClusterTopBar(
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             Spacer(Modifier.width(16.dp))
             val saveCluster = EditClusterTool.SaveCluster
-            WithTooltip(stringResource(saveCluster.description)) {
-                SaveFileButton(
+            WithTooltip(stringResource(Res.string.save_name)) {
+                SimpleButton(
                     painterResource(saveCluster.icon),
                     stringResource(saveCluster.name),
-                    saveData = SaveData(
-                        name = saveCluster.DEFAULT_NAME,
-                        extension = saveCluster.EXTENSION, // yml
-                        otherDisplayedExtensions = saveCluster.otherDisplayedExtensions,
-                        mimeType = saveCluster.MIME_TYPE,
-                        prepareContent = saveAsYaml
-                    ),
-                    modifier = iconModifier
-                ) {
-                    println(if (it) "saved" else "not saved")
-                }
+                    modifier = iconModifier,
+                    iconModifier = iconModifier,
+                    onClick = showSaveOptionsDialog
+                )
+//                SaveFileButton(
+//                    painterResource(saveCluster.icon),
+//                    stringResource(saveCluster.name),
+//                    saveData = SaveData(
+//                        name = saveCluster.DEFAULT_NAME,
+//                        extension = saveCluster.EXTENSION, // yml
+//                        otherDisplayedExtensions = saveCluster.otherDisplayedExtensions,
+//                        mimeType = saveCluster.MIME_TYPE,
+//                        prepareContent = saveAsYaml
+//                    ),
+//                    modifier = iconModifier
+//                ) {
+//                    println(if (it) "saved" else "not saved")
+//                }
             }
-            val pngExport = EditClusterTool.PngExport
-            WithTooltip(stringResource(pngExport.description)) {
-                SaveBitmapAsPngButton(
-                    painterResource(pngExport.icon),
-                    stringResource(pngExport.name),
-                    saveData = SaveData(
-                        name = pngExport.DEFAULT_NAME,
-                        extension = pngExport.EXTENSION,
-                        mimeType = pngExport.MIME_TYPE,
-                        prepareContent = { exportAsPng() }
-                    ),
-                    modifier = iconModifier
-                ) {
-                    println(if (it) "exported" else "not exported")
-                }
-                val svgExport = EditClusterTool.SvgExport
+//            val pngExport = EditClusterTool.PngExport
+//            WithTooltip(stringResource(pngExport.description)) {
+//                SaveBitmapAsPngButton(
+//                    painterResource(pngExport.icon),
+//                    stringResource(pngExport.name),
+//                    saveData = SaveData(
+//                        name = pngExport.DEFAULT_NAME,
+//                        extension = pngExport.EXTENSION,
+//                        mimeType = pngExport.MIME_TYPE,
+//                        prepareContent = { exportAsPng() }
+//                    ),
+//                    modifier = iconModifier
+//                ) {
+//                    println(if (it) "exported" else "not exported")
+//                }
+//                val svgExport = EditClusterTool.SvgExport
 //                SaveFileButton(
 //                    painterResource(svgExport.icon),
 //                    stringResource(svgExport.name),
@@ -532,7 +551,7 @@ fun EditClusterTopBar(
 //                ) {
 //                    println(if (it) "exported" else "not exported")
 //                }
-            }
+//            }
             WithTooltip(stringResource(EditClusterTool.OpenFile.description)) {
                 OpenFileButton(
                     painterResource(EditClusterTool.OpenFile.icon),

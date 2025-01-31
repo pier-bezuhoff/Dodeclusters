@@ -82,6 +82,7 @@ kotlin {
             implementation(libs.coroutines.android)
             implementation(libs.kstore.file)
             implementation(libs.appdirs)
+            implementation(libs.accompanist)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
