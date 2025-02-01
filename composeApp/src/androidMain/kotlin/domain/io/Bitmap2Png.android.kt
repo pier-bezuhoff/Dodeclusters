@@ -9,15 +9,16 @@ import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.util.Base64
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat.startActivity
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -26,20 +27,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.nio.charset.Charset
 
 // FIX: pngs are smudged nonsense
 // reference: https://github.com/android/snippets/blob/latest/compose/snippets/src/main/java/com/example/compose/snippets/graphics/AdvancedGraphicsSnippets.kt
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 actual fun SaveBitmapAsPngButton(
-    iconPainter: Painter,
-    contentDescription: String,
     saveData: SaveData<Result<ImageBitmap>>,
+    buttonContent: @Composable () -> Unit,
     modifier: Modifier,
+    shape: Shape,
+    containerColor: Color,
+    contentColor: Color,
     onSaved: (successful: Boolean) -> Unit
 ) {
     val context = LocalContext.current
@@ -52,7 +53,8 @@ actual fun SaveBitmapAsPngButton(
             listOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
     )
-    IconButton(
+    if (false)
+    Button(
         onClick = {
             if (writeStorageAccessState.allPermissionsGranted) {
                 coroutineScope.launch(Dispatchers.IO) {
@@ -83,8 +85,14 @@ actual fun SaveBitmapAsPngButton(
             }
         },
         modifier = modifier,
+        shape = shape,
+        colors = ButtonDefaults.buttonColors().copy(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        )
     ) {
-        Icon(iconPainter, contentDescription, modifier)
+        buttonContent()
+        Text("Does NOT work") // TODO: fix this
     }
 }
 

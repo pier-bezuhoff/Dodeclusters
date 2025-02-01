@@ -3,8 +3,8 @@ package domain.io
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -18,7 +18,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -41,10 +42,12 @@ import org.w3c.files.BlobPropertyBag
 
 @Composable
 actual fun SaveFileButton(
-    iconPainter: Painter,
-    contentDescription: String,
     saveData: SaveData<String>,
+    buttonContent: @Composable () -> Unit,
     modifier: Modifier,
+    shape: Shape,
+    containerColor: Color,
+    contentColor: Color,
     onSaved: (successful: Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -68,13 +71,18 @@ actual fun SaveFileButton(
         }
     }
 
-    IconButton(
+    Button(
         onClick = {
             openDialog = true
         },
         modifier = modifier,
+        shape = shape,
+        colors = ButtonDefaults.buttonColors().copy(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        )
     ) {
-        Icon(iconPainter, contentDescription, modifier)
+        buttonContent()
     }
     if (openDialog) {
         AlertDialog(

@@ -3,12 +3,14 @@ package domain.io
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,10 +21,12 @@ import java.io.IOException
 
 @Composable
 actual fun SaveFileButton(
-    iconPainter: Painter,
-    contentDescription: String,
     saveData: SaveData<String>,
+    buttonContent: @Composable () -> Unit,
     modifier: Modifier,
+    shape: Shape,
+    containerColor: Color,
+    contentColor: Color,
     onSaved: (successful: Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -63,14 +67,19 @@ actual fun SaveFileButton(
             }
         }
     }
-    IconButton(
+    Button(
         onClick = {
             coroutineScope.launch {
                 launcher.launch(saveData.filename)
             }
         },
         modifier = modifier,
+        shape = shape,
+        colors = ButtonDefaults.buttonColors().copy(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        )
     ) {
-        Icon(iconPainter, contentDescription, modifier)
+        buttonContent()
     }
 }

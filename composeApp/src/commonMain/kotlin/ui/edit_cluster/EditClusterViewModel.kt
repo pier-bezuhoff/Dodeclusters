@@ -85,6 +85,7 @@ import domain.tryCatch2
 import getPlatform
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -92,6 +93,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
@@ -2708,11 +2710,11 @@ class EditClusterViewModel : ViewModel() {
         takeScreenshotFlow.update { deferred ->
             deferred ?: CompletableDeferred()
         }
-        takeScreenshotFlow.value?.let {
-            val bitmap = it.await()
+        return takeScreenshotFlow.value?.let {
+            val bitmap = it.await() // this is blocking ui
             takeScreenshotFlow.update { null }
-            return Result.success(bitmap)
-        } ?: return Result.failure(CancellationException("takeScreenshotFlow.value evaporated somehow"))
+            Result.success(bitmap)
+        } ?: Result.failure(CancellationException("takeScreenshotFlow.value evaporated somehow"))
     }
 
     fun saveState(): State {

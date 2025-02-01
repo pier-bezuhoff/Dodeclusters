@@ -1,6 +1,7 @@
 package domain.io
 
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -10,7 +11,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toAwtImage
 import kotlinx.coroutines.Dispatchers
@@ -22,22 +25,29 @@ import javax.imageio.ImageIO
 
 @Composable
 actual fun SaveBitmapAsPngButton(
-    iconPainter: Painter,
-    contentDescription: String,
     saveData: SaveData<Result<ImageBitmap>>,
+    buttonContent: @Composable () -> Unit,
     modifier: Modifier,
+    shape: Shape,
+    containerColor: Color,
+    contentColor: Color,
     onSaved: (successful: Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
     var lastDir by remember { mutableStateOf<String?>(null) }
-    IconButton(
+    Button(
         onClick = {
             fileDialogIsOpen = true
         },
         modifier = modifier,
+        shape = shape,
+        colors = ButtonDefaults.buttonColors().copy(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        )
     ) {
-        Icon(iconPainter, contentDescription, modifier)
+        buttonContent()
     }
     if (fileDialogIsOpen) {
         SaveFileDialog(

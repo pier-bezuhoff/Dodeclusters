@@ -3,9 +3,9 @@ package ui.edit_cluster
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,65 +40,80 @@ fun SaveOptionsDialog(
             modifier = Modifier,
             shape = RoundedCornerShape(24.dp)
         ) {
-            val iconModifier = Modifier.padding(8.dp, 4.dp).size(40.dp)
+            val buttonModifier = Modifier.padding(4.dp)
+            val iconModifier = Modifier.padding(end = 8.dp)
             Column(
-                Modifier.padding(12.dp)
+                Modifier.padding(4.dp)
             ) {
-                val rowModifier = Modifier.padding(end = 8.dp)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
-                    val saveCluster = EditClusterTool.SaveCluster
-                    SaveFileButton(
-                        painterResource(saveCluster.icon),
-                        stringResource(saveCluster.name),
-                        saveData = SaveData(
-                            name = saveCluster.DEFAULT_NAME,
-                            extension = saveCluster.EXTENSION, // yml
-                            otherDisplayedExtensions = saveCluster.otherDisplayedExtensions,
-                            mimeType = saveCluster.MIME_TYPE,
-                            prepareContent = saveAsYaml
-                        ),
-                        modifier = iconModifier
-                    ) {
-                        println(if (it) "YAML saved" else "YAML not saved")
-                        onConfirm()
-                    }
-                    Text(stringResource(saveCluster.description))
+                val rowModifier = Modifier //.padding(end = 8.dp)
+                val containerColor = MaterialTheme.colorScheme.surface
+                val contentColor = MaterialTheme.colorScheme.onSurface
+                val saveCluster = EditClusterTool.SaveCluster
+                // NOTE: optimize by starting to encode bitmap when user is
+                //  shown name-choosing dialog
+                SaveFileButton(
+                    saveData = SaveData(
+                        name = saveCluster.DEFAULT_NAME,
+                        extension = saveCluster.EXTENSION, // yml
+                        otherDisplayedExtensions = saveCluster.otherDisplayedExtensions,
+                        mimeType = saveCluster.MIME_TYPE,
+                        prepareContent = saveAsYaml
+                    ),
+                    buttonContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
+                            Icon(painterResource(saveCluster.icon), stringResource(saveCluster.name), iconModifier)
+                            Text(stringResource(saveCluster.description))
+                        }
+                    },
+                    modifier = buttonModifier,
+                    containerColor = containerColor,
+                    contentColor = contentColor,
+                ) {
+                    println(if (it) "YAML saved" else "YAML not saved")
+                    onConfirm()
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
-                    val pngExport = EditClusterTool.PngExport
-                    SaveBitmapAsPngButton(
-                        painterResource(pngExport.icon),
-                        stringResource(pngExport.name),
-                        saveData = SaveData(
-                            name = pngExport.DEFAULT_NAME,
-                            extension = pngExport.EXTENSION,
-                            mimeType = pngExport.MIME_TYPE,
-                            prepareContent = { exportAsPng() }
-                        ),
-                        modifier = iconModifier
-                    ) {
-                        println(if (it) "PNG exported" else "PNG not exported")
-                        onConfirm()
-                    }
-                    Text(stringResource(pngExport.description))
+                // for one reason or another png export is quite slow on Web (desktop is quite fast, mobile is unimplemented)
+                val pngExport = EditClusterTool.PngExport
+                SaveBitmapAsPngButton(
+                    saveData = SaveData(
+                        name = pngExport.DEFAULT_NAME,
+                        extension = pngExport.EXTENSION,
+                        mimeType = pngExport.MIME_TYPE,
+                        prepareContent = { exportAsPng() }
+                    ),
+                    buttonContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
+                            Icon(painterResource(pngExport.icon), stringResource(pngExport.name), iconModifier)
+                            Text(stringResource(pngExport.description))
+                        }
+                    },
+                    modifier = buttonModifier,
+                    containerColor = containerColor,
+                    contentColor = contentColor,
+                ) {
+                    println(if (it) "PNG exported" else "PNG not exported")
+                    onConfirm()
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
-                    val svgExport = EditClusterTool.SvgExport
-                    SaveFileButton(
-                        painterResource(svgExport.icon),
-                        stringResource(svgExport.name),
-                        saveData = SaveData(
-                            name = svgExport.DEFAULT_NAME,
-                            extension = svgExport.EXTENSION,
-                            mimeType = svgExport.MIME_TYPE,
-                            prepareContent = exportAsSvg
-                        ),
-                        modifier = iconModifier
-                    ) {
-                        println(if (it) "SVG exported" else "SVG not exported")
-                        onConfirm()
-                    }
-                    Text(stringResource(svgExport.description))
+                val svgExport = EditClusterTool.SvgExport
+                SaveFileButton(
+                    saveData = SaveData(
+                        name = svgExport.DEFAULT_NAME,
+                        extension = svgExport.EXTENSION,
+                        mimeType = svgExport.MIME_TYPE,
+                        prepareContent = exportAsSvg
+                    ),
+                    buttonContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
+                            Icon(painterResource(svgExport.icon), stringResource(svgExport.name), iconModifier)
+                            Text(stringResource(svgExport.description))
+                        }
+                    },
+                    modifier = buttonModifier,
+                    containerColor = containerColor,
+                    contentColor = contentColor,
+                ) {
+                    println(if (it) "SVG exported" else "SVG not exported")
+                    onConfirm()
                 }
             }
         }

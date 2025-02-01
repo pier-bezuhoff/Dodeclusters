@@ -66,7 +66,9 @@ import domain.PartialArgList
 import domain.cluster.LogicalRegion
 import domain.rotateBy
 import getPlatform
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import ui.SimpleToolButton
 import ui.circle2path
@@ -147,7 +149,9 @@ fun BoxScope.EditClusterCanvas(
     val layoutDirection = LocalLayoutDirection.current
     coroutineScope.launch {
         viewModel.takeScreenshotFlow.collect { deferred ->
-            if (deferred != null) {
+            if (deferred != null) withContext(Dispatchers.Main) {
+                // State accesses MUST happen on the main UI thread (and maybe draw ops too)
+                // so this is blocking...
                 screenshotableGraphicsLayer.record(density, layoutDirection, viewModel.canvasSize) {
                     translate(viewModel.translation.x, viewModel.translation.y) {
                         val visibleRect = size.toRect().translate(-viewModel.translation)
