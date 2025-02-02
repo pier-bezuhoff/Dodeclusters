@@ -22,6 +22,7 @@ import org.jetbrains.compose.resources.stringResource
 import ui.hideSystemBars
 import ui.tools.EditClusterTool
 
+// BUG: on Android/Chrome second-order dialogs (name-choosing) lose text color (???)
 @Composable
 fun SaveOptionsDialog(
     viewModel: EditClusterViewModel,

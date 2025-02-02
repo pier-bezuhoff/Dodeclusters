@@ -1017,7 +1017,6 @@ class EditClusterViewModel : ViewModel() {
             val outer = outerRegions.single()
             if (region.fillColor == outer.fillColor) {
                 recordCommand(Command.FILL_REGION, unique = true)
-//                regions.remove(sameExistingRegion)
                 regions.removeAt(i)
                 println("removed $outer")
             } else { // we are trying to change the color im guessing
@@ -1033,6 +1032,7 @@ class EditClusterViewModel : ViewModel() {
             val outerRegionsOfTheSameColor = outerRegions.filter { it.fillColor == region.fillColor }
             if (outerRegionsOfTheSameColor.isNotEmpty()) {
                 recordCommand(Command.FILL_REGION, unique = true)
+                // NOTE: this removes regions of the same color that lie under others, which can be counter-intuitive
                 regions.removeAll(outerRegionsOfTheSameColor)
                 println("removed regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
             } else {
