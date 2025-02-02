@@ -130,6 +130,13 @@ actual fun SaveBitmapAsPngButton(
                 ScreenshotableCanvas(viewModel, bitmapFlow)
             }
         } else {
+            // NOTE: for some only-god-knows-why reason when i try to use
+            //  non-hard-coded or maybe longer strings here, on Android/Chrome
+            //  when the text field gains focus ALL texts in the app
+            //  become invisible...
+            //  And this might have to do with some race condition based
+            //  on number of words/characters displayed at the same time
+            //  as if there is a cap...
             Dialog(
                 onDismissRequest = { openDialog = false },
                 properties = DialogProperties()
@@ -139,11 +146,6 @@ actual fun SaveBitmapAsPngButton(
                     shape = RoundedCornerShape(24.dp),
                 ) {
                     Column {
-                        Text(
-                            text = stringResource(Res.string.choose_name),
-                            modifier = modifier.padding(16.dp),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
                         OutlinedTextField(
                             value = screenshotName,
                             onValueChange = { screenshotName = it },
@@ -173,10 +175,6 @@ actual fun SaveBitmapAsPngButton(
                             Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
                             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                             Text(
-                                // NOTE: for some only-god-knows-why reason when i try to use
-                                //  non-hard-coded string here, on Android/Chrome
-                                //  when the text field gains focus ALL texts in this dialog
-                                //  box become invisible...
                             "OK",
 //                                stringResource(Res.string.ok_description),
                                 fontSize = 16.sp,

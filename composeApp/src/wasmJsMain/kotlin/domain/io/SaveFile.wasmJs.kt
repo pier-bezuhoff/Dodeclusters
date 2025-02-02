@@ -107,6 +107,14 @@ actual fun SaveFileButton(
         buttonContent()
     }
     if (openDialog) {
+//        onSaved(null, null)
+        // NOTE: for some only-god-knows-why reason when i try to use
+        //  non-hard-coded or maybe longer strings here, on Android/Chrome
+        //  when the text field gains focus ALL texts in the app
+        //  become invisible...
+        //  And this might have to do with some race condition based
+        //  on number of words/characters displayed at the same time
+        //  as if there is a cap...
         Dialog(
             onDismissRequest = { openDialog = false },
             properties = DialogProperties()
@@ -116,17 +124,10 @@ actual fun SaveFileButton(
                 shape = RoundedCornerShape(24.dp),
             ) {
                 Column {
-                    Text(
-                        text = "hi", //stringResource(Res.string.choose_name),
-                        modifier = modifier.padding(16.dp),
-                        style = MaterialTheme.typography.titleLarge,
-                    )
                     OutlinedTextField(
                         value = ddcName,
                         onValueChange = { ddcName = it },
-                        label = {
-                            Text("name") //stringResource(Res.string.name))
-                        },
+                        label = { Text(stringResource(Res.string.name)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions( // smart ass enter capturing
                             imeAction = ImeAction.Done
@@ -142,10 +143,6 @@ actual fun SaveFileButton(
                                 true
                             } else false
                         }.focusRequester(textFieldFocusRequester),
-//                        colors = OutlinedTextFieldDefaults.colors(
-//                            focusedContainerColor = Color.Green,
-//                            focusedTextColor = Color.Blue,
-//                        )
                     )
                     Button(
                         onClick = ::onConfirm,
@@ -156,18 +153,56 @@ actual fun SaveFileButton(
                         Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                         Text(
-                            // NOTE: for some only-god-knows-why reason when i try to use
-                            //  non-hard-coded string here, on Android/Chrome
-                            //  when the text field gains focus ALL texts
-                            //  box become invisible...
-                            "OK",
-//                            stringResource(Res.string.ok_description),
+                            "OK",//stringResource(Res.string.ok_description),
                             fontSize = 16.sp,
                         )
                     }
                 }
             }
         }
+        // sus, AlertDialog is no supposed to allow non-specified parameters...
+//        AlertDialog(
+//            onDismissRequest = { openDialog = false },
+//            confirmButton = {
+//                TextButton(
+//                    onClick = ::onConfirm,
+//                    colors = ButtonDefaults.textButtonColors(
+//                        contentColor = MaterialTheme.colorScheme.primary,
+//                        disabledContentColor = MaterialTheme.colorScheme.primary,
+//                    )
+//                ) {
+//                    Text(stringResource(Res.string.ok_description))
+//                }
+//            },
+//            title = { Text(stringResource(Res.string.choose_name)) },
+//            titleContentColor = MaterialTheme.colorScheme.onSurface,
+//            text = {
+//                OutlinedTextField(
+//                    value = ddcName,
+//                    onValueChange = { ddcName = it },
+//                    label = { Text(stringResource(Res.string.name)) },
+//                    singleLine = true,
+//                    keyboardOptions = KeyboardOptions( // smart ass enter capturing
+//                        imeAction = ImeAction.Done
+//                    ),
+//                    keyboardActions = KeyboardActions(
+//                        onDone = { onConfirm() }
+//                    ),
+//                    modifier = Modifier.onKeyEvent {
+//                        if (it.key == Key.Enter) {
+//                            onConfirm()
+//                            true
+//                        } else false
+//                    }.focusRequester(textFieldFocusRequester),
+//                    colors = OutlinedTextFieldDefaults.colors(
+//                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+//                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+//                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+//                    )
+//                )
+//            },
+//            textContentColor = MaterialTheme.colorScheme.onSurface,
+//        )
         LaunchedEffect(openDialog) {
             textFieldFocusRequester.requestFocus()
         }
