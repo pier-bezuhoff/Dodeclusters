@@ -297,7 +297,14 @@ fun EditClusterScreen(
                 onConfirm = viewModel::closeDialog,
             )
         }
-        DialogType.BLEND_SETTINGS -> {}
+        DialogType.BLEND_SETTINGS -> {
+            BlendSettingsDialog(
+                oldTransparency = viewModel.regionsTransparency,
+                oldBlendMode = viewModel.regionsBlendMode,
+                onDismissRequest = viewModel::closeDialog,
+                onConfirm = viewModel::setBlendSettings
+            )
+        }
         null -> {}
     }
     LaunchedEffect(ddcContent, sampleName, viewModel) {

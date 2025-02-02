@@ -151,7 +151,7 @@ class EditClusterViewModel : ViewModel() {
     /** `[0; 1]` transparency of non-chessboard [regions] */
     var regionsTransparency: Float by mutableStateOf(1.0f)
         private set
-    var regionsBlendMode: BlendMode by mutableStateOf(BlendMode.Multiply) //BlendMode.SrcOver)
+    var regionsBlendMode: BlendMode by mutableStateOf(BlendMode.SrcOver)
         private set
     /** custom colors for circle/line borders or points */
     val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
@@ -2575,6 +2575,12 @@ class EditClusterViewModel : ViewModel() {
             createNewFreePoint(newPoint)
         } // it could have already done it with realized PSR.Eq, which results in Arg.Point.Index
         partialArgList = PartialArgList(argList.signature)
+    }
+
+    fun setBlendSettings(newRegionsTransparency: Float, newRegionsBlendMode: BlendMode) {
+        regionsTransparency = newRegionsTransparency
+        regionsBlendMode = newRegionsBlendMode
+        openedDialog = null
     }
 
     fun updateParameters(parameters: Parameters) {

@@ -173,6 +173,16 @@
     <string name="choose_name">Choose a name</string>
     <string name="name">Name</string>
     <string name="open_file">Open file</string>
+    <!-- blend settings dialog -->
+    <string name="blend_settings_title">Blend settings</string>
+    <string name="blend_settings_transparency_prompt">Transparency of regions</string>
+    <!-- blend modes -->
+    <string name="blend_mode_src_over">Normal</string>
+    <string name="blend_mode_multiply">Multiply</string>
+    <string name="blend_mode_screen">Screen</string>
+    <string name="blend_mode_overlay">Overlay</string>
+    <string name="blend_mode_difference">Difference</string>
+    <string name="blend_mode_plus">Addition</string>
     <!-- snackbar messages -->
     <string name="locked_objects_notice">These objects are pinned, detach them to move</string>
     <string name="locked_object_notice">This object is pinned, detach it to move</string>
