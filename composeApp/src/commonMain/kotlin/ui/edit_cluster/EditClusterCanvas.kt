@@ -8,18 +8,21 @@ import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -28,6 +31,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
@@ -39,6 +43,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
@@ -68,6 +73,7 @@ import domain.cluster.LogicalRegion
 import domain.rotateBy
 import getPlatform
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
@@ -84,6 +90,7 @@ import kotlin.math.min
 
 private val dottedPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
 
+// NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
 @Composable
 fun BoxScope.EditClusterCanvas(
     viewModel: EditClusterViewModel,
@@ -144,35 +151,6 @@ fun BoxScope.EditClusterCanvas(
                     )
                     animations.remove(event)
                 }
-            }
-        }
-    }
-    val density = LocalDensity.current
-    val layoutDirection = LocalLayoutDirection.current
-    coroutineScope.launch {
-        viewModel.takeScreenshotFlow.collect { deferred ->
-            if (deferred != null) withContext(Dispatchers.Main) {
-                // State accesses MUST happen on the main UI thread (and maybe draw ops too)
-                // so this is blocking...
-                screenshotableGraphicsLayer.record(density, layoutDirection, viewModel.canvasSize) {
-                    translate(viewModel.translation.x, viewModel.translation.y) {
-                        val visibleRect = size.toRect().translate(-viewModel.translation)
-                        drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsTransparency, regionsBlendMode = viewModel.regionsBlendMode, circleStroke = circleStroke)
-                        if (viewModel.showCircles) {
-                            drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
-                        }
-                        drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, showCircles = viewModel.showCircles, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius)
-                    }
-                }
-                var screenshotBitmap = screenshotableGraphicsLayer.toImageBitmap()
-                screenshotableGraphicsLayer.record(density, layoutDirection, viewModel.canvasSize) {
-                    viewModel.backgroundColor?.let { bgColor ->
-                        drawRect(bgColor)
-                    } // we have to do this to properly layer bg
-                    drawImage(screenshotBitmap)
-                }
-                screenshotBitmap = screenshotableGraphicsLayer.toImageBitmap()
-                deferred.complete(screenshotBitmap)
             }
         }
     }
@@ -238,10 +216,76 @@ fun BoxScope.EditClusterCanvas(
     }
 }
 
+// BUG: when showing circles, sometimes line-likes are not rendered properly (e.g. cat-in-sky)
+//  with glitches specifically occurring from graphicsLayer.record or graphicsLayer.toImageBitmap
+//  potentially bc of giant circles, it's as if their border becomes large & transparent and covers
+//  half a canvas
 @Composable
-fun ScreenshotableCanvas(modifier: Modifier = Modifier) {
-    Canvas(modifier) {
-
+fun ScreenshotableCanvas(
+    viewModel: EditClusterViewModel,
+    bitmapFlow: MutableSharedFlow<ImageBitmap>,
+    modifier: Modifier = Modifier
+) {
+    val strokeWidth = with (LocalDensity.current) { 2.dp.toPx() }
+    val circleStroke = Stroke(width = strokeWidth)
+    val circleThiccStroke = Stroke(width = 2 * strokeWidth)
+    val dottedStroke = remember { Stroke(
+        width = strokeWidth,
+        pathEffect = dottedPathEffect
+    ) }
+    val pointRadius = 2.5f * strokeWidth
+    val circleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
+    val freeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
+    val pointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
+    val freePointColor = freeCircleColor
+    val selectedCircleColor = DodeclustersColors.strongSalad
+//        MaterialTheme.colorScheme.primary
+    val selectedPointColor = selectedCircleColor
+    val imaginaryCircleColor = Color.hsl(20f, 0.9f, 0.5f, alpha = 0.5f) // faded red
+    val thiccSelectionCircleAlpha = 0.9f
+    val graphicsLayer = rememberGraphicsLayer()
+    Box(modifier
+        .fillMaxSize()
+        .drawWithCache {
+            onDrawWithContent {
+                graphicsLayer.record {
+                    this@onDrawWithContent.drawContent()
+                }
+                drawLayer(graphicsLayer)
+            }
+        }
+    ) {
+        Box(Modifier
+            .fillMaxSize()
+            .drawBehind {
+                // have to jump thru 2 boxes for proper bg render
+                viewModel.backgroundColor?.let { backgroundColor ->
+                    drawRect(backgroundColor, size = size)
+                }
+            }
+        ) {
+            Canvas(
+                Modifier.fillMaxSize()
+                    .graphicsLayer(
+                        compositingStrategy = CompositingStrategy.Offscreen, // crucial for proper alpha blending
+                    )
+            ) {
+                translate(viewModel.translation.x, viewModel.translation.y) {
+                    val visibleRect = size.toRect().translate(-viewModel.translation)
+                    drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsTransparency, regionsBlendMode = viewModel.regionsBlendMode, circleStroke = circleStroke)
+                    if (viewModel.showCircles) {
+                        drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
+                    }
+                    drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, showCircles = viewModel.showCircles, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius)
+                }
+            }
+        }
+        LaunchedEffect(viewModel, bitmapFlow) {
+            println("started graphics layer -> bitmap conversion")
+            val bitmap = graphicsLayer.toImageBitmap()
+            println("completed graphics layer -> bitmap conversion")
+            bitmapFlow.emit(bitmap)
+        }
     }
 }
 

@@ -223,9 +223,6 @@ class EditClusterViewModel : ViewModel() {
     // i'll be real this stupid practice is annoying and ugly & a hack
     val animations: SharedFlow<ObjectAnimation> = _animations.asSharedFlow()
 
-    val takeScreenshotFlow: MutableStateFlow<CompletableDeferred<ImageBitmap>?> =
-        MutableStateFlow(null)
-
     val snackbarMessages: MutableSharedFlow<SnackbarMessage> =
         MutableSharedFlow()
 //        MutableSharedFlow(extraBufferCapacity = 1)
@@ -2718,17 +2715,6 @@ class EditClusterViewModel : ViewModel() {
     private fun CircleOrLine.upscale(): CircleOrLine = scaled(0.0, 0.0, UPSCALING_FACTOR)
     private fun Point.downscale(): Point = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
     private fun Point.upscale(): Point = scaled(0.0, 0.0, UPSCALING_FACTOR)
-
-    suspend fun saveScreenshot(): Result<ImageBitmap> {
-        takeScreenshotFlow.update { deferred ->
-            deferred ?: CompletableDeferred()
-        }
-        return takeScreenshotFlow.value?.let {
-            val bitmap = it.await() // this is blocking ui
-            takeScreenshotFlow.update { null }
-            Result.success(bitmap)
-        } ?: Result.failure(CancellationException("takeScreenshotFlow.value evaporated somehow"))
-    }
 
     fun saveState(): State {
         val center = computeAbsoluteCenter() ?: Offset.Zero

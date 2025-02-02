@@ -54,11 +54,13 @@ import dodeclusters.composeapp.generated.resources.blend_settings_transparency_p
 import domain.round
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
+import ui.CancelOkRow
 import ui.OkButton
 import ui.component1
 import ui.component2
 import ui.hideSystemBars
 
+// reference: https://developer.android.com/reference/android/graphics/BlendMode
 private val BLEND_MODES = mapOf(
     BlendMode.SrcOver to Res.string.blend_mode_src_over,
     BlendMode.Multiply to Res.string.blend_mode_multiply,
@@ -173,20 +175,4 @@ private fun SliderText(sliderState: SliderState, modifier: Modifier = Modifier) 
         modifier.padding(16.dp),
         style = MaterialTheme.typography.bodyLarge
     )
-}
-
-@Composable
-private fun CancelOkRow(
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
-    fontSize: TextUnit = 24.sp,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier.fillMaxWidth().padding(vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
-        CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
-        OkButton(fontSize = fontSize, onConfirm = onConfirm)
-    }
 }

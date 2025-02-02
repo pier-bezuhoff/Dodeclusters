@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import ui.edit_cluster.EditClusterViewModel
 import java.io.File
 import java.io.FileOutputStream
 
@@ -35,7 +36,8 @@ import java.io.FileOutputStream
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 actual fun SaveBitmapAsPngButton(
-    saveData: SaveData<Result<ImageBitmap>>,
+    viewModel: EditClusterViewModel,
+    saveData: SaveData<Unit>,
     buttonContent: @Composable () -> Unit,
     modifier: Modifier,
     shape: Shape,
@@ -54,23 +56,23 @@ actual fun SaveBitmapAsPngButton(
         }
     )
     if (false)
-    Button(
-        onClick = {
-            if (writeStorageAccessState.allPermissionsGranted) {
-                coroutineScope.launch(Dispatchers.IO) {
-                    saveData.prepareContent(saveData.name).fold(
-                        onSuccess = { bitmap ->
-                            // something aint right
-                            saveBitmapToDisk(context, bitmap.asAndroidBitmap(), saveData.name)
-                            // way too silent, notifs doko
-                            onSaved(true)
-                        },
-                        onFailure = {
-                            onSaved(false)
-                        }
-                    )
-                }
-            } else if (writeStorageAccessState.shouldShowRationale) {
+        Button(
+            onClick = {
+                if (writeStorageAccessState.allPermissionsGranted) {
+                    coroutineScope.launch(Dispatchers.IO) {
+//                    saveData.prepareContent(saveData.name).fold(
+//                        onSuccess = { bitmap ->
+//                            // something aint right
+//                            saveBitmapToDisk(context, bitmap.asAndroidBitmap(), saveData.name)
+//                            // way too silent, notifs doko
+//                            onSaved(true)
+//                        },
+//                        onFailure = {
+//                        }
+//                    )
+                        onSaved(false)
+                    }
+                } else if (writeStorageAccessState.shouldShowRationale) {
 //                coroutineScope.launch {
 //                val result = snackbarHostState.showSnackbar(
 //                    message = "The storage permission is needed to save the image",
@@ -80,20 +82,20 @@ actual fun SaveBitmapAsPngButton(
                     writeStorageAccessState.launchMultiplePermissionRequest()
 //                }
 //                }
-            } else {
-                writeStorageAccessState.launchMultiplePermissionRequest()
-            }
-        },
-        modifier = modifier,
-        shape = shape,
-        colors = ButtonDefaults.buttonColors().copy(
-            containerColor = containerColor,
-            contentColor = contentColor,
-        )
-    ) {
-        buttonContent()
-        Text("Does NOT work") // TODO: fix this
-    }
+                } else {
+                    writeStorageAccessState.launchMultiplePermissionRequest()
+                }
+            },
+            modifier = modifier,
+            shape = shape,
+            colors = ButtonDefaults.buttonColors().copy(
+                containerColor = containerColor,
+                contentColor = contentColor,
+            )
+        ) {
+            buttonContent()
+            Text("Does NOT work") // TODO: fix this
+        }
 }
 
 private suspend fun saveBitmapToDisk(context: Context, bitmap: Bitmap, name: String): Uri? {

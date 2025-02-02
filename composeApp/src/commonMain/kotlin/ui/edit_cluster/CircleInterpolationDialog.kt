@@ -133,7 +133,7 @@ fun CircleInterpolationDialog(
                             interpolateInBetween = it
                         }
                     )
-                    CancelOkRow(
+                    ui.CancelOkRow(
                         onDismissRequest = onDismissRequest,
                         onConfirm = onConfirm0,
                         fontSize = okFontSize
@@ -170,7 +170,7 @@ private fun CircleInterpolationHorizontalCompact(
                     InsideOutsideToggle(interpolateInBetween, setInterpolateInBetween)
                 }
             }
-        CancelOkRow(onDismissRequest, onConfirm, fontSize = 18.sp)
+        ui.CancelOkRow(onDismissRequest, onConfirm, fontSize = 18.sp)
     }
 }
 
@@ -241,21 +241,5 @@ private fun InsideOutsideToggle(
             modifier = Modifier.padding(8.dp),
             style = MaterialTheme.typography.labelLarge
         )
-    }
-}
-
-@Composable
-private fun CancelOkRow(
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
-    fontSize: TextUnit = 24.sp,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
-        CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
-        OkButton(fontSize = fontSize, onConfirm = onConfirm)
     }
 }

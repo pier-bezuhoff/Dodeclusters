@@ -2,6 +2,7 @@ package ui.edit_cluster
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -25,9 +26,9 @@ import ui.tools.EditClusterTool
 
 @Composable
 fun SaveOptionsDialog(
+    viewModel: EditClusterViewModel,
     saveAsYaml: (name: String) -> String,
     exportAsSvg: (name: String) -> String,
-    exportAsPng: suspend () -> Result<ImageBitmap>,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -75,11 +76,12 @@ fun SaveOptionsDialog(
                 // for one reason or another png export is quite slow on Web (desktop is quite fast, mobile is unimplemented)
                 val pngExport = EditClusterTool.PngExport
                 SaveBitmapAsPngButton(
+                    viewModel = viewModel,
                     saveData = SaveData(
                         name = pngExport.DEFAULT_NAME,
                         extension = pngExport.EXTENSION,
                         mimeType = pngExport.MIME_TYPE,
-                        prepareContent = { exportAsPng() }
+                        prepareContent = { }
                     ),
                     buttonContent = {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {

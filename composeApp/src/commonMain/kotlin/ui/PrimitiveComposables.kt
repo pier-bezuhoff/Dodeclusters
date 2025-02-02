@@ -1,7 +1,10 @@
 package ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -270,6 +273,22 @@ fun CancelButton(
         Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel_name))
         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
         Text(stringResource(Res.string.cancel_name), fontSize = fontSize)
+    }
+}
+
+@Composable
+fun CancelOkRow(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    fontSize: TextUnit = 24.sp,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier.fillMaxWidth().padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
+        OkButton(fontSize = fontSize, onConfirm = onConfirm)
     }
 }
 

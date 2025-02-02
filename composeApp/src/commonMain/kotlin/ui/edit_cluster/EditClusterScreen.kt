@@ -82,6 +82,8 @@ import domain.io.DdcRepository
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -290,9 +292,9 @@ fun EditClusterScreen(
         }
         DialogType.SAVE_OPTIONS -> {
             SaveOptionsDialog(
+                viewModel = viewModel,
                 saveAsYaml = viewModel::saveAsYaml,
                 exportAsSvg = viewModel::exportAsSvg,
-                exportAsPng = viewModel::saveScreenshot,
                 onDismissRequest = viewModel::closeDialog,
                 onConfirm = viewModel::closeDialog,
             )
@@ -336,14 +338,14 @@ fun EditClusterScreen(
             }
         }
     }
-//    LaunchedEffect(viewModel) {
-//        viewModel.snackbarMessages.collectLatest { message ->
+    LaunchedEffect(viewModel) {
+        viewModel.snackbarMessages.collectLatest { message ->
 //            // NOTE: snackbar hangs windows/chrome apparently (?)
 ////            snackbarHostState.showSnackbar(getString(message.stringResource), duration = message.duration)
 //            // MAYBE: move on-selection action prompt here instead
-//            println(getString(message.stringResource))
-//        }
-//    }
+            println(getString(message.stringResource))
+        }
+    }
 }
 
 /** Loads all tool icons and caches them.
