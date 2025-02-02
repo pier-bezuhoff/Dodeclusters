@@ -17,7 +17,7 @@ data class DdcV4(
     val backgroundColor: ColorAsCss? = DEFAULT_BACKGROUND_COLOR,
     val bestCenterX: Float? = DEFAULT_BEST_CENTER_X,
     val bestCenterY: Float? = DEFAULT_BEST_CENTER_Y,
-    /** indicates using all-circle chessboard pattern coloring, ignoring parts */
+    /** indicates using all-circle chessboard pattern coloring */
     val chessboardPattern: Boolean = DEFAULT_CHESSBOARD_PATTERN,
     /** one of two possible starting chessboard phases, true=colored=bg filled with color */
     val chessboardPatternStartsColored: Boolean = DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED,

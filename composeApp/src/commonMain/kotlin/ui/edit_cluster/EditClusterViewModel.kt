@@ -11,6 +11,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.Density
@@ -85,7 +86,6 @@ import domain.tryCatch2
 import getPlatform
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -93,7 +93,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
@@ -130,7 +129,7 @@ class EditClusterViewModel : ViewModel() {
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
 
-    // MAYBE: when circles are hidden select parts instead
+    // MAYBE: when circles are hidden select regions instead
     /** indices of selected circles/lines/points */
     var selection: List<Ix> by mutableStateOf(emptyList())
         private set
@@ -148,19 +147,25 @@ class EditClusterViewModel : ViewModel() {
     /** currently selected color */
     var regionColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
         private set
+
+    /** `[0; 1]` transparency of non-chessboard [regions] */
+    var regionsTransparency: Float by mutableStateOf(1.0f)
+        private set
+    var regionsBlendMode: BlendMode by mutableStateOf(BlendMode.Multiply) //BlendMode.SrcOver)
+        private set
     /** custom colors for circle/line borders or points */
     val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
     var backgroundColor: Color? by mutableStateOf(null)
 //    val hiddenObjects: Set<Ix> by mutableStateOf(emptySet()) // TODO
     var showCircles: Boolean by mutableStateOf(true)
         private set
-    /** which style to use when drawing parts: true = stroke, false = fill */
+    /** which style to use when drawing regions: true = stroke, false = fill */
     var showWireframes: Boolean by mutableStateOf(false)
         private set
     var showDirectionArrows: Boolean by mutableStateOf(DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES)
         private set
     /** applies to [SelectionMode.Region]:
-     * only use circles present in the [selection] to determine which parts to fill */
+     * only use circles present in the [selection] to determine which regions to fill */
     var restrictRegionsToSelection: Boolean by mutableStateOf(false)
         private set
     var chessboardPattern: ChessboardPattern by mutableStateOf(ChessboardPattern.NONE)
@@ -475,13 +480,13 @@ class EditClusterViewModel : ViewModel() {
                 )
             }
         }
-        val logicalRegions = regions.mapNotNull { part ->
-            val insides = part.insides.mapNotNull { reindexing[it] }.toSet()
-            val outsides = part.outsides.mapNotNull { reindexing[it] }.toSet()
+        val logicalRegions = regions.mapNotNull { region ->
+            val insides = region.insides.mapNotNull { reindexing[it] }.toSet()
+            val outsides = region.outsides.mapNotNull { reindexing[it] }.toSet()
             if (insides.isEmpty() && outsides.isEmpty())
                 null
             else
-                part.copy(insides = insides, outsides = outsides)
+                region.copy(insides = insides, outsides = outsides)
         }
         return Constellation(
             objects = objectConstructs,
@@ -773,20 +778,20 @@ class EditClusterViewModel : ViewModel() {
         val old2new = oldIndices.zip(newIndices).toMap()
         val newRegions = regions.filter {
             oldIndices.containsAll(it.insides) && oldIndices.containsAll(it.outsides)
-        }.map { part ->
+        }.map { region ->
             val newInsides: Set<Ix>
             val newOutsides: Set<Ix>
             if (flipInAndOut) {
-                newInsides = part.outsides.map { old2new[it]!! }.toSet()
-                newOutsides = part.insides.map { old2new[it]!! }.toSet()
+                newInsides = region.outsides.map { old2new[it]!! }.toSet()
+                newOutsides = region.insides.map { old2new[it]!! }.toSet()
             } else {
-                newInsides = part.insides.map { old2new[it]!! }.toSet()
-                newOutsides = part.outsides.map { old2new[it]!! }.toSet()
+                newInsides = region.insides.map { old2new[it]!! }.toSet()
+                newOutsides = region.outsides.map { old2new[it]!! }.toSet()
             }
             LogicalRegion(
                 insides = newInsides,
                 outsides = newOutsides,
-                fillColor = part.fillColor
+                fillColor = region.fillColor
             )
         }
         regions.addAll(newRegions)
@@ -801,11 +806,11 @@ class EditClusterViewModel : ViewModel() {
                 .toSet()
             if (deletedCircleIndices.isNotEmpty()) {
                 val everythingIsDeleted = deletedCircleIndices.containsAll(objects.filterIndices { it is CircleOrLine })
-                val oldParts = regions.toList()
+                val oldRegions = regions.toList()
                 regions.clear()
                 if (!everythingIsDeleted) {
                     regions.addAll(
-                        oldParts
+                        oldRegions
                             // to avoid stray chessboard selections
                             .filterNot { (ins, _, _) ->
                                 ins.isNotEmpty() && ins.minus(deletedCircleIndices).isEmpty()
@@ -974,9 +979,9 @@ class EditClusterViewModel : ViewModel() {
         return siblings + parents
     }
 
-    // NOTE: part boundaries get messed up when we alter a big structure like spiral
-    /** @return (compressed part, verbose part involving all circles) surrounding clicked position */
-    private fun selectPartAt(
+    // NOTE: region boundaries get messed up when we alter a big structure like spiral
+    /** @return (compressed region, verbose region involving all circles) surrounding clicked position */
+    private fun selectRegionAt(
         visiblePosition: Offset,
         boundingCircles: List<Ix>? = null
     ): Pair<LogicalRegion, LogicalRegion> {
@@ -989,15 +994,15 @@ class EditClusterViewModel : ViewModel() {
         val circles = objects.map { it as? CircleOrLine }
         val (essentialIns, essentialOuts) =
             compressConstraints(circles, ins, outs)
-        val part0 = LogicalRegion(ins.toSet(), outs.toSet(), regionColor)
-        val part = LogicalRegion(
+        val region0 = LogicalRegion(ins.toSet(), outs.toSet(), regionColor)
+        val region = LogicalRegion(
 //            insides = ins.toSet(),
 //            outsides = outs.toSet(),
             insides = essentialIns,
             outsides = essentialOuts,
             fillColor = regionColor
         )
-        return Pair(part, part0)
+        return Pair(region, region0)
     }
 
     fun reselectRegionAt(
@@ -1005,42 +1010,45 @@ class EditClusterViewModel : ViewModel() {
         boundingCircles: List<Ix>? = null,
         setSelectionToRegionBounds: Boolean = false
     ) {
-        val (part, part0) = selectPartAt(visiblePosition, boundingCircles)
-        val outerParts = regions.filter { part isObviouslyInside it || part0 isObviouslyInside it  }
-        if (outerParts.isEmpty()) {
-            recordCommand(Command.FILL_REGION, listOf(regions.size))
-            regions.add(part)
+        val (region, region0) = selectRegionAt(visiblePosition, boundingCircles)
+        val outerRegions = regions.filter { region isObviouslyInside it || region0 isObviouslyInside it  }
+        if (outerRegions.isEmpty()) {
+            recordCommand(Command.FILL_REGION, target = regions.size)
+            regions.add(region)
             if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
-                selection = (part.insides + part.outsides).toList()
+                selection = (region.insides + region.outsides).toList()
             }
-            println("added $part")
+            println("added $region")
         } else {
-            val sameExistingPart = outerParts.singleOrNull {
-                part.insides == it.insides && part.outsides == it.outsides
+            // im assuming there can only be one at max with the same insides/outsides
+            val i = outerRegions.indexOfLast {
+                region.insides == it.insides && region.outsides == it.outsides
             }
-            recordCommand(Command.FILL_REGION, unique = true)
-            if (sameExistingPart != null) {
-                regions.remove(sameExistingPart)
-                if (part == sameExistingPart) {
-                    println("removed $sameExistingPart")
-                } else { // we are trying to change color im guessing
-                    regions.add(sameExistingPart.copy(fillColor = part.fillColor))
+            val sameExistingRegion = if (i == -1) null else outerRegions[i]
+            if (sameExistingRegion != null) {
+                if (region == sameExistingRegion) {
+                    recordCommand(Command.FILL_REGION, unique = true)
+                    regions.remove(sameExistingRegion)
+                    println("removed $sameExistingRegion")
+                } else { // we are trying to change the color im guessing
+                    recordCommand(Command.FILL_REGION, target = i)
+                    regions[i] = sameExistingRegion.copy(fillColor = region.fillColor)
                     if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
-                        selection = (part.insides + part.outsides).toList()
+                        selection = (region.insides + region.outsides).toList()
                     }
-                    println("recolored $sameExistingPart")
+                    println("recolored $sameExistingRegion")
                 }
-            } else {
-                // MAYBE: if there are many outerParts we dont delete them?
-                regions.removeAll(outerParts)
-                if (
-                    outerParts.all { it.fillColor == outerParts[0].fillColor } &&
-                    outerParts[0].fillColor != part.fillColor
-                ) { // we are trying to change color im guessing
-                    regions.addAll(outerParts.map { it.copy(fillColor = part.fillColor) })
-                    println("recolored parts [${outerParts.joinToString(prefix = "\n", separator = ";\n")}]")
+            } else { // NOTE: click on overlapping region: contested behaviour
+                val outerColor0 = outerRegions[0].fillColor // we know outerRegions are non-empty
+                val allOuterRegionsAreOfTheSameColor = outerRegions.all { it.fillColor == outerColor0 }
+                if (allOuterRegionsAreOfTheSameColor && outerColor0 == region.fillColor) {
+                    recordCommand(Command.FILL_REGION, unique = true)
+                    regions.removeAll(outerRegions)
+                    println("removed regions [${outerRegions.joinToString(prefix = "\n", separator = ";\n")}]")
                 } else {
-                    println("removed parts [${outerParts.joinToString(prefix = "\n", separator = ";\n")}]")
+                    recordCommand(Command.FILL_REGION, target = regions.size)
+                    regions.add(region)
+                    println("added $region")
                 }
             }
         }
@@ -1066,14 +1074,12 @@ class EditClusterViewModel : ViewModel() {
     fun isConstrained(index: Ix): Boolean =
         expressions.expressions[index]?.expr is Expr.Incidence
 
-    // MAYBE: wrap into state that depends only on [parts] for caching
+    // MAYBE: wrap into state that depends only on [regions] for caching
     fun getColorsByMostUsed(): List<Color> =
-        regions
-            .flatMap { part ->
-                part.borderColor?.let { listOf(part.fillColor, it) }
-                    ?: listOf(part.fillColor)
-            }
-            .sortedByFrequency()
+        regions.flatMap { region ->
+            region.borderColor?.let { listOf(region.fillColor, it) }
+                ?: listOf(region.fillColor)
+        }.sortedByFrequency()
 
     /** Try to snap [absolutePosition] to some existing object or their intersection.
      * Snap priority: points > circles
@@ -1278,8 +1284,8 @@ class EditClusterViewModel : ViewModel() {
         openedDialog = null
     }
 
-    // MAYBE: replace with select-all->delete in invisible-circles part manipulation mode
-    fun deleteAllParts() {
+    // MAYBE: replace with select-all->delete in invisible-circles region manipulation mode
+    fun deleteAllRegions() {
         recordCommand(Command.DELETE, unique = true)
         chessboardPattern = ChessboardPattern.NONE
         regions.clear()
@@ -1451,11 +1457,11 @@ class EditClusterViewModel : ViewModel() {
                         SubMode.RectangularSelect(absolute(visiblePosition))
                     }
                 } else if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
-                    val (_, qualifiedPart) = selectPartAt(visiblePosition)
-                    submode = SubMode.FlowSelect(qualifiedPart)
+                    val (_, qualifiedRegion) = selectRegionAt(visiblePosition)
+                    submode = SubMode.FlowSelect(qualifiedRegion)
                 } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
-                    val (_, qualifiedPart) = selectPartAt(visiblePosition)
-                    submode = SubMode.FlowFill(qualifiedPart)
+                    val (_, qualifiedRegion) = selectRegionAt(visiblePosition)
+                    submode = SubMode.FlowFill(qualifiedRegion)
                     val selectedCircles = selection.filter { objects[it] is CircleOrLine }
                     if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
                         reselectRegionAt(visiblePosition, selectedCircles)
@@ -1604,30 +1610,30 @@ class EditClusterViewModel : ViewModel() {
                     }
                 }
                 SelectionMode.Multiselect -> {
-                    // (re)-select part
+                    // (re)-select region
                     val selectedCircleIndex = xorSelectCircleAt(position)
-                    if (selectedCircleIndex == null) { // try to select bounding circles of the selected part
-                        val (part, part0) = selectPartAt(position)
-                        if (part0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
+                    if (selectedCircleIndex == null) { // try to select bounding circles of the selected region
+                        val (region, region0) = selectRegionAt(position)
+                        if (region0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
                             toggleSelectAll()
                         } else {
                             val selectedCircles = selection.filter { objects[it] is CircleOrLine }
                             regions
                                 .withIndex()
-                                .filter { (_, p) -> part isObviouslyInside p || part0 isObviouslyInside p }
+                                .filter { (_, p) -> region isObviouslyInside p || region0 isObviouslyInside p }
                                 .maxByOrNull { (_, p) -> p.insides.size + p.outsides.size }
-                                ?.let { (_, existingPart) ->
-                                    println("existing bound of $existingPart")
-                                    val bounds: Set<Ix> = existingPart.insides + existingPart.outsides
+                                ?.let { (_, existingRegion) ->
+                                    println("existing bound of $existingRegion")
+                                    val bounds: Set<Ix> = existingRegion.insides + existingRegion.outsides
                                     if (bounds != selectedCircles.toSet()) {
                                         selection = bounds.toList()
                                         highlightSelectionParents()
                                     } else {
                                         selection = emptyList()
                                     }
-                                } ?: run { // select bound of a non-existent part
-                                    println("bounds of $part")
-                                    val bounds: Set<Ix> = part.insides + part.outsides
+                                } ?: run { // select bound of a non-existent region
+                                    println("bounds of $region")
+                                    val bounds: Set<Ix> = region.insides + region.outsides
                                     if (bounds != selectedCircles.toSet()) {
                                         selection = bounds.toList()
                                         highlightSelectionParents()
@@ -1928,25 +1934,25 @@ class EditClusterViewModel : ViewModel() {
                 selection = selectWithRectangle(objects, rect)
                 submode = SubMode.RectangularSelect(corner1, c)
             } else if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
-                val qualifiedPart = (submode as SubMode.FlowSelect).lastQualifiedPart
-                val (_, newQualifiedPart) = selectPartAt(centroid)
-                if (qualifiedPart == null) {
-                    submode = SubMode.FlowSelect(newQualifiedPart)
+                val qualifiedRegion = (submode as SubMode.FlowSelect).lastQualifiedRegion
+                val (_, newQualifiedRegion) = selectRegionAt(centroid)
+                if (qualifiedRegion == null) {
+                    submode = SubMode.FlowSelect(newQualifiedRegion)
                 } else {
                     val diff =
-                        (qualifiedPart.insides - newQualifiedPart.insides) union
-                        (newQualifiedPart.insides - qualifiedPart.insides) union
-                        (qualifiedPart.outsides - newQualifiedPart.outsides) union
-                        (newQualifiedPart.outsides - qualifiedPart.outsides)
+                        (qualifiedRegion.insides - newQualifiedRegion.insides) union
+                        (newQualifiedRegion.insides - qualifiedRegion.insides) union
+                        (qualifiedRegion.outsides - newQualifiedRegion.outsides) union
+                        (newQualifiedRegion.outsides - qualifiedRegion.outsides)
                     selection += diff.filter { it !in selection }
                 }
             } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
-                val qualifiedPart = (submode as SubMode.FlowFill).lastQualifiedPart
-                val (_, newQualifiedPart) = selectPartAt(centroid)
-                if (qualifiedPart == null) {
-                    submode = SubMode.FlowFill(newQualifiedPart)
-                } else if (qualifiedPart != newQualifiedPart) {
-                    submode = SubMode.FlowFill(newQualifiedPart)
+                val qualifiedRegion = (submode as SubMode.FlowFill).lastQualifiedRegion
+                val (_, newQualifiedRegion) = selectRegionAt(centroid)
+                if (qualifiedRegion == null) {
+                    submode = SubMode.FlowFill(newQualifiedRegion)
+                } else if (qualifiedRegion != newQualifiedRegion) {
+                    submode = SubMode.FlowFill(newQualifiedRegion)
                     if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
                         reselectRegionAt(centroid, selectedCircles)
                     } else {
@@ -2641,7 +2647,8 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.FlowFill -> activateFlowFill()
             EditClusterTool.FillChessboardPattern -> toggleChessboardPattern()
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
-            EditClusterTool.DeleteAllParts -> deleteAllParts()
+            EditClusterTool.DeleteAllParts -> deleteAllRegions()
+            EditClusterTool.BlendSettings -> openedDialog = DialogType.BLEND_SETTINGS
             EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to seleclet `ted circles only
             EditClusterTool.ToggleFilledOrOutline -> showWireframes = !showWireframes
             EditClusterTool.HideUI -> hideUIFor30s()
@@ -2658,7 +2665,7 @@ class EditClusterViewModel : ViewModel() {
             is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
             EditClusterTool.Undo -> undo()
             EditClusterTool.Redo -> redo()
-            EditClusterTool.SaveCluster -> openedDialog = DialogType.SAVE_OPTIONS_DIALOG
+            EditClusterTool.SaveCluster -> openedDialog = DialogType.SAVE_OPTIONS
             is EditClusterTool.CustomAction -> {} // custom handlers
             EditClusterTool.CompleteArcPath -> completeArcPath()
             EditClusterTool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows

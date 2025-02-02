@@ -32,6 +32,8 @@
     <string name="restrict_region_to_selection_description">Restrict region's bounding circles to only those present in the current selection</string>
     <string name="delete_all_parts_name">Delete all parts</string>
     <string name="delete_all_parts_description">Clear all filled regions</string>
+    <string name="regions_blend_settings_name">Region blending settings</string>
+    <string name="regions_blend_settings_description">Change region transparency and blending when they overlap</string>
     <string name="show_circles_name">Show circles</string>
     <string name="show_circles_description">Show/hide circles</string>
     <string name="toggle_filled_or_outline_name">Filled/outline</string>

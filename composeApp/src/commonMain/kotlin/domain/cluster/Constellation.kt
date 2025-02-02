@@ -15,6 +15,7 @@ import kotlinx.serialization.Serializable
 @Immutable
 data class Constellation(
     val objects: List<ObjectConstruct>,
+    // TODO: rename parts to regions
     val parts: List<LogicalRegion>, // TODO: transition to ArcPath's
     // purely decorative, the "real" border color can be specified
     // using unfilled single-circle ClusterPart with borderColor

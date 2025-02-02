@@ -1,6 +1,7 @@
 package ui.edit_cluster
 
 import PlatformKind
+import androidx.annotation.FloatRange
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -81,6 +82,8 @@ import ui.visibleHalfPlanePath
 import kotlin.math.max
 import kotlin.math.min
 
+private val dottedPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
+
 @Composable
 fun BoxScope.EditClusterCanvas(
     viewModel: EditClusterViewModel,
@@ -96,7 +99,7 @@ fun BoxScope.EditClusterCanvas(
     )
     val dottedStroke = remember { Stroke(
         width = strokeWidth,
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
+        pathEffect = dottedPathEffect
     ) }
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
@@ -119,7 +122,6 @@ fun BoxScope.EditClusterCanvas(
 //        MaterialTheme.colorScheme.primary
     val selectedPointColor = selectedCircleColor
     val imaginaryCircleColor = Color.hsl(20f, 0.9f, 0.5f, alpha = 0.5f) // faded red
-    val clusterPathAlpha = 1f //0.7f
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
@@ -155,7 +157,7 @@ fun BoxScope.EditClusterCanvas(
                 screenshotableGraphicsLayer.record(density, layoutDirection, viewModel.canvasSize) {
                     translate(viewModel.translation.x, viewModel.translation.y) {
                         val visibleRect = size.toRect().translate(-viewModel.translation)
-                        drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, clusterPathAlpha = clusterPathAlpha, circleStroke = circleStroke)
+                        drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsTransparency, regionsBlendMode = viewModel.regionsBlendMode, circleStroke = circleStroke)
                         if (viewModel.showCircles) {
                             drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
                         }
@@ -180,7 +182,6 @@ fun BoxScope.EditClusterCanvas(
     // key(viewModel.objectAlterationTrigger) { Canvas(...) }
     Canvas(
         modifier
-            // NOTE: turned off long press for now (also inside of reactiveCanvas)
             .reactiveCanvas(
                 onTap = viewModel::onTap,
                 onUp = viewModel::onUp,
@@ -205,7 +206,7 @@ fun BoxScope.EditClusterCanvas(
 //        measureTime {
             translate(viewModel.translation.x, viewModel.translation.y) {
                 val visibleRect = size.toRect().translate(-viewModel.translation)
-                drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, clusterPathAlpha = clusterPathAlpha, circleStroke = circleStroke)
+                drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsTransparency, regionsBlendMode = viewModel.regionsBlendMode, circleStroke = circleStroke)
                 drawAnimation(animations = animations, visibleRect = visibleRect, strokeWidth = strokeWidth)
                 if (viewModel.showCircles) {
                     drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
@@ -620,6 +621,10 @@ private fun DrawScope.drawSelectedCircles(
     }
 }
 
+/**
+ * @param[regionsAlpha] `[0; 1]` transparency of regions (filled or contoured),
+ * except when used for [chessboardPattern], in that case it's defined by [chessboardColor]
+ * */
 private fun DrawScope.drawRegions(
     objects: List<GCircle?>,
     regions: List<LogicalRegion>,
@@ -627,7 +632,9 @@ private fun DrawScope.drawRegions(
     chessboardColor: Color,
     showWireframes: Boolean,
     visibleRect: Rect,
-    clusterPathAlpha: Float,
+    @FloatRange(from = 0.0, to = 1.0)
+    regionsAlpha: Float,
+    regionsBlendMode: BlendMode,
     circleStroke: DrawStyle,
 ) {
     // NOTE: buggy on extreme zoom-in
@@ -651,19 +658,22 @@ private fun DrawScope.drawRegions(
         if (showWireframes) {
             drawPath(path,
                 color = region.fillColor,
-                alpha = clusterPathAlpha,
-                style = circleStroke
+                alpha = regionsAlpha,
+                style = circleStroke,
+                blendMode = regionsBlendMode
             )
         } else { // drawing stroke+fill to prevent seams
             drawPath(path,
                 color = region.borderColor ?: region.fillColor,
-                alpha = clusterPathAlpha,
-                style = circleStroke
+                alpha = regionsAlpha,
+                style = circleStroke,
+                blendMode = regionsBlendMode,
             )
             drawPath(path,
                 color = region.fillColor,
-                alpha = clusterPathAlpha,
+                alpha = regionsAlpha,
                 style = Fill,
+                blendMode = regionsBlendMode,
             )
         }
     }

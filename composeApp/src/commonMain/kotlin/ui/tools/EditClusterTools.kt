@@ -79,6 +79,7 @@ import dodeclusters.composeapp.generated.resources.insert_centered_cross_descrip
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_name
 import dodeclusters.composeapp.generated.resources.inserted_cross
 import dodeclusters.composeapp.generated.resources.interpolate_lines
+import dodeclusters.composeapp.generated.resources.intersection_settings
 import dodeclusters.composeapp.generated.resources.line_2_points
 import dodeclusters.composeapp.generated.resources.line_by_2_points_arg_descriptions
 import dodeclusters.composeapp.generated.resources.line_by_2_points_description
@@ -107,6 +108,8 @@ import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.region_description
 import dodeclusters.composeapp.generated.resources.region_name
+import dodeclusters.composeapp.generated.resources.regions_blend_settings_description
+import dodeclusters.composeapp.generated.resources.regions_blend_settings_name
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_description
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_name
 import dodeclusters.composeapp.generated.resources.right_left
@@ -285,6 +288,11 @@ sealed class EditClusterTool(
         Res.string.delete_all_parts_name,
         Res.string.delete_all_parts_description,
         Res.drawable.hide_layers
+    )
+    data object BlendSettings: Action(
+        Res.string.regions_blend_settings_name,
+        Res.string.regions_blend_settings_description,
+        Res.drawable.intersection_settings
     )
 
     data object ShowCircles: Switch(

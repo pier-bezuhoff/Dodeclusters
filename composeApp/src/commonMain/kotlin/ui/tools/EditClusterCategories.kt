@@ -49,6 +49,7 @@ sealed class EditClusterCategory(
             EditClusterTool.FillChessboardPattern,
             EditClusterTool.RestrictRegionToSelection,
             EditClusterTool.DeleteAllParts,
+            EditClusterTool.BlendSettings,
             // EditClusterTool.AppliedColor's are auto-added
         ),
         defaultables = listOf(0, 1)

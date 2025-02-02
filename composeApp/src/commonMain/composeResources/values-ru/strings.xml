@@ -36,6 +36,8 @@
     <string name="restrict_region_to_selection_description">Ограничить области только окружностями из выделения</string>
     <string name="delete_all_parts_name">Очистить все области</string>
     <string name="delete_all_parts_description">Очистить все области</string>
+    <string name="regions_blend_settings_name">Настройка наложения областей</string>
+    <string name="regions_blend_settings_description">Настроить прозрачность и наложение областей</string>
     <string name="show_circles_name">Показать окружности</string>
     <string name="show_circles_description">Показать/скрыть окружности</string>
     <string name="toggle_filled_or_outline_name">Залито/границы</string>

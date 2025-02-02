@@ -34,7 +34,7 @@ fun compressConstraintsByRelativeContainment(
 ): Pair<List<Ix>, List<Ix>> {
     // NOTE: these do not take into account more complex
     //  "intersection is always inside x" type relationships,
-    //  we leave it to compressPartByIntersectionPoints
+    //  we leave it to compressRegionsByIntersectionPoints
     val excessiveIns = ins.filter { inJ -> // NOTE: tbh idt these can occur naturally
         val circle = circles[inJ]!!
         ins.any { otherIn ->

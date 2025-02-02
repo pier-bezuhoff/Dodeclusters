@@ -52,7 +52,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
@@ -71,22 +70,17 @@ import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.lock_open
 import dodeclusters.composeapp.generated.resources.ok_name
-import dodeclusters.composeapp.generated.resources.road
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
-import dodeclusters.composeapp.generated.resources.three_sliders
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import domain.Arg
 import domain.PartialArgList
 import domain.io.DdcRepository
 import domain.io.LookupData
 import domain.io.OpenFileButton
-import domain.io.SaveBitmapAsPngButton
-import domain.io.SaveData
-import domain.io.SaveFileButton
 import kotlinx.coroutines.flow.Flow
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
@@ -294,7 +288,7 @@ fun EditClusterScreen(
                 }
             }
         }
-        DialogType.SAVE_OPTIONS_DIALOG -> {
+        DialogType.SAVE_OPTIONS -> {
             SaveOptionsDialog(
                 saveAsYaml = viewModel::saveAsYaml,
                 exportAsSvg = viewModel::exportAsSvg,
@@ -303,6 +297,7 @@ fun EditClusterScreen(
                 onConfirm = viewModel::closeDialog,
             )
         }
+        DialogType.BLEND_SETTINGS -> {}
         null -> {}
     }
     LaunchedEffect(ddcContent, sampleName, viewModel) {
@@ -349,7 +344,9 @@ fun EditClusterScreen(
  * which is noticeable */
 @Composable
 fun preloadIcons() {
-    for (category in listOf(EditClusterCategory.Create, EditClusterCategory.Drag, EditClusterCategory.Multiselect, EditClusterCategory.Region, EditClusterCategory.Transform, EditClusterCategory.Visibility)) {
+    for (category in listOf(
+        EditClusterCategory.Create, EditClusterCategory.Drag, EditClusterCategory.Multiselect, EditClusterCategory.Region, EditClusterCategory.Transform, EditClusterCategory.Visibility
+    )) {
         for (tool in category.tools) {
             painterResource(tool.icon)
             if (tool is Tool.BinaryToggle) {
@@ -360,13 +357,14 @@ fun preloadIcons() {
         }
     }
     for (resource in listOf(
+        EditClusterTool.PngExport.icon, EditClusterTool.SvgExport.icon,
         Res.drawable.confirm, Res.drawable.cancel, // from dialogs
         Res.drawable.collapse_down, Res.drawable.collapse_left,
         // from canvas HUD
         Res.drawable.expand, Res.drawable.shrink,
         Res.drawable.copy, Res.drawable.delete_forever, Res.drawable.lock_open,
         Res.drawable.rotate_counterclockwise,
-        Res.drawable.three_sliders, Res.drawable.three_dots_in_angle_brackets, Res.drawable.road,
+        Res.drawable.three_dots_in_angle_brackets, EditClusterTool.DetailedAdjustment.icon, EditClusterTool.InBetween.icon,
     )) {
         painterResource(resource)
     }
