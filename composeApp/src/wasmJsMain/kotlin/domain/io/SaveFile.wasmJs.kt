@@ -1,25 +1,20 @@
 package domain.io
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,12 +39,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
-import dodeclusters.composeapp.generated.resources.blend_settings_title
-import dodeclusters.composeapp.generated.resources.choose_name
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.name
 import dodeclusters.composeapp.generated.resources.ok_description
-import dodeclusters.composeapp.generated.resources.ok_name
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.launch
@@ -60,7 +52,6 @@ import org.w3c.dom.events.Event
 import org.w3c.dom.url.URL
 import org.w3c.files.Blob
 import org.w3c.files.BlobPropertyBag
-import ui.OkButton
 
 @Composable
 actual fun SaveFileButton(
@@ -107,7 +98,6 @@ actual fun SaveFileButton(
         buttonContent()
     }
     if (openDialog) {
-//        onSaved(null, null)
         // NOTE: for some only-god-knows-why reason when i try to use
         //  non-hard-coded or maybe longer strings here, on Android/Chrome
         //  when the text field gains focus ALL texts in the app
@@ -115,6 +105,7 @@ actual fun SaveFileButton(
         //  And this might have to do with some race condition based
         //  on number of words/characters displayed at the same time
         //  as if there is a cap...
+        // ALSO: try hiding root dialog, maybe it's because of double-dialog setup
         Dialog(
             onDismissRequest = { openDialog = false },
             properties = DialogProperties()
@@ -160,49 +151,6 @@ actual fun SaveFileButton(
                 }
             }
         }
-        // sus, AlertDialog is no supposed to allow non-specified parameters...
-//        AlertDialog(
-//            onDismissRequest = { openDialog = false },
-//            confirmButton = {
-//                TextButton(
-//                    onClick = ::onConfirm,
-//                    colors = ButtonDefaults.textButtonColors(
-//                        contentColor = MaterialTheme.colorScheme.primary,
-//                        disabledContentColor = MaterialTheme.colorScheme.primary,
-//                    )
-//                ) {
-//                    Text(stringResource(Res.string.ok_description))
-//                }
-//            },
-//            title = { Text(stringResource(Res.string.choose_name)) },
-//            titleContentColor = MaterialTheme.colorScheme.onSurface,
-//            text = {
-//                OutlinedTextField(
-//                    value = ddcName,
-//                    onValueChange = { ddcName = it },
-//                    label = { Text(stringResource(Res.string.name)) },
-//                    singleLine = true,
-//                    keyboardOptions = KeyboardOptions( // smart ass enter capturing
-//                        imeAction = ImeAction.Done
-//                    ),
-//                    keyboardActions = KeyboardActions(
-//                        onDone = { onConfirm() }
-//                    ),
-//                    modifier = Modifier.onKeyEvent {
-//                        if (it.key == Key.Enter) {
-//                            onConfirm()
-//                            true
-//                        } else false
-//                    }.focusRequester(textFieldFocusRequester),
-//                    colors = OutlinedTextFieldDefaults.colors(
-//                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-//                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-//                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
-//                    )
-//                )
-//            },
-//            textContentColor = MaterialTheme.colorScheme.onSurface,
-//        )
         LaunchedEffect(openDialog) {
             textFieldFocusRequester.requestFocus()
         }
@@ -234,15 +182,14 @@ fun downloadTextFile3(filename: String, content: String) {
     blobContent[0] = content.toJsString()
     // Q: why text/plain and not yaml mime or smth else?
     val file = Blob(blobContent, BlobPropertyBag("text/plain"))
-    (document.createElement("a") as? HTMLAnchorElement)?.let { a ->
-        val url = URL.Companion.createObjectURL(file)
-        a.href = url
-        a.download = filename
-        document.body?.appendChild(a)
-        a.click()
-        document.body?.removeChild(a)
-        URL.revokeObjectURL(url)
-    }
+    val a = document.createElement("a") as HTMLAnchorElement
+    val url = URL.Companion.createObjectURL(file)
+    a.href = url
+    a.download = filename
+    document.body?.appendChild(a) // append/remove is required for firefox (allegedly)
+    a.click()
+    document.body?.removeChild(a)
+    URL.revokeObjectURL(url)
 }
 
 // saves properly with given filename

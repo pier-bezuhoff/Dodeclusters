@@ -8,6 +8,8 @@ import ui.LifecycleEvent
 import ui.theme.ColorTheme
 import ui.theme.DEFAULT_COLOR_THEME
 
+// NOTE: because Github Pages serves .wasm files with wrong mime type https://stackoverflow.com/a/54320709/7143065
+//  to open in mobile/firefox use netlify version
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     // example:
@@ -26,6 +28,8 @@ fun main() {
             lifecycleEvents.tryEmit(LifecycleEvent.SaveUIState)
         }
     }
+    document.querySelector("h1")?.setAttribute("style", "display: none;")
+    document.querySelector("h2")?.setAttribute("style", "display: none;")
     CanvasBasedWindow(canvasElementId = "ComposeTarget") {
         App(
             sampleName = sampleName,
@@ -38,5 +42,5 @@ fun main() {
 fun getCurrentURL(): URL =
     js("new URL(window.location.href)")
 
-fun alert(): Unit =
-    js("alert()")
+fun alert(message: String): Unit =
+    js("alert(message)")
