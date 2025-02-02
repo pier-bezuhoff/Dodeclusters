@@ -1003,7 +1003,8 @@ class EditClusterViewModel : ViewModel() {
         setSelectionToRegionBounds: Boolean = false
     ) {
         val (region, region0) = selectRegionAt(visiblePosition, boundingCircles)
-        val outerRegions = regions.filter { region isObviouslyInside it || region0 isObviouslyInside it  }
+        val outerRegionsIndices = regions.filterIndices { region isObviouslyInside it || region0 isObviouslyInside it  }
+        val outerRegions = outerRegionsIndices.map { regions[it] }
         if (outerRegions.isEmpty()) {
             recordCommand(Command.FILL_REGION, target = regions.size)
             regions.add(region)
@@ -1011,37 +1012,33 @@ class EditClusterViewModel : ViewModel() {
                 selection = (region.insides + region.outsides).toList()
             }
             println("added $region")
-        } else {
-            // im assuming there can only be one at max with the same insides/outsides
-            val i = outerRegions.indexOfLast {
-                region.insides == it.insides && region.outsides == it.outsides
+        } else if (outerRegions.size == 1) {
+            val i = outerRegionsIndices.single()
+            val outer = outerRegions.single()
+            if (region.fillColor == outer.fillColor) {
+                recordCommand(Command.FILL_REGION, unique = true)
+//                regions.remove(sameExistingRegion)
+                regions.removeAt(i)
+                println("removed $outer")
+            } else { // we are trying to change the color im guessing
+                recordCommand(Command.FILL_REGION, target = i)
+                regions[i] = outer.copy(fillColor = region.fillColor)
+                if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                    selection = (region.insides + region.outsides).toList()
+                }
+                println("recolored $outer")
             }
-            val sameExistingRegion = if (i == -1) null else outerRegions[i]
-            if (sameExistingRegion != null) {
-                if (region == sameExistingRegion) {
-                    recordCommand(Command.FILL_REGION, unique = true)
-                    regions.remove(sameExistingRegion)
-                    println("removed $sameExistingRegion")
-                } else { // we are trying to change the color im guessing
-                    recordCommand(Command.FILL_REGION, target = i)
-                    regions[i] = sameExistingRegion.copy(fillColor = region.fillColor)
-                    if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
-                        selection = (region.insides + region.outsides).toList()
-                    }
-                    println("recolored $sameExistingRegion")
-                }
-            } else { // NOTE: click on overlapping region: contested behaviour
-                val outerColor0 = outerRegions[0].fillColor // we know outerRegions are non-empty
-                val allOuterRegionsAreOfTheSameColor = outerRegions.all { it.fillColor == outerColor0 }
-                if (allOuterRegionsAreOfTheSameColor && outerColor0 == region.fillColor) {
-                    recordCommand(Command.FILL_REGION, unique = true)
-                    regions.removeAll(outerRegions)
-                    println("removed regions [${outerRegions.joinToString(prefix = "\n", separator = ";\n")}]")
-                } else {
-                    recordCommand(Command.FILL_REGION, target = regions.size)
-                    regions.add(region)
-                    println("added $region")
-                }
+        } else {
+            // NOTE: click on overlapping region: contested behaviour
+            val outerRegionsOfTheSameColor = outerRegions.filter { it.fillColor == region.fillColor }
+            if (outerRegionsOfTheSameColor.isNotEmpty()) {
+                recordCommand(Command.FILL_REGION, unique = true)
+                regions.removeAll(outerRegionsOfTheSameColor)
+                println("removed regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
+            } else {
+                recordCommand(Command.FILL_REGION, target = regions.size)
+                regions.add(region)
+                println("added $region")
             }
         }
     }
