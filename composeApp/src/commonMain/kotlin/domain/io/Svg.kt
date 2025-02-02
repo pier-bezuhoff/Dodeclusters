@@ -34,6 +34,7 @@ private const val defs = """<defs>
 </defs>"""
 private const val svgClose = "</svg>"
 
+// BUG: may output strange things on giant files (e.g. cat-in-sky is giga-zoomed for some reason)
 // MAYBE: just pass already computed objects to make it more straightforward
 // NOTE: "For reliable results cross-browser, use numbers with no more
 //  than 2 digits after the decimal and four digits before it." -- im gonna ignore this
@@ -78,18 +79,7 @@ fun constellation2svg(
         appendLine(formatRect(visibleRect, bg))
     }
     when (chessboardPattern) {
-        ChessboardPattern.NONE -> {
-            val circlesOrLines = objects.map { it as? CircleOrLine }
-            constellation.parts.forEach { part ->
-                val fillColorString = Json.encodeToString(ColorCssSerializer, part.fillColor).trim('"')
-//                val strokeColorString = Json.encodeToString(ColorCssSerializer, part.borderColor).trim('"')
-                val path = region2path(circlesOrLines, part, visibleRect)
-                // NOTE: path.toSvg is bugged for elliptic/circular arcs (not yet implemented)
-                //  https://youtrack.jetbrains.com/issue/CMP-7418/Path.toSvg-is-completely-broken
-                val pathData = path.toCircularSvg()
-                appendLine("""<path d="$pathData" fill="$fillColorString"/>""")
-            }
-        }
+        ChessboardPattern.NONE -> {}
         ChessboardPattern.STARTS_COLORED -> {
             appendLine(
                 chessboardPath(
@@ -110,6 +100,16 @@ fun constellation2svg(
                 )
             )
         }
+    }
+    val circlesOrLines = objects.map { it as? CircleOrLine }
+    constellation.parts.forEach { part ->
+        val fillColorString = Json.encodeToString(ColorCssSerializer, part.fillColor).trim('"')
+//                val strokeColorString = Json.encodeToString(ColorCssSerializer, part.borderColor).trim('"')
+        val path = region2path(circlesOrLines, part, visibleRect)
+        // NOTE: path.toSvg is bugged for elliptic/circular arcs (not yet implemented)
+        //  https://youtrack.jetbrains.com/issue/CMP-7418/Path.toSvg-is-completely-broken
+        val pathData = path.toCircularSvg()
+        appendLine("""<path d="$pathData" fill="$fillColorString"/>""")
     }
     if (encodeCirclesAndPoints) {
         // colors mimic EditClusterCanvas setup

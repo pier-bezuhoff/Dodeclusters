@@ -13,7 +13,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -84,14 +83,11 @@ import domain.toArgPoint
 import domain.transpose
 import domain.tryCatch2
 import getPlatform
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -125,7 +121,7 @@ class EditClusterViewModel : ViewModel() {
         private set
     var submode: SubMode by mutableStateOf(SubMode.None)
         private set
-    // XYPoint uses absolute positioning
+    // NOTE: Arg.XYPoint & co use absolute positioning
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
 
@@ -224,9 +220,9 @@ class EditClusterViewModel : ViewModel() {
     val animations: SharedFlow<ObjectAnimation> = _animations.asSharedFlow()
 
     val snackbarMessages: MutableSharedFlow<SnackbarMessage> =
-        MutableSharedFlow()
+//        MutableSharedFlow()
 //        MutableSharedFlow(extraBufferCapacity = 1)
-//        MutableSharedFlow(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+        MutableSharedFlow(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     var openedDialog: DialogType? by mutableStateOf(null)
         private set
@@ -2117,10 +2113,10 @@ class EditClusterViewModel : ViewModel() {
 
     private fun queueSnackbarMessage(snackbarMessage: SnackbarMessage) {
         // Q: idk how but somehow this breaks Windows/Chrome
-//        snackbarMessages.tryEmit(snackbarMessage)
-        viewModelScope.launch {
-            snackbarMessages.emit(snackbarMessage)
-        }
+        snackbarMessages.tryEmit(snackbarMessage)
+//        viewModelScope.launch {
+//            snackbarMessages.emit(snackbarMessage)
+//        }
     }
 
     /** Signals locked state to the user with animation & snackbar message */
