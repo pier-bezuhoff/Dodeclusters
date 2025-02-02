@@ -101,45 +101,45 @@ fun BlendSettingsDialog(
             ,
             shape = RoundedCornerShape(24.dp)
         ) {
-                Column(
-                    Modifier.verticalScroll(rememberScrollState())
-                    ,
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Title(smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
-                    SliderText(sliderState)
-                    Slider(sliderState, Modifier.padding(16.dp))
-                    Column(Modifier.selectableGroup()) {
-                        BLEND_MODES.entries.forEach { (blendModeVariant, name) ->
-                            Row(Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                                    .selectable(
-                                        selected = blendMode == blendModeVariant,
-                                        onClick = { blendMode = blendModeVariant },
-                                        role = Role.RadioButton
-                                    )
-                                    .padding(horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = blendMode == blendModeVariant,
-                                    onClick = null // null recommended for accessibility with screen readers
-                                )
-                                Text(
-                                    text = stringResource(name),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(start = 16.dp)
-                                )
-                            }
+            Column(
+                Modifier.verticalScroll(rememberScrollState())
+                ,
+                horizontalAlignment = Alignment.Start
+            ) {
+                Title(smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
+                SliderText(sliderState)
+                Slider(sliderState, Modifier.padding(16.dp))
+                Column(Modifier.selectableGroup()) {
+                    BLEND_MODES.entries.forEach { (blendModeVariant, name) ->
+                        Row(Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .selectable(
+                                selected = blendMode == blendModeVariant,
+                                onClick = { blendMode = blendModeVariant },
+                                role = Role.RadioButton
+                            )
+                            .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = blendMode == blendModeVariant,
+                                onClick = null // null recommended for accessibility with screen readers
+                            )
+                            Text(
+                                text = stringResource(name),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
                         }
                     }
-                    CancelOkRow(
-                        onDismissRequest = onDismissRequest,
-                        onConfirm = onConfirm0,
-                        fontSize = okFontSize
-                    )
                 }
+                CancelOkRow(
+                    onDismissRequest = onDismissRequest,
+                    onConfirm = onConfirm0,
+                    fontSize = okFontSize
+                )
+            }
         }
     }
 }

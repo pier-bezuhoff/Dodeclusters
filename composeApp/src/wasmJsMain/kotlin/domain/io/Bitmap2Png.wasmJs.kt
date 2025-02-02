@@ -1,11 +1,20 @@
 package domain.io
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -17,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -30,16 +40,20 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.choose_name
+import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.name
 import dodeclusters.composeapp.generated.resources.ok_description
 import kotlinx.browser.document
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Uint32Array
@@ -116,35 +130,61 @@ actual fun SaveBitmapAsPngButton(
                 ScreenshotableCanvas(viewModel, bitmapFlow)
             }
         } else {
-            AlertDialog(
+            Dialog(
                 onDismissRequest = { openDialog = false },
-                confirmButton = {
-                    TextButton(onClick = ::onConfirm) {
-                        Text(stringResource(Res.string.ok_description))
+                properties = DialogProperties()
+            ) {
+                Surface(
+                    modifier = Modifier.padding(16.dp),
+                    shape = RoundedCornerShape(24.dp),
+                ) {
+                    Column {
+                        Text(
+                            text = stringResource(Res.string.choose_name),
+                            modifier = modifier.padding(16.dp),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        OutlinedTextField(
+                            value = screenshotName,
+                            onValueChange = { screenshotName = it },
+                            label = { Text(stringResource(Res.string.name)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions( // smart ass enter capturing
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = { onConfirm() }
+                            ),
+                            modifier = Modifier
+                                .padding(24.dp)
+                                .onKeyEvent {
+                                    if (it.key == Key.Enter) {
+                                        onConfirm()
+                                        true
+                                    } else false
+                                }.focusRequester(textFieldFocusRequester),
+                        )
+                        Button(
+                            onClick = ::onConfirm,
+                            modifier = modifier.padding(8.dp).align(Alignment.End),
+                            border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
+                        ) {
+                            Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
+                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                            Text(
+                                // NOTE: for some only-god-knows-why reason when i try to use
+                                //  non-hard-coded string here, on Android/Chrome
+                                //  when the text field gains focus ALL texts in this dialog
+                                //  box become invisible...
+                            "OK",
+//                                stringResource(Res.string.ok_description),
+                                fontSize = 16.sp,
+                            )
+                        }
                     }
-                },
-                title = { Text(stringResource(Res.string.choose_name)) },
-                text = {
-                    OutlinedTextField(
-                        value = screenshotName,
-                        onValueChange = { screenshotName = it },
-                        label = { Text(stringResource(Res.string.name)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions( // smart ass enter capturing
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { onConfirm() }
-                        ),
-                        modifier = Modifier.onKeyEvent {
-                            if (it.key == Key.Enter) {
-                                onConfirm()
-                                true
-                            } else false
-                        }.focusRequester(textFieldFocusRequester)
-                    )
-                },
-            )
+                }
+            }
             LaunchedEffect(openDialog) {
                 textFieldFocusRequester.requestFocus()
             }

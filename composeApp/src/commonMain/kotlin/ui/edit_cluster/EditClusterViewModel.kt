@@ -1005,6 +1005,9 @@ class EditClusterViewModel : ViewModel() {
         val (region, region0) = selectRegionAt(visiblePosition, boundingCircles)
         val outerRegionsIndices = regions.filterIndices { region isObviouslyInside it || region0 isObviouslyInside it  }
         val outerRegions = outerRegionsIndices.map { regions[it] }
+        val sameBoundsRegionsIndices = outerRegionsIndices.filter {
+            regions[it].insides == region.insides && regions[it].outsides == region.outsides
+        }
         if (outerRegions.isEmpty()) {
             recordCommand(Command.FILL_REGION, target = regions.size)
             regions.add(region)
@@ -1025,10 +1028,27 @@ class EditClusterViewModel : ViewModel() {
                 if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
                     selection = (region.insides + region.outsides).toList()
                 }
-                println("recolored $outer")
+                println("recolored $outer (singular outer)")
+            }
+        } else if (sameBoundsRegionsIndices.isNotEmpty()) {
+            val sameBoundsSameColor = sameBoundsRegionsIndices.filter { regions[it].fillColor == region.fillColor }
+            if (sameBoundsSameColor.isNotEmpty()) {
+                recordCommand(Command.FILL_REGION, unique = true)
+                val same = sameBoundsSameColor.map { regions[sameBoundsSameColor[it]] }
+                regions.removeAll(same)
+                println("removed $same")
+            } else { // we are trying to change the color im guessing
+                recordCommand(Command.FILL_REGION, targets = sameBoundsRegionsIndices)
+                for (i in sameBoundsRegionsIndices)
+                    regions[i] = regions[i].copy(fillColor = region.fillColor)
+                if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                    selection = (region.insides + region.outsides).toList()
+                }
+                println("recolored $sameBoundsRegionsIndices (same bounds ~ $region)")
             }
         } else {
             // NOTE: click on overlapping region: contested behaviour
+            // TODO: 3 submodes: Replace, Add, Remove in right HUD
             val outerRegionsOfTheSameColor = outerRegions.filter { it.fillColor == region.fillColor }
             if (outerRegionsOfTheSameColor.isNotEmpty()) {
                 recordCommand(Command.FILL_REGION, unique = true)
