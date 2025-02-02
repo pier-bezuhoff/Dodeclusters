@@ -48,7 +48,7 @@ actual fun SaveFileButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
-    onSaved: (successful: Boolean) -> Unit
+    onSaved: (success: Boolean?, filename: String?) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var openDialog by remember { mutableStateOf(false) }
@@ -64,9 +64,9 @@ actual fun SaveFileButton(
             val data = saveData.copy(name = ddcName.text)
             try {
                 downloadTextFile3(data.filename, data.prepareContent(ddcName.text))
-                onSaved(true)
+                onSaved(true, data.filename)
             } catch (e: Exception) {
-                onSaved(false)
+                onSaved(false, data.filename)
             }
         }
     }

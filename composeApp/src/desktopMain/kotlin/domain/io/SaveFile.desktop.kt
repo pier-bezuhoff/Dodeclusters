@@ -31,7 +31,7 @@ actual fun SaveFileButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
-    onSaved: (successful: Boolean) -> Unit
+    onSaved: (success: Boolean?, filename: String?) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
@@ -57,18 +57,18 @@ actual fun SaveFileButton(
         ) { directory, filename ->
             fileDialogIsOpen = false
             coroutineScope.launch(Dispatchers.IO) {
-                try {
-                    if (filename != null) {
-                        if (directory != null)
-                            lastDir = directory
-                        val file = File(directory, filename)
+                if (filename != null) {
+                    if (directory != null)
+                        lastDir = directory
+                    val file = File(directory, filename)
+                    try {
                         saveTextFile(saveData.prepareContent(file.nameWithoutExtension), file)
-                        onSaved(true)
-                    } else
-                        onSaved(false)
-                } catch (e: IOException) {
-                    onSaved(false)
-                }
+                        onSaved(true, file.absolutePath)
+                    } catch (e: IOException) {
+                        onSaved(false, file.absolutePath)
+                    }
+                } else
+                    onSaved(null, null)
             }
         }
     }

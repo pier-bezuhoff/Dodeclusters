@@ -38,6 +38,9 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -47,6 +50,7 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -83,7 +87,6 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
-import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -120,19 +123,20 @@ fun EditClusterScreen(
     val viewModel: EditClusterViewModel = viewModel(
         factory = EditClusterViewModel.Factory
     )
-//    val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
+    val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
+//    val snackbarMessage2string = preloadSnackbarMessages()
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(
         modifier =
         if (keyboardActions == null)
             Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
         else Modifier,
-//        snackbarHost = { SnackbarHost(snackbarHostState) { data ->
-//            Snackbar(data,
-//                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-//                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-//            )
-//        } },
+        snackbarHost = { SnackbarHost(snackbarHostState) { data ->
+            Snackbar(data,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        } },
         floatingActionButton = {
             if (!isLandscape && viewModel.showUI) {
                 // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
@@ -297,6 +301,16 @@ fun EditClusterScreen(
                 exportAsSvg = viewModel::exportAsSvg,
                 onDismissRequest = viewModel::closeDialog,
                 onConfirm = viewModel::closeDialog,
+                onSavedStatus = { success, filename ->
+                    // if success is null it means saving was canceled by the user
+                    if (success != null) {
+                        viewModel.queueSnackbarMessage(
+                            if (success) SnackbarMessage.SUCCESSFUL_SAVE
+                            else SnackbarMessage.FAILED_SAVE,
+                            " $filename"
+                        )
+                    }
+                }
             )
         }
         DialogType.BLEND_SETTINGS -> {
@@ -339,11 +353,14 @@ fun EditClusterScreen(
         }
     }
     LaunchedEffect(viewModel) {
-        viewModel.snackbarMessages.collectLatest { message ->
-//            // NOTE: snackbar hangs windows/chrome apparently (?)
-////            snackbarHostState.showSnackbar(getString(message.stringResource), duration = message.duration)
+        viewModel.snackbarMessages.collectLatest { (message, postfix) ->
+            println("snackbar: $message$postfix")
+            // NOTE: using getString(resource) here hangs windows/chrome for some reason
+            // TODO: can't seem to properly pre-load string resources on Web
+            // with this setup string interpolation with args is not possible
+//            val s = snackbarMessage2string[message]!! + postfix
+//            snackbarHostState.showSnackbar(s, duration = message.duration)
 //            // MAYBE: move on-selection action prompt here instead
-            println(getString(message.stringResource))
         }
     }
 }
@@ -376,6 +393,13 @@ fun preloadIcons() {
         Res.drawable.three_dots_in_angle_brackets, EditClusterTool.DetailedAdjustment.icon, EditClusterTool.InBetween.icon,
     )) {
         painterResource(resource)
+    }
+}
+
+@Composable
+fun preloadSnackbarMessages(): Map<SnackbarMessage, String> {
+    return SnackbarMessage.entries.associateWith {
+        stringResource(it.stringResource).also { s -> it to s }
     }
 }
 

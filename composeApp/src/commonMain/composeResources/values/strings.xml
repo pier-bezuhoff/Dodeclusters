@@ -186,7 +186,13 @@
     <!-- snackbar messages -->
     <string name="locked_objects_notice">These objects are pinned, detach them to move</string>
     <string name="locked_object_notice">This object is pinned, detach it to move</string>
-    <string name="imaginary_circle_notice">Construction resulted in an imaginary circle (invisible but present)</string>
+    <string name="imaginary_circle_notice">Construction resulted in an imaginary circle</string>
+<!--    <string name="successful_open_notice">Loaded</string>-->
+    <string name="successful_restore_notice">Restored from autosave</string>
+    <string name="failed_open_notice">Failed to load</string>
+    <string name="successful_save_notice">Saved as</string>
+    <string name="failed_save_notice">Failed to save</string>
+<!--    <string name="_notice"></string>-->
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

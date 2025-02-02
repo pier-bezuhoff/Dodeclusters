@@ -5,7 +5,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -27,7 +26,7 @@ actual fun SaveFileButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
-    onSaved: (successful: Boolean) -> Unit
+    onSaved: (success: Boolean?, filename: String?) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -53,17 +52,16 @@ actual fun SaveFileButton(
                         FileOutputStream(parcelFileDescriptor.fileDescriptor).use { outputStream ->
                             val content = saveData.prepareContent(name ?: DdcV4.DEFAULT_NAME)
                             outputStream.write(content.toByteArray())
-                            onSaved(true)
+                            onSaved(true, name ?: "")
                         }
-                    } ?: onSaved(false)
-                } ?: onSaved(false)
+                    } ?: onSaved(false, name ?: "")
+                } ?: onSaved(false, "")
             } catch (e: IOException) {
                 e.printStackTrace()
-                onSaved(false)
-
+                onSaved(false, "")
             } catch (e: FileNotFoundException) {
                 e.printStackTrace()
-                onSaved(false)
+                onSaved(false, "")
             }
         }
     }

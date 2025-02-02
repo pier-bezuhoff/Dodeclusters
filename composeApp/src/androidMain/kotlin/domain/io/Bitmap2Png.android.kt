@@ -16,9 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat.startActivity
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -43,7 +41,7 @@ actual fun SaveBitmapAsPngButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
-    onSaved: (successful: Boolean) -> Unit
+    onSaved: (success: Boolean?, filename: String?) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -55,33 +53,33 @@ actual fun SaveBitmapAsPngButton(
             listOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
     )
-    if (false)
+    if (false) {
         Button(
             onClick = {
                 if (writeStorageAccessState.allPermissionsGranted) {
                     coroutineScope.launch(Dispatchers.IO) {
-//                    saveData.prepareContent(saveData.name).fold(
-//                        onSuccess = { bitmap ->
-//                            // something aint right
-//                            saveBitmapToDisk(context, bitmap.asAndroidBitmap(), saveData.name)
-//                            // way too silent, notifs doko
-//                            onSaved(true)
-//                        },
-//                        onFailure = {
-//                        }
-//                    )
-                        onSaved(false)
+    //                    saveData.prepareContent(saveData.name).fold(
+    //                        onSuccess = { bitmap ->
+    //                            // something aint right
+    //                            saveBitmapToDisk(context, bitmap.asAndroidBitmap(), saveData.name)
+    //                            // way too silent, notifs doko
+    //                            onSaved(true)
+    //                        },
+    //                        onFailure = {
+    //                        }
+    //                    )
+                        onSaved(null, saveData.filename)
                     }
                 } else if (writeStorageAccessState.shouldShowRationale) {
-//                coroutineScope.launch {
-//                val result = snackbarHostState.showSnackbar(
-//                    message = "The storage permission is needed to save the image",
-//                    actionLabel = "Grant Access"
-//                )
-//                if (result == SnackbarResult.ActionPerformed) {
+    //                coroutineScope.launch {
+    //                val result = snackbarHostState.showSnackbar(
+    //                    message = "The storage permission is needed to save the image",
+    //                    actionLabel = "Grant Access"
+    //                )
+    //                if (result == SnackbarResult.ActionPerformed) {
                     writeStorageAccessState.launchMultiplePermissionRequest()
-//                }
-//                }
+    //                }
+    //                }
                 } else {
                     writeStorageAccessState.launchMultiplePermissionRequest()
                 }
@@ -96,6 +94,7 @@ actual fun SaveBitmapAsPngButton(
             buttonContent()
             Text("Does NOT work") // TODO: fix this
         }
+    }
 }
 
 private suspend fun saveBitmapToDisk(context: Context, bitmap: Bitmap, name: String): Uri? {

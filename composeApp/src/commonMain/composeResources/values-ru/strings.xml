@@ -182,5 +182,10 @@
     <string name="locked_objects_notice">Объекты закрплены, открепите их чтобы перемещать</string>
     <string name="locked_object_notice">Объект закрплён, открепите его чтобы перемещать</string>
     <string name="imaginary_circle_notice">Результат построения содержит мнимые окружности (не отрисованы)</string>
+<!--    <string name="successful_open_notice">Загружен новый файл</string>-->
+    <string name="successful_restore_notice">Восстановлен из автосохранения</string>
+    <string name="failed_open_notice">Ошибка при попытке открыть файл</string>
+    <string name="successful_save_notice">Файл сохранён как</string>
+    <string name="failed_save_notice">Ошибка при сохранении файла</string>
 
 </resources>

@@ -1,14 +1,12 @@
 package domain.io
 
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 
 @Immutable
@@ -34,5 +32,5 @@ expect fun SaveFileButton(
     shape: Shape = RoundedCornerShape(4.dp),
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
-    onSaved: (successful: Boolean) -> Unit = { }
+    onSaved: (success: Boolean?, filename: String?) -> Unit = { _, _ -> }
 )

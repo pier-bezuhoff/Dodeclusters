@@ -2,7 +2,6 @@ package ui.edit_cluster
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -12,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -31,6 +29,7 @@ fun SaveOptionsDialog(
     exportAsSvg: (name: String) -> String,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
+    onSavedStatus: (success: Boolean?, filename: String?) -> Unit,
 ) {
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -69,8 +68,9 @@ fun SaveOptionsDialog(
                     modifier = buttonModifier,
                     containerColor = containerColor,
                     contentColor = contentColor,
-                ) {
-                    println(if (it) "YAML saved" else "YAML not saved")
+                ) { success, filename ->
+                    println(if (success == true) "YAML saved" else "YAML not saved")
+                    onSavedStatus(success, filename)
                     onConfirm()
                 }
                 // for one reason or another png export is quite slow on Web (desktop is quite fast, mobile is unimplemented)
@@ -92,8 +92,9 @@ fun SaveOptionsDialog(
                     modifier = buttonModifier,
                     containerColor = containerColor,
                     contentColor = contentColor,
-                ) {
-                    println(if (it) "PNG exported" else "PNG not exported")
+                ) { success, filename ->
+                    println(if (success == true) "PNG exported" else "PNG not exported")
+                    onSavedStatus(success, filename)
                     onConfirm()
                 }
                 val svgExport = EditClusterTool.SvgExport
@@ -113,8 +114,9 @@ fun SaveOptionsDialog(
                     modifier = buttonModifier,
                     containerColor = containerColor,
                     contentColor = contentColor,
-                ) {
-                    println(if (it) "SVG exported" else "SVG not exported")
+                ) { success, filename ->
+                    println(if (success == true) "SVG exported" else "SVG not exported")
+                    onSavedStatus(success, filename)
                     onConfirm()
                 }
             }

@@ -219,9 +219,7 @@ class EditClusterViewModel : ViewModel() {
     // i'll be real this stupid practice is annoying and ugly & a hack
     val animations: SharedFlow<ObjectAnimation> = _animations.asSharedFlow()
 
-    val snackbarMessages: MutableSharedFlow<SnackbarMessage> =
-//        MutableSharedFlow()
-//        MutableSharedFlow(extraBufferCapacity = 1)
+    val snackbarMessages: MutableSharedFlow<Pair<SnackbarMessage, String>> =
         MutableSharedFlow(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     var openedDialog: DialogType? by mutableStateOf(null)
@@ -397,6 +395,7 @@ class EditClusterViewModel : ViewModel() {
             { e ->
                 println("Failed to parse ClusterV1->json")
                 e.printStackTrace()
+                queueSnackbarMessage(SnackbarMessage.FAILED_OPEN)
             }
         )
     }
@@ -2111,9 +2110,8 @@ class EditClusterViewModel : ViewModel() {
 //    fun onLongDragCancel() {}
 //    fun onLongDragEnd() {}
 
-    private fun queueSnackbarMessage(snackbarMessage: SnackbarMessage) {
-        // Q: idk how but somehow this breaks Windows/Chrome
-        snackbarMessages.tryEmit(snackbarMessage)
+    fun queueSnackbarMessage(snackbarMessage: SnackbarMessage, postfix: String = "") {
+        snackbarMessages.tryEmit(snackbarMessage to postfix)
 //        viewModelScope.launch {
 //            snackbarMessages.emit(snackbarMessage)
 //        }
@@ -2300,8 +2298,8 @@ class EditClusterViewModel : ViewModel() {
                 ),
             )
             createNewGCircle(newGCircle?.upscale())
-//            if (newGCircle is ImaginaryCircle)
-//                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+            if (newGCircle is ImaginaryCircle)
+                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
         partialArgList = PartialArgList(argList.signature)
     }
@@ -2336,8 +2334,8 @@ class EditClusterViewModel : ViewModel() {
                 ),
             )
             createNewGCircle(newGCircle?.upscale())
-//            if (newGCircle is ImaginaryCircle)
-//                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+            if (newGCircle is ImaginaryCircle)
+                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
         partialArgList = PartialArgList(argList.signature)
     }
@@ -2740,7 +2738,7 @@ class EditClusterViewModel : ViewModel() {
                 loadNewConstellation(Constellation.SAMPLE)
                 centerizeTo(0f, 0f)
             } else {
-                val result = runCatching { // NOTE: can fail crash when underlying ECVM.State format changes
+                val result = runCatching { // NOTE: can fail crash when underlying VM.State format changes
                     getPlatform().lastStateStore.get()
                 }
                 val state = result.getOrNull()
@@ -2749,6 +2747,7 @@ class EditClusterViewModel : ViewModel() {
                     centerizeTo(0f, 0f)
                 } else {
                     restoreFromState(state)
+//                    queueSnackbarMessage(SnackbarMessage.SUCCESSFUL_RESTORE)
                 }
             }
         }
