@@ -8,11 +8,29 @@ import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowColumn
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,6 +38,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
@@ -48,6 +67,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
@@ -63,6 +83,7 @@ import data.geometry.Point
 import data.geometry.fromCorners
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
+import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Arg
 import domain.ChessboardPattern
@@ -74,6 +95,7 @@ import getPlatform
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import ui.SimpleToolButton
 import ui.circle2path
 import ui.reactiveCanvas
@@ -131,8 +153,6 @@ fun BoxScope.EditClusterCanvas(
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableStateMapOf() }
     val coroutineScope = rememberCoroutineScope()
-    val screenshotableGraphicsLayer = rememberGraphicsLayer()
-    screenshotableGraphicsLayer.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
     coroutineScope.launch { // listen to circle animations
         viewModel.animations.collect { event ->
             when (event) {
@@ -209,6 +229,12 @@ fun BoxScope.EditClusterCanvas(
             viewModel.partialArcPath?.nArcs?.let { it >= 1 } == true
         ) {
             ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
+        }
+        if (viewModel.mode == SelectionMode.Region) {
+            RegionManipulationStrategySelector(
+                currentStrategy = viewModel.regionManipulationStrategy,
+                setStrategy = viewModel::setRegionsManipulationStrategy
+            )
         }
     }
 }
@@ -1031,6 +1057,56 @@ fun PointSelectionContextActions(
                 tint = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
+        }
+    }
+}
+
+@Composable
+fun BoxScope.RegionManipulationStrategySelector(
+    currentStrategy: RegionManipulationStrategy,
+    setStrategy: (RegionManipulationStrategy) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.align(Alignment.CenterEnd),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Column(Modifier
+            .width(IntrinsicSize.Max)
+            .selectableGroup()
+        ) {
+            RegionManipulationStrategy.entries.forEach { strategy ->
+                Row(
+                    Modifier
+                        .selectable(
+                            selected = (strategy == currentStrategy),
+                            onClick = { setStrategy(strategy) },
+                            role = Role.RadioButton
+                        )
+                        .height(56.dp)
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                    ,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = (strategy == currentStrategy),
+                        onClick = null, // null recommended for accessibility with screen readers
+                        colors = RadioButtonDefaults.colors().copy(
+                            selectedColor = MaterialTheme.colorScheme.secondary,
+                        )
+                    )
+                    Text(
+                        text = stringResource(strategy.stringResource),
+                        modifier = Modifier
+                            .padding(start = 16.dp)
+                            .weight(1f),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            }
         }
     }
 }

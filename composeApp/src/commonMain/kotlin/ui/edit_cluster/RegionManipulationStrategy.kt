@@ -1,15 +1,22 @@
 package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
+import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_add
+import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_erase
+import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_replace
 import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.StringResource
 
 @Immutable
 @Serializable
-enum class RegionManipulationStrategy {
+enum class RegionManipulationStrategy(
+    val stringResource: StringResource
+) {
     /** When clicking into an existing region, intelligently prefer XOR-style replacing */
-    REPLACE,
+    REPLACE(Res.string.region_manipulation_strategy_replace),
     /** Only & always add new regions within set of delimiters */
-    ADD,
+    ADD(Res.string.region_manipulation_strategy_add),
     /** Only & always erase minimal existing outer regions */
-    ERASE,
+    ERASE(Res.string.region_manipulation_strategy_erase),
 }

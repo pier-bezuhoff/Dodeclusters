@@ -136,6 +136,12 @@
     <string name="attributes_category_name">Delete/Duplicate</string>
     <string name="transform_category_name">Transform</string>
     <string name="create_category_name">Create</string>
+
+    <!-- region manipulation strategies -->
+    <string name="region_manipulation_strategy_replace">&#120491; Replace</string>
+    <string name="region_manipulation_strategy_add">+ Add</string>
+    <string name="region_manipulation_strategy_erase">- Erase</string>
+
     <!-- color picker dialog -->
     <string name="color_picker_title">Pick a color</string>
     <string name="hex_name">hex</string>
@@ -192,7 +198,6 @@
     <string name="failed_open_notice">Failed to load</string>
     <string name="successful_save_notice">Saved as</string>
     <string name="failed_save_notice">Failed to save</string>
-<!--    <string name="_notice"></string>-->
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

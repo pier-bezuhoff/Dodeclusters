@@ -130,6 +130,10 @@
     <string name="attributes_category_name">Удаление/дублирование</string>
     <string name="transform_category_name">Преобразования</string>
     <string name="create_category_name">Создание</string>
+    <!-- region manipulation strategies -->
+    <string name="region_manipulation_strategy_replace">&#120491; Замена</string>
+    <string name="region_manipulation_strategy_add">+ Добавление</string>
+    <string name="region_manipulation_strategy_erase">- Стирание</string>
     <!-- color picker dialog -->
     <string name="color_picker_title">Выберите цвет</string>
     <string name="hex_name">hex</string>
