@@ -4,16 +4,16 @@ import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
 // numeric values used, from the dialog or somewhere else
-@Serializable
 @Immutable
+@Serializable
 sealed interface Parameters {
-    @Serializable
     @Immutable
+    @Serializable
     data object None : Parameters
 }
 
-@Serializable
 @Immutable
+@Serializable
 data class IncidenceParameters(
     val order: Double
 ) : Parameters
@@ -22,15 +22,15 @@ data class IncidenceParameters(
  * start = Left
  * end = Right
  */
-@Serializable
 @Immutable
+@Serializable
 data class ExtrapolationParameters(
     val nLeft: Int,
     val nRight: Int,
 ) : Parameters
 
-@Serializable
 @Immutable
+@Serializable
 data class InterpolationParameters(
     val nInterjacents: Int,
     /** Soft-deprecated.
@@ -46,17 +46,25 @@ data class InterpolationParameters(
  * @param[dilation] total hyperbolic angle `ln(R/r)`
  * @param[nSteps] number of intermediate steps (0 = result only)
  * */
-@Serializable
 @Immutable
+@Serializable
 data class LoxodromicMotionParameters(
     val angle: Float,
     val dilation: Double,
     val nSteps: Int,
 ) : Parameters
 
-@Serializable
 @Immutable
+@Serializable
 data class SagittaRatioParameters(
     val sagittaRatio: Double
+) : Parameters
+
+@Immutable
+@Serializable
+data class BiInversionParameters(
+    /** Multiply inversive distance between engines by [speed] before applications */
+    val speed: Double,
+    val nSteps: Int,
 ) : Parameters
 

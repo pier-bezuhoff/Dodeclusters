@@ -71,5 +71,5 @@ inline fun <reified A, reified B> tryCatch2(
 /** To be used in `when` pattern matching in cases that should NEVER be reached */
 @Suppress("NOTHING_TO_INLINE")
 @Throws(IllegalStateException::class)
-inline fun never(): Nothing =
-    throw IllegalStateException("Never")
+inline fun never(info: String = ""): Nothing =
+    throw IllegalStateException(if (info.isBlank()) "Never" else "Never ($info)")

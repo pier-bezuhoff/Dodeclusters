@@ -119,7 +119,8 @@ data class GeneralizedCircle(
     infix fun scalarProduct(other: GeneralizedCircle): Double =
         x*other.x + y*other.y - z*other.w - other.z*w
 
-    fun normalized(): GeneralizedCircle {
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun normalized(): GeneralizedCircle {
         val n = norm
         if (abs(n) < EPSILON) {
             return if (n == 0.0 && abs(w) < EPSILON || n != 0.0 && abs(w/n) < EPSILON) // is conformal infinity?
@@ -132,7 +133,7 @@ data class GeneralizedCircle(
         } else {
             this * (1/n)
         }
-        return  if (
+        return if (
             a.w < 0 ||
             a.w == 0.0 && a.x < 0 ||
             a.x == 0.0 && a.y < 0 ||
@@ -143,7 +144,8 @@ data class GeneralizedCircle(
             a
     }
 
-    fun normalizedPreservingDirection(): GeneralizedCircle {
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun normalizedPreservingDirection(): GeneralizedCircle {
         val n = norm
         return if (abs(n) < EPSILON) {
             if (n == 0.0 && abs(w) < EPSILON ||
@@ -200,7 +202,7 @@ data class GeneralizedCircle(
             -2*w*x*z0 + 2*w*x0*z - 2*w0*x*z + x*x*x0 + 2*x*y*y0 - x0*y*y,
             -2*w*y*z0 + 2*w*y0*z - 2*w0*y*z - x*x*y0 + 2*x*x0*y + y*y*y0,
             -2*w0*z*z - x*x*z0 + 2*x*x0*z - y*y*z0 + 2*y*y0*z,
-        ).normalizedPreservingDirection() // to avoid cumulative overflow
+        )//.normalizedPreservingDirection() // to avoid cumulative overflow
     }
 
     /** If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
@@ -253,8 +255,9 @@ data class GeneralizedCircle(
         index: Int = 1,
     ): GeneralizedCircle {
         require(nOfSections >= 1)
-        val a = this.normalizedPreservingDirection()
-        val b = other.normalizedPreservingDirection()
+        // im removing normalizations cuz in practice they are never necessary
+        val a = this //.normalizedPreservingDirection()
+        val b = other// .normalizedPreservingDirection()
         val d = a scalarProduct b // inversive distance
         val pencilType = a.calculatePencilType(b)
         val maxInterpolationParameter = when (pencilType) {
@@ -273,7 +276,19 @@ data class GeneralizedCircle(
         val bivector = Rotor.fromOuterProduct(a, b).normalized()
         val rotor = (bivector * (-k/2.0)).exp()
         val target = a + b
-        val result = rotor.applyTo(target.normalizedPreservingDirection())
+        val result = rotor.applyTo(
+            target//.normalizedPreservingDirection()
+        )
+        return result
+    }
+
+    fun biInversion(
+        engine1: GeneralizedCircle, engine2: GeneralizedCircle,
+        speed: Double
+    ): GeneralizedCircle {
+        val bivector = Rotor.fromOuterProduct(engine1, engine2) * speed
+        val rotor = bivector.exp()
+        val result = rotor.applyTo(this)
         return result
     }
 
@@ -283,13 +298,13 @@ data class GeneralizedCircle(
         start: GeneralizedCircle, end: GeneralizedCircle,
         angle: Double, logDilation: Double
     ): GeneralizedCircle {
-        val a = this.normalizedPreservingDirection()
+        val a = this//.normalizedPreservingDirection()
         val pencil = Rotor.fromOuterProduct(start, end).normalized()
         val perpPencil = pencil.dual()
         val rotation = (perpPencil * (-angle/2.0)).exp()
         val dilation = (pencil * (logDilation/2.0)).exp()
         // rotation and dilation commute by construction
-        val result = dilation.applyTo(rotation.applyTo(a))
+        val result = dilation.applyTo(rotation.applyTo(a).normalizedPreservingDirection())
         return result
     }
 
@@ -303,7 +318,7 @@ data class GeneralizedCircle(
      *
      *  Not to be confused with "inversive angle", that is `acos(inversiveDistance)` and
      *  in case of intersecting circles is simply the oriented angle between them
-     * */
+     */
     fun inversiveDistance(other: GeneralizedCircle): Double =
         this.normalizedPreservingDirection() scalarProduct other.normalizedPreservingDirection()
 
@@ -313,7 +328,7 @@ data class GeneralizedCircle(
         val d = a scalarProduct b
         return when (a.calculatePencilType(b)) {
             CirclePencilType.PARABOLIC ->
-                0.0
+                0.0 // there might be some dual number trick
 //                when {
 //                    a.isLine && b.isLine -> {
 //                        // tis wrong
@@ -372,7 +387,7 @@ data class GeneralizedCircle(
                 Circle(x / w, y / w, r, isCCW)
             }
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
-            else -> throw IllegalStateException("Never. $this")
+            else -> never(this.toString())
         }
 
     companion object {
@@ -431,6 +446,7 @@ data class GeneralizedCircle(
             val (w1, x1, y1, z1) = c1
             val (w2, x2, y2, z2) = c2
             val (w3, x3, y3, z3) = perp
+            // note cubic power, it can get out of hand quite fast
             val w = -w3*w2*z1 + w3*w1*z2 + w2*x3*x1 + w2*y3*y1 - w1*x3*x2 - w1*y3*y2
             val x = -w3*x2*z1 + w3*x1*z2 + w2*x1*z3 - w1*x2*z3 + x2*y3*y1 - x1*y3*y2
             val y = -w3*y2*z1 + w3*y1*z2 + w2*y1*z3 - w1*y2*z3 - x3*x2*y1 + x3*x1*y2
@@ -446,16 +462,10 @@ data class GeneralizedCircle(
         }
 
         // there was an attempt..
-        fun is0000(w: Double, x: Double, y: Double, z: Double): Boolean =
+        @Suppress("NOTHING_TO_INLINE")
+        inline fun is0000(w: Double, x: Double, y: Double, z: Double): Boolean =
             setOf(w,x,y,z).all { abs(it) < EPSILON2 } // NOTE: ehh, kinda risky
 //            w == 0.0 && x == 0.0 && y == 0.0 && z == 0.0
     }
 }
 
-@Serializable
-@Immutable
-enum class CirclePencilType {
-    ELLIPTIC, // lines with 1 common point, circles with 2 common points
-    PARABOLIC, // parallel lines, circles tangential to 1 common line at 1 common point
-    HYPERBOLIC, // concentric circles, circles perpendicular to every circle of a fixed (dual) elliptic pencil
-}

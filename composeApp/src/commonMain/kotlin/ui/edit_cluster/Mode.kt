@@ -24,14 +24,8 @@ enum class SelectionMode(
     Drag(EditClusterTool.Drag),
     /** Select multiple circles */
     Multiselect(EditClusterTool.Multiselect),
-    /** Select regions to create new [ClusterPart]s */
+    /** Select regions to create new [LogicalRegion]s */
     Region(EditClusterTool.Region),
-}
-
-// presently unused
-/** intersection-modes of [SelectionMode.Multiselect] related to how new selection is combined */
-enum class MultiselectLogic {
-    ADD, REPLACE, SUBTRACT, SYMMETRIC_DIFFERENCE,
 }
 
 // MAYBE: associate function(constants, variables) -> circles

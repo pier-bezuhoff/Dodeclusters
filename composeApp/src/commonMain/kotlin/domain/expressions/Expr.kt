@@ -35,6 +35,10 @@ private data class E(
     override val args: List<Ix>
 ) : ExprLike
 
+// thinking about it, interface delegation might introduce some performance bloat
+// MAYBE: accept the boilerplate and specify parameters and args as separate extension vals
+//  e.g. Expr.parameters: Parameters = when (this) { ... }
+//  and Expr.args: List<Ix> = when (this) { ... }
 /**
  * Raw expression that can have several outputs:
  * either [OneToOne] or [OneToMany]
@@ -44,8 +48,8 @@ private data class E(
  * a collection of numbers
  * @property[args] Indexed links to dynamic point/line/circle arguments
  * */
-@Serializable
 @Immutable
+@Serializable
 sealed interface Expr : ExprLike {
 
     @Serializable
@@ -108,7 +112,6 @@ sealed interface Expr : ExprLike {
         val circle2: Ix,
     ) : OneToMany, ExprLike by E(Parameters.None, listOf(circle1, circle2))
     // TODO: point-point line interpolation
-    // FIX: 1/2 of 90deg angle flickers, use orientation in tandem with inBetween parameter
     @Serializable
     @SerialName("CircleInterpolation")
     data class CircleInterpolation(
@@ -116,6 +119,8 @@ sealed interface Expr : ExprLike {
         val startCircle: Ix,
         val endCircle: Ix,
     ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
+    // MAYBE: completely replace CircleExtrapolation with BiInversion
+    //  since it's more general
     @Serializable
     @SerialName("CircleExtrapolation")
     data class CircleExtrapolation(
@@ -123,6 +128,14 @@ sealed interface Expr : ExprLike {
         val startCircle: Ix,
         val endCircle: Ix,
     ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
+    @Serializable
+    @SerialName("BiInversion")
+    data class BiInversion(
+        override val parameters: BiInversionParameters,
+        val engine1: Ix,
+        val engine2: Ix,
+        val target: Ix,
+    ) : OneToMany, ExprLike by E(parameters, listOf(engine1, engine2, target))
     @Serializable
     @SerialName("LoxodromicMotion")
     data class LoxodromicMotion( // TODO: add backwards steps
@@ -204,6 +217,12 @@ inline fun Expr.eval(
                 c(startCircle),
                 c(endCircle)
             )
+            is Expr.BiInversion -> computeBiInversion(
+                parameters,
+                g(engine1),
+                g(engine2),
+                g(target),
+            )
             is LoxodromicMotion -> computeLoxodromicMotion(
                 parameters,
                 p(divergencePoint),
@@ -216,7 +235,7 @@ inline fun Expr.eval(
     }
 }
 
-// this eval is about 4 times up to 15 times faster (but lacks downscale)
+// this eval is 4 times to 15 times faster (but lacks downscale)
 // BUT adding downscale completely cancels speed improvement
 fun Expr._eval(objects: List<GCircle?>): ExprResult {
     return when (this) {
@@ -270,6 +289,12 @@ fun Expr._eval(objects: List<GCircle?>): ExprResult {
             parameters,
             objects[startCircle] as? CircleOrLine ?: return emptyList(),
             objects[endCircle] as? CircleOrLine ?: return emptyList(),
+        )
+        is Expr.BiInversion -> computeBiInversion(
+            parameters,
+            objects[engine1] ?: return emptyList(),
+            objects[engine2] ?: return emptyList(),
+            objects[target] ?: return emptyList(),
         )
         is LoxodromicMotion -> computeLoxodromicMotion(
             parameters,
@@ -325,6 +350,11 @@ inline fun Expr.reIndex(
         is CircleExtrapolation -> copy(
             startCircle = reIndexer(startCircle),
             endCircle = reIndexer(endCircle),
+        )
+        is Expr.BiInversion -> copy(
+            engine1 = reIndexer(engine1),
+            engine2 = reIndexer(engine2),
+            target = reIndexer(target)
         )
         is LoxodromicMotion -> copy(
             divergencePoint = reIndexer(divergencePoint),

@@ -160,6 +160,8 @@ class EditClusterViewModel : ViewModel() {
         private set
     var showDirectionArrows: Boolean by mutableStateOf(DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES)
         private set
+    var regionManipulationStrategy: RegionManipulationStrategy by mutableStateOf(RegionManipulationStrategy.REPLACE)
+        private set
     /** applies to [SelectionMode.Region]:
      * only use circles present in the [selection] to determine which regions to fill */
     var restrictRegionsToSelection: Boolean by mutableStateOf(false)
@@ -1008,57 +1010,117 @@ class EditClusterViewModel : ViewModel() {
         val sameBoundsRegionsIndices = outerRegionsIndices.filter {
             regions[it].insides == region.insides && regions[it].outsides == region.outsides
         }
-        if (outerRegions.isEmpty()) {
-            recordCommand(Command.FILL_REGION, target = regions.size)
-            regions.add(region)
-            if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
-                selection = (region.insides + region.outsides).toList()
-            }
-            println("added $region")
-        } else if (outerRegions.size == 1) {
-            val i = outerRegionsIndices.single()
-            val outer = outerRegions.single()
-            if (region.fillColor == outer.fillColor) {
-                recordCommand(Command.FILL_REGION, unique = true)
-                regions.removeAt(i)
-                println("removed $outer")
-            } else { // we are trying to change the color im guessing
-                recordCommand(Command.FILL_REGION, target = i)
-                regions[i] = outer.copy(fillColor = region.fillColor)
-                if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
-                    selection = (region.insides + region.outsides).toList()
+        val sameBoundsRegions = sameBoundsRegionsIndices.map { regions[it] }
+        when (regionManipulationStrategy) {
+            RegionManipulationStrategy.REPLACE -> {
+                if (outerRegions.isEmpty()) {
+                    recordCommand(Command.FILL_REGION, target = regions.size)
+                    regions.add(region)
+                    if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                        selection = (region.insides + region.outsides).toList()
+                    }
+                    println("added $region")
+                } else if (outerRegions.size == 1) {
+                    val i = outerRegionsIndices.single()
+                    val outer = outerRegions.single()
+                    if (region.fillColor == outer.fillColor) {
+                        recordCommand(Command.FILL_REGION, unique = true)
+                        regions.removeAt(i)
+                        println("removed singular same-color outer $outer")
+                    } else { // we are trying to change the color im guessing
+                        recordCommand(Command.FILL_REGION, target = i)
+                        regions[i] = outer.copy(fillColor = region.fillColor)
+                        if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                            selection = (region.insides + region.outsides).toList()
+                        }
+                        println("recolored singular $outer")
+                    }
+                } else if (sameBoundsRegionsIndices.isNotEmpty()) {
+                    val sameBoundsSameColor = sameBoundsRegionsIndices.filter { regions[it].fillColor == region.fillColor }
+                    if (sameBoundsSameColor.isNotEmpty()) {
+                        recordCommand(Command.FILL_REGION, unique = true)
+                        val same = sameBoundsSameColor.map { regions[sameBoundsSameColor[it]] }
+                        regions.removeAll(same)
+                        println("removed all same-bounds same-color $same")
+                    } else { // we are trying to change the color im guessing
+                        val i = sameBoundsRegionsIndices.last()
+                        if (sameBoundsRegionsIndices.size == 1)
+                            recordCommand(Command.FILL_REGION, target = i)
+                        else // cleanup can shift region index
+                            recordCommand(Command.FILL_REGION, unique = true)
+                        regions[i] = region
+                        sameBoundsRegions
+                            .dropLast(1)
+                            .forEach {
+                                regions.remove(it) // cleanup
+                            }
+                        if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                            selection = (region.insides + region.outsides).toList()
+                        }
+                        println("recolored $i (same bounds ~ $region)")
+                    }
+                } else {
+                    // NOTE: click on overlapping region: contested behaviour
+                    val outerRegionsOfTheSameColor = outerRegions.filter { it.fillColor == region.fillColor }
+                    if (outerRegionsOfTheSameColor.isNotEmpty()) {
+                        recordCommand(Command.FILL_REGION, unique = true)
+                        // NOTE: this removes regions of the same color that lie under others, which can be counter-intuitive
+                        regions.removeAll(outerRegionsOfTheSameColor)
+                        println("removed same color regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
+                    } else {
+                        recordCommand(Command.FILL_REGION, target = regions.size)
+                        regions.add(region)
+                        println("added $region")
+                    }
                 }
-                println("recolored $outer (singular outer)")
             }
-        } else if (sameBoundsRegionsIndices.isNotEmpty()) {
-            val sameBoundsSameColor = sameBoundsRegionsIndices.filter { regions[it].fillColor == region.fillColor }
-            if (sameBoundsSameColor.isNotEmpty()) {
-                recordCommand(Command.FILL_REGION, unique = true)
-                val same = sameBoundsSameColor.map { regions[sameBoundsSameColor[it]] }
-                regions.removeAll(same)
-                println("removed $same")
-            } else { // we are trying to change the color im guessing
-                recordCommand(Command.FILL_REGION, targets = sameBoundsRegionsIndices)
-                for (i in sameBoundsRegionsIndices)
-                    regions[i] = regions[i].copy(fillColor = region.fillColor)
-                if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
-                    selection = (region.insides + region.outsides).toList()
+            RegionManipulationStrategy.ADD -> {
+                if (sameBoundsRegionsIndices.isEmpty()) {
+                    recordCommand(Command.FILL_REGION, target = regions.size)
+                    regions.add(region)
+                    if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                        selection = (region.insides + region.outsides).toList()
+                    }
+                    println("added $region")
+                } else if (sameBoundsRegions.last().fillColor == region.fillColor) {
+                    // im gonna cleanup same bounds until only 1 is left
+                    // cleanup & skip
+                    sameBoundsRegions
+                        .dropLast(1)
+                        .forEach {
+                            regions.remove(it) // cannot use removeAll cuz it could remove the last one too
+                        }
+                } else { // same bounds, different color
+                    // replace & cleanup
+                    val i = sameBoundsRegionsIndices.last()
+                    if (sameBoundsRegionsIndices.size == 1)
+                        recordCommand(Command.FILL_REGION, target = i)
+                    else
+                        recordCommand(Command.FILL_REGION, unique = true)
+                    regions[i] = region
+                    if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                        selection = (region.insides + region.outsides).toList()
+                    }
+                    sameBoundsRegions
+                        .dropLast(1)
+                        .forEach {
+                            regions.remove(it) // cannot use removeAll cuz it could remove the last one too
+                        }
+                    println("recolored $i (same bounds ~ $region)")
                 }
-                println("recolored $sameBoundsRegionsIndices (same bounds ~ $region)")
             }
-        } else {
-            // NOTE: click on overlapping region: contested behaviour
-            // TODO: 3 submodes: Replace, Add, Remove in right HUD
-            val outerRegionsOfTheSameColor = outerRegions.filter { it.fillColor == region.fillColor }
-            if (outerRegionsOfTheSameColor.isNotEmpty()) {
-                recordCommand(Command.FILL_REGION, unique = true)
-                // NOTE: this removes regions of the same color that lie under others, which can be counter-intuitive
-                regions.removeAll(outerRegionsOfTheSameColor)
-                println("removed regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
-            } else {
-                recordCommand(Command.FILL_REGION, target = regions.size)
-                regions.add(region)
-                println("added $region")
+            RegionManipulationStrategy.ERASE -> {
+                if (sameBoundsRegions.isNotEmpty()) {
+                    recordCommand(Command.FILL_REGION, unique = true)
+                    regions.removeAll(sameBoundsRegions)
+                    println("removed [${sameBoundsRegionsIndices.joinToString(prefix = "\n", separator = ";\n")}] (same bound ~ $region)")
+                } else if (outerRegions.isNotEmpty()) {
+                    // maybe find minimal and erase it OR remove last outer
+                    // tho it would stop working like eraser then
+                    recordCommand(Command.FILL_REGION, unique = true)
+                    regions.removeAll(outerRegions)
+                    println("removed outer [${outerRegions.joinToString(prefix = "\n", separator = ";\n")}]")
+                } // when clicking on nowhere nothing happens
             }
         }
     }
@@ -1298,6 +1360,10 @@ class EditClusterViewModel : ViewModel() {
         recordCommand(Command.DELETE, unique = true)
         chessboardPattern = ChessboardPattern.NONE
         regions.clear()
+    }
+
+    fun setRegionsManipulationStrategy(newStrategy: RegionManipulationStrategy) {
+        regionManipulationStrategy = newStrategy
     }
 
     fun cancelSelectionAsToolArgPrompt() {
