@@ -22,10 +22,12 @@ fun selectWithRectangle(objects: List<GCircle?>, rect: Rect): List<Int> =
             testObjectRectangleCollision(o, rect)
     }
 
-/** Rectangle collider */
+/** Rectangle collider.
+ * @return `true` if intersection of [obj]'s border and [rect] is
+ * non-empty (including [rect]'s interior), otherwise `false` */
 fun testObjectRectangleCollision(obj: GCircle, rect: Rect): Boolean =
     when (obj) {
-        is Circle -> { // wrong
+        is Circle -> {
             testHorizontalSegmentCircleIntersections(rect.top, rect.left, rect.right, obj) ||
             testHorizontalSegmentCircleIntersections(rect.bottom, rect.left, rect.right, obj) ||
             testVerticalSegmentCircleIntersections(rect.left, rect.top, rect.bottom, obj) ||
@@ -33,7 +35,7 @@ fun testObjectRectangleCollision(obj: GCircle, rect: Rect): Boolean =
             // we know there is no intersections at this point
             rect.contains(obj.center) && 2*obj.radius <= rect.minDimension
         }
-        is Line -> { // wrong
+        is Line -> {
             testHorizontalSegmentLineIntersection(rect.top, rect.left, rect.right, obj) ||
             testHorizontalSegmentLineIntersection(rect.bottom, rect.left, rect.right, obj) ||
             testVerticalSegmentLineIntersection(rect.left, rect.top, rect.bottom, obj) ||

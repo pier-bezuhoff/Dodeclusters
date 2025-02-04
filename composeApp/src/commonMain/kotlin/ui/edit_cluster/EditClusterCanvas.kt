@@ -1103,6 +1103,9 @@ fun BoxScope.RegionManipulationStrategySelector(
                         modifier = Modifier
                             .padding(start = 16.dp)
                             .weight(1f),
+                        color = if (strategy == currentStrategy)
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        else MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }

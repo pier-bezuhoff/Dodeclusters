@@ -2308,6 +2308,13 @@ class EditClusterViewModel : ViewModel() {
                     selection = emptyList()
                 }
             }
+            KeyboardAction.OPEN -> {} //toolAction(EditClusterTool.OpenFile)
+            KeyboardAction.MOVE -> switchToCategory(EditClusterCategory.Drag)
+            KeyboardAction.SELECT -> switchToCategory(EditClusterCategory.Multiselect)
+            KeyboardAction.REGION -> switchToCategory(EditClusterCategory.Region)
+            KeyboardAction.PALETTE -> toolAction(EditClusterTool.Palette)
+            KeyboardAction.TRANSFORM -> switchToCategory(EditClusterCategory.Transform)
+            KeyboardAction.CREATE -> switchToCategory(EditClusterCategory.Create)
         }
     }
 

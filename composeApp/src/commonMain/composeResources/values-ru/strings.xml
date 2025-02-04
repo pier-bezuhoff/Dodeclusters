@@ -127,7 +127,6 @@
     <string name="region_category_name">Области</string>
     <string name="visibility_category_name">Вид</string>
     <string name="colors_category_name">Цвета</string>
-    <string name="attributes_category_name">Удаление/дублирование</string>
     <string name="transform_category_name">Преобразования</string>
     <string name="create_category_name">Создание</string>
     <!-- region manipulation strategies -->

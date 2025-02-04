@@ -27,7 +27,10 @@ enum class KeyboardAction {
 //    SAVE, OPEN,
     /** Cancel ongoing action (partial constructions, etc) */
     CANCEL,
-    // MAYBE: mode shortcuts: D/M = drag, S = multiselect, R = region, V = visibility, P = palette, T = transform, C = create
+    OPEN,
+    MOVE, SELECT, REGION, // drag, multiselect, region
+    PALETTE,
+    TRANSFORM, CREATE,
     // TODO: arrow keys for finer movement
 }
 
@@ -39,69 +42,46 @@ fun Modifier.handleKeyboardActions(
     return Modifier.onPreviewKeyEvent(callback)
 }
 
+@Suppress("NOTHING_TO_INLINE")
+inline fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
+    if (event.type == KeyEventType.KeyUp && !event.isAltPressed && !event.isMetaPressed) {
+        if (event.isCtrlPressed) {
+            when (event.key) {
+                Key.V -> KeyboardAction.PASTE
+                Key.A -> KeyboardAction.SELECT_ALL
+                Key.Plus, Key.Equals -> KeyboardAction.ZOOM_IN
+                Key.Minus -> KeyboardAction.ZOOM_OUT
+                Key.Z -> KeyboardAction.UNDO
+                Key.Y -> KeyboardAction.REDO
+                else -> null
+            }
+        } else {
+            when (event.key) {
+                Key.Delete, Key.Backspace -> KeyboardAction.DELETE
+                Key.Escape -> KeyboardAction.CANCEL
+                Key.O -> KeyboardAction.OPEN
+                Key.M -> KeyboardAction.MOVE
+                Key.S -> KeyboardAction.SELECT
+                Key.R -> KeyboardAction.REGION
+                Key.P -> KeyboardAction.PALETTE
+                Key.T -> KeyboardAction.TRANSFORM
+                Key.C -> KeyboardAction.CREATE
+                Key.Paste -> KeyboardAction.PASTE
+                Key.ZoomIn -> KeyboardAction.ZOOM_IN
+                Key.ZoomOut -> KeyboardAction.ZOOM_OUT
+                else -> null
+            }
+        }
+    } else null
+
 // NOTE: buggy in browser: https://github.com/JetBrains/compose-multiplatform/issues/4673
+//  i had to create separate js-based handler (see wasmJs/main.kt)
 fun keyboardActionsHandler(
     onAction: (KeyboardAction) -> Unit,
 ): (KeyEvent) -> Boolean = { event ->
-    if (event.type == KeyEventType.KeyUp && !event.isAltPressed && !event.isMetaPressed) {
-        when (event.key) {
-            Key.Delete, Key.Backspace -> {
-                onAction(KeyboardAction.DELETE)
-                true
-            }
-            Key.Paste -> {
-                onAction(KeyboardAction.PASTE)
-                true
-            }
-            Key.ZoomIn -> {
-                onAction(KeyboardAction.ZOOM_IN)
-                true
-            }
-            Key.ZoomOut -> {
-                onAction(KeyboardAction.ZOOM_OUT)
-                true
-            }
-            Key.Escape -> {
-                onAction(KeyboardAction.CANCEL)
-                true
-            }
-            else -> if (event.isCtrlPressed) {
-                when (event.key) {
-                    Key.V -> {
-                        onAction(KeyboardAction.PASTE)
-                        true
-                    }
-                    Key.A -> {
-                        onAction(KeyboardAction.SELECT_ALL)
-                        true
-                    }
-                    Key.Plus, Key.Equals -> {
-                        onAction(KeyboardAction.ZOOM_IN)
-                        true
-                    }
-                    Key.Minus -> {
-                        onAction(KeyboardAction.ZOOM_OUT)
-                        true
-                    }
-                    Key.Z -> {
-                        onAction(KeyboardAction.UNDO)
-                        true
-                    }
-                    Key.Y -> {
-                        onAction(KeyboardAction.REDO)
-                        true
-                    }
-//                        Key.S -> {
-//                            onAction(KeyboardAction.SAVE)
-//                            true
-//                        }
-//                        Key.O -> {
-//                            onAction(KeyboardAction.OPEN)
-//                            true
-//                        }
-                    else -> false
-                }
-            } else false
-        }
+    val keyboardAction = keyEventTranslator(event)
+    if (keyboardAction != null) {
+        onAction(keyboardAction)
+        true
     } else false
 }
