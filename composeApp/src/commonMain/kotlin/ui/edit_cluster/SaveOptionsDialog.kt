@@ -1,8 +1,11 @@
 package ui.edit_cluster
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,14 +42,16 @@ fun SaveOptionsDialog(
         hideSystemBars()
         Surface(
             modifier = Modifier,
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(16.dp)
         ) {
-            val buttonModifier = Modifier.padding(4.dp)
-            val iconModifier = Modifier.padding(end = 8.dp)
+            val buttonModifier = Modifier//.padding(4.dp)
+            val iconModifier = Modifier.padding(end = 12.dp)
             Column(
-                Modifier.padding(4.dp)
+                Modifier
+                    .width(IntrinsicSize.Max)
+                    .padding(16.dp)
             ) {
-                val rowModifier = Modifier //.padding(end = 8.dp)
+                val rowModifier = Modifier.fillMaxWidth() //.padding(end = 8.dp)
                 val containerColor = MaterialTheme.colorScheme.surface
                 val contentColor = MaterialTheme.colorScheme.onSurface
                 val saveCluster = EditClusterTool.SaveCluster
