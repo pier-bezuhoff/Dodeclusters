@@ -1004,6 +1004,7 @@ class EditClusterViewModel : ViewModel() {
         boundingCircles: List<Ix>? = null,
         setSelectionToRegionBounds: Boolean = false
     ) {
+        val shouldUpdateSelection = setSelectionToRegionBounds && !restrictRegionsToSelection
         val (region, region0) = selectRegionAt(visiblePosition, boundingCircles)
         val outerRegionsIndices = regions.filterIndices { region isObviouslyInside it || region0 isObviouslyInside it  }
         val outerRegions = outerRegionsIndices.map { regions[it] }
@@ -1016,7 +1017,7 @@ class EditClusterViewModel : ViewModel() {
                 if (outerRegions.isEmpty()) {
                     recordCommand(Command.FILL_REGION, target = regions.size)
                     regions.add(region)
-                    if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                    if (shouldUpdateSelection) {
                         selection = (region.insides + region.outsides).toList()
                     }
                     println("added $region")
@@ -1030,18 +1031,20 @@ class EditClusterViewModel : ViewModel() {
                     } else { // we are trying to change the color im guessing
                         recordCommand(Command.FILL_REGION, target = i)
                         regions[i] = outer.copy(fillColor = region.fillColor)
-                        if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                        if (shouldUpdateSelection) {
                             selection = (region.insides + region.outsides).toList()
                         }
                         println("recolored singular $outer")
                     }
                 } else if (sameBoundsRegionsIndices.isNotEmpty()) {
-                    val sameBoundsSameColor = sameBoundsRegionsIndices.filter { regions[it].fillColor == region.fillColor }
-                    if (sameBoundsSameColor.isNotEmpty()) {
+                    val sameBoundsSameColorRegionsIndices = sameBoundsRegionsIndices.filter {
+                        regions[it].fillColor == region.fillColor
+                    }
+                    if (sameBoundsSameColorRegionsIndices.isNotEmpty()) {
                         recordCommand(Command.FILL_REGION, unique = true)
-                        val same = sameBoundsSameColor.map { regions[sameBoundsSameColor[it]] }
-                        regions.removeAll(same)
-                        println("removed all same-bounds same-color $same")
+                        val sameRegions = sameBoundsSameColorRegionsIndices.map { regions[it] }
+                        regions.removeAll(sameRegions)
+                        println("removed all same-bounds same-color $sameBoundsSameColorRegionsIndices ~ $region")
                     } else { // we are trying to change the color im guessing
                         val i = sameBoundsRegionsIndices.last()
                         if (sameBoundsRegionsIndices.size == 1)
@@ -1054,7 +1057,7 @@ class EditClusterViewModel : ViewModel() {
                             .forEach {
                                 regions.remove(it) // cleanup
                             }
-                        if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                        if (shouldUpdateSelection) {
                             selection = (region.insides + region.outsides).toList()
                         }
                         println("recolored $i (same bounds ~ $region)")
@@ -1064,12 +1067,16 @@ class EditClusterViewModel : ViewModel() {
                     val outerRegionsOfTheSameColor = outerRegions.filter { it.fillColor == region.fillColor }
                     if (outerRegionsOfTheSameColor.isNotEmpty()) {
                         recordCommand(Command.FILL_REGION, unique = true)
-                        // NOTE: this removes regions of the same color that lie under others, which can be counter-intuitive
+                        // NOTE: this removes regions of the same color that lie under
+                        //  others (potentially invisible), which can be counter-intuitive
                         regions.removeAll(outerRegionsOfTheSameColor)
                         println("removed same color regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
-                    } else {
+                    } else { // there are several outer regions, but none of the color of region.fillColor
                         recordCommand(Command.FILL_REGION, target = regions.size)
                         regions.add(region)
+                        if (shouldUpdateSelection) {
+                            selection = (region.insides + region.outsides).toList()
+                        }
                         println("added $region")
                     }
                 }
@@ -1078,7 +1085,7 @@ class EditClusterViewModel : ViewModel() {
                 if (sameBoundsRegionsIndices.isEmpty()) {
                     recordCommand(Command.FILL_REGION, target = regions.size)
                     regions.add(region)
-                    if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                    if (shouldUpdateSelection) {
                         selection = (region.insides + region.outsides).toList()
                     }
                     println("added $region")
@@ -1098,7 +1105,7 @@ class EditClusterViewModel : ViewModel() {
                     else
                         recordCommand(Command.FILL_REGION, unique = true)
                     regions[i] = region
-                    if (setSelectionToRegionBounds && !restrictRegionsToSelection) {
+                    if (shouldUpdateSelection) {
                         selection = (region.insides + region.outsides).toList()
                     }
                     sameBoundsRegions
@@ -1113,7 +1120,7 @@ class EditClusterViewModel : ViewModel() {
                 if (sameBoundsRegions.isNotEmpty()) {
                     recordCommand(Command.FILL_REGION, unique = true)
                     regions.removeAll(sameBoundsRegions)
-                    println("removed [${sameBoundsRegionsIndices.joinToString(prefix = "\n", separator = ";\n")}] (same bound ~ $region)")
+                    println("removed [${sameBoundsRegionsIndices.joinToString(prefix = "\n", separator = ";\n")}] (same bounds ~ $region)")
                 } else if (outerRegions.isNotEmpty()) {
                     // maybe find minimal and erase it OR remove last outer
                     // tho it would stop working like eraser then
@@ -2161,7 +2168,7 @@ class EditClusterViewModel : ViewModel() {
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) // haxx
             toolbarState = toolbarState.copy(activeTool = EditClusterTool.Multiselect)
-        if (submode !is SubMode.FlowFill)
+        if (submode !is SubMode.FlowFill) // we don't want to exit flow-fill
             submode = SubMode.None
     }
 
