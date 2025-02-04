@@ -106,7 +106,9 @@ fun computeBiInversion(
 ): List<GCircle?> {
     // MAYBE: check point-point and circle-circle consistence by conditional casts
     val e1 = GeneralizedCircle.fromGCircle(engine1)
-    val e2 = GeneralizedCircle.fromGCircle(engine2)
+    val e2 = GeneralizedCircle.fromGCircle(engine2).let {
+        if (params.reverseSecondEngine) -it else it
+    }
     val t = GeneralizedCircle.fromGCircle(target)
     val outerProduct = Rotor.fromOuterProduct(e1, e2)
     val trajectory = mutableListOf<GCircle>()
@@ -129,7 +131,9 @@ fun _iterative_computeBiInversion(
 ): List<GCircle?> {
     // MAYBE: check point-point and circle-circle consistence by conditional casts
     val e1 = GeneralizedCircle.fromGCircle(engine1)
-    val e2 = GeneralizedCircle.fromGCircle(engine2)
+    val e2 = GeneralizedCircle.fromGCircle(engine2).let {
+        if (params.reverseSecondEngine) -it else it
+    }
     var t = GeneralizedCircle.fromGCircle(target)
     val bivector = Rotor.fromOuterProduct(e1, e2) * params.speed
     val rotor = bivector.exp()

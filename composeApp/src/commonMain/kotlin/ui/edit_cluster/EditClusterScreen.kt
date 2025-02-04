@@ -58,8 +58,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.input.key.onPreInterceptKeyBeforeSoftKeyboard
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -110,7 +108,7 @@ import ui.tools.Tool
 import kotlin.math.max
 import kotlin.math.min
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun EditClusterScreen(
     sampleName: String? = null,
@@ -130,11 +128,11 @@ fun EditClusterScreen(
 //    val snackbarMessage2string = preloadSnackbarMessages()
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(
-//        modifier =
-//        if (keyboardActions == null)
-//            Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
-//        else Modifier
-//        ,
+        // ig this may only be useful on android with kbd lol
+        modifier = if (keyboardActions == null)
+            Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
+        else Modifier
+        ,
         snackbarHost = { SnackbarHost(snackbarHostState) { data ->
             Snackbar(data,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
@@ -371,7 +369,7 @@ fun EditClusterScreen(
 
 /** Loads all tool icons and caches them.
  * Otherwise icons only start being loaded when the corresponding category panel is open,
- * which is noticeable */
+ * which is noticeable & jarring */
 @Composable
 fun preloadIcons() {
     for (category in listOf(

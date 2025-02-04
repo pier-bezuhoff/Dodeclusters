@@ -166,8 +166,8 @@
     <string name="loxodromic_motion_angle_prompt">Total rotation angle</string>
     <string name="loxodromic_motion_hyperbolic_prompt">Total logarithmic dilation</string>
     <string name="loxodromic_motion_steps_prompt">Number of intermediate steps</string>
-    <string name="loxodromic_motion_angle_placeholder">&lt;angle in degrees&gt;</string>
-    <string name="loxodromic_motion_angle_suffix">°</string>
+    <string name="angle_in_degrees_placeholder">&lt;angle in degrees&gt;</string>
+    <string name="degrees_suffix">°</string>
     <string name="loxodromic_motion_angle_direction_prompt1">Rotate</string>
     <string name="loxodromic_motion_angle_direction_ccw">counterclockwise</string>
     <string name="loxodromic_motion_angle_direction_cw">clockwise</string>

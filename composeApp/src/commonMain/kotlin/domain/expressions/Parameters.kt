@@ -66,5 +66,7 @@ data class BiInversionParameters(
     /** Multiply inversive distance between engines by [speed] before applications */
     val speed: Double,
     val nSteps: Int,
+    /** Non-co-directed engines may lead to non-intuitive behaviour */
+    val reverseSecondEngine: Boolean
 ) : Parameters
 

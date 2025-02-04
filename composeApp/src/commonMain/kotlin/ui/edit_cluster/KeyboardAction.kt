@@ -14,27 +14,26 @@ import androidx.compose.ui.input.key.type
 import kotlinx.serialization.Serializable
 
 // MAYBE: add shortcut help on ?
-@Serializable
 @Immutable
+@Serializable
 enum class KeyboardAction {
-    SELECT_ALL,
+    SELECT_ALL, // Ctrl-A
     DELETE,
     // + Ctrl-C: copy (what? we already have duplicate)
     // + Enter: finish/confirm cluster creation & go to multi-cluster editor
-    PASTE,
+    PASTE, // Ctrl-V
     ZOOM_IN, ZOOM_OUT,
     UNDO, REDO,
 //    SAVE, OPEN,
     /** Cancel ongoing action (partial constructions, etc) */
-    CANCEL,
+    CANCEL, // Esc
     OPEN,
-    MOVE, SELECT, REGION, // drag, multiselect, region
-    PALETTE,
-    TRANSFORM, CREATE,
+    MOVE, SELECT, REGION, // M: drag, S: multiselect, R: region
+    PALETTE, // P
+    TRANSFORM, CREATE, // T, C
     // TODO: arrow keys for finer movement
 }
 
-/** Iffy in browser, since the target composable often randomly loses focus */
 fun Modifier.handleKeyboardActions(
     onAction: (KeyboardAction) -> Unit,
 ): Modifier {
@@ -42,9 +41,8 @@ fun Modifier.handleKeyboardActions(
     return Modifier.onPreviewKeyEvent(callback)
 }
 
-@Suppress("NOTHING_TO_INLINE")
-inline fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
-    if (event.type == KeyEventType.KeyUp && !event.isAltPressed && !event.isMetaPressed) {
+fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
+    if (event.type == KeyEventType.KeyUp && !event.isAltPressed && !event.isMetaPressed) { // Q: is Meta the Win key or macos's ctrl?
         if (event.isCtrlPressed) {
             when (event.key) {
                 Key.V -> KeyboardAction.PASTE

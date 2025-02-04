@@ -2308,7 +2308,7 @@ class EditClusterViewModel : ViewModel() {
                     selection = emptyList()
                 }
             }
-            KeyboardAction.OPEN -> {} //toolAction(EditClusterTool.OpenFile)
+            KeyboardAction.OPEN -> {} // idk
             KeyboardAction.MOVE -> switchToCategory(EditClusterCategory.Drag)
             KeyboardAction.SELECT -> switchToCategory(EditClusterCategory.Multiselect)
             KeyboardAction.REGION -> switchToCategory(EditClusterCategory.Region)

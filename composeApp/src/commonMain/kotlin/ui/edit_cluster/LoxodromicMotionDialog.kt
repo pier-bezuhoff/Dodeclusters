@@ -43,6 +43,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.angle_in_degrees_placeholder
+import dodeclusters.composeapp.generated.resources.degrees_suffix
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_ccw
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_cw
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_prompt1
@@ -59,6 +61,7 @@ import domain.expressions.LoxodromicMotionParameters
 import domain.formatDecimals
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
+import ui.DialogTitle
 import ui.OkButton
 import ui.hideSystemBars
 import kotlin.math.abs
@@ -99,8 +102,6 @@ fun LoxodromicMotionDialog(
     defaults: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
 ) {
     // MAYBE: add turn fraction conversion field
-    // TODO: make onConfirm read all fields
-    //  possibly by hoisting all TFValues and updates here
     var angle by remember(defaults) { mutableStateOf(abs(defaults.angle)) }
     // true = CCW
     var angleDirection by remember(defaults) { mutableStateOf(defaults.angle >= 0.0) }
@@ -125,7 +126,7 @@ fun LoxodromicMotionDialog(
                 Modifier.padding(horizontal = 8.dp),
                 horizontalAlignment = Alignment.Start
             ) {
-                Title(smallerFont = compactWidth)
+                DialogTitle(Res.string.loxodromic_motion_title, smallerFont = compactWidth)
                 Row {
                     AngleSliderPrefix(smallerFont = compactWidth)
                     AngleTextField(angle, { angle = it })
@@ -153,17 +154,6 @@ fun LoxodromicMotionDialog(
             }
         }
     }
-}
-
-@Composable
-private fun Title(smallerFont: Boolean = false, modifier: Modifier = Modifier) {
-    Text(
-        text = stringResource(Res.string.loxodromic_motion_title),
-        modifier = modifier.padding(16.dp),
-        style =
-            if (smallerFont) MaterialTheme.typography.titleMedium
-            else MaterialTheme.typography.titleLarge,
-    )
 }
 
 @Composable
@@ -214,8 +204,8 @@ private fun AngleTextField(
             }
         ,
         textStyle = MaterialTheme.typography.bodyLarge,
-        placeholder = { Text(stringResource(Res.string.loxodromic_motion_angle_placeholder)) },
-        suffix = { Text(stringResource(Res.string.loxodromic_motion_angle_suffix)) },
+        placeholder = { Text(stringResource(Res.string.angle_in_degrees_placeholder)) },
+        suffix = { Text(stringResource(Res.string.degrees_suffix)) },
         keyboardOptions = KeyboardOptions(
             imeAction = ImeAction.Done
         ),

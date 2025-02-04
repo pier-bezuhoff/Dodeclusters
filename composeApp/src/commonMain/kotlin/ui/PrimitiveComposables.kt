@@ -19,6 +19,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconToggleButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
@@ -31,12 +32,19 @@ import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -47,6 +55,8 @@ import dodeclusters.composeapp.generated.resources.cancel_name
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.ok_description
 import dodeclusters.composeapp.generated.resources.ok_name
+import domain.formatDecimals
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.tools.Tool
@@ -290,6 +300,99 @@ fun CancelOkRow(
         CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
         OkButton(fontSize = fontSize, onConfirm = onConfirm)
     }
+}
+
+@Composable
+fun DialogTitle(
+    titleStringResource: StringResource,
+    smallerFont: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = stringResource(titleStringResource),
+        modifier = modifier.padding(16.dp),
+        style =
+        if (smallerFont) MaterialTheme.typography.titleMedium
+        else MaterialTheme.typography.titleLarge,
+    )
+}
+
+@Composable
+fun PreTextFieldLabel(
+    stringResource: StringResource,
+    smallerFont: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        buildAnnotatedString {
+            append(stringResource(stringResource))
+            append(":  ")
+        },
+        modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
+        style =
+            if (smallerFont) MaterialTheme.typography.bodyMedium
+            else MaterialTheme.typography.bodyLarge
+    )
+}
+
+@Composable
+fun FloatTextField(
+    value: Float,
+    onNewValue: (newValue: Float) -> Unit,
+    placeholderStringResource: StringResource? = null,
+    suffixStringResource: StringResource? = null,
+    nFractionalDigits: Int = 2,
+    modifier: Modifier = Modifier
+) {
+    val s = value.formatDecimals(nFractionalDigits)
+    var textFieldValue by remember(value) {
+        mutableStateOf(TextFieldValue(s, TextRange(s.length)))
+    }
+    OutlinedTextField(
+        textFieldValue,
+        onValueChange = { newTextFieldValue ->
+            textFieldValue = newTextFieldValue
+            val updatedValue = textFieldValue.text.toFloatOrNull()
+            if (updatedValue != null && updatedValue != value) {
+                onNewValue(updatedValue)
+            }
+        },
+        modifier = modifier,
+        textStyle = MaterialTheme.typography.bodyLarge,
+        placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
+        suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
+        singleLine = true,
+    )
+}
+
+@Composable
+fun IntTextField(
+    value: Int,
+    onNewValue: (newValue: Int) -> Unit,
+    placeholderStringResource: StringResource? = null,
+    suffixStringResource: StringResource? = null,
+    valueValidator: (value: Int) -> Boolean = { it >= 0 },
+    modifier: Modifier = Modifier
+) {
+    val s = value.toString()
+    var textFieldValue by remember(value) {
+        mutableStateOf(TextFieldValue(s, TextRange(s.length)))
+    }
+    OutlinedTextField(
+        textFieldValue,
+        onValueChange = { newTextFieldValue ->
+            textFieldValue = newTextFieldValue
+            val newValue = textFieldValue.text.toIntOrNull()
+            if (newValue != null && newValue != value && valueValidator(newValue)) {
+                onNewValue(newValue)
+            }
+        },
+        modifier = modifier,
+        textStyle = MaterialTheme.typography.bodyLarge,
+        placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
+        suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
+        singleLine = true,
+    )
 }
 
 // reference: https://stackoverflow.com/a/71129399
