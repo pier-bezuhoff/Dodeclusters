@@ -1581,12 +1581,15 @@ class EditClusterViewModel : ViewModel() {
                             selectCircle(circles, visiblePosition)?.let { circleIndex ->
                                 val newArg = Arg.CircleIndex(circleIndex)
                                 val previous = partialArgList?.currentArg
-                                if (previous == newArg ||
+                                val allowRepeatingArg =
+                                    // we allow target == engine1, but NOT engine1 == engine2
+                                    mode == ToolMode.BI_INVERSION && partialArgList?.args?.size == 1
+                                val repeatingArg =
+                                    previous == newArg ||
                                     previous is Arg.CircleIndex && previous.index == circleIndex ||
                                     previous is Arg.CircleAndPointIndices && previous.circleIndices == listOf(circleIndex)
-                                ) {
-                                    // we ignore identical args (tho there can be a reason not to)
-                                } else {
+                                // we ignore identical args (tho there can be a reason not to)
+                                if (allowRepeatingArg || !repeatingArg) {
                                     partialArgList = partialArgList!!.addArg(newArg, confirmThisArg = true)
                                 }
                             }
