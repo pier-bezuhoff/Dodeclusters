@@ -49,6 +49,9 @@ data class Rotor(
     operator fun times(k: Double): Rotor =
         Rotor(s*k, xy*k, xp*k, xm*k, yp*k, ym*k, pm*k)
 
+    operator fun unaryMinus(): Rotor =
+        Rotor(-s, -xy, -xp, -xm, -yp, -ym, -pm)
+
     fun reversed(): Rotor =
         times(-1.0).copy(s = this.s)
 

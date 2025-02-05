@@ -40,6 +40,7 @@ enum class ToolMode(
     CIRCLE_INVERSION(EditClusterTool.CircleInversion),
     CIRCLE_INTERPOLATION(EditClusterTool.CircleInterpolation),
     CIRCLE_EXTRAPOLATION(EditClusterTool.CircleExtrapolation),
+    BI_INVERSION(EditClusterTool.BiInversion),
     LOXODROMIC_MOTION(EditClusterTool.LoxodromicMotion),
 
     CIRCLE_BY_CENTER_AND_RADIUS(EditClusterTool.ConstructCircleByCenterAndRadius),

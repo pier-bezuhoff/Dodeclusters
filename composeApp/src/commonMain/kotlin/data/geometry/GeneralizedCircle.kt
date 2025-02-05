@@ -286,7 +286,7 @@ data class GeneralizedCircle(
         engine1: GeneralizedCircle, engine2: GeneralizedCircle,
         speed: Double
     ): GeneralizedCircle {
-        val bivector = Rotor.fromOuterProduct(engine1, engine2) * speed
+        val bivector = -Rotor.fromOuterProduct(engine1, engine2) * speed
         val rotor = bivector.exp()
         val result = rotor.applyTo(this)
         return result

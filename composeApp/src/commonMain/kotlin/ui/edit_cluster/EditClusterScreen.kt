@@ -277,6 +277,22 @@ fun EditClusterScreen(
                 )
             }
         }
+        DialogType.BI_INVERSION -> {
+            if (viewModel.partialArgList?.isFull == true) {
+                val (engine1, engine2) = viewModel.partialArgList!!.args
+                    .drop(1)
+                    .map { it as Arg.CircleIndex }
+                    .map { viewModel.objects[it.index] as? CircleOrLine }
+                if (engine1 != null && engine2 != null) {
+                    BiInversionDialog(
+                        engine1, engine2,
+                        onDismissRequest = viewModel::resetBiInversion,
+                        onConfirm = viewModel::completeBiInversion,
+                        defaults = viewModel.defaultBiInversionParameters,
+                    )
+                }
+            }
+        }
         DialogType.LOXODROMIC_MOTION -> {
             if (viewModel.partialArgList?.isFull == true) {
                 val (divergencePoint, convergencePoint) = viewModel.partialArgList!!.args

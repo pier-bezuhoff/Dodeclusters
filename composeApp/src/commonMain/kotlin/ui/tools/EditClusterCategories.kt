@@ -81,6 +81,7 @@ sealed class EditClusterCategory(
             EditClusterTool.CircleInversion,
             EditClusterTool.LoxodromicMotion,
             EditClusterTool.CircleInterpolation,
+            EditClusterTool.BiInversion,
             EditClusterTool.CircleExtrapolation,
         ),
         defaultables = listOf(0, 1, 2, 3),

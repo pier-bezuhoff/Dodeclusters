@@ -65,6 +65,7 @@ val SIGNATURE_2_CIRCLES = Signature(ArgType.Circle, ArgType.Circle)
 val SIGNATURE_INDEXED_AND_CIRCLE = Signature(ArgType.CircleAndPointIndices, ArgType.Circle)
 val SIGNATURE_2_GENERALIZED_CIRCLES = Signature(ArgType.CircleOrPoint, ArgType.CircleOrPoint)
 val SIGNATURE_3_GENERALIZED_CIRCLE = Signature(ArgType.CircleOrPoint, ArgType.CircleOrPoint, ArgType.CircleOrPoint)
+val SIGNATURE_INDEXED_AND_2_CIRCLES = Signature(ArgType.CircleAndPointIndices, ArgType.Circle, ArgType.Circle)
 val SIGNATURE_INDEXED_AND_2_POINTS = Signature(ArgType.CircleAndPointIndices, ArgType.Point, ArgType.Point)
 val SIGNATURE_N_POINTS_PLACEHOLDER = Signature(ArgType.Point)
 

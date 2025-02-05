@@ -76,6 +76,13 @@
         <item>Start-circle</item>
         <item>End-circle</item>
     </string-array>
+    <string name="bi_inversion_name">Bi-inversion</string>
+    <string name="bi_inversion_description">Apply composition of 2 inversions several times</string>
+    <string-array name="bi_inversion_arg_descriptions">
+        <item>The object to invert</item>
+        <item>The circle for the 1st inversion</item>
+        <item>The circle for the 2nd inversion</item>
+    </string-array>
     <string name="loxodromic_motion_name">Loxodromic motion</string>
     <string name="loxodromic_motion_description">Apply several steps of spiral motion</string>
     <string-array name="loxodromic_motion_arg_descriptions">
@@ -99,9 +106,9 @@
     <string name="circle_by_pencil_and_point_name">Circle by pencil and point</string>
     <string name="circle_by_pencil_and_point_description">Construct a circle by its pencil (from 2 circles), and thru a point / perpendicular to an object</string>
     <string-array name="circle_by_pencil_and_point_arg_descriptions">
-        <item>the 1st object in the pencil</item>
-        <item>the 2nd object in the pencil</item>
-        <item>the point / perpendicular object</item>
+        <item>The 1st object in the pencil</item>
+        <item>The 2nd object in the pencil</item>
+        <item>The point / perpendicular object</item>
     </string-array>
     <string name="line_by_2_points_name">Line by 2 points</string>
     <string name="line_by_2_points_description">Construct a line by 2 points or by objects perpendicular to it</string>
@@ -161,6 +168,14 @@
     <string name="circle_extrapolation_left_prompt2">left of the first one</string>
     <string name="circle_extrapolation_right_prompt1">The number of new circles to the</string>
     <string name="circle_extrapolation_right_prompt2">right of the second one</string>
+    <!-- bi-inversion dialog -->
+    <string name="bi_inversion_title">Configure bi-inversion trajectory</string>
+    <string name="bi_inversion_speed_prompt">Speed</string>
+    <string name="bi_inversion_angle_prompt">Rotation angle per step</string>
+    <string name="bi_inversion_hyperbolic_prompt">Logarithmic dilation per step</string>
+    <string name="bi_inversion_steps_prompt">Number of steps</string>
+    <string name="bi_inversion_dilation_placeholder">&lt;log-dilation&gt;</string>
+    <string name="bi_inversion_n_steps_placeholder">&lt;number of steps&gt;</string>
     <!-- loxodromic motion dialog -->
     <string name="loxodromic_motion_title">Configure loxodromic motion</string>
     <string name="loxodromic_motion_angle_prompt">Total rotation angle</string>
@@ -172,7 +187,7 @@
     <string name="loxodromic_motion_angle_direction_ccw">counterclockwise</string>
     <string name="loxodromic_motion_angle_direction_cw">clockwise</string>
     <string name="loxodromic_motion_angle_direction_prompt2">from the 1st point</string>
-    <string name="loxodromic_motion_dilation_placeholder">&lt;dilation&gt;</string>
+    <string name="loxodromic_motion_dilation_placeholder">&lt;log-dilation&gt;</string>
     <string name="loxodromic_motion_n_steps_placeholder">&lt;number of steps&gt;</string>
     <!-- file dialog -->
     <string name="save_cluster_title">Save this cluster</string>

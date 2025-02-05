@@ -65,16 +65,7 @@ fun computeCircleInversion(
     val targetGC = GeneralizedCircle.fromGCircle(target)
     val result = engineGC.applyTo(targetGC)
     val gCircle = result.toGCircle()
-    return when (target) {
-        is Point -> when (gCircle) {
-            is Point -> gCircle
-            is Circle -> Point(gCircle.x, gCircle.y)
-            is ImaginaryCircle -> Point(gCircle.x, gCircle.y)
-            else -> null
-        }
-        is CircleOrLine -> gCircle as? CircleOrLine
-        is ImaginaryCircle -> gCircle as? ImaginaryCircle
-    }
+    return forceSameGCircleType(target, gCircle)
 }
 
 // MAYBE: just repeat obj transformations for tier=0 carrier incident points
@@ -144,3 +135,16 @@ fun computeSagittaRatio(
     val sagitta = circle.radius - hypot(apothemX, apothemY)
     return sign*sagitta/hypot(chordX, chordY)
 }
+
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun forceSameGCircleType(typeSample: GCircle, target: GCircle): GCircle? =
+    when (typeSample) {
+        is Point -> when (target) {
+            is Point -> target
+            is Circle -> Point(target.x, target.y)
+            is ImaginaryCircle -> Point(target.x, target.y)
+            else -> null
+        }
+        is CircleOrLine -> target as? CircleOrLine
+        is ImaginaryCircle -> target as? ImaginaryCircle
+    }

@@ -70,6 +70,13 @@
         <item>Стартовую окружность</item>
         <item>Конечную окружность</item>
     </string-array>
+    <string name="bi_inversion_name">Би-инверсия</string>
+    <string name="bi_inversion_description">Применить композицию 2 инверсий несколько раз</string>
+    <string-array name="bi_inversion_arg_descriptions">
+        <item>Объект, на который мы действуем</item>
+        <item>Окружность для 1-ой инверсии</item>
+        <item>Окружность для 2-ой инверсии</item>
+    </string-array>
     <string name="loxodromic_motion_name">Локсодромическое движение</string>
     <string name="loxodromic_motion_description">Применить несколько шагов движения по локсодромической спирали</string>
     <string-array name="loxodromic_motion_arg_descriptions">
@@ -152,14 +159,21 @@
     <string name="circle_extrapolation_left_prompt2">слева от первой выбранной</string>
     <string name="circle_extrapolation_right_prompt1">Число новых окружностей</string>
     <string name="circle_extrapolation_right_prompt2">справа от второй выбранной</string>
+    <!-- bi-inversion dialog -->
+    <string name="bi_inversion_title">Параметры двойной инверсии</string>
+    <string name="bi_inversion_speed_prompt">Скорость</string>
+    <string name="bi_inversion_angle_prompt">Угол поворота за шаг</string>
+    <string name="bi_inversion_hyperbolic_prompt">One-step logarithmic dilation</string>
+    <string name="bi_inversion_steps_prompt">Число шагов</string>
+    <string name="bi_inversion_dilation_placeholder">&lt;log-dilation&gt;</string>
+    <string name="bi_inversion_n_steps_placeholder">&lt;число шагов&gt;</string>
     <!-- loxodromic motion dialog -->
     <string name="loxodromic_motion_title">Параметры локсодромического движения</string>
     <string name="loxodromic_motion_angle_prompt">Угол крутящей компоненты</string>
     <string name="loxodromic_motion_hyperbolic_prompt">Коэффициент сжатия/раздутия</string>
     <string name="loxodromic_motion_steps_prompt">Число промежуточных шагов</string>
-
-    <string name="loxodromic_motion_angle_placeholder">&lt;угол в градусах&gt;</string>
-    <string name="loxodromic_motion_angle_suffix">°</string>
+    <string name="angle_in_degrees_placeholder">&lt;угол в градусах&gt;</string>
+    <string name="degrees_suffix">°</string>
     <string name="loxodromic_motion_angle_direction_prompt1">Вращать</string>
     <string name="loxodromic_motion_angle_direction_ccw">против часовой стрелки</string>
     <string name="loxodromic_motion_angle_direction_cw">по часовой стрелке</string>

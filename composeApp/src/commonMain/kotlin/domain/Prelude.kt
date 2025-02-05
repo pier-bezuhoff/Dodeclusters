@@ -22,14 +22,18 @@ fun Number.round(fractionalDigits: Int): Double {
 }
 
 /** {integer digits}.{[fractionalDigits]} */
-fun Number.formatDecimals(fractionalDigits: Int): String {
+fun Number.formatDecimals(
+    fractionalDigits: Int,
+    showDotZero: Boolean = true
+): String {
     val x = this.toDouble() // 12.345
     val factor = 10.0.pow(fractionalDigits).roundToInt() // 100
     val x00 = (x * factor).roundToInt() // 1234.5
     val integerPart: Int = x00.floorDiv(factor) // 12
     val fractionalPart: Int = x00 - integerPart*factor // 34
-    return "$integerPart.$fractionalPart" // 12.34
-    // MAYBE: don't show *.0
+    return if (showDotZero)
+        "$integerPart.$fractionalPart" // 12.34
+    else "$integerPart"
 }
 
 /** [x] >= 0 => +1, otherwise => -1 */
@@ -48,6 +52,14 @@ inline val Double.degrees: Float get() =
 /** degree-to-radian conversion */
 inline val Float.radians: Double get() =
     this*PI/180.0
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun squareSum(dx: Float, dy: Float): Float =
+    dx*dx + dy*dy
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun squareSum(dx: Double, dy: Double): Double =
+    dx*dx + dy*dy
 
 // sum types doko
 inline fun <reified A, reified B> tryCatch2(

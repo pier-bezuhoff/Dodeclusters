@@ -27,6 +27,11 @@ import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.angle_in_degrees_placeholder
+import dodeclusters.composeapp.generated.resources.bi_inversion_angle_prompt
+import dodeclusters.composeapp.generated.resources.bi_inversion_n_steps_placeholder
+import dodeclusters.composeapp.generated.resources.bi_inversion_speed_prompt
+import dodeclusters.composeapp.generated.resources.bi_inversion_steps_prompt
+import dodeclusters.composeapp.generated.resources.bi_inversion_title
 import dodeclusters.composeapp.generated.resources.degrees_suffix
 import dodeclusters.composeapp.generated.resources.stub
 import domain.degrees
@@ -62,6 +67,12 @@ data class DefaultBiInversionParameters(
         nSteps = nSteps,
         reverseSecondEngine = reverseSecondEngine
     )
+
+    constructor(parameters: BiInversionParameters) : this(
+        speed = parameters.speed,
+        nSteps = parameters.nSteps,
+        reverseSecondEngine = parameters.reverseSecondEngine
+    )
 }
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
@@ -78,7 +89,7 @@ fun BiInversionDialog(
     val reverseSecondEngine = engine1GC.scalarProduct(engine2GC0) < 0
     val engine2GC = if (reverseSecondEngine) -engine2GC0 else engine2GC0
     val pencil = engine1GC.calculatePencilType(engine2GC)
-    val inversiveAngle = engine1GC.inversiveAngle(engine2GC) // angle or log-dilation
+    val inversiveAngle = 2.0*engine1GC.inversiveAngle(engine2GC) // angle or log-dilation
     val showAngleSlider = pencil == CirclePencilType.ELLIPTIC
     var nSteps by remember(defaults) { mutableStateOf(defaults.nSteps) }
     var speed: Double by remember(defaults) { mutableStateOf(defaults.speed) }
@@ -103,13 +114,13 @@ fun BiInversionDialog(
                 ,
                 horizontalAlignment = Alignment.Start
             ) {
-                DialogTitle(Res.string.stub, smallerFont = isCompact)
+                DialogTitle(Res.string.bi_inversion_title, smallerFont = isCompact)
                 Row {
-                    PreTextFieldLabel(Res.string.stub, smallerFont = isCompact)
+                    PreTextFieldLabel(Res.string.bi_inversion_speed_prompt, smallerFont = isCompact)
                     FloatTextField(
                         value = speed.toFloat(),
                         onNewValue = { speed = it.toDouble() },
-                        placeholderStringResource = Res.string.stub,
+                        nFractionalDigits = 3,
                     )
                 }
                 Slider(
@@ -120,12 +131,13 @@ fun BiInversionDialog(
                 )
                 if (showAngleSlider) {
                     Row {
-                        PreTextFieldLabel(Res.string.stub, smallerFont = isCompact)
+                        PreTextFieldLabel(Res.string.bi_inversion_angle_prompt, smallerFont = isCompact)
                         FloatTextField(
                             value = dAngle,
                             onNewValue = { speed = it.radians / inversiveAngle },
                             placeholderStringResource = Res.string.angle_in_degrees_placeholder,
                             suffixStringResource = Res.string.degrees_suffix,
+                            nFractionalDigits = 2,
                         )
                     }
                     Slider(
@@ -136,11 +148,11 @@ fun BiInversionDialog(
                     )
                 }
                 Row {
-                    PreTextFieldLabel(Res.string.stub, smallerFont = isCompact)
+                    PreTextFieldLabel(Res.string.bi_inversion_steps_prompt, smallerFont = isCompact)
                     IntTextField(
                         value = nSteps,
                         onNewValue = { nSteps = it },
-                        placeholderStringResource = Res.string.stub,
+                        placeholderStringResource = Res.string.bi_inversion_n_steps_placeholder,
                     )
                 }
                 Slider(

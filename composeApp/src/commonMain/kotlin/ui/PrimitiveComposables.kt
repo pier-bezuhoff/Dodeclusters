@@ -344,7 +344,7 @@ fun FloatTextField(
     nFractionalDigits: Int = 2,
     modifier: Modifier = Modifier
 ) {
-    val s = value.formatDecimals(nFractionalDigits)
+    val s = value.formatDecimals(nFractionalDigits, showDotZero = false)
     var textFieldValue by remember(value) {
         mutableStateOf(TextFieldValue(s, TextRange(s.length)))
     }

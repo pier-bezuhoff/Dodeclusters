@@ -3,6 +3,7 @@ package data.geometry
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import domain.filterIndices
+import domain.squareSum
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -22,12 +23,25 @@ fun selectWithRectangle(objects: List<GCircle?>, rect: Rect): List<Int> =
             testObjectRectangleCollision(o, rect)
     }
 
+// reference: https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection
+/** Simpler interior intersection test that ignores rect-inside-circle case */
+fun testCircleRectCollision(circle: Circle, rect: Rect): Boolean {
+    val cx = circle.x.toFloat()
+    val cy = circle.y.toFloat()
+    // get box closest point to sphere center by clamping
+    val x = max(rect.left, min(cx, rect.right))
+    val y = max(rect.top, min(cy, rect.bottom))
+    val distance2 = squareSum(x - cx, y - cy)
+    return distance2 < circle.r2
+}
+
 /** Rectangle collider.
  * @return `true` if intersection of [obj]'s border and [rect] is
  * non-empty (including [rect]'s interior), otherwise `false` */
 fun testObjectRectangleCollision(obj: GCircle, rect: Rect): Boolean =
     when (obj) {
         is Circle -> {
+//            testCircleRectCollision(obj, rect)
             testHorizontalSegmentCircleIntersections(rect.top, rect.left, rect.right, obj) ||
             testHorizontalSegmentCircleIntersections(rect.bottom, rect.left, rect.right, obj) ||
             testVerticalSegmentCircleIntersections(rect.left, rect.top, rect.bottom, obj) ||

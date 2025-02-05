@@ -5,6 +5,7 @@ import data.geometry.CircleOrLine
 import data.geometry.CircleOrLineOrImaginaryCircle
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
+import data.geometry.ImaginaryCircle
 import data.geometry.Point
 import data.geometry.Rotor
 import domain.never
@@ -110,14 +111,16 @@ fun computeBiInversion(
         if (params.reverseSecondEngine) -it else it
     }
     val t = GeneralizedCircle.fromGCircle(target)
-    val outerProduct = Rotor.fromOuterProduct(e1, e2)
-    val trajectory = mutableListOf<GCircle>()
+    val outerProduct = -Rotor.fromOuterProduct(e1, e2)
+    val trajectory = mutableListOf<GCircle?>()
     repeat(params.nSteps) { i ->
+        // FIX: quite inaccurate
         // inlined t.biInversion(e1, e2, params.speed)
         val bivector = outerProduct * ((i + 1) * params.speed)
         val rotor = bivector.exp()
+        val result = rotor.applyTo(t).toGCircle()
         trajectory.add(
-            rotor.applyTo(t).toGCircle()
+            forceSameGCircleType(target, result)
         )
     }
     return trajectory
@@ -146,6 +149,7 @@ fun _iterative_computeBiInversion(
     return trajectory
 }
 
+// FIX: quite inaccurate on points (??)
 fun computeLoxodromicMotion(
     params: LoxodromicMotionParameters,
     divergencePoint: Point, convergencePoint: Point,
@@ -161,7 +165,7 @@ fun computeLoxodromicMotion(
     val targetGC = GeneralizedCircle.fromGCircle(target)
     val pencil = Rotor.fromOuterProduct(start, end).normalized()
     val perpPencil = pencil.dual()
-    val trajectory = mutableListOf<GCircle>()
+    val trajectory = mutableListOf<GCircle?>()
     repeat(n) { i ->
         val progress = (i + 1).toDouble() / n
         val angle = progress * totalAngle
@@ -169,10 +173,9 @@ fun computeLoxodromicMotion(
         val rotation = (perpPencil * (-angle/2.0)).exp()
         val dilation = (pencil * (logDilation/2.0)).exp()
         // inlined t.loxodromicShift(start, end, angle, dilation)
+        val result = dilation.applyTo(rotation.applyTo(targetGC)).toGCircle()
         trajectory.add(
-            dilation.applyTo(
-                rotation.applyTo(targetGC).normalizedPreservingDirection()
-            ).toGCircle()
+            forceSameGCircleType(target, result)
         )
     }
     return trajectory

@@ -12,6 +12,9 @@ import dodeclusters.composeapp.generated.resources.applied_color_name
 import dodeclusters.composeapp.generated.resources.arc_path_arg_descriptions
 import dodeclusters.composeapp.generated.resources.arc_path_description
 import dodeclusters.composeapp.generated.resources.arc_path_name
+import dodeclusters.composeapp.generated.resources.bi_inversion_arg_descriptions
+import dodeclusters.composeapp.generated.resources.bi_inversion_description
+import dodeclusters.composeapp.generated.resources.bi_inversion_name
 import dodeclusters.composeapp.generated.resources.change_background_description
 import dodeclusters.composeapp.generated.resources.change_background_name
 import dodeclusters.composeapp.generated.resources.chessboard
@@ -52,6 +55,7 @@ import dodeclusters.composeapp.generated.resources.delete_name
 import dodeclusters.composeapp.generated.resources.deselect
 import dodeclusters.composeapp.generated.resources.detach_name
 import dodeclusters.composeapp.generated.resources.dotted_rectangle
+import dodeclusters.composeapp.generated.resources.double_reflection
 import dodeclusters.composeapp.generated.resources.drag_description
 import dodeclusters.composeapp.generated.resources.drag_mode_1_circle
 import dodeclusters.composeapp.generated.resources.drag_name
@@ -145,11 +149,11 @@ import domain.SIGNATURE_2_CIRCLES
 import domain.SIGNATURE_2_GENERALIZED_CIRCLES
 import domain.SIGNATURE_2_POINTS
 import domain.SIGNATURE_3_GENERALIZED_CIRCLE
+import domain.SIGNATURE_INDEXED_AND_2_CIRCLES
 import domain.SIGNATURE_INDEXED_AND_2_POINTS
 import domain.SIGNATURE_INDEXED_AND_CIRCLE
 import domain.SIGNATURE_N_POINTS_PLACEHOLDER
 import domain.Signature
-import domain.io.DdcV2
 import domain.io.DdcV4
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
@@ -337,7 +341,6 @@ sealed class EditClusterTool(
 
     data object CircleInversion: MultiArg(
         SIGNATURE_INDEXED_AND_CIRCLE,
-//        PartialArgList.SIGNATURE_SELECTED_CIRCLES_AND_CIRCLE,
         Res.string.circle_inversion_name,
         Res.string.circle_inversion_description,
         Res.array.circle_inversion_arg_descriptions,
@@ -356,6 +359,13 @@ sealed class EditClusterTool(
         Res.string.circle_extrapolation_description,
         Res.array.circle_extrapolation_arg_descriptions,
         Res.drawable.extrapolate_lines
+    )
+    data object BiInversion: MultiArg(
+        SIGNATURE_INDEXED_AND_2_CIRCLES,
+        Res.string.bi_inversion_name,
+        Res.string.bi_inversion_description,
+        Res.array.bi_inversion_arg_descriptions,
+        Res.drawable.double_reflection
     )
     data object LoxodromicMotion: MultiArg(
         SIGNATURE_INDEXED_AND_2_POINTS,

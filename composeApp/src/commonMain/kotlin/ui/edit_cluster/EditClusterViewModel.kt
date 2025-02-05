@@ -49,6 +49,7 @@ import domain.cluster.ClusterV1
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
 import domain.compressConstraints
+import domain.expressions.BiInversionParameters
 import domain.expressions.Expr
 import domain.expressions.Expression
 import domain.expressions.ExpressionForest
@@ -213,6 +214,8 @@ class EditClusterViewModel : ViewModel() {
     var defaultInterpolationParameters = DefaultInterpolationParameters()
         private set
     var defaultExtrapolationParameters = DefaultExtrapolationParameters()
+        private set
+    var defaultBiInversionParameters = DefaultBiInversionParameters()
         private set
     var defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters()
         private set
@@ -2285,7 +2288,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun processKeyboardAction(action: KeyboardAction) {
-        println("processing $action")
+//        println("processing $action")
         when (action) {
             KeyboardAction.SELECT_ALL -> {
                 if (!mode.isSelectingCircles() || !showCircles) // more intuitive behavior
@@ -2333,6 +2336,7 @@ class EditClusterViewModel : ViewModel() {
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
             ToolMode.CIRCLE_INTERPOLATION -> openedDialog = DialogType.CIRCLE_INTERPOLATION
             ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
+            ToolMode.BI_INVERSION -> openedDialog = DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> openedDialog = DialogType.LOXODROMIC_MOTION
         }
     }
@@ -2533,6 +2537,39 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(EditClusterTool.CircleExtrapolation.signature)
     }
 
+    fun completeBiInversion(
+        params: BiInversionParameters,
+    ) {
+        openedDialog = null
+        val argList = partialArgList!!
+        val args = argList.args
+        val objArg = args[0] as Arg.CircleAndPointIndices
+        val targetCircleIndices = objArg.circleIndices
+        val targetPointsIndices = objArg.pointIndices
+        recordCreateCommand()
+        val (engine1, engine2) = args.drop(1).take(2)
+            .map { (it as Arg.CircleIndex).index }
+        val targetIndices = targetCircleIndices + targetPointsIndices
+        copyRegionsAndStylesForNewTrajectories(
+            sourceIndex2NewTrajectory = targetIndices.map { targetIndex ->
+                targetIndex to expressions.addMultiExpr(
+                    Expr.BiInversion(
+                        params,
+                        engine1, engine2,
+                        targetIndex
+                    ),
+                ).map { it?.upscale() } // multi expression creates a whole trajectory at a time
+            }
+        ) { CircleAnimation.Entrance(it) }
+        partialArgList = PartialArgList(argList.signature)
+        defaultBiInversionParameters = DefaultBiInversionParameters(params)
+    }
+
+    fun resetBiInversion() {
+        openedDialog = null
+        partialArgList = PartialArgList(EditClusterTool.BiInversion.signature)
+    }
+
     // TODO: inf point input
     fun completeLoxodromicMotion(
         params: LoxodromicMotionParameters,
@@ -2693,6 +2730,7 @@ class EditClusterViewModel : ViewModel() {
         openedDialog = when (mode) {
             ToolMode.CIRCLE_INTERPOLATION -> DialogType.CIRCLE_INTERPOLATION
             ToolMode.CIRCLE_EXTRAPOLATION -> DialogType.CIRCLE_EXTRAPOLATION
+            ToolMode.BI_INVERSION -> DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> DialogType.LOXODROMIC_MOTION
             else -> null
         }
@@ -2927,7 +2965,7 @@ class EditClusterViewModel : ViewModel() {
          * always create them. In contrast to replacing expression with static circle */
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
         /** [Double] arithmetic is best in range that is closer to 0 */
-        const val UPSCALING_FACTOR = 200.0
+        const val UPSCALING_FACTOR = 500.0
         const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
