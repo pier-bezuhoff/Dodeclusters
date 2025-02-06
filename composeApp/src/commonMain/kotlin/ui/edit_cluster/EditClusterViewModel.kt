@@ -1851,14 +1851,14 @@ class EditClusterViewModel : ViewModel() {
     private fun dragPoint(c: Offset) {
         val ix = selection.first()
         val expr = expressions.expressions[ix]?.expr
-        if (!isFree(ix) && expr is Expr.Incidence) {
+        if (expr is Expr.Incidence) {
             slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, cursorLocation = c)
         } else {
             val childCircles = expressions.getAllChildren(ix)
                 .filter { objects[it] is CircleOrLine }
                 .toSet()
             // when we are dragging intersection of 2 frees with IoC1 we don't want it to snap to them
-            val parents = expressions.getImmediateParents(ix)
+            val parents = expressions.getAllParents(listOf(ix))
             val newPoint = snapped(c, excludePoints = true, excludedCircles = childCircles + parents).result
             transformWhatWeCan(
                 listOf(ix),
@@ -1887,7 +1887,7 @@ class EditClusterViewModel : ViewModel() {
         transformWhatWeCan(targets, translation = pan, focus = c, zoom = zoom, rotationAngle = rotationAngle)
     }
 
-    /** Wrapper around [transform] that adjust [targets] based on [INVERSION_OF_CONTROL] */
+    /** Wrapper around [transform] that adjusts [targets] based on [INVERSION_OF_CONTROL] */
     private inline fun transformWhatWeCan(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
