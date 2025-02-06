@@ -58,11 +58,11 @@
         <item>Инвертируемый объект</item>
         <item>Окружность, относительно которой мы инвертируем</item>
     </string-array>
-    <string name="circle_interpolation_name">Интерполяция окружностей</string>
-    <string name="circle_interpolation_description">Построить промежуточные окружности между двумя данными</string>
+    <string name="circle_interpolation_name">Интерполяция объектов</string>
+    <string name="circle_interpolation_description">Построить промежуточные окружности/точки между 2 окружностями или 2 точками</string>
     <string-array name="circle_interpolation_arg_descriptions">
-        <item>Стартовую окружность</item>
-        <item>Конечную окружность</item>
+        <item>1-ую окружность или точку</item>
+        <item>2-ую окружность или точку</item>
     </string-array>
     <string name="circle_extrapolation_name">Экстраполяция окружностей</string>
     <string name="circle_extrapolation_description">Постороить окружности с помощью инверсий двух данных окружностей</string>
@@ -148,7 +148,7 @@
     <string name="ok_description">Подтвердить</string>
     <!-- circle interpolation dialog -->
     <string name="circle_interpolation_title">Выберите число шагов интерполяции</string>
-    <string name="circle_interpolation_prompt">Число промежуточных окружностей</string>
+    <string name="circle_interpolation_prompt">Число промежуточных объектов</string>
     <string name="circle_interpolation_in_between_prompt1">Интерполировать</string>
     <string name="circle_interpolation_in_between_prompt2_variant1">внутри</string>
     <string name="circle_interpolation_in_between_prompt2_variant2">снаружи</string>

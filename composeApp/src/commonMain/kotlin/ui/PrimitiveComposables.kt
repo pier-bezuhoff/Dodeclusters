@@ -344,7 +344,7 @@ fun FloatTextField(
     nFractionalDigits: Int = 2,
     modifier: Modifier = Modifier
 ) {
-    val s = value.formatDecimals(nFractionalDigits, showDotZero = false)
+    val s = value.formatDecimals(nFractionalDigits, showTrailingZeroes = false)
     var textFieldValue by remember(value) {
         mutableStateOf(TextFieldValue(s, TextRange(s.length)))
     }
@@ -361,6 +361,7 @@ fun FloatTextField(
         textStyle = MaterialTheme.typography.bodyLarge,
         placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
         suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
+        isError = textFieldValue.text.toFloatOrNull()?.let { false } ?: true,
         singleLine = true,
     )
 }
@@ -391,6 +392,7 @@ fun IntTextField(
         textStyle = MaterialTheme.typography.bodyLarge,
         placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
         suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
+        isError = textFieldValue.text.toIntOrNull()?.let { !valueValidator(it) } ?: true,
         singleLine = true,
     )
 }

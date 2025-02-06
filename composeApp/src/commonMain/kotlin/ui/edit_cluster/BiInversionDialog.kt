@@ -120,7 +120,7 @@ fun BiInversionDialog(
                     FloatTextField(
                         value = speed.toFloat(),
                         onNewValue = { speed = it.toDouble() },
-                        nFractionalDigits = 3,
+                        nFractionalDigits = 4,
                     )
                 }
                 Slider(

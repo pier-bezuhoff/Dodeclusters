@@ -64,11 +64,11 @@
         <item>The object to transform</item>
         <item>The circle with respect to which we are inverting</item>
     </string-array>
-    <string name="circle_interpolation_name">Circle interpolation</string>
-    <string name="circle_interpolation_description">Interpolate: generate interjacent circles in between 2 given ones</string>
+    <string name="circle_interpolation_name">Object interpolation</string>
+    <string name="circle_interpolation_description">Interpolate: generate in-betweens given 2 circles or 2 points</string>
     <string-array name="circle_interpolation_arg_descriptions">
-        <item>Start-circle</item>
-        <item>End-circle</item>
+        <item>The 1st circle or point</item>
+        <item>The 2nd circle or point</item>
     </string-array>
     <string name="circle_extrapolation_name">Circle extrapolation</string>
     <string name="circle_extrapolation_description">Extrapolate: generate circles via inversions of 2 given ones</string>
@@ -87,8 +87,8 @@
     <string name="loxodromic_motion_description">Apply several steps of spiral motion</string>
     <string-array name="loxodromic_motion_arg_descriptions">
         <item>The object to move</item>
-        <item>Divergence-point</item>
-        <item>Convergence-point</item>
+        <item>The divergence point</item>
+        <item>The convergence point</item>
     </string-array>
     <string name="circle_by_center_and_radius_name">Circle by its center and radius</string>
     <string name="circle_by_center_and_radius_description">Construct a circle by its center and a point lying on it</string>
@@ -157,7 +157,7 @@
     <string name="ok_description">Confirm</string>
     <!-- circle interpolation dialog -->
     <string name="circle_interpolation_title">Pick the number of interpolation steps</string>
-    <string name="circle_interpolation_prompt">Number of circles in-between</string>
+    <string name="circle_interpolation_prompt">Number of in-betweens</string>
     <string name="circle_interpolation_in_between_prompt1">Interpolate</string>
     <string name="circle_interpolation_in_between_prompt2_variant1">in between</string>
     <string name="circle_interpolation_in_between_prompt2_variant2">outside</string>

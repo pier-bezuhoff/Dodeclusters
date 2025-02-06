@@ -26,15 +26,17 @@ fun Number.round(fractionalDigits: Int): Double {
 /** {integer digits}.{[fractionalDigits]} */
 fun Number.formatDecimals(
     fractionalDigits: Int,
-    showDotZero: Boolean = true
+    showTrailingZeroes: Boolean = true
 ): String {
     val x = this.toDouble() // 12.345
     val factor = 10.0.pow(fractionalDigits).roundToInt() // 100 (fractionalDigits = 2)
     val x00 = (x * factor).roundToInt() // 1234.5
     val integerPart: Int = x00.floorDiv(factor) // 12
     val fractionalPart: Int = x00 - integerPart*factor // 34
-    return if (showDotZero || fractionalPart != 0)
+    return if (showTrailingZeroes)
         "$integerPart.$fractionalPart" // 12.34
+    else if (fractionalPart != 0)
+        "$integerPart.$fractionalPart".trimEnd('0')
     else "$integerPart"
 }
 
