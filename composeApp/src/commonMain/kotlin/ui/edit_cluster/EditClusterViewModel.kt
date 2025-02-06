@@ -1608,29 +1608,24 @@ class EditClusterViewModel : ViewModel() {
                                         .addArg(newArg, confirmThisArg = false)
                                         .copy(lastSnap = result)
                                 }
+                            } else if (mode == ToolMode.CIRCLE_INTERPOLATION && pArgList.currentArg is Arg.CircleOrPoint.Point) {
+                                val newArg = Arg.CircleOrPoint.Point.XY(result.result)
+                                partialArgList = pArgList
+                                    .addArg(newArg, confirmThisArg = false)
+                                    .copy(lastSnap = result)
                             } else {
-                                // FIX: for pointer interpolation if the 2nd point is incident/intersection
-                                //  it replace the 1st point for some reason
                                 val circles = objects.map { it as? CircleOrLine }
                                 val circleIndex = selectCircle(circles, visiblePosition)
                                 if (circleIndex != null) {
                                     val newArg = Arg.CircleOrPoint.CircleIndex(circleIndex)
-                                    val sameArgsForInterpolation =
-                                        (mode == ToolMode.CIRCLE_INTERPOLATION) entails
-                                        (pArgList.args.isEmpty() || pArgList.currentArg is Arg.CircleOrPoint.CircleIndex)
-                                    if (pArgList.currentArg != newArg && sameArgsForInterpolation) {
+                                    if (pArgList.currentArg != newArg) {
                                         partialArgList = pArgList.addArg(newArg, confirmThisArg = false)
                                     }
                                 } else {
-                                    val sameArgsForInterpolation =
-                                        (mode == ToolMode.CIRCLE_INTERPOLATION) entails
-                                        (pArgList.args.isEmpty() || pArgList.currentArg is Arg.CircleOrPoint.Point)
-                                    if (sameArgsForInterpolation) {
-                                        val newArg = Arg.CircleOrPoint.Point.XY(result.result)
-                                        partialArgList = pArgList
-                                            .addArg(newArg, confirmThisArg = false)
-                                            .copy(lastSnap = result)
-                                    }
+                                    val newArg = Arg.CircleOrPoint.Point.XY(result.result)
+                                    partialArgList = pArgList
+                                        .addArg(newArg, confirmThisArg = false)
+                                        .copy(lastSnap = result)
                                 }
                             }
                         }
@@ -1862,14 +1857,12 @@ class EditClusterViewModel : ViewModel() {
             val childCircles = expressions.getAllChildren(ix)
                 .filter { objects[it] is CircleOrLine }
                 .toSet()
-            val newPoint = snapped(c, excludePoints = true, excludedCircles = childCircles).result
+            // when we are dragging intersection of 2 frees with IoC1 we don't want it to snap to them
+            val parents = expressions.getImmediateParents(ix)
+            val newPoint = snapped(c, excludePoints = true, excludedCircles = childCircles + parents).result
             transformWhatWeCan(
                 listOf(ix),
                 translation = newPoint.toOffset() - (objects[ix] as Point).toOffset(),
-//                updateExpressions = {
-//                    expressions.changeToFree(ix)
-//                    expressions.update(listOf(ix))
-//                }
             )
         }
     }

@@ -31,6 +31,7 @@ enum class KeyboardAction {
     MOVE, SELECT, REGION, // M: drag, S: multiselect, R: region
     PALETTE, // P
     TRANSFORM, CREATE, // T, C
+    // TODO: `?` for shortcut cheatsheet / help
     // TODO: arrow keys for finer movement
 }
 
@@ -42,7 +43,8 @@ fun Modifier.handleKeyboardActions(
 }
 
 fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
-    if (event.type == KeyEventType.KeyUp && !event.isAltPressed && !event.isMetaPressed) { // Q: is Meta the Win key or macos's ctrl?
+    if (event.type == KeyEventType.KeyUp && !event.isAltPressed && !event.isMetaPressed) {
+        // Q: is Meta the Win key or macos's ctrl?
         if (event.isCtrlPressed) {
             when (event.key) {
                 Key.V -> KeyboardAction.PASTE
@@ -73,7 +75,7 @@ fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
     } else null
 
 // NOTE: buggy in browser: https://github.com/JetBrains/compose-multiplatform/issues/4673
-//  i had to create separate js-based handler (see wasmJs/main.kt)
+//  i had to recreate separate js-based handler (see wasmJs/main.kt)
 fun keyboardActionsHandler(
     onAction: (KeyboardAction) -> Unit,
 ): (KeyEvent) -> Boolean = { event ->
