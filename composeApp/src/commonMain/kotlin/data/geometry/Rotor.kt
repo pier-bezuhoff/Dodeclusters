@@ -105,7 +105,12 @@ data class Rotor(
     }
 
     companion object {
-        /** = [a] ^ [b] */
+        /** = [a] ^ [b]
+         *
+         * Common pitfall:
+         * `exp(a ^ b) >>> a != b(a)`, but
+         * `exp((a ^ b).normalized * inversiveAngle(a, b)) >>> a == b(a)`
+         */
         fun fromOuterProduct(a: GeneralizedCircle, b: GeneralizedCircle): Rotor {
             val (w1, x1, y1, z1) = a
             val (w2, x2, y2, z2) = b

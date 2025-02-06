@@ -29,8 +29,11 @@ sealed interface GCircle {
 // TODO: Clifford algebra (geometric product + other operations)
 /**
  * Conformal-projective CGA representation of circles/lines/points/imaginary circles
- * via homogenous coordinates.
- * */
+ * via homogenous coordinates. Often they are represented as trivectors, but we use
+ * dual, vector representation for simplicity. For upcast see [GeneralizedCircle.fromGCircle].
+ * In this notation `a ^ b` (outer product) corresponds to intersection/__meet__ and
+ * `a v b` (regressive product) to __join__.
+ */
 @Immutable
 @Serializable
 data class GeneralizedCircle(
@@ -286,7 +289,10 @@ data class GeneralizedCircle(
         engine1: GeneralizedCircle, engine2: GeneralizedCircle,
         speed: Double
     ): GeneralizedCircle {
-        val bivector = -Rotor.fromOuterProduct(engine1, engine2) * speed
+        val inversiveAngle = engine1.inversiveAngle(engine2)
+        val bivector = Rotor.fromOuterProduct(engine1, engine2).normalized() * (-speed * inversiveAngle)
+//        val inversiveDistance = engine1.inversiveDistance(engine1)
+//        val rotor = (Rotor.fromOuterProduct(engine1, engine2).normalized() * (-speed)).exp() * inversiveDistance
         val rotor = bivector.exp()
         val result = rotor.applyTo(this)
         return result
@@ -375,7 +381,8 @@ data class GeneralizedCircle(
             }
         }
 
-    // NOTE: i recommend normalizing preserving the direction before the conversion
+    // Q: "i recommend normalizing preserving direction before the conversion"
+    //  why? i do not anymore
     fun toGCircle(): GCircle =
         when {
             w == 0.0 && x == 0.0 && y == 0.0 -> Point.CONFORMAL_INFINITY
@@ -387,6 +394,50 @@ data class GeneralizedCircle(
                 Circle(x / w, y / w, r, isCCW)
             }
             isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
+            else -> never(this.toString())
+        }
+
+    /** Same as convert [toGCircle], but also force the result to be of the
+     * same type as [sameGCircleTypeAs], i.e.
+     *
+     * [Point] => [Point],
+     *
+     * [CircleOrLine] => [CircleOrLine],
+     *
+     * [ImaginaryCircle] => [ImaginaryCircle]
+     *
+     * otherwise => `null`
+     * */
+    fun toGCircleAs(sameGCircleTypeAs: GCircle): GCircle? =
+        when {
+            w == 0.0 && x == 0.0 && y == 0.0 ->
+                if (sameGCircleTypeAs is Point)
+                    Point.CONFORMAL_INFINITY
+                else null
+            isLine ->
+                if (sameGCircleTypeAs is CircleOrLine)
+                    Line(x, y, -z)
+                else null
+            isPoint ->
+                if (sameGCircleTypeAs is Point)
+                    Point(x / w, y / w)
+                else null
+            isRealCircle -> when (sameGCircleTypeAs) {
+                is CircleOrLine -> {
+                    val r = sqrt(r2)
+                    val isCCW = w >= 0
+                    Circle(x / w, y / w, r, isCCW)
+                }
+                is Point -> Point(x / w, y / w)
+                else -> null
+            }
+            isImaginaryCircle ->
+                when (sameGCircleTypeAs) {
+                    is ImaginaryCircle ->
+                        ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
+                    is Point -> Point(x / w, y / w)
+                    else -> null
+                }
             else -> never(this.toString())
         }
 
@@ -402,7 +453,7 @@ data class GeneralizedCircle(
                     ).normalizedPreservingDirection() * sign
                 }
                 // a*x + b*y + c = 0
-                // -> a*e_x + b*e_y + c*e_inf
+                // -> a*e_x + b*e_y - c*e_inf
                 is Line ->
                     GeneralizedCircle(0.0, gCircle.a, gCircle.b, -gCircle.c)
                         .normalizedPreservingDirection()

@@ -11,10 +11,12 @@ import domain.expressions.Expr.CircleByCenterAndRadius
 import domain.expressions.Expr.CircleByPencilAndPoint
 import domain.expressions.Expr.CircleExtrapolation
 import domain.expressions.Expr.CircleInterpolation
+import domain.expressions.Expr.PointInterpolation
 import domain.expressions.Expr.CircleInversion
 import domain.expressions.Expr.Incidence
 import domain.expressions.Expr.Intersection
 import domain.expressions.Expr.LineBy2Points
+import domain.expressions.Expr.BiInversion
 import domain.expressions.Expr.LoxodromicMotion
 import domain.expressions.Expr.OneToMany
 import domain.expressions.Expr.OneToOne
@@ -111,7 +113,6 @@ sealed interface Expr : ExprLike {
         val circle1: Ix,
         val circle2: Ix,
     ) : OneToMany, ExprLike by E(Parameters.None, listOf(circle1, circle2))
-    // TODO: point-point line interpolation
     @Serializable
     @SerialName("CircleInterpolation")
     data class CircleInterpolation(
@@ -119,6 +120,13 @@ sealed interface Expr : ExprLike {
         val startCircle: Ix,
         val endCircle: Ix,
     ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
+    @Serializable
+    @SerialName("PointInterpolation")
+    data class PointInterpolation(
+        override val parameters: InterpolationParameters,
+        val startPoint: Ix,
+        val endPoint: Ix,
+    ) : OneToMany, ExprLike by E(parameters, listOf(startPoint, endPoint))
     // MAYBE: completely replace CircleExtrapolation with BiInversion
     //  since it's more general
     @Serializable
@@ -149,9 +157,11 @@ sealed interface Expr : ExprLike {
 // performance-wise variations between:
 // no-inline try-catch, inline try-catch
 // no-inline return emptyList() and no-inline return
-// is rather negligible
+// are rather negligible
 // BUT using direct access objects is much much faster (without downscale)
 // with array+downscale there is also not much difference
+// SO downscale is a bottleneck
+// MAYBE: keep VM.objects downscaled and only upscale them for draw
 inline fun Expr.eval(
     crossinline get: (Ix) -> GCircle?,
 ): ExprResult {
@@ -165,7 +175,7 @@ inline fun Expr.eval(
         get(ix) as? Point ?: throw NullPointerException()
     }
     try {
-        // idt it's worth to polymorphism eval
+        // idt it's worth to do normal polymorphism
         return when (this) {
             is OneToOne -> {
                 val result = when (this) {
@@ -212,12 +222,17 @@ inline fun Expr.eval(
                 c(startCircle),
                 c(endCircle)
             )
+            is PointInterpolation -> computePointInterpolation(
+                parameters,
+                p(startPoint),
+                p(endPoint)
+            )
             is CircleExtrapolation -> computeCircleExtrapolation(
                 parameters,
                 c(startCircle),
                 c(endCircle)
             )
-            is Expr.BiInversion -> computeBiInversion(
+            is BiInversion -> computeBiInversion(
                 parameters,
                 g(engine1),
                 g(engine2),
@@ -285,12 +300,17 @@ fun Expr._eval(objects: List<GCircle?>): ExprResult {
             objects[startCircle] as? CircleOrLine ?: return emptyList(),
             objects[endCircle] as? CircleOrLine ?: return emptyList(),
         )
+        is PointInterpolation -> computePointInterpolation(
+            parameters,
+            objects[startPoint] as? Point ?: return emptyList(),
+            objects[endPoint] as? Point ?: return emptyList(),
+        )
         is CircleExtrapolation -> computeCircleExtrapolation(
             parameters,
             objects[startCircle] as? CircleOrLine ?: return emptyList(),
             objects[endCircle] as? CircleOrLine ?: return emptyList(),
         )
-        is Expr.BiInversion -> computeBiInversion(
+        is BiInversion -> computeBiInversion(
             parameters,
             objects[engine1] ?: return emptyList(),
             objects[engine2] ?: return emptyList(),
@@ -305,7 +325,6 @@ fun Expr._eval(objects: List<GCircle?>): ExprResult {
     }
 }
 
-// MAYBE: inline
 inline fun Expr.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
 ): Expr =
@@ -347,11 +366,15 @@ inline fun Expr.reIndex(
             startCircle = reIndexer(startCircle),
             endCircle = reIndexer(endCircle),
         )
+        is PointInterpolation -> copy(
+            startPoint = reIndexer(startPoint),
+            endPoint = reIndexer(endPoint),
+        )
         is CircleExtrapolation -> copy(
             startCircle = reIndexer(startCircle),
             endCircle = reIndexer(endCircle),
         )
-        is Expr.BiInversion -> copy(
+        is BiInversion -> copy(
             engine1 = reIndexer(engine1),
             engine2 = reIndexer(engine2),
             target = reIndexer(target)

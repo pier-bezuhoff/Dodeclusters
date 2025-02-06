@@ -35,7 +35,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import data.geometry.CircleOrLine
+import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
+import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt1
 import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt2_variant1
@@ -68,8 +70,8 @@ data class DefaultInterpolationParameters(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun CircleInterpolationDialog(
-    startCircle: CircleOrLine,
-    endCircle: CircleOrLine,
+    startCircle: GCircle,
+    endCircle: GCircle,
     onDismissRequest: () -> Unit,
     onConfirm: (InterpolationParameters) -> Unit,
     defaults: DefaultInterpolationParameters = DefaultInterpolationParameters(),
@@ -84,6 +86,7 @@ fun CircleInterpolationDialog(
         steps = maxCount - minCount - 1, // only counts intermediates
         valueRange = minCount.toFloat()..maxCount.toFloat()
     ) }
+    val hideInBetweenToggle = startCircle is Point && endCircle is Point
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
     val (widthClass, heightClass) = calculateWindowSizeClass()
     val compactHeight = heightClass == WindowHeightSizeClass.Compact
@@ -112,6 +115,7 @@ fun CircleInterpolationDialog(
             if (heightClass == WindowHeightSizeClass.Compact) {
                 CircleInterpolationHorizontalCompact(
                     sliderState, interpolateInBetween,
+                    hideInBetweenToggle = hideInBetweenToggle,
                     setInterpolateInBetween = { interpolateInBetween = it },
                     onDismissRequest = onDismissRequest,
                     onConfirm = onConfirm0
@@ -123,12 +127,14 @@ fun CircleInterpolationDialog(
                     Title(smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
                     SliderText(sliderState)
                     Slider(sliderState, Modifier.padding(16.dp))
-                    InsideOutsideToggle(
-                        interpolateInBetween,
-                        setInterpolateInBetween = {
-                            interpolateInBetween = it
-                        }
-                    )
+                    if (!hideInBetweenToggle) {
+                        InsideOutsideToggle(
+                            interpolateInBetween,
+                            setInterpolateInBetween = {
+                                interpolateInBetween = it
+                            }
+                        )
+                    }
                     ui.CancelOkRow(
                         onDismissRequest = onDismissRequest,
                         onConfirm = onConfirm0,
@@ -144,6 +150,7 @@ fun CircleInterpolationDialog(
 private fun CircleInterpolationHorizontalCompact(
     sliderState: SliderState,
     interpolateInBetween: Boolean,
+    hideInBetweenToggle: Boolean,
     setInterpolateInBetween: (Boolean) -> Unit,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
@@ -162,8 +169,10 @@ private fun CircleInterpolationHorizontalCompact(
                         end = 16.dp
                     ))
                 }
-                Column {
-                    InsideOutsideToggle(interpolateInBetween, setInterpolateInBetween)
+                if (!hideInBetweenToggle) {
+                    Column {
+                        InsideOutsideToggle(interpolateInBetween, setInterpolateInBetween)
+                    }
                 }
             }
         ui.CancelOkRow(onDismissRequest, onConfirm, fontSize = 18.sp)

@@ -61,10 +61,15 @@ You can find the apk in the assets [attached to the latest release](https://gith
 - `Ctrl + A`: quickly select/deselect everything
 - `Delete`, `Backspace`: delete selected objects
 - `Ctrl + V`: duplicate selected objects
-- `Ctrl + +`, `Ctrl + =`; `Ctrl + -`; mouse wheel: enlarge/shrink selected objects
-- `Ctrl + Z`: undo
-- `Ctrl + Y`: redo
+- `Ctrl + +`, `Ctrl + =`; `Ctrl + -`; mouse wheel: enlarge/shrink selected objects or zoom in/out
+- `Ctrl + Z`: undo ↶
+- `Ctrl + Y`: redo ↷
 - `Esc`: cancel any ongoing constructions
+- `M`: go to Drag mode (~ **M**ove)
+- `S`: go to Multi**S**elect mode (~ **S**election)
+- `R`: go to **R**egions mode
+- `T`: open **T**ransform tools
+- `C`: open **C**reate tools
 
 
 ## Build and run via Gradle

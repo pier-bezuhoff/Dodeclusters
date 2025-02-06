@@ -2,10 +2,8 @@ package domain.expressions
 
 import data.geometry.Circle
 import data.geometry.CircleOrLine
-import data.geometry.CircleOrLineOrImaginaryCircle
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
-import data.geometry.ImaginaryCircle
 import data.geometry.Point
 import data.geometry.Rotor
 import domain.never
@@ -48,6 +46,7 @@ fun computeCircleInterpolation(
     return newCircles
 }
 
+// we ignore params.inBetween for points
 fun computePointInterpolation(
     params: InterpolationParameters,
     startPoint: Point,
@@ -61,9 +60,10 @@ fun computePointInterpolation(
     }
     val n = params.nInterjacents + 1
     val newPoints = (1 until n).map { i ->
+        val progress = i.toDouble() / n
         Point(
-            startPoint.x*i + endPoint.x*(n - i),
-            startPoint.y*i + endPoint.y*(n - i)
+            startPoint.x*(1 - progress) + endPoint.x*progress,
+            startPoint.y*(1 - progress) + endPoint.y*progress,
         )
     }
     return newPoints
@@ -111,52 +111,26 @@ fun computeBiInversion(
         if (params.reverseSecondEngine) -it else it
     }
     val t = GeneralizedCircle.fromGCircle(target)
-    val outerProduct = -Rotor.fromOuterProduct(e1, e2)
+    val inversiveAngle = e1.inversiveAngle(e2)
+    val bivector0 = Rotor.fromOuterProduct(e1, e2).normalized() * (-inversiveAngle)
     val trajectory = mutableListOf<GCircle?>()
     repeat(params.nSteps) { i ->
-        // FIX: quite inaccurate
         // inlined t.biInversion(e1, e2, params.speed)
-        val bivector = outerProduct * ((i + 1) * params.speed)
-        val rotor = bivector.exp()
-        val result = rotor.applyTo(t).toGCircle()
-        trajectory.add(
-            forceSameGCircleType(target, result)
-        )
-    }
-    return trajectory
-}
-
-fun _iterative_computeBiInversion(
-    params: BiInversionParameters,
-    engine1: CircleOrLineOrImaginaryCircle,
-    engine2: CircleOrLineOrImaginaryCircle,
-    target: GCircle,
-): List<GCircle?> {
-    // MAYBE: check point-point and circle-circle consistence by conditional casts
-    val e1 = GeneralizedCircle.fromGCircle(engine1)
-    val e2 = GeneralizedCircle.fromGCircle(engine2).let {
-        if (params.reverseSecondEngine) -it else it
-    }
-    var t = GeneralizedCircle.fromGCircle(target)
-    val bivector = Rotor.fromOuterProduct(e1, e2) * params.speed
-    val rotor = bivector.exp()
-    val trajectory = mutableListOf<GCircle>()
-    repeat(params.nSteps) {
-        t = rotor.applyTo(t).normalizedPreservingDirection()
-        // inlined t.biInversion(e1, e2, params.speed)
-        trajectory.add(t.toGCircle())
+        val bivector = bivector0 * ((i + 1) * params.speed)
+        val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
+        val result = rotor.applyTo(t).toGCircleAs(target)
+        trajectory.add(result)
     }
     return trajectory
 }
 
 // FIX: quite inaccurate on points (??)
+// NOTE: without downscaling it visibly diverges
 fun computeLoxodromicMotion(
     params: LoxodromicMotionParameters,
     divergencePoint: Point, convergencePoint: Point,
     target: GCircle,
 ): List<GCircle?> {
-    // NOTE: without downscaling it visibly diverges
-    // MAYBE: check point-point and circle-circle consistence by conditional casts
     val start = GeneralizedCircle.fromGCircle(divergencePoint)
     val end = GeneralizedCircle.fromGCircle(convergencePoint)
     val totalAngle = params.angle * PI /180
@@ -173,40 +147,8 @@ fun computeLoxodromicMotion(
         val rotation = (perpPencil * (-angle/2.0)).exp()
         val dilation = (pencil * (logDilation/2.0)).exp()
         // inlined t.loxodromicShift(start, end, angle, dilation)
-        val result = dilation.applyTo(rotation.applyTo(targetGC)).toGCircle()
-        trajectory.add(
-            forceSameGCircleType(target, result)
-        )
+        val result = dilation.applyTo(rotation.applyTo(targetGC)).toGCircleAs(target)
+        trajectory.add(result)
     }
     return trajectory
 }
-
-// this one might be faster but potentially less accurate (cumulative error)
-fun _iterative_computeLoxodromicMotion(
-    params: LoxodromicMotionParameters,
-    divergencePoint: Point, convergencePoint: Point,
-    target: GCircle,
-): List<GCircle?> {
-    // NOTE: without downscaling it visibly diverges
-    // MAYBE: check point-point and circle-circle consistence by conditional casts
-    val start = GeneralizedCircle.fromGCircle(divergencePoint)
-    val end = GeneralizedCircle.fromGCircle(convergencePoint)
-    val totalAngle = params.angle * PI /180
-    val totalDilation = params.dilation
-    val n = params.nSteps + 1
-    var t = GeneralizedCircle.fromGCircle(target)
-    val pencil = Rotor.fromOuterProduct(start, end).normalized()
-    val perpPencil = pencil.dual()
-    val rotation = (perpPencil * (-totalAngle/2.0/n)).exp()
-    val dilation = (pencil * (totalDilation/2.0/n)).exp()
-    val trajectory = mutableListOf<GCircle>()
-    repeat(n) {
-        // inlined t.loxodromicShift(start, end, angle, dilation)
-        t = dilation.applyTo(
-            rotation.applyTo(t).normalizedPreservingDirection()
-        ).normalizedPreservingDirection()
-        trajectory.add(t.toGCircle())
-    }
-    return trajectory
-}
-

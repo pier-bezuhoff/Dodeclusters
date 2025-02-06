@@ -347,7 +347,7 @@ sealed class EditClusterTool(
         Res.drawable.circle_inversion
     )
     data object CircleInterpolation: MultiArg(
-        SIGNATURE_2_CIRCLES,
+        SIGNATURE_2_GENERALIZED_CIRCLES,
         Res.string.circle_interpolation_name,
         Res.string.circle_interpolation_description,
         Res.array.circle_interpolation_arg_descriptions,

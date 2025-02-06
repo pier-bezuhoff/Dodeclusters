@@ -753,7 +753,8 @@ private inline fun DrawScope.drawPartialConstructs(
     handleRadius: Float,
     circleStroke: DrawStyle,
     creationPointRadius: Float = handleRadius * 3/4,
-    creationPrototypeColor: Color = DodeclustersColors.green,
+    selectedArgColor: Color = DodeclustersColors.green,
+    creationPrototypeColor: Color = DodeclustersColors.green.copy(alpha = 0.5f),
 ) {
     // generic display for selected tool args
     partialArgList?.args?.let { args ->
@@ -764,21 +765,21 @@ private inline fun DrawScope.drawPartialConstructs(
                     if (circle is CircleOrLine)
                         drawCircleOrLine(
                             circle,
-                            visibleRect, creationPrototypeColor, style = circleStroke
+                            visibleRect, selectedArgColor, style = circleStroke
                         )
                 }
                 is Arg.Point.Index -> {
                     val center = objects[arg.index]
                     if (center is Point)
                         drawCircle(
-                            color = creationPrototypeColor,
+                            color = selectedArgColor,
                             radius = creationPointRadius,
                             center = center.toOffset()
                         )
                 }
                 is Arg.Point.XY ->
                     drawCircle(
-                        color = creationPrototypeColor,
+                        color = selectedArgColor,
                         radius = creationPointRadius,
                         center = arg.toOffset()
                     )
@@ -786,14 +787,14 @@ private inline fun DrawScope.drawPartialConstructs(
                     val center = objects[arg.index]
                     if (center is Point)
                         drawCircle(
-                            color = creationPrototypeColor,
+                            color = selectedArgColor,
                             radius = creationPointRadius,
                             center = center.toOffset()
                         )
                 }
                 is Arg.CircleOrPoint.Point.XY ->
                     drawCircle(
-                        color = creationPrototypeColor,
+                        color = selectedArgColor,
                         radius = creationPointRadius,
                         center = arg.toOffset()
                     )
@@ -802,20 +803,20 @@ private inline fun DrawScope.drawPartialConstructs(
                     if (circle is CircleOrLine)
                         drawCircleOrLine(
                             circle,
-                            visibleRect, creationPrototypeColor, style = circleStroke
+                            visibleRect, selectedArgColor, style = circleStroke
                         )
                 }
                 is Arg.CircleAndPointIndices -> {
                     for (ix in arg.circleIndices) {
                         val circle = objects[ix]
                         if (circle is CircleOrLine)
-                            drawCircleOrLine(circle, visibleRect, creationPrototypeColor, style = circleStroke)
+                            drawCircleOrLine(circle, visibleRect, selectedArgColor, style = circleStroke)
                     }
                     for (ix in arg.pointIndices) {
                         val point = objects[ix]
                         if (point is Point)
                             drawCircle(
-                                color = creationPrototypeColor,
+                                color = selectedArgColor,
                                 radius = creationPointRadius,
                                 center = point.toOffset()
                             )

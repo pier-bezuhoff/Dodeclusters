@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package domain
 
 import kotlin.math.PI
@@ -27,11 +29,11 @@ fun Number.formatDecimals(
     showDotZero: Boolean = true
 ): String {
     val x = this.toDouble() // 12.345
-    val factor = 10.0.pow(fractionalDigits).roundToInt() // 100
+    val factor = 10.0.pow(fractionalDigits).roundToInt() // 100 (fractionalDigits = 2)
     val x00 = (x * factor).roundToInt() // 1234.5
     val integerPart: Int = x00.floorDiv(factor) // 12
     val fractionalPart: Int = x00 - integerPart*factor // 34
-    return if (showDotZero)
+    return if (showDotZero || fractionalPart != 0)
         "$integerPart.$fractionalPart" // 12.34
     else "$integerPart"
 }
@@ -53,13 +55,15 @@ inline val Double.degrees: Float get() =
 inline val Float.radians: Double get() =
     this*PI/180.0
 
-@Suppress("NOTHING_TO_INLINE")
 inline fun squareSum(dx: Float, dy: Float): Float =
     dx*dx + dy*dy
 
-@Suppress("NOTHING_TO_INLINE")
 inline fun squareSum(dx: Double, dy: Double): Double =
     dx*dx + dy*dy
+
+/** `this` => [result] */
+inline infix fun Boolean.entails(result: Boolean): Boolean =
+    !this or result
 
 // sum types doko
 inline fun <reified A, reified B> tryCatch2(
@@ -81,7 +85,6 @@ inline fun <reified A, reified B> tryCatch2(
 }
 
 /** To be used in `when` pattern matching in cases that should NEVER be reached */
-@Suppress("NOTHING_TO_INLINE")
 @Throws(IllegalStateException::class)
 inline fun never(info: String = ""): Nothing =
     throw IllegalStateException(if (info.isBlank()) "Never" else "Never ($info)")
