@@ -1916,7 +1916,14 @@ class EditClusterViewModel : ViewModel() {
                     (targets.toSet() + expressions.getAllParents(targets)).toList()
                 }
             }
-        transform(actualTargets, translation, focus, zoom, rotationAngle, updateExpressions)
+        if (actualTargets.isEmpty()) {
+            if (targets.size == 1) // not sure this is the right place for snackbar messages
+                queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
+            else
+                queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
+        } else {
+            transform(actualTargets, translation, focus, zoom, rotationAngle, updateExpressions)
+        }
     }
 
     /** Apply [translation];scaling;rotation to [targets] (that are all assumed free).
@@ -1936,8 +1943,9 @@ class EditClusterViewModel : ViewModel() {
             expressions.update(it)
         },
     ) {
-        if (targets.isEmpty())
+        if (targets.isEmpty()) {
             return
+        }
         val requiresTranslation = translation != Offset.Zero
         val requiresZoom = zoom != 1f
         val requiresRotation = rotationAngle != 0f
@@ -2226,19 +2234,12 @@ class EditClusterViewModel : ViewModel() {
     /** Signals locked state to the user with animation & snackbar message */
     private fun highlightSelectionParents() {
         val allParents = selection.flatMap { selectedIndex ->
-            // MAYBE: still highlight Incident.carrier BUT do not notify as if locked
             if (isConstrained(selectedIndex)) emptyList() // exclude semi-free Expr.Incidence
             else expressions.getImmediateParents(selectedIndex)
                 .minus(selection.toSet())
                 .mapNotNull { objects[it] }
         }
         if (allParents.isNotEmpty()) {
-            if (movementAfterDown) {
-                if (selection.size == 1)
-                    queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
-                else
-                    queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
-            }
             viewModelScope.launch {
                 _animations.emit(HighlightAnimation(allParents))
             }

@@ -50,6 +50,7 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -88,6 +89,7 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -372,6 +374,14 @@ fun EditClusterScreen(
             }
         }
     }
+    val snackbarMessage2string = remember { mutableMapOf<SnackbarMessage, String>() } // or use mutableStateMap, idk
+    LaunchedEffect(Unit) { // preload snackbar strings
+        // well, using getString in flow.collect breaks windows/chrome
+        // maybe this one will work...
+        SnackbarMessage.entries.forEach {
+            snackbarMessage2string[it] = getString(it.stringResource)
+        }
+    }
     LaunchedEffect(viewModel) {
         viewModel.snackbarMessages.collectLatest { (message, postfix) ->
             println("snackbar: $message$postfix")
@@ -379,7 +389,9 @@ fun EditClusterScreen(
             // TODO: can't seem to properly pre-load string resources on Web
             // with this setup string interpolation with args is not possible
 //            val s = snackbarMessage2string[message]!! + postfix
-//            snackbarHostState.showSnackbar(s, duration = message.duration)
+            snackbarMessage2string[message]?.let { s ->
+                snackbarHostState.showSnackbar(s + postfix, duration = message.duration)
+            }
 //            // MAYBE: move on-selection action prompt here instead
         }
     }

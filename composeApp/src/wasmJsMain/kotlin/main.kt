@@ -37,7 +37,6 @@ fun main() {
     val coroutineScope = CoroutineScope(Dispatchers.Default)
     val keyboardActions: MutableSharedFlow<KeyboardAction> = MutableSharedFlow(replay = 1)
     document.addEventListener("keyup") { event: Event ->
-        println(event)
         (event as? KeyboardEvent)?.let { keyboardEvent ->
             keyboardEventTranslator(keyboardEvent)?.let { keyboardAction ->
                 event.stopPropagation()
@@ -70,6 +69,7 @@ private inline fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction
             when (event.key.lowercase()) {
                 "v" -> KeyboardAction.PASTE
                 "a" -> KeyboardAction.SELECT_ALL
+                // these 2 don't work well with normal scaling
 //                "+", "=" -> KeyboardAction.ZOOM_IN
 //                "-" -> KeyboardAction.ZOOM_OUT
                 "z" -> KeyboardAction.UNDO
