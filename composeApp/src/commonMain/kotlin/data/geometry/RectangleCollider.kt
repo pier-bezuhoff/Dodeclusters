@@ -28,7 +28,7 @@ fun selectWithRectangle(objects: List<GCircle?>, rect: Rect): List<Int> =
 fun testCircleRectCollision(circle: Circle, rect: Rect): Boolean {
     val cx = circle.x.toFloat()
     val cy = circle.y.toFloat()
-    // get box closest point to sphere center by clamping
+    // get rect's closest point to circle center by clamping
     val x = max(rect.left, min(cx, rect.right))
     val y = max(rect.top, min(cy, rect.bottom))
     val distance2 = squareSum(x - cx, y - cy)

@@ -11,7 +11,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -37,10 +36,12 @@ import data.geometry.fromCorners
 import data.geometry.selectWithRectangle
 import domain.Arg
 import domain.ArgType
+import domain.BlendModeType
 import domain.ChessboardPattern
 import domain.ColorAsCss
 import domain.Command
 import domain.History
+import domain.InversionOfControl
 import domain.Ix
 import domain.PartialArgList
 import domain.PointSnapResult
@@ -149,7 +150,7 @@ class EditClusterViewModel : ViewModel() {
     /** `[0; 1]` transparency of non-chessboard [regions] */
     var regionsTransparency: Float by mutableStateOf(1.0f)
         private set
-    var regionsBlendMode: BlendMode by mutableStateOf(BlendMode.SrcOver)
+    var regionsBlendModeType: BlendModeType by mutableStateOf(BlendModeType.SRC_OVER)
         private set
     /** custom colors for circle/line borders or points */
     val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
@@ -2734,9 +2735,9 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
-    fun setBlendSettings(newRegionsTransparency: Float, newRegionsBlendMode: BlendMode) {
+    fun setBlendSettings(newRegionsTransparency: Float, newRegionsBlendModeType: BlendModeType) {
         regionsTransparency = newRegionsTransparency
-        regionsBlendMode = newRegionsBlendMode
+        regionsBlendModeType = newRegionsBlendModeType
         openedDialog = null
     }
 
@@ -3003,13 +3004,4 @@ class EditClusterViewModel : ViewModel() {
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)
     }
-}
-
-enum class InversionOfControl {
-    /** All non-free, non-constrained objects are locked */
-    NONE,
-    /** You can move dependent objects with all their parents as long as all of the parents are free */
-    LEVEL_1,
-    /** You can move dependent objects with all their parents */
-    LEVEL_INFINITY
 }

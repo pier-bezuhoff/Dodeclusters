@@ -196,7 +196,7 @@ fun BoxScope.EditClusterCanvas(
 //        measureTime {
             translate(viewModel.translation.x, viewModel.translation.y) {
                 val visibleRect = size.toRect().translate(-viewModel.translation)
-                drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsTransparency, regionsBlendMode = viewModel.regionsBlendMode, circleStroke = circleStroke)
+                drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsTransparency, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
                 drawAnimation(animations = animations, visibleRect = visibleRect, strokeWidth = strokeWidth)
                 if (viewModel.showCircles) {
                     drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
@@ -290,7 +290,7 @@ fun ScreenshotableCanvas(
             ) {
                 translate(viewModel.translation.x, viewModel.translation.y) {
                     val visibleRect = size.toRect().translate(-viewModel.translation)
-                    drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsTransparency, regionsBlendMode = viewModel.regionsBlendMode, circleStroke = circleStroke)
+                    drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsTransparency, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
                     if (viewModel.showCircles) {
                         drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
                     }

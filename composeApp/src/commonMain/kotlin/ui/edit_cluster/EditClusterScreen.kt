@@ -50,10 +50,8 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
@@ -337,8 +335,8 @@ fun EditClusterScreen(
         }
         DialogType.BLEND_SETTINGS -> {
             BlendSettingsDialog(
-                oldTransparency = viewModel.regionsTransparency,
-                oldBlendMode = viewModel.regionsBlendMode,
+                currentTransparency = viewModel.regionsTransparency,
+                currentBlendModeType = viewModel.regionsBlendModeType,
                 onDismissRequest = viewModel::closeDialog,
                 onConfirm = viewModel::setBlendSettings
             )
@@ -377,10 +375,10 @@ fun EditClusterScreen(
     val snackbarMessage2string = remember { mutableMapOf<SnackbarMessage, String>() } // or use mutableStateMap, idk
     LaunchedEffect(Unit) { // preload snackbar strings
         // well, using getString in flow.collect breaks windows/chrome
-        // maybe this one will work...
-        SnackbarMessage.entries.forEach {
-            snackbarMessage2string[it] = getString(it.stringResource)
-        }
+        // maybe this one will work... it does not
+//        SnackbarMessage.entries.forEach {
+//            snackbarMessage2string[it] = getString(it.stringResource)
+//        }
     }
     LaunchedEffect(viewModel) {
         viewModel.snackbarMessages.collectLatest { (message, postfix) ->
@@ -389,9 +387,9 @@ fun EditClusterScreen(
             // TODO: can't seem to properly pre-load string resources on Web
             // with this setup string interpolation with args is not possible
 //            val s = snackbarMessage2string[message]!! + postfix
-            snackbarMessage2string[message]?.let { s ->
-                snackbarHostState.showSnackbar(s + postfix, duration = message.duration)
-            }
+//            snackbarMessage2string[message]?.let { s ->
+//                snackbarHostState.showSnackbar(s + postfix, duration = message.duration)
+//            }
 //            // MAYBE: move on-selection action prompt here instead
         }
     }
