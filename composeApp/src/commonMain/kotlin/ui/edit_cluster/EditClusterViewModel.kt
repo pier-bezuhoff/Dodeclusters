@@ -45,6 +45,7 @@ import domain.InversionOfControl
 import domain.Ix
 import domain.PartialArgList
 import domain.PointSnapResult
+import domain.Settings
 import domain.angleDeg
 import domain.cluster.ClusterV1
 import domain.cluster.Constellation
@@ -2902,12 +2903,13 @@ class EditClusterViewModel : ViewModel() {
 
     private fun launchRestore() {
         viewModelScope.launch {
+            val platform = getPlatform()
             if (!RESTORE_LAST_SAVE_ON_LOAD) {
                 loadNewConstellation(Constellation.SAMPLE)
                 centerizeTo(0f, 0f)
             } else {
                 val result = runCatching { // NOTE: can fail crash when underlying VM.State format changes
-                    getPlatform().lastStateStore.get()
+                    platform.lastStateStore.get()
                 }
                 val state = result.getOrNull()
                 if (state == null) {
@@ -2918,7 +2920,17 @@ class EditClusterViewModel : ViewModel() {
 //                    queueSnackbarMessage(SnackbarMessage.SUCCESSFUL_RESTORE)
                 }
             }
+            runCatching {
+                platform.settingsStore.get()
+            }.getOrNull()?.let { settings ->
+                loadSettings(settings)
+            }
         }
+    }
+
+    private fun loadSettings(settings: Settings) {
+        regionsTransparency = settings.regionsTransparency
+        regionsBlendModeType = settings.regionsBlendModeType
     }
 
     private fun restoreFromState(state: State) {
@@ -2941,9 +2953,17 @@ class EditClusterViewModel : ViewModel() {
     fun cacheState() {
         println("caching VM state...")
         val state = saveState()
-        getPlatform().saveLastState(state)
+        val platform = getPlatform()
+        platform.saveLastState(state)
+        platform.saveSettings(getCurrentSettings())
         println("cached.")
     }
+
+    private fun getCurrentSettings(): Settings =
+        Settings(
+            regionsTransparency = regionsTransparency,
+            regionsBlendModeType = regionsBlendModeType
+        )
 
     // NOTE: i never seen this proc on Android or Wasm tbh
     //  so i had to create Flow<LifecycleEvent> to manually trigger caching
@@ -2958,7 +2978,7 @@ class EditClusterViewModel : ViewModel() {
     data class State(
         val constellation: Constellation,
         val selection: List<Ix>,
-        // NOTE: saving VM.translation instead has issues (on desktop window size rapidly passes thru 3 sizes)
+        // NOTE: saving VM.translation instead has issues (on desktop window size rapidly cycles thru 3 sizes)
         val centerX: Float,
         val centerY: Float,
         val regionColor: ColorAsCss? = null,

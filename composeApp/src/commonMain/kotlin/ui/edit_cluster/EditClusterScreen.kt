@@ -372,24 +372,15 @@ fun EditClusterScreen(
             }
         }
     }
-    val snackbarMessage2string = remember { mutableMapOf<SnackbarMessage, String>() } // or use mutableStateMap, idk
-    LaunchedEffect(Unit) { // preload snackbar strings
-        // well, using getString in flow.collect breaks windows/chrome
-        // maybe this one will work... it does not
-//        SnackbarMessage.entries.forEach {
-//            snackbarMessage2string[it] = getString(it.stringResource)
-//        }
-    }
     LaunchedEffect(viewModel) {
         viewModel.snackbarMessages.collectLatest { (message, postfix) ->
-            println("snackbar: $message$postfix")
+//            println("snackbar: $message$postfix")
             // NOTE: using getString(resource) here hangs windows/chrome for some reason
+            //  ticket: https://youtrack.jetbrains.com/issue/CMP-6930/Using-getString-method-causing-JsException
             // TODO: can't seem to properly pre-load string resources on Web
             // with this setup string interpolation with args is not possible
 //            val s = snackbarMessage2string[message]!! + postfix
-//            snackbarMessage2string[message]?.let { s ->
-//                snackbarHostState.showSnackbar(s + postfix, duration = message.duration)
-//            }
+            snackbarHostState.showSnackbar(message.string + postfix, duration = message.duration)
 //            // MAYBE: move on-selection action prompt here instead
         }
     }

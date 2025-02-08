@@ -1,3 +1,4 @@
+import domain.Settings
 import domain.io.getAppDataDir
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
@@ -21,6 +22,9 @@ object JVMPlatform: Platform {
     override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
         storeOf(file = Path(dataDir, Platform.LAST_STATE_STORE_FILE_NAME + ".json"))
     }
+    override val settingsStore: KStore<Settings> by lazy {
+        storeOf(file = Path(dataDir, Platform.SETTINGS_STORE_FILE_NAME + ".json"))
+    }
 
     // reference: https://stackoverflow.com/a/75734381/7143065
     @OptIn(DelicateCoroutinesApi::class)
@@ -34,6 +38,16 @@ object JVMPlatform: Platform {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun saveSettings(settings: Settings) {
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                settingsStore.set(settings)
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+    }
     override fun scrollToZoom(yDelta: Float): Float {
         val percent = 2.5f
         val zoom = (1f + percent/100f).pow(-yDelta)

@@ -1,4 +1,5 @@
 import android.os.Build
+import domain.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -21,6 +22,9 @@ object AndroidPlatform : Platform {
     override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
         storeOf(file = Path(filesDir, Platform.LAST_STATE_STORE_FILE_NAME + ".json"))
     }
+    override val settingsStore: KStore<Settings> by lazy {
+        storeOf(file = Path(filesDir, Platform.SETTINGS_STORE_FILE_NAME + ".json"))
+    }
 
     // reference: https://stackoverflow.com/a/75734381/7143065
     @OptIn(DelicateCoroutinesApi::class)
@@ -28,6 +32,17 @@ object AndroidPlatform : Platform {
         GlobalScope.launch(Dispatchers.IO) {
             try {
                 lastStateStore.set(state)
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun saveSettings(settings: Settings) {
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                settingsStore.set(settings)
             } catch (e: IOException) {
                 e.printStackTrace()
             }

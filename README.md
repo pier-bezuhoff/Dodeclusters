@@ -75,7 +75,7 @@ You can find the apk in the assets [attached to the latest release](https://gith
 ## Build and run via Gradle
 
 > [!IMPORTANT]
-> Requires JDK 17
+> Requires JDK 17 (later versions may work too)
 
 ### Run desktop app
 `./gradlew :composeApp:run`  

@@ -1,3 +1,4 @@
+import domain.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.storage.storeOf
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -20,11 +21,21 @@ object WasmPlatform: Platform {
     override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
         storeOf(key = Platform.LAST_STATE_STORE_FILE_NAME)
     }
+    override val settingsStore: KStore<Settings> by lazy {
+        storeOf(key = Platform.SETTINGS_STORE_FILE_NAME)
+    }
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun saveLastState(state: EditClusterViewModel.State) {
         GlobalScope.launch(Dispatchers.Default) { // MAYBE: another dispatcher is better
             lastStateStore.set(state)
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun saveSettings(settings: Settings) {
+        GlobalScope.launch(Dispatchers.Default) {
+            settingsStore.set(settings)
         }
     }
 
@@ -55,6 +66,7 @@ private fun detectUnderlyingPlatform(): UnderlyingPlatform {
             UnderlyingPlatform.WINDOWS
         appVersion.contains("Mac", ignoreCase = true) ->
             UnderlyingPlatform.MAC
-        else -> UnderlyingPlatform.LINUX
+        else ->
+            UnderlyingPlatform.LINUX
     }
 }
