@@ -15,6 +15,7 @@ interface Platform {
     fun saveLastState(state: EditClusterViewModel.State)
     fun saveSettings(settings: Settings)
     // MAYBE: also save history (to a separate store) for UX
+    //  tho be aware that LocalStorage allows 5 MB max
     fun scrollToZoom(yDelta: Float): Float
 
     companion object {
