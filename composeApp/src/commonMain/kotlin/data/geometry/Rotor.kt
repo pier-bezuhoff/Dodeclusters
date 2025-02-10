@@ -83,8 +83,9 @@ data class Rotor(
                 .copy(s = cos(n))
         } else if (n > 1e2) { // veeeeeeeeery strong, sinh(x)/x ~ exp(x)/x, cosh(x) ~ exp(x)
             // basically times infinity
-            (this * Double.POSITIVE_INFINITY)
-                .copy(s = Double.POSITIVE_INFINITY)
+            this
+//            (this * Double.POSITIVE_INFINITY)
+                .copy(s = Double.POSITIVE_INFINITY) // flags near-infinite stretch
         } else { // n2 > 0, hyperbolic motion
             (this * (sinh(n)/n))
                 .copy(s = cosh(n))
@@ -111,7 +112,7 @@ data class Rotor(
     }
 
     companion object {
-        /** = [a] ^ [b]
+        /** @return [a] ^ [b]
          *
          * Common pitfall:
          * `exp(a ^ b) >>> a != b(a)`, but

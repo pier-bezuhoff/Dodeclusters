@@ -410,6 +410,7 @@ data class GeneralizedCircle(
     /** Assumes normalization */
     fun toGCircle(): GCircle =
         if (abs(w) < EPSILON) {
+//            if (abs(z) > EPSILON && abs(x/z) < EPSILON && abs(y/z) < EPSILON) { // more accurate, less efficient
             if (abs(x) < EPSILON && abs(y) < EPSILON)
                 Point.CONFORMAL_INFINITY
             else
@@ -442,6 +443,7 @@ data class GeneralizedCircle(
      * */
     fun toGCircleAs(sameGCircleTypeAs: GCircle): GCircle? =
         if (abs(w) < EPSILON) {
+//            if (abs(z) > EPSILON && abs(x/z) < EPSILON && abs(y/z) < EPSILON) { // more accurate, less efficient
             if (abs(x) < EPSILON && abs(y) < EPSILON) {
                 if (sameGCircleTypeAs is Point)
                     Point.CONFORMAL_INFINITY
@@ -454,10 +456,14 @@ data class GeneralizedCircle(
         } else {
             val x0 = x/w
             val y0 = y/w
-            val r2 = x0.pow(2) + y0.pow(2) - 2*z/w
+            val d2 = x0.pow(2) + y0.pow(2)
+            val r2 = d2 - 2*z/w
             when {
-                sameGCircleTypeAs is Point ->
-                    Point(x0, y0) // we combat random radius fluctuations this way
+                sameGCircleTypeAs is Point -> // we combat random radius fluctuations this way
+                    if (d2 > 1e12)
+                        Point.CONFORMAL_INFINITY
+                    else
+                        Point(x0, y0)
                 r2 >= EPSILON2 && sameGCircleTypeAs is CircleOrLine -> {
                         val r = sqrt(r2)
                         val isCCW = w >= 0

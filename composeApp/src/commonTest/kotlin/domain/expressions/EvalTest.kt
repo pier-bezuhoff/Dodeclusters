@@ -1,8 +1,11 @@
 package domain.expressions
 
+import androidx.compose.ui.geometry.Offset
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.Point
+import data.geometry.randomCircleOrLine
+import data.geometry.randomPointCircleOrLine
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.random.Random

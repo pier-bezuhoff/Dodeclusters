@@ -50,24 +50,24 @@ fun assertAlmostEquals(
     )
 }
 
-fun randomCircleOrLine(): GeneralizedCircle {
+fun randomCircleOrLine(maxAmplitude: Double = 16.0): GeneralizedCircle {
     val isCircle = Random.nextBoolean()
     return if (isCircle)
-        randomCircle()
-    else randomLine()
+        randomCircle(maxAmplitude)
+    else randomLine(maxAmplitude)
 }
 
-fun randomPointCircleOrLine(): GeneralizedCircle =
+fun randomPointCircleOrLine(maxAmplitude: Double = 16.0): GeneralizedCircle =
     when (Random.nextInt(1..3)) {
-        1 -> randomPoint()
-        2 -> randomLine()
-        else -> randomCircle()
+        1 -> randomPoint(maxAmplitude)
+        2 -> randomLine(maxAmplitude)
+        else -> randomCircle(maxAmplitude)
     }
 
 fun randomCircle(maxAmplitude: Double = 16.0): GeneralizedCircle {
     val x = Random.nextDouble(-maxAmplitude, maxAmplitude)
     val y = Random.nextDouble(-maxAmplitude, maxAmplitude)
-    val r = Random.nextDouble(0.01, maxAmplitude)
+    val r = Random.nextDouble(1.0/maxAmplitude, maxAmplitude)
     return GeneralizedCircle.fromGCircle(Circle(x, y, r))
 }
 
