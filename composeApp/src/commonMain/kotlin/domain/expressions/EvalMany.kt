@@ -120,9 +120,7 @@ fun computeBiInversion(
         // inlined t.biInversion(e1, e2, params.speed)
         val bivector = bivector0 * ((i + 1) * params.speed)
         val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
-        val result = rotor.applyTo(t)
-            .toGCircle() //.toGCircleAs(target)
-//        println("scaled bivector: $bivector, rotor: $rotor, ${rotor.applyTo(t)} -> result: $result")
+        val result = rotor.applyTo(t).toGCircleAs(target)
         trajectory.add(result)
     }
     return trajectory
@@ -151,8 +149,11 @@ fun computeLoxodromicMotion(
         val rotation = (perpPencil * (-angle/2.0)).exp()
         val dilation = (pencil * (logDilation/2.0)).exp()
         // inlined t.loxodromicShift(start, end, angle, dilation)
-        val result = dilation.applyTo(rotation.applyTo(targetGC)).toGCircleAs(target)
-        trajectory.add(result)
+        trajectory.add(
+            dilation.applyTo(
+                rotation.applyTo(targetGC)
+            ).toGCircleAs(target)
+        )
     }
     return trajectory
 }
