@@ -5,7 +5,6 @@ import data.geometry.CircleOrLine
 import data.geometry.EPSILON
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
-import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.Point
 import kotlin.math.hypot
@@ -19,7 +18,7 @@ fun computeCircleByCenterAndRadius(
     radiusPoint: Point
 ): Circle? {
     val radius = hypot(radiusPoint.x - center.x, radiusPoint.y - center.y)
-    return if (radius == 0.0 || radius == Double.POSITIVE_INFINITY || radius.isNaN()) null
+    return if (radius == 0.0 || !radius.isFinite()) null
     else Circle(center.x, center.y, radius)
 }
 

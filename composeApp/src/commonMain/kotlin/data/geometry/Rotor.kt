@@ -93,7 +93,7 @@ data class Rotor(
 
     /** Applies `this` rotor to the [target] and then leaves only grade=1 component
      *
-     * `this * `[target]` * this.reversed()` */
+     * @return `this * `[target]` * this.reversed()`, normalized */
     fun applyTo(target: GeneralizedCircle): GeneralizedCircle {
         if (s == Double.POSITIVE_INFINITY) // result of exp(rotor with big norm)
             return GeneralizedCircle.CONFORMAL_INFINITY // clutching hard

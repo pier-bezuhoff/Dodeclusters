@@ -33,15 +33,15 @@ fun computeCircleInterpolation(
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val n = params.nInterjacents + 1
-    val newCircles = (1 until n).map { i ->
-        val interjacent =
-//            start.affineCombination(end, 0.5)
+    val newCircles = mutableListOf<GCircle?>()
+    for (i in 1 until n) {
+        newCircles.add(
 //            start.bisector(end, nOfSections = n, index = i, inBetween = params.inBetween)
             start.naturalBisector(
                 if (params.complementary) -end else end,
                 nOfSections = n, index = i
-            )
-        interjacent.toGCircle()
+            ).toGCircleAs(startCircle)
+        )
     }
     return newCircles
 }
@@ -59,11 +59,14 @@ fun computePointInterpolation(
         return List(params.nInterjacents) { null }
     }
     val n = params.nInterjacents + 1
-    val newPoints = (1 until n).map { i ->
+    val newPoints = mutableListOf<Point>()
+    for (i in 1 until n) {
         val progress = i.toDouble() / n
-        Point(
-            startPoint.x*(1 - progress) + endPoint.x*progress,
-            startPoint.y*(1 - progress) + endPoint.y*progress,
+        newPoints.add(
+            Point(
+                startPoint.x*(1 - progress) + endPoint.x*progress,
+                startPoint.y*(1 - progress) + endPoint.y*progress,
+            )
         )
     }
     return newPoints
@@ -82,7 +85,7 @@ fun computeCircleExtrapolation(
     var c: GeneralizedCircle
     // this can be simplified with bi-inversion
     repeat(params.nLeft) { // <-c-a-b
-        c = a.applyTo(b).normalizedPreservingDirection()
+        c = a.applyTo(b)
         newGeneralizedCircles.add(c)
         b = a
         a = c
@@ -90,7 +93,7 @@ fun computeCircleExtrapolation(
     a = start
     b = end
     repeat(params.nRight) { // a-b-c->
-        c = b.applyTo(a).normalizedPreservingDirection()
+        c = b.applyTo(a)
         newGeneralizedCircles.add(c)
         a = b
         b = c
