@@ -2,7 +2,6 @@ package domain.expressions
 
 import data.geometry.Circle
 import data.geometry.CircleOrLine
-import data.geometry.ImaginaryCircle
 import data.geometry.Point
 import kotlin.math.abs
 import kotlin.math.min

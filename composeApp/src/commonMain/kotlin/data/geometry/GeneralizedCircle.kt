@@ -30,14 +30,16 @@ sealed interface GCircle {
 
 // MAYBE: Clifford algebra (geometric product + other operations)
 /**
- * NORMALIZED Conformal-projective CGA representation of
- * circles/lines/points/imaginary circles via homogenous coordinates.
+ * Conformal-projective CGA representation of
+ * circles/lines/points/imaginary circles via __NORMALIZED__ homogenous coordinates.
  * Often they are represented as trivectors, but we use dual,
  * vector representation for simplicity. For upcast see [GeneralizedCircle.fromGCircle].
  * In this notation `a ^ b` (outer product) corresponds to intersection/__meet__ and
  * `a v b` (regressive product) to __join__. Being normalized implies that its [norm2] is
- * either -1, +1 or 0. And if it's 0, first coefficient of (w,x,y,z) is set to 1.
+ * either -1, +1 or 0. And if it's 0, the first non-zero coefficient of (w,x,y,z) is ±1.
+ * When working with scaled versions, be careful, cuz most methods expect the normalized version.
  */
+@Suppress("PropertyName")
 @Immutable
 @Serializable
 data class GeneralizedCircle(
@@ -62,41 +64,74 @@ data class GeneralizedCircle(
         }
     }
 
+    @Suppress("unused")
     inline val ePlusProjection: Double get() =
         -w/2 + z
+    @Suppress("unused")
     inline val eMinusProjection: Double get() =
         w/2 + z
 
-    // norm=0 for points
     inline val norm2: Double get() =
         x*x + y*y - 2*w*z
 //        this scalarProduct this
-    // NOTE: for circles, c.norm = w*radius
+    // NOTE: norm=0 for points, norm=w*radius for circles
     inline val norm: Double get() =
         sqrt(abs(norm2))
 
-    inline val isConformalInfinity: Boolean get() =
+    /** Assumes normalization. Radius squared */
+    inline val r2: Double get() =
+        if (abs(w) < EPSILON) {
+            if (abs(x) < EPSILON && abs(y) < EPSILON)
+                0.0 // conformal infinity
+            else Double.POSITIVE_INFINITY // line
+        } else { // norm2/(w*w)
+            (x/w).pow(2) + (y/w).pow(2) - 2*z/w
+        }
+
+    /** Assumes normalization. */
+    private inline val _isConformalInfinity: Boolean get() =
         abs(w) < EPSILON && abs(x) < EPSILON && abs(y) < EPSILON
 
-    /** Test [isConformalInfinity] first */
-    inline val isLine: Boolean get() =
+    /** Assumes normalization. Test [_isConformalInfinity] first */
+    private inline val _isLine: Boolean get() =
         w == 0.0 || abs(w) < EPSILON
 
-    /** Radius squared */
-    inline val r2: Double get() =
-        if (isConformalInfinity) 0.0
-        else if (isLine) Double.POSITIVE_INFINITY
-        else 1.0/(w*w) // norm2/(w*w)
-//        else (x/w).pow(2) + (y/w).pow(2) - 2*z/w
+    /** Assumes normalization. */
+    private inline val _isPoint: Boolean get() = // includes conformal infinity
+        abs(r2) < EPSILON2
 
-    inline val isPoint: Boolean get() = // includes conformal infinity
-        isConformalInfinity || !isLine && abs(r2) < EPSILON2
+    /** Assumes normalization. Test [_isConformalInfinity] and [_isLine] first */
+    private inline val _isRealCircle: Boolean get() =
+        r2 >= EPSILON2
 
-    inline val isRealCircle: Boolean get() =
-        !isConformalInfinity && !isLine && r2 >= EPSILON2
+    /** Assumes normalization. Test [_isConformalInfinity] and [_isLine] first */
+    private inline val _isImaginaryCircle: Boolean get() =
+        r2 <= -EPSILON2
 
-    inline val isImaginaryCircle: Boolean get() =
-        !isConformalInfinity && !isLine && r2 <= -EPSILON2
+    val isLine: Boolean get() =
+        normalizedPreservingDirection().run {
+            !_isConformalInfinity && _isLine
+        }
+
+    val isConformalInfinity: Boolean get() =
+        normalizedPreservingDirection().run {
+            abs(w) < EPSILON && abs(x) < EPSILON && abs(y) < EPSILON
+        }
+
+    val isPoint: Boolean get() =
+        normalizedPreservingDirection().run {
+            _isConformalInfinity || !_isLine && _isPoint
+        }
+
+    val isRealCircle: Boolean get() =
+        normalizedPreservingDirection().run {
+            !_isConformalInfinity && !_isLine && _isRealCircle
+        }
+
+    val isImaginaryCircle: Boolean get() =
+        normalizedPreservingDirection().run {
+            !_isConformalInfinity && !_isLine && _isImaginaryCircle
+        }
 
     // NOTE: since we assume GeneralizedCircle to be normalized, be careful with these
     operator fun times(a: Double): GeneralizedCircle {
@@ -386,17 +421,23 @@ data class GeneralizedCircle(
 
     /** Assumes normalization */
     fun toGCircle(): GCircle =
-        when {
-            isConformalInfinity -> Point.CONFORMAL_INFINITY
-            isLine -> Line(x, y, -z)
-            isPoint -> Point(x / w, y / w)
-            isRealCircle -> {
-                val r = sqrt(r2)
-                val isCCW = w >= 0
-                Circle(x / w, y / w, r, isCCW)
+        if (abs(w) < EPSILON) {
+            if (abs(x) < EPSILON && abs(y) < EPSILON)
+                Point.CONFORMAL_INFINITY
+            else
+                Line(x, y, -z)
+        } else {
+            val x0 = x/w
+            val y0 = y/w
+            val r2 = x0.pow(2) + y0.pow(2) - 2*z/w
+            when {
+                r2 >= EPSILON2 ->
+                    Circle(x0, y0, radius = sqrt(r2), isCCW = w >= 0)
+                r2 <= -EPSILON2 ->
+                    ImaginaryCircle(x0, y0, sqrt(abs(r2)))
+                else -> // abs(r2) < EPSILON2
+                    Point(x0, y0)
             }
-            isImaginaryCircle -> ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
-            else -> never(this.toString())
         }
 
     /** Assumes normalization.
@@ -412,36 +453,36 @@ data class GeneralizedCircle(
      * otherwise => `null`
      * */
     fun toGCircleAs(sameGCircleTypeAs: GCircle): GCircle? =
-        when {
-            isConformalInfinity ->
+        if (abs(w) < EPSILON) {
+            if (abs(x) < EPSILON && abs(y) < EPSILON) {
                 if (sameGCircleTypeAs is Point)
                     Point.CONFORMAL_INFINITY
                 else null
-            isLine ->
+            } else {
                 if (sameGCircleTypeAs is CircleOrLine)
                     Line(x, y, -z)
                 else null
-            isPoint ->
-                if (sameGCircleTypeAs is Point)
-                    Point(x / w, y / w)
-                else null
-            isRealCircle -> when (sameGCircleTypeAs) {
-                is CircleOrLine -> {
-                    val r = sqrt(r2)
-                    val isCCW = w >= 0
-                    Circle(x / w, y / w, r, isCCW)
-                }
-                is Point -> Point(x / w, y / w)
-                else -> null
             }
-            isImaginaryCircle ->
-                when (sameGCircleTypeAs) {
-                    is ImaginaryCircle ->
-                        ImaginaryCircle(x / w, y / w, sqrt(abs(r2)))
-                    is Point -> Point(x / w, y / w)
-                    else -> null
-                }
-            else -> never(this.toString())
+        } else {
+            val x0 = x/w
+            val y0 = y/w
+            val r2 = x0.pow(2) + y0.pow(2) - 2*z/w
+            when {
+                r2 >= EPSILON2 ->
+                    if (sameGCircleTypeAs is CircleOrLine) {
+                        val r = sqrt(r2)
+                        val isCCW = w >= 0
+                        Circle(x0, y0, r, isCCW)
+                    } else null
+                r2 <= -EPSILON2 ->
+                    if (sameGCircleTypeAs is ImaginaryCircle)
+                        ImaginaryCircle(x0, y0, sqrt(abs(r2)))
+                    else null
+                else -> // abs(r2) < EPSILON2
+                    if (sameGCircleTypeAs is Point)
+                        Point(x0, y0)
+                    else null
+            }
         }
 
     companion object {
