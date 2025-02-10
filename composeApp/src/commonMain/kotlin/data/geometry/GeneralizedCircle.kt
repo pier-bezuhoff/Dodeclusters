@@ -39,7 +39,6 @@ sealed interface GCircle {
  * either -1, +1 or 0. And if it's 0, the first non-zero coefficient of (w,x,y,z) is ±1.
  * When working with scaled versions, be careful, cuz most methods expect the normalized version.
  */
-@Suppress("PropertyName")
 @Immutable
 @Serializable
 data class GeneralizedCircle(
@@ -209,17 +208,6 @@ data class GeneralizedCircle(
     //  X == k*X where k>0
     /** Assumes normalization */
     fun homogenousEquals(other: GeneralizedCircle, epsilon: Double = EPSILON): Boolean {
-        val (w1,x1,y1,z1) = this
-        val (w2,x2,y2,z2) = other
-        return (w2 == 0.0 && abs(w1) < epsilon || abs(w1/w2 - 1.0) < epsilon) &&
-                (x2 == 0.0 && abs(x1) < epsilon || abs(x1/x2 - 1.0) < epsilon) &&
-                (y2 == 0.0 && abs(y1) < epsilon || abs(y1/y2 - 1.0) < epsilon) &&
-                (z2 == 0.0 && abs(z1) < epsilon || abs(z1/z2 - 1.0) < epsilon)
-    }
-
-    //  X == k*X where k!=0
-    /** Assumes normalization */
-    fun homogenousEqualsNonOriented(other: GeneralizedCircle, epsilon: Double = EPSILON): Boolean {
         val (w1,x1,y1,z1) = this
         val (w2,x2,y2,z2) = other
         return (w2 == 0.0 && abs(w1) < epsilon || abs(w1/w2 - 1.0) < epsilon) &&
@@ -468,20 +456,16 @@ data class GeneralizedCircle(
             val y0 = y/w
             val r2 = x0.pow(2) + y0.pow(2) - 2*z/w
             when {
-                r2 >= EPSILON2 ->
-                    if (sameGCircleTypeAs is CircleOrLine) {
+                sameGCircleTypeAs is Point ->
+                    Point(x0, y0) // we combat random radius fluctuations this way
+                r2 >= EPSILON2 && sameGCircleTypeAs is CircleOrLine -> {
                         val r = sqrt(r2)
                         val isCCW = w >= 0
                         Circle(x0, y0, r, isCCW)
-                    } else null
-                r2 <= -EPSILON2 ->
-                    if (sameGCircleTypeAs is ImaginaryCircle)
-                        ImaginaryCircle(x0, y0, sqrt(abs(r2)))
-                    else null
-                else -> // abs(r2) < EPSILON2
-                    if (sameGCircleTypeAs is Point)
-                        Point(x0, y0)
-                    else null
+                    }
+                r2 <= -EPSILON2 && sameGCircleTypeAs is ImaginaryCircle ->
+                    ImaginaryCircle(x0, y0, sqrt(abs(r2)))
+                else -> null
             }
         }
 
@@ -574,7 +558,7 @@ data class GeneralizedCircle(
         }
 
         // there was an attempt..
-        inline fun isNear0000(w: Double, x: Double, y: Double, z: Double): Boolean =
+        private inline fun isNear0000(w: Double, x: Double, y: Double, z: Double): Boolean =
             // NOTE: ehh, kinda risky
             abs(w) < EPSILON2 && abs(x) < EPSILON2 && abs(y) < EPSILON2 && abs(z) < EPSILON2
 
