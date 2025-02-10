@@ -34,7 +34,7 @@ data class Rotor(
 ) {
     /** NOTE: in some cases `this`*`this.R` can contain non-scalar parts,
       `norm2 = (this*this.reversed()).grade(0)` */
-    val norm2 get() =
+    inline val norm2 get() =
         s.pow(2) - xy.pow(2) - xp.pow(2) + xm.pow(2) - yp.pow(2) + ym.pow(2) + pm.pow(2)
 
     fun normalized(): Rotor {
@@ -71,7 +71,7 @@ data class Rotor(
 
     // reference: "Geometric Algebra for Computer Science", page 185
     fun exp(): Rotor {
-        if (setOf(s, xy, xp, xm, yp, ym, pm).all { it == 0.0 })
+        if (s == 0.0 && xy == 0.0 && xm == 0.0 && yp == 0.0 && ym == 0.0 && pm == 0.0)
             return Rotor(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
         require(s == 0.0) { "Exponentiation requires pure grade=2 bivector" }
         val n2 = this.norm2
@@ -79,8 +79,12 @@ data class Rotor(
         return if (n < EPSILON) { // parabolic motion
             this.copy(s = 1.0)
         } else if (n2 < 0) { // elliptic motion
-            (this * (sin(n)/n))
+            (this * (sin(n) / n))
                 .copy(s = cos(n))
+        } else if (n > 1e2) { // veeeeeeeeery strong, sinh(x)/x ~ exp(x)/x, cosh(x) ~ exp(x)
+            // basically times infinity
+            (this * Double.POSITIVE_INFINITY)
+                .copy(s = Double.POSITIVE_INFINITY)
         } else { // n2 > 0, hyperbolic motion
             (this * (sinh(n)/n))
                 .copy(s = cosh(n))
@@ -91,16 +95,18 @@ data class Rotor(
      *
      * `this * `[target]` * this.reversed()` */
     fun applyTo(target: GeneralizedCircle): GeneralizedCircle {
+        if (s == Double.POSITIVE_INFINITY) // result of exp(rotor with big norm)
+            return GeneralizedCircle.CONFORMAL_INFINITY // clutching hard
         val (w, x, y, z) = target
         val x1 = pm.pow(2)*x + pm*w*xm + pm*w*xp - 2*pm*xm*z + 2*pm*xp*z - s.pow(2)*x + s*w*xm + s*w*xp + 2*s*xm*z - 2*s*xp*z - 2*s*xy*y + w*xy*ym + w*xy*yp - x*xm.pow(2) + x*xp.pow(2) + x*xy.pow(2) + x*ym.pow(2) - x*yp.pow(2) - 2*xm*y*ym + 2*xp*y*yp + 2*xy*ym*z - 2*xy*yp*z
         val y1 = pm.pow(2)*y + pm*w*ym + pm*w*yp - 2*pm*ym*z + 2*pm*yp*z - s.pow(2)*y + s*w*ym + s*w*yp + 2*s*x*xy + 2*s*ym*z - 2*s*yp*z - w*xm*xy - w*xp*xy - 2*x*xm*ym + 2*x*xp*yp + xm.pow(2)*y - 2*xm*xy*z - xp.pow(2)*y + 2*xp*xy*z + xy.pow(2)*y - y*ym.pow(2) + y*yp.pow(2)
         val plus = pm.pow(2)*w/2 - pm.pow(2)*z + pm*s*w + 2*pm*s*z - 2*pm*x*xm - 2*pm*y*ym + s.pow(2)*w/2 - s.pow(2)*z + 2*s*x*xp + 2*s*y*yp - w*xm.pow(2)/2 - w*xm*xp - w*xp.pow(2)/2 + w*xy.pow(2)/2 - w*ym.pow(2)/2 - w*ym*yp - w*yp.pow(2)/2 - 2*x*xy*yp + xm.pow(2)*z - 2*xm*xp*z + xp.pow(2)*z + 2*xp*xy*y - xy.pow(2)*z + ym.pow(2)*z - 2*ym*yp*z + yp.pow(2)*z
         val minus = -pm.pow(2)*w/2 - pm.pow(2)*z - pm*s*w + 2*pm*s*z - 2*pm*x*xp - 2*pm*y*yp - s.pow(2)*w/2 - s.pow(2)*z + 2*s*x*xm + 2*s*y*ym - w*xm.pow(2)/2 - w*xm*xp - w*xp.pow(2)/2 - w*xy.pow(2)/2 - w*ym.pow(2)/2 - w*ym*yp - w*yp.pow(2)/2 - 2*x*xy*ym - xm.pow(2)*z + 2*xm*xp*z + 2*xm*xy*y - xp.pow(2)*z - xy.pow(2)*z - ym.pow(2)*z + 2*ym*yp*z - yp.pow(2)*z
-        return -GeneralizedCircle(
-            (minus - plus),
-            x1,
-            y1,
-            (plus + minus)/2
+        return GeneralizedCircle(
+            -(minus - plus),
+            -x1,
+            -y1,
+            -(plus + minus)/2
         ).normalizedPreservingDirection()
     }
 

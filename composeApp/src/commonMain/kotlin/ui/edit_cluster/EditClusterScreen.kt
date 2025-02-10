@@ -372,6 +372,7 @@ fun EditClusterScreen(
             }
         }
     }
+    println(stringResource(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE.stringResource))
     LaunchedEffect(viewModel) {
         viewModel.snackbarMessages.collectLatest { (message, postfix) ->
 //            println("snackbar: $message$postfix")

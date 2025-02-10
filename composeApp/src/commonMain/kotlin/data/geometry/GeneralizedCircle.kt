@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package data.geometry
 
 import androidx.compose.runtime.Immutable
@@ -26,7 +28,8 @@ sealed interface GCircle {
     ): GCircle
 }
 
-// TODO: Clifford algebra (geometric product + other operations)
+// MAYBE: separate normalized & scaled representations for clarity
+// MAYBE: Clifford algebra (geometric product + other operations)
 /**
  * Conformal-projective CGA representation of circles/lines/points/imaginary circles
  * via homogenous coordinates. Often they are represented as trivectors, but we use
@@ -53,44 +56,46 @@ data class GeneralizedCircle(
     val z: Double
 ) {
     init {
-        require(listOf(w,x,y,z).any { it != 0.0 }) { "(0,0,0,0) Homogenous coordinates are invalid" }
+        require(isValidHomogenousCoordinates(w,x,y,z)) {
+            "GeneralizedCircle.init: homogenous coordinates ($w,$x,$y,$z) are invalid"
+        }
     }
 
-    val ePlusProjection: Double get() =
+    inline val ePlusProjection: Double get() =
         -w/2 + z
-    val eMinusProjection: Double get() =
+    inline val eMinusProjection: Double get() =
         w/2 + z
 
     // norm=0 for points
-    val norm2: Double get() =
+    inline val norm2: Double get() =
         x*x + y*y - 2*w*z
 //        this scalarProduct this
     // NOTE: for circles, c.norm = w*radius
-    val norm: Double get() =
+    inline val norm: Double get() =
         sqrt(abs(norm2))
 
-    val isConformalInfinity: Boolean get() =
+    inline val isConformalInfinity: Boolean get() =
         this.normalized().run {
             abs(w) < EPSILON && abs(x) < EPSILON && abs(y) < EPSILON
         }
 
-    val isLine: Boolean get() =
+    inline val isLine: Boolean get() =
         !isConformalInfinity && (w == 0.0 || abs(this.normalized().w) < EPSILON)
 
     /** Radius squared */
-    val r2: Double get() =
+    inline val r2: Double get() =
         if (isConformalInfinity) 0.0
         else if (isLine) Double.POSITIVE_INFINITY
         else norm2/(w*w)
 //        else (x/w).pow(2) + (y/w).pow(2) - 2*z/w
 
-    val isPoint: Boolean get() = // includes conformal infinity
+    inline val isPoint: Boolean get() = // includes conformal infinity
         !isLine && abs(r2) < EPSILON2
 
-    val isRealCircle: Boolean get() =
+    inline val isRealCircle: Boolean get() =
         !isLine && r2 >= EPSILON2
 
-    val isImaginaryCircle: Boolean get() =
+    inline val isImaginaryCircle: Boolean get() =
         !isLine && r2 <= -EPSILON2
 
     operator fun times(a: Double): GeneralizedCircle {
@@ -122,7 +127,6 @@ data class GeneralizedCircle(
     infix fun scalarProduct(other: GeneralizedCircle): Double =
         x*other.x + y*other.y - z*other.w - other.z*w
 
-    @Suppress("NOTHING_TO_INLINE")
     inline fun normalized(): GeneralizedCircle {
         val n = norm
         if (abs(n) < EPSILON) {
@@ -147,19 +151,21 @@ data class GeneralizedCircle(
             a
     }
 
-    @Suppress("NOTHING_TO_INLINE")
     inline fun normalizedPreservingDirection(): GeneralizedCircle {
         val n = norm
-        return if (abs(n) < EPSILON) {
+        val absN = abs(n)
+        return if (absN < EPSILON) {
             if (n == 0.0 && abs(w) < EPSILON ||
-                n != 0.0 && abs(w/n) < EPSILON
+                n != 0.0 && abs(w / n) < EPSILON
             ) // is conformal infinity?
                 GeneralizedCircle(
                     0.0, 0.0, 0.0,
-                    z = if (w == 0.0) sign(z) else sign(w)*sign(z)
+                    z = if (w == 0.0) sign(z) else sign(w) * sign(z)
                 )
             else
-                this * (1/abs(w))
+                this * (1 / abs(w))
+//        } else if (absN > 1e10) {
+//            CONFORMAL_INFINITY // yes, i was the one who invented clutches
         } else if (abs(w/n) < EPSILON) {
             this.copy(w = 0.0) * (1/n)
         } else {
@@ -438,10 +444,12 @@ data class GeneralizedCircle(
                     is Point -> Point(x / w, y / w)
                     else -> null
                 }
-            else -> never(this.toString())
+            else -> null // NaNs ig //never(this.toString())
         }
 
     companion object {
+        val CONFORMAL_INFINITY = GeneralizedCircle(0.0, 0.0, 0.0, 1.0)
+
         fun fromGCircle(gCircle: GCircle): GeneralizedCircle =
             when (gCircle) {
                 is Circle -> {
@@ -457,7 +465,7 @@ data class GeneralizedCircle(
                 is Line ->
                     GeneralizedCircle(0.0, gCircle.a, gCircle.b, -gCircle.c)
                         .normalizedPreservingDirection()
-                Point.CONFORMAL_INFINITY -> GeneralizedCircle(0.0, 0.0, 0.0, 1.0)
+                Point.CONFORMAL_INFINITY -> CONFORMAL_INFINITY
                 is Point -> GeneralizedCircle(
                     1.0,
                     gCircle.x, gCircle.y,
@@ -480,12 +488,12 @@ data class GeneralizedCircle(
             val x = -w1*y2*z3 + w1*y3*z2 + w2*y1*z3 - w2*y3*z1 - w3*y1*z2 + w3*y2*z1
             val y = w1*x2*z3 - w1*x3*z2 - w2*x1*z3 + w2*x3*z1 + w3*x1*z2 - w3*x2*z1
             val z = -x1*y2*z3 + x1*y3*z2 + x2*y1*z3 - x2*y3*z1 - x3*y1*z2 + x3*y2*z1
-            if (is0000(w,x,y,z)) {
+            if (isNear0000(w,x,y,z)) {
                 // case of c1-c2-c3 being in the same pencil
 //                println("GeneralizedCircle.perp3 resulted in near-zero: ($w, $x, $y, $z) aka 0 or infinite number of solutions")
                 return null
             }
-            if (listOf(w,x,y,z).any { it.isNaN() || it.isInfinite() }) {
+            if (!isValidHomogenousCoordinates(w,x,y,z)) {
                 return null
             }
             return GeneralizedCircle(w, x, y, z).normalizedPreservingDirection()
@@ -502,21 +510,25 @@ data class GeneralizedCircle(
             val x = -w3*x2*z1 + w3*x1*z2 + w2*x1*z3 - w1*x2*z3 + x2*y3*y1 - x1*y3*y2
             val y = -w3*y2*z1 + w3*y1*z2 + w2*y1*z3 - w1*y2*z3 - x3*x2*y1 + x3*x1*y2
             val z = w2*z3*z1 - w1*z3*z2 - x3*x2*z1 + x3*x1*z2 - y3*y2*z1 + y3*y1*z2
-            if (is0000(w,x,y,z)) {
+            if (isNear0000(w,x,y,z)) {
                 println("GeneralizedCircle.parallel2perp1 resulted in near-zero: ($w, $x, $y, $z) aka 0 or infinite number of solutions")
                 return null
             }
-            if (listOf(w,x,y,z).any { it.isNaN() || it.isInfinite() }) {
+            if (!isValidHomogenousCoordinates(w,x,y,z)) {
                 return null
             }
             return GeneralizedCircle(w, x, y, z).normalizedPreservingDirection()
         }
 
         // there was an attempt..
-        @Suppress("NOTHING_TO_INLINE")
-        inline fun is0000(w: Double, x: Double, y: Double, z: Double): Boolean =
-            setOf(w,x,y,z).all { abs(it) < EPSILON2 } // NOTE: ehh, kinda risky
-//            w == 0.0 && x == 0.0 && y == 0.0 && z == 0.0
+        inline fun isNear0000(w: Double, x: Double, y: Double, z: Double): Boolean =
+            // NOTE: ehh, kinda risky
+            abs(w) < EPSILON2 && abs(x) < EPSILON2 && abs(y) < EPSILON2 && abs(z) < EPSILON2
+//            setOf(w,x,y,z).all { abs(it) < EPSILON2 }
+
+        inline fun isValidHomogenousCoordinates(w: Double, x: Double, y: Double, z: Double): Boolean =
+            w.isFinite() && x.isFinite() && y.isFinite() && z.isFinite() &&
+            (w != 0.0 || x != 0.0 || y != 0.0 || z != 0.0) // (0,0,0,0) is invalid in homogenous
     }
 }
 

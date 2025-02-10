@@ -105,7 +105,6 @@ fun computeBiInversion(
     engine2: GCircle,
     target: GCircle,
 ): List<GCircle?> {
-    // MAYBE: check point-point and circle-circle consistence by conditional casts
     val e1 = GeneralizedCircle.fromGCircle(engine1)
     val e2 = GeneralizedCircle.fromGCircle(engine2).let {
         if (params.reverseSecondEngine) -it else it
@@ -118,13 +117,15 @@ fun computeBiInversion(
         // inlined t.biInversion(e1, e2, params.speed)
         val bivector = bivector0 * ((i + 1) * params.speed)
         val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
-        val result = rotor.applyTo(t).toGCircleAs(target)
+        val result = rotor.applyTo(t)
+            .toGCircle() //.toGCircleAs(target)
+//        println("scaled bivector: $bivector, rotor: $rotor, ${rotor.applyTo(t)} -> result: $result")
         trajectory.add(result)
     }
     return trajectory
 }
 
-// FIX: quite inaccurate on points (??)
+// FIX: quite inaccurate on points (?? example)
 // NOTE: without downscaling it visibly diverges
 fun computeLoxodromicMotion(
     params: LoxodromicMotionParameters,
