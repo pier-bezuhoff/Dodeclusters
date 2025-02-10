@@ -197,7 +197,7 @@ data class GeneralizedCircle(
             else
                 this * (1 / abs(w))
 //        } else if (absN > 1e10) {
-//            CONFORMAL_INFINITY // yes, i was the one who invented clutches
+//            CONFORMAL_INFINITY // more clutches stashed here
         } else if (abs(w/n) < EPSILON) {
             this.copy(w = 0.0) * (1/n)
         } else {
