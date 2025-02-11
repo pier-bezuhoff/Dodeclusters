@@ -225,7 +225,7 @@ fun BoxScope.EditClusterCanvas(
         ) {
             ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
         }
-        if (viewModel.mode == SelectionMode.Region) {
+        if (viewModel.mode == SelectionMode.Region && viewModel.showCircles) {
             RegionManipulationStrategySelector(
                 currentStrategy = viewModel.regionManipulationStrategy,
                 setStrategy = viewModel::setRegionsManipulationStrategy
@@ -1053,59 +1053,6 @@ fun PointSelectionContextActions(
                 tint = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
-        }
-    }
-}
-
-@Composable
-fun BoxScope.RegionManipulationStrategySelector(
-    currentStrategy: RegionManipulationStrategy,
-    setStrategy: (RegionManipulationStrategy) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.align(Alignment.CenterEnd),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    ) {
-        Column(Modifier
-            .width(IntrinsicSize.Max)
-            .selectableGroup()
-        ) {
-            RegionManipulationStrategy.entries.forEach { strategy ->
-                Row(
-                    Modifier
-                        .selectable(
-                            selected = (strategy == currentStrategy),
-                            onClick = { setStrategy(strategy) },
-                            role = Role.RadioButton
-                        )
-                        .height(56.dp)
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth()
-                    ,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = (strategy == currentStrategy),
-                        onClick = null, // null recommended for accessibility with screen readers
-                        colors = RadioButtonDefaults.colors().copy(
-                            selectedColor = MaterialTheme.colorScheme.secondary,
-                        )
-                    )
-                    Text(
-                        text = stringResource(strategy.stringResource),
-                        modifier = Modifier
-                            .padding(start = 16.dp)
-                            .weight(1f),
-                        color = if (strategy == currentStrategy)
-                            MaterialTheme.colorScheme.onSecondaryContainer
-                        else MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
-            }
         }
     }
 }

@@ -134,13 +134,3 @@ class CircleTest {
     }
 }
 
-fun assertAlmostEquals(
-    expected: GCircle,
-    actual: GCircle,
-    message: String = "",
-    epsilon: Double = 1e-3
-) = assertAlmostEquals(
-    GeneralizedCircle.fromGCircle(expected),
-    GeneralizedCircle.fromGCircle(actual),
-    message, epsilon
-)

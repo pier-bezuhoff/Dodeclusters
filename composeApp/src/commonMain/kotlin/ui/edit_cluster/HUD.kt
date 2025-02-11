@@ -2,17 +2,27 @@ package ui.edit_cluster
 
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dodeclusters.composeapp.generated.resources.Res
@@ -217,6 +228,58 @@ fun BoxScope.ArcPathContextActions(
             stringResource(EditClusterTool.CompleteArcPath.description),
             style = MaterialTheme.typography.titleSmall
         )
+    }
+}
+
+@Composable
+fun BoxScope.RegionManipulationStrategySelector(
+    currentStrategy: RegionManipulationStrategy,
+    setStrategy: (RegionManipulationStrategy) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.align(Alignment.CenterEnd),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Column(Modifier
+            .width(IntrinsicSize.Max)
+            .selectableGroup()
+        ) {
+            RegionManipulationStrategy.entries.forEach { strategy ->
+                Row(Modifier
+                        .selectable(
+                            selected = (strategy == currentStrategy),
+                            onClick = { setStrategy(strategy) },
+                            role = Role.RadioButton
+                        )
+                        .height(56.dp)
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                    ,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = (strategy == currentStrategy),
+                        onClick = null, // null recommended for accessibility with screen readers
+                        colors = RadioButtonDefaults.colors().copy(
+                            selectedColor = MaterialTheme.colorScheme.secondary,
+                        )
+                    )
+                    Text(
+                        text = stringResource(strategy.stringResource),
+                        modifier = Modifier
+                            .padding(start = 16.dp)
+                            .weight(1f),
+                        color = if (strategy == currentStrategy)
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            }
+        }
     }
 }
 

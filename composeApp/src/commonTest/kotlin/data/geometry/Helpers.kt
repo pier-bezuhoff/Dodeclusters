@@ -19,15 +19,26 @@ fun assertAlmostEquals(
 }
 
 fun assertAlmostEquals(
+    expected: GCircle,
+    actual: GCircle?,
+    message: String = "",
+    epsilon: Double = 1e-3
+) = assertAlmostEquals(
+    GeneralizedCircle.fromGCircle(expected),
+    actual?.let { GeneralizedCircle.fromGCircle(actual) },
+    message, epsilon
+)
+
+fun assertAlmostEquals(
     expected: GeneralizedCircle,
-    actual: GeneralizedCircle,
+    actual: GeneralizedCircle?,
     message: String = "",
     epsilon: Double = 1e-3
 ) {
     val expectedNormalized = expected.normalized()
-    val actualNormalized = actual.normalized()
+    val actualNormalized = actual?.normalized()
     assertTrue(
-        expectedNormalized.homogenousEquals(actualNormalized, epsilon) || run {
+        actualNormalized != null && (expectedNormalized.homogenousEquals(actualNormalized, epsilon) || run {
             // TODO: also include BIG circle <=> line equivalence
             val a = expectedNormalized.toGCircle()
             val b = actualNormalized.toGCircleAs(a)
@@ -43,9 +54,9 @@ fun assertAlmostEquals(
                     a is Point && b is Point &&
                     abs(a.x - b.x) < epsilon + abs(b.x) *epsilon &&
                     abs(a.y - b.y) < epsilon + abs(b.y) *epsilon
-        },
+        }),
         "$actualNormalized shouldBe $expectedNormalized" +
-                "\n${actualNormalized.toGCircle()} or ${actualNormalized.toGCircleAs(expectedNormalized.toGCircle())} " +
+                "\n${actualNormalized?.toGCircle()} or ${actualNormalized?.toGCircleAs(expectedNormalized.toGCircle())} " +
                 "shouldBe ${expectedNormalized.toGCircle()}" +
                 "\n\n$message"
     )
