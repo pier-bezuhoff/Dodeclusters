@@ -1,5 +1,6 @@
 package data.geometry
 
+import domain.never
 import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.random.nextInt
@@ -50,44 +51,48 @@ fun assertAlmostEquals(
     )
 }
 
-fun randomCircleOrLine(maxAmplitude: Double = 16.0): GeneralizedCircle {
+fun randomCircleOrLine(maxAmplitude: Double = 16.0): CircleOrLine {
     val isCircle = Random.nextBoolean()
     return if (isCircle)
         randomCircle(maxAmplitude)
     else randomLine(maxAmplitude)
 }
 
-fun randomPointCircleOrLine(maxAmplitude: Double = 16.0): GeneralizedCircle =
+fun randomPointCircleOrLine(maxAmplitude: Double = 16.0): GCircle =
     when (Random.nextInt(1..3)) {
         1 -> randomPoint(maxAmplitude)
         2 -> randomLine(maxAmplitude)
-        else -> randomCircle(maxAmplitude)
+        3 -> randomCircle(maxAmplitude)
+        else -> never()
     }
 
-fun randomCircle(maxAmplitude: Double = 16.0): GeneralizedCircle {
+fun randomCircle(maxAmplitude: Double = 16.0): Circle {
     val x = Random.nextDouble(-maxAmplitude, maxAmplitude)
     val y = Random.nextDouble(-maxAmplitude, maxAmplitude)
     val r = Random.nextDouble(1.0/maxAmplitude, maxAmplitude)
-    return GeneralizedCircle.fromGCircle(Circle(x, y, r))
+    return Circle(x, y, r)
 }
 
-fun randomLine(maxAmplitude: Double = 16.0): GeneralizedCircle {
+fun randomLine(maxAmplitude: Double = 16.0): Line {
     val a = Random.nextDouble(-maxAmplitude, maxAmplitude)
     val b = Random.nextDouble(-maxAmplitude, maxAmplitude)
     val c = Random.nextDouble(-maxAmplitude, maxAmplitude)
-    return if (a == 0.0 && b == 0.0)
-        GeneralizedCircle.fromGCircle(Line(1.0, 0.0, 0.0))
-    else
-        GeneralizedCircle.fromGCircle(Line(a, b, c))
+    return when (Random.nextInt(0..10)) {
+        1 -> Line(if (a != 0.0) a else 1.0, 0.0, c) // vertical
+        2 -> Line(0.0, if (b != 0.0) b else 1.0, c) // horizontal
+        else ->
+            if (a == 0.0 && b == 0.0)
+                Line(1.0, 0.0, 0.0)
+            else
+                Line(a, b, c)
+    }
 }
 
-fun randomPoint(maxAmplitude: Double = 16.0): GeneralizedCircle {
+fun randomPoint(maxAmplitude: Double = 16.0): Point {
     val isConformalInf = Random.nextInt(0..10) == 0
     val a = Random.nextDouble(-maxAmplitude, maxAmplitude)
     val b = Random.nextDouble(-maxAmplitude, maxAmplitude)
-    return GeneralizedCircle.fromGCircle(
-        if (isConformalInf) Point.CONFORMAL_INFINITY
-        else Point(a, b)
-    )
+    return if (isConformalInf) Point.CONFORMAL_INFINITY
+    else Point(a, b)
 }
 

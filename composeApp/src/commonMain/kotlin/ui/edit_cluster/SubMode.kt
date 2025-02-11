@@ -38,10 +38,10 @@ sealed interface SubMode {
         val lastQualifiedRegion: LogicalRegion? = null
     ) : SubMode
 
-    /**
-    /** sub-mode accompanying [ToolMode], that allows live adjustment of expression parameters */
+    /** Sub-mode accompanying [ToolMode], that allows live adjustment of expression parameters
      * @property[outputIndices] indices containing outputs of the multi expr we are adjusting
-     * @property[maxOutputRange] contains [outputIndices] and additional `null`ed indices that
+     * @property[maxOutputRange] all indices reserved for [expr],
+     * contains [outputIndices] and additional `null`ed indices that
      * were previously allocated for this multi expr
      * */
     data class ExprAdjustment(

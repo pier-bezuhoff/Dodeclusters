@@ -2,8 +2,10 @@ package domain.expressions
 
 import androidx.compose.ui.geometry.Offset
 import data.geometry.Circle
+import data.geometry.Line
 import data.geometry.assertAlmostEquals
 import data.geometry.randomCircle
+import data.geometry.randomLine
 import data.geometry.randomPoint
 import data.geometry.randomPointCircleOrLine
 import kotlin.test.Test
@@ -18,9 +20,10 @@ class EvalManyTest {
         repeat(1_000) { // turn around
             val target =
                 if (it % 2 == 0)
-                    randomPoint().toGCircle()
+                    randomPoint()
                 else
-                    randomCircle().toGCircle()
+                    randomCircle()
+            // fails for lines...
             var k = 36
             var turnAround = computeBiInversion(
                 BiInversionParameters(1.0, k, true),
@@ -53,6 +56,9 @@ class EvalManyTest {
             )[k-1]
             assertTrue(turnAround != null)
             assertAlmostEquals(target, turnAround)
+        }
+        repeat(100) {
+            val line = randomLine()
         }
     }
 }

@@ -1,7 +1,5 @@
 package data.geometry
 
-import kotlin.math.abs
-import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.random.nextInt
@@ -53,9 +51,9 @@ class GeneralizedCircleTest {
     @Test
     fun testApplyTo() {
         repeat(1000) {
-            val a = randomCircleOrLine()
-            val b = randomPointCircleOrLine()
-            val c = randomCircleOrLine()
+            val a = GeneralizedCircle.fromGCircle(randomCircleOrLine())
+            val b = GeneralizedCircle.fromGCircle(randomPointCircleOrLine())
+            val c = GeneralizedCircle.fromGCircle(randomCircleOrLine())
             // involution
             assertAlmostEquals(
                 b,
@@ -76,9 +74,9 @@ class GeneralizedCircleTest {
     @Test
     fun testBisector() {
         repeat(100) {
-            val a = randomCircleOrLine()
-            val b = randomCircleOrLine()
-            val bi1 = a.naturalBisector(b)
+            val a = GeneralizedCircle.fromGCircle(randomCircleOrLine())
+            val b = GeneralizedCircle.fromGCircle(randomCircleOrLine())
+            val bi1 = a.bisector(b)
             assertAlmostEquals(
                 b, bi1.applyTo(a),
                 "a=$a, b=$b, bi=$bi1\na=${a.toGCircle()}, b=${b.toGCircle()}, bi=${bi1.toGCircle()}",
@@ -88,8 +86,8 @@ class GeneralizedCircleTest {
             val k = Random.nextInt(1 until n)
             // adjacent k/n-sectors are "equidistant" under inversion
             assertAlmostEquals(
-                a.naturalBisector(b, n, k).applyTo(a.naturalBisector(b, n, k - 1)),
-                a.naturalBisector(b, n, k + 1),
+                a.bisector(b, n, k).applyTo(a.bisector(b, n, k - 1)),
+                a.bisector(b, n, k + 1),
                 "a=$a, b=$b, n=$n, k=$k\na=${a.toGCircle()}, b=${b.toGCircle()}",
                 epsilon = 0.1
             )
@@ -99,9 +97,9 @@ class GeneralizedCircleTest {
     @Test
     fun testInversiveDistance() {
         repeat(100) {
-            val a = randomCircleOrLine()
-            val b = randomCircleOrLine()
-            val c = randomCircleOrLine()
+            val a = GeneralizedCircle.fromGCircle(randomCircleOrLine())
+            val b = GeneralizedCircle.fromGCircle(randomCircleOrLine())
+            val c = GeneralizedCircle.fromGCircle(randomCircleOrLine())
             // inversive distance is invariant under inversion
             assertAlmostEquals(
                 a.inversiveDistance(b),

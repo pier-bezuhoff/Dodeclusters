@@ -60,6 +60,9 @@ fun computeCircleInversion(
     target: GCircle,
     engine: GCircle
 ): GCircle? {
+    // idk why but normal route returns seemingly arbitrary result for center
+    if (target is Point && engine is Circle && engine.centerPoint.distanceFrom(target) < EPSILON)
+        return Point.CONFORMAL_INFINITY
     val engineGC = GeneralizedCircle.fromGCircle(engine)
     val targetGC = GeneralizedCircle.fromGCircle(target)
     val result = engineGC.applyTo(targetGC)

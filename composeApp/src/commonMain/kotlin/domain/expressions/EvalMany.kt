@@ -37,7 +37,7 @@ fun computeCircleInterpolation(
     for (i in 1 until n) {
         newCircles.add(
 //            start.bisector(end, nOfSections = n, index = i, inBetween = params.inBetween)
-            start.naturalBisector(
+            start.bisector(
                 if (params.complementary) -end else end,
                 nOfSections = n, index = i
             ).toGCircleAs(startCircle)

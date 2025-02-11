@@ -22,7 +22,6 @@ import domain.degrees
 import domain.filterIndices
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.sqrt

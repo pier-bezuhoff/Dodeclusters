@@ -14,8 +14,8 @@ sealed interface Mode {
         this == SelectionMode.Drag || this == SelectionMode.Multiselect
 }
 
-@Serializable
 @Immutable
+@Serializable
 enum class SelectionMode(
     @Transient
     override val tool: EditClusterTool
@@ -28,19 +28,16 @@ enum class SelectionMode(
     Region(EditClusterTool.Region),
 }
 
-// MAYBE: associate function(constants, variables) -> circles
-//  with each tool and update the result when any variable changes
-//  + potentially save these functional dependencies to ddc
-@Serializable
 @Immutable
+@Serializable
 enum class ToolMode(
     @Transient
     override val tool: EditClusterTool.MultiArg
 ) : Mode {
     CIRCLE_INVERSION(EditClusterTool.CircleInversion),
     CIRCLE_INTERPOLATION(EditClusterTool.CircleInterpolation),
-    CIRCLE_EXTRAPOLATION(EditClusterTool.CircleExtrapolation),
     BI_INVERSION(EditClusterTool.BiInversion),
+    CIRCLE_EXTRAPOLATION(EditClusterTool.CircleExtrapolation),
     LOXODROMIC_MOTION(EditClusterTool.LoxodromicMotion),
 
     CIRCLE_BY_CENTER_AND_RADIUS(EditClusterTool.ConstructCircleByCenterAndRadius),

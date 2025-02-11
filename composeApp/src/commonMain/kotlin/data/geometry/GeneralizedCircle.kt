@@ -235,10 +235,11 @@ data class GeneralizedCircle(
 
     /**
      * Assumes normalization.
+     * Same as [bisector] but is not continuous in f(`this`, [other]).
      * If [index]=m & [nOfSections]=n, select m-th n-sector among (n-1) possible,
      * counting from `this` circle's side. [index]=0 being `this` circle.
      * @return normalized n-sector */
-    fun bisector(
+    fun naiveBisector(
         other: GeneralizedCircle,
         nOfSections: Int = 2,
         index: Int = 1,
@@ -281,7 +282,7 @@ data class GeneralizedCircle(
      * For complementary n-sector input -[other] instead of +[other]
      * @return normalized n-sector
      */
-    fun naturalBisector(
+    fun bisector(
         other: GeneralizedCircle,
         nOfSections: Int = 2,
         index: Int = 1,
@@ -304,7 +305,7 @@ data class GeneralizedCircle(
         // exp(-k/2 * (a^b).normalized) >>> (a±b)
         val bivector = Rotor.fromOuterProduct(this, other).normalized()
         val rotor = (bivector * (-k / 2.0)).exp()
-        val target = this + other
+        val target = this + other // this trick allows to find imaginary bisector
         return rotor.applyTo(
             target//.normalizedPreservingDirection()
         )
@@ -323,8 +324,6 @@ data class GeneralizedCircle(
     ): GeneralizedCircle {
         val inversiveAngle = engine1.inversiveAngle(engine2)
         val bivector = Rotor.fromOuterProduct(engine1, engine2).normalized() * (-speed * inversiveAngle)
-//        val inversiveDistance = engine1.inversiveDistance(engine1)
-//        val rotor = (Rotor.fromOuterProduct(engine1, engine2).normalized() * (-speed)).exp() * inversiveDistance
         val rotor = bivector.exp()
         return rotor.applyTo(this)
     }
@@ -338,13 +337,12 @@ data class GeneralizedCircle(
         start: GeneralizedCircle, end: GeneralizedCircle,
         angle: Double, logDilation: Double
     ): GeneralizedCircle {
-        val a = this//.normalizedPreservingDirection()
         val pencil = Rotor.fromOuterProduct(start, end).normalized()
         val perpPencil = pencil.dual()
         val rotation = (perpPencil * (-angle/2.0)).exp()
         val dilation = (pencil * (logDilation/2.0)).exp()
         // rotation and dilation commute by construction
-        return dilation.applyTo(rotation.applyTo(a))
+        return dilation.applyTo(rotation.applyTo(this))
     }
 
     /**
@@ -411,7 +409,7 @@ data class GeneralizedCircle(
     fun toGCircle(): GCircle =
         if (abs(w) < EPSILON) {
 //            if (abs(z) > EPSILON && abs(x/z) < EPSILON && abs(y/z) < EPSILON) { // more accurate, less efficient
-            if (abs(x) < EPSILON && abs(y) < EPSILON)
+            if (abs(x) < EPSILON && abs(y) < EPSILON) // implies z > EPSILON
                 Point.CONFORMAL_INFINITY
             else
                 Line(x, y, -z)
@@ -458,20 +456,23 @@ data class GeneralizedCircle(
             val y0 = y/w
             val d2 = x0.pow(2) + y0.pow(2)
             val r2 = d2 - 2*z/w
-            when {
-                sameGCircleTypeAs is Point -> // we combat random radius fluctuations this way
-                    if (d2 > 1e12)
+            when (sameGCircleTypeAs) {
+                is Point -> // we combat random radius fluctuations this way
+                    // ideally abs(r2) < EPSILON2
+                    if (d2 > 1e12) // coordinates in millions is NG
                         Point.CONFORMAL_INFINITY
                     else
                         Point(x0, y0)
-                r2 >= EPSILON2 && sameGCircleTypeAs is CircleOrLine -> {
+                is CircleOrLine ->
+                    if (r2 >= EPSILON2) {
                         val r = sqrt(r2)
                         val isCCW = w >= 0
                         Circle(x0, y0, r, isCCW)
-                    }
-                r2 <= -EPSILON2 && sameGCircleTypeAs is ImaginaryCircle ->
-                    ImaginaryCircle(x0, y0, sqrt(abs(r2)))
-                else -> null
+                    } else null
+                is ImaginaryCircle ->
+                    if (r2 <= -EPSILON2)
+                        ImaginaryCircle(x0, y0, sqrt(abs(r2)))
+                    else null
             }
         }
 
