@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package ui.edit_cluster
+package ui.edit_cluster.dialogs
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,10 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -43,10 +39,11 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.blend_settings_title
 import dodeclusters.composeapp.generated.resources.blend_settings_transparency_prompt
 import domain.BlendModeType
-import domain.round
+import domain.formatDecimals
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
+import ui.LabelColonBigValue
 import ui.component1
 import ui.component2
 import ui.hideSystemBars
@@ -87,7 +84,10 @@ fun BlendSettingsDialog(
                 horizontalAlignment = Alignment.Start
             ) {
                 DialogTitle(Res.string.blend_settings_title, smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
-                SliderText(sliderState)
+                LabelColonBigValue(
+                    value = sliderState.value.formatDecimals(3, showTrailingZeroes = false),
+                    labelResource = Res.string.blend_settings_transparency_prompt
+                )
                 Slider(sliderState, Modifier.padding(16.dp))
                 Column(Modifier.selectableGroup()) {
                     BlendModeType.entries.forEach { blendModeTypeVariant ->
@@ -122,26 +122,4 @@ fun BlendSettingsDialog(
             }
         }
     }
-}
-
-@Composable
-private fun SliderText(sliderState: SliderState, modifier: Modifier = Modifier) {
-    Text(
-        buildAnnotatedString {
-            append(stringResource(Res.string.blend_settings_transparency_prompt))
-            append(":  ")
-            withStyle(
-                SpanStyle(
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )
-            ) {
-                append("${sliderState.value.round(3)}")
-            }
-        }
-        ,
-        modifier.padding(16.dp),
-        style = MaterialTheme.typography.bodyLarge
-    )
 }

@@ -1,4 +1,4 @@
-package ui.edit_cluster
+package ui.edit_cluster.dialogs
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,10 +33,10 @@ import dodeclusters.composeapp.generated.resources.bi_inversion_speed_prompt
 import dodeclusters.composeapp.generated.resources.bi_inversion_steps_prompt
 import dodeclusters.composeapp.generated.resources.bi_inversion_title
 import dodeclusters.composeapp.generated.resources.degrees_suffix
-import dodeclusters.composeapp.generated.resources.stub
 import domain.degrees
 import domain.expressions.BiInversionParameters
 import domain.radians
+import ui.CancelOkRow
 import ui.DialogTitle
 import ui.FloatTextField
 import ui.IntTextField
@@ -161,7 +161,7 @@ fun BiInversionDialog(
                     valueRange = defaults.stepsRange,
                     steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
                 )
-                ui.CancelOkRow(
+                CancelOkRow(
                     onDismissRequest = onDismissRequest,
                     onConfirm = { onConfirm(BiInversionParameters(speed, nSteps, reverseSecondEngine)) },
                     fontSize = fontSize

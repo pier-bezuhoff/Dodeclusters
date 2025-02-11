@@ -37,6 +37,7 @@ import org.jetbrains.compose.resources.stringResource
 import ui.OnOffButton
 import ui.SimpleButton
 import ui.SimpleToolButton
+import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
 import kotlin.math.roundToInt

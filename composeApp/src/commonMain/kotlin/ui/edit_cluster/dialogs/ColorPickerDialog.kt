@@ -1,4 +1,4 @@
-package ui.edit_cluster
+package ui.edit_cluster.dialogs
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,15 +53,14 @@ import com.github.ajalt.colormath.model.RGB
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.color_picker_title
 import dodeclusters.composeapp.generated.resources.hex_name
-import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
+import ui.DialogTitle
 import ui.OkButton
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.hideSystemBars
 import ui.isLandscape
-import kotlin.time.Duration.Companion.milliseconds
 
 // TODO: preview previous vs current color
 // TODO: add predefined colors (e.g. a-la in inkscape or such)
@@ -116,7 +114,7 @@ private fun ColorPickerHorizontalCompact(
                 hex.value = computeHex(color)
             }
             Box(Modifier.fillMaxHeight()) {
-                ColorPickerTitle(Modifier.align(Alignment.TopCenter))
+                DialogTitle(Res.string.color_picker_title, modifier = Modifier.align(Alignment.TopCenter))
                 HexInput(color, hex, Modifier.align(Alignment.CenterStart)) {
                     onConfirm(color.value.toColor())
                 }
@@ -155,9 +153,7 @@ private fun ColorPickerHorizontal(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Start,
         ) {
-            ColorPickerTitle(Modifier
-                .align(Alignment.CenterHorizontally)
-            )
+            DialogTitle(Res.string.color_picker_title, modifier = Modifier.align(Alignment.CenterHorizontally))
             ColorPickerDisplay(color, Modifier.fillMaxHeight(0.7f)) {
                 hex.value = computeHex(color)
             }
@@ -196,7 +192,7 @@ private fun ColorPickerVertical(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ColorPickerTitle()
+            DialogTitle(Res.string.color_picker_title)
             ColorPickerDisplay(color, Modifier
                 .align(Alignment.Start)
                 .fillMaxHeight(0.7f)
@@ -225,15 +221,6 @@ private fun computeHex(clr: State<HsvColor>): TextFieldValue {
     val c = clr.value.toColor()
     val s = RGB(c.red, c.green, c.blue).toHex(withNumberSign = false, renderAlpha = RenderCondition.NEVER)
     return TextFieldValue(s, TextRange(s.length))
-}
-
-@Composable
-private fun ColorPickerTitle(modifier: Modifier = Modifier) {
-    Text(
-        text = stringResource(Res.string.color_picker_title),
-        modifier = modifier.padding(16.dp),
-        style = MaterialTheme.typography.titleLarge,
-    )
 }
 
 @Composable

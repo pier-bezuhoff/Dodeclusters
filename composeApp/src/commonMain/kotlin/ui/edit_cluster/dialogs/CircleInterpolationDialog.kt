@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package ui.edit_cluster
+package ui.edit_cluster.dialogs
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.Point
@@ -47,6 +46,9 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.circle_interpolation_title
 import domain.expressions.InterpolationParameters
 import org.jetbrains.compose.resources.stringResource
+import ui.CancelOkRow
+import ui.DialogTitle
+import ui.LabelColonBigValue
 import ui.component1
 import ui.component2
 import ui.hideSystemBars
@@ -124,8 +126,14 @@ fun CircleInterpolationDialog(
                 Column(
                     horizontalAlignment = Alignment.Start
                 ) {
-                    Title(smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
-                    SliderText(sliderState)
+                    DialogTitle(Res.string.circle_interpolation_title,
+                        smallerFont = false,
+                        Modifier.align(Alignment.CenterHorizontally)
+                    )
+                    LabelColonBigValue(
+                        value = sliderState.value.roundToInt().toString(),
+                        labelResource = Res.string.circle_interpolation_prompt
+                    )
                     Slider(sliderState, Modifier.padding(16.dp))
                     if (!hideInBetweenToggle) {
                         InsideOutsideToggle(
@@ -135,7 +143,7 @@ fun CircleInterpolationDialog(
                             }
                         )
                     }
-                    ui.CancelOkRow(
+                    CancelOkRow(
                         onDismissRequest = onDismissRequest,
                         onConfirm = onConfirm0,
                         fontSize = okFontSize
@@ -159,55 +167,30 @@ private fun CircleInterpolationHorizontalCompact(
     Column(
         horizontalAlignment = Alignment.Start
     ) {
-        Title(smallerFont = true, Modifier.align(Alignment.CenterHorizontally))
-            Row(Modifier.fillMaxWidth()) {
-                Column(Modifier.fillMaxWidth(0.5f)) {
-                    SliderText(sliderState)
-                    Slider(sliderState, Modifier.padding(
-                        top = 16.dp,
-                        start = 16.dp,
-                        end = 16.dp
-                    ))
-                }
-                if (!hideInBetweenToggle) {
-                    Column {
-                        InsideOutsideToggle(interpolateInBetween, setInterpolateInBetween)
-                    }
-                }
+        DialogTitle(Res.string.circle_interpolation_title,
+            smallerFont = true,
+            Modifier.align(Alignment.CenterHorizontally)
+        )
+        Row(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth(0.5f)) {
+                LabelColonBigValue(
+                    value = sliderState.value.roundToInt().toString(),
+                    labelResource = Res.string.circle_interpolation_prompt
+                )
+                Slider(sliderState, Modifier.padding(
+                    top = 16.dp,
+                    start = 16.dp,
+                    end = 16.dp
+                ))
             }
-        ui.CancelOkRow(onDismissRequest, onConfirm, fontSize = 18.sp)
-    }
-}
-
-@Composable
-private fun Title(smallerFont: Boolean, modifier: Modifier = Modifier) {
-    Text(
-        text = stringResource(Res.string.circle_interpolation_title),
-        modifier = modifier.padding(16.dp),
-        style =
-            if (smallerFont) MaterialTheme.typography.titleMedium
-            else MaterialTheme.typography.titleLarge,
-    )
-}
-
-@Composable
-private fun SliderText(sliderState: SliderState, modifier: Modifier = Modifier) {
-    Text(
-        buildAnnotatedString {
-            append(stringResource(Res.string.circle_interpolation_prompt))
-            append(":  ")
-            withStyle(SpanStyle(
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )) {
-                append("${sliderState.value.roundToInt()}")
+            if (!hideInBetweenToggle) {
+                Column {
+                    InsideOutsideToggle(interpolateInBetween, setInterpolateInBetween)
+                }
             }
         }
-        ,
-        Modifier.padding(16.dp),
-        style = MaterialTheme.typography.bodyLarge
-    )
+        CancelOkRow(onDismissRequest, onConfirm, fontSize = 18.sp)
+    }
 }
 
 @Composable

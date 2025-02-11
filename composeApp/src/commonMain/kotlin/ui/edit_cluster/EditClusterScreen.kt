@@ -97,6 +97,13 @@ import ui.SimpleButton
 import ui.ThreeIconButton
 import ui.TwoIconButton
 import ui.WithTooltip
+import ui.edit_cluster.dialogs.BiInversionDialog
+import ui.edit_cluster.dialogs.BlendSettingsDialog
+import ui.edit_cluster.dialogs.CircleExtrapolationDialog
+import ui.edit_cluster.dialogs.CircleInterpolationDialog
+import ui.edit_cluster.dialogs.ColorPickerDialog
+import ui.edit_cluster.dialogs.LoxodromicMotionDialog
+import ui.edit_cluster.dialogs.SaveOptionsDialog
 import ui.isCompact
 import ui.isLandscape
 import ui.theme.DodeclustersColors

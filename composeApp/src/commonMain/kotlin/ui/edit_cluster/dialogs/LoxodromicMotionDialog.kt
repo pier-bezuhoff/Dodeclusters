@@ -1,15 +1,10 @@
-package ui.edit_cluster
+package ui.edit_cluster.dialogs
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -26,17 +21,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -56,11 +44,13 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_n_steps_pla
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_steps_prompt
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
 import domain.expressions.LoxodromicMotionParameters
-import domain.formatDecimals
 import org.jetbrains.compose.resources.stringResource
-import ui.CancelButton
+import ui.CancelOkRow
 import ui.DialogTitle
-import ui.OkButton
+import ui.DoubleTextField
+import ui.FloatTextField
+import ui.IntTextField
+import ui.PreTextFieldLabel
 import ui.hideSystemBars
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -126,92 +116,60 @@ fun LoxodromicMotionDialog(
             ) {
                 DialogTitle(Res.string.loxodromic_motion_title, smallerFont = compactWidth)
                 Row {
-                    AngleSliderPrefix(smallerFont = compactWidth)
-                    AngleTextField(angle, { angle = it })
+                    PreTextFieldLabel(Res.string.loxodromic_motion_angle_prompt, smallerFont = compactWidth)
+                    FloatTextField(
+                        value = angle,
+                        onNewValue = { angle = it },
+                        placeholderStringResource = Res.string.angle_in_degrees_placeholder,
+                        suffixStringResource = Res.string.degrees_suffix,
+                        nFractionalDigits = 1,
+                    )
                 }
                 Slider(angle, { angle = it },
                     valueRange = defaults.angleRange
                 )
                 RotationDirectionToggle(angleDirection, { angleDirection = it }, smallerFont = compactWidth)
                 Row {
-                    DilationPrefix(smallerFont = compactWidth)
-                    DilationTextField(dilation, { dilation = it })
+                    PreTextFieldLabel(Res.string.loxodromic_motion_hyperbolic_prompt, smallerFont = compactWidth)
+                    DoubleTextField(
+                        value = dilation,
+                        onNewValue = { dilation = it },
+                        placeholderStringResource = Res.string.loxodromic_motion_dilation_placeholder,
+                        nFractionalDigits = 3,
+                    )
                 }
                 Slider(dilation.toFloat(), { dilation = it.toDouble() },
                     valueRange = defaults.dilationRange
                 )
                 Row {
-                    StepsPrefix(smallerFont = compactWidth)
-                    StepsTextField(nSteps, { nSteps = it })
+                    PreTextFieldLabel(Res.string.loxodromic_motion_steps_prompt, smallerFont = compactWidth)
+                    IntTextField(
+                        value = nSteps,
+                        onNewValue = { nSteps = it },
+                        placeholderStringResource = Res.string.loxodromic_motion_n_steps_placeholder,
+                    )
                 }
                 Slider(nSteps.toFloat(), { nSteps = it.roundToInt() },
                     valueRange = defaults.stepsRange,
                     steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
                 )
-                CancelOkRow(angle, angleDirection, dilation, nSteps, onDismissRequest, onConfirm, fontSize)
+                CancelOkRow(
+                    onDismissRequest = onDismissRequest,
+                    onConfirm = {
+                        onConfirm(
+                            LoxodromicMotionParameters(
+                                if (angleDirection) angle
+                                else -angle,
+                                dilation,
+                                nSteps
+                            )
+                        )
+                    },
+                    fontSize = fontSize
+                )
             }
         }
     }
-}
-
-@Composable
-private fun AngleSliderPrefix(
-    smallerFont: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        buildAnnotatedString {
-            append(stringResource(Res.string.loxodromic_motion_angle_prompt))
-            append(":  ")
-        },
-        modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-        style =
-            if (smallerFont) MaterialTheme.typography.bodyMedium
-            else MaterialTheme.typography.bodyLarge
-    )
-}
-
-@Composable
-private fun AngleTextField(
-    angle: Float,
-    setAngle: (newAngle: Float) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val s = angle.formatDecimals(1)
-    var angleTFValue by remember(angle) {
-        mutableStateOf(TextFieldValue(s, TextRange(s.length)))
-    }
-    fun updateSlider() {
-        val newAngle = angleTFValue.text.toFloatOrNull()
-        if (newAngle != null && newAngle != angle) {
-            setAngle(newAngle)
-        }
-    }
-    OutlinedTextField(
-        angleTFValue,
-        onValueChange = { newValue ->
-            angleTFValue = newValue
-            updateSlider()
-        },
-        modifier = modifier
-            .onKeyEvent {
-                if (it.key == Key.Enter) {
-                    updateSlider()
-                    true
-                } else false
-            }
-        ,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        placeholder = { Text(stringResource(Res.string.angle_in_degrees_placeholder)) },
-        suffix = { Text(stringResource(Res.string.degrees_suffix)) },
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(
-            onDone = { updateSlider() }
-        ),
-        singleLine = true,
-    )
 }
 
 @Composable
@@ -255,152 +213,5 @@ private fun RotationDirectionToggle(
                 if (smallerFont) MaterialTheme.typography.labelMedium
                 else MaterialTheme.typography.labelLarge
         )
-    }
-}
-
-@Composable
-private fun DilationPrefix(
-    smallerFont: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        buildAnnotatedString {
-            append(stringResource(Res.string.loxodromic_motion_hyperbolic_prompt))
-            append(":  ")
-        },
-        modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-        style =
-            if (smallerFont) MaterialTheme.typography.bodyMedium
-            else MaterialTheme.typography.bodyLarge
-    )
-}
-
-@Composable
-private fun DilationTextField(
-    dilation: Double,
-    setDilation: (newDilation: Double) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val s = dilation.formatDecimals(3)
-    var dilationTFValue by remember(dilation) {
-        mutableStateOf(TextFieldValue(s, TextRange(s.length)))
-    }
-    fun updateSlider() {
-        val newDilation = dilationTFValue.text.toDoubleOrNull()
-        if (newDilation != null && newDilation != dilation) {
-            setDilation(newDilation)
-        }
-    }
-    OutlinedTextField(
-        dilationTFValue,
-        onValueChange = { newValue ->
-            dilationTFValue = newValue
-            updateSlider()
-        },
-        modifier = modifier
-            .onKeyEvent {
-                if (it.key == Key.Enter) {
-                    updateSlider()
-                    true
-                } else false
-            }
-        ,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        placeholder = { Text(stringResource(Res.string.loxodromic_motion_dilation_placeholder)) },
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(
-            onDone = { updateSlider() }
-        ),
-        singleLine = true,
-    )
-}
-
-@Composable
-private fun StepsPrefix(
-    smallerFont: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        buildAnnotatedString {
-            append(stringResource(Res.string.loxodromic_motion_steps_prompt))
-            append(":  ")
-        },
-        modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-        style =
-            if (smallerFont) MaterialTheme.typography.bodySmall
-            else MaterialTheme.typography.bodyLarge
-    )
-}
-
-@Composable
-private fun StepsTextField(
-    nSteps: Int,
-    setNSteps: (newNSteps: Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val s = nSteps.toString()
-    var stepsTFValue by remember(nSteps) {
-        mutableStateOf(TextFieldValue(s, TextRange(s.length)))
-    }
-    fun updateSlider() {
-        val newNSteps = stepsTFValue.text.toIntOrNull()
-        if (newNSteps != null && newNSteps != nSteps && newNSteps >= 0) {
-            setNSteps(newNSteps)
-        }
-    }
-    OutlinedTextField(
-        stepsTFValue,
-        onValueChange = { newValue ->
-            stepsTFValue = newValue
-            updateSlider()
-        },
-        modifier = modifier
-            .onKeyEvent {
-                if (it.key == Key.Enter) {
-                    updateSlider()
-                    true
-                } else false
-            }
-        ,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        placeholder = { Text(stringResource(Res.string.loxodromic_motion_n_steps_placeholder)) },
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(
-            onDone = { updateSlider() }
-        ),
-        singleLine = true,
-    )
-}
-
-@Composable
-private fun CancelOkRow(
-    angle: Float,
-    angleDirection: Boolean,
-    dilation: Double,
-    nSteps: Int,
-    onDismissRequest: () -> Unit,
-    onConfirm: (LoxodromicMotionParameters) -> Unit,
-    fontSize: TextUnit = 24.sp,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier.fillMaxWidth().padding(vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
-        CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
-        OkButton(fontSize = fontSize, onConfirm = {
-            onConfirm(
-                LoxodromicMotionParameters(
-                    if (angleDirection) angle
-                    else -angle,
-                    dilation,
-                    nSteps
-                )
-            )
-        })
     }
 }

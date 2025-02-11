@@ -1,15 +1,13 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package ui.edit_cluster
+package ui.edit_cluster.dialogs
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -29,7 +27,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -43,8 +40,7 @@ import dodeclusters.composeapp.generated.resources.circle_extrapolation_right_pr
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_title
 import domain.expressions.ExtrapolationParameters
 import org.jetbrains.compose.resources.stringResource
-import ui.CancelButton
-import ui.OkButton
+import ui.CancelOkRow
 import ui.hideSystemBars
 import ui.isLandscape
 import kotlin.math.roundToInt
@@ -64,6 +60,7 @@ data class DefaultExtrapolationParameters(
     )
 }
 
+// deprecated, superseded by bi-inversion
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun CircleExtrapolationDialog(
@@ -133,12 +130,22 @@ private fun CircleExtrapolationHorizontalCompact(
                 LeftSliderText(leftSliderState)
                 Slider(leftSliderState)
             }
-            Column() {
+            Column {
                 RightSliderText(rightSliderState)
                 Slider(rightSliderState)
             }
         }
-        CancelOkRow(leftSliderState, rightSliderState, onDismissRequest, onConfirm)
+        ui.CancelOkRow(
+            onDismissRequest = onDismissRequest,
+            onConfirm = {
+                onConfirm(
+                    ExtrapolationParameters(
+                        leftSliderState.value.roundToInt(),
+                        rightSliderState.value.roundToInt()
+                    )
+                )
+            }
+        )
     }
 }
 
@@ -160,7 +167,17 @@ private fun CircleExtrapolationHorizontal(
         Slider(leftSliderState)
         RightSliderText(rightSliderState)
         Slider(rightSliderState)
-        CancelOkRow(leftSliderState, rightSliderState, onDismissRequest, onConfirm)
+        ui.CancelOkRow(
+            onDismissRequest = onDismissRequest,
+            onConfirm = {
+                onConfirm(
+                    ExtrapolationParameters(
+                        leftSliderState.value.roundToInt(),
+                        rightSliderState.value.roundToInt()
+                    )
+                )
+            }
+        )
     }
 }
 
@@ -187,7 +204,18 @@ private fun CircleExtrapolationVertical(
         Slider(leftSliderState)
         RightSliderText(rightSliderState)
         Slider(rightSliderState)
-        CancelOkRow(leftSliderState, rightSliderState, onDismissRequest, onConfirm, fontSize)
+        CancelOkRow(
+            onDismissRequest = onDismissRequest,
+            onConfirm = {
+                onConfirm(
+                    ExtrapolationParameters(
+                        leftSliderState.value.roundToInt(),
+                        rightSliderState.value.roundToInt()
+                    )
+                )
+            },
+            fontSize = fontSize
+        )
     }
 }
 
@@ -266,29 +294,4 @@ private fun RightSliderText(
         modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
         style = MaterialTheme.typography.bodyLarge
     )
-}
-
-@Composable
-private fun CancelOkRow(
-    leftSliderState: SliderState,
-    rightSliderState: SliderState,
-    onDismissRequest: () -> Unit,
-    onConfirm: (ExtrapolationParameters) -> Unit,
-    fontSize: TextUnit = 24.sp,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier.fillMaxWidth().padding(vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
-        CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
-        OkButton(fontSize = fontSize, onConfirm = {
-            onConfirm(
-                ExtrapolationParameters(
-                    leftSliderState.value.roundToInt(),
-                    rightSliderState.value.roundToInt()
-                )
-            )
-        })
-    }
 }

@@ -42,9 +42,12 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -52,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.cancel_name
+import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.ok_description
 import dodeclusters.composeapp.generated.resources.ok_name
@@ -60,6 +64,7 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.tools.Tool
+import kotlin.math.roundToInt
 
 @Composable
 fun SimpleButton(
@@ -336,6 +341,32 @@ fun PreTextFieldLabel(
 }
 
 @Composable
+fun LabelColonBigValue(
+    value: String,
+    labelResource: StringResource,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        buildAnnotatedString {
+            append(stringResource(labelResource))
+            append(":  ")
+            withStyle(
+                SpanStyle(
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold
+            )
+            ) {
+                append(value)
+            }
+        }
+        ,
+        modifier.padding(16.dp),
+        style = MaterialTheme.typography.bodyLarge
+    )
+}
+
+@Composable
 fun FloatTextField(
     value: Float,
     onNewValue: (newValue: Float) -> Unit,
@@ -362,6 +393,37 @@ fun FloatTextField(
         placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
         suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
         isError = textFieldValue.text.toFloatOrNull()?.let { false } ?: true,
+        singleLine = true,
+    )
+}
+
+@Composable
+fun DoubleTextField(
+    value: Double,
+    onNewValue: (newValue: Double) -> Unit,
+    placeholderStringResource: StringResource? = null,
+    suffixStringResource: StringResource? = null,
+    nFractionalDigits: Int = 2,
+    modifier: Modifier = Modifier
+) {
+    val s = value.formatDecimals(nFractionalDigits, showTrailingZeroes = false)
+    var textFieldValue by remember(value) {
+        mutableStateOf(TextFieldValue(s, TextRange(s.length)))
+    }
+    OutlinedTextField(
+        textFieldValue,
+        onValueChange = { newTextFieldValue ->
+            textFieldValue = newTextFieldValue
+            val updatedValue = textFieldValue.text.toDoubleOrNull()
+            if (updatedValue != null && updatedValue != value) {
+                onNewValue(updatedValue)
+            }
+        },
+        modifier = modifier,
+        textStyle = MaterialTheme.typography.bodyLarge,
+        placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
+        suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
+        isError = textFieldValue.text.toDoubleOrNull()?.let { false } ?: true,
         singleLine = true,
     )
 }

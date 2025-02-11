@@ -1,4 +1,4 @@
-package ui.edit_cluster
+package ui.edit_cluster.dialogs
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -22,6 +22,7 @@ import domain.io.SaveData
 import domain.io.SaveFileButton
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import ui.edit_cluster.EditClusterViewModel
 import ui.hideSystemBars
 import ui.tools.EditClusterTool
 

@@ -97,6 +97,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import ui.edit_cluster.dialogs.DefaultBiInversionParameters
+import ui.edit_cluster.dialogs.DefaultExtrapolationParameters
+import ui.edit_cluster.dialogs.DefaultInterpolationParameters
+import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
