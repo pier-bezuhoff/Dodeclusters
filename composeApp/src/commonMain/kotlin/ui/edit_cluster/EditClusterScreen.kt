@@ -87,7 +87,6 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
-import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -169,7 +168,7 @@ fun EditClusterScreen(
         },
         floatingActionButtonPosition = FabPosition.End
     ) {
-        Surface() {
+        Surface {
             Box(Modifier
                 .drawBehind {
                     viewModel.backgroundColor?.let { backgroundColor ->
@@ -198,9 +197,7 @@ fun EditClusterScreen(
                         showSaveOptionsDialog = { viewModel.toolAction(EditClusterTool.SaveCluster) },
                         loadFromYaml = { content ->
                             content?.let {
-                                viewModel.loadFromYaml(
-                                    content
-                                )
+                                viewModel.loadFromYaml(content)
                             }
                         },
                         undo = viewModel::undo,
@@ -223,7 +220,6 @@ fun EditClusterScreen(
             }
         }
     }
-    preloadIcons()
     when (viewModel.openedDialog) {
         DialogType.REGION_COLOR_PICKER -> {
             ColorPickerDialog(
@@ -343,7 +339,7 @@ fun EditClusterScreen(
         }
         null -> {}
     }
-    LaunchedEffect(ddcContent, sampleName, viewModel) {
+    LaunchedEffect(viewModel, ddcContent, sampleName, ddcRepository) {
         if (ddcContent != null) {
             println("loading external ddc...")
             viewModel.loadFromYaml(ddcContent)
@@ -372,19 +368,22 @@ fun EditClusterScreen(
             }
         }
     }
-    println(stringResource(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE.stringResource))
-    LaunchedEffect(viewModel) {
+    // NOTE: using getString(resource) here hangs windows/chrome for some reason
+    //  ticket: https://youtrack.jetbrains.com/issue/CMP-6930/Using-getString-method-causing-JsException
+    val snackbarMessageStrings = SnackbarMessage.entries.associateWith {
+        stringResource(it.stringResource) // maybe this works, test windows/chrome
+    }
+    LaunchedEffect(viewModel, snackbarHostState, snackbarMessageStrings) {
         viewModel.snackbarMessages.collectLatest { (message, postfix) ->
-//            println("snackbar: $message$postfix")
-            // NOTE: using getString(resource) here hangs windows/chrome for some reason
-            //  ticket: https://youtrack.jetbrains.com/issue/CMP-6930/Using-getString-method-causing-JsException
             // TODO: can't seem to properly pre-load string resources on Web
             // with this setup string interpolation with args is not possible
-//            val s = snackbarMessage2string[message]!! + postfix
-            snackbarHostState.showSnackbar(message.string + postfix, duration = message.duration)
+            val s = snackbarMessageStrings[message] + postfix
+            println("snackbar: $message -> ${message.string}$postfix -> $s$postfix")
+            snackbarHostState.showSnackbar(s, duration = message.duration)
 //            // MAYBE: move on-selection action prompt here instead
         }
     }
+    preloadIcons()
 }
 
 /** Loads all tool icons and caches them.
@@ -415,13 +414,6 @@ fun preloadIcons() {
         Res.drawable.three_dots_in_angle_brackets, EditClusterTool.DetailedAdjustment.icon, EditClusterTool.InBetween.icon,
     )) {
         painterResource(resource)
-    }
-}
-
-@Composable
-fun preloadSnackbarMessages(): Map<SnackbarMessage, String> {
-    return SnackbarMessage.entries.associateWith {
-        stringResource(it.stringResource).also { s -> it to s }
     }
 }
 

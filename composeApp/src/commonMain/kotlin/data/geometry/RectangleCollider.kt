@@ -61,6 +61,13 @@ fun testObjectRectangleCollision(obj: GCircle, rect: Rect): Boolean =
         is ImaginaryCircle -> false
     }
 
+fun calculateRectangleCircleIntersectionContour(rect: Rect, circle: Circle): List<Offset> {
+    // segment between 1st 2 points is line segment of the rect, then circle, then rect,
+    // ..., and lastly circle; going CCW along the rect
+    // for tangential contact, 2 points of segment should coincide
+    TODO()
+}
+
 @Suppress("NOTHING_TO_INLINE")
 inline fun testHorizontalSegmentCircleIntersections(
     y: Float,
