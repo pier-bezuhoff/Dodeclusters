@@ -17,9 +17,7 @@ import kotlinx.serialization.json.Json
 import ui.region2path
 import kotlin.math.hypot
 
-private const val INDENT = "  " // nah i aint indenting dat
 // MAYBE: implement https://stackoverflow.com/a/4756461/7143065
-// MAYBE: prepend with user-specified [file]name
 private fun svgOpen(width: Float, height: Float) =
     """<svg xmlns="http://www.w3.org/2000/svg" width="$width" height="$height" viewBox="0.0 0.0 $width $height">"""
 private fun title(name: String) =
@@ -35,9 +33,10 @@ private const val defs = """<defs>
 private const val svgClose = "</svg>"
 
 // BUG: may output strange things on giant files (e.g. cat-in-sky is giga-zoomed for some reason)
+//  as if with higher scaling factor
 // MAYBE: just pass already computed objects to make it more straightforward
 // NOTE: "For reliable results cross-browser, use numbers with no more
-//  than 2 digits after the decimal and four digits before it." -- im gonna ignore this
+//  than 2 digits after the decimal and four digits before it." -- im gonna ignore this >.<
 fun constellation2svg(
     constellation: Constellation,
     startX: Float, startY: Float,

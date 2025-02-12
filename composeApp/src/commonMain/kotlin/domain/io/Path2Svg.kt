@@ -73,7 +73,7 @@ private fun conicSegment2arc(points: FloatArray): String {
     val p2x = points[4]
     val p2y = points[5]
 //    val w = points[6]
-    // we assume circular arc, so weight satisfies t4 coefficient expansion:
+    // we assume circular arc, so the weight satisfies t4 coefficient expansion:
     // |p0 + p2 - 2*w*p1| = 2*(1-w)
     // and p1 must lie on both tangents in p0 and p2 to the circle
     val p0 = Point(p0x.toDouble(), p0y.toDouble())
@@ -85,7 +85,7 @@ private fun conicSegment2arc(points: FloatArray): String {
     // we average p0p1 and p2p1 just in case, they should be equal anyway
     val radius = (p0.distanceFrom(p1) + p2.distanceFrom(p1))/2.0 * abs(tan(p0p1p2/2.0))
 //    val sweepAngle = PI - p0p1p2 // unless angle p1 is negative
-    val xAxisAngle = 0 // first axis rotation for ellipses
+    val xAxisAngle: Int = 0 // first axis rotation for ellipses
     val largeArcFlag: Int = 0 // 0 => small, i.e. sweepAngle < 180 (always true for non-negative weight)
     val sweepOrientationFlag: Int = if (p0p1p2 >= 0) 0 else 1 // 0 => positive orientation aka CCW, 1 => CW
     return "A $radius $radius $xAxisAngle $largeArcFlag $sweepOrientationFlag $p2x $p2y"

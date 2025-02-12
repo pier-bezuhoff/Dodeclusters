@@ -3022,9 +3022,9 @@ class EditClusterViewModel : ViewModel() {
          * always create them. In contrast to replacing expression with static circle */
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
         // NOTE: factor > 200 breaks cat-in-sky,
-        //  tweak it with care
+        //  tweak it with care (due to incidence-order being scale-dependent)
         /** [Double] arithmetic is best in range that is closer to 0 */
-        const val UPSCALING_FACTOR = 200.0 //500.0
+        const val UPSCALING_FACTOR = 500.0 //200.0
         const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =

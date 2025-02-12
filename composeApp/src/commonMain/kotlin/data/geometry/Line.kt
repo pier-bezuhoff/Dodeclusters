@@ -162,6 +162,8 @@ data class Line(
         return Line(a, b, newC)
     }
 
+    // scaling doesn't scale incident points
+    // MAYBE: scale a&b too and for incidents use vector (a, b) instead of normal with length=1?
     override fun scaled(focusX: Double, focusY: Double, zoom: Double): Line {
         // dist1 -> zoom * dist 1
         val newC = zoom*(a*focusX + b*focusY + c) - a*focusX - b*focusY

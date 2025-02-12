@@ -10,6 +10,7 @@ import domain.expressions.ObjectConstruct
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// MAYBE: collapse contiguously indexed Expression.OneOf outputs
 @Immutable
 @Serializable
 data class DdcV4(
