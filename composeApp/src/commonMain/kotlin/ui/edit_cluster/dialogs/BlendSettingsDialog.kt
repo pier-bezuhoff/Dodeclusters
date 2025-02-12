@@ -30,14 +30,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.blend_settings_opacity_prompt
 import dodeclusters.composeapp.generated.resources.blend_settings_title
-import dodeclusters.composeapp.generated.resources.blend_settings_transparency_prompt
 import domain.BlendModeType
 import domain.formatDecimals
 import org.jetbrains.compose.resources.stringResource
@@ -51,13 +52,13 @@ import ui.hideSystemBars
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun BlendSettingsDialog(
-    currentTransparency: Float,
+    currentOpacity: Float,
     currentBlendModeType: BlendModeType,
     onDismissRequest: () -> Unit,
-    onConfirm: (newTransparency: Float, newBlendModeType: BlendModeType) -> Unit,
+    onConfirm: (newOpacity: Float, newBlendModeType: BlendModeType) -> Unit,
 ) {
     val sliderState = remember { SliderState(
-        value = currentTransparency,
+        value = currentOpacity,
         valueRange = 0f .. 1f,
     ) }
     var blendModeType by remember { mutableStateOf(currentBlendModeType) }
@@ -86,9 +87,10 @@ fun BlendSettingsDialog(
                 DialogTitle(Res.string.blend_settings_title, smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
                 LabelColonBigValue(
                     value = sliderState.value.formatDecimals(3, showTrailingZeroes = false),
-                    labelResource = Res.string.blend_settings_transparency_prompt
+                    labelResource = Res.string.blend_settings_opacity_prompt
                 )
                 Slider(sliderState, Modifier.padding(16.dp))
+                // MAYBE: add explanatory label "Blend mode:"
                 Column(Modifier.selectableGroup()) {
                     BlendModeType.entries.forEach { blendModeTypeVariant ->
                         Row(Modifier
@@ -108,8 +110,12 @@ fun BlendSettingsDialog(
                             )
                             Text(
                                 text = stringResource(blendModeTypeVariant.nameStringResource),
+                                modifier = Modifier.padding(start = 16.dp),
+                                color =
+                                    if (blendModeType == blendModeTypeVariant)
+                                        MaterialTheme.colorScheme.primary
+                                    else Color.Unspecified,
                                 style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
                             )
                         }
                     }

@@ -196,7 +196,7 @@
     <string name="open_file">Open file</string>
     <!-- blend settings dialog -->
     <string name="blend_settings_title">Blend settings</string>
-    <string name="blend_settings_transparency_prompt">Transparency of regions</string>
+    <string name="blend_settings_opacity_prompt">Opacity of filled regions</string>
     <!-- blend modes -->
     <string name="blend_mode_src_over">Normal</string>
     <string name="blend_mode_multiply">Multiply</string>

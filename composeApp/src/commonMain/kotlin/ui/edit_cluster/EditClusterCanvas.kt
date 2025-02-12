@@ -10,23 +10,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,7 +20,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
@@ -63,7 +48,6 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
@@ -90,18 +74,16 @@ import getPlatform
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.stringResource
-import ui.SimpleToolButton
 import ui.circle2path
 import ui.reactiveCanvas
 import ui.region2path
 import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
-import ui.tools.EditClusterTool
 import ui.visibleHalfPlanePath
 import kotlin.math.max
 import kotlin.math.min
 
+private val defaultMaxCircleRadius: Float = getPlatform().maxCircleRadius
 private val dottedPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
 
 // NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
@@ -196,12 +178,12 @@ fun BoxScope.EditClusterCanvas(
 //        measureTime {
             translate(viewModel.translation.x, viewModel.translation.y) {
                 val visibleRect = size.toRect().translate(-viewModel.translation)
-                drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsTransparency, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
+                drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
                 drawAnimation(animations = animations, visibleRect = visibleRect, strokeWidth = strokeWidth)
                 if (viewModel.showCircles) {
                     drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
+                    drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius)
                 }
-                drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, showCircles = viewModel.showCircles, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius)
                 drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getPointArg = { viewModel.getArg(it) }, getCircleOrPointArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke)
                 drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             }
@@ -238,6 +220,8 @@ fun BoxScope.EditClusterCanvas(
 //  with glitches specifically occurring from graphicsLayer.record or graphicsLayer.toImageBitmap
 //  potentially bc of giant circles, it's as if their border becomes large & transparent and covers
 //  half a canvas
+// ALSO: cat-in-sky is not displayed correctly no longer (??)
+private const val maxCircleRadius4screenshots: Float = 1e4f // default is 1e5, 7k for android
 @Composable
 fun ScreenshotableCanvas(
     viewModel: EditClusterViewModel,
@@ -290,11 +274,11 @@ fun ScreenshotableCanvas(
             ) {
                 translate(viewModel.translation.x, viewModel.translation.y) {
                     val visibleRect = size.toRect().translate(-viewModel.translation)
-                    drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsTransparency, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
+                    drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
                     if (viewModel.showCircles) {
-                        drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
+                        drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke, maxCircleRadius = maxCircleRadius4screenshots)
+                        drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius, maxCircleRadius = maxCircleRadius4screenshots)
                     }
-                    drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, showCircles = viewModel.showCircles, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius)
                 }
             }
         }
@@ -369,13 +353,13 @@ private fun DrawScope.drawCircleOrLine(
     alpha: Float = 1f,
     style: DrawStyle = Fill,
     blendMode: BlendMode = DrawScope.DefaultBlendMode,
-    drawHalfPlanesForLines: Boolean = false
+    drawHalfPlanesForLines: Boolean = false,
+    maxCircleRadius: Float = defaultMaxCircleRadius,
 ) {
     when (circle) {
         is Circle -> {
             val radius = circle.radius.toFloat()
-            val maxRadius = getPlatform().maxCircleRadius
-            if (radius <= maxRadius || style != Fill) {
+            if (radius <= maxCircleRadius || style != Fill) {
                 drawCircle(color, radius, circle.center, alpha, style, blendMode = blendMode)
             } else {
                 val line = circle.approximateToLine(visibleRect.center)
@@ -581,6 +565,7 @@ private inline fun DrawScope.drawObjects(
     pointRadius: Float,
     imaginaryCircleColor: Color,
     imaginaryCircleStroke: Stroke,
+    maxCircleRadius: Float = defaultMaxCircleRadius,
 ) {
     val showImaginaryCircles = EditClusterViewModel.SHOW_IMAGINARY_CIRCLES
     if (circleSelectionIsActive) {
@@ -589,11 +574,15 @@ private inline fun DrawScope.drawObjects(
                 val color =
                     objectColors[ix] ?:
                     if (isObjectFree(ix)) freeCircleColor else circleColor
-                drawCircleOrLine(circle, visibleRect, color, style = circleStroke)
+                drawCircleOrLine(circle, visibleRect, color,
+                    style = circleStroke,
+                    maxCircleRadius = maxCircleRadius
+                )
             } else if (showImaginaryCircles && circle is ImaginaryCircle) {
                 drawCircleOrLine(
                     Circle(circle.x, circle.y, circle.radius), visibleRect,
-                    color = imaginaryCircleColor, style = imaginaryCircleStroke
+                    color = imaginaryCircleColor, style = imaginaryCircleStroke,
+                    maxCircleRadius = maxCircleRadius
                 )
             }
         }
@@ -604,12 +593,15 @@ private inline fun DrawScope.drawObjects(
                     val color =
                         objectColors[ix] ?:
                         if (isObjectFree(ix)) freeCircleColor else circleColor
-                    drawCircleOrLine(circle as CircleOrLine, visibleRect, color, style = circleStroke)
+                    drawCircleOrLine(circle as CircleOrLine, visibleRect, color,
+                        style = circleStroke,
+                        maxCircleRadius = maxCircleRadius
+                    )
                 }
                 is ImaginaryCircle -> if (showImaginaryCircles) {
                     drawCircleOrLine(
                         Circle(circle.x, circle.y, circle.radius), visibleRect,
-                        color = imaginaryCircleColor, style = imaginaryCircleStroke
+                        color = imaginaryCircleColor, style = imaginaryCircleStroke,
                     )
                 }
                 else -> {}
@@ -639,7 +631,6 @@ private fun DrawScope.drawSelectedCircles(
     objectColors: Map<Ix, Color>,
     selection: List<Ix>,
     mode: Mode,
-    showCircles: Boolean,
     circleSelectionIsActive: Boolean,
     pointSelectionIsActive: Boolean,
     restrictRegionsToSelection: Boolean,
@@ -649,12 +640,10 @@ private fun DrawScope.drawSelectedCircles(
     thiccSelectionCircleAlpha: Float,
     circleThiccStroke: Stroke,
     selectedPointColor: Color,
-    pointRadius: Float
+    pointRadius: Float,
+    maxCircleRadius: Float = defaultMaxCircleRadius,
 ) {
-    if (showCircles &&
-        (circleSelectionIsActive ||
-        mode == SelectionMode.Region && restrictRegionsToSelection)
-    ) {
+    if (circleSelectionIsActive || mode == SelectionMode.Region && restrictRegionsToSelection) {
         for (ix in selection) {
             val circle = objects[ix]
             if (circle is CircleOrLine) {
@@ -664,7 +653,8 @@ private fun DrawScope.drawSelectedCircles(
                 drawCircleOrLine(
                     circle, visibleRect, color,
                     alpha = thiccSelectionCircleAlpha,
-                    style = circleThiccStroke
+                    style = circleThiccStroke,
+                    maxCircleRadius = maxCircleRadius,
                 )
                 if (showDirectionArrows) {
                     if (patchForAndroid)
@@ -1028,30 +1018,6 @@ private inline fun DrawScope.drawHandles(
                 start = center,
                 end = sameDirectionFarAway,
                 strokeWidth = 2f
-            )
-        }
-    }
-}
-
-@Composable
-fun PointSelectionContextActions(
-    canvasSize: IntSize,
-    selectionIsLocked: Boolean,
-    toolAction: (EditClusterTool) -> Unit,
-) {
-    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
-        SimpleToolButton(
-            EditClusterTool.Delete,
-            // awkward position tbh
-            bottomRightModifier,
-            onClick = toolAction
-        )
-        if (selectionIsLocked) {
-            SimpleToolButton(
-                EditClusterTool.Detach,
-                halfBottomRightModifier,
-                tint = MaterialTheme.colorScheme.secondary,
-                onClick = toolAction
             )
         }
     }

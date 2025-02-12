@@ -338,7 +338,7 @@ fun EditClusterScreen(
         }
         DialogType.BLEND_SETTINGS -> {
             BlendSettingsDialog(
-                currentTransparency = viewModel.regionsTransparency,
+                currentOpacity = viewModel.regionsOpacity,
                 currentBlendModeType = viewModel.regionsBlendModeType,
                 onDismissRequest = viewModel::closeDialog,
                 onConfirm = viewModel::setBlendSettings

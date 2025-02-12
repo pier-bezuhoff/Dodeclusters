@@ -153,7 +153,7 @@ class EditClusterViewModel : ViewModel() {
         private set
 
     /** `[0; 1]` transparency of non-chessboard [regions] */
-    var regionsTransparency: Float by mutableStateOf(1.0f)
+    var regionsOpacity: Float by mutableStateOf(1.0f)
         private set
     var regionsBlendModeType: BlendModeType by mutableStateOf(BlendModeType.SRC_OVER)
         private set
@@ -2740,8 +2740,8 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
-    fun setBlendSettings(newRegionsTransparency: Float, newRegionsBlendModeType: BlendModeType) {
-        regionsTransparency = newRegionsTransparency
+    fun setBlendSettings(newRegionsOpacity: Float, newRegionsBlendModeType: BlendModeType) {
+        regionsOpacity = newRegionsOpacity
         regionsBlendModeType = newRegionsBlendModeType
         openedDialog = null
     }
@@ -2933,7 +2933,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun loadSettings(settings: Settings) {
-        regionsTransparency = settings.regionsTransparency
+        regionsOpacity = settings.regionsTransparency
         regionsBlendModeType = settings.regionsBlendModeType
     }
 
@@ -2965,7 +2965,7 @@ class EditClusterViewModel : ViewModel() {
 
     private fun getCurrentSettings(): Settings =
         Settings(
-            regionsTransparency = regionsTransparency,
+            regionsTransparency = regionsOpacity,
             regionsBlendModeType = regionsBlendModeType
         )
 

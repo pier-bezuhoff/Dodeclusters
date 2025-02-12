@@ -145,6 +145,30 @@ fun BoxScope.CircleSelectionContextActions(
     }
 }
 
+@Composable
+fun PointSelectionContextActions(
+    canvasSize: IntSize,
+    selectionIsLocked: Boolean,
+    toolAction: (EditClusterTool) -> Unit,
+) {
+    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
+        SimpleToolButton(
+            EditClusterTool.Delete,
+            // awkward position tbh
+            bottomRightModifier,
+            onClick = toolAction
+        )
+        if (selectionIsLocked) {
+            SimpleToolButton(
+                EditClusterTool.Detach,
+                halfBottomRightModifier,
+                tint = MaterialTheme.colorScheme.secondary,
+                onClick = toolAction
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoxScope.CircleInterpolationInterface(
