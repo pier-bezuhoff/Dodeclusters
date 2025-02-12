@@ -13,7 +13,8 @@ data class Settings(
 //    val showImaginaryCircles: Boolean = true,
 //    val inversionOfControl: InversionOfControl = InversionOfControl.LEVEL_1,
 //    val alwaysCreateAdditionalPoints: Boolean = false,
-    val regionsTransparency: Float = 1f,
+    // upscaling factor
+    val regionsOpacity: Float = 1f,
     val regionsBlendModeType: BlendModeType = BlendModeType.SRC_OVER,
     // default tools for categories
 )

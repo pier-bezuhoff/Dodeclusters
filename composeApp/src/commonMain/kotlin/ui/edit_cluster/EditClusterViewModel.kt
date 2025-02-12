@@ -2819,7 +2819,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             EditClusterTool.DeleteAllParts -> deleteAllRegions()
             EditClusterTool.BlendSettings -> openedDialog = DialogType.BLEND_SETTINGS
-            EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to seleclet `ted circles only
+            EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selecletted circles only
             EditClusterTool.ToggleFilledOrOutline -> showWireframes = !showWireframes
             EditClusterTool.HideUI -> hideUIFor30s()
             EditClusterTool.Palette -> openedDialog = DialogType.REGION_COLOR_PICKER
@@ -2933,7 +2933,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun loadSettings(settings: Settings) {
-        regionsOpacity = settings.regionsTransparency
+        regionsOpacity = settings.regionsOpacity
         regionsBlendModeType = settings.regionsBlendModeType
     }
 
@@ -2965,7 +2965,7 @@ class EditClusterViewModel : ViewModel() {
 
     private fun getCurrentSettings(): Settings =
         Settings(
-            regionsTransparency = regionsOpacity,
+            regionsOpacity = regionsOpacity,
             regionsBlendModeType = regionsBlendModeType
         )
 
@@ -3021,8 +3021,10 @@ class EditClusterViewModel : ViewModel() {
         /** when constructing object depending on not-yet-existing points,
          * always create them. In contrast to replacing expression with static circle */
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
+        // NOTE: factor > 200 breaks cat-in-sky,
+        //  tweak it with care
         /** [Double] arithmetic is best in range that is closer to 0 */
-        const val UPSCALING_FACTOR = 500.0
+        const val UPSCALING_FACTOR = 200.0 //500.0
         const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =

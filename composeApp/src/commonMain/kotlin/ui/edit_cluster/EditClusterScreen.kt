@@ -378,14 +378,12 @@ fun EditClusterScreen(
     // NOTE: using getString(resource) here hangs windows/chrome for some reason
     //  ticket: https://youtrack.jetbrains.com/issue/CMP-6930/Using-getString-method-causing-JsException
     val snackbarMessageStrings = SnackbarMessage.entries.associateWith {
-        stringResource(it.stringResource) // maybe this works, test windows/chrome
+        stringResource(it.stringResource)
     }
     LaunchedEffect(viewModel, snackbarHostState, snackbarMessageStrings) {
         viewModel.snackbarMessages.collectLatest { (message, postfix) ->
-            // TODO: can't seem to properly pre-load string resources on Web
             // with this setup string interpolation with args is not possible
             val s = snackbarMessageStrings[message] + postfix
-            println("snackbar: $message -> ${message.string}$postfix -> $s$postfix")
             snackbarHostState.showSnackbar(s, duration = message.duration)
 //            // MAYBE: move on-selection action prompt here instead
         }
