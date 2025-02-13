@@ -98,6 +98,7 @@ class PerformanceTest {
         println("oop polymorphism: ${time2/count2} ($count2 times)")
     }
 
+    @Ignore
     @Test
     fun compareLoops() {
         val things: List<Thing> = (0 until 1_000).map {
@@ -151,6 +152,8 @@ inline fun compareScenarios(
     var count2 = 0
     repeat(nRuns) {
         when (Random.nextInt(1..2)) {
+            // without this contraption the experiment is not clear as the first measurement
+            // is routinely slower (some start-up time or optimizations idk)
             1 -> {
                 time1 += measureTime { scenario1() }
                 count1 += 1
