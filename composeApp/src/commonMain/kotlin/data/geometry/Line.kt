@@ -13,6 +13,7 @@ import kotlin.math.hypot
 import kotlin.math.sign
 import kotlin.math.sin
 
+// NOTE: ggbra lines are defined by 2 points, maybe its better for incidence?
 /** [a]*x + [b]*y + [c] = 0
  *
  * Normal vector = ([a], [b]), so it depends on the sign

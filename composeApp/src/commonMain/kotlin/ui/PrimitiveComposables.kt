@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.sp
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.cancel_name
-import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.ok_description
 import dodeclusters.composeapp.generated.resources.ok_name
@@ -64,7 +63,6 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.tools.Tool
-import kotlin.math.roundToInt
 
 @Composable
 fun SimpleButton(

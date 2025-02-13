@@ -187,6 +187,7 @@ fun EditClusterScreen(
                 if (viewModel.showUI) {
                     ToolDescription(
                         tool = viewModel.toolbarState.activeTool,
+                        toolIsEnabled = viewModel.toolPredicate(viewModel.toolbarState.activeTool),
                         partialArgList = viewModel.partialArgList,
                         isLandscape = isLandscape,
                         compact = compact,
@@ -425,6 +426,7 @@ fun preloadIcons() {
 @Composable
 fun ToolDescription(
     tool: EditClusterTool,
+    toolIsEnabled: Boolean,
     partialArgList: PartialArgList?,
     isLandscape: Boolean,
     compact: Boolean,
@@ -440,9 +442,17 @@ fun ToolDescription(
             .offset(x = if (isLandscape) 100.dp else 0.dp) // offsetting left toolbar
             .fillMaxWidth(if (compact) 0.45f else 0.5f) // we cant specify max text length, so im doing this
     ) {
-        Crossfade(tool) { currentTool ->
+        Crossfade(Pair(tool, toolIsEnabled)) { (currentTool, currentToolIsEnabled) ->
+            val description = when (currentTool) {
+                is Tool.BinaryToggle ->
+                    if (currentToolIsEnabled)
+                        stringResource(currentTool.description)
+                    else
+                        stringResource(currentTool.disabledDescription)
+                else -> stringResource(currentTool.description)
+            }
             Text(
-                stringResource(currentTool.description),
+                description,
                 modifier
                     .padding(8.dp, 12.dp)
                     .border(
@@ -996,7 +1006,21 @@ fun ToolButton(
 ) {
     val icon = painterResource(tool.icon)
     val name = stringResource(tool.name)
-    val description = stringResource(tool.description)
+    val description = when (tool) {
+        is Tool.TernaryToggle ->
+            if (!enabled)
+                stringResource(tool.disabledDescription)
+            else if (alternative)
+                stringResource(tool.alternativeDescription)
+            else
+                stringResource(tool.description)
+        is Tool.BinaryToggle ->
+            if (enabled)
+                stringResource(tool.description)
+            else
+                stringResource(tool.disabledDescription)
+        else -> stringResource(tool.description)
+    }
     val callback = { onClick(tool) }
     WithTooltip(description) {
         when (tool) {
@@ -1016,11 +1040,11 @@ fun ToolButton(
                     )
                 }
             }
-            is EditClusterTool.FillChessboardPattern -> {
+            is Tool.TernaryToggle -> {
                 ThreeIconButton(
                     iconPainter = icon,
-                    alternativeIconPainter = painterResource(tool.alternativeEnabledIcon),
-                    disabledIconPainter = painterResource(tool.disabledIcon!!),
+                    alternativeIconPainter = painterResource(tool.alternativeIcon),
+                    disabledIconPainter = painterResource(tool.disabledIcon),
                     name = name,
                     enabled = enabled,
                     alternative = alternative,

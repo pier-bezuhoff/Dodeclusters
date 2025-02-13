@@ -64,7 +64,9 @@ import dodeclusters.composeapp.generated.resources.duplicate_name
 import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.expand_name
 import dodeclusters.composeapp.generated.resources.extrapolate_lines
+import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_alternative_description
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_description
+import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_disabled_description
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_name
 import dodeclusters.composeapp.generated.resources.fill_region
 import dodeclusters.composeapp.generated.resources.fill_swiped_circles
@@ -102,6 +104,8 @@ import dodeclusters.composeapp.generated.resources.paint_splash
 import dodeclusters.composeapp.generated.resources.palette
 import dodeclusters.composeapp.generated.resources.palette_description
 import dodeclusters.composeapp.generated.resources.palette_name
+import dodeclusters.composeapp.generated.resources.phantom
+import dodeclusters.composeapp.generated.resources.phantom_crossed
 import dodeclusters.composeapp.generated.resources.pick_circle_color_description
 import dodeclusters.composeapp.generated.resources.pick_circle_color_name
 import dodeclusters.composeapp.generated.resources.png_export_name
@@ -115,6 +119,7 @@ import dodeclusters.composeapp.generated.resources.region_name
 import dodeclusters.composeapp.generated.resources.regions_blend_settings_description
 import dodeclusters.composeapp.generated.resources.regions_blend_settings_name
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_description
+import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_disabled_description
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_name
 import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.road
@@ -123,8 +128,6 @@ import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.screenshot_pc
 import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.shark_fin_striped
-import dodeclusters.composeapp.generated.resources.show_circles_description
-import dodeclusters.composeapp.generated.resources.show_circles_name
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_name
 import dodeclusters.composeapp.generated.resources.spiral
@@ -133,10 +136,18 @@ import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_name
 import dodeclusters.composeapp.generated.resources.three_sliders
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_description
+import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_disabled_description
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_name
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_description
 import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_name
+import dodeclusters.composeapp.generated.resources.toggle_objects_description
+import dodeclusters.composeapp.generated.resources.toggle_objects_disabled_description
+import dodeclusters.composeapp.generated.resources.toggle_objects_name
+import dodeclusters.composeapp.generated.resources.toggle_phantoms_description
+import dodeclusters.composeapp.generated.resources.toggle_phantoms_disabled_description
+import dodeclusters.composeapp.generated.resources.toggle_phantoms_name
 import dodeclusters.composeapp.generated.resources.toggle_select_all_description
+import dodeclusters.composeapp.generated.resources.toggle_select_all_disabled_description
 import dodeclusters.composeapp.generated.resources.toggle_select_all_name
 import dodeclusters.composeapp.generated.resources.two_of_three_circles_connected
 import dodeclusters.composeapp.generated.resources.undo
@@ -170,7 +181,8 @@ sealed class EditClusterTool(
         name: StringResource,
         description: StringResource = name,
         icon: DrawableResource,
-        final override val disabledIcon: DrawableResource? = null
+        final override val disabledIcon: DrawableResource? = null,
+        final override val disabledDescription: StringResource = description,
     ) : EditClusterTool(name, description, icon), Tool.BinaryToggle
     sealed class MultiArg(
         final override val signature: Signature,
@@ -179,6 +191,7 @@ sealed class EditClusterTool(
         final override val argDescriptions: StringArrayResource,
         icon: DrawableResource,
         final override val disabledIcon: DrawableResource? = null,
+        final override val disabledDescription: StringResource = description,
     ) : EditClusterTool(name, description, icon), Tool.BinaryToggle, Tool.MultiArg
     sealed class Action(
         name: StringResource,
@@ -261,7 +274,8 @@ sealed class EditClusterTool(
         Res.string.toggle_select_all_name,
         Res.string.toggle_select_all_description,
         Res.drawable.select_all,
-        Res.drawable.deselect
+        Res.drawable.deselect,
+        disabledDescription = Res.string.toggle_select_all_disabled_description
     )
 
     data object Region: Switch(
@@ -274,19 +288,22 @@ sealed class EditClusterTool(
         Res.string.flow_fill_description,
         Res.drawable.fill_swiped_circles
     )
-    data object FillChessboardPattern: Switch(
+    data object FillChessboardPattern: EditClusterTool(
         Res.string.fill_chessboard_pattern_name,
         Res.string.fill_chessboard_pattern_description,
         Res.drawable.chessboard,
-        Res.drawable.chessboard_crossed,
-    ) {
-        val alternativeEnabledIcon = Res.drawable.chessboard_reflected
+    ), Tool.TernaryToggle {
+        override val alternativeIcon: DrawableResource = Res.drawable.chessboard_reflected
+        override val alternativeDescription: StringResource = Res.string.fill_chessboard_pattern_alternative_description
+        override val disabledIcon: DrawableResource = Res.drawable.chessboard_crossed
+        override val disabledDescription: StringResource = Res.string.fill_chessboard_pattern_disabled_description
     }
     data object RestrictRegionToSelection: Switch(
         Res.string.restrict_region_to_selection_name,
         Res.string.restrict_region_to_selection_description,
         Res.drawable.circled_region,
-        Res.drawable.open_region
+        Res.drawable.open_region,
+        disabledDescription = Res.string.restrict_region_to_selection_disabled_description
     )
     data object DeleteAllParts: Action(
         Res.string.delete_all_parts_name,
@@ -299,13 +316,21 @@ sealed class EditClusterTool(
         Res.drawable.intersection_settings
     )
 
-    data object ShowCircles: Switch(
-        Res.string.show_circles_name,
-        Res.string.show_circles_description,
+    data object ToggleObjects: Switch(
+        Res.string.toggle_objects_name,
+        Res.string.toggle_objects_description,
         Res.drawable.visible_circle,
-        Res.drawable.crossed_circle
+        Res.drawable.crossed_circle,
+        disabledDescription = Res.string.toggle_objects_disabled_description
     )
-    data object ToggleFilledOrOutline: Switch(
+    data object TogglePhantoms: Switch(
+        Res.string.toggle_phantoms_name,
+        Res.string.toggle_phantoms_description,
+        Res.drawable.phantom,
+        Res.drawable.phantom_crossed,
+        disabledDescription = Res.string.toggle_phantoms_disabled_description
+    )
+    data object ToggleFilledOrOutline: Switch( // unused
         Res.string.toggle_filled_or_outline_name,
         Res.string.toggle_filled_or_outline_description,
         Res.drawable.filled_circle,
@@ -321,6 +346,7 @@ sealed class EditClusterTool(
         Res.string.toggle_direction_arrows_description,
         Res.drawable.visible_haired_arrow,
         Res.drawable.hide_haired_arrow,
+        disabledDescription = Res.string.toggle_direction_arrows_disabled_description
     )
     data object AddBackgroundImage: Action(
         Res.string.change_background_name,

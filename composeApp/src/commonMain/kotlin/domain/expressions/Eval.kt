@@ -69,6 +69,7 @@ fun computeCircleInversion(
     return result.toGCircleAs(target)
 }
 
+// NOTE: not good since scaling line doesn't scale points incident to it
 // MAYBE: just repeat obj transformations for tier=0 carrier incident points
 fun computeIncidence(
     params: IncidenceParameters,

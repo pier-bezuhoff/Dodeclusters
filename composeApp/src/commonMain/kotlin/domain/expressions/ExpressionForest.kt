@@ -2,6 +2,7 @@ package domain.expressions
 
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
+import data.geometry.Line
 import data.geometry.Point
 import domain.Ix
 import kotlin.math.abs
@@ -453,6 +454,30 @@ class ExpressionForest(
                 ))
             }
         }
+    }
+
+    // FIX: NG, maybe bc of translation, idk
+    /**
+     * Adjust parameters of all points incident to lines,
+     * scaling them by [zoom]. Should be used after uniformly scaling
+     * all objects (e.g. when [get] scales source objects) to correctly zoom in/out
+     * points on lines.
+     * @return indices of changed expressions. You may want to [update]`()` them
+     */
+    fun scaleLineIncidenceExpressions(zoom: Double): List<Ix> {
+        val changedIxs = mutableListOf<Ix>()
+        for ((ix, e) in expressions) {
+            val expr = e?.expr
+            if (expr is Expr.Incidence && get(expr.carrier) is Line) {
+                expressions[ix] = Expression.Just(
+                    expr.copy(IncidenceParameters(
+                        order = zoom * expr.parameters.order
+                    ))
+                )
+                changedIxs.add(ix)
+            }
+        }
+        return changedIxs
     }
 
     fun getImmediateParents(childIx: Ix): List<Ix> =

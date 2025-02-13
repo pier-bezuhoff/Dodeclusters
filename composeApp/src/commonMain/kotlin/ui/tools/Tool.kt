@@ -19,8 +19,17 @@ sealed interface Tool {
     sealed interface BinaryToggle : Action {
         /** When null, use [icon] when disabled and [icon] highlighted by color when enabled */
         val disabledIcon: DrawableResource?
+        val disabledDescription: StringResource
     }
 
+    /** Cycles through 3 different states */
+    sealed interface TernaryToggle : Action {
+        // generally alternative stuff is shown when both enabled & alternative flags are true
+        val alternativeIcon: DrawableResource
+        val alternativeDescription: StringResource
+        val disabledIcon: DrawableResource
+        val disabledDescription: StringResource
+    }
     /** Action with no preserved internal state, in contrast to [BinaryToggle] */
     sealed interface InstantAction : Action
 

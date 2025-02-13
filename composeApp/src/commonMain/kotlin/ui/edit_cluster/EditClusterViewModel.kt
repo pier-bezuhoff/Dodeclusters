@@ -160,8 +160,12 @@ class EditClusterViewModel : ViewModel() {
     /** custom colors for circle/line borders or points */
     val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
     var backgroundColor: Color? by mutableStateOf(null)
-//    val hiddenObjects: Set<Ix> by mutableStateOf(emptySet()) // TODO
     var showCircles: Boolean by mutableStateOf(true)
+        private set
+    // alt name: ghost[ed] objects
+    var phantomObjects: Set<Ix> by mutableStateOf(emptySet())
+        private set
+    var showPhantomObjects: Boolean by mutableStateOf(false)
         private set
     /** which style to use when drawing regions: true = stroke, false = fill */
     var showWireframes: Boolean by mutableStateOf(false)
@@ -454,6 +458,9 @@ class EditClusterViewModel : ViewModel() {
             }
         )
         expressions.reEval() // calculates all dependent objects
+//        expressions.update(
+//            expressions.scaleLineIncidenceExpressions(DOWNSCALING_FACTOR)
+//        )
         regions.addAll(constellation.parts)
         objectColors.putAll(constellation.objectColors)
         backgroundColor = constellation.backgroundColor
@@ -468,6 +475,7 @@ class EditClusterViewModel : ViewModel() {
             originalIndices = objects.indices,
             deletedIndices = deleted
         )
+//        expressions.scaleLineIncidenceExpressions(UPSCALING_FACTOR)
         val objectConstructs = objects.indices.mapNotNull { ix ->
             val e = expressions.expressions[ix]
             if (e == null) {
@@ -484,6 +492,7 @@ class EditClusterViewModel : ViewModel() {
                 )
             }
         }
+//        expressions.scaleLineIncidenceExpressions(DOWNSCALING_FACTOR)
         val logicalRegions = regions.mapNotNull { region ->
             val insides = region.insides.mapNotNull { reindexing[it] }.toSet()
             val outsides = region.outsides.mapNotNull { reindexing[it] }.toSet()
@@ -1167,7 +1176,8 @@ class EditClusterViewModel : ViewModel() {
         regions.flatMap { region ->
             region.borderColor?.let { listOf(region.fillColor, it) }
                 ?: listOf(region.fillColor)
-        }.sortedByFrequency()
+        }.plus(chessboardColor)
+        .sortedByFrequency()
 
     /** Try to snap [absolutePosition] to some existing object or their intersection.
      * Snap priority: points > circles
@@ -1293,6 +1303,10 @@ class EditClusterViewModel : ViewModel() {
         if (!showCircles && mode is ToolMode)
             switchToMode(SelectionMode.Drag)
         selection = emptyList()
+    }
+
+    fun togglePhantomObjects() {
+        showPhantomObjects = !showPhantomObjects
     }
 
     fun hidePanel() {
@@ -2808,6 +2822,9 @@ class EditClusterViewModel : ViewModel() {
     fun toolAction(tool: EditClusterTool) {
 //        println("toolAction($tool)")
         when (tool) {
+            EditClusterTool.Undo -> undo()
+            EditClusterTool.Redo -> redo()
+            EditClusterTool.SaveCluster -> openedDialog = DialogType.SAVE_OPTIONS
             EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
             EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect)
             EditClusterTool.RectangularSelect -> activateRectangularSelect()
@@ -2819,9 +2836,15 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             EditClusterTool.DeleteAllParts -> deleteAllRegions()
             EditClusterTool.BlendSettings -> openedDialog = DialogType.BLEND_SETTINGS
-            EditClusterTool.ShowCircles -> toggleShowCircles() // MAYBE: apply to selecletted circles only
+            EditClusterTool.ToggleObjects -> toggleShowCircles()
+            EditClusterTool.TogglePhantoms -> togglePhantomObjects()
             EditClusterTool.ToggleFilledOrOutline -> showWireframes = !showWireframes
             EditClusterTool.HideUI -> hideUIFor30s()
+            EditClusterTool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
+            // TODO: 2 options: solid color or external image
+            EditClusterTool.AddBackgroundImage -> openedDialog = DialogType.BACKGROUND_COLOR_PICKER
+            EditClusterTool.InsertCenteredCross -> insertCenteredCross()
+            EditClusterTool.CompleteArcPath -> completeArcPath()
             EditClusterTool.Palette -> openedDialog = DialogType.REGION_COLOR_PICKER
             EditClusterTool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
             EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
@@ -2830,17 +2853,9 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.Duplicate -> duplicateSelectedCircles()
             EditClusterTool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
             EditClusterTool.Delete -> deleteSelectedPointsAndCircles()
-            EditClusterTool.InsertCenteredCross -> insertCenteredCross()
             is EditClusterTool.AppliedColor -> setNewRegionColor(tool.color)
             is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
-            EditClusterTool.Undo -> undo()
-            EditClusterTool.Redo -> redo()
-            EditClusterTool.SaveCluster -> openedDialog = DialogType.SAVE_OPTIONS
             is EditClusterTool.CustomAction -> {} // custom handlers
-            EditClusterTool.CompleteArcPath -> completeArcPath()
-            EditClusterTool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
-            // TODO: 2 options: solid color or external image
-            EditClusterTool.AddBackgroundImage -> openedDialog = DialogType.BACKGROUND_COLOR_PICKER
             EditClusterTool.DetailedAdjustment -> openDetailsDialog()
             EditClusterTool.InBetween -> TODO()
         }
@@ -2859,7 +2874,8 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
             EditClusterTool.FillChessboardPattern -> chessboardPattern != ChessboardPattern.NONE
             EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
-            EditClusterTool.ShowCircles -> showCircles
+            EditClusterTool.ToggleObjects -> showCircles
+            EditClusterTool.TogglePhantoms -> showPhantomObjects
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
             EditClusterTool.ToggleDirectionArrows -> showDirectionArrows
 //            EditClusterTool.Palette -> openedDialog == DialogType.REGION_COLOR_PICKER
@@ -3021,8 +3037,7 @@ class EditClusterViewModel : ViewModel() {
         /** when constructing object depending on not-yet-existing points,
          * always create them. In contrast to replacing expression with static circle */
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
-        // NOTE: factor > 200 breaks cat-in-sky,
-        //  tweak it with care (due to incidence-order being scale-dependent)
+        // NOTE: changing it presently breaks all line-incident points
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 500.0 //200.0
         const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
