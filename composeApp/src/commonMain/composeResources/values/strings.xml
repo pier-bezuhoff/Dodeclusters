@@ -222,6 +222,7 @@
     <string name="failed_open_notice">Failed to load</string>
     <string name="successful_save_notice">Saved as</string>
     <string name="failed_save_notice">Failed to save</string>
+    <string name="phantom_object_explanation">No phantom objects. To mark object as 'phantom' (= invisible), select it and click 'eye' icon on the bottom-right</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

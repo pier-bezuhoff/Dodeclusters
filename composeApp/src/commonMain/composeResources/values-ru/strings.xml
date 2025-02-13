@@ -214,5 +214,6 @@
     <string name="failed_open_notice">Ошибка при попытке открыть файл</string>
     <string name="successful_save_notice">Файл сохранён как</string>
     <string name="failed_save_notice">Ошибка при сохранении файла</string>
+    <string name="phantom_object_explanation">Нет фантомных объектов. Чтобы пометить объект как 'фантомный' (= невидимый), выделите его и кликните на глаз справа снизу</string>
 
 </resources>

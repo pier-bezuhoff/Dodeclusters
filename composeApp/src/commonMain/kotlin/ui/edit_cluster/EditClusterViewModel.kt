@@ -183,6 +183,7 @@ class EditClusterViewModel : ViewModel() {
     var chessboardColor: Color by mutableStateOf(regionColor)
         private set
 
+    // these 2 are NG
     val circleSelectionIsActive: Boolean by derivedStateOf {
         showCircles && selection.any { objects[it] is CircleOrLine } && mode.isSelectingCircles()
     }
@@ -1294,7 +1295,10 @@ class EditClusterViewModel : ViewModel() {
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
         showCircles = true
-        val everythingIsSelected = selection.containsAll(objects.filterIndices { it is CircleOrLine })
+        val everythingIsSelected = selection.containsAll(
+            objects.filterIndices { it is CircleOrLine }
+                .filter { showPhantomObjects || it !in phantoms }
+        )
         selection = if (everythingIsSelected) {
             emptyList()
         } else { // maybe select Imaginary's and nulls too
@@ -1311,6 +1315,8 @@ class EditClusterViewModel : ViewModel() {
 
     fun togglePhantomObjects() {
         showPhantomObjects = !showPhantomObjects
+        if (phantoms.isEmpty())
+            queueSnackbarMessage(SnackbarMessage.PHANTOM_OBJECT_EXPLANATION)
     }
 
     fun hidePanel() {

@@ -145,7 +145,9 @@ fun TwoIconButton(
         onCheckedChange = { onClick() },
         modifier = modifier,
         colors = IconButtonDefaults.iconToggleButtonColors(
-            checkedContentColor = tint // no need for color variation since we have a diff icon
+            contentColor = tint,
+            disabledContentColor = tint,
+            checkedContentColor = tint, // no need for color variation since we have a diff icon
         )
     ) {
         Icon(
