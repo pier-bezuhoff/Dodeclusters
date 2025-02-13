@@ -153,6 +153,7 @@ import dodeclusters.composeapp.generated.resources.two_of_three_circles_connecte
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.upload
+import dodeclusters.composeapp.generated.resources.visible
 import dodeclusters.composeapp.generated.resources.visible_circle
 import dodeclusters.composeapp.generated.resources.visible_haired_arrow
 import domain.SIGNATURE_1_POINT
@@ -492,6 +493,13 @@ sealed class EditClusterTool(
         Res.string.swap_direction_name,
         icon = Res.drawable.right_left
     )
+    data object MarkAsPhantoms: ContextAction(
+        Res.string.toggle_phantoms_name,
+        icon = Res.drawable.visible,
+    ), Tool.BinaryToggle {
+        override val disabledIcon = Res.drawable.phantom
+        override val disabledDescription = Res.string.toggle_phantoms_disabled_description
+    }
     data object DetailedAdjustment: ContextAction(
         Res.string.stub,
         icon = Res.drawable.three_sliders

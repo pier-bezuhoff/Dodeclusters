@@ -1079,6 +1079,7 @@ fun ToolButton(
                         name = name,
                         enabled = enabled,
                         modifier = modifier,
+                        iconModifier = modifier,
                         tint = tint,
                         onClick = callback
                     )

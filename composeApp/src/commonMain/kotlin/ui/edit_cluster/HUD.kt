@@ -48,6 +48,7 @@ import org.jetbrains.compose.resources.stringResource
 import ui.OnOffButton
 import ui.SimpleButton
 import ui.SimpleToolButton
+import ui.TwoIconButton
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
@@ -57,6 +58,7 @@ import kotlin.math.roundToInt
 fun BoxScope.LockedCircleSelectionContextActions(
     canvasSize: IntSize,
     toolAction: (EditClusterTool) -> Unit,
+    toolPredicate: (EditClusterTool) -> Boolean,
     getMostCommonCircleColorInSelection: () -> Color?
 ) {
     with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
@@ -77,6 +79,15 @@ fun BoxScope.LockedCircleSelectionContextActions(
             bottomRightModifier,
             onClick = toolAction
         )
+        TwoIconButton(
+            painterResource(EditClusterTool.MarkAsPhantoms.icon),
+            painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
+            stringResource(EditClusterTool.MarkAsPhantoms.name),
+            enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+            bottomMidModifier,
+            tint = MaterialTheme.colorScheme.secondary,
+            onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
+        )
         SimpleToolButton(
             EditClusterTool.Detach,
             bottomLeftModifier,
@@ -91,6 +102,7 @@ fun BoxScope.CircleSelectionContextActions(
     canvasSize: IntSize,
     showDirectionArrows: Boolean,
     toolAction: (EditClusterTool) -> Unit,
+    toolPredicate: (EditClusterTool) -> Boolean,
     getMostCommonCircleColorInSelection: () -> Color?,
 ) {
     // infinity button to the left-center
@@ -134,12 +146,23 @@ fun BoxScope.CircleSelectionContextActions(
             bottomRightModifier,
             onClick = toolAction
         )
+        // TODO: make it make sense
         if (showDirectionArrows) {
             SimpleToolButton(
                 EditClusterTool.SwapDirection,
                 bottomMidModifier,
                 tint = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
+            )
+        } else { // not the best way to go about it, but w/e
+            TwoIconButton(
+                painterResource(EditClusterTool.MarkAsPhantoms.icon),
+                painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
+                stringResource(EditClusterTool.MarkAsPhantoms.name),
+                enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+                bottomMidModifier,
+                tint = MaterialTheme.colorScheme.secondary,
+                onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
             )
         }
     }
@@ -150,6 +173,7 @@ fun PointSelectionContextActions(
     canvasSize: IntSize,
     selectionIsLocked: Boolean,
     toolAction: (EditClusterTool) -> Unit,
+    toolPredicate: (EditClusterTool) -> Boolean,
 ) {
     with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
         SimpleToolButton(
@@ -157,6 +181,15 @@ fun PointSelectionContextActions(
             // awkward position tbh
             bottomRightModifier,
             onClick = toolAction
+        )
+        TwoIconButton(
+            painterResource(EditClusterTool.MarkAsPhantoms.icon),
+            painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
+            stringResource(EditClusterTool.MarkAsPhantoms.name),
+            enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+            bottomMidModifier,
+            tint = MaterialTheme.colorScheme.secondary,
+            onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
         )
         if (selectionIsLocked) {
             SimpleToolButton(

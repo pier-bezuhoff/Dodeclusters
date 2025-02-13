@@ -163,7 +163,7 @@ class EditClusterViewModel : ViewModel() {
     var showCircles: Boolean by mutableStateOf(true)
         private set
     // alt name: ghost[ed] objects
-    var phantomObjects: Set<Ix> by mutableStateOf(emptySet())
+    var phantoms: Set<Ix> by mutableStateOf(emptySet())
         private set
     var showPhantomObjects: Boolean by mutableStateOf(false)
         private set
@@ -917,6 +917,7 @@ class EditClusterViewModel : ViewModel() {
                 val distance = point?.distanceFrom(absolutePoint) ?: Double.POSITIVE_INFINITY
                 ix to distance
             }.filter { (_, distance) -> distance <= tapRadius }
+            .filter { (ix, _) -> showPhantomObjects || ix !in phantoms }
             .minByOrNull { (ix, distance) ->
                 val priority =
                     if (ix in priorityTargets) 100
@@ -949,6 +950,7 @@ class EditClusterViewModel : ViewModel() {
             ix to distance
         }
             .filter { (_, distance) -> distance <= tapRadius }
+            .filter { (ix, _) -> showPhantomObjects || ix !in phantoms }
             .minByOrNull { (ix, distance) ->
                 val priority =
                     if (ix in priorityTargets) 100
@@ -999,7 +1001,9 @@ class EditClusterViewModel : ViewModel() {
         boundingCircles: List<Ix>? = null
     ): Pair<LogicalRegion, LogicalRegion> {
         val position = absolute(visiblePosition)
-        val delimiters = boundingCircles ?: objects.filterIndices { it is CircleOrLine }
+        val delimiters = boundingCircles ?:
+            objects.filterIndices { it is CircleOrLine }
+                .filter { showPhantomObjects || it !in phantoms }
         val ins = delimiters // NOTE: doesn't include circles that the point lies on
             .filter { ix -> (objects[ix] as? CircleOrLine)?.hasInside(position) ?: false }
         val outs = delimiters
@@ -1471,6 +1475,16 @@ class EditClusterViewModel : ViewModel() {
         selectionIsLockedTrigger = !selectionIsLockedTrigger
     }
 
+    private fun markObjectsAsPhantoms() {
+        phantoms = phantoms + selection
+//        selection = emptyList()
+        showPhantomObjects = false
+    }
+
+    private fun unmarkObjectsAsPhantoms() {
+        phantoms = phantoms - selection
+    }
+
     private fun swapDirectionsOfSelectedCircles() {
         for (ix in selection) { // no recording (idk why)
             val obj = objects[ix]
@@ -1736,6 +1750,8 @@ class EditClusterViewModel : ViewModel() {
                         val (region, region0) = selectRegionAt(position)
                         if (region0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
                             toggleSelectAll()
+                            if (!showPhantomObjects)
+                                selection = selection.filter { it !in phantoms }
                         } else {
                             val selectedCircles = selection.filter { objects[it] is CircleOrLine }
                             regions
@@ -2057,7 +2073,10 @@ class EditClusterViewModel : ViewModel() {
             if (mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect) {
                 val corner1 = (submode as SubMode.RectangularSelect).corner1
                 val rect = Rect.fromCorners(corner1 ?: c, c)
-                selection = selectWithRectangle(objects, rect)
+                val selectables = objects.mapIndexed { ix, o ->
+                    if (showPhantomObjects || ix !in phantoms) o else null
+                }
+                selection = selectWithRectangle(selectables, rect)
                 submode = SubMode.RectangularSelect(corner1, c)
             } else if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
                 val qualifiedRegion = (submode as SubMode.FlowSelect).lastQualifiedRegion
@@ -2070,7 +2089,7 @@ class EditClusterViewModel : ViewModel() {
                         (newQualifiedRegion.insides - qualifiedRegion.insides) union
                         (qualifiedRegion.outsides - newQualifiedRegion.outsides) union
                         (newQualifiedRegion.outsides - qualifiedRegion.outsides)
-                    selection += diff.filter { it !in selection }
+                    selection += diff.filter { it !in selection && (showPhantomObjects || it !in phantoms) }
                 }
             } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
                 val qualifiedRegion = (submode as SubMode.FlowFill).lastQualifiedRegion
@@ -2206,7 +2225,10 @@ class EditClusterViewModel : ViewModel() {
             if (corner1 != null && corner2 != null) {
                 val newCorner2 = absolute(visiblePosition)
                 val rect = Rect.fromCorners(corner1, newCorner2)
-                selection = selectWithRectangle(objects, rect)
+                val selectables = objects.mapIndexed { ix, o ->
+                    if (showPhantomObjects || ix !in phantoms) o else null
+                }
+                selection = selectWithRectangle(selectables, rect)
                 submode = SubMode.RectangularSelect(corner1, corner2)
             }
         }
@@ -2850,6 +2872,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
             EditClusterTool.Detach -> detachEverySelectedObject()
             EditClusterTool.SwapDirection -> swapDirectionsOfSelectedCircles()
+            EditClusterTool.MarkAsPhantoms -> if (toolPredicate(tool)) markObjectsAsPhantoms() else unmarkObjectsAsPhantoms()
             EditClusterTool.Duplicate -> duplicateSelectedCircles()
             EditClusterTool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
             EditClusterTool.Delete -> deleteSelectedPointsAndCircles()
@@ -2878,8 +2901,8 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.TogglePhantoms -> showPhantomObjects
             EditClusterTool.ToggleFilledOrOutline -> !showWireframes
             EditClusterTool.ToggleDirectionArrows -> showDirectionArrows
-//            EditClusterTool.Palette -> openedDialog == DialogType.REGION_COLOR_PICKER
             is EditClusterTool.MultiArg -> mode == ToolMode.correspondingTo(tool)
+            EditClusterTool.MarkAsPhantoms -> selection.none { it in phantoms }
             else -> true
         }
 
@@ -3032,7 +3055,7 @@ class EditClusterViewModel : ViewModel() {
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         const val SHOW_IMAGINARY_CIRCLES = true
         /** Allow moving non-free object IF all of it's lvl1 parents/dependencies are free by
-         * moving all of its parent with it */ // geogebra-like
+         * moving all of its parent with it */ // ggbra-like
         val INVERSION_OF_CONTROL = InversionOfControl.LEVEL_1
         /** when constructing object depending on not-yet-existing points,
          * always create them. In contrast to replacing expression with static circle */

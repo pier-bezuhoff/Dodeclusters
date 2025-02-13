@@ -136,6 +136,7 @@ fun TwoIconButton(
     name: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -151,7 +152,7 @@ fun TwoIconButton(
             if (enabled) iconPainter
             else disabledIconPainter,
             contentDescription = name,
-            modifier = modifier
+            modifier = iconModifier
         )
     }
 }

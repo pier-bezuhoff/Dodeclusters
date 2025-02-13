@@ -178,10 +178,12 @@ fun BoxScope.EditClusterCanvas(
 //        measureTime {
             translate(viewModel.translation.x, viewModel.translation.y) {
                 val visibleRect = size.toRect().translate(-viewModel.translation)
-                drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
+                val hiddenObjectIndices = if (viewModel.showPhantomObjects) emptySet() else viewModel.phantoms
+                drawRegions(objects = viewModel.objects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsOpacity = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
                 drawAnimation(animations = animations, visibleRect = visibleRect, strokeWidth = strokeWidth)
                 if (viewModel.showCircles) {
-                    drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
+//                    val selectionIsActive = viewModel.showCircles && viewModel.mode.isSelectingCircles() && viewModel.selection.isNotEmpty()
+                    drawObjects(objects = viewModel.objects, hiddenObjectIndices = hiddenObjectIndices, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
                     drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius)
                 }
                 drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getPointArg = { viewModel.getArg(it) }, getCircleOrPointArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke)
@@ -192,15 +194,15 @@ fun BoxScope.EditClusterCanvas(
             }
 //        }.also { println("full draw: $it") } // not that long
     }
-    if (viewModel.showUI) {
+    if (viewModel.showUI) { // HUD
         if (viewModel.circleSelectionIsActive) {
             if (viewModel.selectionIsLocked) {
-                LockedCircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
+                LockedCircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::toolPredicate, viewModel::getMostCommonCircleColorInSelection)
             } else {
-                CircleSelectionContextActions(viewModel.canvasSize, viewModel.showDirectionArrows, viewModel::toolAction, viewModel::getMostCommonCircleColorInSelection)
+                CircleSelectionContextActions(viewModel.canvasSize, viewModel.showDirectionArrows, viewModel::toolAction, viewModel::toolPredicate, viewModel::getMostCommonCircleColorInSelection)
             }
         } else if (viewModel.pointSelectionIsActive) {
-            PointSelectionContextActions(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel::toolAction)
+            PointSelectionContextActions(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel::toolAction, viewModel::toolPredicate)
         } else if (
             viewModel.mode == ToolMode.ARC_PATH &&
             viewModel.partialArcPath?.nArcs?.let { it >= 1 } == true
@@ -271,9 +273,10 @@ fun ScreenshotableCanvas(
             ) {
                 translate(viewModel.translation.x, viewModel.translation.y) {
                     val visibleRect = size.toRect().translate(-viewModel.translation)
-                    drawRegions(objects = viewModel.objects, regions = viewModel.regions, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsAlpha = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
+                    val hiddenObjectIndices = if (viewModel.showPhantomObjects) emptySet() else viewModel.phantoms
+                    drawRegions(objects = viewModel.objects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsOpacity = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
                     if (viewModel.showCircles) {
-                        drawObjects(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
+                        drawObjects(objects = viewModel.objects, hiddenObjectIndices = hiddenObjectIndices, objectColors = viewModel.objectColors, selection = viewModel.selection, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
                         drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, circleSelectionIsActive = viewModel.circleSelectionIsActive, pointSelectionIsActive = viewModel.pointSelectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius)
                     }
                 }
@@ -549,6 +552,7 @@ private fun DrawScope.drawAnimation(
 
 private inline fun DrawScope.drawObjects(
     objects: List<GCircle?>,
+    hiddenObjectIndices: Set<Ix>,
     objectColors: Map<Ix, Color>,
     selection: List<Ix>,
     circleSelectionIsActive: Boolean,
@@ -565,53 +569,79 @@ private inline fun DrawScope.drawObjects(
     imaginaryCircleStroke: Stroke,
 ) {
     val showImaginaryCircles = EditClusterViewModel.SHOW_IMAGINARY_CIRCLES
+//    for (ix in objects.indices) {
+//        if (ix !in hiddenObjectIndices && (!circleSelectionIsActive || ix !in selection)) {
+//            when (val o = objects[ix]) {
+//                is CircleOrLine -> {
+//                    val color =
+//                        objectColors[ix] ?: if (isObjectFree(ix)) freeCircleColor else circleColor
+//                    drawCircleOrLine(o, visibleRect, color,
+//                        style = circleStroke,
+//                    )
+//                }
+//                is Point -> {
+//                    val color = if (isObjectFree(ix)) freePointColor else pointColor
+//                    drawCircle(color, pointRadius, o.toOffset())
+//                }
+//                is ImaginaryCircle -> {
+//                    drawCircleOrLine(
+//                        Circle(o.x, o.y, o.radius), visibleRect,
+//                        color = imaginaryCircleColor, style = imaginaryCircleStroke,
+//                    )
+//                }
+//                null -> {}
+//            }
+//        }
+//    }
     if (circleSelectionIsActive) {
         for ((ix, circle) in objects.withIndex()) {
-            if (circle is CircleOrLine && ix !in selection) {
-                val color =
-                    objectColors[ix] ?:
-                    if (isObjectFree(ix)) freeCircleColor else circleColor
-                drawCircleOrLine(circle, visibleRect, color,
-                    style = circleStroke,
-                )
-            } else if (showImaginaryCircles && circle is ImaginaryCircle) {
-                drawCircleOrLine(
-                    Circle(circle.x, circle.y, circle.radius), visibleRect,
-                    color = imaginaryCircleColor, style = imaginaryCircleStroke,
-                )
-            }
-        }
-    } else {
-        for ((ix, circle) in objects.withIndex()) {
-            when (circle) {
-                is Circle, is Line -> {
+            if (ix !in hiddenObjectIndices) {
+                if (circle is CircleOrLine && ix !in selection) {
                     val color =
-                        objectColors[ix] ?:
-                        if (isObjectFree(ix)) freeCircleColor else circleColor
-                    drawCircleOrLine(circle as CircleOrLine, visibleRect, color,
+                        objectColors[ix] ?: if (isObjectFree(ix)) freeCircleColor else circleColor
+                    drawCircleOrLine(circle, visibleRect, color,
                         style = circleStroke,
                     )
-                }
-                is ImaginaryCircle -> if (showImaginaryCircles) {
+                } else if (showImaginaryCircles && circle is ImaginaryCircle) {
                     drawCircleOrLine(
                         Circle(circle.x, circle.y, circle.radius), visibleRect,
                         color = imaginaryCircleColor, style = imaginaryCircleStroke,
                     )
                 }
-                else -> {}
+            }
+        }
+    } else {
+        for ((ix, circle) in objects.withIndex()) {
+            if (ix !in hiddenObjectIndices) {
+                when (circle) {
+                    is Circle, is Line -> {
+                        val color =
+                            objectColors[ix] ?: if (isObjectFree(ix)) freeCircleColor else circleColor
+                        drawCircleOrLine(circle as CircleOrLine, visibleRect, color,
+                            style = circleStroke,
+                        )
+                    }
+                    is ImaginaryCircle -> if (showImaginaryCircles) {
+                        drawCircleOrLine(
+                            Circle(circle.x, circle.y, circle.radius), visibleRect,
+                            color = imaginaryCircleColor, style = imaginaryCircleStroke,
+                        )
+                    }
+                    else -> {}
+                }
             }
         }
     }
     if (pointSelectionIsActive) {
         for ((ix, point) in objects.withIndex()) {
-            if (point is Point && ix !in selection) {
+            if (point is Point && ix !in selection && ix !in hiddenObjectIndices) {
                 val color = if (isObjectFree(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
         }
     } else {
         for ((ix, point) in objects.withIndex()) {
-            if (point is Point) {
+            if (point is Point && ix !in hiddenObjectIndices) {
                 val color = if (isObjectFree(ix)) freePointColor else pointColor
                 drawCircle(color, pointRadius, point.toOffset())
             }
@@ -666,34 +696,38 @@ private fun DrawScope.drawSelectedCircles(
 }
 
 /**
- * @param[regionsAlpha] `[0; 1]` transparency of regions (filled or contoured),
+ * @param[regionsOpacity] `[0; 1]` transparency of regions (filled or contoured),
  * except when used for [chessboardPattern], in that case it's defined by [chessboardColor]
  * */
 private fun DrawScope.drawRegions(
     objects: List<GCircle?>,
     regions: List<LogicalRegion>,
+    hiddenObjectIndices: Set<Ix>,
     chessboardPattern: ChessboardPattern,
     chessboardColor: Color,
     showWireframes: Boolean,
     visibleRect: Rect,
     @FloatRange(from = 0.0, to = 1.0)
-    regionsAlpha: Float,
+    regionsOpacity: Float,
     regionsBlendMode: BlendMode,
     circleStroke: DrawStyle,
 ) {
     // NOTE: buggy on extreme zoom-in
     if (chessboardPattern != ChessboardPattern.NONE) {
         if (showWireframes) {
-            for (circle in objects)
-                if (circle is CircleOrLine)
-                    drawCircleOrLine(circle, visibleRect, chessboardColor, style = circleStroke)
+            for (ix in objects.indices) {
+                val o = objects[ix]
+                if (ix !in hiddenObjectIndices && o is CircleOrLine)
+                    drawCircleOrLine(o, visibleRect, chessboardColor, style = circleStroke)
+            }
         } else {
             if (chessboardPattern == ChessboardPattern.STARTS_COLORED)
                 drawRect(chessboardColor, visibleRect.topLeft, visibleRect.size)
             // FIX: flickering, eg when altering spirals
-            for (circle in objects) { // it used to work poorly but is good now for some reason
-                if (circle is CircleOrLine)
-                    drawCircleOrLine(circle, visibleRect, chessboardColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
+            for (ix in objects.indices) { // it used to work poorly but is good now for some reason
+                val o = objects[ix]
+                if (ix !in hiddenObjectIndices && o is CircleOrLine)
+                    drawCircleOrLine(o, visibleRect, chessboardColor, blendMode = BlendMode.Xor, drawHalfPlanesForLines = true)
             }
         }
     }
@@ -702,20 +736,20 @@ private fun DrawScope.drawRegions(
         if (showWireframes) {
             drawPath(path,
                 color = region.fillColor,
-                alpha = regionsAlpha,
+                alpha = regionsOpacity,
                 style = circleStroke,
                 blendMode = regionsBlendMode
             )
         } else { // drawing stroke+fill to prevent seams
             drawPath(path,
                 color = region.borderColor ?: region.fillColor,
-                alpha = regionsAlpha,
+                alpha = regionsOpacity,
                 style = circleStroke,
                 blendMode = regionsBlendMode,
             )
             drawPath(path,
                 color = region.fillColor,
-                alpha = regionsAlpha,
+                alpha = regionsOpacity,
                 style = Fill,
                 blendMode = regionsBlendMode,
             )
@@ -1066,6 +1100,7 @@ fun DrawScope.drawSelectionControls(
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.topUnderScaleSlider))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.halfHigherThanBottom))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.left, positions.bottom))
+    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.mid, positions.bottom))
     drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.bottom))
     if (!selectionIsLocked) {
         drawLine(

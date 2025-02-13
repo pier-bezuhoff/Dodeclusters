@@ -4,13 +4,10 @@ import data.geometry.Circle
 import data.geometry.GCircle
 import data.geometry.Point
 import domain.cluster.Constellation
-import ui.edit_cluster.EditClusterViewModel
-import kotlin.math.abs
-import kotlin.random.Random
+import kotlin.math.exp
+import kotlin.math.pow
 import kotlin.test.Test
 import kotlin.test.assertTrue
-import kotlin.time.Duration
-import kotlin.time.measureTime
 
 class ExpressionTest {
     enum class Variation {
