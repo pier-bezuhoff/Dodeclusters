@@ -2285,8 +2285,7 @@ class EditClusterViewModel : ViewModel() {
             if (isConstrained(selectedIndex)) emptyList() // exclude semi-free Expr.Incidence
             else expressions.getImmediateParents(selectedIndex)
                 .minus(selection.toSet())
-                .mapNotNull { objects[it] }
-        }
+        }.distinct().mapNotNull { objects[it] }
         if (allParents.isNotEmpty()) {
             viewModelScope.launch {
                 _animations.emit(HighlightAnimation(allParents))
