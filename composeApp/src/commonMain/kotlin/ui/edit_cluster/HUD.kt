@@ -38,9 +38,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.bi_inversion_steps_prompt
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.ok_name
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import domain.expressions.InterpolationParameters
 import org.jetbrains.compose.resources.painterResource
@@ -204,14 +204,15 @@ fun PointSelectionContextActions(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BoxScope.CircleInterpolationInterface(
+fun BoxScope.InterpolationInterface(
     updateParameters: (InterpolationParameters) -> Unit,
     openDetailsDialog: () -> Unit,
+    confirmParameters: () -> Unit,
     defaults: DefaultInterpolationParameters,
 ) {
     val minCount = defaults.minCircleCount
     val maxCount = defaults.maxCircleCount
-    val coDirected = false
+    val coDirected = false // TODO + also hid in-between for points
     val sliderState = remember { SliderState(
         value = defaults.nInterjacents.toFloat(),
         steps = maxCount - minCount - 1, // only counts intermediates
@@ -226,7 +227,9 @@ fun BoxScope.CircleInterpolationInterface(
         // MAYBE: instead of this just use VM.paramsFlow
         updateParameters(params)
     }
-    Column() {
+    Column(
+//        Modifier.align(Alignment.Center)
+    ) {
         SimpleToolButton(EditClusterTool.DetailedAdjustment) {
             openDetailsDialog()
             // on confirm from dialog reset this submode
@@ -239,16 +242,16 @@ fun BoxScope.CircleInterpolationInterface(
             interpolateInBetween = !interpolateInBetween // triggers params upd => triggers VM.updParams
         }
         Row {
-            Icon( // icon for the slider
+            Icon( // icon for the n-steps slider
                 painterResource(Res.drawable.three_dots_in_angle_brackets),
-                stringResource(Res.string.stub)
+                stringResource(Res.string.bi_inversion_steps_prompt)
             )
-            Slider(sliderState)
+            Slider(sliderState, Modifier.fillMaxWidth(0.4f))
             SimpleButton(
                 painterResource(Res.drawable.confirm),
                 stringResource(Res.string.ok_name)
             ) {
-                // complete submode
+                confirmParameters()
             }
         }
     }

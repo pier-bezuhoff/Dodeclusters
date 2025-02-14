@@ -67,6 +67,7 @@ import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeIntersection
 import domain.expressions.computeLineBy2Points
+import domain.expressions.copyWithNewParameters
 import domain.expressions.reIndex
 import domain.filterIndices
 import domain.io.DdcV1
@@ -2240,7 +2241,8 @@ class EditClusterViewModel : ViewModel() {
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) // haxx
             toolbarState = toolbarState.copy(activeTool = EditClusterTool.Multiselect)
-        if (submode !is SubMode.FlowFill) // we don't want to exit flow-fill
+        // we don't want to exit flow-fill or expr-adj that we started with completeToolMode()
+        if (submode !is SubMode.FlowFill && submode !is SubMode.ExprAdjustment)
             submode = SubMode.None
     }
 
@@ -2395,7 +2397,8 @@ class EditClusterViewModel : ViewModel() {
             ToolMode.POINT -> completePoint()
             ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
-            ToolMode.CIRCLE_INTERPOLATION -> openedDialog = DialogType.CIRCLE_INTERPOLATION
+            ToolMode.CIRCLE_INTERPOLATION -> startCircleInterpolationParameterAdjustment()
+                //openedDialog = DialogType.CIRCLE_INTERPOLATION
             ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
             ToolMode.BI_INVERSION -> openedDialog = DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> openedDialog = DialogType.LOXODROMIC_MOTION
@@ -2553,6 +2556,55 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
+    private fun startCircleInterpolationParameterAdjustment() {
+        // TODO: disallow re-assigning second arg
+        // and hide arg input prompt
+        val argList = partialArgList!!
+        val (arg1, arg2) = argList.args.map { it as Arg.CircleOrPoint }
+        if (arg1 is Arg.CircleOrPoint.CircleIndex && arg2 is Arg.CircleOrPoint.CircleIndex) {
+            val expr = Expr.CircleInterpolation(defaultInterpolationParameters.params, arg1.index, arg2.index)
+            recordCreateCommand()
+            val oldSize = objects.size
+            val newGCircles = expressions.addMultiExpr(expr)
+            val newCircles = newGCircles.map { it?.upscale() }
+            addObjects(newCircles)
+            val outputRange = (oldSize until objects.size).toList()
+            submode = SubMode.ExprAdjustment(expr, outputRange, outputRange)
+        } else if (arg1 is Arg.CircleOrPoint.Point && arg2 is Arg.CircleOrPoint.Point) {
+            recordCreateCommand()
+            val (startPointIx, endPointIx) = listOf(arg1, arg2).map { pointArg ->
+                when (pointArg) {
+                    is Arg.CircleOrPoint.Point.Index -> pointArg.index
+                    is Arg.CircleOrPoint.Point.XY ->
+                        createNewFreePoint(pointArg.toPoint(), triggerRecording = false)
+                }
+            }
+            val expr = Expr.PointInterpolation(defaultInterpolationParameters.params, startPointIx, endPointIx)
+            val oldSize = objects.size
+            val newGCircles = expressions.addMultiExpr(expr)
+            val newPoints = newGCircles.map { it?.upscale() as? Point }
+            addObjects(newPoints)
+            val outputRange = (oldSize until objects.size).toList()
+            submode = SubMode.ExprAdjustment(expr, outputRange, outputRange)
+        }
+    }
+
+    fun confirmAdjustedParameters() {
+        partialArgList?.let {
+            partialArgList = PartialArgList(it.signature)
+        }
+        when (val sm = submode) {
+            is SubMode.ExprAdjustment ->
+                when (val parameters = sm.expr.parameters) {
+                    is InterpolationParameters ->
+                        defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
+                    else -> {}
+                }
+            else -> {}
+        }
+        submode = SubMode.None
+    }
+
     fun completeCircleInterpolation(params: InterpolationParameters) {
         openedDialog = null
         val argList = partialArgList!!
@@ -2587,6 +2639,7 @@ class EditClusterViewModel : ViewModel() {
             partialArgList = PartialArgList(argList.signature)
             defaultInterpolationParameters = DefaultInterpolationParameters(params)
         }
+        submode = SubMode.None
     }
 
     fun resetCircleInterpolation() {
@@ -2789,20 +2842,31 @@ class EditClusterViewModel : ViewModel() {
 
     fun updateParameters(parameters: Parameters) {
         val sm = submode
-        if (sm is SubMode.ExprAdjustment)
-            when {
-                mode == ToolMode.CIRCLE_INTERPOLATION &&
-                sm.expr is Expr.CircleInterpolation &&
-                parameters is InterpolationParameters -> {
-                    val newExpr = sm.expr.copy(parameters = parameters)
-                    val (newIndices, newRange) = expressions.adjustMultiExpr(
-                        targetIndices = sm.outputIndices,
-                        maxRange = sm.maxOutputRange,
-                        newExpr = newExpr
-                    )
-                    submode = sm.copy(expr = newExpr, outputIndices = newIndices, maxOutputRange = newRange)
-                }
+        if (sm is SubMode.ExprAdjustment && sm.expr is Expr.OneToMany && parameters != sm.expr.parameters) {
+            val newExpr = sm.expr.copyWithNewParameters(parameters) as Expr.OneToMany
+            println("updP($parameters): $sm -> $newExpr")
+            val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
+                targetIndices = sm.outputIndices,
+                maxRange = sm.reservedIndices,
+                newExpr = newExpr
+            )
+            for (ix in newReservedIndices) { // we have to cleanup abandoned but reserved indices
+                if (ix < objects.size)
+                    objects[ix] = null
+                else
+                    addObject(null)
             }
+            for (i in newIndices.indices) {
+                val ix = newIndices[i]
+                val newObject = newObjects[i]?.upscale()
+                objects[ix] = newObject
+            }
+            submode = sm.copy(
+                expr = newExpr,
+                outputIndices = newIndices,
+                reservedIndices = newReservedIndices
+            )
+        }
     }
 
     fun openDetailsDialog() {

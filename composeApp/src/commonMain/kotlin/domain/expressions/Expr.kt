@@ -385,3 +385,37 @@ inline fun Expr.reIndex(
             target = reIndexer(target)
         )
     }
+
+/** Copies case-by-case by hard-__casting__ [newParameters] as an appropriate type for `this` */
+fun Expr.copyWithNewParameters(
+    newParameters: Parameters
+): Expr =
+    when (this) {
+        is Incidence -> copy(
+            parameters = newParameters as IncidenceParameters
+        )
+        is CircleByCenterAndRadius -> this
+        is CircleBy3Points -> this
+        is CircleByPencilAndPoint -> this
+        is LineBy2Points -> this
+        is CircleInversion -> this
+        is CircleBy2PointsAndSagittaRatio -> copy(
+            parameters = newParameters as SagittaRatioParameters
+        )
+        is Intersection -> this
+        is CircleInterpolation -> copy(
+            parameters = newParameters as InterpolationParameters
+        )
+        is PointInterpolation -> copy(
+            parameters = newParameters as InterpolationParameters
+        )
+        is CircleExtrapolation -> copy(
+            parameters = newParameters as ExtrapolationParameters
+        )
+        is BiInversion -> copy(
+            parameters = newParameters as BiInversionParameters
+        )
+        is LoxodromicMotion -> copy(
+            parameters = newParameters as LoxodromicMotionParameters
+        )
+    }

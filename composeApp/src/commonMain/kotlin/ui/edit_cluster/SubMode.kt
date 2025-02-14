@@ -40,13 +40,13 @@ sealed interface SubMode {
 
     /** Sub-mode accompanying [ToolMode], that allows live adjustment of expression parameters
      * @property[outputIndices] indices containing outputs of the multi expr we are adjusting
-     * @property[maxOutputRange] all indices reserved for [expr],
-     * contains [outputIndices] and additional `null`ed indices that
+     * @property[reservedIndices] all indices reserved for [expr],
+     * including [outputIndices] and additional `null`ed indices that
      * were previously allocated for this multi expr
      * */
     data class ExprAdjustment(
         val expr: Expr,
         val outputIndices: List<Ix>,
-        val maxOutputRange: List<Ix>,
-    ) : SubMode // maybe allow it in Drag mode
+        val reservedIndices: List<Ix>,
+    ) : SubMode // allow it in Drag mode
 }

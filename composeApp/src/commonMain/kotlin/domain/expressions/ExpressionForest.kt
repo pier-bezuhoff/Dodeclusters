@@ -328,16 +328,19 @@ class ExpressionForest(
      * @param[targetIndices] indices of all [Expression.OneOf] of the given expression
      * @param[maxRange] all indices that were ever used to hold results of the expr. They
      * must start with [targetIndices], and then potentially contain `null`-ed indices.
-     * @return updated ([targetIndices], [maxRange])
+     * @return updated ([targetIndices], [maxRange], updated objects at new target indices (to be set))
      * */
     fun adjustMultiExpr(
         targetIndices: List<Ix>,
         maxRange: List<Ix>,
-        newExpr: Expr.OneToMany
-    ): Pair<List<Ix>, List<Ix>> {
+        newExpr: Expr.OneToMany,
+    ): Triple<List<Ix>, List<Ix>, List<GCircle?>> {
+        println("adjustMultiExpr($targetIndices, $maxRange, $newExpr)")
         val i0 = targetIndices.first()
         val oldExpr = expressions[i0]!!.expr
-        require(oldExpr.args == newExpr.args && targetIndices.all { expressions[it] == oldExpr })
+        require(oldExpr.args == newExpr.args && targetIndices.all { expressions[it]?.expr == oldExpr }) {
+            "adjustMultiExpr($targetIndices, $maxRange, $newExpr)"
+        }
         val tier = ix2tier[i0]!!
 //        val tier = computeTier(i0, newExpr)
         var newMaxRange = maxRange
@@ -345,7 +348,7 @@ class ExpressionForest(
         val sizeIncrease = result.size - targetIndices.size
         val newTargetIndices: List<Ix>
         if (sizeIncrease > 0) {
-            val sizeOverflow = result.size - targetIndices.size
+            val sizeOverflow = result.size - maxRange.size
             if (sizeOverflow > 0) {
                 newMaxRange = newMaxRange + (expressions.size until expressions.size + sizeOverflow)
             }
@@ -366,9 +369,8 @@ class ExpressionForest(
         for (i in result.indices) {
             val ix = newTargetIndices[i]
             expressions[ix] = Expression.OneOf(newExpr, outputIndex = i)
-            set(ix, result[i])
         }
-        return Pair(newTargetIndices, newMaxRange)
+        return Triple(newTargetIndices, newMaxRange, result)
     }
 
     /**

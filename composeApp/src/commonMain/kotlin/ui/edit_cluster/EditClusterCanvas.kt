@@ -69,6 +69,7 @@ import domain.ChessboardPattern
 import domain.Ix
 import domain.PartialArgList
 import domain.cluster.LogicalRegion
+import domain.expressions.Expr
 import domain.rotateBy
 import getPlatform
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -208,6 +209,20 @@ fun BoxScope.EditClusterCanvas(
             viewModel.partialArcPath?.nArcs?.let { it >= 1 } == true
         ) {
             ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
+        } else {
+            when (val sm = viewModel.submode) {
+                is SubMode.ExprAdjustment -> when (sm.expr) {
+                    is Expr.CircleInterpolation, is Expr.PointInterpolation ->
+                        InterpolationInterface(
+                            updateParameters = viewModel::updateParameters,
+                            openDetailsDialog = viewModel::openDetailsDialog,
+                            confirmParameters = viewModel::confirmAdjustedParameters,
+                            defaults = viewModel.defaultInterpolationParameters
+                        )
+                    else -> {}
+                }
+                else -> {}
+            }
         }
         if (viewModel.mode == SelectionMode.Region && viewModel.showCircles) {
             RegionManipulationStrategySelector(
