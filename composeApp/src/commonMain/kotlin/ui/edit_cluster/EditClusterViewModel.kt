@@ -1484,11 +1484,11 @@ class EditClusterViewModel : ViewModel() {
     private fun markObjectsAsPhantoms() {
         phantoms = phantoms + selection
 //        selection = emptyList()
-        showPhantomObjects = false
+//        showPhantomObjects = false // i think this behavior is confuzzling
     }
 
     private fun unmarkObjectsAsPhantoms() {
-        phantoms = phantoms - selection
+        phantoms = phantoms - selection.toSet()
     }
 
     private fun swapDirectionsOfSelectedCircles() {
@@ -2251,7 +2251,7 @@ class EditClusterViewModel : ViewModel() {
 
     // maybe enable it &
     // make long drag = pan zoom
-    fun onLongPress(position: Offset) {
+    fun onLongPress(position: Offset) { // by itself interferes with long-drag
         // select siblings & parents for easy copy
         if (mode.isSelectingCircles()) {
             selection.let {
