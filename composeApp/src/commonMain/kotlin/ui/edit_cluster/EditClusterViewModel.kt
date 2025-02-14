@@ -1481,13 +1481,13 @@ class EditClusterViewModel : ViewModel() {
         selectionIsLockedTrigger = !selectionIsLockedTrigger
     }
 
-    private fun markObjectsAsPhantoms() {
+    private fun markSelectedObjectsAsPhantoms() {
         phantoms = phantoms + selection
-//        selection = emptyList()
-//        showPhantomObjects = false // i think this behavior is confuzzling
+        // selection = emptyList() // being able to instantly undo is prob better ux
+        // showPhantomObjects = false // i think this behavior is confuzzling
     }
 
-    private fun unmarkObjectsAsPhantoms() {
+    private fun unmarkSelectedObjectsAsPhantoms() {
         phantoms = phantoms - selection.toSet()
     }
 
@@ -2877,7 +2877,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
             EditClusterTool.Detach -> detachEverySelectedObject()
             EditClusterTool.SwapDirection -> swapDirectionsOfSelectedCircles()
-            EditClusterTool.MarkAsPhantoms -> if (toolPredicate(tool)) markObjectsAsPhantoms() else unmarkObjectsAsPhantoms()
+            EditClusterTool.MarkAsPhantoms -> if (toolPredicate(tool)) markSelectedObjectsAsPhantoms() else unmarkSelectedObjectsAsPhantoms()
             EditClusterTool.Duplicate -> duplicateSelectedCircles()
             EditClusterTool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
             EditClusterTool.Delete -> deleteSelectedPointsAndCircles()

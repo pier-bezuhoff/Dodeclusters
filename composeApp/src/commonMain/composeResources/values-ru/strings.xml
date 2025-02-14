@@ -4,7 +4,7 @@
     <string name="save_name">Сохранить</string>
     <string name="save_cluster_name">Сохранить как файл Dodeclusters</string>
     <string name="png_export_name">Сохранить скриншот как PNG</string>
-    <string name="svg_export_name">Эксопртировать как изображение SVG</string>
+    <string name="svg_export_name">Экспортировать как изображение SVG</string>
     <string name="open_file_name">Открыть файл Dodeclusters</string>
     <string name="undo_name">Отменить действие</string>
     <string name="redo_name">Повторить действие</string>
