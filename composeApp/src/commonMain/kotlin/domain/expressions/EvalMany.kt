@@ -152,7 +152,7 @@ fun computeLoxodromicMotion(
         trajectory.add(
             dilation.applyTo(
                 rotation.applyTo(targetGC)
-            ).toGCircleAs(target)
+            ).toGCircle() //As(target)
         )
     }
     return trajectory

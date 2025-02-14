@@ -2397,8 +2397,9 @@ class EditClusterViewModel : ViewModel() {
             ToolMode.POINT -> completePoint()
             ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
-            ToolMode.CIRCLE_INTERPOLATION -> startCircleInterpolationParameterAdjustment()
-                //openedDialog = DialogType.CIRCLE_INTERPOLATION
+            ToolMode.CIRCLE_INTERPOLATION ->
+//                startCircleInterpolationParameterAdjustment()
+                openedDialog = DialogType.CIRCLE_INTERPOLATION
             ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
             ToolMode.BI_INVERSION -> openedDialog = DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> openedDialog = DialogType.LOXODROMIC_MOTION
@@ -3131,7 +3132,7 @@ class EditClusterViewModel : ViewModel() {
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
         // NOTE: changing it presently breaks all line-incident points
         /** [Double] arithmetic is best in range that is closer to 0 */
-        const val UPSCALING_FACTOR = 500.0 //200.0
+        const val UPSCALING_FACTOR = 2_000.0 //200.0
         const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
