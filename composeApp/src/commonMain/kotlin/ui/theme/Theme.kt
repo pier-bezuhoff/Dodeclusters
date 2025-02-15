@@ -23,6 +23,7 @@ fun DodeclustersTheme(
     val extendedScheme =
         if (isLight) DodeclustersColors.extendedLightScheme
         else DodeclustersColors.extendedDarkScheme
+    MaterialTheme.shapes.small
     CompositionLocalProvider(LocalExtendedColors provides extendedScheme) {
         MaterialTheme(
             colorScheme = scheme,

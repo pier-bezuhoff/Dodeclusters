@@ -1537,7 +1537,7 @@ class EditClusterViewModel : ViewModel() {
                 val screenCenter = absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
                 when {
                     isCloseEnoughToSelect(
-                        absolutePosition = absolute(selectionControlsPositions.sliderMiddleOffset),
+                        absolutePosition = absolute(selectionControlsPositions.scaleSliderMiddleOffset),
                         visiblePosition = visiblePosition,
                         lowAccuracy = true
                     ) -> {
@@ -1595,7 +1595,7 @@ class EditClusterViewModel : ViewModel() {
                     } else {
                         reselectRegionAt(visiblePosition)
                     }
-                } else if (mode is ToolMode) {
+                } else if (mode is ToolMode && partialArgList?.isFull != true) {
                     val pArgList = partialArgList
                     when (pArgList?.nextArgType) {
                         ArgType.Point -> {
@@ -1638,18 +1638,19 @@ class EditClusterViewModel : ViewModel() {
                             }
                         }
                         ArgType.CircleOrPoint -> {
+                            val inInterpolationMode = mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION
                             val result = snapped(absolute(visiblePosition))
                             if (result is PointSnapResult.Eq) {
                                 val newArg = Arg.CircleOrPoint.Point.Index(result.pointIndex)
                                 val sameArgsForInterpolation =
-                                    (mode == ToolMode.CIRCLE_INTERPOLATION) entails
+                                    inInterpolationMode entails
                                     (pArgList.args.isEmpty() || pArgList.currentArg is Arg.CircleOrPoint.Point)
                                 if (pArgList.currentArg != newArg && sameArgsForInterpolation) {
                                     partialArgList = pArgList
                                         .addArg(newArg, confirmThisArg = false)
                                         .copy(lastSnap = result)
                                 }
-                            } else if (mode == ToolMode.CIRCLE_INTERPOLATION && pArgList.currentArg is Arg.CircleOrPoint.Point) {
+                            } else if (inInterpolationMode && pArgList.currentArg is Arg.CircleOrPoint.Point) {
                                 val newArg = Arg.CircleOrPoint.Point.XY(result.result)
                                 partialArgList = pArgList
                                     .addArg(newArg, confirmThisArg = false)
@@ -1658,11 +1659,12 @@ class EditClusterViewModel : ViewModel() {
                                 val circles = objects.map { it as? CircleOrLine }
                                 val circleIndex = selectCircle(circles, visiblePosition)
                                 if (circleIndex != null) {
+                                    // if 1st interpolation arg is point we cannot reach here
                                     val newArg = Arg.CircleOrPoint.CircleIndex(circleIndex)
                                     if (pArgList.currentArg != newArg) {
                                         partialArgList = pArgList.addArg(newArg, confirmThisArg = false)
                                     }
-                                } else {
+                                } else if (inInterpolationMode entails (pArgList.currentArg !is Arg.CircleOrPoint.CircleIndex)) {
                                     val newArg = Arg.CircleOrPoint.Point.XY(result.result)
                                     partialArgList = pArgList
                                         .addArg(newArg, confirmThisArg = false)
@@ -2166,7 +2168,7 @@ class EditClusterViewModel : ViewModel() {
                 // MAYBE: try to re-attach free points
             }
             ToolMode.ARC_PATH -> {}
-            is ToolMode -> {
+            is ToolMode -> if (submode == SubMode.None) {
                 val pArgList = partialArgList
                 // we only confirm args in onUp, they are created in onDown etc.
                 val newArg = when (val arg = pArgList?.currentArg) {
@@ -2217,7 +2219,7 @@ class EditClusterViewModel : ViewModel() {
             }
             else -> {}
         }
-        if (partialArgList?.isFull == true) {
+        if (partialArgList?.isFull == true && submode == SubMode.None) {
             completeToolMode()
         }
         if ((mode == SelectionMode.Drag || mode == SelectionMode.Multiselect) &&
@@ -2369,6 +2371,7 @@ class EditClusterViewModel : ViewModel() {
                 is ToolMode -> {
                     partialArgList = partialArgList?.let { PartialArgList(it.signature) }
                     partialArcPath = null
+                    submode = SubMode.None
                 }
                 is SelectionMode -> {
                     selection = emptyList()
@@ -2397,7 +2400,7 @@ class EditClusterViewModel : ViewModel() {
             ToolMode.POINT -> completePoint()
             ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
-            ToolMode.CIRCLE_INTERPOLATION ->
+            ToolMode.CIRCLE_OR_POINT_INTERPOLATION ->
                 startCircleInterpolationParameterAdjustment()
 //                openedDialog = DialogType.CIRCLE_INTERPOLATION
             ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
@@ -2569,6 +2572,7 @@ class EditClusterViewModel : ViewModel() {
             val newGCircles = expressions.addMultiExpr(expr)
             val newCircles = newGCircles.map { it?.upscale() }
             addObjects(newCircles)
+            // imaginary n-sectors doko?
             val outputRange = (oldSize until objects.size).toList()
             submode = SubMode.ExprAdjustment(expr, outputRange, outputRange)
         } else if (arg1 is Arg.CircleOrPoint.Point && arg2 is Arg.CircleOrPoint.Point) {
@@ -2645,7 +2649,7 @@ class EditClusterViewModel : ViewModel() {
 
     fun resetCircleInterpolation() {
         openedDialog = null
-        partialArgList = PartialArgList(EditClusterTool.CircleInterpolation.signature)
+        partialArgList = PartialArgList(EditClusterTool.CircleOrPointInterpolation.signature)
     }
 
     fun completeCircleExtrapolation(
@@ -2872,7 +2876,7 @@ class EditClusterViewModel : ViewModel() {
 
     fun openDetailsDialog() {
         openedDialog = when (mode) {
-            ToolMode.CIRCLE_INTERPOLATION -> DialogType.CIRCLE_INTERPOLATION
+            ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> DialogType.CIRCLE_INTERPOLATION
             ToolMode.CIRCLE_EXTRAPOLATION -> DialogType.CIRCLE_EXTRAPOLATION
             ToolMode.BI_INVERSION -> DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> DialogType.LOXODROMIC_MOTION
@@ -2886,7 +2890,7 @@ class EditClusterViewModel : ViewModel() {
         newComplementary: Boolean? = null,
     ): Boolean? {
         when (mode) {
-            ToolMode.CIRCLE_INTERPOLATION -> {
+            ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> {
                 when (val s = submode) {
                     is SubMode.ExprAdjustment -> {
                         when (val expr = s.expr) {

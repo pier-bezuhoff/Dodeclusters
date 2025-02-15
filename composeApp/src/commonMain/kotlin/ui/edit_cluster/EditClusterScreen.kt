@@ -78,8 +78,10 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.shrink
+import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
+import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
 import domain.Arg
 import domain.PartialArgList
 import domain.io.DdcRepository
@@ -470,9 +472,15 @@ fun ToolDescription(
         val argDescriptions = (tool as? EditClusterTool.MultiArg)?.let {
             stringArrayResource(it.argDescriptions)
         }
+        val confirmParametersPrompt = stringResource(Res.string.tool_arg_parameter_adjustment_prompt)
         val number =
-            if (partialArgList == null || tool !is EditClusterTool.MultiArg)
+            if (partialArgList == null ||
+                tool !is EditClusterTool.MultiArg ||
+                partialArgList.isFull && !partialArgList.lastArgIsConfirmed
+            )
                 null
+            else if (partialArgList.isFull && partialArgList.lastArgIsConfirmed)
+                -1 // indicates expr-adj submode
             else if (partialArgList.lastArgIsConfirmed)
                 min(partialArgList.args.size, tool.signature.argTypes.size - 1)
             else
@@ -483,7 +491,10 @@ fun ToolDescription(
                 argDescriptions != null &&
                 argDescriptions.size > currentNumber
             ) {
-                val argDescription = argDescriptions[currentNumber]
+                val argDescription =
+                    if (currentNumber == -1) null
+                else
+                    argDescriptions[currentNumber]
                 val selectionAsArgPrompt = stringResource(Res.string.set_selection_as_tool_arg_prompt)
                 if (currentShowPrompt) {
                     Button(
@@ -509,7 +520,7 @@ fun ToolDescription(
                     }
                 } else if (!compact) {
                     Text(
-                        "$inputPrompt: $argDescription",
+                        if (currentNumber == -1) confirmParametersPrompt else "$inputPrompt: $argDescription",
                         Modifier.padding(24.dp, 4.dp),
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
                         textDecoration = TextDecoration.Underline,
@@ -1069,7 +1080,8 @@ fun ToolButton(
                         name = name,
                         isOn = enabled,
                         modifier = modifier,
-                        tint = tint,
+                        iconModifier = modifier,
+                        contentColor = tint,
                         onClick = callback
                     )
                 } else {

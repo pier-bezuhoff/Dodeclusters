@@ -54,6 +54,7 @@ import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.delete_name
 import dodeclusters.composeapp.generated.resources.deselect
 import dodeclusters.composeapp.generated.resources.detach_name
+import dodeclusters.composeapp.generated.resources.detailed_adjustment_name
 import dodeclusters.composeapp.generated.resources.dotted_rectangle
 import dodeclusters.composeapp.generated.resources.double_reflection
 import dodeclusters.composeapp.generated.resources.drag_description
@@ -81,6 +82,7 @@ import dodeclusters.composeapp.generated.resources.hide_haired_arrow
 import dodeclusters.composeapp.generated.resources.hide_layers
 import dodeclusters.composeapp.generated.resources.hide_ui_description
 import dodeclusters.composeapp.generated.resources.hide_ui_name
+import dodeclusters.composeapp.generated.resources.in_between_name
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_description
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_name
 import dodeclusters.composeapp.generated.resources.inserted_cross
@@ -131,7 +133,6 @@ import dodeclusters.composeapp.generated.resources.shark_fin_striped
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_name
 import dodeclusters.composeapp.generated.resources.spiral
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_name
 import dodeclusters.composeapp.generated.resources.three_sliders
@@ -373,7 +374,7 @@ sealed class EditClusterTool(
         Res.array.circle_inversion_arg_descriptions,
         Res.drawable.circle_inversion
     )
-    data object CircleInterpolation: MultiArg(
+    data object CircleOrPointInterpolation: MultiArg(
         SIGNATURE_2_GENERALIZED_CIRCLES,
         Res.string.circle_interpolation_name,
         Res.string.circle_interpolation_description,
@@ -501,11 +502,11 @@ sealed class EditClusterTool(
         override val disabledDescription = Res.string.toggle_phantoms_disabled_description
     }
     data object DetailedAdjustment: ContextAction(
-        Res.string.stub,
+        Res.string.detailed_adjustment_name,
         icon = Res.drawable.three_sliders
     )
     data object InBetween: ContextAction(
-        Res.string.stub,
+        Res.string.in_between_name,
         icon = Res.drawable.road
     )
 }

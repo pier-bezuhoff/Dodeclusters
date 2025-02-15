@@ -136,6 +136,7 @@
 <!--    <string name="_description"></string>-->
     <string name="tool_arg_input_prompt">Пожалуйста, укажите</string>
     <string name="set_selection_as_tool_arg_prompt">Использовать выделение как</string>
+    <string name="tool_arg_parameter_adjustment_prompt">Пожалуйста, подтвердите выбранные параметры</string>
 
     <!-- categories -->
     <string name="drag_category_name">Перетаскивание</string>

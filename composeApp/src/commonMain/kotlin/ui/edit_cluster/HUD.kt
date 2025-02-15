@@ -1,13 +1,11 @@
 package ui.edit_cluster
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -46,6 +44,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.bi_inversion_steps_prompt
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.ok_name
+import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import domain.expressions.InterpolationParameters
 import org.jetbrains.compose.resources.painterResource
@@ -229,28 +228,20 @@ fun BoxScope.InterpolationInterface(
         sliderState.value.roundToInt(),
         if (coDirected) !interpolateInBetween else interpolateInBetween
     )
+    val buttonShape = RoundedCornerShape(percent = 50)
+    val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
     LaunchedEffect(params) {
         // MAYBE: instead of this just use VM.paramsFlow
         updateParameters(params)
     }
     with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
-    }
-    Column(
-        Modifier
-            .align(Alignment.CenterEnd)
-            .fillMaxHeight(0.8f)
-        ,
-        verticalArrangement = Arrangement.Bottom,
-        horizontalAlignment = Alignment.End,
-    ) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
         ) {
             SimpleToolButton(
                 EditClusterTool.DetailedAdjustment,
-                Modifier
-                    .padding(vertical = 12.dp)
-                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                topRightUnderScaleModifier
+                    .background(buttonBackground, buttonShape)
             ) {
                 openDetailsDialog()
             }
@@ -258,38 +249,32 @@ fun BoxScope.InterpolationInterface(
                 painterResource(EditClusterTool.InBetween.icon),
                 stringResource(EditClusterTool.InBetween.name),
                 isOn = interpolateInBetween,
-//                Modifier.background(MaterialTheme.colorScheme.secondaryContainer),//.padding(4.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                checkedTint = MaterialTheme.colorScheme.onSecondaryContainer,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = halfBottomRightModifier,
+                contentColor = MaterialTheme.colorScheme.secondary,
+                checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerColor = buttonBackground,
                 checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 interpolateInBetween = !interpolateInBetween // triggers params upd => triggers VM.updParams
             }
-            Row(
-                Modifier.padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+            Icon(
+                painterResource(Res.drawable.three_dots_in_angle_brackets),
+                "N-steps slider",//stringResource(Res.string.steps_slider_name),
+                preHorizontalSliderModifier
+                    .padding(vertical = 12.dp)
+            )
+            Slider(
+                sliderState,
+                horizontalSliderModifier
+                    .width(horizontalSliderWidth)
+            )
+            SimpleButton(
+                painterResource(Res.drawable.confirm),
+                stringResource(Res.string.ok_name),
+                bottomRightModifier
+                    .background(buttonBackground, buttonShape),
             ) {
-                Icon( // icon for the n-steps slider
-                    painterResource(Res.drawable.three_dots_in_angle_brackets),
-                    stringResource(Res.string.bi_inversion_steps_prompt),
-                    Modifier.padding(12.dp),
-                )
-                Slider(
-                    sliderState,
-                    Modifier
-                        .fillMaxWidth(0.4f)
-                        .padding(12.dp)
-                )
-                SimpleButton(
-                    painterResource(Res.drawable.confirm),
-                    stringResource(Res.string.ok_name),
-                    Modifier
-                        .background(MaterialTheme.colorScheme.secondaryContainer),
-                ) {
-                    confirmParameters()
-                }
+                confirmParameters()
             }
         }
     }

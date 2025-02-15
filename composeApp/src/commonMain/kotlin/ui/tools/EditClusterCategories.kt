@@ -81,7 +81,7 @@ sealed class EditClusterCategory(
         listOf(
             EditClusterTool.CircleInversion,
             EditClusterTool.LoxodromicMotion,
-            EditClusterTool.CircleInterpolation,
+            EditClusterTool.CircleOrPointInterpolation,
             EditClusterTool.BiInversion,
             EditClusterTool.CircleExtrapolation,
         ),

@@ -35,7 +35,7 @@ enum class ToolMode(
     override val tool: EditClusterTool.MultiArg
 ) : Mode {
     CIRCLE_INVERSION(EditClusterTool.CircleInversion),
-    CIRCLE_INTERPOLATION(EditClusterTool.CircleInterpolation),
+    CIRCLE_OR_POINT_INTERPOLATION(EditClusterTool.CircleOrPointInterpolation),
     BI_INVERSION(EditClusterTool.BiInversion),
     CIRCLE_EXTRAPOLATION(EditClusterTool.CircleExtrapolation),
     LOXODROMIC_MOTION(EditClusterTool.LoxodromicMotion),

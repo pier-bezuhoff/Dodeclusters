@@ -25,6 +25,12 @@ data class ImaginaryCircle(
         return ImaginaryCircle(newX, newY, radius*zoom)
     }
 
+    fun scaled(focus: Offset, zoom: Float): ImaginaryCircle {
+        val newX = (x - focus.x) * zoom + focus.x
+        val newY = (y - focus.y) * zoom + focus.y
+        return ImaginaryCircle(newX, newY, zoom * radius)
+    }
+
     override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): ImaginaryCircle {
         var newX: Double = x + translation.x
         var newY: Double = y + translation.y
@@ -39,12 +45,6 @@ data class ImaginaryCircle(
             newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
             newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
         } // tbf because of T;S;R order it is not completely accurate
-        return ImaginaryCircle(newX, newY, zoom * radius)
-    }
-
-    fun scaled(focus: Offset, zoom: Float): ImaginaryCircle {
-        val newX = (x - focus.x) * zoom + focus.x
-        val newY = (y - focus.y) * zoom + focus.y
         return ImaginaryCircle(newX, newY, zoom * radius)
     }
 }

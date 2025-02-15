@@ -1069,8 +1069,8 @@ fun DrawScope.drawSelectionControls(
     if (!selectionIsLocked) {
         drawLine(
             sliderColor,
-            Offset(positions.right, positions.top + positions.sliderPadding),
-            Offset(positions.right, positions.scaleSliderBottom - positions.sliderPadding)
+            Offset(positions.right, positions.top + positions.scaleSliderPadding),
+            Offset(positions.right, positions.scaleSliderBottom - positions.scaleSliderPadding)
         )
         val sliderPercentage = when (subMode) {
             is SubMode.ScaleViaSlider -> subMode.sliderPercentage
@@ -1125,10 +1125,10 @@ data class SelectionControlsPositions(
     val cornerRadius = minDim * RELATIVE_CORNER_RADIUS
 
     val top = height * RELATIVE_VERTICAL_MARGIN
-    val sliderPadding = height * RELATIVE_SCALE_SLIDER_PADDING
-    val sliderFullHeight = height * RELATIVE_SCALE_SLIDER_HEIGHT
-    val sliderHeight = sliderFullHeight - 2*sliderPadding
-    val sliderMiddlePosition = top + sliderFullHeight / 2f
+    val scaleSliderPadding = height * RELATIVE_SCALE_SLIDER_PADDING
+    val scaleSliderFullHeight = height * RELATIVE_SCALE_SLIDER_HEIGHT
+    val scaleSliderHeight = scaleSliderFullHeight - 2*scaleSliderPadding
+    val scaleSliderMiddlePosition = top + scaleSliderFullHeight / 2f
     val scaleSliderBottom = top + height * RELATIVE_SCALE_SLIDER_HEIGHT
     val topUnderScaleSlider = scaleSliderBottom + height * RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT
     val bottom = height * (1 - RELATIVE_VERTICAL_MARGIN)
@@ -1138,16 +1138,19 @@ data class SelectionControlsPositions(
     val left = right - (bottom - topUnderScaleSlider)
     val mid = (right + left)/2
 
-    val sliderMiddleOffset = Offset(right, sliderMiddlePosition)
+    val horizontalSliderStart = width * RELATIVE_HORIZONTAL_SLIDER_OFFSET
+    val horizontalSliderSpan = right - horizontalSliderStart
+
+    val scaleSliderMiddleOffset = Offset(right, scaleSliderMiddlePosition)
     val rotationHandleOffset = Offset(left, bottom)
 
     @Stable
     fun calculateSliderY(percentage: Float = 0.5f): Float =
-        top + sliderPadding + sliderHeight * (1 - percentage)
+        top + scaleSliderPadding + scaleSliderHeight * (1 - percentage)
 
     @Stable
     fun addPanToPercentage(currentPercentage: Float, pan: Offset): Float {
-        val p = -pan.y/sliderHeight
+        val p = -pan.y/scaleSliderHeight
         return (currentPercentage + p).coerceIn(0f, 1f)
     }
 
@@ -1158,6 +1161,7 @@ data class SelectionControlsPositions(
         const val RELATIVE_SCALE_SLIDER_PADDING = 0.02f // = % of H
         const val RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT = 0.10f // = % of H
         const val RELATIVE_CORNER_RADIUS = 0.10f // % of minDim
+        const val RELATIVE_HORIZONTAL_SLIDER_OFFSET = 0.6f // = 60% from the left of the screen
     }
 }
 
@@ -1178,6 +1182,10 @@ data class ConcreteSelectionControlsPositions(
             )
         }
 
+    val horizontalSliderWidth = with (density) {
+        positions.horizontalSliderSpan.toDp()
+    } - halfSize
+
     val topRightModifier = offsetModifier(positions.right, positions.top)
     val scaleBottomRightModifier = offsetModifier(positions.right, positions.scaleSliderBottom)
     val topRightUnderScaleModifier = offsetModifier(positions.right, positions.topUnderScaleSlider)
@@ -1185,4 +1193,6 @@ data class ConcreteSelectionControlsPositions(
     val bottomRightModifier = offsetModifier(positions.right, positions.bottom)
     val bottomLeftModifier = offsetModifier(positions.left, positions.bottom)
     val bottomMidModifier = offsetModifier(positions.mid, positions.bottom)
+    val horizontalSliderModifier = offsetModifier(positions.horizontalSliderStart, positions.bottom)
+    val preHorizontalSliderModifier = offsetModifier(positions.horizontalSliderStart - 40, positions.bottom)
 }

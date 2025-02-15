@@ -40,7 +40,7 @@ fun computeCircleInterpolation(
             start.bisector(
                 if (params.complementary) -end else end,
                 nOfSections = n, index = i
-            ).toGCircleAs(startCircle)
+            ).toGCircle() //As(startCircle)
         )
     }
     return newCircles

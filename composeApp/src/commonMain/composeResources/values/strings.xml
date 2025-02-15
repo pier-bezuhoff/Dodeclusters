@@ -57,16 +57,6 @@
     <string name="palette_description">Pick colors</string>
     <string name="applied_color_name">Applied color</string>
     <string name="applied_color_description">Switch to this recently used color</string>
-    <string name="expand_name">Expand</string>
-    <string name="shrink_name">Shrink</string>
-    <string name="detach_name">Detach</string>
-    <string name="swap_direction_name">Swap direction</string>
-    <string name="duplicate_name">Duplicate</string>
-    <string name="duplicate_description">Duplicate selected circles</string>
-    <string name="pick_circle_color_name">Circle color</string>
-    <string name="pick_circle_color_description">Pick circle color</string>
-    <string name="delete_name">Delete</string>
-    <string name="delete_description">Delete selected circles</string>
     <string name="circle_inversion_name">Circle inversion</string>
     <string name="circle_inversion_description">Invert an object with respect to a circle</string>
     <string-array name="circle_inversion_arg_descriptions">
@@ -138,10 +128,25 @@
     <string-array name="add_point_arg_descriptions">
         <item>An anchor point</item>
     </string-array>
-<!--    <string name="_name"></string>-->
-<!--    <string name="_description"></string>-->
     <string name="tool_arg_input_prompt">Please specify</string>
     <string name="set_selection_as_tool_arg_prompt">Use active selection as</string>
+    <string name="tool_arg_parameter_adjustment_prompt">Please confirm selected parameters</string>
+    <!-- contextual tools -->
+    <string name="expand_name">Expand</string>
+    <string name="shrink_name">Shrink</string>
+    <string name="detach_name">Detach</string>
+    <string name="swap_direction_name">Swap direction</string>
+    <string name="duplicate_name">Duplicate</string>
+    <string name="duplicate_description">Duplicate selected circles</string>
+    <string name="pick_circle_color_name">Circle color</string>
+    <string name="pick_circle_color_description">Pick circle color</string>
+    <string name="delete_name">Delete</string>
+    <string name="delete_description">Delete selected circles</string>
+    <string name="detailed_adjustment_name">Open detailed adjustment dialog</string>
+    <string name="in_between_name">In between</string>
+    <string name="steps_slider_name">N steps</string>
+<!--    <string name="_name"></string>-->
+<!--    <string name="_description"></string>-->
 
     <!-- categories -->
     <string name="drag_category_name">Drag</string>
