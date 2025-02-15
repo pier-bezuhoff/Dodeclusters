@@ -126,8 +126,7 @@ fun computeBiInversion(
     return trajectory
 }
 
-// FIX: quite inaccurate on points (?? example)
-// NOTE: without downscaling it visibly diverges
+// NOTE: without downscaling it visibly diverges (even at 1/500 downscaling)
 fun computeLoxodromicMotion(
     params: LoxodromicMotionParameters,
     divergencePoint: Point, convergencePoint: Point,

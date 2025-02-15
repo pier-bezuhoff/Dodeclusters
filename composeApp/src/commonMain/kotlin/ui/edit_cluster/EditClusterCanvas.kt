@@ -210,19 +210,20 @@ fun BoxScope.EditClusterCanvas(
         ) {
             ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
         } else {
-//            when (val sm = viewModel.submode) {
-//                is SubMode.ExprAdjustment -> when (sm.expr) {
-//                    is Expr.CircleInterpolation, is Expr.PointInterpolation ->
-//                        InterpolationInterface(
-//                            updateParameters = viewModel::updateParameters,
-//                            openDetailsDialog = viewModel::openDetailsDialog,
-//                            confirmParameters = viewModel::confirmAdjustedParameters,
-//                            defaults = viewModel.defaultInterpolationParameters
-//                        )
-//                    else -> {}
-//                }
-//                else -> {}
-//            }
+            when (val sm = viewModel.submode) {
+                is SubMode.ExprAdjustment -> when (sm.expr) {
+                    is Expr.CircleInterpolation, is Expr.PointInterpolation ->
+                        InterpolationInterface(
+                            canvasSize = viewModel.canvasSize,
+                            updateParameters = viewModel::updateParameters,
+                            openDetailsDialog = viewModel::openDetailsDialog,
+                            confirmParameters = viewModel::confirmAdjustedParameters,
+                            defaults = viewModel.defaultInterpolationParameters
+                        )
+                    else -> {}
+                }
+                else -> {}
+            }
         }
         if (viewModel.mode == SelectionMode.Region && viewModel.showCircles) {
             RegionManipulationStrategySelector(

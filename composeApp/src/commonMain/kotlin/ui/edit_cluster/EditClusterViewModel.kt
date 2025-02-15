@@ -2398,8 +2398,8 @@ class EditClusterViewModel : ViewModel() {
             ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
             ToolMode.CIRCLE_INTERPOLATION ->
-//                startCircleInterpolationParameterAdjustment()
-                openedDialog = DialogType.CIRCLE_INTERPOLATION
+                startCircleInterpolationParameterAdjustment()
+//                openedDialog = DialogType.CIRCLE_INTERPOLATION
             ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
             ToolMode.BI_INVERSION -> openedDialog = DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> openedDialog = DialogType.LOXODROMIC_MOTION

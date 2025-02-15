@@ -203,6 +203,9 @@ fun OnOffButton(
     isOn: Boolean,
     modifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current,
+    checkedTint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    checkedContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     onClick: () -> Unit
 ) {
     OutlinedIconToggleButton(
@@ -210,10 +213,10 @@ fun OnOffButton(
         onCheckedChange = { onClick() },
         modifier = modifier,
         colors = IconButtonDefaults.outlinedIconToggleButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = containerColor,
             contentColor = tint,//MaterialTheme.colorScheme.onSurfaceVariant,
-            checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            checkedContainerColor = checkedContainerColor,
+            checkedContentColor = checkedTint,
         ),
         border = if (isOn) BorderStroke(2.dp, MaterialTheme.colorScheme.outline) else null
     ) {

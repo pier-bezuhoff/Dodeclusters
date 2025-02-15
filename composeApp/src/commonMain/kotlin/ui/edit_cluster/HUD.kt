@@ -1,10 +1,13 @@
 package ui.edit_cluster
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -17,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -25,6 +29,7 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -205,6 +210,7 @@ fun PointSelectionContextActions(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoxScope.InterpolationInterface(
+    canvasSize: IntSize,
     updateParameters: (InterpolationParameters) -> Unit,
     openDetailsDialog: () -> Unit,
     confirmParameters: () -> Unit,
@@ -227,31 +233,63 @@ fun BoxScope.InterpolationInterface(
         // MAYBE: instead of this just use VM.paramsFlow
         updateParameters(params)
     }
+    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
+    }
     Column(
-//        Modifier.align(Alignment.Center)
+        Modifier
+            .align(Alignment.CenterEnd)
+            .fillMaxHeight(0.8f)
+        ,
+        verticalArrangement = Arrangement.Bottom,
+        horizontalAlignment = Alignment.End,
     ) {
-        SimpleToolButton(EditClusterTool.DetailedAdjustment) {
-            openDetailsDialog()
-            // on confirm from dialog reset this submode
-        }
-        OnOffButton(
-            painterResource(EditClusterTool.InBetween.icon),
-            stringResource(EditClusterTool.InBetween.name),
-            isOn = interpolateInBetween
+        CompositionLocalProvider(
+            LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
         ) {
-            interpolateInBetween = !interpolateInBetween // triggers params upd => triggers VM.updParams
-        }
-        Row {
-            Icon( // icon for the n-steps slider
-                painterResource(Res.drawable.three_dots_in_angle_brackets),
-                stringResource(Res.string.bi_inversion_steps_prompt)
-            )
-            Slider(sliderState, Modifier.fillMaxWidth(0.4f))
-            SimpleButton(
-                painterResource(Res.drawable.confirm),
-                stringResource(Res.string.ok_name)
+            SimpleToolButton(
+                EditClusterTool.DetailedAdjustment,
+                Modifier
+                    .padding(vertical = 12.dp)
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
             ) {
-                confirmParameters()
+                openDetailsDialog()
+            }
+            OnOffButton(
+                painterResource(EditClusterTool.InBetween.icon),
+                stringResource(EditClusterTool.InBetween.name),
+                isOn = interpolateInBetween,
+//                Modifier.background(MaterialTheme.colorScheme.secondaryContainer),//.padding(4.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                checkedTint = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ) {
+                interpolateInBetween = !interpolateInBetween // triggers params upd => triggers VM.updParams
+            }
+            Row(
+                Modifier.padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon( // icon for the n-steps slider
+                    painterResource(Res.drawable.three_dots_in_angle_brackets),
+                    stringResource(Res.string.bi_inversion_steps_prompt),
+                    Modifier.padding(12.dp),
+                )
+                Slider(
+                    sliderState,
+                    Modifier
+                        .fillMaxWidth(0.4f)
+                        .padding(12.dp)
+                )
+                SimpleButton(
+                    painterResource(Res.drawable.confirm),
+                    stringResource(Res.string.ok_name),
+                    Modifier
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                ) {
+                    confirmParameters()
+                }
             }
         }
     }
