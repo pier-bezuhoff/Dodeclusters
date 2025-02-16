@@ -1,6 +1,7 @@
 package ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -71,17 +72,23 @@ fun SimpleButton(
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current,
+    containerColor: Color = Color.Unspecified,
+    interactionSource: MutableInteractionSource? = null,
     onClick: () -> Unit
 ) {
     IconButton(
         onClick = onClick,
+        colors = IconButtonDefaults.iconButtonColors(
+            containerColor = containerColor,
+            contentColor = tint,
+        ),
+        interactionSource = interactionSource,
         modifier = modifier,
     ) {
         Icon(
             iconPainter,
             contentDescription = name,
             modifier = iconModifier,
-            tint = tint
         )
     }
 }

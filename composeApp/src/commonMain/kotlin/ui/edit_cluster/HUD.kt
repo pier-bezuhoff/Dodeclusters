@@ -1,6 +1,9 @@
 package ui.edit_cluster
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.HoverInteraction
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -41,10 +44,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dodeclusters.composeapp.generated.resources.Res
-import dodeclusters.composeapp.generated.resources.bi_inversion_steps_prompt
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.ok_name
-import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import domain.expressions.InterpolationParameters
 import org.jetbrains.compose.resources.painterResource
@@ -217,7 +218,7 @@ fun BoxScope.InterpolationInterface(
 ) {
     val minCount = defaults.minCircleCount
     val maxCount = defaults.maxCircleCount
-    val coDirected = false // TODO + also hid in-between for points
+    val coDirected = false // TODO + also hide in-between for points
     val sliderState = remember { SliderState(
         value = defaults.nInterjacents.toFloat(),
         steps = maxCount - minCount - 1, // only counts intermediates
@@ -268,13 +269,34 @@ fun BoxScope.InterpolationInterface(
                 horizontalSliderModifier
                     .width(horizontalSliderWidth)
             )
+            val okInteractionSource = remember { MutableInteractionSource() }
+            val okBackgroundState = mutableStateOf(MaterialTheme.colorScheme.secondary)
             SimpleButton(
                 painterResource(Res.drawable.confirm),
                 stringResource(Res.string.ok_name),
                 bottomRightModifier
-                    .background(buttonBackground, buttonShape),
+                    .background(okBackgroundState.value, buttonShape)
+                ,
+                tint = MaterialTheme.colorScheme.onSecondary,
+//                containerColor = okBackground, //MaterialTheme.colorScheme.secondary,
+                interactionSource = okInteractionSource,
             ) {
                 confirmParameters()
+            }
+            LaunchedEffect(okInteractionSource, okBackgroundState) {
+                okInteractionSource.interactions.collect { interaction ->
+                    println(interaction)
+                    when (interaction) {
+                        is HoverInteraction.Enter ->
+                            okBackgroundState.value = Color.Green.also { println("grun") }// okBackground.copy(alpha = 0.8f)
+                        is PressInteraction.Press ->
+                            okBackgroundState.value = Color.Blue//okBackground.copy(alpha = 0.7f)
+                        is PressInteraction.Cancel, is PressInteraction.Release, is HoverInteraction.Exit ->
+//                            okBackground = okBackground //.copy(alpha = 1.0f)
+                        {}
+                        else -> {}
+                    }
+                }
             }
         }
     }

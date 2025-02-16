@@ -2649,7 +2649,7 @@ class EditClusterViewModel : ViewModel() {
 
     fun resetCircleInterpolation() {
         openedDialog = null
-        partialArgList = PartialArgList(EditClusterTool.CircleOrPointInterpolation.signature)
+//        partialArgList = PartialArgList(EditClusterTool.CircleOrPointInterpolation.signature)
     }
 
     fun completeCircleExtrapolation(
