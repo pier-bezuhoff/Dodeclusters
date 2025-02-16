@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.HoverInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -20,7 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -231,6 +234,8 @@ fun BoxScope.InterpolationInterface(
     )
     val buttonShape = RoundedCornerShape(percent = 50)
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+    val okInteractionSource = remember { MutableInteractionSource() }
+    val okBackgroundState = mutableStateOf(MaterialTheme.colorScheme.secondary)
     LaunchedEffect(params) {
         // MAYBE: instead of this just use VM.paramsFlow
         updateParameters(params)
@@ -269,34 +274,44 @@ fun BoxScope.InterpolationInterface(
                 horizontalSliderModifier
                     .width(horizontalSliderWidth)
             )
-            val okInteractionSource = remember { MutableInteractionSource() }
-            val okBackgroundState = mutableStateOf(MaterialTheme.colorScheme.secondary)
-            SimpleButton(
-                painterResource(Res.drawable.confirm),
-                stringResource(Res.string.ok_name),
-                bottomRightModifier
-                    .background(okBackgroundState.value, buttonShape)
-                ,
-                tint = MaterialTheme.colorScheme.onSecondary,
-//                containerColor = okBackground, //MaterialTheme.colorScheme.secondary,
-                interactionSource = okInteractionSource,
+            FilledIconButton(
+                onClick = confirmParameters,
+                bottomRightModifier,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                )
             ) {
-                confirmParameters()
+                Icon(
+                    painterResource(Res.drawable.confirm),
+                    stringResource(Res.string.ok_name),
+                )
             }
-            LaunchedEffect(okInteractionSource, okBackgroundState) {
-                okInteractionSource.interactions.collect { interaction ->
-                    println(interaction)
-                    when (interaction) {
-                        is HoverInteraction.Enter ->
-                            okBackgroundState.value = Color.Green.also { println("grun") }// okBackground.copy(alpha = 0.8f)
-                        is PressInteraction.Press ->
-                            okBackgroundState.value = Color.Blue//okBackground.copy(alpha = 0.7f)
-                        is PressInteraction.Cancel, is PressInteraction.Release, is HoverInteraction.Exit ->
-//                            okBackground = okBackground //.copy(alpha = 1.0f)
-                        {}
-                        else -> {}
-                    }
-                }
+//            SimpleButton(
+//                painterResource(Res.drawable.confirm),
+//                stringResource(Res.string.ok_name),
+//                bottomRightModifier
+//                    .background(okBackgroundState.value, buttonShape)
+//                ,
+//                tint = MaterialTheme.colorScheme.onSecondary,
+////                containerColor = okBackground, //MaterialTheme.colorScheme.secondary,
+//                interactionSource = okInteractionSource,
+//            ) {
+//                confirmParameters()
+//            }
+        }
+    }
+    okInteractionSource.collectIsHoveredAsState()
+    LaunchedEffect(okInteractionSource, okBackgroundState) {
+        okInteractionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is HoverInteraction.Enter ->
+                    okBackgroundState.value = okBackgroundState.value.copy(alpha = 0.9f)
+                is PressInteraction.Press ->
+                    okBackgroundState.value = okBackgroundState.value.copy(alpha = 0.8f)
+                is PressInteraction.Cancel, is PressInteraction.Release, is HoverInteraction.Exit ->
+                    okBackgroundState.value = okBackgroundState.value.copy(alpha = 1f)
+                else -> {}
             }
         }
     }
