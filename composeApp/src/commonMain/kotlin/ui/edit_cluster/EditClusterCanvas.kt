@@ -735,8 +735,8 @@ private inline fun DrawScope.drawPartialConstructs(
     handleRadius: Float,
     circleStroke: DrawStyle,
     creationPointRadius: Float = handleRadius * 3/4,
-    selectedArgColor: Color = DodeclustersColors.green,
-    creationPrototypeColor: Color = DodeclustersColors.green.copy(alpha = 0.5f),
+    selectedArgColor: Color = DodeclustersColors.green, //pureSecondary,
+    creationPrototypeColor: Color = DodeclustersColors.green.copy(alpha = 0.7f),
 ) {
     // generic display for selected tool args
     partialArgList?.args?.let { args ->

@@ -2133,12 +2133,13 @@ class EditClusterViewModel : ViewModel() {
         } else {
             val result = snapped(c)
             val absolutePoint = result.result
+            val pArgList = partialArgList
             if (mode == ToolMode.ARC_PATH) {
                 // TODO: if last with n>=3, snap to start
                 partialArcPath = partialArcPath?.moveFocused(absolutePoint)
             } else if (
                 mode is ToolMode &&
-                partialArgList?.currentArgType == ArgType.Point
+                pArgList?.currentArgType == ArgType.Point
             ) {
                 val newArg = when (result) {
                     is PointSnapResult.Eq -> Arg.Point.Index(result.pointIndex)
@@ -2149,7 +2150,9 @@ class EditClusterViewModel : ViewModel() {
                     .copy(lastSnap = result)
             } else if (
                 mode is ToolMode &&
-                partialArgList?.currentArgType == ArgType.CircleOrPoint
+                pArgList?.currentArgType == ArgType.CircleOrPoint &&
+                ((mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION) entails
+                    (pArgList.currentArg !is Arg.CircleOrPoint.CircleIndex))
             ) {
                 val newArg = when (result) {
                     is PointSnapResult.Eq -> Arg.CircleOrPoint.Point.Index(result.pointIndex)
@@ -2573,14 +2576,18 @@ class EditClusterViewModel : ViewModel() {
         val argList = partialArgList!!
         val (arg1, arg2) = argList.args.map { it as Arg.CircleOrPoint }
         if (arg1 is Arg.CircleOrPoint.CircleIndex && arg2 is Arg.CircleOrPoint.CircleIndex) {
-            val expr = Expr.CircleInterpolation(
-                defaultInterpolationParameters.params,
-                arg1.index, arg2.index
-            )
-            recordCreateCommand()
             interpolateCircles = true
             val scalarProduct = GeneralizedCircle.fromGCircle(objects[arg1.index]!!) scalarProduct GeneralizedCircle.fromGCircle(objects[arg2.index]!!)
             circlesAreCoDirected = scalarProduct >= 0.0
+            val expr = Expr.CircleInterpolation(
+                defaultInterpolationParameters.params.let {
+                    it.copy(
+                        complementary = if (circlesAreCoDirected) !it.inBetween else it.inBetween
+                    )
+                },
+                arg1.index, arg2.index
+            )
+            recordCreateCommand()
             val oldSize = objects.size
             val newGCircles = expressions.addMultiExpr(expr)
             val newCircles = newGCircles.map { it?.upscale() }

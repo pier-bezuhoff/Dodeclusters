@@ -114,9 +114,9 @@ output directory: `composeApp/build/outputs/apk/debug/`
 To run applications built with Kotlin/Wasm in a browser, you need a browser supporting [wasm garbage collection feature](https://github.com/WebAssembly/gc):  
 - For **Chrome** and **Chromium-based** browsers (Edge, Brave etc.), it **should just work** since version 119.
 - For **Firefox** 120+ it **should just work**.
-- For **Safari** it should work starting from version 18.2+.
+- For **Safari** it should work starting from version 18.2.
 > [!NOTE]
-> Safari 18.2 is available for iOS 18.2, iPadOS 18.2, visionOS 2.2, macOS 15.2, macOS Sonoma, and macOS Ventura. On iOS and iPadOS, Safari 18.2 is bundled with the operating system. To get it, update your device to version 18.2 or later. [Safari release notes](https://developer.apple.com/documentation/safari-release-notes/safari-18_2-release-notes#Overview).
+> Safari 18.2 is available for iOS 18.2, iPadOS 18.2, visionOS 2.2, macOS 15.2, macOS Sonoma, and macOS Ventura. On iOS and iPadOS, Safari 18.2 is bundled with the operating system. To get it, update your device to version 18.2 or later. [Safari release notes](https://developer.apple.com/documentation/safari-release-notes/safari-18_2-release-notes#Overview)
 - [Relevant Wasm compatibility table.](https://webassembly.org/features/#table-row-gc)
 
 For more information see https://kotl.in/wasm_help/.
