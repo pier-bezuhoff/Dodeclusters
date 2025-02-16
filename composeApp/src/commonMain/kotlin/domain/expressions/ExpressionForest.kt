@@ -224,7 +224,7 @@ class ExpressionForest(
     /**
      * Delete [ixs] nodes and all of their children from the [ExpressionForest] by
      * setting [expressions]`[...] = null` and clearing [children], [ix2tier], [tier2ixs]
-     * @return all the deleted nodes
+     * @return all the deleted nodes indices
      * */
     fun deleteNodes(ixs: List<Ix>): Set<Ix> {
         val deleted = ixs.toMutableSet()

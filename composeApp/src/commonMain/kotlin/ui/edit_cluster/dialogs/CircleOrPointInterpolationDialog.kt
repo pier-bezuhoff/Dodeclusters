@@ -71,7 +71,7 @@ data class DefaultInterpolationParameters(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-fun CircleInterpolationDialog(
+fun CircleOrPointInterpolationDialog(
     startCircle: GCircle,
     endCircle: GCircle,
     onDismissRequest: () -> Unit,
@@ -88,7 +88,7 @@ fun CircleInterpolationDialog(
         steps = maxCount - minCount - 1, // only counts intermediates
         valueRange = minCount.toFloat()..maxCount.toFloat()
     ) }
-    val hideInBetweenToggle = startCircle is Point && endCircle is Point
+    val hideInBetweenToggle = startCircle is Point // && endCircle is Point
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
     val (widthClass, heightClass) = calculateWindowSizeClass()
     val compactHeight = heightClass == WindowHeightSizeClass.Compact
@@ -98,9 +98,9 @@ fun CircleInterpolationDialog(
         else 24.sp
     val onConfirm0 = { onConfirm(
         InterpolationParameters(
-            sliderState.value.roundToInt(),
-            interpolateInBetween,
-            if (coDirected) !interpolateInBetween else interpolateInBetween
+            nInterjacents = sliderState.value.roundToInt(),
+            inBetween = interpolateInBetween,
+            complementary = if (coDirected) !interpolateInBetween else interpolateInBetween
         )
     ) }
     Dialog(

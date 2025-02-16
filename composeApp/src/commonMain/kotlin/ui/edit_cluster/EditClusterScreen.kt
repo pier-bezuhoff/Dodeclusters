@@ -78,7 +78,6 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.shrink
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
@@ -102,7 +101,7 @@ import ui.WithTooltip
 import ui.edit_cluster.dialogs.BiInversionDialog
 import ui.edit_cluster.dialogs.BlendSettingsDialog
 import ui.edit_cluster.dialogs.CircleExtrapolationDialog
-import ui.edit_cluster.dialogs.CircleInterpolationDialog
+import ui.edit_cluster.dialogs.CircleOrPointInterpolationDialog
 import ui.edit_cluster.dialogs.ColorPickerDialog
 import ui.edit_cluster.dialogs.LoxodromicMotionDialog
 import ui.edit_cluster.dialogs.SaveOptionsDialog
@@ -262,10 +261,10 @@ fun EditClusterScreen(
                         viewModel.getArg(it as Arg.CircleOrPoint)
                     }
                 if (startObject != null && endObject != null) {
-                    CircleInterpolationDialog(
+                    CircleOrPointInterpolationDialog(
                         startObject, endObject,
-                        onDismissRequest = viewModel::resetCircleInterpolation,
-                        onConfirm = viewModel::completeCircleInterpolation,
+                        onDismissRequest = viewModel::closeDialog,
+                        onConfirm = viewModel::completeCircleOrPointInterpolation,
                         defaults = viewModel.defaultInterpolationParameters
                     )
                 }

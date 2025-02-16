@@ -214,11 +214,13 @@ fun BoxScope.EditClusterCanvas(
                 is SubMode.ExprAdjustment -> when (sm.expr) {
                     is Expr.CircleInterpolation, is Expr.PointInterpolation ->
                         InterpolationInterface(
+                            interpolateCircles = viewModel.interpolateCircles,
+                            circlesAreCoDirected = viewModel.circlesAreCoDirected,
                             canvasSize = viewModel.canvasSize,
+                            defaults = viewModel.defaultInterpolationParameters,
                             updateParameters = viewModel::updateParameters,
                             openDetailsDialog = viewModel::openDetailsDialog,
                             confirmParameters = viewModel::confirmAdjustedParameters,
-                            defaults = viewModel.defaultInterpolationParameters
                         )
                     else -> {}
                 }

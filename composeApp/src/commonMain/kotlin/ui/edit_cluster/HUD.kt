@@ -1,10 +1,6 @@
 package ui.edit_cluster
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.HoverInteraction
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -21,9 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -34,10 +28,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,18 +44,22 @@ import androidx.compose.ui.unit.dp
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.ok_name
+import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import domain.expressions.InterpolationParameters
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.OnOffButton
-import ui.SimpleButton
+import ui.SimpleFilledButton
 import ui.SimpleToolButton
 import ui.TwoIconButton
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
 import kotlin.math.roundToInt
+
+// MAYBE: add tooltips to buttons
 
 @Composable
 fun BoxScope.LockedCircleSelectionContextActions(
@@ -183,11 +182,13 @@ fun PointSelectionContextActions(
     toolAction: (EditClusterTool) -> Unit,
     toolPredicate: (EditClusterTool) -> Boolean,
 ) {
+    val buttonShape = RoundedCornerShape(percent = 50)
+    val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
     with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
         SimpleToolButton(
             EditClusterTool.Delete,
             // awkward position tbh
-            bottomRightModifier,
+            bottomRightModifier.background(buttonBackground, buttonShape),
             onClick = toolAction
         )
         TwoIconButton(
@@ -195,14 +196,14 @@ fun PointSelectionContextActions(
             painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
             stringResource(EditClusterTool.MarkAsPhantoms.name),
             enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
-            bottomMidModifier,
+            bottomMidModifier.background(buttonBackground, buttonShape),
             tint = MaterialTheme.colorScheme.secondary,
             onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
         )
         if (selectionIsLocked) {
             SimpleToolButton(
                 EditClusterTool.Detach,
-                halfBottomRightModifier,
+                halfBottomRightModifier.background(buttonBackground, buttonShape),
                 tint = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
@@ -210,18 +211,22 @@ fun PointSelectionContextActions(
     }
 }
 
+/**
+ * @param[interpolateCircles] as opposed to interpolating points
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoxScope.InterpolationInterface(
     canvasSize: IntSize,
+    interpolateCircles: Boolean,
+    circlesAreCoDirected: Boolean,
+    defaults: DefaultInterpolationParameters,
     updateParameters: (InterpolationParameters) -> Unit,
     openDetailsDialog: () -> Unit,
     confirmParameters: () -> Unit,
-    defaults: DefaultInterpolationParameters,
 ) {
     val minCount = defaults.minCircleCount
     val maxCount = defaults.maxCircleCount
-    val coDirected = false // TODO + also hide in-between for points
     val sliderState = remember { SliderState(
         value = defaults.nInterjacents.toFloat(),
         steps = maxCount - minCount - 1, // only counts intermediates
@@ -229,17 +234,15 @@ fun BoxScope.InterpolationInterface(
     ) }
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
     val params = InterpolationParameters(
-        sliderState.value.roundToInt(),
-        if (coDirected) !interpolateInBetween else interpolateInBetween
+        nInterjacents = sliderState.value.roundToInt(),
+        inBetween = interpolateInBetween,
+        complementary =
+            if (interpolateCircles) {
+                if (circlesAreCoDirected) !interpolateInBetween else interpolateInBetween
+            } else interpolateInBetween
     )
     val buttonShape = RoundedCornerShape(percent = 50)
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-    val okInteractionSource = remember { MutableInteractionSource() }
-    val okBackgroundState = mutableStateOf(MaterialTheme.colorScheme.secondary)
-    LaunchedEffect(params) {
-        // MAYBE: instead of this just use VM.paramsFlow
-        updateParameters(params)
-    }
     with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
@@ -248,24 +251,27 @@ fun BoxScope.InterpolationInterface(
                 EditClusterTool.DetailedAdjustment,
                 topRightUnderScaleModifier
                     .background(buttonBackground, buttonShape)
-            ) {
-                openDetailsDialog()
-            }
-            OnOffButton(
-                painterResource(EditClusterTool.InBetween.icon),
-                stringResource(EditClusterTool.InBetween.name),
-                isOn = interpolateInBetween,
-                modifier = halfBottomRightModifier,
-                contentColor = MaterialTheme.colorScheme.secondary,
-                checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                containerColor = buttonBackground,
-                checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-            ) {
-                interpolateInBetween = !interpolateInBetween // triggers params upd => triggers VM.updParams
+                ,
+                onClick = { openDetailsDialog() }
+            )
+            if (interpolateCircles) {
+                OnOffButton(
+                    painterResource(EditClusterTool.InBetween.icon),
+                    stringResource(EditClusterTool.InBetween.name),
+                    isOn = interpolateInBetween,
+                    modifier = halfBottomRightModifier,
+                    contentColor = MaterialTheme.colorScheme.secondary,
+                    checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    containerColor = buttonBackground,
+                    checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                ) {
+                    interpolateInBetween = !interpolateInBetween
+                    // triggers params upd => triggers VM.updParams
+                }
             }
             Icon(
                 painterResource(Res.drawable.three_dots_in_angle_brackets),
-                "N-steps slider",//stringResource(Res.string.steps_slider_name),
+                stringResource(Res.string.steps_slider_name),
                 preHorizontalSliderModifier
                     .padding(vertical = 12.dp)
             )
@@ -274,45 +280,20 @@ fun BoxScope.InterpolationInterface(
                 horizontalSliderModifier
                     .width(horizontalSliderWidth)
             )
-            FilledIconButton(
-                onClick = confirmParameters,
+            SimpleFilledButton(
+                painterResource(Res.drawable.confirm),
+                stringResource(Res.string.ok_name),
                 bottomRightModifier,
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = MaterialTheme.colorScheme.onSecondary,
-                )
-            ) {
-                Icon(
-                    painterResource(Res.drawable.confirm),
-                    stringResource(Res.string.ok_name),
-                )
-            }
-//            SimpleButton(
-//                painterResource(Res.drawable.confirm),
-//                stringResource(Res.string.ok_name),
-//                bottomRightModifier
-//                    .background(okBackgroundState.value, buttonShape)
-//                ,
-//                tint = MaterialTheme.colorScheme.onSecondary,
-////                containerColor = okBackground, //MaterialTheme.colorScheme.secondary,
-//                interactionSource = okInteractionSource,
-//            ) {
-//                confirmParameters()
-//            }
+                contentColor = MaterialTheme.colorScheme.onSecondary,
+                containerColor = MaterialTheme.colorScheme.secondary,
+                onClick = confirmParameters
+            )
         }
     }
-    okInteractionSource.collectIsHoveredAsState()
-    LaunchedEffect(okInteractionSource, okBackgroundState) {
-        okInteractionSource.interactions.collect { interaction ->
-            when (interaction) {
-                is HoverInteraction.Enter ->
-                    okBackgroundState.value = okBackgroundState.value.copy(alpha = 0.9f)
-                is PressInteraction.Press ->
-                    okBackgroundState.value = okBackgroundState.value.copy(alpha = 0.8f)
-                is PressInteraction.Cancel, is PressInteraction.Release, is HoverInteraction.Exit ->
-                    okBackgroundState.value = okBackgroundState.value.copy(alpha = 1f)
-                else -> {}
-            }
+    val coroutineScope = rememberCoroutineScope()
+    key(params) { // this feels hacky, `key(params)` serves only a semantic purpose btw
+        coroutineScope.launch {
+            updateParameters(params)
         }
     }
 }

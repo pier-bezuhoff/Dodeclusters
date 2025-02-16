@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -110,6 +111,34 @@ inline fun <reified T> SimpleToolButton(
     tint = tint,
     onClick = { onClick(tool) },
 )
+
+@Composable
+fun SimpleFilledButton(
+    iconPainter: Painter,
+    name: String,
+    modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    contentColor: Color = LocalContentColor.current,
+    containerColor: Color = Color.Unspecified,
+    interactionSource: MutableInteractionSource? = null,
+    onClick: () -> Unit
+) {
+    FilledIconButton(
+        onClick = onClick,
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        ),
+        interactionSource = interactionSource,
+        modifier = modifier,
+    ) {
+        Icon(
+            iconPainter,
+            contentDescription = name,
+            modifier = iconModifier,
+        )
+    }
+}
 
 @Composable
 fun DisableableButton(
