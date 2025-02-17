@@ -106,6 +106,7 @@ import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
+import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
@@ -301,9 +302,10 @@ class EditClusterViewModel : ViewModel() {
         val start = absolute(Offset.Zero)
         return constellation2svg(
             constellation = toConstellation(),
+            objects = objects.toList(),
+            freeObjectIndices = objects.indices.filter { expressions.expressions[it] == null }.toSet(),
             width = canvasSize.width.toFloat(),
             height = canvasSize.height.toFloat(),
-            startX = start.x, startY = start.y,
             encodeCirclesAndPoints = showCircles,
             chessboardPattern = chessboardPattern,
             chessboardCellColor = chessboardColor,

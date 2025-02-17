@@ -10,6 +10,7 @@ import data.geometry.Line
 import data.geometry.Point
 import domain.ChessboardPattern
 import domain.ColorCssSerializer
+import domain.Ix
 import domain.cluster.Constellation
 import domain.expressions.ExpressionForest
 import domain.expressions.ObjectConstruct
@@ -33,39 +34,20 @@ private const val defs = """<defs>
 private const val svgClose = "</svg>"
 
 // BUG: may output strange things on giant files (e.g. cat-in-sky is giga-zoomed for some reason)
-//  as if with higher scaling factor
+//  likely bc of diff UPSCALING_FACTOR
 // MAYBE: just pass already computed objects to make it more straightforward
 // NOTE: "For reliable results cross-browser, use numbers with no more
 //  than 2 digits after the decimal and four digits before it." -- im gonna ignore this >.<
 fun constellation2svg(
     constellation: Constellation,
-    startX: Float, startY: Float,
+    objects: List<GCircle?>,
+    freeObjectIndices: Set<Ix>,
     width: Float, height: Float,
     encodeCirclesAndPoints: Boolean = true,
     chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
     chessboardCellColor: Color = Color.White,
     name: String? = null,
 ): String = buildString {
-    val tr = Offset(-startX, -startY)
-    val objects: MutableList<GCircle?> = mutableListOf()
-    objects.addAll(
-        constellation.objects.map {
-            when (it) {
-                is ObjectConstruct.ConcreteCircle -> it.circle.translated(tr)
-                is ObjectConstruct.ConcreteLine -> it.line.translated(tr)
-                is ObjectConstruct.ConcretePoint -> it.point.translated(tr)
-                is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
-            }
-        }
-    )
-    val upscalingFactor = 200.0
-    val downscalingFactor = 1.0/upscalingFactor
-    val expressions = ExpressionForest(
-        constellation.toExpressionMap(),
-        get = { ix -> objects[ix]?.scaled(0.0, 0.0, downscalingFactor) },
-        set = { ix, o -> objects[ix] = o?.scaled(0.0, 0.0, upscalingFactor) }
-    )
-    expressions.reEval()
     val visibleRect = Rect(0f, 0f, width, height)
     val inflatedVisibleRect = visibleRect.inflate(100f)
     appendLine(svgOpen(width, height))
@@ -120,7 +102,7 @@ fun constellation2svg(
         objects.forEachIndexed { ix, o ->
             val color = constellation.objectColors[ix] ?: when {
                 o is Point -> pointColor
-                expressions.expressions[ix] == null -> freeCircleColor
+                ix in freeObjectIndices -> freeCircleColor
                 else -> circleColor
             }
             val colorString = Json.encodeToString(ColorCssSerializer, color).trim('"')
