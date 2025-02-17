@@ -64,7 +64,7 @@
         <item>The circle with respect to which we are inverting</item>
     </string-array>
     <string name="circle_interpolation_name">Object interpolation</string>
-    <string name="circle_interpolation_description">Interpolate: generate in-betweens given 2 circles or 2 points</string>
+    <string name="circle_interpolation_description">Bisectors / interpolation: generate n-sectors for 2 circles or interpolated in-betweens for 2 points</string>
     <string-array name="circle_interpolation_arg_descriptions">
         <item>The 1st circle or point</item>
         <item>The 2nd circle or point</item>

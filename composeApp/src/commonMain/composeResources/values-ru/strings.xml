@@ -68,7 +68,7 @@
         <item>Окружность, относительно которой мы инвертируем</item>
     </string-array>
     <string name="circle_interpolation_name">Интерполяция объектов</string>
-    <string name="circle_interpolation_description">Построить промежуточные окружности/точки между 2 окружностями или 2 точками</string>
+    <string name="circle_interpolation_description">Биссектрисы / интерполяция: построить n-сектриссы между 2 окружностями или промежуточные точки между 2 точками</string>
     <string-array name="circle_interpolation_arg_descriptions">
         <item>1-ую окружность или точку</item>
         <item>2-ую окружность или точку</item>

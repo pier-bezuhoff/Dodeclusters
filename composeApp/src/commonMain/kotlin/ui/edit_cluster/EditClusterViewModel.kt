@@ -443,6 +443,8 @@ class EditClusterViewModel : ViewModel() {
         history.clear()
         resetTransients()
         println("loaded new constellation")
+        if (!mode.isSelectingCircles())
+            switchToMode(SelectionMode.Drag)
     }
 
     private fun loadConstellation(constellation: Constellation) {
@@ -687,12 +689,14 @@ class EditClusterViewModel : ViewModel() {
         addObjects(newObjects) // row-column order
         var outputIndex = oldSize - 1
         sourceIndex2NewTrajectory.forEach { (sourceIndex, trajectory) ->
-            if (objectColors.containsKey(sourceIndex)) {
-                val sourceColor = objectColors[sourceIndex]!!
+            val sourceColor = objectColors[sourceIndex]
+            if (sourceColor != null) {
                 trajectory.forEach { _ ->
                     outputIndex += 1
                     objectColors[outputIndex] = sourceColor
                 }
+            } else {
+                outputIndex += trajectory.size
             }
         }
         outputIndex = oldSize - 1
@@ -2575,7 +2579,6 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
-    // TODO: highlight outputs
     private fun startCircleOrPointInterpolationParameterAdjustment() {
         val argList = partialArgList!!
         val (arg1, arg2) = argList.args.map { it as Arg.CircleOrPoint }
@@ -2595,9 +2598,6 @@ class EditClusterViewModel : ViewModel() {
             val oldSize = objects.size
             val newGCircles = expressions.addMultiExpr(expr)
             val newCircles = newGCircles.map { it?.upscale() }
-            for (ix in oldSize until (oldSize + newGCircles.size)) {
-                objectColors[ix] = TEMPORARY_OBJECT_COLOR
-            }
             addObjects(newCircles)
             val outputRange = (oldSize until objects.size).toList()
             submode = SubMode.ExprAdjustment(expr, outputRange, outputRange)
@@ -2638,8 +2638,6 @@ class EditClusterViewModel : ViewModel() {
                         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters)
                     else -> {}
                 }
-                // we colored temporary objects, now we clear their color on confirmation
-                objectColors -= sm.reservedIndices.toSet()
             }
             else -> {}
         }
@@ -2686,6 +2684,40 @@ class EditClusterViewModel : ViewModel() {
     fun resetCircleExtrapolation() {
         openedDialog = null
         partialArgList = PartialArgList(EditClusterTool.CircleExtrapolation.signature)
+    }
+
+    fun startBiInversionParameterAdjustment() {
+        val argList = partialArgList!!
+        val args = argList.args
+        val objArg = args[0] as Arg.CircleAndPointIndices
+        val targetCircleIndices = objArg.circleIndices
+        val targetPointsIndices = objArg.pointIndices
+        recordCreateCommand()
+        val (engine1, engine2) = args.drop(1).take(2)
+            .map { (it as Arg.CircleIndex).index }
+        val oldSize = objects.size
+        val targetIndices = targetCircleIndices + targetPointsIndices
+        val expr0 = Expr.BiInversion(
+                defaultBiInversionParameters.params,
+                engine1, engine2,
+                -1 // ranges over args[0]
+            )
+        val source2trajectory = targetIndices.map { targetIndex ->
+            targetIndex to expressions.addMultiExpr(
+                Expr.BiInversion(
+                    defaultBiInversionParameters.params,
+                    engine1, engine2,
+                    targetIndex
+                ),
+            ).map { it?.upscale() } // multi expression creates a whole trajectory at a time
+        }
+        copyRegionsAndStylesForNewTrajectories(
+            sourceIndex2NewTrajectory = source2trajectory
+        )
+        val outputRange = (oldSize until objects.size).toList()
+        // ig we either have a List<Expr> or 1 expr but its last param can range over
+        // corresponding pArgList argument
+        submode = SubMode.ExprAdjustment(expr0, outputRange, outputRange)
     }
 
     fun completeBiInversion(
@@ -2881,7 +2913,6 @@ class EditClusterViewModel : ViewModel() {
                 val ix = newIndices[i]
                 val newObject = newObjects[i]?.upscale()
                 objects[ix] = newObject
-                objectColors[ix] = TEMPORARY_OBJECT_COLOR
             }
             submode = sm.copy(
                 expr = newExpr,
@@ -3125,8 +3156,6 @@ class EditClusterViewModel : ViewModel() {
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 2_000.0 //200.0
         const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
-        val TEMPORARY_OBJECT_COLOR = Color.Blue
-//            DodeclustersColors.secondaryDark // may be bad in light scheme
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)

@@ -1016,6 +1016,7 @@ private inline fun DrawScope.drawHandles(
     }
 }
 
+// FIX: J and o dont blend well (especially on white), fuse them
 fun DrawScope.drawSelectionControls(
     canvasSize: IntSize,
     selectionIsLocked: Boolean,
