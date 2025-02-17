@@ -1,6 +1,5 @@
 package domain.io
 
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import data.geometry.Circle
@@ -12,8 +11,6 @@ import domain.ChessboardPattern
 import domain.ColorCssSerializer
 import domain.Ix
 import domain.cluster.Constellation
-import domain.expressions.ExpressionForest
-import domain.expressions.ObjectConstruct
 import kotlinx.serialization.json.Json
 import ui.region2path
 import kotlin.math.hypot
@@ -33,9 +30,6 @@ private const val defs = """<defs>
 </defs>"""
 private const val svgClose = "</svg>"
 
-// BUG: may output strange things on giant files (e.g. cat-in-sky is giga-zoomed for some reason)
-//  likely bc of diff UPSCALING_FACTOR
-// MAYBE: just pass already computed objects to make it more straightforward
 // NOTE: "For reliable results cross-browser, use numbers with no more
 //  than 2 digits after the decimal and four digits before it." -- im gonna ignore this >.<
 fun constellation2svg(
@@ -100,10 +94,10 @@ fun constellation2svg(
         val pointRadius = 5f
         val highlightClassString = "" //"""class="$highlightClass" """
         objects.forEachIndexed { ix, o ->
-            val color = constellation.objectColors[ix] ?: when {
-                o is Point -> pointColor
-                ix in freeObjectIndices -> freeCircleColor
-                else -> circleColor
+            val color =  when {
+                o is Point -> pointColor // points cant be colored for now
+                ix in freeObjectIndices -> constellation.objectColors[ix] ?: freeCircleColor
+                else -> constellation.objectColors[ix] ?: circleColor
             }
             val colorString = Json.encodeToString(ColorCssSerializer, color).trim('"')
             when (o) {

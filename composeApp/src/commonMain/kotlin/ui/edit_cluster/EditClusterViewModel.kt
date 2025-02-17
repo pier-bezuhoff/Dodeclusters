@@ -106,7 +106,6 @@ import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
-import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
@@ -299,10 +298,12 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun exportAsSvg(name: String = DdcV4.DEFAULT_NAME): String {
-        val start = absolute(Offset.Zero)
         return constellation2svg(
             constellation = toConstellation(),
-            objects = objects.toList(),
+            objects = objects.toList()
+                .map { o ->
+                    o?.translated(translation) // back to top-left = (0,0) system
+                },
             freeObjectIndices = objects.indices.filter { expressions.expressions[it] == null }.toSet(),
             width = canvasSize.width.toFloat(),
             height = canvasSize.height.toFloat(),
@@ -2574,6 +2575,7 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
+    // TODO: highlight outputs
     private fun startCircleOrPointInterpolationParameterAdjustment() {
         val argList = partialArgList!!
         val (arg1, arg2) = argList.args.map { it as Arg.CircleOrPoint }
@@ -2593,6 +2595,9 @@ class EditClusterViewModel : ViewModel() {
             val oldSize = objects.size
             val newGCircles = expressions.addMultiExpr(expr)
             val newCircles = newGCircles.map { it?.upscale() }
+            for (ix in oldSize until (oldSize + newGCircles.size)) {
+                objectColors[ix] = TEMPORARY_OBJECT_COLOR
+            }
             addObjects(newCircles)
             val outputRange = (oldSize until objects.size).toList()
             submode = SubMode.ExprAdjustment(expr, outputRange, outputRange)
@@ -2623,12 +2628,19 @@ class EditClusterViewModel : ViewModel() {
             partialArgList = PartialArgList(it.signature)
         }
         when (val sm = submode) {
-            is SubMode.ExprAdjustment ->
+            is SubMode.ExprAdjustment -> {
                 when (val parameters = sm.expr.parameters) {
                     is InterpolationParameters ->
                         defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
+                    is BiInversionParameters ->
+                        defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
+                    is LoxodromicMotionParameters ->
+                        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters)
                     else -> {}
                 }
+                // we colored temporary objects, now we clear their color on confirmation
+                objectColors -= sm.reservedIndices.toSet()
+            }
             else -> {}
         }
         submode = SubMode.None
@@ -2869,6 +2881,7 @@ class EditClusterViewModel : ViewModel() {
                 val ix = newIndices[i]
                 val newObject = newObjects[i]?.upscale()
                 objects[ix] = newObject
+                objectColors[ix] = TEMPORARY_OBJECT_COLOR
             }
             submode = sm.copy(
                 expr = newExpr,
@@ -3112,6 +3125,8 @@ class EditClusterViewModel : ViewModel() {
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = 2_000.0 //200.0
         const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
+        val TEMPORARY_OBJECT_COLOR = Color.Blue
+//            DodeclustersColors.secondaryDark // may be bad in light scheme
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)

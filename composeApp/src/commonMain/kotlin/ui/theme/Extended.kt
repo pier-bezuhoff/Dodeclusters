@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.Color
 @Immutable
 data class ExtendedColorScheme(
     val accentColor: Color,
-    val highAccentColor: Color
+    val highAccentColor: Color,
 )
 
 val LocalExtendedColors = staticCompositionLocalOf {

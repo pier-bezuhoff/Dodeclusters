@@ -84,8 +84,6 @@ object DodeclustersColors {
     val accentDark = Color(0xFF_D4BE51)
     val highAccentDark = Color(0xFF_F5BD6F)
 
-    val pureSecondary = Color(0xFF_05E0CF)
-
     // M3
     val lightScheme = lightColorScheme(
         primary = primaryLight,

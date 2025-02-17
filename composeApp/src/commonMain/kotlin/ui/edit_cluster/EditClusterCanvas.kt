@@ -87,6 +87,7 @@ import kotlin.math.min
 private val defaultMaxCircleRadius: Float = getPlatform().maxCircleRadius
 private val dottedPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
 
+// TODO: make colors dependent on light/dark scheme
 // NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
 @Composable
 fun BoxScope.EditClusterCanvas(
