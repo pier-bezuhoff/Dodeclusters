@@ -81,6 +81,7 @@ import domain.io.parseDdcV3
 import domain.io.parseDdcV4
 import domain.never
 import domain.reindexingMap
+import domain.removeAtIndices
 import domain.snapAngle
 import domain.snapPointToCircles
 import domain.snapPointToPoints
@@ -672,14 +673,15 @@ class EditClusterViewModel : ViewModel() {
      * indices specified in [sourceIndex2NewTrajectory].
      * We assume that appropriate expressions were/will be created and
      * that those expressions follow the order of [sourceIndex2NewTrajectory]`.flatten()`, but
-     * the objects themselves are yet to be added to [objects]. In addition set
+     * the objects themselves are yet to be added to [objects]. In addition, set
      * new objects that are circles/lines/points as [selection].
      * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`,
      * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
      * @param[circleAnimationInit] given list of circles/lines queue [CircleAnimation]
      * constructed by this block. Use `{ null }` if no animation is required.
-     * */
-    private inline fun copyRegionsAndStylesForNewTrajectories(
+     * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
+     */
+    private inline fun copyRegionsAndStylesOntoNewTrajectories(
         sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
         flipRegionsInAndOut: Boolean = false,
         crossinline circleAnimationInit: (List<CircleOrLine>) -> CircleAnimation? = { null },
@@ -687,19 +689,58 @@ class EditClusterViewModel : ViewModel() {
         val oldSize = objects.size
         val newObjects = sourceIndex2NewTrajectory.flatMap { it.second }
         addObjects(newObjects) // row-column order
-        var outputIndex = oldSize - 1
+        copySourceColorsOntoTrajectories(sourceIndex2NewTrajectory, oldSize)
+        copySourceRegionsOntoTrajectories(sourceIndex2NewTrajectory, oldSize, flipRegionsInAndOut)
+        selection = (oldSize until objects.size).filter { ix ->
+            objects[ix] is CircleOrLine || objects[ix] is Point
+        }
+        circleAnimationInit(newObjects.filterIsInstance<CircleOrLine>())?.let { circleAnimation ->
+            viewModelScope.launch {
+                _animations.emit(circleAnimation)
+            }
+        }
+    }
+
+    /**
+     * Copy [objectColors] from source indices onto trajectories specified
+     * by [sourceIndex2NewTrajectory]. Trajectory objects are assumed to be laid out in
+     * row-column order of [sourceIndex2NewTrajectory]`.flatten` starting from [startIndex]
+     * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun copySourceColorsOntoTrajectories(
+        sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
+        startIndex: Ix,
+    ) {
+        var outputIndex = startIndex
         sourceIndex2NewTrajectory.forEach { (sourceIndex, trajectory) ->
             val sourceColor = objectColors[sourceIndex]
             if (sourceColor != null) {
                 trajectory.forEach { _ ->
-                    outputIndex += 1
                     objectColors[outputIndex] = sourceColor
+                    outputIndex += 1
                 }
             } else {
                 outputIndex += trajectory.size
             }
         }
-        outputIndex = oldSize - 1
+    }
+
+    /**
+     * Copy [regions] from source indices onto trajectories specified
+     * by [sourceIndex2NewTrajectory]. Trajectory objects are assumed to be laid out in
+     * row-column order of [sourceIndex2NewTrajectory]`.flatten` starting from [startIndex]
+     * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`,
+     * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
+     * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun copySourceRegionsOntoTrajectories(
+        sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
+        startIndex: Ix,
+        flipRegionsInAndOut: Boolean = false,
+    ) {
+        var outputIndex = startIndex - 1 // -1 offsets pre-increment
         sourceIndex2NewTrajectory.map { (ix, trajectory) ->
             trajectory.map { o ->
                 outputIndex += 1
@@ -712,21 +753,49 @@ class EditClusterViewModel : ViewModel() {
             // Column<(OG Ix, new Ix)>
             val nonNullSlice = trajectoryStageSlice.filterNotNull()
             // for each stage in the trajectory we try to copy regions
-            if (nonNullSlice.isNotEmpty())
+            if (nonNullSlice.isNotEmpty()) {
                 copyRegions(
                     oldIndices = nonNullSlice.map { it.first },
                     newIndices = nonNullSlice.map { it.second },
                     flipInAndOut = flipRegionsInAndOut
                 )
-        }
-        selection = (oldSize until objects.size).filter { ix ->
-            objects[ix] is CircleOrLine || objects[ix] is Point
-        }
-        circleAnimationInit(newObjects.filterIsInstance<CircleOrLine>())?.let { circleAnimation ->
-            viewModelScope.launch {
-                _animations.emit(circleAnimation)
             }
         }
+    }
+
+    /**
+     * Copy [regions] from source indices onto trajectories specified
+     * by [sourceIndex2TrajectoryOfIndices].
+     * @param[sourceIndex2TrajectoryOfIndices] `[(original index ~ style source, [trajectory of indices of objects])]`,
+     * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
+     * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
+     * @return indices of copied regions within [regions]
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun copySourceRegionsOntoTrajectories(
+        sourceIndex2TrajectoryOfIndices: List<Pair<Ix, List<Ix>>>,
+        flipRegionsInAndOut: Boolean = false,
+    ): List<Int> {
+        val newRegionIndices = mutableListOf<Int>()
+        sourceIndex2TrajectoryOfIndices.map { (sourceIndex, trajectory) ->
+            trajectory.map { outputIndex ->
+                sourceIndex to outputIndex
+            } // Column<Row<(OG Ix, new Ix)?>>
+        }.transpose().forEach { trajectoryStageSlice ->
+            // Column<(OG Ix, new Ix)>
+            val nonNullSlice = trajectoryStageSlice.filterNotNull()
+            // for each stage in the trajectory we try to copy regions
+            if (nonNullSlice.isNotEmpty()) {
+                newRegionIndices.addAll(
+                    copyRegions(
+                        oldIndices = nonNullSlice.map { it.first },
+                        newIndices = nonNullSlice.map { it.second },
+                        flipInAndOut = flipRegionsInAndOut
+                    )
+                )
+            }
+        }
+        return newRegionIndices
     }
 
     /** Add objects from [sourceIndex2NewObject] to [objects], while
@@ -740,7 +809,8 @@ class EditClusterViewModel : ViewModel() {
      * original indices CAN repeat (tho its regions will be copied only once even for the repeats).
      * @param[circleAnimationInit] given list of circles/lines queue [CircleAnimation]
      * constructed by this block. Use `{ null }` if no animation is required.
-     * */
+     * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
+     */
     private inline fun copyRegionsAndStyles(
         sourceIndex2NewObject: List<Pair<Ix, GCircle?>>,
         flipRegionsInAndOut: Boolean = false,
@@ -799,12 +869,13 @@ class EditClusterViewModel : ViewModel() {
      * [oldIndices].size must be [newIndices].size
      * @param[flipInAndOut] when `true` new region's insides use old region's outsides and
      * and vice versa
-     * */
+     * @return indices of the new regions within [regions]
+     */
     private fun copyRegions(
         oldIndices: List<Ix>,
         newIndices: List<Ix>,
         flipInAndOut: Boolean = false,
-    ) {
+    ): IntRange {
         require(oldIndices.size == newIndices.size) { "Original size doesn't match target size during copyRegions($oldIndices, $newIndices, $flipInAndOut)" }
         val old2new = oldIndices.zip(newIndices).toMap()
         val newRegions = regions.filter {
@@ -825,50 +896,63 @@ class EditClusterViewModel : ViewModel() {
                 fillColor = region.fillColor
             )
         }
+        val oldSize = regions.size
         regions.addAll(newRegions)
+        return oldSize until regions.size
     }
 
     fun deleteSelectedPointsAndCircles() {
         if (showCircles && selection.isNotEmpty() && mode.isSelectingCircles()) {
-            recordCommand(Command.DELETE, unique = true)
-            val toBeDeleted = expressions.deleteNodes(selection)
-            val deletedCircleIndices = toBeDeleted
-                .filter { objects[it] is CircleOrLine }
-                .toSet()
-            if (deletedCircleIndices.isNotEmpty()) {
-                val everythingIsDeleted = deletedCircleIndices.containsAll(objects.filterIndices { it is CircleOrLine })
-                val oldRegions = regions.toList()
-                regions.clear()
-                if (!everythingIsDeleted) {
-                    regions.addAll(
-                        oldRegions
-                            // to avoid stray chessboard selections
-                            .filterNot { (ins, _, _) ->
-                                ins.isNotEmpty() && ins.minus(deletedCircleIndices).isEmpty()
-                            }
-                            .map { (ins, outs, fillColor) ->
-                                LogicalRegion(
-                                    insides = ins.minus(deletedCircleIndices),
-                                    outsides = outs.minus(deletedCircleIndices),
-                                    fillColor = fillColor
-                                )
-                            }
-                            .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
-                    )
-                } else {
-                    if (chessboardPattern == ChessboardPattern.STARTS_COLORED)
-                        chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
-                }
-                val deletedCircles = deletedCircleIndices.mapNotNull { objects[it] as? CircleOrLine }
-                viewModelScope.launch {
-                    _animations.emit(
-                        CircleAnimation.Exit(deletedCircles)
-                    )
-                }
-            }
-            removeObjects(toBeDeleted.toList())
+            deleteObjectsWithDependenciesColorsAndRegions(selection)
             selection = emptyList()
         }
+    }
+
+    private inline fun deleteObjectsWithDependenciesColorsAndRegions(
+        indicesToDelete: List<Ix>,
+        crossinline circleAnimationInit: (List<CircleOrLine>) -> CircleAnimation? = { deletedCircles ->
+            CircleAnimation.Exit(deletedCircles)
+        },
+    ) {
+        recordCommand(Command.DELETE, unique = true)
+        val toBeDeleted = expressions.deleteNodes(indicesToDelete)
+        val deletedCircleIndices = toBeDeleted
+            .filter { objects[it] is CircleOrLine }
+            .toSet()
+        if (deletedCircleIndices.isNotEmpty()) {
+            val everythingIsDeleted = deletedCircleIndices.containsAll(
+                objects.filterIndices { it is CircleOrLine }
+            )
+            val oldRegions = regions.toList()
+            regions.clear()
+            if (!everythingIsDeleted) {
+                regions.addAll(
+                    oldRegions
+                        // to avoid stray chessboard selections
+                        .filterNot { (ins, _, _) ->
+                            ins.isNotEmpty() && ins.minus(deletedCircleIndices).isEmpty()
+                        }
+                        .map { (ins, outs, fillColor) ->
+                            LogicalRegion(
+                                insides = ins.minus(deletedCircleIndices),
+                                outsides = outs.minus(deletedCircleIndices),
+                                fillColor = fillColor
+                            )
+                        }
+                        .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
+                )
+            } else {
+                if (chessboardPattern == ChessboardPattern.STARTS_COLORED)
+                    chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
+            }
+            val deletedCircles = deletedCircleIndices.mapNotNull { objects[it] as? CircleOrLine }
+            circleAnimationInit(deletedCircles)?.let { circleAnimation ->
+                viewModelScope.launch {
+                    _animations.emit(circleAnimation)
+                }
+            }
+        }
+        removeObjects(toBeDeleted.toList())
     }
 
     fun getArg(arg: Arg.Point): Point? =
@@ -2600,9 +2684,12 @@ class EditClusterViewModel : ViewModel() {
             val newCircles = newGCircles.map { it?.upscale() }
             addObjects(newCircles)
             val outputRange = (oldSize until objects.size).toList()
-            submode = SubMode.ExprAdjustment(expr, outputRange, outputRange)
-            if (newGCircles.any { it is ImaginaryCircle })
+            submode = SubMode.ExprAdjustment(listOf(
+                AdjustableExpr(expr, outputRange, outputRange)
+            ))
+            if (newGCircles.any { it is ImaginaryCircle }) {
                 queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+            }
         } else if (arg1 is Arg.CircleOrPoint.Point && arg2 is Arg.CircleOrPoint.Point) {
             recordCreateCommand()
             val (startPointIx, endPointIx) = listOf(arg1, arg2).map { pointArg ->
@@ -2619,7 +2706,9 @@ class EditClusterViewModel : ViewModel() {
             val newPoints = newGCircles.map { it?.upscale() as? Point }
             addObjects(newPoints)
             val outputRange = (oldSize until objects.size).toList()
-            submode = SubMode.ExprAdjustment(expr, outputRange, outputRange)
+            submode = SubMode.ExprAdjustment(listOf(
+                AdjustableExpr(expr, outputRange, outputRange)
+            ))
         }
     }
 
@@ -2629,7 +2718,7 @@ class EditClusterViewModel : ViewModel() {
         }
         when (val sm = submode) {
             is SubMode.ExprAdjustment -> {
-                when (val parameters = sm.expr.parameters) {
+                when (val parameters = sm.parameters) {
                     is InterpolationParameters ->
                         defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
                     is BiInversionParameters ->
@@ -2653,11 +2742,12 @@ class EditClusterViewModel : ViewModel() {
     fun cancelExprAdjustment() {
         when (val sm = submode) {
             is SubMode.ExprAdjustment -> {
-                val deletedIndices = expressions.deleteNodes(sm.outputIndices)
-                objectColors -= deletedIndices
-                removeObjects(deletedIndices.toList())
+                val outputs = sm.adjustables.flatMap { it.outputIndices }
+                deleteObjectsWithDependenciesColorsAndRegions(
+                    outputs,
+                    circleAnimationInit = { null }
+                )
                 selection = emptyList()
-                // potentially update regions as in deleteSelectedPointsAndCircles
             }
             else -> {}
         }
@@ -2695,29 +2785,30 @@ class EditClusterViewModel : ViewModel() {
         recordCreateCommand()
         val (engine1, engine2) = args.drop(1).take(2)
             .map { (it as Arg.CircleIndex).index }
-        val oldSize = objects.size
         val targetIndices = targetCircleIndices + targetPointsIndices
-        val expr0 = Expr.BiInversion(
-                defaultBiInversionParameters.params,
-                engine1, engine2,
-                -1 // ranges over args[0]
-            )
+        val adjustables = mutableListOf<AdjustableExpr>()
+        val params0 = defaultBiInversionParameters.params
+        val oldSize = objects.size
+        var outputIndex = oldSize
         val source2trajectory = targetIndices.map { targetIndex ->
-            targetIndex to expressions.addMultiExpr(
-                Expr.BiInversion(
-                    defaultBiInversionParameters.params,
-                    engine1, engine2,
-                    targetIndex
-                ),
-            ).map { it?.upscale() } // multi expression creates a whole trajectory at a time
+            val expr = Expr.BiInversion(params0, engine1, engine2, targetIndex)
+            val result = expressions
+                .addMultiExpr(expr)
+                .map { it?.upscale() } // multi expression creates a whole trajectory at a time
+            val outputRange = (outputIndex until (outputIndex + result.size)).toList()
+            adjustables.add(
+                AdjustableExpr(expr, outputRange, outputRange)
+            )
+            outputIndex += result.size
+            return@map targetIndex to result
         }
-        copyRegionsAndStylesForNewTrajectories(
-            sourceIndex2NewTrajectory = source2trajectory
-        )
-        val outputRange = (oldSize until objects.size).toList()
-        // ig we either have a List<Expr> or 1 expr but its last param can range over
-        // corresponding pArgList argument
-        submode = SubMode.ExprAdjustment(expr0, outputRange, outputRange)
+        val newObjects = source2trajectory.flatMap { it.second }
+        addObjects(newObjects) // row-column order
+        copySourceColorsOntoTrajectories(source2trajectory, oldSize)
+        copySourceRegionsOntoTrajectories(source2trajectory, oldSize, flipRegionsInAndOut = false)
+        val newRegions = listOf<Ix>()
+        TODO()
+        submode = SubMode.ExprAdjustment(adjustables, newRegions)
     }
 
     fun completeBiInversion(
@@ -2733,7 +2824,7 @@ class EditClusterViewModel : ViewModel() {
         val (engine1, engine2) = args.drop(1).take(2)
             .map { (it as Arg.CircleIndex).index }
         val targetIndices = targetCircleIndices + targetPointsIndices
-        copyRegionsAndStylesForNewTrajectories(
+        copyRegionsAndStylesOntoNewTrajectories(
             sourceIndex2NewTrajectory = targetIndices.map { targetIndex ->
                 targetIndex to expressions.addMultiExpr(
                     Expr.BiInversion(
@@ -2770,7 +2861,7 @@ class EditClusterViewModel : ViewModel() {
                 is Arg.Point.XY -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
             } }
         val targetIndices = targetCircleIndices + targetPointsIndices
-        copyRegionsAndStylesForNewTrajectories(
+        copyRegionsAndStylesOntoNewTrajectories(
             sourceIndex2NewTrajectory = targetIndices.map { targetIndex ->
                 targetIndex to expressions.addMultiExpr(
                     Expr.LoxodromicMotion(
@@ -2866,7 +2957,7 @@ class EditClusterViewModel : ViewModel() {
                             )
                             else -> never()
                         }
-                        else -> never()
+//                        else -> never()
                     }
                 }.filterNotNull()
             createNewGCircles(newCircles)
@@ -2891,34 +2982,81 @@ class EditClusterViewModel : ViewModel() {
         openedDialog = null
     }
 
-    /** When in [SubMode.ExprAdjustment], changes [submode]`.expr` parameters to [parameters] and
+    /** When in [SubMode.ExprAdjustment], changes [submode]'s [Expr]s' parameters to [parameters] and
      * updates corresponding [objects] */
     fun updateParameters(parameters: Parameters) {
         val sm = submode
-        if (sm is SubMode.ExprAdjustment && sm.expr is Expr.OneToMany && parameters != sm.expr.parameters) {
-            val newExpr = sm.expr.copyWithNewParameters(parameters) as Expr.OneToMany
-            println("updateParameters($parameters): $sm -> $newExpr")
-            val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
-                targetIndices = sm.outputIndices,
-                maxRange = sm.reservedIndices,
-                newExpr = newExpr
-            )
-            for (ix in newReservedIndices) { // we have to cleanup abandoned but reserved indices
-                if (ix < objects.size)
-                    objects[ix] = null
-                else
-                    addObject(null)
+        println("updateParameters($parameters): $sm")
+        if (sm is SubMode.ExprAdjustment && parameters != sm.parameters) {
+            submode = when (sm.parameters) {
+                is InterpolationParameters -> {
+                    val (expr, outputIndices, reservedIndices) = sm.adjustables[0]
+                    val newExpr = expr.copyWithNewParameters(parameters) as Expr.OneToMany
+                    val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
+                        newExpr = newExpr,
+                        targetIndices = outputIndices,
+                        maxRange = reservedIndices,
+                    )
+                    for (ix in newReservedIndices) { // we have to cleanup abandoned but reserved indices
+                        if (ix < objects.size)
+                            objects[ix] = null
+                        else
+                            addObject(null)
+                    }
+                    for (i in newIndices.indices) {
+                        val ix = newIndices[i]
+                        val newObject = newObjects[i]?.upscale()
+                        objects[ix] = newObject
+                    }
+                    SubMode.ExprAdjustment(listOf(
+                        AdjustableExpr(newExpr, newIndices, newReservedIndices)
+                    ))
+                }
+                is BiInversionParameters -> {
+                    regions.removeAtIndices(sm.regions)
+                    val newAdjustables = mutableListOf<AdjustableExpr>()
+                    val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
+                    for ((expr, outputIndices, reservedIndices) in sm.adjustables) {
+                        val sourceIndex = expr.args.last() // by convention the last index is the target
+                        val newExpr = expr.copyWithNewParameters(parameters) as Expr.OneToMany
+                        val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
+                            newExpr = newExpr,
+                            targetIndices = outputIndices,
+                            maxRange = reservedIndices,
+                        )
+                        // NOTE: reserved indices will be generally non-contiguous
+                        // we have to cleanup abandoned indices
+                        for (ix in (outputIndices - newIndices.toSet())) {
+                            objects[ix] = null
+                        }
+                        for (ix in (newReservedIndices - reservedIndices.toSet())) {
+                            if (ix >= objects.size) {
+                                addObject(null) // pad with nulls
+                            }
+                        }
+                        objectColors -= outputIndices.toSet()
+                        val sourceColor = objectColors[sourceIndex]
+                        for (i in newIndices.indices) {
+                            val ix = newIndices[i]
+                            val newObject = newObjects[i]?.upscale()
+                            objects[ix] = newObject
+                            sourceColor?.also {
+                                objectColors[ix] = it
+                            }
+                        }
+                        newAdjustables.add(
+                            AdjustableExpr(newExpr, newIndices, newReservedIndices)
+                        )
+                        source2trajectory.add(
+                           sourceIndex to newIndices
+                        )
+                    }
+                    val regions =
+                        copySourceRegionsOntoTrajectories(source2trajectory, flipRegionsInAndOut = false)
+                    SubMode.ExprAdjustment(newAdjustables, regions)
+                }
+                else -> sm
             }
-            for (i in newIndices.indices) {
-                val ix = newIndices[i]
-                val newObject = newObjects[i]?.upscale()
-                objects[ix] = newObject
-            }
-            submode = sm.copy(
-                expr = newExpr,
-                outputIndices = newIndices,
-                reservedIndices = newReservedIndices
-            )
         }
     }
 

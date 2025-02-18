@@ -19,12 +19,24 @@ inline fun <T> Iterable<T>.partitionIndices(
             )
         }
 
+/**
+ * Removes elements at [indices] starting from the highest index,
+ * not atomic, so if 2+ threads are trying to write it's NG
+ */
+@Suppress("NOTHING_TO_INLINE")
+inline fun <E> MutableList<E>.removeAtIndices(indices: List<Ix>) {
+    for (ix in indices.sortedDescending()) {
+        removeAt(ix)
+    }
+}
+
 // reference: https://docs.python.org/3/library/itertools.html#itertools.combinations
-/** Produces indices for non-repeating combinations out
+/**
+ * Produces indices for non-repeating combinations out
  * of [n] objects in total, [r] at time (in lexicographic order).
  *
  * `combinations(4, 3) → 012 013 023 123`
- * */
+ */
 fun combinations(n: Int, r: Int): Sequence<List<Int>> = sequence {
     val indices = (0 until r).toMutableList()
     if (r > n)
@@ -61,7 +73,7 @@ fun reindexingMap(originalIndices: Iterable<Ix>, deletedIndices: Set<Ix>): Map<I
 /**
  * Sorts elements by their frequency
  * @return List of distinct elements from most common to most rare
- * */
+ */
 fun <T> Iterable<T>.sortedByFrequency(): List<T> =
     this.groupingBy { it }
         .eachCount()
@@ -87,7 +99,7 @@ fun <T> Iterable<T>.collectionSizeOrDefault(default: Int): Int =
  * using the provided [transform] function applied to each triple of elements.
  * The returned list has length of the shortest collection.
  */
-inline fun <A, B, C, R> Iterable<A>.zip3(
+inline fun <reified A, reified B, reified C, reified R> Iterable<A>.zip3(
     other: Iterable<B>,
     another: Iterable<C>,
     crossinline transform: (a: A, b: B, c: C) -> R
@@ -106,8 +118,10 @@ inline fun <A, B, C, R> Iterable<A>.zip3(
     return list
 }
 
-/** aka zipN (non-truncating), when some lists are shorter than required they are
- * filled with [filler] */
+/**
+ * aka zipN (non-truncating), when some lists are shorter than required they are
+ * filled with [filler]
+ */
 @Suppress("NOTHING_TO_INLINE")
 inline fun <T> List<List<T>>.transpose(filler: T? = null): List<List<T?>> {
     val maxSize = this.maxOfOrNull { it.size } ?: return emptyList()

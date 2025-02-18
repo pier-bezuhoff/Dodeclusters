@@ -5,7 +5,9 @@ import androidx.compose.ui.geometry.Offset
 import domain.Ix
 import domain.cluster.LogicalRegion
 import domain.expressions.Expr
+import domain.expressions.Parameters
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Immutable
 @Serializable
@@ -38,15 +40,44 @@ sealed interface SubMode {
         val lastQualifiedRegion: LogicalRegion? = null
     ) : SubMode
 
-    /** Sub-mode accompanying [ToolMode], that allows live adjustment of expression parameters
-     * @property[outputIndices] indices containing outputs of the multi expr we are adjusting
-     * @property[reservedIndices] all indices reserved for [expr],
-     * including [outputIndices] and additional `null`ed indices that
-     * were previously allocated for this multi expr
-     * */
+    // generic type E doesn't actually enforce anything...
+    /** Sub-mode accompanying [ToolMode], that allows live adjustment of expression parameters.
+     * Can affect many [adjustables] = [Expr]s of same type, by varying parameters of each of them.
+     * All expressions must be of the same type.
+     * @property[adjustables] non-empty list of [Expr]s together with occupied and
+     * reserved output indices for each
+     * @property[regions] indices of regions resulted from the [adjustables] expressions, this
+     * number is generally divisible by n-steps parameter
+     * @property[parameters] should be the same for all [adjustables]
+     */
     data class ExprAdjustment(
-        val expr: Expr,
-        val outputIndices: List<Ix>,
-        val reservedIndices: List<Ix>,
-    ) : SubMode // allow it in Drag mode
+        val adjustables: List<AdjustableExpr>, // non-empty
+        val regions: List<Ix> = emptyList(),
+    ) : SubMode { // allow it in Drag mode
+
+        @Transient
+        val parameters = adjustables[0].expr.parameters
+
+        init {
+            require(
+                adjustables.isNotEmpty() &&
+                adjustables[0].expr.let { expr0 ->
+                    adjustables.all { expr0::class == it.expr::class }
+                }
+            ) { "Invalid adjustables $adjustables" }
+        }
+    }
 }
+
+/** Adjustable [expr] with indices that are occupied by its outputs.
+ * @property[outputIndices] indices containing outputs of the multi [expr] we are adjusting
+ * @property[reservedIndices] all indices reserved for the [expr],
+ * including [outputIndices] and additional `null`ed indices that
+ * were previously allocated for this multi [expr]
+ */
+@Immutable
+data class AdjustableExpr(
+    val expr: Expr,
+    val outputIndices: List<Ix>,
+    val reservedIndices: List<Ix>,
+)

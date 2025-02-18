@@ -331,9 +331,9 @@ class ExpressionForest(
      * @return updated ([targetIndices], [maxRange], updated objects at new target indices (to be set))
      * */
     fun adjustMultiExpr(
+        newExpr: Expr.OneToMany,
         targetIndices: List<Ix>,
         maxRange: List<Ix>,
-        newExpr: Expr.OneToMany,
     ): Triple<List<Ix>, List<Ix>, List<GCircle?>> {
         println("adjustMultiExpr($targetIndices, $maxRange, $newExpr)")
         val i0 = targetIndices.first()
