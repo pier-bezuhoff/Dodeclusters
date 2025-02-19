@@ -29,15 +29,17 @@ data class ExtrapolationParameters(
     val nRight: Int,
 ) : Parameters
 
+/**
+ * @param[nInterjacents] Number of new objects to generate in between
+ * @param[inBetween] Unused, except for informing change to DefaultInterpolationParameter and
+ * for backwards-compatibility
+ * @param[complementary] Direction-aware; `true` indicates non-natural n-sector choice
+ */
 @Immutable
 @Serializable
 data class InterpolationParameters(
     val nInterjacents: Int,
-    /** Soft-deprecated.
-     * Unused except for informing change to DefaultInterpolationParameter and
-     * for backwards-compatibility */
     val inBetween: Boolean,
-    /** Direction-aware; `true` indicates non-natural n-sector choice */
     val complementary: Boolean = inBetween // defaults to inBetween bc of o|o case
 ) : Parameters
 
@@ -60,13 +62,18 @@ data class SagittaRatioParameters(
     val sagittaRatio: Double
 ) : Parameters
 
+/**
+ * @param[speed] Multiply inversive distance between engines by [speed] before applications.
+ * Can be negative.
+ * @param[nSteps] Number of times to apply the composition of inversions
+ * @param[reverseSecondEngine] Not co-directed (anti-parallel) engines may lead to
+ * non-intuitive behaviour
+ */
 @Immutable
 @Serializable
 data class BiInversionParameters(
-    /** Multiply inversive distance between engines by [speed] before applications */
     val speed: Double,
     val nSteps: Int,
-    /** Non-co-directed engines may lead to non-intuitive behaviour */
     val reverseSecondEngine: Boolean
 ) : Parameters
 

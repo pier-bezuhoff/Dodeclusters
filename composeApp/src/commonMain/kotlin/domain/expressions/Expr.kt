@@ -22,6 +22,7 @@ import domain.expressions.Expr.OneToMany
 import domain.expressions.Expr.OneToOne
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 typealias ExprResult = List<GCircle?>
 
@@ -42,14 +43,12 @@ private data class E(
 //  e.g. Expr.parameters: Parameters = when (this) { ... }
 //  and Expr.args: List<Ix> = when (this) { ... }
 /**
- * Raw expression that can have several outputs:
+ * Raw expression that can have one or several outputs:
  * either [OneToOne] or [OneToMany]
- *
- * Whenever the order of [args] doesn't matter, enforce index-increasing order
  * @property[parameters] Static parameters used in the expression, generally
  * a collection of numbers
  * @property[args] Indexed links to dynamic point/line/circle arguments
- * */
+ */
 @Immutable
 @Serializable
 sealed interface Expr : ExprLike {
@@ -58,6 +57,14 @@ sealed interface Expr : ExprLike {
     sealed interface OneToOne : Expr
     @Serializable
     sealed interface OneToMany : Expr
+
+    /**
+     * [Expr] that applies transformation to [target] object [nSteps] times
+     */
+    sealed interface TransformLike : Expr {
+        val target: Ix
+        val nSteps: Int
+    }
 
     // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr
     //  p' = f(Δ(f⁻¹(p)), where point p on dependent carrier f(<free>) moves to p' when <free> is affected by Δ
@@ -96,9 +103,12 @@ sealed interface Expr : ExprLike {
     @Serializable
     @SerialName("CircleInversion")
     data class CircleInversion(
-        val target: Ix,
+        override val target: Ix,
         val engine: Ix,
-    ) : OneToOne, ExprLike by E(Parameters.None, listOf(target, engine))
+    ) : OneToOne, ExprLike by E(Parameters.None, listOf(target, engine)), TransformLike {
+        @Transient
+        override val nSteps: Int = 1
+    }
     @Serializable
     @SerialName("CircleBy2PointsAndSagittaRatio")
     data class CircleBy2PointsAndSagittaRatio(
@@ -142,16 +152,26 @@ sealed interface Expr : ExprLike {
         override val parameters: BiInversionParameters,
         val engine1: Ix,
         val engine2: Ix,
-        val target: Ix,
-    ) : OneToMany, ExprLike by E(parameters, listOf(engine1, engine2, target))
+        override val target: Ix,
+    ) : OneToMany
+    , ExprLike by E(parameters, listOf(engine1, engine2, target))
+    , TransformLike {
+        @Transient
+        override val nSteps: Int = parameters.nSteps
+    }
     @Serializable
     @SerialName("LoxodromicMotion")
-    data class LoxodromicMotion( // TODO: add backwards steps
+    data class LoxodromicMotion( // MAYBE: add backwards steps
         override val parameters: LoxodromicMotionParameters,
         val divergencePoint: Ix,
         val convergencePoint: Ix,
-        val target: Ix,
-    ) : OneToMany, ExprLike by E(parameters, listOf(divergencePoint, convergencePoint, target))
+        override val target: Ix,
+    ) : OneToMany
+    , ExprLike by E(parameters, listOf(divergencePoint, convergencePoint, target))
+    , TransformLike {
+        @Transient
+        override val nSteps: Int = parameters.nSteps
+    }
 }
 
 // performance-wise variations between:

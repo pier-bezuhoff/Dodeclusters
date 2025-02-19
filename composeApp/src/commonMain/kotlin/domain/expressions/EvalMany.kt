@@ -102,9 +102,10 @@ fun computeCircleExtrapolation(
         .map { it.toGCircle() as? CircleOrLine }
 }
 
+// BUG: doesn't work for parallel lines or touching circles
 fun computeBiInversion(
     params: BiInversionParameters,
-    engine1: GCircle, // realistically speaking points dont fit here
+    engine1: GCircle, // realistically speaking points dont fit as engines
     engine2: GCircle,
     target: GCircle,
 ): List<GCircle?> {

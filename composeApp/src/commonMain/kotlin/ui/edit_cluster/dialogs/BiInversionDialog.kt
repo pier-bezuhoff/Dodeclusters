@@ -54,10 +54,8 @@ data class DefaultBiInversionParameters(
     val maxSpeed: Float = 10f,
     val minAngle: Float = 0f,
     val maxAngle: Float = 360f,
-//    val minDilation: Float = 0.01f,
-//    val maxDilation: Float = 100.0f,
     val minNSteps: Int = 1,
-    val maxNSteps: Int = 20,
+    val maxNSteps: Int = 50,
 ) {
     val speedRange = minSpeed .. maxSpeed
     val stepsRange = minNSteps.toFloat() .. maxNSteps.toFloat()

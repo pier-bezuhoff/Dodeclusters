@@ -74,6 +74,7 @@ import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.lock_open
 import dodeclusters.composeapp.generated.resources.ok_name
+import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
@@ -254,7 +255,7 @@ fun EditClusterScreen(
                 onConfirm = viewModel::setNewBackgroundColor,
             )
         }
-        DialogType.CIRCLE_INTERPOLATION -> {
+        DialogType.CIRCLE_OR_POINT_INTERPOLATION -> {
             if (viewModel.partialArgList?.isFull == true) {
                 val (startObject, endObject) = viewModel.partialArgList!!.args
                     .map {
@@ -417,8 +418,9 @@ fun preloadIcons() {
         // from canvas HUD
         Res.drawable.expand, Res.drawable.shrink,
         Res.drawable.copy, Res.drawable.delete_forever, Res.drawable.lock_open,
-        Res.drawable.rotate_counterclockwise,
-        Res.drawable.three_dots_in_angle_brackets, EditClusterTool.DetailedAdjustment.icon, EditClusterTool.InBetween.icon,
+        Res.drawable.rotate_counterclockwise, Res.drawable.right_left,
+        Res.drawable.three_dots_in_angle_brackets, EditClusterTool.DetailedAdjustment.icon,
+        EditClusterTool.InBetween.icon,
     )) {
         painterResource(resource)
     }

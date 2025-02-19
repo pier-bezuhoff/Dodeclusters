@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,8 +45,11 @@ import androidx.compose.ui.unit.dp
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.ok_name
+import dodeclusters.composeapp.generated.resources.right_left
+import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
+import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -54,10 +58,16 @@ import ui.OnOffButton
 import ui.SimpleFilledButton
 import ui.SimpleToolButton
 import ui.TwoIconButton
+import ui.VerticalSlider
+import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
+import kotlin.math.abs
+import kotlin.math.acosh
+import kotlin.math.asinh
 import kotlin.math.roundToInt
+import kotlin.math.sinh
 
 // MAYBE: add tooltips to buttons
 
@@ -68,7 +78,7 @@ fun BoxScope.LockedCircleSelectionContextActions(
     toolPredicate: (EditClusterTool) -> Boolean,
     getMostCommonCircleColorInSelection: () -> Color?
 ) {
-    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
+    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
         // duplicate & delete buttons
         SimpleToolButton(
             EditClusterTool.Duplicate,
@@ -119,7 +129,7 @@ fun BoxScope.CircleSelectionContextActions(
 //        stringResource(Res.string.stub),
 //        Modifier.align(Alignment.CenterStart)
 //    ) {}
-    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
+    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
         // expand & shrink buttons
         SimpleToolButton(
             EditClusterTool.Expand,
@@ -184,7 +194,7 @@ fun PointSelectionContextActions(
 ) {
     val buttonShape = RoundedCornerShape(percent = 50)
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
+    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
         SimpleToolButton(
             EditClusterTool.Delete,
             // awkward position tbh
@@ -216,7 +226,7 @@ fun PointSelectionContextActions(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BoxScope.InterpolationInterface(
+fun InterpolationInterface(
     canvasSize: IntSize,
     interpolateCircles: Boolean,
     circlesAreCoDirected: Boolean,
@@ -241,25 +251,25 @@ fun BoxScope.InterpolationInterface(
                 if (circlesAreCoDirected) !interpolateInBetween else interpolateInBetween
             } else interpolateInBetween
     )
-    val buttonShape = RoundedCornerShape(percent = 50)
+    val buttonShape = remember { RoundedCornerShape(percent = 50) }
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-    with (ConcreteSelectionControlsPositions(canvasSize, LocalDensity.current)) {
+    val sliderColors = SliderDefaults.colors(
+        thumbColor = MaterialTheme.colorScheme.secondary,
+        activeTrackColor = MaterialTheme.colorScheme.secondary,
+        activeTickColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTickColor = MaterialTheme.colorScheme.secondary,
+    )
+    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
         ) {
-            SimpleToolButton(
-                EditClusterTool.DetailedAdjustment,
-                topRightUnderScaleModifier
-                    .background(buttonBackground, buttonShape)
-                ,
-                onClick = { openDetailsDialog() }
-            )
             if (interpolateCircles) {
                 OnOffButton(
                     painterResource(EditClusterTool.InBetween.icon),
                     stringResource(EditClusterTool.InBetween.name),
                     isOn = interpolateInBetween,
-                    modifier = halfBottomRightModifier,
+                    modifier = topRightUnderScaleModifier,
                     contentColor = MaterialTheme.colorScheme.secondary,
                     checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     containerColor = buttonBackground,
@@ -269,6 +279,13 @@ fun BoxScope.InterpolationInterface(
                     // triggers params upd => triggers VM.updParams
                 }
             }
+            SimpleToolButton(
+                EditClusterTool.DetailedAdjustment,
+                halfBottomRightModifier
+                    .background(buttonBackground, buttonShape)
+                ,
+                onClick = { openDetailsDialog() }
+            )
             Icon(
                 painterResource(Res.drawable.three_dots_in_angle_brackets),
                 stringResource(Res.string.steps_slider_name),
@@ -279,6 +296,120 @@ fun BoxScope.InterpolationInterface(
                 sliderState,
                 horizontalSliderModifier
                     .width(horizontalSliderWidth)
+                ,
+                colors = sliderColors,
+            )
+            SimpleFilledButton(
+                painterResource(Res.drawable.confirm),
+                stringResource(Res.string.ok_name),
+                bottomRightModifier,
+                contentColor = MaterialTheme.colorScheme.onSecondary,
+                containerColor = MaterialTheme.colorScheme.secondary,
+                onClick = confirmParameters
+            )
+        }
+    }
+    val coroutineScope = rememberCoroutineScope()
+    key(params) { // this feels hacky, `key(params)` serves only a semantic purpose btw
+        coroutineScope.launch {
+            updateParameters(params)
+        }
+    }
+}
+
+/**
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BiInversionInterface(
+    canvasSize: IntSize,
+    defaults: DefaultBiInversionParameters,
+    updateParameters: (BiInversionParameters) -> Unit,
+    openDetailsDialog: () -> Unit,
+    confirmParameters: () -> Unit,
+) {
+    // equivalent to swapping the order of engines
+    var negateSpeed by remember { mutableStateOf(false) }
+    // we use sinh for nicer range
+    // sinh(x) ~ x on [0; 1] and sinh(x) ~ exp(x)/2 on [1; +inf]
+    // f(x) := k1 * sinh(k2 * x) such that
+    // f(0) = 0; f(1/2) = 1; f(1) = max-speed
+    val k2 = remember { 2.0 * acosh(defaults.maxSpeed / 2.0) }
+    val k1 = remember {  1.0 / sinh(k2 / 2.0) }
+    val minVisibleSpeedValue = remember { (asinh(defaults.minSpeed/k1)/k2).toFloat() }
+    val maxVisibleSpeedValue = remember { (asinh(defaults.maxSpeed/k1)/k2).toFloat() }
+    val speedSliderState = remember { SliderState(
+        value = (asinh(abs(defaults.speed)/k1)/k2).toFloat(),
+        valueRange = minVisibleSpeedValue .. maxVisibleSpeedValue
+    ) }
+    val stepsSliderState = remember { SliderState(
+        value = defaults.nSteps.toFloat(),
+        steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
+        valueRange = defaults.stepsRange
+    ) }
+    val params = BiInversionParameters(
+        speed = (if (negateSpeed) -1 else +1) * k1*sinh(k2*speedSliderState.value),
+        nSteps = stepsSliderState.value.roundToInt(),
+        reverseSecondEngine = defaults.reverseSecondEngine,
+    )
+    val buttonShape = remember { RoundedCornerShape(percent = 50) }
+    val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+    val sliderColors = SliderDefaults.colors(
+        thumbColor = MaterialTheme.colorScheme.secondary,
+        activeTrackColor = MaterialTheme.colorScheme.secondary,
+        activeTickColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTickColor = MaterialTheme.colorScheme.secondary,
+    )
+    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
+        CompositionLocalProvider(
+            LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
+        ) {
+            Icon(
+                painterResource(Res.drawable.rotate_counterclockwise),
+                "speed slider",
+                topRightModifier
+                    .padding(start = 12.dp)
+            )
+            VerticalSlider(
+                speedSliderState,
+                verticalSliderModifier
+                    .height(verticalSliderHeight)
+                ,
+                colors = sliderColors,
+            )
+            OnOffButton( // negate speed toggle
+                painterResource(Res.drawable.right_left),
+                "negate speed",
+                isOn = negateSpeed,
+                modifier = topRightUnderScaleModifier,
+                contentColor = MaterialTheme.colorScheme.secondary,
+                checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerColor = buttonBackground,
+                checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ) {
+                negateSpeed = !negateSpeed
+                // triggers params upd => triggers VM.updParams
+            }
+            SimpleToolButton(
+                EditClusterTool.DetailedAdjustment,
+                halfBottomRightModifier
+                    .background(buttonBackground, buttonShape)
+                ,
+                onClick = { openDetailsDialog() }
+            )
+            Icon(
+                painterResource(Res.drawable.three_dots_in_angle_brackets),
+                stringResource(Res.string.steps_slider_name),
+                preHorizontalSliderModifier
+                    .padding(vertical = 12.dp)
+            )
+            Slider(
+                stepsSliderState,
+                horizontalSliderModifier
+                    .width(horizontalSliderWidth)
+                ,
+                colors = sliderColors
             )
             SimpleFilledButton(
                 painterResource(Res.drawable.confirm),

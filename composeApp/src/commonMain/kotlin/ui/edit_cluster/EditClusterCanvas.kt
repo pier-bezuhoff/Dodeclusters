@@ -69,7 +69,9 @@ import domain.ChessboardPattern
 import domain.Ix
 import domain.PartialArgList
 import domain.cluster.LogicalRegion
-import domain.expressions.Expr
+import domain.expressions.BiInversionParameters
+import domain.expressions.InterpolationParameters
+import domain.expressions.LoxodromicMotionParameters
 import domain.rotateBy
 import getPlatform
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -123,8 +125,9 @@ fun BoxScope.EditClusterCanvas(
     val freeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
     val pointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
     val freePointColor = freeCircleColor
-    val selectedCircleColor = DodeclustersColors.strongSalad
-//        MaterialTheme.colorScheme.primary
+    val selectedCircleColor =
+//        MaterialTheme.colorScheme.secondary
+        DodeclustersColors.strongSalad
     val selectedPointColor = selectedCircleColor
     val imaginaryCircleColor = Color.hsl(20f, 0.9f, 0.5f, alpha = 0.5f) // faded red
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
@@ -212,17 +215,26 @@ fun BoxScope.EditClusterCanvas(
             ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
         } else {
             when (val sm = viewModel.submode) {
-                is SubMode.ExprAdjustment -> when (sm.expr) {
-                    is Expr.CircleInterpolation, is Expr.PointInterpolation ->
+                is SubMode.ExprAdjustment -> when (sm.parameters) {
+                    is InterpolationParameters ->
                         InterpolationInterface(
+                            canvasSize = viewModel.canvasSize,
                             interpolateCircles = viewModel.interpolateCircles,
                             circlesAreCoDirected = viewModel.circlesAreCoDirected,
-                            canvasSize = viewModel.canvasSize,
                             defaults = viewModel.defaultInterpolationParameters,
                             updateParameters = viewModel::updateParameters,
                             openDetailsDialog = viewModel::openDetailsDialog,
                             confirmParameters = viewModel::confirmAdjustedParameters,
                         )
+                    is BiInversionParameters ->
+                        BiInversionInterface(
+                            canvasSize = viewModel.canvasSize,
+                            defaults = viewModel.defaultBiInversionParameters,
+                            updateParameters = viewModel::updateParameters,
+                            openDetailsDialog = viewModel::openDetailsDialog,
+                            confirmParameters = viewModel::confirmAdjustedParameters,
+                        )
+                    is LoxodromicMotionParameters -> {}
                     else -> {}
                 }
                 else -> {}
@@ -1170,12 +1182,12 @@ data class SelectionControlsPositions(
 }
 
 @Immutable
-data class ConcreteSelectionControlsPositions(
+data class ConcreteScreenPositions(
     val size: IntSize,
     val density: Density,
     val halfSize: Dp = (48/2).dp,
 ) {
-    val positions: SelectionControlsPositions = SelectionControlsPositions(size)
+    private val positions: SelectionControlsPositions = SelectionControlsPositions(size)
 
     @Stable
     fun offsetModifier(x: Float, y: Float): Modifier =
@@ -1190,6 +1202,10 @@ data class ConcreteSelectionControlsPositions(
         positions.horizontalSliderSpan.toDp()
     } - halfSize
 
+    val verticalSliderHeight = with (density) {
+        positions.scaleSliderFullHeight.toDp()
+    }
+
     val topRightModifier = offsetModifier(positions.right, positions.top)
     val scaleBottomRightModifier = offsetModifier(positions.right, positions.scaleSliderBottom)
     val topRightUnderScaleModifier = offsetModifier(positions.right, positions.topUnderScaleSlider)
@@ -1199,4 +1215,5 @@ data class ConcreteSelectionControlsPositions(
     val bottomMidModifier = offsetModifier(positions.mid, positions.bottom)
     val horizontalSliderModifier = offsetModifier(positions.horizontalSliderStart, positions.bottom)
     val preHorizontalSliderModifier = offsetModifier(positions.horizontalSliderStart - 40, positions.bottom)
+    val verticalSliderModifier = offsetModifier(positions.right, positions.top + positions.scaleSliderPadding + 12)
 }

@@ -66,7 +66,7 @@ data class DefaultLoxodromicMotionParameters(
     val minDilation: Double = 0.0,
     val maxDilation: Double = 7.0,
     val minNSteps: Int = 0,
-    val maxNSteps: Int = 20,
+    val maxNSteps: Int = 50,
 ) {
     val params: LoxodromicMotionParameters = LoxodromicMotionParameters(angle, dilation, nSteps)
     val angleRange = minAngle .. maxAngle

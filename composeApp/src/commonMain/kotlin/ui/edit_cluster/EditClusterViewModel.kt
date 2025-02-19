@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
@@ -727,19 +729,39 @@ class EditClusterViewModel : ViewModel() {
     }
 
     /**
+     * Copy [objectColors] from source indices onto trajectories specified
+     * by [sourceIndex2TrajectoryOfIndices].
+     * @param[sourceIndex2TrajectoryOfIndices] `[(original index ~ style source, [trajectory of indices of objects])]`,
+     */
+    private inline fun copySourceColorsOntoTrajectories(
+        sourceIndex2TrajectoryOfIndices: List<Pair<Ix, List<Ix>>>,
+    ) {
+        sourceIndex2TrajectoryOfIndices.forEach { (sourceIndex, trajectory) ->
+            val sourceColor = objectColors[sourceIndex]
+            if (sourceColor != null) {
+                trajectory.forEach { ix ->
+                    objectColors[ix] = sourceColor
+                }
+            }
+        }
+    }
+
+    /**
      * Copy [regions] from source indices onto trajectories specified
      * by [sourceIndex2NewTrajectory]. Trajectory objects are assumed to be laid out in
      * row-column order of [sourceIndex2NewTrajectory]`.flatten` starting from [startIndex]
      * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`,
      * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
      * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
+     * @return indices of copied regions within [regions]
      */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun copySourceRegionsOntoTrajectories(
         sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
         startIndex: Ix,
         flipRegionsInAndOut: Boolean = false,
-    ) {
+    ): List<Int> {
+        val newRegionIndices = mutableListOf<Int>()
         var outputIndex = startIndex - 1 // -1 offsets pre-increment
         sourceIndex2NewTrajectory.map { (ix, trajectory) ->
             trajectory.map { o ->
@@ -754,13 +776,16 @@ class EditClusterViewModel : ViewModel() {
             val nonNullSlice = trajectoryStageSlice.filterNotNull()
             // for each stage in the trajectory we try to copy regions
             if (nonNullSlice.isNotEmpty()) {
-                copyRegions(
-                    oldIndices = nonNullSlice.map { it.first },
-                    newIndices = nonNullSlice.map { it.second },
-                    flipInAndOut = flipRegionsInAndOut
+                newRegionIndices.addAll(
+                    copyRegions(
+                        oldIndices = nonNullSlice.map { it.first },
+                        newIndices = nonNullSlice.map { it.second },
+                        flipInAndOut = flipRegionsInAndOut
+                    )
                 )
             }
         }
+        return newRegionIndices
     }
 
     /**
@@ -2503,13 +2528,128 @@ class EditClusterViewModel : ViewModel() {
             ToolMode.POINT -> completePoint()
             ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
-            ToolMode.CIRCLE_OR_POINT_INTERPOLATION ->
-                startCircleOrPointInterpolationParameterAdjustment()
-//                openedDialog = DialogType.CIRCLE_INTERPOLATION
+            ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> startCircleOrPointInterpolationParameterAdjustment()
             ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
-            ToolMode.BI_INVERSION -> openedDialog = DialogType.BI_INVERSION
+            ToolMode.BI_INVERSION ->
+                startBiInversionParameterAdjustment()
+//                openedDialog = DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> openedDialog = DialogType.LOXODROMIC_MOTION
         }
+    }
+
+    /** When in [SubMode.ExprAdjustment], changes [submode]'s [Expr]s' parameters to
+     * [parameters] and updates corresponding [objects] */
+    fun updateParameters(parameters: Parameters) {
+        val sm = submode
+        println("updateParameters($parameters): $sm")
+        if (sm is SubMode.ExprAdjustment && parameters != sm.parameters) {
+            submode = when (sm.parameters) {
+                is InterpolationParameters -> { // single adjustable expr case
+                    val (expr, outputIndices, reservedIndices) = sm.adjustables[0]
+                    val newExpr = expr.copyWithNewParameters(parameters) as Expr.OneToMany
+                    val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
+                        newExpr = newExpr,
+                        targetIndices = outputIndices,
+                        reservedIndices = reservedIndices,
+                    )
+                    for (ix in newReservedIndices) { // we have to cleanup abandoned but reserved indices
+                        if (ix < objects.size)
+                            objects[ix] = null
+                        else
+                            addObject(null)
+                    }
+                    for (i in newIndices.indices) {
+                        val ix = newIndices[i]
+                        val newObject = newObjects[i]?.upscale()
+                        objects[ix] = newObject
+                    }
+                    SubMode.ExprAdjustment(listOf(
+                        AdjustableExpr(newExpr, newIndices, newReservedIndices)
+                    ))
+                }
+                // multiple adjustable exprs
+                is BiInversionParameters, is LoxodromicMotionParameters -> {
+                    regions.removeAtIndices(sm.regions)
+                    val newAdjustables = mutableListOf<AdjustableExpr>()
+                    val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
+                    for ((expr, outputIndices, reservedIndices) in sm.adjustables) {
+                        val sourceIndex = (expr as Expr.TransformLike).target
+                        val newExpr = expr.copyWithNewParameters(parameters) as Expr.OneToMany
+                        val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
+                            newExpr = newExpr,
+                            targetIndices = outputIndices,
+                            reservedIndices = reservedIndices,
+                        )
+                        // NOTE: reserved indices will be generally non-contiguous
+                        // we have to cleanup abandoned indices
+                        for (ix in (outputIndices - newIndices.toSet())) {
+                            objects[ix] = null
+                        }
+                        for (ix in (newReservedIndices - reservedIndices.toSet())) {
+                            if (ix >= objects.size) {
+                                addObject(null) // pad with nulls
+                            }
+                        }
+                        objectColors -= outputIndices.toSet()
+                        val sourceColor = objectColors[sourceIndex]
+                        for (i in newIndices.indices) {
+                            val ix = newIndices[i]
+                            val newObject = newObjects[i]?.upscale()
+                            objects[ix] = newObject
+                            sourceColor?.also {
+                                objectColors[ix] = it
+                            }
+                        }
+                        newAdjustables.add(
+                            AdjustableExpr(newExpr, newIndices, newReservedIndices)
+                        )
+                        source2trajectory.add(
+                            sourceIndex to newIndices
+                        )
+                    }
+                    val regions =
+                        copySourceRegionsOntoTrajectories(source2trajectory, flipRegionsInAndOut = false)
+                    SubMode.ExprAdjustment(newAdjustables, regions)
+                }
+                else -> sm
+            }
+        }
+    }
+
+    fun confirmAdjustedParameters() {
+        partialArgList?.let {
+            partialArgList = PartialArgList(it.signature)
+        }
+        when (val sm = submode) {
+            is SubMode.ExprAdjustment -> {
+                when (val parameters = sm.parameters) {
+                    is InterpolationParameters ->
+                        defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
+                    is BiInversionParameters ->
+                        defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
+                    is LoxodromicMotionParameters ->
+                        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters)
+                    else -> {}
+                }
+            }
+            else -> {}
+        }
+        submode = SubMode.None
+    }
+
+    fun cancelExprAdjustment() {
+        when (val sm = submode) {
+            is SubMode.ExprAdjustment -> {
+                val outputs = sm.adjustables.flatMap { it.outputIndices }
+                deleteObjectsWithDependenciesColorsAndRegions(
+                    outputs,
+                    circleAnimationInit = { null }
+                )
+                selection = emptyList()
+            }
+            else -> {}
+        }
+        submode = SubMode.None
     }
 
     private fun completeCircleByCenterAndRadius() {
@@ -2712,46 +2852,10 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    fun confirmAdjustedParameters() {
-        partialArgList?.let {
-            partialArgList = PartialArgList(it.signature)
-        }
-        when (val sm = submode) {
-            is SubMode.ExprAdjustment -> {
-                when (val parameters = sm.parameters) {
-                    is InterpolationParameters ->
-                        defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
-                    is BiInversionParameters ->
-                        defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
-                    is LoxodromicMotionParameters ->
-                        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters)
-                    else -> {}
-                }
-            }
-            else -> {}
-        }
-        submode = SubMode.None
-    }
-
     fun completeCircleOrPointInterpolation(params: InterpolationParameters) {
         openedDialog = null
         updateParameters(params)
         confirmAdjustedParameters()
-    }
-
-    fun cancelExprAdjustment() {
-        when (val sm = submode) {
-            is SubMode.ExprAdjustment -> {
-                val outputs = sm.adjustables.flatMap { it.outputIndices }
-                deleteObjectsWithDependenciesColorsAndRegions(
-                    outputs,
-                    circleAnimationInit = { null }
-                )
-                selection = emptyList()
-            }
-            else -> {}
-        }
-        submode = SubMode.None
     }
 
     fun completeCircleExtrapolation(
@@ -2782,10 +2886,16 @@ class EditClusterViewModel : ViewModel() {
         val objArg = args[0] as Arg.CircleAndPointIndices
         val targetCircleIndices = objArg.circleIndices
         val targetPointsIndices = objArg.pointIndices
-        recordCreateCommand()
         val (engine1, engine2) = args.drop(1).take(2)
             .map { (it as Arg.CircleIndex).index }
+        val engine1GC = GeneralizedCircle.fromGCircle(objects[engine1]!!)
+        val engine2GC0 = GeneralizedCircle.fromGCircle(objects[engine2]!!)
+        val reverseSecondEngine = engine1GC.scalarProduct(engine2GC0) < 0 // anti-parallel
+        defaultBiInversionParameters = defaultBiInversionParameters.copy(
+            reverseSecondEngine = reverseSecondEngine
+        )
         val targetIndices = targetCircleIndices + targetPointsIndices
+        recordCreateCommand()
         val adjustables = mutableListOf<AdjustableExpr>()
         val params0 = defaultBiInversionParameters.params
         val oldSize = objects.size
@@ -2805,13 +2915,22 @@ class EditClusterViewModel : ViewModel() {
         val newObjects = source2trajectory.flatMap { it.second }
         addObjects(newObjects) // row-column order
         copySourceColorsOntoTrajectories(source2trajectory, oldSize)
-        copySourceRegionsOntoTrajectories(source2trajectory, oldSize, flipRegionsInAndOut = false)
-        val newRegions = listOf<Ix>()
-        TODO()
-        submode = SubMode.ExprAdjustment(adjustables, newRegions)
+        val regions = copySourceRegionsOntoTrajectories(
+            source2trajectory, oldSize,
+            flipRegionsInAndOut = false
+        )
+        submode = SubMode.ExprAdjustment(adjustables, regions)
     }
 
     fun completeBiInversion(
+        params: BiInversionParameters,
+    ) {
+        openedDialog = null
+        updateParameters(params)
+        confirmAdjustedParameters()
+    }
+
+    fun _completeBiInversion(
         params: BiInversionParameters,
     ) {
         openedDialog = null
@@ -2879,10 +2998,6 @@ class EditClusterViewModel : ViewModel() {
     fun resetLoxodromicMotion() {
         openedDialog = null
         partialArgList = PartialArgList(EditClusterTool.LoxodromicMotion.signature)
-    }
-
-    fun closeDialog() {
-        openedDialog = null
     }
 
     fun completeArcPath() {
@@ -2976,93 +3091,19 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
+    fun closeDialog() {
+        openedDialog = null
+    }
+
     fun setBlendSettings(newRegionsOpacity: Float, newRegionsBlendModeType: BlendModeType) {
         regionsOpacity = newRegionsOpacity
         regionsBlendModeType = newRegionsBlendModeType
         openedDialog = null
     }
 
-    /** When in [SubMode.ExprAdjustment], changes [submode]'s [Expr]s' parameters to [parameters] and
-     * updates corresponding [objects] */
-    fun updateParameters(parameters: Parameters) {
-        val sm = submode
-        println("updateParameters($parameters): $sm")
-        if (sm is SubMode.ExprAdjustment && parameters != sm.parameters) {
-            submode = when (sm.parameters) {
-                is InterpolationParameters -> {
-                    val (expr, outputIndices, reservedIndices) = sm.adjustables[0]
-                    val newExpr = expr.copyWithNewParameters(parameters) as Expr.OneToMany
-                    val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
-                        newExpr = newExpr,
-                        targetIndices = outputIndices,
-                        maxRange = reservedIndices,
-                    )
-                    for (ix in newReservedIndices) { // we have to cleanup abandoned but reserved indices
-                        if (ix < objects.size)
-                            objects[ix] = null
-                        else
-                            addObject(null)
-                    }
-                    for (i in newIndices.indices) {
-                        val ix = newIndices[i]
-                        val newObject = newObjects[i]?.upscale()
-                        objects[ix] = newObject
-                    }
-                    SubMode.ExprAdjustment(listOf(
-                        AdjustableExpr(newExpr, newIndices, newReservedIndices)
-                    ))
-                }
-                is BiInversionParameters -> {
-                    regions.removeAtIndices(sm.regions)
-                    val newAdjustables = mutableListOf<AdjustableExpr>()
-                    val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
-                    for ((expr, outputIndices, reservedIndices) in sm.adjustables) {
-                        val sourceIndex = expr.args.last() // by convention the last index is the target
-                        val newExpr = expr.copyWithNewParameters(parameters) as Expr.OneToMany
-                        val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
-                            newExpr = newExpr,
-                            targetIndices = outputIndices,
-                            maxRange = reservedIndices,
-                        )
-                        // NOTE: reserved indices will be generally non-contiguous
-                        // we have to cleanup abandoned indices
-                        for (ix in (outputIndices - newIndices.toSet())) {
-                            objects[ix] = null
-                        }
-                        for (ix in (newReservedIndices - reservedIndices.toSet())) {
-                            if (ix >= objects.size) {
-                                addObject(null) // pad with nulls
-                            }
-                        }
-                        objectColors -= outputIndices.toSet()
-                        val sourceColor = objectColors[sourceIndex]
-                        for (i in newIndices.indices) {
-                            val ix = newIndices[i]
-                            val newObject = newObjects[i]?.upscale()
-                            objects[ix] = newObject
-                            sourceColor?.also {
-                                objectColors[ix] = it
-                            }
-                        }
-                        newAdjustables.add(
-                            AdjustableExpr(newExpr, newIndices, newReservedIndices)
-                        )
-                        source2trajectory.add(
-                           sourceIndex to newIndices
-                        )
-                    }
-                    val regions =
-                        copySourceRegionsOntoTrajectories(source2trajectory, flipRegionsInAndOut = false)
-                    SubMode.ExprAdjustment(newAdjustables, regions)
-                }
-                else -> sm
-            }
-        }
-    }
-
     fun openDetailsDialog() {
         openedDialog = when (mode) {
-            ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> DialogType.CIRCLE_INTERPOLATION
+            ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
             ToolMode.CIRCLE_EXTRAPOLATION -> DialogType.CIRCLE_EXTRAPOLATION
             ToolMode.BI_INVERSION -> DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> DialogType.LOXODROMIC_MOTION

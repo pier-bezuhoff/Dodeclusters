@@ -326,29 +326,28 @@ class ExpressionForest(
      * Change [Parameters] of all outputs of a given [Expr.OneToMany] to the one in [newExpr].
      * Assumption: old expr and [newExpr] are of the same type.
      * @param[targetIndices] indices of all [Expression.OneOf] of the given expression
-     * @param[maxRange] all indices that were ever used to hold results of the expr. They
+     * @param[reservedIndices] all indices that were ever used to hold results of the expr. They
      * must start with [targetIndices], and then potentially contain `null`-ed indices.
-     * @return updated ([targetIndices], [maxRange], updated objects at new target indices (to be set))
+     * @return updated ([targetIndices], [reservedIndices], updated objects at new target indices (to be set))
      * */
     fun adjustMultiExpr(
         newExpr: Expr.OneToMany,
         targetIndices: List<Ix>,
-        maxRange: List<Ix>,
+        reservedIndices: List<Ix>,
     ): Triple<List<Ix>, List<Ix>, List<GCircle?>> {
-        println("adjustMultiExpr($targetIndices, $maxRange, $newExpr)")
+        println("adjustMultiExpr($targetIndices, $reservedIndices, $newExpr)")
         val i0 = targetIndices.first()
         val oldExpr = expressions[i0]!!.expr
         require(oldExpr.args == newExpr.args && targetIndices.all { expressions[it]?.expr == oldExpr }) {
-            "adjustMultiExpr($targetIndices, $maxRange, $newExpr)"
+            "adjustMultiExpr($targetIndices, $reservedIndices, $newExpr)"
         }
         val tier = ix2tier[i0]!!
-//        val tier = computeTier(i0, newExpr)
-        var newMaxRange = maxRange
+        var newMaxRange = reservedIndices
         val result = newExpr.eval(get)
         val sizeIncrease = result.size - targetIndices.size
         val newTargetIndices: List<Ix>
         if (sizeIncrease > 0) {
-            val sizeOverflow = result.size - maxRange.size
+            val sizeOverflow = result.size - reservedIndices.size
             if (sizeOverflow > 0) {
                 newMaxRange = newMaxRange + (expressions.size until expressions.size + sizeOverflow)
             }

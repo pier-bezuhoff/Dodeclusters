@@ -20,8 +20,8 @@ inline fun <T> Iterable<T>.partitionIndices(
         }
 
 /**
- * Removes elements at [indices] starting from the highest index,
- * not atomic, so if 2+ threads are trying to write it's NG
+ * Removes elements at [indices] starting from the highest index.
+ * Not atomic, so if 2+ threads are trying to write it's NG
  */
 @Suppress("NOTHING_TO_INLINE")
 inline fun <E> MutableList<E>.removeAtIndices(indices: List<Ix>) {

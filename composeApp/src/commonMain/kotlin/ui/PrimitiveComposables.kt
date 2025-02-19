@@ -524,7 +524,7 @@ fun VerticalSlider(
                 transformOrigin = TransformOrigin(0f, 0f)
             }.layout { measurable, constraints ->
                 val placeable = measurable.measure(
-                    Constraints(
+                    Constraints( // transposed constraints
                         minWidth = constraints.minHeight,
                         maxWidth = constraints.maxHeight,
                         minHeight = constraints.minWidth,
