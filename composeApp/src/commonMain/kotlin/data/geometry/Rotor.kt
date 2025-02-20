@@ -1,8 +1,11 @@
 package data.geometry
 
 import androidx.compose.runtime.Immutable
+import domain.never
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
+import kotlin.math.acos
+import kotlin.math.acosh
 import kotlin.math.cos
 import kotlin.math.cosh
 import kotlin.math.pow
@@ -112,6 +115,8 @@ data class Rotor(
     }
 
     companion object {
+        val NULL = Rotor(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
         /** @return [a] ^ [b]
          *
          * Common pitfall:
@@ -130,6 +135,47 @@ data class Rotor(
                 w2*y1/2 - w1*y2/2 - y2*z1 + y1*z2,
                 w2*z1 - w1*z2
             )
+        }
+
+        /**
+         * Construct rotor representing composition
+         * of their symmetries/reflections, scaled to coincide with generalized `angle` between them
+         * @return pure bivector ~ a ^ b, scaled in a way such that
+         * `exp(result) >>> x === b(a(x))`
+         */
+        fun fromPencil(a: GeneralizedCircle, b: GeneralizedCircle): Rotor {
+            val (w1, x1, y1, z1) = a
+            val (w2, x2, y2, z2) = b
+            val bivector = Rotor(
+                0.0,
+                +x2*y1 - x1*y2,
+                +w2*x1/2 - w1*x2/2 + x2*z1 - x1*z2,
+                -w2*x1/2 + w1*x2/2 + x2*z1 - x1*z2,
+                +w2*y1/2 - w1*y2/2 + y2*z1 - y1*z2,
+                -w2*y1/2 + w1*y2/2 + y2*z1 - y1*z2,
+                -w2*z1 + w1*z2
+            ) // i reversed signs it cmp. fromOuterProduct
+            return if (a.homogenousEquals(b)) {
+                NULL // no pencil - no rotor
+            } else {
+                // sign of the scalar product is relative direction of [a] wrt. to [b]
+                val d = a.inversiveDistance(b)
+                val d0 = abs(d)
+                when { // pencil type test
+                    abs(1 - d0) < EPSILON -> { // parabolic
+                        // |a^b| = 0 => exp(a^b) = 1 + a^b
+                        bivector // its norm should be 0
+                    }
+                    // s0 = 0 => they are perpendicular
+                    d0 < 1.0 -> { // elliptic
+                        bivector.normalized() * acos(d)
+                    }
+                    d0 > 1.0 -> { // hyperbolic
+                        bivector.normalized() * acosh(abs(d))
+                    }
+                    else -> never()
+                }
+            }
         }
     }
 }

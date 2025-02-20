@@ -1214,6 +1214,6 @@ data class ConcreteScreenPositions(
     val bottomLeftModifier = offsetModifier(positions.left, positions.bottom)
     val bottomMidModifier = offsetModifier(positions.mid, positions.bottom)
     val horizontalSliderModifier = offsetModifier(positions.horizontalSliderStart, positions.bottom)
-    val preHorizontalSliderModifier = offsetModifier(positions.horizontalSliderStart - 40, positions.bottom)
+    val preHorizontalSliderModifier = offsetModifier(positions.horizontalSliderStart - 42, positions.bottom)
     val verticalSliderModifier = offsetModifier(positions.right, positions.top + positions.scaleSliderPadding + 12)
 }

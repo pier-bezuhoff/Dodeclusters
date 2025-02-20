@@ -102,7 +102,6 @@ fun computeCircleExtrapolation(
         .map { it.toGCircle() as? CircleOrLine }
 }
 
-// BUG: doesn't work for parallel lines or touching circles
 fun computeBiInversion(
     params: BiInversionParameters,
     engine1: GCircle, // realistically speaking points dont fit as engines
@@ -114,8 +113,7 @@ fun computeBiInversion(
         if (params.reverseSecondEngine) -it else it
     }
     val t = GeneralizedCircle.fromGCircle(target)
-    val inversiveAngle = e1.inversiveAngle(e2)
-    val bivector0 = Rotor.fromOuterProduct(e1, e2).normalized() * (-inversiveAngle)
+    val bivector0 = Rotor.fromPencil(e1, e2)
     val trajectory = mutableListOf<GCircle?>()
     repeat(params.nSteps) { i ->
         // inlined t.biInversion(e1, e2, params.speed)

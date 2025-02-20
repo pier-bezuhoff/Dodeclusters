@@ -322,8 +322,7 @@ data class GeneralizedCircle(
         engine1: GeneralizedCircle, engine2: GeneralizedCircle,
         speed: Double
     ): GeneralizedCircle {
-        val inversiveAngle = engine1.inversiveAngle(engine2)
-        val bivector = Rotor.fromOuterProduct(engine1, engine2).normalized() * (-speed * inversiveAngle)
+        val bivector = Rotor.fromPencil(engine1, engine2) * speed
         val rotor = bivector.exp()
         return rotor.applyTo(this)
     }
@@ -361,8 +360,13 @@ data class GeneralizedCircle(
     inline fun inversiveDistance(other: GeneralizedCircle): Double =
         this scalarProduct other
 
-    /** Assumes normalization, returns in-pencil angle, for hyperbolic pencil returns
-     * (hyperbolic angle)/i */
+    /**
+     * Assumes normalization.
+     * @return in-pencil angle (in radians),
+     * for elliptic pencil - standard boring angle `[0; PI]`,
+     * for hyperbolic -- `(hyperbolic angle)/i`,
+     * for parabolic -- always `0`
+     */
     fun inversiveAngle(other: GeneralizedCircle): Double =
         if (this.homogenousEquals(other)) {
             0.0 // no pencil
@@ -438,7 +442,7 @@ data class GeneralizedCircle(
      * [ImaginaryCircle] => [ImaginaryCircle]
      *
      * otherwise => `null`
-     * */
+     */
     fun toGCircleAs(sameGCircleTypeAs: GCircle): GCircle? =
         if (abs(w) < EPSILON) {
 //            if (abs(z) > EPSILON && abs(x/z) < EPSILON && abs(y/z) < EPSILON) { // more accurate, less efficient
