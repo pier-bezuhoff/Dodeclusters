@@ -83,8 +83,6 @@ data class DefaultLoxodromicMotionParameters(
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun LoxodromicMotionDialog(
-    divergencePoint: Point,
-    convergencePoint: Point,
     onDismissRequest: () -> Unit,
     onConfirm: (LoxodromicMotionParameters) -> Unit,
     defaults: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),

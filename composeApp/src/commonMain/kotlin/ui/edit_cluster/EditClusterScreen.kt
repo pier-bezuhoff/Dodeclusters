@@ -312,8 +312,7 @@ fun EditClusterScreen(
                     } }
                 if (divergencePoint != null && convergencePoint != null) {
                     LoxodromicMotionDialog(
-                        divergencePoint, convergencePoint,
-                        onDismissRequest = viewModel::resetLoxodromicMotion,
+                        onDismissRequest = viewModel::closeDialog,
                         onConfirm = viewModel::completeLoxodromicMotion,
                         defaults = viewModel.defaultLoxodromicMotionParameters
                     )

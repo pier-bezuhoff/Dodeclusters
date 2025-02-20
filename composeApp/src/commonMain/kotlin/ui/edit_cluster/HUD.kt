@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
+import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.ok_name
 import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
@@ -51,6 +52,7 @@ import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
+import domain.expressions.LoxodromicMotionParameters
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -61,6 +63,7 @@ import ui.TwoIconButton
 import ui.VerticalSlider
 import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
+import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
 import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
 import kotlin.math.abs
@@ -317,8 +320,6 @@ fun InterpolationInterface(
     }
 }
 
-/**
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BiInversionInterface(
@@ -391,6 +392,127 @@ fun BiInversionInterface(
                 negateSpeed = !negateSpeed
                 // triggers params upd => triggers VM.updParams
             }
+            SimpleToolButton(
+                EditClusterTool.DetailedAdjustment,
+                halfBottomRightModifier
+                    .background(buttonBackground, buttonShape)
+                ,
+                onClick = { openDetailsDialog() }
+            )
+            Icon(
+                painterResource(Res.drawable.three_dots_in_angle_brackets),
+                stringResource(Res.string.steps_slider_name),
+                preHorizontalSliderModifier
+                    .padding(vertical = 12.dp)
+            )
+            Slider(
+                stepsSliderState,
+                horizontalSliderModifier
+                    .width(horizontalSliderWidth)
+                ,
+                colors = sliderColors
+            )
+            SimpleFilledButton(
+                painterResource(Res.drawable.confirm),
+                stringResource(Res.string.ok_name),
+                bottomRightModifier,
+                contentColor = MaterialTheme.colorScheme.onSecondary,
+                containerColor = MaterialTheme.colorScheme.secondary,
+                onClick = confirmParameters
+            )
+        }
+    }
+    val coroutineScope = rememberCoroutineScope()
+    key(params) { // this feels hacky, `key(params)` serves only a semantic purpose btw
+        coroutineScope.launch {
+            updateParameters(params)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LoxodromicMotionInterface(
+    canvasSize: IntSize,
+    defaults: DefaultLoxodromicMotionParameters,
+    updateParameters: (LoxodromicMotionParameters) -> Unit,
+    openDetailsDialog: () -> Unit,
+    confirmParameters: () -> Unit,
+) {
+    // equivalent to swapping the order of engines
+    var reverseDirection by remember { mutableStateOf(false) }
+    val angleSliderState = remember { SliderState(
+        value = defaults.angle,
+        valueRange = defaults.angleRange
+    ) }
+    // TODO: convert to per-step angular speed/hyperbolic speed
+    // MAYBE: dilation is too steep
+    val dilationSliderState = remember { SliderState(
+        value = defaults.dilation.toFloat(),
+        valueRange = defaults.dilationRange
+    ) }
+    val stepsSliderState = remember { SliderState(
+        value = defaults.nSteps.toFloat(),
+        steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
+        valueRange = defaults.stepsRange
+    ) }
+    val params = LoxodromicMotionParameters( // TODO: direction-reversing toggle
+        angle = angleSliderState.value,
+        dilation = dilationSliderState.value.toDouble(),
+        nSteps = stepsSliderState.value.roundToInt(),
+    )
+    val buttonShape = remember { RoundedCornerShape(percent = 50) }
+    val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+    val sliderColors = SliderDefaults.colors(
+        thumbColor = MaterialTheme.colorScheme.secondary,
+        activeTrackColor = MaterialTheme.colorScheme.secondary,
+        activeTickColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTickColor = MaterialTheme.colorScheme.secondary,
+    )
+    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
+        CompositionLocalProvider(
+            LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
+        ) {
+            Icon(
+                painterResource(Res.drawable.expand),
+                "dilation slider",
+                topMidModifier
+                    .padding(start = 12.dp)
+            )
+            VerticalSlider(
+                dilationSliderState,
+                verticalSlider2Modifier
+                    .height(verticalSliderHeight)
+                ,
+                colors = sliderColors,
+            )
+            Icon(
+                painterResource(Res.drawable.rotate_counterclockwise),
+                "angle slider",
+                topRightModifier
+                    .padding(start = 12.dp)
+            )
+            VerticalSlider(
+                angleSliderState,
+                verticalSliderModifier
+                    .height(verticalSliderHeight)
+                ,
+                colors = sliderColors,
+            )
+            if (false)
+                OnOffButton(
+                    painterResource(Res.drawable.right_left),
+                    "reverse direction",
+                    isOn = reverseDirection,
+                    modifier = topRightUnderScaleModifier,
+                    contentColor = MaterialTheme.colorScheme.secondary,
+                    checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    containerColor = buttonBackground,
+                    checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                ) {
+                    reverseDirection = !reverseDirection
+                }
             SimpleToolButton(
                 EditClusterTool.DetailedAdjustment,
                 halfBottomRightModifier

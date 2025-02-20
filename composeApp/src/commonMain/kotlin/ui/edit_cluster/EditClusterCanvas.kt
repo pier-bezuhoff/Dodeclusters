@@ -234,7 +234,14 @@ fun BoxScope.EditClusterCanvas(
                             openDetailsDialog = viewModel::openDetailsDialog,
                             confirmParameters = viewModel::confirmAdjustedParameters,
                         )
-                    is LoxodromicMotionParameters -> {}
+                    is LoxodromicMotionParameters ->
+                        LoxodromicMotionInterface(
+                            canvasSize = viewModel.canvasSize,
+                            defaults = viewModel.defaultLoxodromicMotionParameters,
+                            updateParameters = viewModel::updateParameters,
+                            openDetailsDialog = viewModel::openDetailsDialog,
+                            confirmParameters = viewModel::confirmAdjustedParameters,
+                        )
                     else -> {}
                 }
                 else -> {}
@@ -1216,4 +1223,6 @@ data class ConcreteScreenPositions(
     val horizontalSliderModifier = offsetModifier(positions.horizontalSliderStart, positions.bottom)
     val preHorizontalSliderModifier = offsetModifier(positions.horizontalSliderStart - 42, positions.bottom)
     val verticalSliderModifier = offsetModifier(positions.right, positions.top + positions.scaleSliderPadding + 12)
+    val topMidModifier = offsetModifier(positions.mid, positions.top)
+    val verticalSlider2Modifier = offsetModifier(positions.mid, positions.top + positions.scaleSliderPadding + 12)
 }

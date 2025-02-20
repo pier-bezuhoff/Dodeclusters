@@ -2530,10 +2530,8 @@ class EditClusterViewModel : ViewModel() {
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
             ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> startCircleOrPointInterpolationParameterAdjustment()
             ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
-            ToolMode.BI_INVERSION ->
-                startBiInversionParameterAdjustment()
-//                openedDialog = DialogType.BI_INVERSION
-            ToolMode.LOXODROMIC_MOTION -> openedDialog = DialogType.LOXODROMIC_MOTION
+            ToolMode.BI_INVERSION -> startBiInversionParameterAdjustment()
+            ToolMode.LOXODROMIC_MOTION -> startLoxodromicMotionParameterAdjustment()
         }
     }
 
@@ -2930,69 +2928,52 @@ class EditClusterViewModel : ViewModel() {
         confirmAdjustedParameters()
     }
 
-    fun _completeBiInversion(
-        params: BiInversionParameters,
-    ) {
-        openedDialog = null
-        val argList = partialArgList!!
-        val args = argList.args
-        val objArg = args[0] as Arg.CircleAndPointIndices
-        val targetCircleIndices = objArg.circleIndices
-        val targetPointsIndices = objArg.pointIndices
-        recordCreateCommand()
-        val (engine1, engine2) = args.drop(1).take(2)
-            .map { (it as Arg.CircleIndex).index }
-        val targetIndices = targetCircleIndices + targetPointsIndices
-        copyRegionsAndStylesOntoNewTrajectories(
-            sourceIndex2NewTrajectory = targetIndices.map { targetIndex ->
-                targetIndex to expressions.addMultiExpr(
-                    Expr.BiInversion(
-                        params,
-                        engine1, engine2,
-                        targetIndex
-                    ),
-                ).map { it?.upscale() } // multi expression creates a whole trajectory at a time
-            }
-        ) { CircleAnimation.Entrance(it) }
-        partialArgList = PartialArgList(argList.signature)
-        defaultBiInversionParameters = DefaultBiInversionParameters(params)
-    }
-
     // TODO: inf point input
-    fun completeLoxodromicMotion(
-        params: LoxodromicMotionParameters,
-    ) {
-        openedDialog = null
+    fun startLoxodromicMotionParameterAdjustment() {
         val argList = partialArgList!!
         val args = argList.args
         val objArg = args[0] as Arg.CircleAndPointIndices
         val targetCircleIndices = objArg.circleIndices
         val targetPointsIndices = objArg.pointIndices
         recordCreateCommand()
-        val (divergence, convergence) = args.drop(1).take(2)
+        val (divergencePointIndex, convergencePointIndex) = args.drop(1).take(2)
             .map { when (val arg = it as Arg.Point) {
                 is Arg.Point.Index -> arg.index
                 is Arg.Point.XY -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
             } }
         val targetIndices = targetCircleIndices + targetPointsIndices
-        copyRegionsAndStylesOntoNewTrajectories(
-            sourceIndex2NewTrajectory = targetIndices.map { targetIndex ->
-                targetIndex to expressions.addMultiExpr(
-                    Expr.LoxodromicMotion(
-                        params,
-                        divergence, convergence,
-                        targetIndex
-                    ),
-                ).map { it?.upscale() } // multi expression creates a whole trajectory at a time
-            }
-        ) { CircleAnimation.Entrance(it) }
-        partialArgList = PartialArgList(argList.signature)
-        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params)
+        val adjustables = mutableListOf<AdjustableExpr>()
+        val params0 = defaultLoxodromicMotionParameters.params
+        val oldSize = objects.size
+        var outputIndex = oldSize
+        val source2trajectory = targetIndices.map { targetIndex ->
+            val expr = Expr.LoxodromicMotion(params0, divergencePointIndex, convergencePointIndex, targetIndex)
+            val result = expressions
+                .addMultiExpr(expr)
+                .map { it?.upscale() } // multi expression creates a whole trajectory at a time
+            val outputRange = (outputIndex until (outputIndex + result.size)).toList()
+            adjustables.add(
+                AdjustableExpr(expr, outputRange, outputRange)
+            )
+            outputIndex += result.size
+            return@map targetIndex to result
+        }
+        val newObjects = source2trajectory.flatMap { it.second }
+        addObjects(newObjects) // row-column order
+        copySourceColorsOntoTrajectories(source2trajectory, oldSize)
+        val regions = copySourceRegionsOntoTrajectories(
+            source2trajectory, oldSize,
+            flipRegionsInAndOut = false
+        )
+        submode = SubMode.ExprAdjustment(adjustables, regions)
     }
 
-    fun resetLoxodromicMotion() {
+    fun completeLoxodromicMotion(
+        params: LoxodromicMotionParameters,
+    ) {
         openedDialog = null
-        partialArgList = PartialArgList(EditClusterTool.LoxodromicMotion.signature)
+        updateParameters(params)
+        confirmAdjustedParameters()
     }
 
     fun completeArcPath() {
