@@ -2958,11 +2958,6 @@ class EditClusterViewModel : ViewModel() {
         defaultBiInversionParameters = DefaultBiInversionParameters(params)
     }
 
-    fun resetBiInversion() {
-        openedDialog = null
-        partialArgList = PartialArgList(EditClusterTool.BiInversion.signature)
-    }
-
     // TODO: inf point input
     fun completeLoxodromicMotion(
         params: LoxodromicMotionParameters,

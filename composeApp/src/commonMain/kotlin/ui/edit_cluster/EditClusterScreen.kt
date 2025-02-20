@@ -294,7 +294,7 @@ fun EditClusterScreen(
                 if (engine1 != null && engine2 != null) {
                     BiInversionDialog(
                         engine1, engine2,
-                        onDismissRequest = viewModel::resetBiInversion,
+                        onDismissRequest = viewModel::closeDialog,
                         onConfirm = viewModel::completeBiInversion,
                         defaults = viewModel.defaultBiInversionParameters,
                     )

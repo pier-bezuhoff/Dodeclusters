@@ -1154,7 +1154,7 @@ data class SelectionControlsPositions(
     val left = right - (bottom - topUnderScaleSlider)
     val mid = (right + left)/2
 
-    val horizontalSliderStart = width * RELATIVE_HORIZONTAL_SLIDER_OFFSET
+    val horizontalSliderStart = width - min(width, height) * RELATIVE_HORIZONTAL_SLIDER_SPAN
     val horizontalSliderSpan = right - horizontalSliderStart
 
     val scaleSliderMiddleOffset = Offset(right, scaleSliderMiddlePosition)
@@ -1177,7 +1177,7 @@ data class SelectionControlsPositions(
         const val RELATIVE_SCALE_SLIDER_PADDING = 0.02f // = % of H
         const val RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT = 0.10f // = % of H
         const val RELATIVE_CORNER_RADIUS = 0.10f // % of minDim
-        const val RELATIVE_HORIZONTAL_SLIDER_OFFSET = 0.6f // = 60% from the left of the screen
+        const val RELATIVE_HORIZONTAL_SLIDER_SPAN = 0.60f // = 60% of min-dimension
     }
 }
 
