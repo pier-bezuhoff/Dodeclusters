@@ -457,8 +457,8 @@ fun LoxodromicMotionInterface(
         valueRange = defaults.stepsRange
     ) }
     val params = LoxodromicMotionParameters( // TODO: direction-reversing toggle
-        angle = angleSliderState.value,
-        dilation = dilationSliderState.value.toDouble(),
+        angle = (if (reverseDirection) -1 else +1) * angleSliderState.value,
+        dilation = (if (reverseDirection) -1 else +1) * dilationSliderState.value.toDouble(),
         nSteps = stepsSliderState.value.roundToInt(),
     )
     val buttonShape = remember { RoundedCornerShape(percent = 50) }
@@ -500,19 +500,18 @@ fun LoxodromicMotionInterface(
                 ,
                 colors = sliderColors,
             )
-            if (false)
-                OnOffButton(
-                    painterResource(Res.drawable.right_left),
-                    "reverse direction",
-                    isOn = reverseDirection,
-                    modifier = topRightUnderScaleModifier,
-                    contentColor = MaterialTheme.colorScheme.secondary,
-                    checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    containerColor = buttonBackground,
-                    checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                ) {
-                    reverseDirection = !reverseDirection
-                }
+            OnOffButton(
+                painterResource(Res.drawable.right_left),
+                "reverse direction",
+                isOn = reverseDirection,
+                modifier = topRightUnderScaleModifier,
+                contentColor = MaterialTheme.colorScheme.secondary,
+                checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerColor = buttonBackground,
+                checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ) {
+                reverseDirection = !reverseDirection
+            }
             SimpleToolButton(
                 EditClusterTool.DetailedAdjustment,
                 halfBottomRightModifier
