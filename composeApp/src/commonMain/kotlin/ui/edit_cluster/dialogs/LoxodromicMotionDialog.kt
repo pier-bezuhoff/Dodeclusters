@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.angle_in_degrees_placeholder
 import dodeclusters.composeapp.generated.resources.degrees_suffix
@@ -55,28 +54,36 @@ import ui.hideSystemBars
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+/**
+ * NOTE: [anglePerStep], [dilationPerStep], [nTotalSteps] are parametrized
+ *  differently cmp. to [LoxodromicMotionParameters]
+ * @param[anglePerStep] angular speed per step in degrees
+ * @param[dilationPerStep] hyperbolic speed in ln(scaling) per step
+ * @param[nTotalSteps] total number of loxodromic steps
+ */
 @Immutable
 data class DefaultLoxodromicMotionParameters(
-    /** in degrees */
-    val angle: Float = 270f,
-    val dilation: Double = 1.0,
-    val nSteps: Int = 10,
-    val minAngle: Float = 0f,
-    val maxAngle: Float = 360f,
-    val minDilation: Double = 0.0,
-    val maxDilation: Double = 7.0,
-    val minNSteps: Int = 0,
+    val anglePerStep: Float = 30f,
+    val dilationPerStep: Double = 0.1,
+    val nTotalSteps: Int = 10,
+    val minAngle: Float = -60f,
+    val maxAngle: Float = 60f,
+    val minDilation: Double = -1.0,
+    val maxDilation: Double = 1.0,
+    val minNSteps: Int = 1,
     val maxNSteps: Int = 50,
 ) {
-    val params: LoxodromicMotionParameters = LoxodromicMotionParameters(angle, dilation, nSteps)
+    val params: LoxodromicMotionParameters = LoxodromicMotionParameters.fromDifferential(
+        anglePerStep, dilationPerStep, nTotalSteps
+    )
     val angleRange = minAngle .. maxAngle
     val dilationRange = minDilation.toFloat() .. maxDilation.toFloat()
     val stepsRange = minNSteps.toFloat() .. maxNSteps.toFloat()
 
     constructor(parameters: LoxodromicMotionParameters) : this(
-        angle = parameters.angle,
-        dilation = parameters.dilation,
-        nSteps = parameters.nSteps
+        anglePerStep = parameters.anglePerStep,
+        dilationPerStep = parameters.dilationPerStep,
+        nTotalSteps = parameters.nTotalSteps,
     )
 }
 
@@ -88,11 +95,11 @@ fun LoxodromicMotionDialog(
     defaults: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
 ) {
     // MAYBE: add turn fraction conversion field
-    var angle by remember(defaults) { mutableStateOf(abs(defaults.angle)) }
+    var angle by remember(defaults) { mutableStateOf(abs(defaults.anglePerStep)) }
     // true = CCW
-    var angleDirection by remember(defaults) { mutableStateOf(defaults.angle >= 0.0) }
-    var dilation by remember(defaults) { mutableStateOf(defaults.dilation) }
-    var nSteps by remember(defaults) { mutableStateOf(defaults.nSteps) }
+    var angleDirection by remember(defaults) { mutableStateOf(defaults.anglePerStep >= 0.0) }
+    var dilation by remember(defaults) { mutableStateOf(defaults.dilationPerStep) }
+    var nSteps by remember(defaults) { mutableStateOf(defaults.nTotalSteps) }
     val windowSizeClass = calculateWindowSizeClass()
     val compactWidth = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
@@ -155,9 +162,8 @@ fun LoxodromicMotionDialog(
                     onDismissRequest = onDismissRequest,
                     onConfirm = {
                         onConfirm(
-                            LoxodromicMotionParameters(
-                                if (angleDirection) angle
-                                else -angle,
+                            LoxodromicMotionParameters.fromDifferential(
+                                if (angleDirection) angle else -angle,
                                 dilation,
                                 nSteps
                             )

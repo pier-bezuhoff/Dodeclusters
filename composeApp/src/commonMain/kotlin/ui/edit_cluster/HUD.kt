@@ -442,24 +442,23 @@ fun LoxodromicMotionInterface(
     // equivalent to swapping the order of engines
     var reverseDirection by remember { mutableStateOf(false) }
     val angleSliderState = remember { SliderState(
-        value = defaults.angle,
+        value = defaults.anglePerStep,
         valueRange = defaults.angleRange
     ) }
-    // TODO: convert to per-step angular speed/hyperbolic speed
     // MAYBE: dilation is too steep
     val dilationSliderState = remember { SliderState(
-        value = defaults.dilation.toFloat(),
+        value = defaults.dilationPerStep.toFloat(),
         valueRange = defaults.dilationRange
     ) }
     val stepsSliderState = remember { SliderState(
-        value = defaults.nSteps.toFloat(),
+        value = defaults.nTotalSteps.toFloat(),
         steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
         valueRange = defaults.stepsRange
     ) }
-    val params = LoxodromicMotionParameters( // TODO: direction-reversing toggle
-        angle = (if (reverseDirection) -1 else +1) * angleSliderState.value,
-        dilation = (if (reverseDirection) -1 else +1) * dilationSliderState.value.toDouble(),
-        nSteps = stepsSliderState.value.roundToInt(),
+    val params = LoxodromicMotionParameters.fromDifferential(
+        anglePerStep = (if (reverseDirection) -1 else +1) * angleSliderState.value,
+        dilationPerStep = (if (reverseDirection) -1 else +1) * dilationSliderState.value.toDouble(),
+        nTotalSteps = stepsSliderState.value.roundToInt(),
     )
     val buttonShape = remember { RoundedCornerShape(percent = 50) }
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)

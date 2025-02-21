@@ -2,6 +2,7 @@ package domain.expressions
 
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 // numeric values used, from the dialog or somewhere else
 @Immutable
@@ -54,7 +55,26 @@ data class LoxodromicMotionParameters(
     val angle: Float,
     val dilation: Double,
     val nSteps: Int,
-) : Parameters
+) : Parameters {
+    val anglePerStep: Float get() =
+        angle / (nSteps + 1)
+    val dilationPerStep: Double get() =
+        dilation / (nSteps + 1)
+    val nTotalSteps: Int get() =
+        nSteps + 1
+    companion object {
+        fun fromDifferential(
+            anglePerStep: Float,
+            dilationPerStep: Double,
+            nTotalSteps: Int
+        ): LoxodromicMotionParameters =
+            LoxodromicMotionParameters(
+                anglePerStep * nTotalSteps,
+                dilationPerStep * nTotalSteps,
+                nTotalSteps - 1,
+            )
+    }
+}
 
 @Immutable
 @Serializable
