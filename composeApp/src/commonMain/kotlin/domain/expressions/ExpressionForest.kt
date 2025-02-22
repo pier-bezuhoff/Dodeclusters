@@ -335,7 +335,6 @@ class ExpressionForest(
         targetIndices: List<Ix>,
         reservedIndices: List<Ix>,
     ): Triple<List<Ix>, List<Ix>, List<GCircle?>> {
-        println("adjustMultiExpr($targetIndices, $reservedIndices, $newExpr)")
         val i0 = targetIndices.first()
         val oldExpr = expressions[i0]!!.expr
         require(oldExpr.args == newExpr.args && targetIndices.all { expressions[it]?.expr == oldExpr }) {

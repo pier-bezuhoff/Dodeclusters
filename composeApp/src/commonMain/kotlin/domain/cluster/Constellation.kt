@@ -10,9 +10,12 @@ import domain.expressions.reIndex
 import kotlinx.serialization.Serializable
 
 // aka ClusterV3.2
-/** Evolution of [Cluster] that contains both concretes and expressions */
-@Serializable
+/**
+ * Evolution of [Cluster] (v3.2) that contains both concretes and expressions
+ * @param[phantoms] indices of hidden [objects]
+ */
 @Immutable
+@Serializable
 data class Constellation(
     val objects: List<ObjectConstruct>,
     // TODO: rename parts to regions
@@ -20,7 +23,8 @@ data class Constellation(
     // purely decorative, the "real" border color can be specified
     // using unfilled single-circle ClusterPart with borderColor
     val objectColors: Map<Ix, ColorAsCss> = emptyMap(),
-    val backgroundColor: ColorAsCss? = null
+    val backgroundColor: ColorAsCss? = null,
+    val phantoms: List<Ix> = emptyList(),
 ) {
     init {
         val allObjectIndices = objects.indices.toSet()

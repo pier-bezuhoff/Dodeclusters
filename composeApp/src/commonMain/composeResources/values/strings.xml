@@ -191,10 +191,10 @@
     <string name="bi_inversion_dilation_placeholder">&lt;log-dilation&gt;</string>
     <string name="bi_inversion_n_steps_placeholder">&lt;number of steps&gt;</string>
     <!-- loxodromic motion dialog -->
-    <string name="loxodromic_motion_title">Configure loxodromic motion</string>
-    <string name="loxodromic_motion_angle_prompt">Total rotation angle</string>
-    <string name="loxodromic_motion_hyperbolic_prompt">Total logarithmic dilation</string>
-    <string name="loxodromic_motion_steps_prompt">Number of intermediate steps</string>
+    <string name="loxodromic_motion_title">Configure loxodromic spiral motion</string>
+    <string name="loxodromic_motion_angle_prompt">Rotation angle per step</string>
+    <string name="loxodromic_motion_hyperbolic_prompt">Logarithm of scaling per step</string>
+    <string name="loxodromic_motion_steps_prompt">Number of steps</string>
     <string name="angle_in_degrees_placeholder">&lt;angle in degrees&gt;</string>
     <string name="degrees_suffix">°</string>
     <string name="loxodromic_motion_angle_direction_prompt1">Rotate</string>

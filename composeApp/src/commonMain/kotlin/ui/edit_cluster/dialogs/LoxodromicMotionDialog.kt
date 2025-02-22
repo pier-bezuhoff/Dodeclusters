@@ -57,15 +57,15 @@ import kotlin.math.roundToInt
 /**
  * NOTE: [anglePerStep], [dilationPerStep], [nTotalSteps] are parametrized
  *  differently cmp. to [LoxodromicMotionParameters]
- * @param[anglePerStep] angular speed per step in degrees
- * @param[dilationPerStep] hyperbolic speed in ln(scaling) per step
+ * @param[anglePerStep] rotational angular speed per step, in degrees
+ * @param[dilationPerStep] hyperbolic speed in `ln(r2/r1)` per step
  * @param[nTotalSteps] total number of loxodromic steps
  */
 @Immutable
 data class DefaultLoxodromicMotionParameters(
-    val anglePerStep: Float = 30f,
+    val anglePerStep: Float = 15f,
     val dilationPerStep: Double = 0.1,
-    val nTotalSteps: Int = 10,
+    val nTotalSteps: Int = 20,
     val minAngle: Float = -60f,
     val maxAngle: Float = 60f,
     val minDilation: Double = -1.0,

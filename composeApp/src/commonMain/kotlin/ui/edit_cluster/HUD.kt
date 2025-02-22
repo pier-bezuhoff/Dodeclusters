@@ -243,7 +243,7 @@ fun InterpolationInterface(
     val sliderState = remember { SliderState(
         value = defaults.nInterjacents.toFloat(),
         steps = maxCount - minCount - 1, // only counts intermediates
-        valueRange = minCount.toFloat()..maxCount.toFloat()
+        valueRange = defaults.nInterjacentsRange
     ) }
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
     val params = InterpolationParameters(
@@ -445,7 +445,6 @@ fun LoxodromicMotionInterface(
         value = defaults.anglePerStep,
         valueRange = defaults.angleRange
     ) }
-    // MAYBE: dilation is too steep
     val dilationSliderState = remember { SliderState(
         value = defaults.dilationPerStep.toFloat(),
         valueRange = defaults.dilationRange

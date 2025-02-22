@@ -479,6 +479,7 @@ class EditClusterViewModel : ViewModel() {
         regions.addAll(constellation.parts)
         objectColors.putAll(constellation.objectColors)
         backgroundColor = constellation.backgroundColor
+        phantoms = constellation.phantoms.toSet()
     }
 
     fun toConstellation(): Constellation {
@@ -522,7 +523,8 @@ class EditClusterViewModel : ViewModel() {
             objectColors = objectColors.mapNotNull { (ix, color) ->
                 reindexing[ix]?.let { it to color }
             }.toMap(),
-            backgroundColor = backgroundColor
+            backgroundColor = backgroundColor,
+            phantoms = phantoms.toList(),
         )
     }
 
@@ -2539,7 +2541,6 @@ class EditClusterViewModel : ViewModel() {
      * [parameters] and updates corresponding [objects] */
     fun updateParameters(parameters: Parameters) {
         val sm = submode
-        println("updateParameters($parameters): $sm")
         if (sm is SubMode.ExprAdjustment && parameters != sm.parameters) {
             submode = when (sm.parameters) {
                 is InterpolationParameters -> { // single adjustable expr case
@@ -2610,6 +2611,15 @@ class EditClusterViewModel : ViewModel() {
                     SubMode.ExprAdjustment(newAdjustables, regions)
                 }
                 else -> sm
+            }
+            when (parameters) { // upd defaults for dialog, not sure it's sensible
+                is InterpolationParameters ->
+                    defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
+                is BiInversionParameters ->
+                    defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
+                is LoxodromicMotionParameters ->
+                    defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters)
+                else -> {}
             }
         }
     }
@@ -3262,7 +3272,10 @@ class EditClusterViewModel : ViewModel() {
         super.onCleared()
     }
 
-    /** Be careful to pass *only* strictly immutable args by __copying__ */
+    /**
+     * Save-able state of [EditClusterViewModel], used for [history].
+     * Be careful to pass _only_ strictly immutable args by __copying__
+     */
     @Immutable
     @Serializable
     data class State(

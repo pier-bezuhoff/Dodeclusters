@@ -61,6 +61,8 @@ data class DefaultInterpolationParameters(
     val minCircleCount: Int = 1,
     val maxCircleCount: Int = 20
 ) {
+    val nInterjacentsRange = minCircleCount.toFloat() .. maxCircleCount.toFloat()
+
     val params = InterpolationParameters(nInterjacents, inBetween)
 
     constructor(parameters: InterpolationParameters) : this(
@@ -86,7 +88,7 @@ fun CircleOrPointInterpolationDialog(
     val sliderState = remember { SliderState(
         value = defaults.nInterjacents.toFloat(),
         steps = maxCount - minCount - 1, // only counts intermediates
-        valueRange = minCount.toFloat()..maxCount.toFloat()
+        valueRange = defaults.nInterjacentsRange
     ) }
     val hideInBetweenToggle = startCircle is Point // && endCircle is Point
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }

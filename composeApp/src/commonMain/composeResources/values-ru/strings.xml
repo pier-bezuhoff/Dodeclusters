@@ -178,10 +178,10 @@
     <string name="bi_inversion_dilation_placeholder">&lt;log-dilation&gt;</string>
     <string name="bi_inversion_n_steps_placeholder">&lt;число шагов&gt;</string>
     <!-- loxodromic motion dialog -->
-    <string name="loxodromic_motion_title">Параметры локсодромического движения</string>
-    <string name="loxodromic_motion_angle_prompt">Угол крутящей компоненты</string>
-    <string name="loxodromic_motion_hyperbolic_prompt">Коэффициент сжатия/раздутия</string>
-    <string name="loxodromic_motion_steps_prompt">Число промежуточных шагов</string>
+    <string name="loxodromic_motion_title">Параметры локсодромического спирального движения</string>
+    <string name="loxodromic_motion_angle_prompt">Угол вращения за шаг</string>
+    <string name="loxodromic_motion_hyperbolic_prompt">Логарифм расширения/сжатия за шаг</string>
+    <string name="loxodromic_motion_steps_prompt">Число шагов</string>
     <string name="angle_in_degrees_placeholder">&lt;угол в градусах&gt;</string>
     <string name="degrees_suffix">°</string>
     <string name="loxodromic_motion_angle_direction_prompt1">Вращать</string>
