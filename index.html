@@ -1,84 +1,141 @@
 <!doctype html>
 <html lang="en" prefix="og: https://ogp.me/ns#">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="icon" href="favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-        <link rel="manifest" href="site.webmanifest" />
-        <link rel="mask-icon" href="safari-pinned-tab.svg" color="#5bbad5" />
-        <link rel="canonical" href="https://pier-bezuhoff.github.io/Dodeclusters/">
-        <meta name="description" content="Circle-based vector graphics editor" />
-        <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=3,user-scalable=yes" />
-        <meta name="msapplication-TileColor" content="#00aba9" />
-        <meta name="theme-color" content="#ffffff" />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://pier-bezuhoff.github.io/Dodeclusters/" />
-        <meta property="og:title" content="Dodeclusters Web App" />
-        <meta property="og:site_name" content="Dodeclusters" />
-        <meta property="og:description" content="Circle-based vector graphics editor" />
-        <meta property="og:locale" content="en_US" />
-        <meta property="og:locale:alternate" content="ru_RU" />
-        <meta property="og:image" content="https://raw.githubusercontent.com/pier-bezuhoff/Dodeclusters/master/docs/02inf-art.png" />
-        <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Dodeclusters: From zero to Infinity written over tangential circles with alternating orange and black colors" />
-        <title>Dodeclusters &#1421;</title>
-        <script type="application/ld+json">
-        {
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          "name": "Dodeclusters",
-          "description": "Effortlessly create beautiful & precise geometric patterns with our new open-source circle-based vector graphics editor. Learn & use powerful geometric tools to draw absolutely smooth enveloping spirals and intricate non-Euclidean chessboard ornaments.",
-          "browserRequirements": "Requires a modern web browser with JavaScript & Wasm support.",
-          "applicationCategory": ["DesignApplication", "graphic editor"],
-          "applicationSubCategory": ["https://www.wikidata.org/wiki/Q1155404", "vector graphics editor", "https://www.wikidata.org/wiki/Q506883", "free and open-source software"],
-          "genre": ["https://www.wikidata.org/wiki/Q170130", "vector graphics"],
-          "applicationSuite": "Dodeca",
-          "downloadUrl": "https://github.com/pier-bezuhoff/Dodeclusters/releases",
-          "operatingSystem": ["Web", "Android", "Windows", "Linux"],
-          "softwareVersion": "0.4.0",
-          "inLanguage": ["en", "ru"],
-          "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD",
-            "availability": "https://schema.org/InStock"
-          },
-          "featureList": [
-            "Precise construction",
-            "Easy coloring",
-            "Create spirals",
-            "Dynamicly dependent objects",
-            "Dark mode",
-            "SVG export",
-            "Responsive design",
-            "Undo & redo history",
-            "Free",
-            "Open source"
-          ],
-          "screenshot": [
-            "https://pier-bezuhoff.github.io/Dodeclusters/screenshots/1.jpg",
-            "https://pier-bezuhoff.github.io/Dodeclusters/screenshots/2.jpg",
-            "https://pier-bezuhoff.github.io/Dodeclusters/screenshots/3.jpg"
-          ],
-          "url": "https://pier-bezuhoff.github.io/Dodeclusters/",
-          "sameAs": "https://github.com/pier-bezuhoff/Dodeclusters",
-          "author": {
-            "@type": "Person",
-            "name": "pier-bezuhoff",
-            "url": "https://github.com/pier-bezuhoff"
-          },
-          "dateCreate": "2024-01-11",
-          "license": "https://github.com/pier-bezuhoff/Dodeclusters/blob/master/LICENSE"
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+    <link rel="manifest" href="site.webmanifest" />
+    <link rel="mask-icon" href="safari-pinned-tab.svg" color="#5bbad5" />
+    <link rel="canonical" href="https://pier-bezuhoff.github.io/Dodeclusters/">
+    <meta name="description" content="Circle-based vector graphics editor" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=3,user-scalable=yes" />
+    <meta name="msapplication-TileColor" content="#00aba9" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://pier-bezuhoff.github.io/Dodeclusters/" />
+    <meta property="og:title" content="Dodeclusters Web App" />
+    <meta property="og:site_name" content="Dodeclusters" />
+    <meta property="og:description" content="Circle-based vector graphics editor" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+    <meta property="og:image" content="https://raw.githubusercontent.com/pier-bezuhoff/Dodeclusters/master/docs/02inf-art.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Dodeclusters: From zero to Infinity written over tangential circles with alternating orange and black colors" />
+    <title>Dodeclusters &#1421;</title>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Dodeclusters",
+      "description": "Effortlessly create beautiful & precise geometric patterns with our new open-source circle-based vector graphics editor. Learn & use powerful geometric tools to draw absolutely smooth enveloping spirals and intricate non-Euclidean chessboard ornaments.",
+      "browserRequirements": "Requires a modern web browser with JavaScript & Wasm support.",
+      "applicationCategory": ["DesignApplication", "graphic editor"],
+      "applicationSubCategory": ["https://www.wikidata.org/wiki/Q1155404", "vector graphics editor", "https://www.wikidata.org/wiki/Q506883", "free and open-source software"],
+      "genre": ["https://www.wikidata.org/wiki/Q170130", "vector graphics"],
+      "applicationSuite": "Dodeca",
+      "downloadUrl": "https://github.com/pier-bezuhoff/Dodeclusters/releases",
+      "operatingSystem": ["Web", "Android", "Windows", "Linux"],
+      "softwareVersion": "0.4.0",
+      "inLanguage": ["en", "ru"],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock"
+      },
+      "featureList": [
+        "Precise construction",
+        "Easy coloring",
+        "Create spirals",
+        "Dynamicly dependent objects",
+        "Dark mode",
+        "SVG export",
+        "Responsive design",
+        "Undo & redo history",
+        "Free",
+        "Open source"
+      ],
+      "screenshot": [
+        "https://pier-bezuhoff.github.io/Dodeclusters/screenshots/1.jpg",
+        "https://pier-bezuhoff.github.io/Dodeclusters/screenshots/2.jpg",
+        "https://pier-bezuhoff.github.io/Dodeclusters/screenshots/3.jpg"
+      ],
+      "url": "https://pier-bezuhoff.github.io/Dodeclusters/",
+      "sameAs": "https://github.com/pier-bezuhoff/Dodeclusters",
+      "author": {
+        "@type": "Person",
+        "name": "pier-bezuhoff",
+        "url": "https://github.com/pier-bezuhoff"
+      },
+      "dateCreate": "2024-01-11",
+      "license": "https://github.com/pier-bezuhoff/Dodeclusters/blob/master/LICENSE"
+    }
+    </script>
+    <script type="application/javascript" src="composeApp.js"></script>
+    <meta name="google-site-verification" content="yKOpXb8Zc0SJds3eFMCCXDqQp52QWU2oVZR0exhXWxU" />
+    <style>
+      h1, h2 {
+        text-align: center;
+      }
+      #loading {
+        display: block;
+        margin: 0 auto;
+      }
+      .twelve {
+        -webkit-animation:spin 6s linear infinite;
+        -moz-animation:spin 6s linear infinite;
+        animation:spin 6s linear infinite;
+        transform-origin: center;
+      }
+      .four {
+        -webkit-animation:spin 2s linear infinite;
+        -moz-animation:spin 2s linear infinite;
+        animation:spin 2s linear infinite;
+        transform-origin: center;
+      }
+      @-moz-keyframes spin {
+        100% { -moz-transform: rotate(360deg); }
+      }
+      @-webkit-keyframes spin {
+        100% { -webkit-transform: rotate(360deg); }
+      }
+      @keyframes spin {
+        100% {
+          -webkit-transform: rotate(360deg);
+          transform:rotate(360deg);
         }
-        </script>
-        <script type="application/javascript" src="composeApp.js"></script>
-        <meta name="google-site-verification" content="yKOpXb8Zc0SJds3eFMCCXDqQp52QWU2oVZR0exhXWxU" />
-    </head>
-    <body>
-        <h1 style="text-align: center;">Welcome to Dodeclusters: the circle-based vector graphics editor!</h1>
-        <h2 style="text-align: center;">Loading Dodeclusters &#1421; ...</h2>
-        <canvas id="ComposeTarget" role="application" aria-label="Canvas-based application"></canvas>
-    </body>
+      }
+    </style>
+  </head>
+  <body>
+   <h1>Welcome to Dodeclusters: the circle-based vector graphics editor!</h1>
+   <h2>Loading Dodeclusters &#1421; ...</h2>
+   <svg id="loading" width="256" height="256" version="1.1" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+     <g stroke-dashoffset="0.15">
+       <g class="twelve" fill="#60ffe5" fill-opacity="0.5" stroke="#066558" stroke-width="4">
+         <circle cx="80" cy="44.865" r="30"/>
+         <circle cx="44.865" cy="80" r="30"/>
+         <circle cx="32" cy="128" r="30"/>
+         <circle cx="44.865" cy="176" r="30"/>
+         <circle cx="80" cy="211.142" r="30"/>
+         <circle cx="128" cy="224" r="30"/>
+         <circle cx="176" cy="211.142" r="30"/>
+         <circle cx="211.142" cy="176" r="30"/>
+         <circle cx="224" cy="128" r="30"/>
+         <circle cx="211.142" cy="80" r="30"/>
+         <circle cx="176" cy="44.865" r="30"/>
+         <circle cx="128" cy="32" r="30"/>
+       </g>
+       <g class="four" fill="none" stroke="#03e3e8" stroke-width="8">
+         <circle cx="128" cy="80" r="46"/>
+         <circle cx="128" cy="176" r="46"/>
+         <circle cx="176" cy="128" r="46"/>
+         <circle cx="80" cy="128" r="46"/>
+       </g>
+     </g>
+   </svg>
+   <canvas id="ComposeTarget" role="application" aria-label="Canvas-based application"></canvas>
+  </body>
 </html>
