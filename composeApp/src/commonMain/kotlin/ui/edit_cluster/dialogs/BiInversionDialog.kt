@@ -48,7 +48,7 @@ import kotlin.math.roundToInt
 @Immutable
 data class DefaultBiInversionParameters(
     val speed: Double = 1.0,
-    val nSteps: Int = 1,
+    val nSteps: Int = 5,
     val reverseSecondEngine: Boolean = false,
     val minSpeed: Float = 0f,
     val maxSpeed: Float = 10f,

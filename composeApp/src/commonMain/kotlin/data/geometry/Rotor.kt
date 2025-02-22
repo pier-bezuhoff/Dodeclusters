@@ -161,6 +161,7 @@ data class Rotor(
                 // sign of the scalar product is relative direction of [a] wrt. to [b]
                 val d = a.inversiveDistance(b)
                 val d0 = abs(d)
+                // natural logarithm of d for our weird numbers
                 when { // pencil type test
                     abs(1 - d0) < EPSILON -> { // parabolic
                         // |a^b| = 0 => exp(a^b) = 1 + a^b
@@ -171,6 +172,7 @@ data class Rotor(
                         bivector.normalized() * acos(d)
                     }
                     d0 > 1.0 -> { // hyperbolic
+                        // Q: i think for negative d in acosh(d) it'd be imaginary?
                         bivector.normalized() * acosh(abs(d))
                     }
                     else -> never()

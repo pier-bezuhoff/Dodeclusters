@@ -288,27 +288,15 @@ data class GeneralizedCircle(
         index: Int = 1,
     ): GeneralizedCircle {
         require(nOfSections >= 1)
-        val d = this scalarProduct other // inversive distance
-        val pencilType = this.calculatePencilType(other)
-        val maxInterpolationParameter = when (pencilType) {
-            CirclePencilType.PARABOLIC -> 1.0 // |d| = 1
-            CirclePencilType.ELLIPTIC -> acos(d) // |d| < 1
-            // Q: i think for negative d in acosh(d) it'd be imaginary circles?
-            CirclePencilType.HYPERBOLIC -> acosh(abs(d)) // |d| > 1
-            null -> 0.0
-        } // natural logarithm of d for our weird numbers
-        val fraction = index.toDouble() / nOfSections - 0.5
         // NOTE: for imaginary circles this k!=0.5 is not very meaningful
         //  there is no meaningful "imaginary trisector"
         //  tho maybe there can be defined an "imaginary 4-sector"?
-        val k = -fraction * maxInterpolationParameter
+        val fraction = index.toDouble() / nOfSections - 0.5
+        val pencil = Rotor.fromPencil(this, other)
         // exp(-k/2 * (a^b).normalized) >>> (a±b)
-        val bivector = Rotor.fromOuterProduct(this, other).normalized()
-        val rotor = (bivector * (-k / 2.0)).exp()
+        val rotor = (pencil * (fraction / 2.0)).exp()
         val target = this + other // this trick allows to find imaginary bisector
-        return rotor.applyTo(
-            target//.normalizedPreservingDirection()
-        )
+        return rotor.applyTo(target)
     }
 
     /** Assumes normalization.

@@ -1220,9 +1220,25 @@ data class ConcreteScreenPositions(
     val bottomRightModifier = offsetModifier(positions.right, positions.bottom)
     val bottomLeftModifier = offsetModifier(positions.left, positions.bottom)
     val bottomMidModifier = offsetModifier(positions.mid, positions.bottom)
-    val horizontalSliderModifier = offsetModifier(positions.horizontalSliderStart, positions.bottom)
-    val preHorizontalSliderModifier = offsetModifier(positions.horizontalSliderStart - 42, positions.bottom)
-    val verticalSliderModifier = offsetModifier(positions.right, positions.top + positions.scaleSliderPadding + 12)
+    val horizontalSliderModifier =
+        with (density) { Modifier.offset(
+            x = positions.horizontalSliderStart.toDp(),
+            y = positions.bottom.toDp() - halfSize,
+        ) }
+    val preHorizontalSliderModifier =
+        with (density) { Modifier.offset(
+            x = positions.horizontalSliderStart.toDp() - 4.dp - halfSize,
+            y = positions.bottom.toDp() - halfSize,
+        ) }
+    val verticalSliderModifier =
+        with (density) { Modifier.offset(
+            x = positions.right.toDp() - halfSize,
+            y = (positions.top + positions.scaleSliderPadding).toDp()
+        ) }
     val topMidModifier = offsetModifier(positions.mid, positions.top)
-    val verticalSlider2Modifier = offsetModifier(positions.mid, positions.top + positions.scaleSliderPadding + 12)
+    val verticalSlider2Modifier =
+        with (density) { Modifier.offset(
+            x = positions.mid.toDp() - halfSize,
+            y = (positions.top + positions.scaleSliderPadding).toDp()
+        ) }
 }

@@ -296,7 +296,7 @@ class EditClusterViewModel : ViewModel() {
             bestCenterY = computeAbsoluteCenter()?.y,
             chessboardPattern = chessboardPattern != ChessboardPattern.NONE,
             chessboardPatternStartsColored = chessboardPattern == ChessboardPattern.STARTS_COLORED,
-            chessboardColor = chessboardColor
+            chessboardColor = chessboardColor,
         ))
     }
 
@@ -306,8 +306,12 @@ class EditClusterViewModel : ViewModel() {
             objects = objects.toList()
                 .map { o ->
                     o?.translated(translation) // back to top-left = (0,0) system
-                },
-            freeObjectIndices = objects.indices.filter { expressions.expressions[it] == null }.toSet(),
+                }
+            ,
+            freeObjectIndices = objects.indices.filter {
+                expressions.expressions[it] == null
+            }.toSet()
+            ,
             width = canvasSize.width.toFloat(),
             height = canvasSize.height.toFloat(),
             encodeCirclesAndPoints = showCircles,
@@ -585,6 +589,7 @@ class EditClusterViewModel : ViewModel() {
         for (ix in ixs) {
             objects[ix] = null
             objectColors.remove(ix)
+            phantoms -= ix
         }
     }
 
