@@ -36,11 +36,10 @@ fun computeCircleInterpolation(
     val newCircles = mutableListOf<GCircle?>()
     for (i in 1 until n) {
         newCircles.add(
-//            start.bisector(end, nOfSections = n, index = i, inBetween = params.inBetween)
             start.bisector(
                 if (params.complementary) -end else end,
                 nOfSections = n, index = i
-            ).toGCircle() //As(startCircle)
+            ).toGCircle() // no casting cuz we'd lose (real, real) -> imaginary bisector
         )
     }
     return newCircles

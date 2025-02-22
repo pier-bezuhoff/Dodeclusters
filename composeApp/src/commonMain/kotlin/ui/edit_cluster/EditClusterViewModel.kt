@@ -1317,9 +1317,10 @@ class EditClusterViewModel : ViewModel() {
         }.plus(chessboardColor)
         .sortedByFrequency()
 
-    /** Try to snap [absolutePosition] to some existing object or their intersection.
+    /**
+     * Try to snap [absolutePosition] to some existing object or their intersection.
      * Snap priority: points > circles
-     * */
+     */
     fun snapped(
         absolutePosition: Offset,
         excludePoints: Boolean = false,
@@ -1329,7 +1330,12 @@ class EditClusterViewModel : ViewModel() {
         val point = Point.fromOffset(absolutePosition)
         val point2pointSnapping = !excludePoints && mode != ToolMode.POINT
         if (point2pointSnapping) {
-            val snappablePoints = objects.map { it as? Point }
+            val snappablePoints = objects.mapIndexed { ix, o ->
+                if (!showPhantomObjects && ix in phantoms)
+                    null
+                else
+                    o as? Point
+            }
             val p2pResult = snapPointToPoints(point, snappablePoints, snapDistance)
             if (p2pResult is PointSnapResult.Eq)
                 return p2pResult
@@ -1338,7 +1344,7 @@ class EditClusterViewModel : ViewModel() {
         if (!point2circleSnapping) // no snapping to invisibles
             return PointSnapResult.Free(point)
         val snappableCircles = objects.mapIndexed { ix, c ->
-            if (ix in excludedCircles) null
+            if (ix in excludedCircles || !showPhantomObjects && ix in phantoms) null
             else c as? CircleOrLine
         }
         val p2cResult = snapPointToCircles(point, snappableCircles, snapDistance)
