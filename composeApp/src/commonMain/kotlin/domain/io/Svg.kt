@@ -58,7 +58,10 @@ fun constellation2svg(
         ChessboardPattern.STARTS_COLORED -> {
             appendLine(
                 chessboardPath(
-                    objects.filterIsInstance<CircleOrLine>(),
+                    objects
+                        .filterIndexed { ix, _ -> ix !in constellation.phantoms }
+                        .filterIsInstance<CircleOrLine>()
+                    ,
                     color = chessboardCellColor,
                     visibleRect = visibleRect,
                     startsColored = true
@@ -68,7 +71,10 @@ fun constellation2svg(
         ChessboardPattern.STARTS_TRANSPARENT -> {
             appendLine(
                 chessboardPath(
-                    objects.filterIsInstance<CircleOrLine>(),
+                    objects
+                        .filterIndexed { ix, _ -> ix !in constellation.phantoms }
+                        .filterIsInstance<CircleOrLine>()
+                    ,
                     color = chessboardCellColor,
                     visibleRect = visibleRect,
                     startsColored = false
@@ -94,20 +100,25 @@ fun constellation2svg(
         val pointRadius = 5f
         val highlightClassString = "" //"""class="$highlightClass" """
         objects.forEachIndexed { ix, o ->
-            val color =  when {
-                o is Point -> pointColor // points cant be colored for now
-                ix in freeObjectIndices -> constellation.objectColors[ix] ?: freeCircleColor
-                else -> constellation.objectColors[ix] ?: circleColor
-            }
-            val colorString = Json.encodeToString(ColorCssSerializer, color).trim('"')
-            when (o) {
-                is CircleOrLine -> appendLine(
-                    formatCircleOrLineStroke(o, inflatedVisibleRect, stroke = colorString, prefix = highlightClassString)
-                )
-                is Point -> appendLine(
-                    """<circle ${highlightClassString}cx="${o.x}" cy="${o.y}" r="$pointRadius" fill="$colorString"/>"""
-                )
-                else -> {}
+            if (ix !in constellation.phantoms) {
+                val color = when {
+                    o is Point -> pointColor // points cant be colored for now
+                    ix in freeObjectIndices -> constellation.objectColors[ix] ?: freeCircleColor
+                    else -> constellation.objectColors[ix] ?: circleColor
+                }
+                val colorString = Json.encodeToString(ColorCssSerializer, color).trim('"')
+                when (o) {
+                    is CircleOrLine -> appendLine(
+                        formatCircleOrLineStroke(o, inflatedVisibleRect,
+                            stroke = colorString,
+                            prefix = highlightClassString
+                        )
+                    )
+                    is Point -> appendLine(
+                        """<circle ${highlightClassString}cx="${o.x}" cy="${o.y}" r="$pointRadius" fill="$colorString"/>"""
+                    )
+                    else -> {}
+                }
             }
         }
     }
