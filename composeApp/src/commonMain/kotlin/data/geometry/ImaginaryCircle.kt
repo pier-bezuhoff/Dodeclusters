@@ -15,7 +15,7 @@ data class ImaginaryCircle(
     val x: Double,
     val y: Double,
     val radius: Double,
-) : CircleOrLineOrImaginaryCircle {
+) : CircleOrLineOrImaginaryCircle, GCircle {
     override fun translated(vector: Offset): ImaginaryCircle =
         ImaginaryCircle(x + vector.x, y + vector.y, radius)
 

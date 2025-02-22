@@ -29,6 +29,7 @@ import data.geometry.ArcPathCircle
 import data.geometry.ArcPathPoint
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.CircleOrLineOrPoint
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.ImaginaryCircle
@@ -301,8 +302,13 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun exportAsSvg(name: String = DdcV4.DEFAULT_NAME): String {
+        val constellation = toConstellation()
         return constellation2svg(
-            constellation = toConstellation(),
+            constellation =
+                if (showPhantomObjects)
+                    constellation.copy(phantoms = emptyList())
+                else constellation
+            ,
             objects = objects.toList()
                 .map { o ->
                     o?.translated(translation) // back to top-left = (0,0) system
@@ -528,6 +534,7 @@ class EditClusterViewModel : ViewModel() {
                 reindexing[ix]?.let { it to color }
             }.toMap(),
             backgroundColor = backgroundColor,
+            // NOTE: we keep track of phantoms EVEN when they are shown
             phantoms = phantoms.toList(),
         )
     }
@@ -1434,14 +1441,12 @@ class EditClusterViewModel : ViewModel() {
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
         showCircles = true
-        val everythingIsSelected = selection.containsAll(
-            objects.filterIndices { it is CircleOrLine }
-                .filter { showPhantomObjects || it !in phantoms }
-        )
+        val allCLPIndices = objects.filterIndices { it is CircleOrLineOrPoint }
+        val everythingIsSelected = selection.containsAll(allCLPIndices)
         selection = if (everythingIsSelected) {
             emptyList()
         } else { // maybe select Imaginary's and nulls too
-            objects.filterIndices { it is Point || it is CircleOrLine }
+            allCLPIndices
         }
     }
 
@@ -3160,7 +3165,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.RectangularSelect -> mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect
             EditClusterTool.FlowSelect -> mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
             EditClusterTool.ToggleSelectAll ->
-                selection.containsAll(objects.filterIndices { it is CircleOrLine })
+                selection.containsAll(objects.filterIndices { it is CircleOrLineOrPoint })
             EditClusterTool.Region -> mode == SelectionMode.Region && submode !is SubMode.FlowFill
             EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
             EditClusterTool.FillChessboardPattern -> chessboardPattern != ChessboardPattern.NONE

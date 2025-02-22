@@ -256,9 +256,6 @@ fun BoxScope.EditClusterCanvas(
     }
 }
 
-// uncapped extremely big circles (non-filled) soil the whole screenshot during
-// graphicsLayer.record or graphicsLayer.toImageBitmap
-// it's as if their border becomes large & transparent and covers
 @Composable
 fun ScreenshotableCanvas(
     viewModel: EditClusterViewModel,
@@ -322,9 +319,9 @@ fun ScreenshotableCanvas(
             }
         }
         LaunchedEffect(viewModel, bitmapFlow) {
-            println("started graphics layer -> bitmap conversion")
+            println("started {graphics layer -> bitmap} conversion")
             val bitmap = graphicsLayer.toImageBitmap()
-            println("completed graphics layer -> bitmap conversion")
+            println("completed {graphics layer -> bitmap} conversion")
             bitmapFlow.emit(bitmap)
         }
     }

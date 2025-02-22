@@ -12,13 +12,15 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
+sealed interface CircleOrLineOrPoint : GCircle
+
 @Immutable
 @Serializable
 @SerialName("point")
 data class Point(
     val x: Double,
     val y: Double
-) : GCircle {
+) : CircleOrLineOrPoint, GCircle {
     fun toOffset(): Offset =
         if (this == CONFORMAL_INFINITY)
             Offset.Infinite

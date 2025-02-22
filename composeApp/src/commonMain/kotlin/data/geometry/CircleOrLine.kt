@@ -11,7 +11,7 @@ import kotlin.math.sqrt
 
 @Immutable
 @Serializable
-sealed interface CircleOrLine : CircleOrLineOrImaginaryCircle, LocusWithOrder {
+sealed interface CircleOrLine : CircleOrLineOrImaginaryCircle, CircleOrLineOrPoint, LocusWithOrder {
     fun project(point: Point): Point
     fun distanceFrom(point: Point): Double
     fun distanceFrom(point: Offset): Double
