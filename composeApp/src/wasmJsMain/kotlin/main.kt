@@ -47,7 +47,9 @@ fun main() {
         }
     }
     // cleanup plain text left as a placeholder/for search engines
-    document.querySelector("#loading")?.setAttribute("style", "display: none;")
+    val loadingSpinner = document.getElementById("loading")
+    loadingSpinner?.setAttribute("style", "display: none;")
+    loadingSpinner?.remove()
     document.querySelector("h2")?.setAttribute("style", "display: none;")
     document.querySelector("h1")?.setAttribute("style", "display: none;")
     // MAYBE: also add spinning thingy with css animation
