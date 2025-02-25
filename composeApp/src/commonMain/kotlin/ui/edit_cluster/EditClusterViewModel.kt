@@ -3144,7 +3144,8 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
             EditClusterTool.Detach -> detachEverySelectedObject()
             EditClusterTool.SwapDirection -> swapDirectionsOfSelectedCircles()
-            EditClusterTool.MarkAsPhantoms -> if (toolPredicate(tool)) markSelectedObjectsAsPhantoms() else unmarkSelectedObjectsAsPhantoms()
+            EditClusterTool.MarkAsPhantoms ->
+                if (toolPredicate(tool)) markSelectedObjectsAsPhantoms() else unmarkSelectedObjectsAsPhantoms()
             EditClusterTool.Duplicate -> duplicateSelectedCircles()
             EditClusterTool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
             EditClusterTool.Delete -> deleteSelectedPointsAndCircles()
@@ -3159,23 +3160,37 @@ class EditClusterViewModel : ViewModel() {
     /** Is [tool] enabled? */
     fun toolPredicate(tool: EditClusterTool): Boolean =
         when (tool) { // NOTE: i think this has to return State<Boolean> to work properly
-            EditClusterTool.Drag -> mode == SelectionMode.Drag
-            EditClusterTool.Multiselect -> mode == SelectionMode.Multiselect &&
+            EditClusterTool.Drag ->
+                mode == SelectionMode.Drag
+            EditClusterTool.Multiselect ->
+                mode == SelectionMode.Multiselect &&
                 submode !is SubMode.FlowSelect && submode !is SubMode.RectangularSelect
-            EditClusterTool.RectangularSelect -> mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect
-            EditClusterTool.FlowSelect -> mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
+            EditClusterTool.RectangularSelect ->
+                mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect
+            EditClusterTool.FlowSelect ->
+                mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
             EditClusterTool.ToggleSelectAll ->
                 selection.containsAll(objects.filterIndices { it is CircleOrLineOrPoint })
-            EditClusterTool.Region -> mode == SelectionMode.Region && submode !is SubMode.FlowFill
-            EditClusterTool.FlowFill -> mode == SelectionMode.Region && submode is SubMode.FlowFill
-            EditClusterTool.FillChessboardPattern -> chessboardPattern != ChessboardPattern.NONE
-            EditClusterTool.RestrictRegionToSelection -> restrictRegionsToSelection
-            EditClusterTool.ToggleObjects -> showCircles
-            EditClusterTool.TogglePhantoms -> showPhantomObjects
-            EditClusterTool.ToggleFilledOrOutline -> !showWireframes
-            EditClusterTool.ToggleDirectionArrows -> showDirectionArrows
-            EditClusterTool.MarkAsPhantoms -> selection.none { it in phantoms }
-            is EditClusterTool.MultiArg -> mode == ToolMode.correspondingTo(tool)
+            EditClusterTool.Region ->
+                mode == SelectionMode.Region && submode !is SubMode.FlowFill
+            EditClusterTool.FlowFill ->
+                mode == SelectionMode.Region && submode is SubMode.FlowFill
+            EditClusterTool.FillChessboardPattern ->
+                chessboardPattern != ChessboardPattern.NONE
+            EditClusterTool.RestrictRegionToSelection ->
+                restrictRegionsToSelection
+            EditClusterTool.ToggleObjects ->
+                showCircles
+            EditClusterTool.TogglePhantoms ->
+                showPhantomObjects
+            EditClusterTool.ToggleFilledOrOutline ->
+                !showWireframes
+            EditClusterTool.ToggleDirectionArrows ->
+                showDirectionArrows
+            EditClusterTool.MarkAsPhantoms ->
+                selection.none { it in phantoms }
+            is EditClusterTool.MultiArg ->
+                mode == ToolMode.correspondingTo(tool)
             else -> true
         }
 

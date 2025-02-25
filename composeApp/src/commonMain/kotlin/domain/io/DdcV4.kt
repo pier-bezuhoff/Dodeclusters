@@ -10,6 +10,21 @@ import domain.expressions.ObjectConstruct
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// new format idea:
+// 1. store coordinates even for expressions, for easier integration with other programs
+// 2. store expression as a Map<String, String> for simpler evolution of parameters
+// objects:
+// - type: Circle | Line | Point | Imaginary circle | null
+//   x, y, r | a, b, c
+//   expr index
+//   expr output index
+// ...
+// exprs:
+// - type: ExprType
+//   obj1
+//   targetObj
+//   param1
+
 // MAYBE: collapse contiguously indexed Expression.OneOf outputs
 @Immutable
 @Serializable

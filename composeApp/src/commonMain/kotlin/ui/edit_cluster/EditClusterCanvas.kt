@@ -256,6 +256,15 @@ fun BoxScope.EditClusterCanvas(
     }
 }
 
+/**
+ * Used to make a screenshot of the current state of [viewModel].
+ * Recreates the content of [EditClusterCanvas] on screen, saving operations into a
+ * graphics layer, and then queues async graphics-layer-to-bitmap conversion with.
+ * result to be emitted into [bitmapFlow].
+ *
+ * NOTE: It is blocking and rather slow. Also idk why but the async _always_ happens on
+ *  the main thread...
+ */
 @Composable
 fun ScreenshotableCanvas(
     viewModel: EditClusterViewModel,
@@ -294,7 +303,7 @@ fun ScreenshotableCanvas(
         Box(Modifier
             .fillMaxSize()
             .drawBehind {
-                // have to jump thru 2 boxes for proper bg render
+                // have to jump thru 2 ~~hoops~~ boxes for proper bg render
                 viewModel.backgroundColor?.let { backgroundColor ->
                     drawRect(backgroundColor, size = size)
                 }

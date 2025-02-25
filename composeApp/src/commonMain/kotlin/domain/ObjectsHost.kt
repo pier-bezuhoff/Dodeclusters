@@ -14,14 +14,23 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-private const val NULL_TYPE = 0
-private const val CIRCLE_CCW_TYPE = 1
-private const val CIRCLE_CW_TYPE = 2
-private const val LINE_TYPE = 3
-private const val POINT_TYPE = 4
-private const val IMAGINARY_CIRCLE_TYPE = 5
+// alternative setup: fuse x,y,r | a,b,c representation with GeneralizedCircle coordinates,
+// resulting in
+// type: Byte = null | circle | line | point | imaginary circle
+// orientation: Boolean (to distinguish CCW vs CW circles)
+// w = +1 | 0
+// x: Double = normal x | a
+// y: Double = normal y | b
+// z: Double = (x^2 + y^2 - r^2)/2 | c
 
-// This is definitely NOT premature optimization...
+private const val NULL_TYPE: Byte = 0
+private const val CIRCLE_CCW_TYPE: Byte = 1
+private const val CIRCLE_CW_TYPE: Byte = 2
+private const val LINE_TYPE: Byte = 3
+private const val POINT_TYPE: Byte = 4
+private const val IMAGINARY_CIRCLE_TYPE: Byte = 5
+
+// This is definitely NOT premature optimization... right?
 /**
  * @property[size] size of [objectTypes]
  * @property[objectTypes] types of 3-element batches in [objectParameters]
@@ -32,6 +41,7 @@ private const val IMAGINARY_CIRCLE_TYPE = 5
  * for [IMAGINARY_CIRCLE_TYPE]: (x,y,imaginary radius),
  * for [NULL_TYPE]: (?,?,?). `?` being unspecified.
  * [objectParameters]`.size == `3*[size]
+ * @property[ids] flow of monotonically increasing ids, emitted for any object change (bulked)
  *
  * Not thread-safe, so beware
  * */
@@ -40,32 +50,32 @@ class ObjectsHost {
     // reference: https://developer.android.com/reference/kotlin/androidx/collection/MutableDoubleList
     var size = 0
     private var maxSize = 100
-    var objectTypes: IntArray = IntArray(maxSize)
+    var objectTypes: ByteArray = ByteArray(maxSize)
         private set
-    var objectParameters: DoubleArray = DoubleArray(3*maxSize)
+    var objectParameters: DoubleArray = DoubleArray(PARAMETERS_PER_OBJECT*maxSize)
         private set
 
-    val _ids = MutableStateFlow(0)
+    private val _ids = MutableStateFlow(0)
     val ids = _ids.asStateFlow()
 
     fun addObjects(objects: List<GCircle?>) {
         val sizeIncrease = objects.size
         val requiredSize = size + sizeIncrease
-        val size3 = 3*size
+        val size3 = PARAMETERS_PER_OBJECT*size
         // i think doing this manually is faster than using MutableList
         // because of no unboxing
         if (requiredSize > maxSize) {
             val k = 1 + (requiredSize - maxSize) / SIZE_INCREMENT
             maxSize += SIZE_INCREMENT * k
-            objectTypes = IntArray(maxSize) { if (it < size) objectTypes[it] else NULL_TYPE }
-            objectParameters = DoubleArray(3*maxSize) { i ->
+            objectTypes = ByteArray(maxSize) { if (it < size) objectTypes[it] else NULL_TYPE }
+            objectParameters = DoubleArray(PARAMETERS_PER_OBJECT*maxSize) { i ->
                 if (i < size3)
                     objectParameters[i]
                 else 0.0
             }
         }
         for (i in 0 until sizeIncrease) {
-            val startOffset = size3 + 3*i
+            val startOffset = size3 + PARAMETERS_PER_OBJECT*i
             when (val o = objects[i]) {
                 is Circle -> {
                     objectParameters[startOffset] = o.x
@@ -123,8 +133,8 @@ class ObjectsHost {
         for (ix in indices) {
             when (objectTypes[ix]) { // inlined T;R;S for GCircle
                 CIRCLE_CCW_TYPE, CIRCLE_CW_TYPE -> {
-                    var x: Double = objectParameters[3*ix] + dx
-                    var y: Double = objectParameters[3*ix + 1] + dy
+                    var x: Double = objectParameters[PARAMETERS_PER_OBJECT*ix] + dx
+                    var y: Double = objectParameters[PARAMETERS_PER_OBJECT*ix + 1] + dy
                     if (focus != Offset.Unspecified) {
                         // cmp. Offset.rotateBy & zoom and rotation are commutative
                         x -= focusX
@@ -132,26 +142,26 @@ class ObjectsHost {
                         x = (x * cosPhi - y * sinPhi) * zoom + focusX
                         y = (x * sinPhi + y * cosPhi) * zoom + focusY
                     } // tbf because of T;S;R order it is not completely accurate
-                    objectParameters[3*ix]  = x
-                    objectParameters[3*ix + 1] = y
-                    objectParameters[3*ix + 2] *= zoomD
+                    objectParameters[PARAMETERS_PER_OBJECT*ix]  = x
+                    objectParameters[PARAMETERS_PER_OBJECT*ix + 1] = y
+                    objectParameters[PARAMETERS_PER_OBJECT*ix + 2] *= zoomD
                 }
                 LINE_TYPE -> {
-                    val a = objectParameters[3*ix]
-                    val b = objectParameters[3*ix + 1]
-                    var c: Double = objectParameters[3*ix + 2]
+                    val a = objectParameters[PARAMETERS_PER_OBJECT*ix]
+                    val b = objectParameters[PARAMETERS_PER_OBJECT*ix + 1]
+                    var c: Double = objectParameters[PARAMETERS_PER_OBJECT*ix + 2]
                     c -= a*dx + b*dy
                     c = zoom*(a*focusX + b*focusY + c) // - a*focusX - b*focusY // added back when rotating
                     val a1 = a * cosPhi - b * sinPhi
                     val b1 = a * sinPhi + b * cosPhi
                     c = (hypot(a1, b1)/hypot(a, b)) * c - a1*focusX - b1*focusY
-                    objectParameters[3*ix] = a1
-                    objectParameters[3*ix + 1] = b1
-                    objectParameters[3*ix + 2] = c
+                    objectParameters[PARAMETERS_PER_OBJECT*ix] = a1
+                    objectParameters[PARAMETERS_PER_OBJECT*ix + 1] = b1
+                    objectParameters[PARAMETERS_PER_OBJECT*ix + 2] = c
                 }
                 POINT_TYPE -> {
-                    var x: Double = objectParameters[3*ix] + dx
-                    var y: Double = objectParameters[3*ix + 1] + dy
+                    var x: Double = objectParameters[PARAMETERS_PER_OBJECT*ix] + dx
+                    var y: Double = objectParameters[PARAMETERS_PER_OBJECT*ix + 1] + dy
                     if (focus != Offset.Unspecified) {
                         // cmp. Offset.rotateBy & zoom and rotation are commutative
                         x -= focusX
@@ -159,8 +169,8 @@ class ObjectsHost {
                         x = (x * cosPhi - y * sinPhi) * zoom + focusX
                         y = (x * sinPhi + y * cosPhi) * zoom + focusY
                     } // tbf because of T;S;R order it is not completely accurate
-                    objectParameters[3*ix]  = x
-                    objectParameters[3*ix + 1] = y
+                    objectParameters[PARAMETERS_PER_OBJECT*ix]  = x
+                    objectParameters[PARAMETERS_PER_OBJECT*ix + 1] = y
                 }
 //                IMAGINARY_CIRCLE_TYPE -> {} // always dependent for now
                 else -> {}
@@ -175,12 +185,14 @@ class ObjectsHost {
         for (ix in indices) {
             when (objectTypes[ix]) { // inlined GCircle.translated
                 CIRCLE_CCW_TYPE, CIRCLE_CW_TYPE, POINT_TYPE -> {
-                    objectParameters[3*ix] += dx
-                    objectParameters[3*ix + 1] += dy
+                    objectParameters[PARAMETERS_PER_OBJECT*ix] += dx
+                    objectParameters[PARAMETERS_PER_OBJECT*ix + 1] += dy
                 }
                 LINE_TYPE -> {
 //                    Line(a, b, c - (a*vector.x + b*vector.y))
-                    objectParameters[3*ix + 2] -= objectParameters[3*ix]*dx + objectParameters[3*ix + 1]*dy
+                    objectParameters[PARAMETERS_PER_OBJECT*ix + 2] -=
+                        objectParameters[PARAMETERS_PER_OBJECT*ix]*dx +
+                        objectParameters[PARAMETERS_PER_OBJECT*ix + 1]*dy
                 }
 //                IMAGINARY_CIRCLE_TYPE -> {} // always dependent for now
                 else -> {}
@@ -191,7 +203,7 @@ class ObjectsHost {
 
     fun updateObjects(updatedObjects: Map<Ix, GCircle?>) {
         for ((ix, o) in updatedObjects) {
-            val startOffset = 3*ix
+            val startOffset = PARAMETERS_PER_OBJECT*ix
             when (o) {
                 is Circle -> {
                     objectParameters[startOffset] = o.x
@@ -226,5 +238,6 @@ class ObjectsHost {
         /** When new objects overflow [maxSize] it will increase by
          * [SIZE_INCREMENT] via copying existing [objectParameters] & [objectTypes] */
         private const val SIZE_INCREMENT = 100
+        private const val PARAMETERS_PER_OBJECT = 3
     }
 }
