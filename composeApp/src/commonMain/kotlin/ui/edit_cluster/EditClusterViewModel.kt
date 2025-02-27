@@ -2498,38 +2498,43 @@ class EditClusterViewModel : ViewModel() {
 
     fun processKeyboardAction(action: KeyboardAction) {
 //        println("processing $action")
-        when (action) {
-            KeyboardAction.SELECT_ALL -> {
-                if (!mode.isSelectingCircles() || !showCircles) // more intuitive behavior
-                    selection = emptyList() // forces to select all instead of toggling
-                switchToCategory(EditClusterCategory.Multiselect)
-                toggleSelectAll()
-            }
-            KeyboardAction.DELETE -> deleteSelectedPointsAndCircles()
-            KeyboardAction.PASTE -> duplicateSelectedCircles()
-            KeyboardAction.ZOOM_IN -> scaleSelection(KEYBOARD_ZOOM_INCREMENT)
-            KeyboardAction.ZOOM_OUT -> scaleSelection(1/KEYBOARD_ZOOM_INCREMENT)
-            KeyboardAction.UNDO -> undo()
-            KeyboardAction.REDO -> redo()
-            KeyboardAction.CANCEL -> when (mode) { // reset mode
-                is ToolMode -> {
-                    if (submode is SubMode.ExprAdjustment)
-                        cancelExprAdjustment()
-                    partialArgList = partialArgList?.let { PartialArgList(it.signature) }
-                    partialArcPath = null
-                    submode = SubMode.None
+        if (openedDialog == null) {
+            when (action) {
+                KeyboardAction.SELECT_ALL -> {
+                    if (!mode.isSelectingCircles() || !showCircles) // more intuitive behavior
+                        selection = emptyList() // forces to select all instead of toggling
+                    switchToCategory(EditClusterCategory.Multiselect)
+                    toggleSelectAll()
                 }
-                is SelectionMode -> {
-                    selection = emptyList()
+
+                KeyboardAction.DELETE -> deleteSelectedPointsAndCircles()
+                KeyboardAction.PASTE -> duplicateSelectedCircles()
+                KeyboardAction.ZOOM_IN -> scaleSelection(KEYBOARD_ZOOM_INCREMENT)
+                KeyboardAction.ZOOM_OUT -> scaleSelection(1/KEYBOARD_ZOOM_INCREMENT)
+                KeyboardAction.UNDO -> undo()
+                KeyboardAction.REDO -> redo()
+                KeyboardAction.CANCEL -> when (mode) { // reset mode
+                    is ToolMode -> {
+                        if (submode is SubMode.ExprAdjustment)
+                            cancelExprAdjustment()
+                        partialArgList = partialArgList?.let { PartialArgList(it.signature) }
+                        partialArcPath = null
+                        submode = SubMode.None
+                    }
+
+                    is SelectionMode -> {
+                        selection = emptyList()
+                    }
                 }
+
+                KeyboardAction.OPEN -> {} // idk
+                KeyboardAction.MOVE -> switchToCategory(EditClusterCategory.Drag)
+                KeyboardAction.SELECT -> switchToCategory(EditClusterCategory.Multiselect)
+                KeyboardAction.REGION -> switchToCategory(EditClusterCategory.Region)
+                KeyboardAction.PALETTE -> toolAction(EditClusterTool.Palette)
+                KeyboardAction.TRANSFORM -> switchToCategory(EditClusterCategory.Transform)
+                KeyboardAction.CREATE -> switchToCategory(EditClusterCategory.Create)
             }
-            KeyboardAction.OPEN -> {} // idk
-            KeyboardAction.MOVE -> switchToCategory(EditClusterCategory.Drag)
-            KeyboardAction.SELECT -> switchToCategory(EditClusterCategory.Multiselect)
-            KeyboardAction.REGION -> switchToCategory(EditClusterCategory.Region)
-            KeyboardAction.PALETTE -> toolAction(EditClusterTool.Palette)
-            KeyboardAction.TRANSFORM -> switchToCategory(EditClusterCategory.Transform)
-            KeyboardAction.CREATE -> switchToCategory(EditClusterCategory.Create)
         }
     }
 
