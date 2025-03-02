@@ -2506,7 +2506,6 @@ class EditClusterViewModel : ViewModel() {
                     switchToCategory(EditClusterCategory.Multiselect)
                     toggleSelectAll()
                 }
-
                 KeyboardAction.DELETE -> deleteSelectedPointsAndCircles()
                 KeyboardAction.PASTE -> duplicateSelectedCircles()
                 KeyboardAction.ZOOM_IN -> scaleSelection(KEYBOARD_ZOOM_INCREMENT)
@@ -2521,12 +2520,10 @@ class EditClusterViewModel : ViewModel() {
                         partialArcPath = null
                         submode = SubMode.None
                     }
-
                     is SelectionMode -> {
                         selection = emptyList()
                     }
                 }
-
                 KeyboardAction.OPEN -> {} // idk
                 KeyboardAction.MOVE -> switchToCategory(EditClusterCategory.Drag)
                 KeyboardAction.SELECT -> switchToCategory(EditClusterCategory.Multiselect)
