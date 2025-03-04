@@ -61,6 +61,97 @@ import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.hideSystemBars
 import ui.isLandscape
+import ui.theme.DodeclustersColors
+
+/**
+ * @param[currentColor] currently chosen color
+ * @param[usedColors] colors used to fill regions, sorted from most common to rarest
+ * @param[savedColors] manually saved custom colors chosen during color-picking, latest to oldest
+ * @param[predefinedColors] default palette
+ */
+data class ColorPickerParameters(
+    val currentColor: Color,
+    val usedColors: List<Color>,
+    val savedColors: List<Color> = emptyList(),
+    val predefinedColors: List<Color> = listOf(
+        Color.White, Color.Black,
+        Color.Red, Color.Green, Color.Blue, // RGB
+        Color.Cyan, Color.Magenta, Color.Yellow, // CMY[K]
+        Color.LightGray, Color.Gray, Color.DarkGray,
+        // UI colors
+        DodeclustersColors.secondaryDark, DodeclustersColors.secondaryLight,
+        DodeclustersColors.highAccentDark, DodeclustersColors.highAccentLight,
+        DodeclustersColors.skyBlue,
+        // nice pastel palette
+        Color(0xFF_B5C0D0), // very pale blue
+        Color(0xFF_CCD3CA), // very pale green
+        Color(0xFF_F5E8DD), // very pale yellow
+        Color(0xFF_EED3D9), // very pale pink/red
+        // random fun colors
+        Color(0xFF_F08A5D), // orange
+        Color(0xFF_6A2C70), // dark purple
+        Color(0xFF_08D9D6), // aquamarine
+        Color(0xFF_FFDE63), // pinkish red
+        Color(0xFF_321E1E), // deep brown
+    ),
+)
+
+@Composable
+fun ColorPickerDialog2(
+    parameters: ColorPickerParameters,
+    modifier: Modifier = Modifier,
+    onCancel: () -> Unit,
+    onConfirm: (Color) -> Unit,
+) {
+    val color = rememberSaveable(stateSaver = HsvColor.Saver) {
+        mutableStateOf(HsvColor.from(parameters.currentColor))
+    }
+    val hex = mutableStateOf(computeHex(color)) // NOTE: need to be MANUALLY updated on every color change
+    Dialog(
+        onDismissRequest = {
+            onConfirm(color.value.toColor()) // that is how it be, out-of-dialog tap
+        },
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        hideSystemBars()
+        Surface(
+            modifier = modifier
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxHeight(0.8f),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.Start,
+            ) {
+                DialogTitle(Res.string.color_picker_title, modifier = Modifier.align(Alignment.CenterHorizontally))
+                Row() {
+                    ColorPickerDisplay(
+                        color, Modifier.fillMaxHeight(0.7f),
+                        onColorChanged = { hex.value = computeHex(color) }
+                    )
+                    Column() {
+                        // old vs new (new color circle overlapping old color circle)
+                        // palette (use 'splash' icons)
+                        // custom colors
+                        // used colors
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    HexInput(color, hex) {
+                        onConfirm(color.value.toColor())
+                    }
+                    CancelButton(onDismissRequest = onCancel)
+                    OkButton { onConfirm(color.value.toColor()) }
+                }
+            }
+        }
+    }
+}
+
 
 // TODO: preview previous vs current color
 // TODO: add predefined colors (e.g. a-la in inkscape or such)
