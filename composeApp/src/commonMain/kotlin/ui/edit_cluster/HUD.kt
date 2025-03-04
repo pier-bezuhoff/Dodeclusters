@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -195,7 +195,7 @@ fun PointSelectionContextActions(
     toolAction: (EditClusterTool) -> Unit,
     toolPredicate: (EditClusterTool) -> Boolean,
 ) {
-    val buttonShape = RoundedCornerShape(percent = 50)
+    val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
     with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
         SimpleToolButton(
@@ -254,7 +254,7 @@ fun InterpolationInterface(
                 if (circlesAreCoDirected) !interpolateInBetween else interpolateInBetween
             } else interpolateInBetween
     )
-    val buttonShape = remember { RoundedCornerShape(percent = 50) }
+    val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
     val sliderColors = SliderDefaults.colors(
         thumbColor = MaterialTheme.colorScheme.secondary,
@@ -353,7 +353,7 @@ fun BiInversionInterface(
         nSteps = stepsSliderState.value.roundToInt(),
         reverseSecondEngine = defaults.reverseSecondEngine,
     )
-    val buttonShape = remember { RoundedCornerShape(percent = 50) }
+    val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
     val sliderColors = SliderDefaults.colors(
         thumbColor = MaterialTheme.colorScheme.secondary,
@@ -459,7 +459,7 @@ fun LoxodromicMotionInterface(
         dilationPerStep = (if (reverseDirection) -1 else +1) * dilationSliderState.value.toDouble(),
         nTotalSteps = stepsSliderState.value.roundToInt(),
     )
-    val buttonShape = remember { RoundedCornerShape(percent = 50) }
+    val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
     val sliderColors = SliderDefaults.colors(
         thumbColor = MaterialTheme.colorScheme.secondary,
@@ -590,7 +590,7 @@ fun BoxScope.RegionManipulationStrategySelector(
 ) {
     Surface(
         modifier = modifier.align(Alignment.CenterEnd),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
     ) {

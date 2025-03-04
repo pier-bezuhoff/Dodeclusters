@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
@@ -100,7 +101,7 @@ fun BiInversionDialog(
         hideSystemBars()
         Surface(
             modifier = Modifier.padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(24.dp)
+            shape = MaterialTheme.shapes.extraLarge,
         ) {
             val fontSize =
                 if (isCompact) 14.sp

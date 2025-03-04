@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -313,7 +313,7 @@ fun OkButton(
         onClick = { onConfirm() },
         modifier = modifier.padding(8.dp),
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-        shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
+        shape = CircleShape,
     ) {
         Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
@@ -331,7 +331,7 @@ fun CancelButton(
         onClick = { onDismissRequest() },
         modifier = modifier.padding(8.dp),
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-        shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
+        shape = CircleShape,
     ) {
         Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel_name))
         Spacer(Modifier.size(ButtonDefaults.IconSpacing))

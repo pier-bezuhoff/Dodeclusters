@@ -77,7 +77,7 @@ fun BlendSettingsDialog(
             modifier = Modifier
                 .padding(16.dp)
             ,
-            shape = RoundedCornerShape(24.dp)
+            shape = MaterialTheme.shapes.extraLarge,
         ) {
             Column(
                 Modifier.verticalScroll(rememberScrollState())

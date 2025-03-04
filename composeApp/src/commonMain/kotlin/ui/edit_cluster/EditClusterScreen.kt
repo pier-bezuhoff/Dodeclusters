@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -460,7 +459,7 @@ fun ToolDescription(
                     .border(
                         2.dp,
                         MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
-                        RoundedCornerShape(24.dp)
+                        MaterialTheme.shapes.extraLarge,
                     )
                     .padding(16.dp, 8.dp)
                 ,
@@ -560,7 +559,7 @@ fun EditClusterTopBar(
                 0.3f to backgroundColor.copy(alpha = 1.0f),
                 1f to backgroundColor.copy(alpha = 0.5f),
             ),
-            RoundedCornerShape(24.dp)
+            MaterialTheme.shapes.extraLarge,
         )
         .padding(top = 24.dp, end = 24.dp) // offsets the corner-removing offset
         .height(toolbarHeight),
@@ -765,24 +764,20 @@ private fun LeftToolbar(
     compact: Boolean,
     modifier: Modifier = Modifier
 ) {
-//    val scrollState = rememberScrollState()
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
     val toolbarSize =
         if (compact) 48.dp
         else 64.dp
-    val cornerRadius = 24.dp
     Column(
         modifier
-//            .offset(x = -cornerRadius)
             .background(
                 Brush.horizontalGradient(
                     0f to backgroundColor,
                     1f to backgroundColor.copy(alpha = 0.7f),
                 ),
-                RoundedCornerShape(cornerRadius)
+                MaterialTheme.shapes.extraLarge,
             )
-//            .padding(start = cornerRadius)
             .width(toolbarSize)
         ,
         Arrangement.Top,
@@ -894,7 +889,7 @@ private fun HorizontalPanel(
         .offset(x = (-24).dp) // hide round corners to the left
         .background(
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-            RoundedCornerShape(24.dp)
+            MaterialTheme.shapes.extraLarge,
         )
         .padding(start = 24.dp),
     ) {
@@ -962,7 +957,7 @@ private fun VerticalPanel(
             .verticalScroll(scrollState)
             .background(
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                RoundedCornerShape(24.dp)
+                MaterialTheme.shapes.extraLarge,
             )
         ,
         horizontalAlignment = Alignment.CenterHorizontally

@@ -9,12 +9,13 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -78,7 +79,7 @@ data class ColorPickerParameters(
         Color.Red, Color.Green, Color.Blue, // RGB
         Color.Cyan, Color.Magenta, Color.Yellow, // CMY[K]
         Color.LightGray, Color.Gray, Color.DarkGray,
-        // UI colors
+        // UI colors (not sure it's a good idea... no contrast)
         DodeclustersColors.secondaryDark, DodeclustersColors.secondaryLight,
         DodeclustersColors.highAccentDark, DodeclustersColors.highAccentLight,
         DodeclustersColors.skyBlue,
@@ -107,6 +108,10 @@ fun ColorPickerDialog2(
         mutableStateOf(HsvColor.from(parameters.currentColor))
     }
     val hex = mutableStateOf(computeHex(color)) // NOTE: need to be MANUALLY updated on every color change
+    val setColor = { newColor: Color ->
+        color.value = HsvColor.from(newColor)
+        hex.value = computeHex(color)
+    }
     Dialog(
         onDismissRequest = {
             onConfirm(color.value.toColor()) // that is how it be, out-of-dialog tap
@@ -117,7 +122,7 @@ fun ColorPickerDialog2(
         Surface(
             modifier = modifier
                 .padding(16.dp),
-            shape = RoundedCornerShape(24.dp),
+            shape = MaterialTheme.shapes.extraLarge,
         ) {
             Column(
                 modifier = Modifier.fillMaxHeight(0.8f),
@@ -127,14 +132,18 @@ fun ColorPickerDialog2(
                 DialogTitle(Res.string.color_picker_title, modifier = Modifier.align(Alignment.CenterHorizontally))
                 Row() {
                     ColorPickerDisplay(
-                        color, Modifier.fillMaxHeight(0.7f),
+                        color,
+                        Modifier
+                            .height(128.dp)
+//                            .fillMaxHeight(0.7f)
+                        ,
                         onColorChanged = { hex.value = computeHex(color) }
                     )
                     Column() {
                         // old vs new (new color circle overlapping old color circle)
-                        // palette (use 'splash' icons)
-                        // custom colors
                         // used colors
+                        // custom colors
+                        // palette (use 'splash' icons)
                     }
                 }
                 Row(
@@ -198,7 +207,7 @@ private fun ColorPickerHorizontalCompact(
         modifier = modifier
 //                    .fillMaxHeight()
             .padding(16.dp),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.extraLarge,
     ) {
         Row(Modifier.fillMaxHeight(0.9f)) {
             ColorPickerDisplay(color, Modifier.fillMaxHeight()) {
@@ -237,7 +246,7 @@ private fun ColorPickerHorizontal(
         modifier = modifier
 //                    .fillMaxHeight()
             .padding(16.dp),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.extraLarge,
     ) {
         Column(
             modifier = Modifier.fillMaxHeight(0.8f),
@@ -276,7 +285,7 @@ private fun ColorPickerVertical(
             .fillMaxWidth()
             .wrapContentHeight()
             .padding(16.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(
             modifier = Modifier.fillMaxSize(0.95f),

@@ -43,7 +43,7 @@ fun SaveOptionsDialog(
         hideSystemBars()
         Surface(
             modifier = Modifier,
-            shape = RoundedCornerShape(16.dp)
+            shape = MaterialTheme.shapes.large,
         ) {
             val buttonModifier = Modifier//.padding(4.dp)
             val iconModifier = Modifier.padding(end = 12.dp)

@@ -94,7 +94,7 @@ fun CircleExtrapolationDialog(
         hideSystemBars()
         Surface(
             modifier = Modifier.padding(16.dp),
-            shape = RoundedCornerShape(24.dp)
+            shape = MaterialTheme.shapes.extraLarge,
         ) {
             if (windowSizeClass.isLandscape) {
                 if (windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Compact) // for mobile phones

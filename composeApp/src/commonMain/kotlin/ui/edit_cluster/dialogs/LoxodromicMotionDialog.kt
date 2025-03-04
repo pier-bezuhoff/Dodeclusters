@@ -110,7 +110,7 @@ fun LoxodromicMotionDialog(
         hideSystemBars()
         Surface(
             modifier = Modifier.padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(24.dp)
+            shape = MaterialTheme.shapes.extraLarge,
         ) {
             val fontSize =
                 if (compactWidth) 14.sp
