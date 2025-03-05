@@ -1496,6 +1496,30 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
+    fun concludeRegionColorPicker(colorPickerParameters: ColorPickerParameters) {
+        openedDialog = null
+        regionColor = colorPickerParameters.currentColor
+        this.colorPickerParameters = colorPickerParameters
+        selectTool(EditClusterTool.Region)
+    }
+
+    fun concludeCircleColorPicker(colorPickerParameters: ColorPickerParameters) {
+        recordCommand(Command.CHANGE_COLOR)
+        for (ix in selection) {
+            objectColors[ix] = colorPickerParameters.currentColor
+        }
+        openedDialog = null
+        this.colorPickerParameters = colorPickerParameters
+    }
+
+    fun concludeBackgroundColorPicker(colorPickerParameters: ColorPickerParameters) {
+        recordCommand(Command.CHANGE_COLOR)
+        backgroundColor = colorPickerParameters.currentColor
+        openedDialog = null
+        this.colorPickerParameters = colorPickerParameters
+        selectTool(EditClusterTool.Region)
+    }
+
     fun setNewRegionColor(color: Color) {
         openedDialog = null
         regionColor = color

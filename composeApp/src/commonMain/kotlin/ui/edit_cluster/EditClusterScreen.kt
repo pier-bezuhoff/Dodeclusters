@@ -234,34 +234,35 @@ fun EditClusterScreen(
     when (viewModel.openedDialog) {
         DialogType.REGION_COLOR_PICKER -> {
             ColorPickerDialog2(
-                parameters = ColorPickerParameters(
+                parameters = viewModel.colorPickerParameters.copy(
                     currentColor = viewModel.regionColor,
                     usedColors = viewModel.getColorsByMostUsed(),
                 ),
                 onCancel = viewModel::dismissRegionColorPicker,
-                onConfirm = { viewModel.setNewRegionColor(it.currentColor) }
+                onConfirm = viewModel::concludeRegionColorPicker,
             )
-//            ColorPickerDialog(
-//                initialColor = viewModel.regionColor,
-//                onDismissRequest = viewModel::dismissRegionColorPicker,
-//                onConfirm = viewModel::setNewRegionColor
-//            )
         }
         DialogType.CIRCLE_COLOR_PICKER -> {
             val initialColor = viewModel.getMostCommonCircleColorInSelection()
                 ?: MaterialTheme.extendedColorScheme.highAccentColor
-            ColorPickerDialog(
-                initialColor = initialColor,
-                onDismissRequest = viewModel::dismissCircleColorPicker,
-                onConfirm = viewModel::setNewCircleColor
+            ColorPickerDialog2(
+                parameters = viewModel.colorPickerParameters.copy(
+                    currentColor = initialColor,
+                    usedColors = viewModel.getColorsByMostUsed(),
+                ),
+                onCancel = viewModel::dismissCircleColorPicker,
+                onConfirm = viewModel::concludeCircleColorPicker,
             )
         }
         DialogType.BACKGROUND_COLOR_PICKER -> {
             val initialColor = viewModel.backgroundColor ?: MaterialTheme.colorScheme.background
-            ColorPickerDialog(
-                initialColor = initialColor,
-                onDismissRequest = viewModel::dismissBackgroundColorPicker,
-                onConfirm = viewModel::setNewBackgroundColor,
+            ColorPickerDialog2(
+                parameters = viewModel.colorPickerParameters.copy(
+                    currentColor = initialColor,
+                    usedColors = viewModel.getColorsByMostUsed(),
+                ),
+                onCancel = viewModel::dismissBackgroundColorPicker,
+                onConfirm = viewModel::concludeBackgroundColorPicker,
             )
         }
         DialogType.CIRCLE_OR_POINT_INTERPOLATION -> {

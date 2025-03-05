@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -142,11 +145,11 @@ fun ColorPickerDialog2(
         .padding(8.dp)
     val swatchBgModifier = Modifier
         .padding(4.dp)
-        .background(
-            lightDarkGradientSmallBrush,
-            CircleShape,
-//            alpha = 0.7f
-        )
+//        .background(
+//            lightDarkGradientSmallBrush,
+//            CircleShape,
+////            alpha = 0.7f
+//        )
     val splashIconModifier = Modifier
         .size(48.dp)
     val onConfirm0 = {
@@ -181,8 +184,7 @@ fun ColorPickerDialog2(
                     ColorPickerDisplay(
                         color,
                         Modifier
-//                            .height(256.dp)
-                            .fillMaxHeight(0.7f)
+                            .fillMaxHeight(0.8f)
                         ,
                         onColorChanged = { hex.value = computeHex(color) }
                     )
@@ -252,7 +254,7 @@ fun ColorPickerDialog2(
                             }
                         }
                         FlowRow(
-                            paletteRowModifier,
+                            paletteRowModifier.verticalScroll(rememberScrollState()),
                             maxItemsInEachRow = maxColorsPerRow,
                         ) {
                             for (clr in parameters.predefinedColors) {
@@ -269,6 +271,10 @@ fun ColorPickerDialog2(
                     }
                 }
                 Row(
+                    Modifier
+                        .weight(1f)
+                        .requiredHeightIn(50.dp, 100.dp)
+                    ,
                     horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
