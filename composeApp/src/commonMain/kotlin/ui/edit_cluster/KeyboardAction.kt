@@ -24,7 +24,8 @@ enum class KeyboardAction {
     PASTE, // Ctrl-V
     ZOOM_IN, ZOOM_OUT,
     UNDO, REDO,
-//    SAVE, OPEN,
+    // SAVE, OPEN,
+    CONFIRM, // Enter
     /** Cancel ongoing action (partial constructions, etc) */
     CANCEL, // Esc
     OPEN,
@@ -58,6 +59,7 @@ fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
         } else {
             when (event.key) {
                 Key.Delete, Key.Backspace -> KeyboardAction.DELETE
+                Key.Enter -> KeyboardAction.CONFIRM
                 Key.Escape -> KeyboardAction.CANCEL
                 Key.O -> KeyboardAction.OPEN
                 Key.M -> KeyboardAction.MOVE

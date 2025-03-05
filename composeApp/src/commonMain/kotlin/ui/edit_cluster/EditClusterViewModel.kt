@@ -108,6 +108,7 @@ import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultExtrapolationParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
+import ui.edit_cluster.dialogs.DialogType
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
@@ -2551,13 +2552,15 @@ class EditClusterViewModel : ViewModel() {
                         selection = emptyList()
                     }
                 }
-                KeyboardAction.OPEN -> {} // idk
                 KeyboardAction.MOVE -> switchToCategory(EditClusterCategory.Drag)
                 KeyboardAction.SELECT -> switchToCategory(EditClusterCategory.Multiselect)
                 KeyboardAction.REGION -> switchToCategory(EditClusterCategory.Region)
                 KeyboardAction.PALETTE -> toolAction(EditClusterTool.Palette)
                 KeyboardAction.TRANSFORM -> switchToCategory(EditClusterCategory.Transform)
                 KeyboardAction.CREATE -> switchToCategory(EditClusterCategory.Create)
+                KeyboardAction.OPEN -> {}
+                KeyboardAction.CONFIRM -> if (submode is SubMode.ExprAdjustment)
+                    confirmAdjustedParameters()
             }
         }
     }

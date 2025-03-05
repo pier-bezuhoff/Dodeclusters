@@ -10,15 +10,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -30,12 +26,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,7 +76,6 @@ import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.hideSystemBars
 import ui.isCompact
-import ui.isLandscape
 import ui.theme.DodeclustersColors
 
 /**
@@ -126,25 +119,20 @@ fun ColorPickerDialog(
         mutableStateOf(HsvColor.from(parameters.currentColor))
     }
     val color = colorState.value.toColor()
-    val hexState = remember {
-        mutableStateOf(computeHex(colorState)) // NOTE: need to be MANUALLY updated on every color change
-    }
     var savedColors by remember {
         mutableStateOf(parameters.savedColors)
     }
     val setColor = { newColor: Color ->
         colorState.value = HsvColor.from(newColor)
-        hexState.value = computeHex(colorState)
     }
     val lightDarkGradientBrush = remember { Brush.verticalGradient(
-        listOf(Color.White, Color.Black),
-        startY = 10f,
-        endY = 80f,
+        0.1f to Color.White,
+        0.9f to Color.Black,
     ) }
-    val lightDarkGradientSmallBrush = remember { Brush.verticalGradient(
-        listOf(Color.White, Color.Black),
-        endY = 40f,
-    ) }
+//    val lightDarkGradientSmallBrush = remember { Brush.verticalGradient(
+//        listOf(Color.White, Color.Black),
+//        endY = 40f,
+//    ) }
     val windowSizeClass = calculateWindowSizeClass()
     val isCompact = windowSizeClass.isCompact
     val fontSize =
@@ -153,20 +141,16 @@ fun ColorPickerDialog(
     val maxColorsPerRow = 10
     val paletteRowModifier = Modifier
         .padding(12.dp)
-        .border(2.dp, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.shapes.medium)
+        .border(2.dp, MaterialTheme.colorScheme.secondary, MaterialTheme.shapes.medium)
 //        .background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.medium)
         .padding(8.dp)
     val swatchBgModifier = Modifier
         .padding(4.dp)
-//        .background(
-//            lightDarkGradientSmallBrush,
-//            CircleShape,
-////            alpha = 0.7f
-//        )
     val splashIconModifier = Modifier
         .size(
-            if (isCompact) 24.dp
-            else 40.dp
+            40.dp
+//            if (isCompact) 24.dp
+//            else 40.dp
         )
     val onConfirm0 = {
         onConfirm(
@@ -174,7 +158,7 @@ fun ColorPickerDialog(
                 currentColor = color,
                 savedColors = savedColors,
             )
-        ) // that is how it be, out-of-dialog tap
+        )
     }
     Dialog(
         onDismissRequest = onConfirm0, // that is how it be, out-of-dialog tap
@@ -184,15 +168,12 @@ fun ColorPickerDialog(
         Surface(
             modifier = modifier
                 .padding(16.dp)
-//                .fillMaxSize()
             ,
             shape = MaterialTheme.shapes.extraLarge,
         ) {
             Column(
                 modifier = Modifier
-//                    .fillMaxSize()
                 ,
-//                verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 DialogTitle(
@@ -209,9 +190,7 @@ fun ColorPickerDialog(
                             Modifier
                                 .fillMaxHeight(0.8f)
                             ,
-                            onColorChanged = {
-                                hexState.value = computeHex(colorState)
-                            }
+                            onColorChanged = {}
                         )
                         Row(
                             Modifier
@@ -220,7 +199,11 @@ fun ColorPickerDialog(
                             horizontalArrangement = Arrangement.SpaceAround,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            HexInput(colorState, hexState, onConfirm = onConfirm0)
+                            HexInput(
+                                color,
+                                setColor = { colorState.value = HsvColor.from(it) },
+                                onConfirm = onConfirm0
+                            )
                             CancelButton(fontSize, onDismissRequest = onCancel)
                             OkButton(fontSize, onConfirm = onConfirm0)
                         }
@@ -236,7 +219,7 @@ fun ColorPickerDialog(
                                 .padding(start = 12.dp)
                                 .background(lightDarkGradientBrush, MaterialTheme.shapes.medium)
                                 .padding(12.dp)
-                                .padding(end = 32.dp)
+                                .padding(end = 40.dp) // adjust for 2nd circle-box offset
                         ) {
                             Box(
                                 Modifier
@@ -247,14 +230,14 @@ fun ColorPickerDialog(
                             ) {}
                             Box(
                                 Modifier
-                                    .offset(x = 32.dp)
+                                    .offset(x = 40.dp)
                                     .size(64.dp)
                                     .clip(CircleShape)
                                     .background(color)
                                     .clickable(enabled = false, onClick = {}) // blocks thru-clicks
                             ) {}
                         }
-                        // add icons/explanation for color-palette rows
+                        // add icons/explanations for color-palette rows
                         FlowRow(
                             paletteRowModifier,
                             maxItemsInEachRow = maxColorsPerRow,
@@ -265,7 +248,6 @@ fun ColorPickerDialog(
                                     "used color",
                                     swatchBgModifier,
                                     splashIconModifier,
-//                                    containerColor = bgColorFor(clr),
                                     tint = clr,
                                 ) { setColor(clr) }
                             }
@@ -281,6 +263,7 @@ fun ColorPickerDialog(
                                 "save/forget color",
                                 enabled = color !in savedColors,
                                 Modifier.align(Alignment.CenterVertically),
+                                tint = MaterialTheme.colorScheme.secondary
                             ) {
                                 if (color in savedColors)
                                     savedColors -= color
@@ -293,15 +276,12 @@ fun ColorPickerDialog(
                                     "saved color",
                                     swatchBgModifier,
                                     splashIconModifier,
-//                                    containerColor = bgColorFor(clr),
                                     tint = clr,
                                 ) { setColor(clr) }
                             }
                         }
                         FlowRow(
-                            paletteRowModifier
-//                                .verticalScroll(rememberScrollState())
-                            ,
+                            paletteRowModifier,
                             maxItemsInEachRow = maxColorsPerRow,
                         ) {
                             for (clr in parameters.predefinedColors) {
@@ -310,7 +290,6 @@ fun ColorPickerDialog(
                                     "predefined color",
                                     swatchBgModifier,
                                     splashIconModifier,
-//                                    containerColor = bgColorFor(clr),
                                     tint = clr,
                                 ) { setColor(clr) }
                             }
@@ -328,170 +307,18 @@ private fun bgColorFor(color: Color): Color =
     else DodeclustersColors.lightestWhite
 
 
-// TODO: preview previous vs current color
-// TODO: add predefined colors (e.g. a-la in inkscape or such)
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
-@Composable
-fun ColorPickerDialog(
-    initialColor: Color,
-    onDismissRequest: () -> Unit,
-    onConfirm: (Color) -> Unit,
-) {
-    val color = rememberSaveable(stateSaver = HsvColor.Saver) {
-        mutableStateOf(HsvColor.from(initialColor))
-    }
-    val hex = mutableStateOf(computeHex(color)) // NOTE: need to be MANUALLY updated on every color change
-    val windowSizeClass = calculateWindowSizeClass()
-    Dialog(
-        onDismissRequest = {
-//        onDismissRequest()
-            onConfirm(color.value.toColor()) // thats how it be
-        },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        hideSystemBars()
-        if (windowSizeClass.isLandscape) {
-            if (windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Compact) // for mobile phones
-                ColorPickerHorizontalCompact(color, hex, onDismissRequest, onConfirm)
-            else
-                ColorPickerHorizontal(color, hex, onDismissRequest, onConfirm)
-        } else { // portrait
-            ColorPickerVertical(color, hex, onDismissRequest, onConfirm)
-        }
-    }
+private fun computeHexTFV(color: Color): TextFieldValue {
+    val hexString = RGB(color.red, color.green, color.blue)
+        .toHex(withNumberSign = false, renderAlpha = RenderCondition.NEVER)
+    return TextFieldValue(hexString, TextRange(hexString.length))
 }
 
-@Composable
-private fun ColorPickerHorizontalCompact(
-    color: MutableState<HsvColor>,
-    hex: MutableState<TextFieldValue>,
-    onDismissRequest: () -> Unit,
-    onConfirm: (Color) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-//                    .fillMaxHeight()
-            .padding(16.dp),
-        shape = MaterialTheme.shapes.extraLarge,
-    ) {
-        Row(Modifier.fillMaxHeight(0.9f)) {
-            ColorPickerDisplay(color, Modifier.fillMaxHeight()) {
-                hex.value = computeHex(color)
-            }
-            Box(Modifier.fillMaxHeight()) {
-                DialogTitle(Res.string.color_picker_title, modifier = Modifier.align(Alignment.TopCenter))
-                HexInput(color, hex, Modifier.align(Alignment.CenterStart)) {
-                    onConfirm(color.value.toColor())
-                }
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                    ,
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CancelButton { onDismissRequest() }
-                    OkButton { onConfirm(color.value.toColor()) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ColorPickerHorizontal(
-    color: MutableState<HsvColor>,
-    hex: MutableState<TextFieldValue>,
-    onDismissRequest: () -> Unit,
-    onConfirm: (Color) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-//                    .fillMaxHeight()
-            .padding(16.dp),
-        shape = MaterialTheme.shapes.extraLarge,
-    ) {
-        Column(
-            modifier = Modifier.fillMaxHeight(0.8f),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.Start,
-        ) {
-            DialogTitle(Res.string.color_picker_title, modifier = Modifier.align(Alignment.CenterHorizontally))
-            ColorPickerDisplay(color, Modifier.fillMaxHeight(0.7f)) {
-                hex.value = computeHex(color)
-            }
-            Row(
-//                        modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HexInput(color, hex) {
-                    onConfirm(color.value.toColor())
-                }
-                CancelButton { onDismissRequest() }
-                OkButton { onConfirm(color.value.toColor()) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ColorPickerVertical(
-    color: MutableState<HsvColor>,
-    hex: MutableState<TextFieldValue>,
-    onDismissRequest: () -> Unit,
-    onConfirm: (Color) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(16.dp),
-        shape = MaterialTheme.shapes.large,
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(0.95f),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            DialogTitle(Res.string.color_picker_title)
-            ColorPickerDisplay(color, Modifier
-                .align(Alignment.Start)
-                .fillMaxHeight(0.7f)
-            ) {
-                hex.value = computeHex(color)
-            }
-            HexInput(color, hex, Modifier.align(Alignment.Start)) {
-                onConfirm(color.value.toColor())
-            }
-            Row(
-                modifier = Modifier
-                    .defaultMinSize(minHeight = 48.dp)
-                    .fillMaxWidth()
-                    .padding(top = 16.dp)
-                ,
-                horizontalArrangement = Arrangement.SpaceAround,
-            ) {
-                CancelButton { onDismissRequest() }
-                OkButton { onConfirm(color.value.toColor()) }
-            }
-        }
-    }
-}
-
-private fun computeHex(clr: State<HsvColor>): TextFieldValue {
-    val c = clr.value.toColor()
-    val s = RGB(c.red, c.green, c.blue).toHex(withNumberSign = false, renderAlpha = RenderCondition.NEVER)
-    return TextFieldValue(s, TextRange(s.length))
-}
-
+/**
+ * @param[hsvColorState] this state is updated internally by [ClassicColorPicker]
+ */
 @Composable
 private fun ColorPickerDisplay(
-    color: MutableState<HsvColor>,
+    hsvColorState: MutableState<HsvColor>,
     modifier: Modifier = Modifier,
     onColorChanged: () -> Unit
 ) {
@@ -500,10 +327,9 @@ private fun ColorPickerDisplay(
             .aspectRatio(1.1f)
             .padding(16.dp)
         ,
-        colorPickerValueState = color,
+        colorPickerValueState = hsvColorState,
         showAlphaBar = false, // MAYBE: add alpha someday
         onColorChanged = { onColorChanged() }
-        // $color is updated internally by the ColorPicker
     )
 }
 
@@ -512,36 +338,40 @@ private fun ColorPickerDisplay(
  */
 @Composable
 private fun HexInput(
-    color: MutableState<HsvColor>,
-    hex: MutableState<TextFieldValue>,
+    color: Color,
     modifier: Modifier = Modifier,
+    setColor: (Color) -> Unit,
     onConfirm: () -> Unit
 ) {
+    var hexTFV by remember(color) {
+        mutableStateOf(computeHexTFV(color))
+    }
     val windowInfo = LocalWindowInfo.current
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
-    var isError by remember(color.value) { mutableStateOf(false) }
+    var isError by remember(color) { mutableStateOf(false) }
     OutlinedTextField(
-        value = hex.value,
+        value = hexTFV,
         onValueChange = { new ->
-            hex.value = new
-            val hexText = new.text.let {
+            hexTFV = new
+            val hexString = new.text.let {
                 if (it.isNotEmpty() && it[0] == '#')
                     it.drop(1) // drop leading '#'
                 else it
             }
-            if (hexText.length == 6) // primitive hex validation
+            if (hexString.length == 6) { // primitive hex validation
                 try {
-                    val rgb = RGB(hexText)
-                    color.value = HsvColor.from(Color(rgb.r, rgb.g, rgb.b))
+                    val rgb = RGB(hexString)
+                    setColor(Color(rgb.r, rgb.g, rgb.b))
                     isError = false
                 } catch (e: IllegalArgumentException) {
                     e.printStackTrace()
-                    println("cannot parse hex string \"$hexText\"")
+                    println("cannot parse hex string \"$hexString\"")
                     isError = true
                 }
-            else
+            } else {
                 isError = true
+            }
         },
 //                    textStyle = TextStyle(fontSize = 16.sp),
         label = { Text(stringResource(Res.string.hex_name)) },

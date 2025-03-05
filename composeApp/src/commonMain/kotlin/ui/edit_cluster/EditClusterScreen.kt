@@ -88,6 +88,8 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -103,6 +105,8 @@ import ui.edit_cluster.dialogs.BlendSettingsDialog
 import ui.edit_cluster.dialogs.CircleExtrapolationDialog
 import ui.edit_cluster.dialogs.CircleOrPointInterpolationDialog
 import ui.edit_cluster.dialogs.ColorPickerDialog
+import ui.edit_cluster.dialogs.DialogAction
+import ui.edit_cluster.dialogs.DialogType
 import ui.edit_cluster.dialogs.LoxodromicMotionDialog
 import ui.edit_cluster.dialogs.SaveOptionsDialog
 import ui.isCompact
@@ -128,6 +132,13 @@ fun EditClusterScreen(
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
     val compact = windowSizeClass.isCompact
     val ddcRepository = DdcRepository
+    val dialogActions = keyboardActions?.mapNotNull {
+        when (it) {
+            KeyboardAction.CANCEL -> DialogAction.DISMISS
+            KeyboardAction.CONFIRM -> DialogAction.CONFIRM
+            else -> null
+        }
+    }
     val viewModel: EditClusterViewModel = viewModel(
         factory = EditClusterViewModel.Factory
     )

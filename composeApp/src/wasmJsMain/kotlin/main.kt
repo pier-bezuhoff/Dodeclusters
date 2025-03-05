@@ -69,27 +69,30 @@ private inline fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction
     if (!event.altKey && !event.shiftKey) {
         event.type
         if (event.ctrlKey || event.metaKey) { // meta key is apparently macos equiv of ctrl
-            when (event.key.lowercase()) {
-                "v" -> KeyboardAction.PASTE
-                "a" -> KeyboardAction.SELECT_ALL
+            // using KeyEvent.code is language-invariant
+            // reference: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
+            when (event.code) {
+                "KeyV" -> KeyboardAction.PASTE
+                "KeyA" -> KeyboardAction.SELECT_ALL
                 // these 2 don't work well with normal scaling
-//                "+", "=" -> KeyboardAction.ZOOM_IN
-//                "-" -> KeyboardAction.ZOOM_OUT
-                "z" -> KeyboardAction.UNDO
-                "y" -> KeyboardAction.REDO
+//                "Equal" -> KeyboardAction.ZOOM_IN
+//                "Minus" -> KeyboardAction.ZOOM_OUT
+                "KeyZ" -> KeyboardAction.UNDO
+                "KeyY" -> KeyboardAction.REDO
                 else -> null
             }
         } else
-            when (event.key.lowercase()) {
-                "delete", "backspace" -> KeyboardAction.DELETE
-                "escape" -> KeyboardAction.CANCEL
-                "o" -> KeyboardAction.OPEN
-                "m" -> KeyboardAction.MOVE
-                "s" -> KeyboardAction.SELECT
-                "r" -> KeyboardAction.REGION
-                "p" -> KeyboardAction.PALETTE
-                "t" -> KeyboardAction.TRANSFORM
-                "c" -> KeyboardAction.CREATE
+            when (event.code) {
+                "Delete", "Backspace" -> KeyboardAction.DELETE
+                "Enter" -> KeyboardAction.CONFIRM
+                "Escape" -> KeyboardAction.CANCEL
+                "KeyO" -> KeyboardAction.OPEN
+                "KeyM" -> KeyboardAction.MOVE
+                "KeyS" -> KeyboardAction.SELECT
+                "KeyR" -> KeyboardAction.REGION
+                "KeyU" -> KeyboardAction.PALETTE
+                "KeyT" -> KeyboardAction.TRANSFORM
+                "KeyC" -> KeyboardAction.CREATE
                 else -> null
             }
     } else null
