@@ -103,6 +103,8 @@ import ui.edit_cluster.dialogs.BlendSettingsDialog
 import ui.edit_cluster.dialogs.CircleExtrapolationDialog
 import ui.edit_cluster.dialogs.CircleOrPointInterpolationDialog
 import ui.edit_cluster.dialogs.ColorPickerDialog
+import ui.edit_cluster.dialogs.ColorPickerDialog2
+import ui.edit_cluster.dialogs.ColorPickerParameters
 import ui.edit_cluster.dialogs.LoxodromicMotionDialog
 import ui.edit_cluster.dialogs.SaveOptionsDialog
 import ui.isCompact
@@ -231,11 +233,19 @@ fun EditClusterScreen(
     }
     when (viewModel.openedDialog) {
         DialogType.REGION_COLOR_PICKER -> {
-            ColorPickerDialog(
-                initialColor = viewModel.regionColor,
-                onDismissRequest = viewModel::dismissRegionColorPicker,
-                onConfirm = viewModel::setNewRegionColor
+            ColorPickerDialog2(
+                parameters = ColorPickerParameters(
+                    currentColor = viewModel.regionColor,
+                    usedColors = viewModel.getColorsByMostUsed(),
+                ),
+                onCancel = viewModel::dismissRegionColorPicker,
+                onConfirm = { viewModel.setNewRegionColor(it.currentColor) }
             )
+//            ColorPickerDialog(
+//                initialColor = viewModel.regionColor,
+//                onDismissRequest = viewModel::dismissRegionColorPicker,
+//                onConfirm = viewModel::setNewRegionColor
+//            )
         }
         DialogType.CIRCLE_COLOR_PICKER -> {
             val initialColor = viewModel.getMostCommonCircleColorInSelection()

@@ -103,6 +103,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import ui.edit_cluster.dialogs.ColorPickerParameters
 import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultExtrapolationParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
@@ -233,6 +234,7 @@ class EditClusterViewModel : ViewModel() {
     var interpolateCircles: Boolean by mutableStateOf(true)
     var circlesAreCoDirected: Boolean by mutableStateOf(true)
 
+    var colorPickerParameters = ColorPickerParameters(Color.Unspecified, emptyList())
     // so.. why aren't these States?
     var defaultInterpolationParameters = DefaultInterpolationParameters()
         private set

@@ -1,19 +1,28 @@
 package ui.edit_cluster.dialogs
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -34,9 +43,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -52,12 +64,16 @@ import androidx.compose.ui.window.DialogProperties
 import com.github.ajalt.colormath.RenderCondition
 import com.github.ajalt.colormath.model.RGB
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.add_circle
 import dodeclusters.composeapp.generated.resources.color_picker_title
 import dodeclusters.composeapp.generated.resources.hex_name
+import dodeclusters.composeapp.generated.resources.paint_splash
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.DialogTitle
 import ui.OkButton
+import ui.SimpleButton
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.hideSystemBars
@@ -75,91 +91,200 @@ data class ColorPickerParameters(
     val usedColors: List<Color>,
     val savedColors: List<Color> = emptyList(),
     val predefinedColors: List<Color> = listOf(
-        Color.White, Color.Black,
-        Color.Red, Color.Green, Color.Blue, // RGB
-        Color.Cyan, Color.Magenta, Color.Yellow, // CMY[K]
-        Color.LightGray, Color.Gray, Color.DarkGray,
-        // UI colors (not sure it's a good idea... no contrast)
-        DodeclustersColors.secondaryDark, DodeclustersColors.secondaryLight,
-        DodeclustersColors.highAccentDark, DodeclustersColors.highAccentLight,
-        DodeclustersColors.skyBlue,
-        // nice pastel palette
-        Color(0xFF_B5C0D0), // very pale blue
-        Color(0xFF_CCD3CA), // very pale green
-        Color(0xFF_F5E8DD), // very pale yellow
-        Color(0xFF_EED3D9), // very pale pink/red
+        Color.White, Color.LightGray, Color.Gray, Color.DarkGray, Color.Black,
+        // RGB & CMY[K] -> R Y G C B M
+        Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta,
         // random fun colors
         Color(0xFF_F08A5D), // orange
         Color(0xFF_6A2C70), // dark purple
         Color(0xFF_08D9D6), // aquamarine
         Color(0xFF_FFDE63), // pinkish red
         Color(0xFF_321E1E), // deep brown
+        // UI colors (not sure it's a good idea... no contrast)
+        DodeclustersColors.primaryDark, DodeclustersColors.primaryLight,
+        DodeclustersColors.secondaryDark, DodeclustersColors.secondaryLight,
+//        DodeclustersColors.tertiaryDark, DodeclustersColors.tertiaryLight,
+        DodeclustersColors.highAccentDark, DodeclustersColors.highAccentLight,
+        DodeclustersColors.skyBlue,
     ),
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ColorPickerDialog2(
     parameters: ColorPickerParameters,
     modifier: Modifier = Modifier,
     onCancel: () -> Unit,
-    onConfirm: (Color) -> Unit,
+    onConfirm: (ColorPickerParameters) -> Unit,
 ) {
     val color = rememberSaveable(stateSaver = HsvColor.Saver) {
         mutableStateOf(HsvColor.from(parameters.currentColor))
     }
     val hex = mutableStateOf(computeHex(color)) // NOTE: need to be MANUALLY updated on every color change
+    var savedColors by remember { mutableStateOf(parameters.savedColors) }
     val setColor = { newColor: Color ->
         color.value = HsvColor.from(newColor)
         hex.value = computeHex(color)
     }
+    val lightDarkGradientBrush = remember { Brush.verticalGradient(
+        listOf(Color.White, Color.Black),
+        endY = 80f,
+    ) }
+    val lightDarkGradientSmallBrush = remember { Brush.verticalGradient(
+        listOf(Color.White, Color.Black),
+        endY = 40f,
+    ) }
+    val maxColorsPerRow = 10
+    val paletteRowModifier = Modifier
+        .padding(12.dp)
+        .border(2.dp, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.shapes.medium)
+//        .background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.medium)
+        .padding(8.dp)
+    val swatchBgModifier = Modifier
+        .padding(4.dp)
+        .background(
+            lightDarkGradientSmallBrush,
+            CircleShape,
+//            alpha = 0.7f
+        )
+    val splashIconModifier = Modifier
+        .size(48.dp)
+    val onConfirm0 = {
+        onConfirm(
+            parameters.copy(
+                currentColor = color.value.toColor(),
+                savedColors = savedColors,
+            )
+        ) // that is how it be, out-of-dialog tap
+    }
     Dialog(
-        onDismissRequest = {
-            onConfirm(color.value.toColor()) // that is how it be, out-of-dialog tap
-        },
+        onDismissRequest = onConfirm0, // that is how it be, out-of-dialog tap
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         hideSystemBars()
         Surface(
             modifier = modifier
-                .padding(16.dp),
+                .padding(16.dp)
+//                .fillMaxSize()
+            ,
             shape = MaterialTheme.shapes.extraLarge,
         ) {
             Column(
-                modifier = Modifier.fillMaxHeight(0.8f),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.Start,
+                modifier = Modifier
+//                    .fillMaxSize()
+                ,
+//                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 DialogTitle(Res.string.color_picker_title, modifier = Modifier.align(Alignment.CenterHorizontally))
                 Row() {
                     ColorPickerDisplay(
                         color,
                         Modifier
-                            .height(128.dp)
-//                            .fillMaxHeight(0.7f)
+//                            .height(256.dp)
+                            .fillMaxHeight(0.7f)
                         ,
                         onColorChanged = { hex.value = computeHex(color) }
                     )
-                    Column() {
-                        // old vs new (new color circle overlapping old color circle)
-                        // used colors
-                        // custom colors
-                        // palette (use 'splash' icons)
+                    Column(
+                        Modifier.padding(vertical = 12.dp)
+                    ) {
+                        Box(
+                            Modifier
+                                .background(lightDarkGradientBrush, MaterialTheme.shapes.medium)
+                                .padding(12.dp)
+                                .padding(end = 32.dp)
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .background(parameters.currentColor)
+                                    .clickable { setColor(parameters.currentColor) }
+                            ) {}
+                            Box(
+                                Modifier
+                                    .offset(x = 32.dp)
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .background(color.value.toColor())
+                                    .clickable(enabled = false, onClick = {}) // blocks thru-clicks
+                            ) {}
+                        }
+                        // add icons/explanation for color-palette rows
+                        FlowRow(
+                            paletteRowModifier,
+                            maxItemsInEachRow = maxColorsPerRow,
+                        ) {
+                            for (clr in parameters.usedColors) {
+                                SimpleButton(
+                                    painterResource(Res.drawable.paint_splash),
+                                    "used color",
+                                    swatchBgModifier,
+                                    splashIconModifier,
+//                                    containerColor = bgColorFor(clr),
+                                    tint = clr,
+                                ) { setColor(clr) }
+                            }
+                        }
+                        FlowRow(
+                            paletteRowModifier,
+                            verticalArrangement = Arrangement.Center,
+                            maxItemsInEachRow = maxColorsPerRow,
+                        ) {
+                            SimpleButton(
+                                painterResource(Res.drawable.add_circle),
+                                "save color",
+                            ) {
+                                val c = color.value.toColor()
+                                if (c !in savedColors)
+                                    savedColors += c
+                            }
+                            for (clr in savedColors.reversed()) {
+                                SimpleButton(
+                                    painterResource(Res.drawable.paint_splash),
+                                    "saved color",
+                                    swatchBgModifier,
+                                    splashIconModifier,
+//                                    containerColor = bgColorFor(clr),
+                                    tint = clr,
+                                ) { setColor(clr) }
+                            }
+                        }
+                        FlowRow(
+                            paletteRowModifier,
+                            maxItemsInEachRow = maxColorsPerRow,
+                        ) {
+                            for (clr in parameters.predefinedColors) {
+                                SimpleButton(
+                                    painterResource(Res.drawable.paint_splash),
+                                    "predefined color",
+                                    swatchBgModifier,
+                                    splashIconModifier,
+//                                    containerColor = bgColorFor(clr),
+                                    tint = clr,
+                                ) { setColor(clr) }
+                            }
+                        }
                     }
                 }
                 Row(
                     horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    HexInput(color, hex) {
-                        onConfirm(color.value.toColor())
-                    }
+                    HexInput(color, hex, onConfirm = onConfirm0)
                     CancelButton(onDismissRequest = onCancel)
-                    OkButton { onConfirm(color.value.toColor()) }
+                    OkButton(onConfirm = onConfirm0)
                 }
             }
         }
     }
 }
+
+private fun bgColorFor(color: Color): Color =
+    if (color.luminance() > 0.2)
+        DodeclustersColors.darkestGray
+    else DodeclustersColors.lightestWhite
 
 
 // TODO: preview previous vs current color
@@ -341,6 +466,9 @@ private fun ColorPickerDisplay(
     )
 }
 
+/**
+ * @param[onConfirm] shortcut confirm exit lambda
+ */
 @Composable
 private fun HexInput(
     color: MutableState<HsvColor>,
@@ -356,14 +484,19 @@ private fun HexInput(
         value = hex.value,
         onValueChange = { new ->
             hex.value = new
-            if (new.text.length == 6) // primitive hex validation
+            val hexText = new.text.let {
+                if (it.isNotEmpty() && it[0] == '#')
+                    it.drop(1) // drop leading '#'
+                else it
+            }
+            if (hexText.length == 6) // primitive hex validation
                 try {
-                    val rgb = RGB(new.text)
+                    val rgb = RGB(hexText)
                     color.value = HsvColor.from(Color(rgb.r, rgb.g, rgb.b))
                     isError = false
                 } catch (e: IllegalArgumentException) {
                     e.printStackTrace()
-                    println("cannot parse hex string \"${new.text}\"")
+                    println("cannot parse hex string \"$hexText\"")
                     isError = true
                 }
             else
