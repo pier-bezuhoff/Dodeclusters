@@ -3,7 +3,6 @@ package ui.edit_cluster.dialogs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,14 +10,12 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -157,7 +154,6 @@ fun ColorPickerDialog(
         .padding(4.dp)
         .border(2.dp, MaterialTheme.colorScheme.secondary, MaterialTheme.shapes.medium)
 //        .background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.medium)
-//        .padding(8.dp)
     val swatchBgModifier = Modifier
         .padding(4.dp)
         .size(
@@ -188,13 +184,13 @@ fun ColorPickerDialog(
             modifier = Modifier.padding(16.dp),
             shape = MaterialTheme.shapes.extraLarge,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                DialogTitle(
-                    Res.string.color_picker_title,
-                    smallerFont = isCompact,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-                if (isLandscape) {
+            if (isLandscape) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    DialogTitle(
+                        Res.string.color_picker_title,
+                        smallerFont = isCompact,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    )
                     Row() {
                         Column(horizontalAlignment = Alignment.End) {
                             ColorPickerDisplay(
@@ -225,7 +221,10 @@ fun ColorPickerDialog(
                             Box(
                                 Modifier
                                     .padding(start = 4.dp, bottom = 8.dp) // outer offset
-                                    .background(lightDarkVerticalGradientBrush, MaterialTheme.shapes.medium)
+                                    .background(
+                                        lightDarkVerticalGradientBrush,
+                                        MaterialTheme.shapes.medium
+                                    )
                                     .padding(12.dp)
                                     .padding(end = 40.dp) // adjust for 2nd circle-box offset
                             ) {
@@ -299,17 +298,26 @@ fun ColorPickerDialog(
                             }
                         }
                     }
-                } else { // portrait
+                }
+            } else { // portrait
+                Column(
+                    Modifier
+                        .verticalScroll(rememberScrollState())
+                    ,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    DialogTitle(
+                        Res.string.color_picker_title,
+                        smallerFont = isCompact,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    )
                     ColorPickerDisplay(
                         colorState,
                         Modifier.fillMaxWidth(
                             if (isMedium) 0.6f else 0.8f
                         ),
                     )
-                    Row(
-                        Modifier
-                            .horizontalScroll(rememberScrollState())
-                    ) {
+                    Row() {
                         Box(
                             Modifier
                                 .padding(top = 4.dp, start = 4.dp, end = 8.dp)
@@ -388,11 +396,7 @@ fun ColorPickerDialog(
                             }
                         }
                     }
-                    Row( // FIX: still gets overlapped on portrait tablet
-                        Modifier
-                            .weight(1f)
-                            .requiredHeightIn(50.dp, 100.dp) // desperation constraint
-                        ,
+                    Row(
                         horizontalArrangement = Arrangement.SpaceAround,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -458,7 +462,7 @@ private fun HexInput(
     color: Color,
     modifier: Modifier = Modifier,
     setColor: (Color) -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
 ) {
     var hexTFV by remember(color) {
         mutableStateOf(computeHexTFV(color))
