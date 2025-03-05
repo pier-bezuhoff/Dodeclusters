@@ -103,8 +103,6 @@ import ui.edit_cluster.dialogs.BlendSettingsDialog
 import ui.edit_cluster.dialogs.CircleExtrapolationDialog
 import ui.edit_cluster.dialogs.CircleOrPointInterpolationDialog
 import ui.edit_cluster.dialogs.ColorPickerDialog
-import ui.edit_cluster.dialogs.ColorPickerDialog2
-import ui.edit_cluster.dialogs.ColorPickerParameters
 import ui.edit_cluster.dialogs.LoxodromicMotionDialog
 import ui.edit_cluster.dialogs.SaveOptionsDialog
 import ui.isCompact
@@ -233,7 +231,7 @@ fun EditClusterScreen(
     }
     when (viewModel.openedDialog) {
         DialogType.REGION_COLOR_PICKER -> {
-            ColorPickerDialog2(
+            ColorPickerDialog(
                 parameters = viewModel.colorPickerParameters.copy(
                     currentColor = viewModel.regionColor,
                     usedColors = viewModel.getColorsByMostUsed(),
@@ -245,7 +243,7 @@ fun EditClusterScreen(
         DialogType.CIRCLE_COLOR_PICKER -> {
             val initialColor = viewModel.getMostCommonCircleColorInSelection()
                 ?: MaterialTheme.extendedColorScheme.highAccentColor
-            ColorPickerDialog2(
+            ColorPickerDialog(
                 parameters = viewModel.colorPickerParameters.copy(
                     currentColor = initialColor,
                     usedColors = viewModel.getColorsByMostUsed(),
@@ -256,7 +254,7 @@ fun EditClusterScreen(
         }
         DialogType.BACKGROUND_COLOR_PICKER -> {
             val initialColor = viewModel.backgroundColor ?: MaterialTheme.colorScheme.background
-            ColorPickerDialog2(
+            ColorPickerDialog(
                 parameters = viewModel.colorPickerParameters.copy(
                     currentColor = initialColor,
                     usedColors = viewModel.getColorsByMostUsed(),

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
@@ -30,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -62,6 +60,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.github.ajalt.colormath.RenderCondition
@@ -69,6 +68,7 @@ import com.github.ajalt.colormath.model.RGB
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.add_circle
 import dodeclusters.composeapp.generated.resources.color_picker_title
+import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.hex_name
 import dodeclusters.composeapp.generated.resources.paint_splash
 import org.jetbrains.compose.resources.painterResource
@@ -77,9 +77,11 @@ import ui.CancelButton
 import ui.DialogTitle
 import ui.OkButton
 import ui.SimpleButton
+import ui.TwoIconButton
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.hideSystemBars
+import ui.isCompact
 import ui.isLandscape
 import ui.theme.DodeclustersColors
 
@@ -112,31 +114,42 @@ data class ColorPickerParameters(
     ),
 )
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-fun ColorPickerDialog2(
+fun ColorPickerDialog(
     parameters: ColorPickerParameters,
     modifier: Modifier = Modifier,
     onCancel: () -> Unit,
     onConfirm: (ColorPickerParameters) -> Unit,
 ) {
-    val color = rememberSaveable(stateSaver = HsvColor.Saver) {
+    val colorState = rememberSaveable(stateSaver = HsvColor.Saver) {
         mutableStateOf(HsvColor.from(parameters.currentColor))
     }
-    val hex = mutableStateOf(computeHex(color)) // NOTE: need to be MANUALLY updated on every color change
-    var savedColors by remember { mutableStateOf(parameters.savedColors) }
+    val color = colorState.value.toColor()
+    val hexState = remember {
+        mutableStateOf(computeHex(colorState)) // NOTE: need to be MANUALLY updated on every color change
+    }
+    var savedColors by remember {
+        mutableStateOf(parameters.savedColors)
+    }
     val setColor = { newColor: Color ->
-        color.value = HsvColor.from(newColor)
-        hex.value = computeHex(color)
+        colorState.value = HsvColor.from(newColor)
+        hexState.value = computeHex(colorState)
     }
     val lightDarkGradientBrush = remember { Brush.verticalGradient(
         listOf(Color.White, Color.Black),
+        startY = 10f,
         endY = 80f,
     ) }
     val lightDarkGradientSmallBrush = remember { Brush.verticalGradient(
         listOf(Color.White, Color.Black),
         endY = 40f,
     ) }
+    val windowSizeClass = calculateWindowSizeClass()
+    val isCompact = windowSizeClass.isCompact
+    val fontSize =
+        if (isCompact) 14.sp
+        else 24.sp
     val maxColorsPerRow = 10
     val paletteRowModifier = Modifier
         .padding(12.dp)
@@ -151,11 +164,14 @@ fun ColorPickerDialog2(
 ////            alpha = 0.7f
 //        )
     val splashIconModifier = Modifier
-        .size(48.dp)
+        .size(
+            if (isCompact) 24.dp
+            else 40.dp
+        )
     val onConfirm0 = {
         onConfirm(
             parameters.copy(
-                currentColor = color.value.toColor(),
+                currentColor = color,
                 savedColors = savedColors,
             )
         ) // that is how it be, out-of-dialog tap
@@ -179,20 +195,45 @@ fun ColorPickerDialog2(
 //                verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                DialogTitle(Res.string.color_picker_title, modifier = Modifier.align(Alignment.CenterHorizontally))
+                DialogTitle(
+                    Res.string.color_picker_title,
+                    smallerFont = isCompact,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
                 Row() {
-                    ColorPickerDisplay(
-                        color,
-                        Modifier
-                            .fillMaxHeight(0.8f)
-                        ,
-                        onColorChanged = { hex.value = computeHex(color) }
-                    )
                     Column(
-                        Modifier.padding(vertical = 12.dp)
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        ColorPickerDisplay(
+                            colorState,
+                            Modifier
+                                .fillMaxHeight(0.8f)
+                            ,
+                            onColorChanged = {
+                                hexState.value = computeHex(colorState)
+                            }
+                        )
+                        Row(
+                            Modifier
+                                .requiredHeightIn(50.dp, 100.dp) // desperate constraint
+                            ,
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            HexInput(colorState, hexState, onConfirm = onConfirm0)
+                            CancelButton(fontSize, onDismissRequest = onCancel)
+                            OkButton(fontSize, onConfirm = onConfirm0)
+                        }
+                    }
+                    Column(
+                        Modifier
+                            .verticalScroll(rememberScrollState())
+                            .padding(vertical = 12.dp)
+                        ,
                     ) {
                         Box(
                             Modifier
+                                .padding(start = 12.dp)
                                 .background(lightDarkGradientBrush, MaterialTheme.shapes.medium)
                                 .padding(12.dp)
                                 .padding(end = 32.dp)
@@ -209,7 +250,7 @@ fun ColorPickerDialog2(
                                     .offset(x = 32.dp)
                                     .size(64.dp)
                                     .clip(CircleShape)
-                                    .background(color.value.toColor())
+                                    .background(color)
                                     .clickable(enabled = false, onClick = {}) // blocks thru-clicks
                             ) {}
                         }
@@ -234,13 +275,17 @@ fun ColorPickerDialog2(
                             verticalArrangement = Arrangement.Center,
                             maxItemsInEachRow = maxColorsPerRow,
                         ) {
-                            SimpleButton(
+                            TwoIconButton(
                                 painterResource(Res.drawable.add_circle),
-                                "save color",
+                                painterResource(Res.drawable.delete_forever),
+                                "save/forget color",
+                                enabled = color !in savedColors,
+                                Modifier.align(Alignment.CenterVertically),
                             ) {
-                                val c = color.value.toColor()
-                                if (c !in savedColors)
-                                    savedColors += c
+                                if (color in savedColors)
+                                    savedColors -= color
+                                else
+                                    savedColors += color
                             }
                             for (clr in savedColors.reversed()) {
                                 SimpleButton(
@@ -254,7 +299,9 @@ fun ColorPickerDialog2(
                             }
                         }
                         FlowRow(
-                            paletteRowModifier.verticalScroll(rememberScrollState()),
+                            paletteRowModifier
+//                                .verticalScroll(rememberScrollState())
+                            ,
                             maxItemsInEachRow = maxColorsPerRow,
                         ) {
                             for (clr in parameters.predefinedColors) {
@@ -269,18 +316,6 @@ fun ColorPickerDialog2(
                             }
                         }
                     }
-                }
-                Row(
-                    Modifier
-                        .weight(1f)
-                        .requiredHeightIn(50.dp, 100.dp)
-                    ,
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    HexInput(color, hex, onConfirm = onConfirm0)
-                    CancelButton(onDismissRequest = onCancel)
-                    OkButton(onConfirm = onConfirm0)
                 }
             }
         }
@@ -529,7 +564,8 @@ private fun HexInput(
                     onConfirm()
                     true
                 } else false
-            }.padding(horizontal = 16.dp, vertical = 8.dp)
+            }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
         ,
 //        colors = OutlinedTextFieldDefaults.colors()
 //            .copy(unfocusedContainerColor = color.value.toColor())

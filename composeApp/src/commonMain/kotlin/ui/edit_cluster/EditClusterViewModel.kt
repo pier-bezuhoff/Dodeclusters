@@ -117,6 +117,7 @@ import kotlin.time.Duration.Companion.seconds
 // MAYBE: use UiState functional pattern + StateFlow's instead of this mess
 // this class is obviously too big
 // TODO: decouple navigation & tools/categories
+// MAYBE: timed autosave (cron-like), e.g. every 10min
 @Suppress("MemberVisibilityCanBePrivate")
 class EditClusterViewModel : ViewModel() {
     /** All existing [GCircle]s; `null`s correspond either to unrealized outputs of
