@@ -43,8 +43,9 @@ fun Modifier.handleKeyboardActions(
     return Modifier.onPreviewKeyEvent(callback)
 }
 
+// corresponds to keyboardEventTranslator from js/main.kt
 fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
-    if (event.type == KeyEventType.KeyUp && !event.isAltPressed && !event.isMetaPressed) {
+    if (event.type == KeyEventType.KeyDown && !event.isAltPressed && !event.isMetaPressed) {
         // Q: is Meta the Win key or macos's ctrl?
         if (event.isCtrlPressed) {
             when (event.key) {

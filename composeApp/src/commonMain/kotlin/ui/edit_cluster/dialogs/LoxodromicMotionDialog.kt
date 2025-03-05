@@ -3,7 +3,6 @@ package ui.edit_cluster.dialogs
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -15,6 +14,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +43,7 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_n_steps_pla
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_steps_prompt
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
 import domain.expressions.LoxodromicMotionParameters
+import kotlinx.coroutines.flow.Flow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
@@ -90,9 +91,10 @@ data class DefaultLoxodromicMotionParameters(
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun LoxodromicMotionDialog(
-    onDismissRequest: () -> Unit,
     onConfirm: (LoxodromicMotionParameters) -> Unit,
+    onCancel: () -> Unit,
     defaults: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
+    dialogActions: Flow<DialogAction>? = null,
 ) {
     // MAYBE: add turn fraction conversion field
     var angle by remember(defaults) { mutableStateOf(abs(defaults.anglePerStep)) }
@@ -104,7 +106,7 @@ fun LoxodromicMotionDialog(
     val compactWidth = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
     Dialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = !compactHeight)
     ) {
         hideSystemBars()
@@ -159,7 +161,7 @@ fun LoxodromicMotionDialog(
                     steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
                 )
                 CancelOkRow(
-                    onDismissRequest = onDismissRequest,
+                    onDismissRequest = onCancel,
                     onConfirm = {
                         onConfirm(
                             LoxodromicMotionParameters.fromDifferential(
@@ -170,6 +172,20 @@ fun LoxodromicMotionDialog(
                         )
                     },
                     fontSize = fontSize
+                )
+            }
+        }
+    }
+    LaunchedEffect(dialogActions) {
+        dialogActions?.collect { dialogAction ->
+            when (dialogAction) {
+                DialogAction.DISMISS -> onCancel()
+                DialogAction.CONFIRM -> onConfirm(
+                    LoxodromicMotionParameters.fromDifferential(
+                        if (angleDirection) angle else -angle,
+                        dilation,
+                        nSteps
+                    )
                 )
             }
         }

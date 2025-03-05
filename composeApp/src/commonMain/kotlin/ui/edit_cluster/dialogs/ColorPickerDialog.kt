@@ -65,6 +65,7 @@ import dodeclusters.composeapp.generated.resources.color_picker_title
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.hex_name
 import dodeclusters.composeapp.generated.resources.paint_splash
+import kotlinx.coroutines.flow.Flow
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
@@ -111,17 +112,16 @@ data class ColorPickerParameters(
 @Composable
 fun ColorPickerDialog(
     parameters: ColorPickerParameters,
-    modifier: Modifier = Modifier,
     onCancel: () -> Unit,
     onConfirm: (ColorPickerParameters) -> Unit,
+    dialogActions: Flow<DialogAction>? = null,
 ) {
     val colorState = rememberSaveable(stateSaver = HsvColor.Saver) {
         mutableStateOf(HsvColor.from(parameters.currentColor))
     }
     val color = colorState.value.toColor()
-    var savedColors by remember {
-        mutableStateOf(parameters.savedColors)
-    }
+    val savedColorsState = remember { mutableStateOf(parameters.savedColors) }
+    var savedColors by savedColorsState
     val setColor = { newColor: Color ->
         colorState.value = HsvColor.from(newColor)
     }
@@ -155,8 +155,8 @@ fun ColorPickerDialog(
     val onConfirm0 = {
         onConfirm(
             parameters.copy(
-                currentColor = color,
-                savedColors = savedColors,
+                currentColor = colorState.value.toColor(),
+                savedColors = savedColorsState.value,
             )
         )
     }
@@ -166,7 +166,7 @@ fun ColorPickerDialog(
     ) {
         hideSystemBars()
         Surface(
-            modifier = modifier
+            modifier = Modifier
                 .padding(16.dp)
             ,
             shape = MaterialTheme.shapes.extraLarge,
@@ -296,6 +296,14 @@ fun ColorPickerDialog(
                         }
                     }
                 }
+            }
+        }
+    }
+    LaunchedEffect(dialogActions, colorState) {
+        dialogActions?.collect { dialogAction ->
+            when (dialogAction) {
+                DialogAction.DISMISS -> onCancel()
+                DialogAction.CONFIRM -> onConfirm0()
             }
         }
     }

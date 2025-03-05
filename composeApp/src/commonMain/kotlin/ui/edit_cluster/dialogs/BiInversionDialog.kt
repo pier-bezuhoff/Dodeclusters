@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -13,6 +12,7 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +37,7 @@ import dodeclusters.composeapp.generated.resources.degrees_suffix
 import domain.degrees
 import domain.expressions.BiInversionParameters
 import domain.radians
+import kotlinx.coroutines.flow.Flow
 import ui.CancelOkRow
 import ui.DialogTitle
 import ui.FloatTextField
@@ -79,9 +80,10 @@ data class DefaultBiInversionParameters(
 fun BiInversionDialog(
     engine1: GCircle,
     engine2: GCircle,
-    onDismissRequest: () -> Unit,
     onConfirm: (BiInversionParameters) -> Unit,
+    onCancel: () -> Unit,
     defaults: DefaultBiInversionParameters = DefaultBiInversionParameters(),
+    dialogActions: Flow<DialogAction>? = null,
 ) {
     val engine1GC = GeneralizedCircle.fromGCircle(engine1)
     val engine2GC0 = GeneralizedCircle.fromGCircle(engine2)
@@ -95,7 +97,7 @@ fun BiInversionDialog(
     val dAngle: Float = (speed * inversiveAngle).degrees
     val isCompact = calculateWindowSizeClass().isCompact
     Dialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = true)
     ) {
         hideSystemBars()
@@ -161,10 +163,18 @@ fun BiInversionDialog(
                     steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
                 )
                 CancelOkRow(
-                    onDismissRequest = onDismissRequest,
+                    onDismissRequest = onCancel,
                     onConfirm = { onConfirm(BiInversionParameters(speed, nSteps, reverseSecondEngine)) },
                     fontSize = fontSize
                 )
+            }
+        }
+    }
+    LaunchedEffect(dialogActions) {
+        dialogActions?.collect { dialogAction ->
+            when (dialogAction) {
+                DialogAction.DISMISS -> onCancel()
+                DialogAction.CONFIRM -> onConfirm(BiInversionParameters(speed, nSteps, reverseSecondEngine))
             }
         }
     }

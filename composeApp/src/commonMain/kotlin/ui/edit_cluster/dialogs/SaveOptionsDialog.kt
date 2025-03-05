@@ -6,12 +6,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -20,24 +20,25 @@ import androidx.compose.ui.window.DialogProperties
 import domain.io.SaveBitmapAsPngButton
 import domain.io.SaveData
 import domain.io.SaveFileButton
+import kotlinx.coroutines.flow.Flow
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.edit_cluster.EditClusterViewModel
 import ui.hideSystemBars
 import ui.tools.EditClusterTool
 
-// BUG: on Android/Chrome second-order dialogs (name-choosing) lose text color (???)
 @Composable
 fun SaveOptionsDialog(
     viewModel: EditClusterViewModel,
     saveAsYaml: (name: String) -> String,
     exportAsSvg: (name: String) -> String,
-    onDismissRequest: () -> Unit,
+    onCancel: () -> Unit,
     onConfirm: () -> Unit,
     onSavedStatus: (success: Boolean?, filename: String?) -> Unit,
+    dialogActions: Flow<DialogAction>? = null,
 ) {
     Dialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = true)
     ) {
         hideSystemBars()
@@ -126,6 +127,14 @@ fun SaveOptionsDialog(
                     onSavedStatus(success, filename)
                     onConfirm()
                 }
+            }
+        }
+    }
+    LaunchedEffect(dialogActions) {
+        dialogActions?.collect { dialogAction ->
+            when (dialogAction) {
+                DialogAction.DISMISS -> onCancel()
+                DialogAction.CONFIRM -> onConfirm()
             }
         }
     }

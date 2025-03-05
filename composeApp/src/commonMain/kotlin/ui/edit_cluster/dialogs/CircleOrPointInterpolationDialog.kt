@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -20,6 +19,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +45,7 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_in_betwe
 import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.circle_interpolation_title
 import domain.expressions.InterpolationParameters
+import kotlinx.coroutines.flow.Flow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
@@ -76,9 +77,10 @@ data class DefaultInterpolationParameters(
 fun CircleOrPointInterpolationDialog(
     startCircle: GCircle,
     endCircle: GCircle,
-    onDismissRequest: () -> Unit,
     onConfirm: (InterpolationParameters) -> Unit,
+    onCancel: () -> Unit,
     defaults: DefaultInterpolationParameters = DefaultInterpolationParameters(),
+    dialogActions: Flow<DialogAction>? = null,
 ) {
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
@@ -106,7 +108,7 @@ fun CircleOrPointInterpolationDialog(
         )
     ) }
     Dialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = !compactHeight),
     ) {
         hideSystemBars()
@@ -121,7 +123,7 @@ fun CircleOrPointInterpolationDialog(
                     sliderState, interpolateInBetween,
                     hideInBetweenToggle = hideInBetweenToggle,
                     setInterpolateInBetween = { interpolateInBetween = it },
-                    onDismissRequest = onDismissRequest,
+                    onDismissRequest = onCancel,
                     onConfirm = onConfirm0
                 )
             } else {
@@ -146,11 +148,19 @@ fun CircleOrPointInterpolationDialog(
                         )
                     }
                     CancelOkRow(
-                        onDismissRequest = onDismissRequest,
+                        onDismissRequest = onCancel,
                         onConfirm = onConfirm0,
                         fontSize = okFontSize
                     )
                 }
+            }
+        }
+    }
+    LaunchedEffect(dialogActions) {
+        dialogActions?.collect { dialogAction ->
+            when (dialogAction) {
+                DialogAction.DISMISS -> onCancel()
+                DialogAction.CONFIRM -> onConfirm0()
             }
         }
     }

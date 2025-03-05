@@ -36,7 +36,7 @@ fun main() {
     }
     val coroutineScope = CoroutineScope(Dispatchers.Default)
     val keyboardActions: MutableSharedFlow<KeyboardAction> = MutableSharedFlow(replay = 1)
-    document.addEventListener("keyup") { event: Event ->
+    document.addEventListener("keydown") { event: Event ->
         (event as? KeyboardEvent)?.let { keyboardEvent ->
             keyboardEventTranslator(keyboardEvent)?.let { keyboardAction ->
                 event.stopPropagation()

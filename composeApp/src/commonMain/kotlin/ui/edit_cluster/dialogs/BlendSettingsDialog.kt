@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -20,10 +19,10 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +40,7 @@ import dodeclusters.composeapp.generated.resources.blend_settings_opacity_prompt
 import dodeclusters.composeapp.generated.resources.blend_settings_title
 import domain.BlendModeType
 import domain.formatDecimals
+import kotlinx.coroutines.flow.Flow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
@@ -54,8 +54,9 @@ import ui.hideSystemBars
 fun BlendSettingsDialog(
     currentOpacity: Float,
     currentBlendModeType: BlendModeType,
-    onDismissRequest: () -> Unit,
+    onCancel: () -> Unit,
     onConfirm: (newOpacity: Float, newBlendModeType: BlendModeType) -> Unit,
+    dialogActions: Flow<DialogAction>? = null,
 ) {
     val sliderState = remember { SliderState(
         value = currentOpacity,
@@ -63,13 +64,12 @@ fun BlendSettingsDialog(
     ) }
     var blendModeType by remember { mutableStateOf(currentBlendModeType) }
     val (widthClass, heightClass) = calculateWindowSizeClass()
-    val compactHeight = heightClass == WindowHeightSizeClass.Compact
     val okFontSize =
         if (widthClass == WindowWidthSizeClass.Compact)
             18.sp
         else 24.sp
     Dialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = true),
     ) {
         hideSystemBars()
@@ -121,10 +121,18 @@ fun BlendSettingsDialog(
                     }
                 }
                 CancelOkRow(
-                    onDismissRequest = onDismissRequest,
+                    onDismissRequest = onCancel,
                     onConfirm = { onConfirm(sliderState.value, blendModeType) },
                     fontSize = okFontSize
                 )
+            }
+        }
+    }
+    LaunchedEffect(dialogActions) {
+        dialogActions?.collect { dialogAction ->
+            when (dialogAction) {
+                DialogAction.DISMISS -> onCancel()
+                DialogAction.CONFIRM -> onConfirm(sliderState.value, blendModeType)
             }
         }
     }

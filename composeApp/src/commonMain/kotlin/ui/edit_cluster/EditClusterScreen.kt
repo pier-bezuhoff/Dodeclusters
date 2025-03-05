@@ -88,7 +88,6 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
@@ -143,7 +142,6 @@ fun EditClusterScreen(
         factory = EditClusterViewModel.Factory
     )
     val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
-//    val snackbarMessage2string = preloadSnackbarMessages()
     viewModel.setEpsilon(LocalDensity.current)
     Scaffold(
         // ig this may only be useful on android with kbd lol
@@ -211,9 +209,6 @@ fun EditClusterScreen(
                         compact = compact,
                         undoIsEnabled = viewModel.undoIsEnabled,
                         redoIsEnabled = viewModel.redoIsEnabled,
-//                        saveAsYaml = viewModel::saveAsYaml,
-//                        exportAsSvg = viewModel::exportAsSvg,
-//                        exportAsPng = viewModel::saveScreenshot,
                         showSaveOptionsDialog = { viewModel.toolAction(EditClusterTool.SaveCluster) },
                         loadFromYaml = { content ->
                             content?.let {
@@ -249,6 +244,7 @@ fun EditClusterScreen(
                 ),
                 onCancel = viewModel::dismissRegionColorPicker,
                 onConfirm = viewModel::concludeRegionColorPicker,
+                dialogActions = dialogActions,
             )
         }
         DialogType.CIRCLE_COLOR_PICKER -> {
@@ -261,6 +257,7 @@ fun EditClusterScreen(
                 ),
                 onCancel = viewModel::dismissCircleColorPicker,
                 onConfirm = viewModel::concludeCircleColorPicker,
+                dialogActions = dialogActions,
             )
         }
         DialogType.BACKGROUND_COLOR_PICKER -> {
@@ -272,6 +269,7 @@ fun EditClusterScreen(
                 ),
                 onCancel = viewModel::dismissBackgroundColorPicker,
                 onConfirm = viewModel::concludeBackgroundColorPicker,
+                dialogActions = dialogActions,
             )
         }
         DialogType.CIRCLE_OR_POINT_INTERPOLATION -> {
@@ -283,9 +281,10 @@ fun EditClusterScreen(
                 if (startObject != null && endObject != null) {
                     CircleOrPointInterpolationDialog(
                         startObject, endObject,
-                        onDismissRequest = viewModel::closeDialog,
+                        onCancel = viewModel::closeDialog,
                         onConfirm = viewModel::completeCircleOrPointInterpolation,
-                        defaults = viewModel.defaultInterpolationParameters
+                        defaults = viewModel.defaultInterpolationParameters,
+                        dialogActions = dialogActions,
                     )
                 }
             }
@@ -300,7 +299,7 @@ fun EditClusterScreen(
                     startCircle, endCircle,
                     onDismissRequest = viewModel::resetCircleExtrapolation,
                     onConfirm = viewModel::completeCircleExtrapolation,
-                    defaults = viewModel.defaultExtrapolationParameters
+                    defaults = viewModel.defaultExtrapolationParameters,
                 )
             }
         }
@@ -313,9 +312,10 @@ fun EditClusterScreen(
                 if (engine1 != null && engine2 != null) {
                     BiInversionDialog(
                         engine1, engine2,
-                        onDismissRequest = viewModel::closeDialog,
+                        onCancel = viewModel::closeDialog,
                         onConfirm = viewModel::completeBiInversion,
                         defaults = viewModel.defaultBiInversionParameters,
+                        dialogActions = dialogActions,
                     )
                 }
             }
@@ -331,9 +331,10 @@ fun EditClusterScreen(
                     } }
                 if (divergencePoint != null && convergencePoint != null) {
                     LoxodromicMotionDialog(
-                        onDismissRequest = viewModel::closeDialog,
+                        onCancel = viewModel::closeDialog,
                         onConfirm = viewModel::completeLoxodromicMotion,
-                        defaults = viewModel.defaultLoxodromicMotionParameters
+                        defaults = viewModel.defaultLoxodromicMotionParameters,
+                        dialogActions = dialogActions,
                     )
                 }
             }
@@ -343,7 +344,7 @@ fun EditClusterScreen(
                 viewModel = viewModel,
                 saveAsYaml = viewModel::saveAsYaml,
                 exportAsSvg = viewModel::exportAsSvg,
-                onDismissRequest = viewModel::closeDialog,
+                onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::closeDialog,
                 onSavedStatus = { success, filename ->
                     // if success is null it means saving was canceled by the user
@@ -354,15 +355,17 @@ fun EditClusterScreen(
                             " $filename"
                         )
                     }
-                }
+                },
+                dialogActions = dialogActions,
             )
         }
         DialogType.BLEND_SETTINGS -> {
             BlendSettingsDialog(
                 currentOpacity = viewModel.regionsOpacity,
                 currentBlendModeType = viewModel.regionsBlendModeType,
-                onDismissRequest = viewModel::closeDialog,
-                onConfirm = viewModel::setBlendSettings
+                onCancel = viewModel::closeDialog,
+                onConfirm = viewModel::setBlendSettings,
+                dialogActions = dialogActions,
             )
         }
         null -> {}
