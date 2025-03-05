@@ -3,6 +3,7 @@ package ui.edit_cluster.dialogs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,11 +11,15 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -26,6 +31,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,6 +84,8 @@ import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.hideSystemBars
 import ui.isCompact
+import ui.isExpanded
+import ui.isLandscape
 import ui.theme.DodeclustersColors
 
 /**
@@ -125,37 +134,47 @@ fun ColorPickerDialog(
     val setColor = { newColor: Color ->
         colorState.value = HsvColor.from(newColor)
     }
-    val lightDarkGradientBrush = remember { Brush.verticalGradient(
+    val lightDarkVerticalGradientBrush = remember { Brush.verticalGradient(
+        0.1f to Color.White,
+        0.9f to Color.Black,
+    ) } // to grasp how the color looks in different contexts
+    val lightDarkHorizontalGradientBrush = remember { Brush.horizontalGradient(
         0.1f to Color.White,
         0.9f to Color.Black,
     ) }
-//    val lightDarkGradientSmallBrush = remember { Brush.verticalGradient(
-//        listOf(Color.White, Color.Black),
-//        endY = 40f,
-//    ) }
     val windowSizeClass = calculateWindowSizeClass()
+    println(windowSizeClass)
     val isCompact = windowSizeClass.isCompact
+    val isMedium = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium && windowSizeClass.heightSizeClass == WindowHeightSizeClass.Medium
+    val isExpanded = windowSizeClass.isExpanded
+    val isLandscape = windowSizeClass.isLandscape
+    val maxColorsPerRowLandscape = 11
+    val maxColorsPerRowPortrait = if (isMedium) 8 else 6
     val fontSize =
         if (isCompact) 14.sp
         else 24.sp
-    val maxColorsPerRow = 10
-    val paletteRowModifier = Modifier
-        .padding(12.dp)
+    val paletteModifier = Modifier
+        .padding(4.dp)
         .border(2.dp, MaterialTheme.colorScheme.secondary, MaterialTheme.shapes.medium)
 //        .background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.medium)
-        .padding(8.dp)
+//        .padding(8.dp)
     val swatchBgModifier = Modifier
         .padding(4.dp)
+        .size(
+            if (isCompact) 30.dp
+            else if (isExpanded) 60.dp
+            else 45.dp
+        )
     val splashIconModifier = Modifier
         .size(
-            40.dp
-//            if (isCompact) 24.dp
-//            else 40.dp
+            if (isCompact) 24.dp
+            else if (isExpanded) 40.dp
+            else 32.dp
         )
     val onConfirm0 = {
         onConfirm(
             parameters.copy(
-                currentColor = colorState.value.toColor(),
+                currentColor = colorState.value.toColor(), // important that we capture states
                 savedColors = savedColorsState.value,
             )
         )
@@ -166,60 +185,137 @@ fun ColorPickerDialog(
     ) {
         hideSystemBars()
         Surface(
-            modifier = Modifier
-                .padding(16.dp)
-            ,
+            modifier = Modifier.padding(16.dp),
             shape = MaterialTheme.shapes.extraLarge,
         ) {
-            Column(
-                modifier = Modifier
-                ,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 DialogTitle(
                     Res.string.color_picker_title,
                     smallerFont = isCompact,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
-                Row() {
-                    Column(
-                        horizontalAlignment = Alignment.End
-                    ) {
-                        ColorPickerDisplay(
-                            colorState,
-                            Modifier
-                                .fillMaxHeight(0.8f)
-                            ,
-                            onColorChanged = {}
-                        )
-                        Row(
-                            Modifier
-                                .requiredHeightIn(50.dp, 100.dp) // desperate constraint
-                            ,
-                            horizontalArrangement = Arrangement.SpaceAround,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            HexInput(
-                                color,
-                                setColor = { colorState.value = HsvColor.from(it) },
-                                onConfirm = onConfirm0
+                if (isLandscape) {
+                    Row() {
+                        Column(horizontalAlignment = Alignment.End) {
+                            ColorPickerDisplay(
+                                colorState,
+                                Modifier.fillMaxHeight(0.8f),
                             )
-                            CancelButton(fontSize, onDismissRequest = onCancel)
-                            OkButton(fontSize, onConfirm = onConfirm0)
+                            Row(
+                                Modifier
+                                    .requiredHeightIn(50.dp, 100.dp) // desperation constraint
+                                ,
+                                horizontalArrangement = Arrangement.SpaceAround,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                HexInput(
+                                    color,
+                                    setColor = { colorState.value = HsvColor.from(it) },
+                                    onConfirm = onConfirm0
+                                )
+                                CancelButton(fontSize, onDismissRequest = onCancel)
+                                OkButton(fontSize, onConfirm = onConfirm0)
+                            }
+                        }
+                        Column(
+                            Modifier
+                                .verticalScroll(rememberScrollState())
+                                .padding(top = 12.dp, end = 8.dp),
+                        ) {
+                            Box(
+                                Modifier
+                                    .padding(start = 4.dp, bottom = 8.dp) // outer offset
+                                    .background(lightDarkVerticalGradientBrush, MaterialTheme.shapes.medium)
+                                    .padding(12.dp)
+                                    .padding(end = 40.dp) // adjust for 2nd circle-box offset
+                            ) {
+                                Box(
+                                    Modifier
+                                        .size(64.dp)
+                                        .clip(CircleShape)
+                                        .background(parameters.currentColor)
+                                        .clickable { setColor(parameters.currentColor) }
+                                ) {}
+                                Box(
+                                    Modifier
+                                        .offset(x = 40.dp)
+                                        .size(64.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .clickable(enabled = false, onClick = {}) // blocks thru-clicks
+                                ) {}
+                            }
+                            // add icons/explanations for color-palette rows
+                            FlowRow(
+                                paletteModifier,
+                                verticalArrangement = Arrangement.Center,
+                                maxItemsInEachRow = maxColorsPerRowLandscape,
+                            ) {
+                                for (clr in parameters.usedColors) {
+                                    SimpleButton(
+                                        painterResource(Res.drawable.paint_splash),
+                                        "used color",
+                                        swatchBgModifier,
+                                        splashIconModifier,
+                                        tint = clr,
+                                    ) { setColor(clr) }
+                                }
+                                TwoIconButton(
+                                    painterResource(Res.drawable.add_circle),
+                                    painterResource(Res.drawable.delete_forever),
+                                    "save/forget color",
+                                    enabled = color !in savedColors,
+                                    Modifier.align(Alignment.CenterVertically),
+                                    tint = MaterialTheme.colorScheme.secondary
+                                ) {
+                                    if (color in savedColors)
+                                        savedColors -= color
+                                    else
+                                        savedColors += color
+                                }
+                                for (clr in savedColors.reversed()) { // newest-to-oldest
+                                    SimpleButton(
+                                        painterResource(Res.drawable.paint_splash),
+                                        "saved color",
+                                        swatchBgModifier,
+                                        splashIconModifier,
+                                        tint = clr,
+                                    ) { setColor(clr) }
+                                }
+                            }
+                            FlowRow(
+                                paletteModifier,
+                                maxItemsInEachRow = maxColorsPerRowLandscape,
+                            ) {
+                                for (clr in parameters.predefinedColors) {
+                                    SimpleButton(
+                                        painterResource(Res.drawable.paint_splash),
+                                        "predefined color",
+                                        swatchBgModifier,
+                                        splashIconModifier,
+                                        tint = clr,
+                                    ) { setColor(clr) }
+                                }
+                            }
                         }
                     }
-                    Column(
+                } else { // portrait
+                    ColorPickerDisplay(
+                        colorState,
+                        Modifier.fillMaxWidth(
+                            if (isMedium) 0.6f else 0.8f
+                        ),
+                    )
+                    Row(
                         Modifier
-                            .verticalScroll(rememberScrollState())
-                            .padding(vertical = 12.dp)
-                        ,
+                            .horizontalScroll(rememberScrollState())
                     ) {
                         Box(
                             Modifier
-                                .padding(start = 12.dp)
-                                .background(lightDarkGradientBrush, MaterialTheme.shapes.medium)
+                                .padding(top = 4.dp, start = 4.dp, end = 8.dp)
+                                .background(lightDarkHorizontalGradientBrush, MaterialTheme.shapes.medium)
                                 .padding(12.dp)
-                                .padding(end = 40.dp) // adjust for 2nd circle-box offset
+                                .padding(bottom = 40.dp) // adjust for 2nd circle-box offset
                         ) {
                             Box(
                                 Modifier
@@ -230,70 +326,83 @@ fun ColorPickerDialog(
                             ) {}
                             Box(
                                 Modifier
-                                    .offset(x = 40.dp)
+                                    .offset(y = 40.dp)
                                     .size(64.dp)
                                     .clip(CircleShape)
                                     .background(color)
                                     .clickable(enabled = false, onClick = {}) // blocks thru-clicks
                             ) {}
                         }
-                        // add icons/explanations for color-palette rows
-                        FlowRow(
-                            paletteRowModifier,
-                            maxItemsInEachRow = maxColorsPerRow,
-                        ) {
-                            for (clr in parameters.usedColors) {
-                                SimpleButton(
-                                    painterResource(Res.drawable.paint_splash),
-                                    "used color",
-                                    swatchBgModifier,
-                                    splashIconModifier,
-                                    tint = clr,
-                                ) { setColor(clr) }
-                            }
-                        }
-                        FlowRow(
-                            paletteRowModifier,
-                            verticalArrangement = Arrangement.Center,
-                            maxItemsInEachRow = maxColorsPerRow,
-                        ) {
-                            TwoIconButton(
-                                painterResource(Res.drawable.add_circle),
-                                painterResource(Res.drawable.delete_forever),
-                                "save/forget color",
-                                enabled = color !in savedColors,
-                                Modifier.align(Alignment.CenterVertically),
-                                tint = MaterialTheme.colorScheme.secondary
+                        Column() {
+                            // add icons/explanations for color-palette rows
+                            FlowRow(
+                                paletteModifier,
+                                verticalArrangement = Arrangement.Center,
+                                maxItemsInEachRow = maxColorsPerRowPortrait,
                             ) {
-                                if (color in savedColors)
-                                    savedColors -= color
-                                else
-                                    savedColors += color
+                                for (clr in parameters.usedColors) {
+                                    SimpleButton(
+                                        painterResource(Res.drawable.paint_splash),
+                                        "used color",
+                                        swatchBgModifier,
+                                        splashIconModifier,
+                                        tint = clr,
+                                    ) { setColor(clr) }
+                                }
+                                TwoIconButton(
+                                    painterResource(Res.drawable.add_circle),
+                                    painterResource(Res.drawable.delete_forever),
+                                    "save/forget color",
+                                    enabled = color !in savedColors,
+                                    Modifier.align(Alignment.CenterVertically),
+                                    tint = MaterialTheme.colorScheme.secondary
+                                ) {
+                                    if (color in savedColors)
+                                        savedColors -= color
+                                    else
+                                        savedColors += color
+                                }
+                                for (clr in savedColors.reversed()) { // newest-to-oldest
+                                    SimpleButton(
+                                        painterResource(Res.drawable.paint_splash),
+                                        "saved color",
+                                        swatchBgModifier,
+                                        splashIconModifier,
+                                        tint = clr,
+                                    ) { setColor(clr) }
+                                }
                             }
-                            for (clr in savedColors.reversed()) {
-                                SimpleButton(
-                                    painterResource(Res.drawable.paint_splash),
-                                    "saved color",
-                                    swatchBgModifier,
-                                    splashIconModifier,
-                                    tint = clr,
-                                ) { setColor(clr) }
+                            FlowRow(
+                                paletteModifier,
+                                maxItemsInEachRow = maxColorsPerRowPortrait,
+                            ) {
+                                for (clr in parameters.predefinedColors) {
+                                    SimpleButton(
+                                        painterResource(Res.drawable.paint_splash),
+                                        "predefined color",
+                                        swatchBgModifier,
+                                        splashIconModifier,
+                                        tint = clr,
+                                    ) { setColor(clr) }
+                                }
                             }
                         }
-                        FlowRow(
-                            paletteRowModifier,
-                            maxItemsInEachRow = maxColorsPerRow,
-                        ) {
-                            for (clr in parameters.predefinedColors) {
-                                SimpleButton(
-                                    painterResource(Res.drawable.paint_splash),
-                                    "predefined color",
-                                    swatchBgModifier,
-                                    splashIconModifier,
-                                    tint = clr,
-                                ) { setColor(clr) }
-                            }
-                        }
+                    }
+                    Row( // FIX: still gets overlapped on portrait tablet
+                        Modifier
+                            .weight(1f)
+                            .requiredHeightIn(50.dp, 100.dp) // desperation constraint
+                        ,
+                        horizontalArrangement = Arrangement.SpaceAround,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        HexInput(
+                            color,
+                            setColor = { colorState.value = HsvColor.from(it) },
+                            onConfirm = onConfirm0,
+                        )
+                        CancelButton(fontSize, noText = isCompact, onDismissRequest = onCancel)
+                        OkButton(fontSize, onConfirm = onConfirm0)
                     }
                 }
             }
@@ -328,7 +437,7 @@ private fun computeHexTFV(color: Color): TextFieldValue {
 private fun ColorPickerDisplay(
     hsvColorState: MutableState<HsvColor>,
     modifier: Modifier = Modifier,
-    onColorChanged: () -> Unit
+    onColorChanged: () -> Unit = {},
 ) {
     ClassicColorPicker(
         modifier
@@ -404,6 +513,8 @@ private fun HexInput(
                 } else false
             }
             .padding(horizontal = 16.dp, vertical = 8.dp)
+            // overrides min width of 280.dp defined for TextField
+            .widthIn(50.dp, 100.dp)
         ,
 //        colors = OutlinedTextFieldDefaults.colors()
 //            .copy(unfocusedContainerColor = color.value.toColor())

@@ -3294,6 +3294,7 @@ class EditClusterViewModel : ViewModel() {
     private fun loadSettings(settings: Settings) {
         regionsOpacity = settings.regionsOpacity
         regionsBlendModeType = settings.regionsBlendModeType
+        colorPickerParameters = colorPickerParameters.copy(savedColors = settings.savedColors)
     }
 
     private fun restoreFromState(state: State) {
@@ -3325,7 +3326,8 @@ class EditClusterViewModel : ViewModel() {
     private fun getCurrentSettings(): Settings =
         Settings(
             regionsOpacity = regionsOpacity,
-            regionsBlendModeType = regionsBlendModeType
+            regionsBlendModeType = regionsBlendModeType,
+            savedColors = colorPickerParameters.savedColors,
         )
 
     // NOTE: i never seen this proc on Android or Wasm tbh

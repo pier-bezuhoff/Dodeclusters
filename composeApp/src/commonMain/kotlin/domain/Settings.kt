@@ -17,4 +17,5 @@ data class Settings(
     val regionsOpacity: Float = 1f,
     val regionsBlendModeType: BlendModeType = BlendModeType.SRC_OVER,
     // default tools for categories
+    val savedColors: List<ColorAsCss> = emptyList(),
 )

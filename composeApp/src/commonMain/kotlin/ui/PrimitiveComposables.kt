@@ -30,9 +30,6 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -311,7 +308,7 @@ fun OkButton(
 ) {
     Button(
         onClick = { onConfirm() },
-        modifier = modifier.padding(8.dp),
+        modifier = modifier.padding(4.dp),
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
         shape = CircleShape,
     ) {
@@ -324,18 +321,21 @@ fun OkButton(
 @Composable
 fun CancelButton(
     fontSize: TextUnit = 24.sp,
+    noText: Boolean = false,
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
 ) {
     OutlinedButton(
         onClick = { onDismissRequest() },
-        modifier = modifier.padding(8.dp),
+        modifier = modifier.padding(4.dp),
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
         shape = CircleShape,
     ) {
         Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel_name))
-        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-        Text(stringResource(Res.string.cancel_name), fontSize = fontSize)
+        if (!noText) {
+            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+            Text(stringResource(Res.string.cancel_name), fontSize = fontSize)
+        }
     }
 }
 
@@ -540,20 +540,3 @@ fun VerticalSlider(
         colors = colors,
     )
 }
-
-val WindowSizeClass.isLandscape: Boolean get() =
-    widthSizeClass == WindowWidthSizeClass.Expanded &&
-    heightSizeClass <= WindowHeightSizeClass.Expanded ||
-    widthSizeClass == WindowWidthSizeClass.Medium &&
-    heightSizeClass < WindowHeightSizeClass.Medium
-// (Medium, Medium) is the size in portrait tablet browser
-
-val WindowSizeClass.isCompact: Boolean get() =
-    widthSizeClass == WindowWidthSizeClass.Compact ||
-    heightSizeClass == WindowHeightSizeClass.Compact
-
-operator fun WindowSizeClass.component1(): WindowWidthSizeClass =
-    widthSizeClass
-
-operator fun WindowSizeClass.component2(): WindowHeightSizeClass =
-    heightSizeClass
