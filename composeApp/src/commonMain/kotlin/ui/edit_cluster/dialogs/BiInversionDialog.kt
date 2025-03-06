@@ -38,6 +38,7 @@ import domain.degrees
 import domain.expressions.BiInversionParameters
 import domain.radians
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import ui.CancelOkRow
 import ui.DialogTitle
 import ui.FloatTextField
@@ -83,7 +84,7 @@ fun BiInversionDialog(
     onConfirm: (BiInversionParameters) -> Unit,
     onCancel: () -> Unit,
     defaults: DefaultBiInversionParameters = DefaultBiInversionParameters(),
-    dialogActions: Flow<DialogAction>? = null,
+    dialogActions: SharedFlow<DialogAction>? = null,
 ) {
     val engine1GC = GeneralizedCircle.fromGCircle(engine1)
     val engine2GC0 = GeneralizedCircle.fromGCircle(engine2)

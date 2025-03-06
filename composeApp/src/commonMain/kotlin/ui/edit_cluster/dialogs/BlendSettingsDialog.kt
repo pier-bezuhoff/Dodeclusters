@@ -40,7 +40,7 @@ import dodeclusters.composeapp.generated.resources.blend_settings_opacity_prompt
 import dodeclusters.composeapp.generated.resources.blend_settings_title
 import domain.BlendModeType
 import domain.formatDecimals
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
@@ -56,7 +56,7 @@ fun BlendSettingsDialog(
     currentBlendModeType: BlendModeType,
     onCancel: () -> Unit,
     onConfirm: (newOpacity: Float, newBlendModeType: BlendModeType) -> Unit,
-    dialogActions: Flow<DialogAction>? = null,
+    dialogActions: SharedFlow<DialogAction>? = null,
 ) {
     val sliderState = remember { SliderState(
         value = currentOpacity,

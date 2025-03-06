@@ -70,6 +70,7 @@ import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.hex_name
 import dodeclusters.composeapp.generated.resources.paint_splash
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
@@ -120,7 +121,7 @@ fun ColorPickerDialog(
     parameters: ColorPickerParameters,
     onCancel: () -> Unit,
     onConfirm: (ColorPickerParameters) -> Unit,
-    dialogActions: Flow<DialogAction>? = null,
+    dialogActions: SharedFlow<DialogAction>? = null,
 ) {
     val colorState = rememberSaveable(stateSaver = HsvColor.Saver) {
         mutableStateOf(HsvColor.from(parameters.currentColor))
@@ -140,7 +141,6 @@ fun ColorPickerDialog(
         0.9f to Color.Black,
     ) }
     val windowSizeClass = calculateWindowSizeClass()
-    println(windowSizeClass)
     val isCompact = windowSizeClass.isCompact
     val isMedium = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium && windowSizeClass.heightSizeClass == WindowHeightSizeClass.Medium
     val isExpanded = windowSizeClass.isExpanded
@@ -176,8 +176,8 @@ fun ColorPickerDialog(
         )
     }
     Dialog(
-        onDismissRequest = onConfirm0, // that is how it be, out-of-dialog tap
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        onDismissRequest = onCancel,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         hideSystemBars()
         Surface(

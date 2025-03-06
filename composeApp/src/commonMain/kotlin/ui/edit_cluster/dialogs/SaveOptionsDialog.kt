@@ -21,6 +21,7 @@ import domain.io.SaveBitmapAsPngButton
 import domain.io.SaveData
 import domain.io.SaveFileButton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.edit_cluster.EditClusterViewModel
@@ -35,7 +36,7 @@ fun SaveOptionsDialog(
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
     onSavedStatus: (success: Boolean?, filename: String?) -> Unit,
-    dialogActions: Flow<DialogAction>? = null,
+    dialogActions: SharedFlow<DialogAction>? = null,
 ) {
     Dialog(
         onDismissRequest = onCancel,

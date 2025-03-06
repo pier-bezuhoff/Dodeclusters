@@ -50,6 +50,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -86,9 +87,11 @@ import domain.PartialArgList
 import domain.io.DdcRepository
 import domain.io.LookupData
 import domain.io.OpenFileButton
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.shareIn
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -123,21 +126,22 @@ import kotlin.math.min
 fun EditClusterScreen(
     sampleName: String? = null,
     ddcContent: String? = null,
-    keyboardActions: Flow<KeyboardAction>? = null,
-    lifecycleEvents: Flow<LifecycleEvent>? = null,
+    keyboardActions: SharedFlow<KeyboardAction>? = null,
+    lifecycleEvents: SharedFlow<LifecycleEvent>? = null,
 ) {
     val windowSizeClass = calculateWindowSizeClass()
     val isLandscape = windowSizeClass.isLandscape
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
     val compact = windowSizeClass.isCompact
     val ddcRepository = DdcRepository
+    val coroutineScope = rememberCoroutineScope()
     val dialogActions = keyboardActions?.mapNotNull {
         when (it) {
             KeyboardAction.CANCEL -> DialogAction.DISMISS
             KeyboardAction.CONFIRM -> DialogAction.CONFIRM
             else -> null
         }
-    }
+    }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
     val viewModel: EditClusterViewModel = viewModel(
         factory = EditClusterViewModel.Factory
     )

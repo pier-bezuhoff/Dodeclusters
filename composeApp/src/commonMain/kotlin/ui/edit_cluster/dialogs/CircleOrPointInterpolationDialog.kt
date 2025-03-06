@@ -46,6 +46,7 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.circle_interpolation_title
 import domain.expressions.InterpolationParameters
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
@@ -80,7 +81,7 @@ fun CircleOrPointInterpolationDialog(
     onConfirm: (InterpolationParameters) -> Unit,
     onCancel: () -> Unit,
     defaults: DefaultInterpolationParameters = DefaultInterpolationParameters(),
-    dialogActions: Flow<DialogAction>? = null,
+    dialogActions: SharedFlow<DialogAction>? = null,
 ) {
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)

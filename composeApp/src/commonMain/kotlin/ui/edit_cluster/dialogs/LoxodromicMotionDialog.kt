@@ -44,6 +44,7 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_steps_promp
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
 import domain.expressions.LoxodromicMotionParameters
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
@@ -94,7 +95,7 @@ fun LoxodromicMotionDialog(
     onConfirm: (LoxodromicMotionParameters) -> Unit,
     onCancel: () -> Unit,
     defaults: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
-    dialogActions: Flow<DialogAction>? = null,
+    dialogActions: SharedFlow<DialogAction>? = null,
 ) {
     // MAYBE: add turn fraction conversion field
     var angle by remember(defaults) { mutableStateOf(abs(defaults.anglePerStep)) }
