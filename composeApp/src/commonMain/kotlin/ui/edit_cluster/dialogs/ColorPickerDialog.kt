@@ -100,18 +100,24 @@ data class ColorPickerParameters(
         Color.White, Color.LightGray, Color.Gray, Color.DarkGray, Color.Black,
         // RGB & CMY[K] -> R Y G C B M
         Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta,
-        // random fun colors
-        Color(0xFF_F08A5D), // orange
-        Color(0xFF_6A2C70), // dark purple
-        Color(0xFF_08D9D6), // aquamarine
-        Color(0xFF_FFDE63), // pinkish red
+        // fun colors
+        Color(0xFF_FFC0CB), // peachy pink
+        Color(0xFF_FF7373), // pinkish red
+        Color(0xFF_800000), // venous blood red
         Color(0xFF_321E1E), // deep brown
+        Color(0xFF_F08A5D), // orange
+        Color(0xFF_FFA500), // orange orange
+        Color(0xFF_FFD700), // gold banana yellow
+        Color(0xFF_065535), // very dark, forest-y green
+        Color(0xFF_008080), // teal
+        Color(0xFF_08D9D6), // aquamarine
+        Color(0xFF_6A2C70), // dark purple
         // UI colors (not sure it's a good idea... no contrast)
+        DodeclustersColors.skyBlue,
         DodeclustersColors.primaryDark, DodeclustersColors.primaryLight,
         DodeclustersColors.secondaryDark, DodeclustersColors.secondaryLight,
 //        DodeclustersColors.tertiaryDark, DodeclustersColors.tertiaryLight,
         DodeclustersColors.highAccentDark, DodeclustersColors.highAccentLight,
-        DodeclustersColors.skyBlue,
     ),
 )
 
@@ -254,7 +260,7 @@ fun ColorPickerDialog(
                                     SimpleButton(
                                         painterResource(Res.drawable.paint_splash),
                                         "used color",
-                                        swatchBgModifier,
+                                        swatchBgModifier.align(Alignment.CenterVertically),
                                         splashIconModifier,
                                         tint = clr,
                                     ) { setColor(clr) }
@@ -276,7 +282,7 @@ fun ColorPickerDialog(
                                     SimpleButton(
                                         painterResource(Res.drawable.paint_splash),
                                         "saved color",
-                                        swatchBgModifier,
+                                        swatchBgModifier.align(Alignment.CenterVertically),
                                         splashIconModifier,
                                         tint = clr,
                                     ) { setColor(clr) }
@@ -352,7 +358,7 @@ fun ColorPickerDialog(
                                     SimpleButton(
                                         painterResource(Res.drawable.paint_splash),
                                         "used color",
-                                        swatchBgModifier,
+                                        swatchBgModifier.align(Alignment.CenterVertically),
                                         splashIconModifier,
                                         tint = clr,
                                     ) { setColor(clr) }
@@ -374,7 +380,7 @@ fun ColorPickerDialog(
                                     SimpleButton(
                                         painterResource(Res.drawable.paint_splash),
                                         "saved color",
-                                        swatchBgModifier,
+                                        swatchBgModifier.align(Alignment.CenterVertically),
                                         splashIconModifier,
                                         tint = clr,
                                     ) { setColor(clr) }
