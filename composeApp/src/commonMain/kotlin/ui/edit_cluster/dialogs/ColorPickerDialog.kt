@@ -69,7 +69,6 @@ import dodeclusters.composeapp.generated.resources.color_picker_title
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.hex_name
 import dodeclusters.composeapp.generated.resources.paint_splash
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -107,7 +106,7 @@ data class ColorPickerParameters(
         Color(0xFF_321E1E), // deep brown
         Color(0xFF_F08A5D), // orange
         Color(0xFF_FFA500), // orange orange
-        Color(0xFF_FFD700), // gold banana yellow
+        Color(0xFF_FFD700), // golden banana yellow
         Color(0xFF_065535), // very dark, forest-y green
         Color(0xFF_008080), // teal
         Color(0xFF_08D9D6), // aquamarine
