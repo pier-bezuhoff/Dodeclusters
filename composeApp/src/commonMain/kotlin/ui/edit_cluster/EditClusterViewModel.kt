@@ -1325,7 +1325,12 @@ class EditClusterViewModel : ViewModel() {
         regions.flatMap { region ->
             region.borderColor?.let { listOf(region.fillColor, it) }
                 ?: listOf(region.fillColor)
-        }.plus(chessboardColor)
+        }.let {
+            if (chessboardPattern == ChessboardPattern.NONE)
+                it
+            else
+                it + chessboardColor
+        }
         .sortedByFrequency()
 
     /**
@@ -1546,21 +1551,7 @@ class EditClusterViewModel : ViewModel() {
             .maxByOrNull { (_, k) -> k }
             ?.key
 
-    fun setNewCircleColor(color: Color) {
-        recordCommand(Command.CHANGE_COLOR)
-        for (ix in selection) {
-            objectColors[ix] = color
-        }
-        openedDialog = null
-    }
-
     fun dismissCircleColorPicker() {
-        openedDialog = null
-    }
-
-    fun setNewBackgroundColor(color: Color) {
-        recordCommand(Command.CHANGE_COLOR)
-        backgroundColor = color
         openedDialog = null
     }
 
