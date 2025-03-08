@@ -108,14 +108,15 @@ data class ColorPickerParameters(
         Color(0xFF_FFA500), // orange orange
         Color(0xFF_FFD700), // golden banana yellow
         Color(0xFF_065535), // very dark, forest-y green
+        Color(0xFF_08D9D6), // aquamarine (visually similar to cyan)
         Color(0xFF_008080), // teal
-        Color(0xFF_08D9D6), // aquamarine
         Color(0xFF_6A2C70), // dark purple
         // UI colors (not sure it's a good idea... no contrast)
         DodeclustersColors.skyBlue,
         DodeclustersColors.primaryDark, DodeclustersColors.primaryLight,
         DodeclustersColors.secondaryDark, DodeclustersColors.secondaryLight,
-//        DodeclustersColors.tertiaryDark, DodeclustersColors.tertiaryLight,
+        // DodeclustersColors.tertiaryDark, DodeclustersColors.tertiaryLight,
+        // tertiary and highAccent are the same, BUT highAccent is _actually_ used
         DodeclustersColors.highAccentDark, DodeclustersColors.highAccentLight,
     ),
 )
@@ -128,11 +129,11 @@ fun ColorPickerDialog(
     onConfirm: (ColorPickerParameters) -> Unit,
     dialogActions: SharedFlow<DialogAction>? = null,
 ) {
-    val colorState = rememberSaveable(stateSaver = HsvColor.Saver) {
+    val colorState = rememberSaveable(parameters, stateSaver = HsvColor.Saver) {
         mutableStateOf(HsvColor.from(parameters.currentColor))
     }
     val color = colorState.value.toColor()
-    val savedColorsState = remember { mutableStateOf(parameters.savedColors) }
+    val savedColorsState = remember(parameters) { mutableStateOf(parameters.savedColors) }
     var savedColors by savedColorsState
     val setColor = { newColor: Color ->
         colorState.value = HsvColor.from(newColor)
@@ -172,10 +173,14 @@ fun ColorPickerDialog(
             else if (isExpanded) 40.dp
             else 32.dp
         )
-    val onConfirm0 = {
+    val onConfirm0 = { // MAYBE: wrap into remember(parameters) { { ... } }
         onConfirm(
             parameters.copy(
-                currentColor = colorState.value.toColor(), // important that we capture states
+                // important that we capture states in the closure
+                // otherwise changing values would invalidate this lambda
+                // and the lambda captured by LaunchedEffect would be outdated one
+                // that uses outdated values
+                currentColor = colorState.value.toColor(),
                 savedColors = savedColorsState.value,
             )
         )
@@ -249,7 +254,7 @@ fun ColorPickerDialog(
                                         .clickable(enabled = false, onClick = {}) // blocks thru-clicks
                                 ) {}
                             }
-                            // add icons/explanations for color-palette rows
+                            // MAYBE: add icons/explanations for color-palette rows
                             FlowRow(
                                 paletteModifier,
                                 verticalArrangement = Arrangement.Center,
@@ -417,7 +422,7 @@ fun ColorPickerDialog(
             }
         }
     }
-    LaunchedEffect(dialogActions, colorState) {
+    LaunchedEffect(dialogActions, parameters) {
         dialogActions?.collect { dialogAction ->
             when (dialogAction) {
                 DialogAction.DISMISS -> onCancel()
@@ -427,6 +432,7 @@ fun ColorPickerDialog(
     }
 }
 
+// looks awkward
 private fun bgColorFor(color: Color): Color =
     if (color.luminance() > 0.2)
         DodeclustersColors.darkestGray
@@ -528,7 +534,7 @@ private fun HexInput(
 //        colors = OutlinedTextFieldDefaults.colors()
 //            .copy(unfocusedContainerColor = color.value.toColor())
     )
-    // NOTE: this fix only works 90% of time...
+    // NOTE: this (no focus by default on Android) fix only works 90% of time...
     // reference: https://stackoverflow.com/q/71412537/7143065
     LaunchedEffect(windowInfo) {
         snapshotFlow { windowInfo.isWindowFocused }.collect { isWindowFocused ->

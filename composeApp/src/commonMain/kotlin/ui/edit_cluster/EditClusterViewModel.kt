@@ -1321,6 +1321,7 @@ class EditClusterViewModel : ViewModel() {
         expressions.expressions[index]?.expr is Expr.Incidence
 
     // MAYBE: wrap into state that depends only on [regions] for caching
+    // MAYBE: also add backgroundColor (tho it is MT.surface by default and thus 0-contrast)
     fun getColorsByMostUsed(): List<Color> =
         regions.flatMap { region ->
             region.borderColor?.let { listOf(region.fillColor, it) }

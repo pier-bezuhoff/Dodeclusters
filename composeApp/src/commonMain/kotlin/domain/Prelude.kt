@@ -57,6 +57,12 @@ inline val Double.degrees: Float get() =
 inline val Float.radians: Double get() =
     this*PI/180.0
 
+inline fun Double.pow2(): Double =
+    this*this
+
+inline fun Float.pow2(): Float =
+    this*this
+
 inline fun squareSum(dx: Float, dy: Float): Float =
     dx*dx + dy*dy
 

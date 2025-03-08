@@ -12,8 +12,6 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-sealed interface CircleOrLineOrPoint : GCircle
-
 @Immutable
 @Serializable
 @SerialName("point")
@@ -27,7 +25,7 @@ data class Point(
         else
             Offset(x.toFloat(), y.toFloat())
 
-    fun distanceFrom(point: Point): Double =
+    override fun distanceFrom(point: Point): Double =
         when {
             this == CONFORMAL_INFINITY && point == CONFORMAL_INFINITY -> 0.0
             this == CONFORMAL_INFINITY && point != CONFORMAL_INFINITY -> Double.POSITIVE_INFINITY
@@ -96,6 +94,7 @@ data class Point(
 }
 
 /** A point is either [IN] a region, [BORDERING] it or [OUT]side of it */
+@Immutable
 enum class RegionPointLocation {
     /** A point is inside of a region */
     IN,

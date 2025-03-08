@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import domain.never
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -13,7 +14,7 @@ import kotlin.math.sqrt
 @Serializable
 sealed interface CircleOrLine : CircleOrLineOrImaginaryCircle, CircleOrLineOrPoint, LocusWithOrder {
     fun project(point: Point): Point
-    fun distanceFrom(point: Point): Double
+    override fun distanceFrom(point: Point): Double
     fun distanceFrom(point: Offset): Double
     fun calculateLocation(point: Offset): RegionPointLocation
     /** @return [RegionPointLocation.BORDERING] when the distance is in (-[EPSILON]; +[EPSILON]) */
@@ -166,7 +167,7 @@ fun calculateIntersection(
                     CircleLineIntersection.Double(q, p)
             }
         }
-        else -> throw IllegalStateException("Never")
+        else -> never()
     }
 }
 

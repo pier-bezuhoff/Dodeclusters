@@ -150,7 +150,9 @@ android {
 
 compose.desktop {
     application {
-//        javaHome = "/usr/lib/jvm/java-17-openjdk/" // cannot find jpackage in the normal jbr-17
+        // NOTE: uncomment the following if you want to build desktop distribution locally
+        //  Android Studio's built-in jbr17 for some reason doesn't  have (?) jpackage
+//        javaHome = "/usr/lib/jvm/java-17-openjdk/" // should point to your locally installed jdk 17
         mainClass = "MainKt"
 
         buildTypes.release.proguard {
@@ -158,7 +160,14 @@ compose.desktop {
         }
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(
+                TargetFormat.Msi, // Windows installer
+                TargetFormat.Exe,
+                TargetFormat.AppImage, // universal Linux
+                TargetFormat.Deb, // Debian-based
+                TargetFormat.Rpm, // Red Hat, Fedora, OpenSUSE, CentOS
+                TargetFormat.Dmg, // macOS, unused
+            )
             packageName = "com.pierbezuhoff.dodeclusters"
             packageVersion = "1.0.0" // cannot start with 0 it seems //libs.versions.dodeclusters.version.get()
             macOS {

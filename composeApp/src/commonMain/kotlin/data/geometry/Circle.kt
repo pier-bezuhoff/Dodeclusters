@@ -169,6 +169,9 @@ data class Circle(
     override fun translated(vector: Offset): Circle =
         Circle(center + vector, radius, isCCW)
 
+    fun translated(dx: Double, dy: Double): Circle =
+        Circle(x + dx, y + dy, radius, isCCW)
+
     override fun scaled(focus: Offset, zoom: Float): Circle {
         val newOffset = (center - focus) * zoom + focus
         return Circle(newOffset, zoom * radius, isCCW)

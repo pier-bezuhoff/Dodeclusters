@@ -157,6 +157,9 @@ data class Line(
     override fun translated(vector: Offset): Line =
        Line(a, b, c - (a*vector.x + b*vector.y))
 
+    fun translatedTo(point: Point): Line =
+        Line(a, b, -a*point.x - b*point.y)
+
     override fun scaled(focus: Offset, zoom: Float): Line {
         // dist1 -> zoom * dist 1
         val newC = zoom*(a*focus.x + b*focus.y + c) - a*focus.x - b*focus.y

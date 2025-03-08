@@ -3,13 +3,19 @@ package domain
 import androidx.compose.runtime.Immutable
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.CircleOrLineOrPoint
 import data.geometry.EPSILON
 import data.geometry.Line
 import data.geometry.Point
+import data.geometry.perpendicularDistance
+import data.geometry.translateUntilTangency
+import domain.PointSnapResult.PointToCircle
+import domain.PointSnapResult.PointToPoint
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.tan
 
 @Immutable
 sealed interface PointSnapResult {
@@ -143,6 +149,58 @@ fun snapPointToCircles(
                 )
             }
         }
+    }
+}
+
+// MAYBE: fuse with PointSnapResult
+//  into SnapResult<O>
+@Immutable
+sealed interface CircleSnapResult {
+    val result: CircleOrLine
+    data class Free(override val result: CircleOrLine) : CircleSnapResult
+    data class Tangent(override val result: CircleOrLine, val tangentIndex: Ix) : CircleSnapResult
+    data class BiTangent(
+        override val result: CircleOrLine,
+        val tangent1Index: Ix,
+        val tangent2Index: Ix,
+    ) : CircleSnapResult {
+        init {
+            tangent1Index != tangent2Index
+        }
+    }
+}
+
+fun snapCircleToCircles(
+    circle: CircleOrLine,
+    circles: List<CircleOrLineOrPoint?>,
+    snapDistance: Double,
+    bitangentTolerance: Double = 1.5
+): CircleSnapResult {
+    val closestCircles: List<Ix> = circles.asSequence()
+        .mapIndexed { ix, c ->
+            ix to (c?.perpendicularDistance(circle) ?: Double.POSITIVE_INFINITY)
+        }
+        .filter { (_, d) -> d <= snapDistance }
+        .sortedBy { (_, d) -> d }
+        .take(2)
+        .map { (ix, _) -> ix }
+        .toList() // get 2 closest circles
+    return if (closestCircles.isEmpty()) {
+        CircleSnapResult.Free(circle)
+    } else if (closestCircles.size == 1 || circle is Line) {
+        // line cannot snap to 2 objects (without rotation)
+        val ix = closestCircles.first()
+        val c = circles[ix]!!
+        val newCircle = circle.translateUntilTangency(c)
+        CircleSnapResult.Tangent(newCircle, ix)
+    } else { // 2 tangents
+        val (ix1, ix2) = closestCircles
+        val c1 = circles[ix1]!!
+        val c2 = circles[ix2]!!
+        // try fitting circle
+        // if it's too far from the original
+        // go to single-tangent case instead
+        TODO()
     }
 }
 
