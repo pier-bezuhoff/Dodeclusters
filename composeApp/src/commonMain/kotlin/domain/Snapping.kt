@@ -8,14 +8,11 @@ import data.geometry.EPSILON
 import data.geometry.Line
 import data.geometry.Point
 import data.geometry.perpendicularDistance
-import data.geometry.translateUntilTangency
-import domain.PointSnapResult.PointToCircle
-import domain.PointSnapResult.PointToPoint
+import data.geometry.translatedUntilTangency
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.tan
 
 @Immutable
 sealed interface PointSnapResult {
@@ -191,7 +188,7 @@ fun snapCircleToCircles(
         // line cannot snap to 2 objects (without rotation)
         val ix = closestCircles.first()
         val c = circles[ix]!!
-        val newCircle = circle.translateUntilTangency(c)
+        val newCircle = circle.translatedUntilTangency(c)
         CircleSnapResult.Tangent(newCircle, ix)
     } else { // 2 tangents
         val (ix1, ix2) = closestCircles
@@ -200,7 +197,7 @@ fun snapCircleToCircles(
         // try fitting circle
         // if it's too far from the original
         // go to single-tangent case instead
-        TODO()
+        CircleSnapResult.BiTangent(TODO(), ix1, ix2)
     }
 }
 

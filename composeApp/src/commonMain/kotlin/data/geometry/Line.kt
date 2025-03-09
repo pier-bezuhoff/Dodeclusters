@@ -157,6 +157,9 @@ data class Line(
     override fun translated(vector: Offset): Line =
        Line(a, b, c - (a*vector.x + b*vector.y))
 
+    fun translated(dx: Double, dy: Double): Line =
+        Line(a, b, c - (a*dx + b*dy))
+
     fun translatedTo(point: Point): Line =
         Line(a, b, -a*point.x - b*point.y)
 

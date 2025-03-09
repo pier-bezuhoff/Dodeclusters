@@ -295,6 +295,56 @@ data class Circle(
         return Line(nx * directionSign, ny * directionSign, c * directionSign)
     }
 
+    fun translatedUntilBiTangency(base1: CircleOrLineOrPoint, base2: CircleOrLineOrPoint): Circle? {
+        val b11: CircleOrLine
+        val b12: CircleOrLine
+        val b21: CircleOrLine
+        val b22: CircleOrLine
+        when (base1) {
+            is Circle -> {
+                b11 = Circle(base1.x, base1.y, base1.radius + this.radius)
+                b12 = Circle(base1.x, base1.y, abs(base1.radius - this.radius))
+            }
+            is Line -> {
+                val dlx = this.radius*base1.a/base1.norm
+                val dly = this.radius*base1.b/base1.norm
+                b11 = base1.translated(dlx, dly)
+                b12 = base1.translated(-dlx, -dly)
+            }
+            is Point -> {
+                b11 = Circle(base1.x, base1.y, this.radius)
+                b12 = b11
+            }
+        }
+        when (base2) {
+            is Circle -> {
+                b21 = Circle(base2.x, base2.y, base2.radius + this.radius)
+                b22 = Circle(base2.x, base2.y, abs(base2.radius - this.radius))
+            }
+            is Line -> {
+                val dlx = this.radius*base2.a/base2.norm
+                val dly = this.radius*base2.b/base2.norm
+                b21 = base2.translated(dlx, dly)
+                b22 = base2.translated(-dlx, -dly)
+            }
+            is Point -> {
+                b21 = Circle(base2.x, base2.y, this.radius)
+                b22 = b11
+            }
+        }
+        // out-out, out-in, in-out, in-in tangency cases
+        val potentialCenters =
+            calculateIntersectionPoints(b11, b21) +
+            calculateIntersectionPoints(b11, b22) +
+            calculateIntersectionPoints(b12, b21) +
+            calculateIntersectionPoints(b12, b22)
+        return potentialCenters
+            .minByOrNull { it.distanceFrom(this.centerPoint) }
+            ?.let { newCenter ->
+                this.copy(x = newCenter.x, y = newCenter.y)
+            }
+    }
+
     companion object {
         @Deprecated("Superseded by more general and stable method GeneralizedCircle.perp3")
         fun by3Points(p1: Offset, p2: Offset, p3: Offset): Circle {

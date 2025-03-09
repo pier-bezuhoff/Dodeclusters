@@ -41,28 +41,3 @@ infix fun CircleOrLineOrPoint.perpendicularDistance(another: CircleOrLineOrPoint
         is Point ->
             another.distanceFrom(this)
     }
-
-fun CircleOrLine.translateUntilTangency(base: CircleOrLineOrPoint): CircleOrLine =
-    when (this) {
-        is Circle -> when (base) {
-            is Circle -> {
-                val b = base.project(this.centerPoint)
-                val p = this.project(b)
-                this.translated(b.x - p.x, b.y - p.y)
-            }
-            is Line -> {
-                val b = base.project(this.centerPoint)
-                val p = this.project(b)
-                this.translated(b.x - p.x, b.y - p.y)
-            }
-            is Point -> {
-                val p = this.project(base)
-                this.translated(base.x - p.x, base.y - p.y)
-            }
-        }
-        is Line -> when (base) {
-            is Circle -> this.translatedTo(base.project(this.project(base.centerPoint)))
-            is Line -> base // we assume collinearity
-            is Point -> this.translatedTo(base)
-        }
-    }
