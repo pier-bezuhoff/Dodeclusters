@@ -155,6 +155,7 @@ fun snapPointToCircles(
 sealed interface CircleSnapResult {
     val result: CircleOrLine
     data class Free(override val result: CircleOrLine) : CircleSnapResult
+    // Equality case seems inapplicable to circle-circle snaps
     data class Tangent(override val result: CircleOrLine, val tangentIndex: Ix) : CircleSnapResult
     data class BiTangent(
         override val result: CircleOrLine,
@@ -167,13 +168,14 @@ sealed interface CircleSnapResult {
     }
 }
 
+// NOTE: dont forget to exclude [circle] from [circles]
 fun snapCircleToCircles(
     circle: CircleOrLine,
-    circles: List<CircleOrLineOrPoint?>,
+    circlesLinesOrPoints: List<CircleOrLineOrPoint?>,
     snapDistance: Double,
     bitangentTolerance: Double = 1.5
 ): CircleSnapResult {
-    val closestCircles: List<Ix> = circles.asSequence()
+    val closestCircles: List<Ix> = circlesLinesOrPoints.asSequence()
         .mapIndexed { ix, c ->
             ix to (c?.perpendicularDistance(circle) ?: Double.POSITIVE_INFINITY)
         }
@@ -182,22 +184,30 @@ fun snapCircleToCircles(
         .take(2)
         .map { (ix, _) -> ix }
         .toList() // get 2 closest circles
-    return if (closestCircles.isEmpty()) {
-        CircleSnapResult.Free(circle)
-    } else if (closestCircles.size == 1 || circle is Line) {
-        // line cannot snap to 2 objects (without rotation)
-        val ix = closestCircles.first()
-        val c = circles[ix]!!
-        val newCircle = circle.translatedUntilTangency(c)
-        CircleSnapResult.Tangent(newCircle, ix)
-    } else { // 2 tangents
-        val (ix1, ix2) = closestCircles
-        val c1 = circles[ix1]!!
-        val c2 = circles[ix2]!!
-        // try fitting circle
-        // if it's too far from the original
-        // go to single-tangent case instead
-        CircleSnapResult.BiTangent(TODO(), ix1, ix2)
+    return when {
+        closestCircles.isEmpty() -> {
+            CircleSnapResult.Free(circle)
+        }
+        circle is Line || closestCircles.size == 1  -> {
+            // line cannot snap to 2 objects (without rotation)
+            val ix1 = closestCircles.first()
+            val c1 = circlesLinesOrPoints[ix1]!!
+            val newCircle = circle.translatedUntilTangency(c1)
+            CircleSnapResult.Tangent(newCircle, ix1)
+        }
+        else -> { // 2 tangents
+            val (ix1, ix2) = closestCircles
+            val c = circle as Circle
+            val c1 = circlesLinesOrPoints[ix1]!!
+            val c2 = circlesLinesOrPoints[ix2]!!
+            val newCircle = c.translatedUntilBiTangency(c1, c2)
+            if (newCircle == null ||
+                newCircle.distanceBetweenCenters(c) >= bitangentTolerance * snapDistance
+            ) {
+                return CircleSnapResult.Tangent(c.translatedUntilTangency(c1), ix1)
+            }
+            CircleSnapResult.BiTangent(newCircle, ix1, ix2)
+        }
     }
 }
 

@@ -38,6 +38,7 @@ import data.geometry.PartialArcPath
 import data.geometry.Point
 import data.geometry.fromCorners
 import data.geometry.selectWithRectangle
+import data.geometry.translationDelta
 import domain.Arg
 import domain.ArgType
 import domain.BlendModeType
@@ -86,6 +87,7 @@ import domain.never
 import domain.reindexingMap
 import domain.removeAtIndices
 import domain.snapAngle
+import domain.snapCircleToCircles
 import domain.snapPointToCircles
 import domain.snapPointToPoints
 import domain.sortedByFrequency
@@ -1632,8 +1634,7 @@ class EditClusterViewModel : ViewModel() {
         } else { // NOTE: scaling everything instead of canvas can produce more artifacts
             val targets = objects.indices.toList()
             val center = computeAbsoluteCenter() ?: Offset.Zero
-            // no need to recompute expressions here
-            transform(targets, focus = center, zoom = zoom, updateExpressions = {})
+            transform(targets, focus = center, zoom = zoom)
         }
     }
 
@@ -2048,10 +2049,29 @@ class EditClusterViewModel : ViewModel() {
         submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
     }
 
-    // dragging circle: move + scale radius
+    // dragging circle: move + scale radius & rotate [line]
     private fun dragCircle(pan: Offset, zoom: Float, rotationAngle: Float) {
-        val ix = selection.single()
-        transformWhatWeCan(listOf(ix), translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+        val selectedIndex = selection.single()
+        // tangential snap
+        if (ENABLE_TANGENT_SNAPPING) {
+            val circle = objects[selectedIndex] as CircleOrLine
+            val result0 = circle.transformed(translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+                as CircleOrLine
+            val snapDistance = tapRadius.toDouble()/ TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR
+            val excludedCircles =
+                setOf(selectedIndex) +
+                expressions.getAllChildren(selectedIndex) +
+                expressions.getImmediateParents(selectedIndex)
+            val snappableCLPs = objects.mapIndexed { ix, c ->
+                if (ix in excludedCircles || !showPhantomObjects && ix in phantoms) null
+                else c as? CircleOrLineOrPoint
+            }
+            val snap = snapCircleToCircles(result0, snappableCLPs, snapDistance = snapDistance)
+            val delta = result0 translationDelta snap.result
+            transformWhatWeCan(listOf(selectedIndex), translation = pan + delta, zoom = zoom, rotationAngle = rotationAngle)
+        } else {
+            transformWhatWeCan(listOf(selectedIndex), translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+        }
     }
 
     private fun dragPoint(c: Offset) {
@@ -2063,7 +2083,7 @@ class EditClusterViewModel : ViewModel() {
             val childCircles = expressions.getAllChildren(ix)
                 .filter { objects[it] is CircleOrLine }
                 .toSet()
-            // when we are dragging intersection of 2 frees with IoC1 we don't want it to snap to them
+            // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
             val parents = expressions.getAllParents(listOf(ix))
             val newPoint = snapped(c, excludePoints = true, excludedCircles = childCircles + parents).result
             transformWhatWeCan(
@@ -2093,7 +2113,16 @@ class EditClusterViewModel : ViewModel() {
         transformWhatWeCan(targets, translation = pan, focus = c, zoom = zoom, rotationAngle = rotationAngle)
     }
 
-    /** Wrapper around [transform] that adjusts [targets] based on [INVERSION_OF_CONTROL] */
+    /**
+     * Wrapper around [transform] that adjusts [targets] based on [INVERSION_OF_CONTROL].
+     *
+     * [transform] applies [translation];scaling;rotation to [targets] (that are all assumed free).
+     *
+     * Scaling and rotation are w.r.t. fixed [focus] by the factor of
+     * [zoom] and by [rotationAngle] degrees. If [focus] is [Offset.Unspecified] for
+     * each circle choose its center, for each point -- itself, for each line -- screen center
+     * projected onto it
+     */
     private inline fun transformWhatWeCan(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
@@ -2132,13 +2161,14 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    /** Apply [translation];scaling;rotation to [targets] (that are all assumed free).
+    /**
+     * Apply [translation];scaling;rotation to [targets] (that are all assumed free).
      *
-     * Scaling and rotation are wrt. fixed [focus] by the factor of
+     * Scaling and rotation are w.r.t. fixed [focus] by the factor of
      * [zoom] and by [rotationAngle] degrees. If [focus] is [Offset.Unspecified] for
      * each circle choose its center, for each point -- itself, for each line -- screen center
      * projected onto it
-     * */
+     */
     private inline fun transform(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
@@ -3365,8 +3395,10 @@ class EditClusterViewModel : ViewModel() {
         const val HUD_ZOOM_INCREMENT = 1.1f // == +10%
         const val KEYBOARD_ZOOM_INCREMENT = 1.05f // == +5%
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
+        const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 6.0
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
+        const val ENABLE_TANGENT_SNAPPING = true
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false

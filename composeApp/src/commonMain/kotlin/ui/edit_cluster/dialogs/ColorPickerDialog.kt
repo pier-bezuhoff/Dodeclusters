@@ -255,6 +255,7 @@ fun ColorPickerDialog(
                                 ) {}
                             }
                             // MAYBE: add icons/explanations for color-palette rows
+                            // TODO: small secondary-color test atop secondary-color box
                             FlowRow(
                                 paletteModifier,
                                 verticalArrangement = Arrangement.Center,

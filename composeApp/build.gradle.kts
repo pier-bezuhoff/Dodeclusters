@@ -152,7 +152,7 @@ compose.desktop {
     application {
         // NOTE: uncomment the following if you want to build desktop distribution locally
         //  Android Studio's built-in jbr17 for some reason doesn't  have (?) jpackage
-//        javaHome = "/usr/lib/jvm/java-17-openjdk/" // should point to your locally installed jdk 17
+        // javaHome = "/usr/lib/jvm/java-17-openjdk/" // should point to your locally installed jdk 17
         mainClass = "MainKt"
 
         buildTypes.release.proguard {
@@ -165,7 +165,7 @@ compose.desktop {
                 TargetFormat.Exe,
                 TargetFormat.AppImage, // universal Linux
                 TargetFormat.Deb, // Debian-based
-                TargetFormat.Rpm, // Red Hat, Fedora, OpenSUSE, CentOS
+                TargetFormat.Rpm, // Red Hat, Fedora, OpenSUSE, CentOS (doesnt seem it can be generated on arch)
                 TargetFormat.Dmg, // macOS, unused
             )
             packageName = "com.pierbezuhoff.dodeclusters"

@@ -339,6 +339,7 @@ data class Circle(
             calculateIntersectionPoints(b12, b21) +
             calculateIntersectionPoints(b12, b22)
         return potentialCenters
+            .distinct()
             .minByOrNull { it.distanceFrom(this.centerPoint) }
             ?.let { newCenter ->
                 this.copy(x = newCenter.x, y = newCenter.y)

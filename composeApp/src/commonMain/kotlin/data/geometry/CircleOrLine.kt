@@ -235,3 +235,26 @@ fun CircleOrLine.translatedUntilTangency(base: CircleOrLineOrPoint): CircleOrLin
             is Point -> this.translatedTo(base)
         }
     }
+
+infix fun CircleOrLine.translationDelta(result: CircleOrLine): Offset =
+    when {
+        this is Circle && result is Circle -> {
+            val dx = result.x - this.x
+            val dy = result.y - this.y
+            Offset(dx.toFloat(), dy.toFloat())
+        }
+        this is Line && result is Line -> {
+            val p0 = this.order2point(0.0)
+            val p1 = result.order2point(0.0)
+            val dx0 = p1.x - p0.x
+            val dy0 = p1.y - p0.y
+            val directionX = result.directionX
+            val directionY = result.directionY
+            val parallelProjection = dx0*directionX + dy0*directionY
+            val dx = dx0 - parallelProjection*directionX
+            val dy = dy0 - parallelProjection*directionY
+            // only perpendicular component, no parallel in-line shift
+            Offset(dx.toFloat(), dy.toFloat())
+        }
+        else -> never("Incompatible types: $this vs $result")
+    }
