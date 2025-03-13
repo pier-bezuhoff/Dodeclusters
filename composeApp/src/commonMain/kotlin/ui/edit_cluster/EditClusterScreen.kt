@@ -483,14 +483,18 @@ fun ToolDescription(
                 description,
                 modifier
                     .padding(8.dp, 12.dp)
+                    .background(
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                        MaterialTheme.shapes.extraLarge,
+                    )
                     .border(
                         2.dp,
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
                         MaterialTheme.shapes.extraLarge,
                     )
                     .padding(16.dp, 8.dp)
                 ,
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
+                color = MaterialTheme.colorScheme.secondary,
                 style = textStyle,
             )
         }
