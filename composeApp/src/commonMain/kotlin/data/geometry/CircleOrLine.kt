@@ -236,6 +236,10 @@ fun CircleOrLine.translatedUntilTangency(base: CircleOrLineOrPoint): CircleOrLin
         }
     }
 
+/**
+ * Calculate difference vector. `this` and [result] are assumed to be of same type and shape.
+ * @return [result]` - this` as translation vector.
+ */
 infix fun CircleOrLine.translationDelta(result: CircleOrLine): Offset =
     when {
         this is Circle && result is Circle -> {

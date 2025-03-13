@@ -150,12 +150,12 @@ fun snapPointToCircles(
 }
 
 // MAYBE: fuse with PointSnapResult
-//  into SnapResult<O>
+//  into SnapResult<O: GCircle>
 @Immutable
 sealed interface CircleSnapResult {
     val result: CircleOrLine
     data class Free(override val result: CircleOrLine) : CircleSnapResult
-    // Equality case seems inapplicable to circle-circle snaps
+    // Equality case is practically inapplicable to circle-circle snaps
     data class Tangent(override val result: CircleOrLine, val tangentIndex: Ix) : CircleSnapResult
     data class BiTangent(
         override val result: CircleOrLine,
@@ -168,7 +168,7 @@ sealed interface CircleSnapResult {
     }
 }
 
-// NOTE: dont forget to exclude [circle] from [circles]
+// NOTE: dont forget to exclude [circle], its immediate parents and all children from [circles]
 fun snapCircleToCircles(
     circle: CircleOrLine,
     circlesLinesOrPoints: List<CircleOrLineOrPoint?>,

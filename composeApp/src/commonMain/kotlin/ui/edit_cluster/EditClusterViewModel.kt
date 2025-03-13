@@ -2057,7 +2057,7 @@ class EditClusterViewModel : ViewModel() {
             val circle = objects[selectedIndex] as CircleOrLine
             val result0 = circle.transformed(translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                 as CircleOrLine
-            val snapDistance = tapRadius.toDouble()/ TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR
+            val snapDistance = tapRadius.toDouble()/TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR
             val excludedCircles =
                 setOf(selectedIndex) +
                 expressions.getAllChildren(selectedIndex) +
@@ -2094,6 +2094,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     // special case that is not handled by transform()
+    // MAYBE: instead transform then snap/project onto carrier and transform by snap-delta again
     private fun slidePointAcrossCarrier(pointIndex: Ix, carrierIndex: Ix, cursorLocation: Offset) {
         recordCommand(Command.MOVE, target = pointIndex)
         val carrier = objects[carrierIndex] as CircleOrLine
@@ -3395,19 +3396,19 @@ class EditClusterViewModel : ViewModel() {
         const val HUD_ZOOM_INCREMENT = 1.1f // == +10%
         const val KEYBOARD_ZOOM_INCREMENT = 1.05f // == +5%
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
-        const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 6.0
+        const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
         const val ENABLE_TANGENT_SNAPPING = true
         const val RESTORE_LAST_SAVE_ON_LOAD = true
-        const val TWO_FINGER_TAP_FOR_UNDO = true
+        const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         const val SHOW_IMAGINARY_CIRCLES = true
-        /** Allow moving non-free object IF all of it's lvl1 parents/dependencies are free by
+        /** Allow moving non-free object IF all of it's lvl 1 parents=dependencies are free by
          * moving all of its parent with it */ // ggbra-like
         val INVERSION_OF_CONTROL = InversionOfControl.LEVEL_1
-        /** when constructing object depending on not-yet-existing points,
-         * always create them. In contrast to replacing expression with static circle */
+        /** When constructing an object depending on not-yet-existing points,
+         * always create them. In contrast to replacing its expression with a static, free circle */
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
         // NOTE: changing it presently breaks all line-incident points
         /** [Double] arithmetic is best in range that is closer to 0 */
