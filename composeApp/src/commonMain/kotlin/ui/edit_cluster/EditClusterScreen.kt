@@ -494,7 +494,7 @@ fun ToolDescription(
                     )
                     .padding(16.dp, 8.dp)
                 ,
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
                 style = textStyle,
             )
         }

@@ -82,7 +82,7 @@ import domain.io.constellation2svg
 import domain.io.parseDdcV1
 import domain.io.parseDdcV2
 import domain.io.parseDdcV3
-import domain.io.parseDdcV4
+import domain.io.tryParseDdc
 import domain.never
 import domain.reindexingMap
 import domain.removeAtIndices
@@ -343,105 +343,55 @@ class EditClusterViewModel : ViewModel() {
 
     // TODO: make it suspend
     fun loadFromYaml(yaml: String) {
-        tryCatch2<SerializationException, IllegalArgumentException>(
-            {
-                val ddc = parseDdcV4(yaml)
-                val constellation = ddc.toConstellation()
+        tryParseDdc(
+            content = yaml,
+            onDdc4 = { ddc4 ->
+                val constellation = ddc4.toConstellation()
                 loadNewConstellation(constellation)
-                centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
+                centerizeTo(ddc4.bestCenterX, ddc4.bestCenterY)
                 chessboardPattern =
-                    if (!ddc.chessboardPattern) ChessboardPattern.NONE
-                    else if (ddc.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
+                    if (!ddc4.chessboardPattern) ChessboardPattern.NONE
+                    else if (ddc4.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
                     else ChessboardPattern.STARTS_TRANSPARENT
-                ddc.chessboardColor?.let {
+                ddc4.chessboardColor?.let {
                     chessboardColor = it
                 }
             },
-            { e ->
-                println("Failed to parse DdcV4->yaml, falling back to DdcV3->yaml")
-                e.printStackTrace()
-                loadDdcV3FromYaml(yaml)
-            }
-        )
-    }
-
-    fun loadDdcV3FromYaml(yaml: String) {
-        tryCatch2<SerializationException, IllegalArgumentException>(
-            {
-                val ddc = parseDdcV3(yaml)
-                val constellation = ddc.toConstellation().toConstellation()
+            onDdc3 = { ddc3 ->
+                val constellation = ddc3.toConstellation().toConstellation()
                 loadNewConstellation(constellation)
-                centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
+                centerizeTo(ddc3.bestCenterX, ddc3.bestCenterY)
                 chessboardPattern =
-                    if (!ddc.chessboardPattern) ChessboardPattern.NONE
-                    else if (ddc.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
+                    if (!ddc3.chessboardPattern) ChessboardPattern.NONE
+                    else if (ddc3.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
                     else ChessboardPattern.STARTS_TRANSPARENT
             },
-            { e ->
-                println("Failed to parse DdcV3->yaml, falling back to DdcV2->yaml")
-                e.printStackTrace()
-                loadDdcV2FromYaml(yaml)
-            }
-        )
-    }
-
-    private fun loadDdcV2FromYaml(yaml: String) {
-        tryCatch2<SerializationException, IllegalArgumentException>(
-            {
-                val ddc = parseDdcV2(yaml)
-                val cluster = ddc.content
+            onDdc2 = { ddc2 ->
+                val cluster = ddc2.content
                     .filterIsInstance<DdcV2.Token.Cluster>()
                     .first()
                     .toCluster()
                 loadNewConstellation(cluster.toConstellation())
-                centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
+                centerizeTo(ddc2.bestCenterX, ddc2.bestCenterY)
                 chessboardPattern =
-                    if (!ddc.chessboardPattern) ChessboardPattern.NONE
-                    else if (ddc.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
+                    if (!ddc2.chessboardPattern) ChessboardPattern.NONE
+                    else if (ddc2.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
                     else ChessboardPattern.STARTS_TRANSPARENT
             },
-            { e ->
-                println("Failed to parse DdcV2->yaml, falling back to DdcV1->yaml")
-                e.printStackTrace()
-                loadDdcV1FromYaml(yaml)
-            }
-        )
-    }
-
-    private fun loadDdcV1FromYaml(yaml: String) {
-        tryCatch2<SerializationException, IllegalArgumentException>(
-            {
-                val ddc = parseDdcV1(yaml)
-                val cluster = ddc.content
+            onDdc1 = { ddc1 ->
+                val cluster = ddc1.content
                     .filterIsInstance<DdcV1.Token.Cluster>()
                     .first()
                     .toCluster()
                 loadNewConstellation(cluster.toConstellation())
-                centerizeTo(ddc.bestCenterX, ddc.bestCenterY)
+                centerizeTo(ddc1.bestCenterX, ddc1.bestCenterY)
             },
-            { e ->
-                println("Failed to parse DdcV1->yaml, falling back to ClusterV1->json")
-                e.printStackTrace()
-                loadClusterV1FromJson(yaml) // NOTE: for backwards compat
-            }
-        )
-    }
-
-    private fun loadClusterV1FromJson(json: String) {
-        val permissiveJson = Json {
-            isLenient = true
-            ignoreUnknownKeys = true // enables backward compatibility to a certain level
-        }
-        tryCatch2<SerializationException, IllegalArgumentException>(
-            {
-                val cluster1: ClusterV1 = permissiveJson.decodeFromString(ClusterV1.serializer(), json)
+            onClusterV1 = { cluster1 ->
                 loadNewConstellation(cluster1.toCluster().toConstellation())
             },
-            { e ->
-                println("Failed to parse ClusterV1->json")
-                e.printStackTrace()
+            onFail = {
                 queueSnackbarMessage(SnackbarMessage.FAILED_OPEN)
-            }
+            },
         )
     }
 
@@ -1666,6 +1616,36 @@ class EditClusterViewModel : ViewModel() {
         expressions.update(selection)
     }
 
+    // might be useful for duplication with dependencies
+    /** For each object in [selection], add to selection its siblings and parents */
+    private fun expandSelectionToFamily() {
+        if (mode.isSelectingCircles()) {
+            val familyMembers = selection.flatMap { ix ->
+                listOf(ix) + findSiblingsAndParents(ix)
+            }.distinct()
+            if (familyMembers.size > 1 && mode == SelectionMode.Drag) {
+                switchToMode(SelectionMode.Multiselect)
+            }
+            selection = familyMembers
+        }
+    }
+
+    /** sibling = has the same [Expr] (possibly `null`) */
+    private fun expandSelectionToAllSiblings() {
+        if (mode.isSelectingCircles()) {
+            val siblings = selection
+                .map { expressions.expressions[it]?.expr }
+                .distinct()
+                .flatMap { expr ->
+                    expressions.findExpr(expr)
+                }
+            if (mode == SelectionMode.Drag && siblings.size > 1) {
+                switchToMode(SelectionMode.Multiselect)
+            }
+            selection = siblings
+        }
+    }
+
     fun onDown(visiblePosition: Offset) {
         movementAfterDown = false
         // reset grabbed thingies
@@ -2061,7 +2041,7 @@ class EditClusterViewModel : ViewModel() {
             val excludedCircles =
                 setOf(selectedIndex) +
                 expressions.getAllChildren(selectedIndex) +
-                expressions.getImmediateParents(selectedIndex)
+                expressions.getAllParents(listOf(selectedIndex))
             val snappableCLPs = objects.mapIndexed { ix, c ->
                 if (ix in excludedCircles || !showPhantomObjects && ix in phantoms) null
                 else c as? CircleOrLineOrPoint
@@ -2452,18 +2432,6 @@ class EditClusterViewModel : ViewModel() {
     // make long drag = pan zoom
     fun onLongPress(position: Offset) { // by itself interferes with long-drag
         // select siblings & parents for easy copy
-        if (mode.isSelectingCircles()) {
-            selection.let {
-                if (it.size == 1) {
-                    val ix = it.single()
-                    val family = listOf(ix) + findSiblingsAndParents(ix)
-                    if (family.size > 1 && mode == SelectionMode.Drag) {
-                        switchToMode(SelectionMode.Multiselect)
-                        selection = family
-                    }
-                }
-            }
-        }
     }
 
 //    fun onLongDragStart(position: Offset) {}

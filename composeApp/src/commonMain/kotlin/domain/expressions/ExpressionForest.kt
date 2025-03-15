@@ -167,7 +167,7 @@ class ExpressionForest(
         return result
     }
 
-    fun findExpr(expr: Expr): List<Ix> {
+    fun findExpr(expr: Expr?): List<Ix> {
         return expressions.entries
             .filter { (_, e) -> e?.expr == expr }
             .map { it.key }
@@ -412,6 +412,7 @@ class ExpressionForest(
         }
     }
 
+    // MAYBE: transform into tailrec
     fun getAllChildren(parentIx: Ix): Set<Ix> {
         val childs = children[parentIx] ?: emptySet()
         val allChilds = childs.toMutableSet()
@@ -487,7 +488,10 @@ class ExpressionForest(
         val immediateParents = childs.flatMap { getImmediateParents(it) }
         if (immediateParents.isEmpty())
             return _result
-        return getAllParents(immediateParents.minus(childs.toSet()), _result + immediateParents.toSet())
+        return getAllParents(
+            immediateParents.minus(childs.toSet()),
+            _result + immediateParents.toSet()
+        )
     }
 
     fun findExistingIntersectionIndices(circleIndex1: Ix, circleIndex2: Ix): List<Ix> {
