@@ -109,7 +109,7 @@ jobs:
           name: "AppImage AppDir"
           path: 'composeApp/build/compose/binaries/main-release/app'
 
-  build-appimage:
+  build-deb:
     name: "Build deb for Ubuntu & Debian-based systems"
     runs-on: ubuntu-latest
     permissions:
