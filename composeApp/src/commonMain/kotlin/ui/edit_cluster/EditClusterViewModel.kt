@@ -114,6 +114,7 @@ import ui.edit_cluster.dialogs.DialogType
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
+import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
@@ -1614,6 +1615,36 @@ class EditClusterViewModel : ViewModel() {
             }
         }
         expressions.update(selection)
+    }
+
+    inline fun showAdjustExprButton(): Boolean =
+        selection.isNotEmpty() && (expressions.expressions[selection[0]]?.expr?.let { expr0 ->
+            (expr0 is Expr.CircleInterpolation ||
+            expr0 is Expr.PointInterpolation ||
+            expr0 is Expr.BiInversion ||
+            expr0 is Expr.LoxodromicMotion) &&
+            selection.all { expressions.expressions[it]?.expr == expr0 }
+        } ?: false)
+
+    fun adjustExpr() {
+        val expr = expressions.expressions[selection[0]]?.expr
+        val outputIndices = expressions.findExpr(expr)
+        val toolMode = when (expr) {
+            is Expr.CircleInterpolation -> ToolMode.CIRCLE_OR_POINT_INTERPOLATION
+            is Expr.PointInterpolation -> ToolMode.CIRCLE_OR_POINT_INTERPOLATION
+            is Expr.BiInversion -> ToolMode.BI_INVERSION
+            is Expr.LoxodromicMotion -> ToolMode.LOXODROMIC_MOTION
+            else -> null
+        }
+        if (toolMode != null && expr != null) {
+            recordCreateCommand() // save, since cancelling adj removes all affected objects
+            switchToMode(toolMode)
+            // MAYBE: fill in pArgList
+            // FIX: start with present parameters
+            submode = SubMode.ExprAdjustment(
+                listOf(AdjustableExpr(expr, outputIndices, outputIndices)),
+            )
+        }
     }
 
     // might be useful for duplication with dependencies
@@ -3176,6 +3207,7 @@ class EditClusterViewModel : ViewModel() {
             is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
             is EditClusterTool.CustomAction -> {} // custom, platform-dependent handlers for open/save
             EditClusterTool.DetailedAdjustment -> openDetailsDialog()
+            EditClusterTool.AdjustExpr -> adjustExpr()
             EditClusterTool.InBetween -> {} // unused, potentially updateParams(...)
         }
     }

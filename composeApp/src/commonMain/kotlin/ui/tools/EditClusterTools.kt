@@ -7,6 +7,7 @@ import dodeclusters.composeapp.generated.resources.add_image
 import dodeclusters.composeapp.generated.resources.add_point_arg_descriptions
 import dodeclusters.composeapp.generated.resources.add_point_description
 import dodeclusters.composeapp.generated.resources.add_point_name
+import dodeclusters.composeapp.generated.resources.adjust_expr_name
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
 import dodeclusters.composeapp.generated.resources.arc_path_arg_descriptions
@@ -133,6 +134,7 @@ import dodeclusters.composeapp.generated.resources.shark_fin_striped
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_name
 import dodeclusters.composeapp.generated.resources.spiral
+import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_name
 import dodeclusters.composeapp.generated.resources.three_sliders
@@ -151,6 +153,7 @@ import dodeclusters.composeapp.generated.resources.toggle_select_all_description
 import dodeclusters.composeapp.generated.resources.toggle_select_all_disabled_description
 import dodeclusters.composeapp.generated.resources.toggle_select_all_name
 import dodeclusters.composeapp.generated.resources.two_of_three_circles_connected
+import dodeclusters.composeapp.generated.resources.two_vertical_sliders
 import dodeclusters.composeapp.generated.resources.undo
 import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.upload
@@ -504,6 +507,10 @@ sealed class EditClusterTool(
     data object DetailedAdjustment: ContextAction(
         Res.string.detailed_adjustment_name,
         icon = Res.drawable.three_sliders
+    )
+    data object AdjustExpr: ContextAction(
+        Res.string.adjust_expr_name,
+        icon = Res.drawable.two_vertical_sliders
     )
     data object InBetween: ContextAction(
         Res.string.in_between_name,

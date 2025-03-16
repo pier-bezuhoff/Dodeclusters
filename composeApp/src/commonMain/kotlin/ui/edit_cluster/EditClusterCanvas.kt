@@ -201,11 +201,15 @@ fun BoxScope.EditClusterCanvas(
     }
     if (viewModel.showUI) { // HUD
         if (viewModel.circleSelectionIsActive) {
-            if (viewModel.selectionIsLocked) {
-                LockedCircleSelectionContextActions(viewModel.canvasSize, viewModel::toolAction, viewModel::toolPredicate, viewModel::getMostCommonCircleColorInSelection)
-            } else {
-                CircleSelectionContextActions(viewModel.canvasSize, viewModel.showDirectionArrows, viewModel::toolAction, viewModel::toolPredicate, viewModel::getMostCommonCircleColorInSelection)
-            }
+            ContextCircleActions(
+                viewModel.canvasSize,
+                objectColor = viewModel.getMostCommonCircleColorInSelection(),
+                showAdjustExprButton = viewModel.showAdjustExprButton(),
+                showOrientationToggle = viewModel.showDirectionArrows,
+                isLocked = viewModel.selectionIsLocked,
+                toolAction = viewModel::toolAction,
+                toolPredicate = viewModel::toolPredicate,
+            )
         } else if (viewModel.pointSelectionIsActive) {
             PointSelectionContextActions(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel::toolAction, viewModel::toolPredicate)
         } else if (

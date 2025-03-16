@@ -143,6 +143,7 @@
     <string name="delete_name">Delete</string>
     <string name="delete_description">Delete selected circles</string>
     <string name="detailed_adjustment_name">Open detailed adjustment dialog</string>
+    <string name="adjust_expr_name">Adjust expression of selected objects</string>
     <string name="in_between_name">In between</string>
     <string name="steps_slider_name">N steps</string>
 <!--    <string name="_name"></string>-->

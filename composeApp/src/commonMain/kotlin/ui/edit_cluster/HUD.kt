@@ -1,6 +1,7 @@
 package ui.edit_cluster
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -73,6 +75,95 @@ import kotlin.math.roundToInt
 import kotlin.math.sinh
 
 // MAYBE: add tooltips to buttons
+
+@Composable
+fun BoxScope.ContextCircleActions(
+    canvasSize: IntSize,
+    objectColor: Color?,
+    showAdjustExprButton: Boolean,
+    showOrientationToggle: Boolean,
+    isLocked: Boolean,
+    toolAction: (EditClusterTool) -> Unit,
+    toolPredicate: (EditClusterTool) -> Boolean,
+) {
+    // column 1:
+    // expand
+    // scale slider
+    // shrink
+    // column 2:
+    // [adjust (if all have same expr)]
+    // color
+    // visibility
+    // [orientation]
+    // [locked]
+    // copy
+    // delete
+    // + rotate handle in the 1st column
+    val buttonModifier = Modifier
+        .padding(8.dp)
+        .size(36.dp)
+    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
+        Surface(
+            Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp)
+            ,
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ) {
+            Column(
+                verticalArrangement = Arrangement.Center,
+            ) {
+                if (showAdjustExprButton) {
+                    SimpleToolButton(
+                        EditClusterTool.AdjustExpr,
+                        buttonModifier,
+                        onClick = toolAction
+                    )
+                }
+                SimpleToolButton(
+                    EditClusterTool.PickCircleColor,
+                    buttonModifier,
+                    tint = objectColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
+                    onClick = toolAction
+                )
+                TwoIconButton(
+                    painterResource(EditClusterTool.MarkAsPhantoms.icon),
+                    painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
+                    stringResource(EditClusterTool.MarkAsPhantoms.name),
+                    enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+                    buttonModifier,
+                    onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
+                )
+                if (showOrientationToggle) {
+                    SimpleToolButton(
+                        EditClusterTool.SwapDirection,
+                        buttonModifier,
+                        onClick = toolAction
+                    )
+                }
+                if (isLocked) {
+                    SimpleToolButton(
+                        EditClusterTool.Detach,
+                        buttonModifier,
+                        onClick = toolAction
+                    )
+                }
+                SimpleToolButton(
+                    EditClusterTool.Duplicate,
+                    buttonModifier,
+                    onClick = toolAction
+                )
+                SimpleToolButton(
+                    EditClusterTool.Delete,
+                    buttonModifier,
+                    onClick = toolAction
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun BoxScope.LockedCircleSelectionContextActions(

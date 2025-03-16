@@ -1030,7 +1030,7 @@ private fun VerticalPanel(
 // all-included multiplexer
 /**
  * @param[regionColor] only used for Palette color
- * */
+ */
 @Composable
 fun ToolButton(
     tool: EditClusterTool,
