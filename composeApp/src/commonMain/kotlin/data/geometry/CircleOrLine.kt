@@ -214,7 +214,7 @@ fun CircleOrLine.calculateSegmentTopLeft(start: Point, end: Point): SegmentPoint
 fun CircleOrLine.translatedUntilTangency(base: CircleOrLineOrPoint): CircleOrLine =
     when (this) {
         is Circle -> when (base) {
-            is Circle -> {
+            is Circle -> { // FIX: base inside snapping is incorrect
                 val b = base.project(this.centerPoint)
                 val p = this.project(b)
                 this.translated(b.x - p.x, b.y - p.y)

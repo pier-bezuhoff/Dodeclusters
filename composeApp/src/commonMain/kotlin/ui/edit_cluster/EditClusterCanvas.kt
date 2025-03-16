@@ -195,13 +195,13 @@ fun BoxScope.EditClusterCanvas(
                 drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             }
             if (viewModel.circleSelectionIsActive && viewModel.showUI) {
-                drawSelectionControls(canvasSize = viewModel.canvasSize, selectionIsLocked = viewModel.selectionIsLocked, subMode = viewModel.submode, sliderColor = sliderColor, jCarcassColor = jCarcassColor, rotateHandleColor = rotateIconColor, handleRadius = handleRadius, iconDim = iconDim, rotateIcon = rotateIcon)
+//                drawSelectionControls(canvasSize = viewModel.canvasSize, selectionIsLocked = viewModel.selectionIsLocked, subMode = viewModel.submode, sliderColor = sliderColor, jCarcassColor = jCarcassColor, rotateHandleColor = rotateIconColor, handleRadius = handleRadius, iconDim = iconDim, rotateIcon = rotateIcon)
             }
 //        }.also { println("full draw: $it") } // not that long
     }
     if (viewModel.showUI) { // HUD
         if (viewModel.circleSelectionIsActive) {
-            ContextCircleActions(
+            SelectionContextActions(
                 viewModel.canvasSize,
                 objectColor = viewModel.getMostCommonCircleColorInSelection(),
                 showAdjustExprButton = viewModel.showAdjustExprButton(),
@@ -211,7 +211,12 @@ fun BoxScope.EditClusterCanvas(
                 toolPredicate = viewModel::toolPredicate,
             )
         } else if (viewModel.pointSelectionIsActive) {
-            PointSelectionContextActions(viewModel.canvasSize, viewModel.selectionIsLocked, viewModel::toolAction, viewModel::toolPredicate)
+            PointContextActions( // only points are selected
+                showAdjustExprButton = viewModel.showAdjustExprButton(),
+                isLocked = viewModel.selectionIsLocked,
+                toolAction = viewModel::toolAction,
+                toolPredicate = viewModel::toolPredicate,
+            )
         } else if (
             viewModel.mode == ToolMode.ARC_PATH &&
             viewModel.partialArcPath?.nArcs?.let { it >= 1 } == true

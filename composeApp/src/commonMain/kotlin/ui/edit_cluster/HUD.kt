@@ -77,7 +77,7 @@ import kotlin.math.sinh
 // MAYBE: add tooltips to buttons
 
 @Composable
-fun BoxScope.ContextCircleActions(
+fun BoxScope.SelectionContextActions(
     canvasSize: IntSize,
     objectColor: Color?,
     showAdjustExprButton: Boolean,
@@ -90,225 +90,123 @@ fun BoxScope.ContextCircleActions(
     // expand
     // scale slider
     // shrink
-    // column 2:
-    // [adjust (if all have same expr)]
-    // color
-    // visibility
-    // [orientation]
-    // [locked]
-    // copy
-    // delete
-    // + rotate handle in the 1st column
+    // rotate handle
     val buttonModifier = Modifier
         .padding(8.dp)
         .size(36.dp)
     with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
-        Surface(
-            Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 16.dp)
-            ,
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    }
+    Surface(
+        Modifier
+            .align(Alignment.CenterEnd)
+            .padding(end = 8.dp)
+        ,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
         ) {
-            Column(
-                verticalArrangement = Arrangement.Center,
-            ) {
-                if (showAdjustExprButton) {
-                    SimpleToolButton(
-                        EditClusterTool.AdjustExpr,
-                        buttonModifier,
-                        onClick = toolAction
-                    )
-                }
+            if (showAdjustExprButton) {
                 SimpleToolButton(
-                    EditClusterTool.PickCircleColor,
-                    buttonModifier,
-                    tint = objectColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
-                    onClick = toolAction
-                )
-                TwoIconButton(
-                    painterResource(EditClusterTool.MarkAsPhantoms.icon),
-                    painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
-                    stringResource(EditClusterTool.MarkAsPhantoms.name),
-                    enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
-                    buttonModifier,
-                    onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
-                )
-                if (showOrientationToggle) {
-                    SimpleToolButton(
-                        EditClusterTool.SwapDirection,
-                        buttonModifier,
-                        onClick = toolAction
-                    )
-                }
-                if (isLocked) {
-                    SimpleToolButton(
-                        EditClusterTool.Detach,
-                        buttonModifier,
-                        onClick = toolAction
-                    )
-                }
-                SimpleToolButton(
-                    EditClusterTool.Duplicate,
-                    buttonModifier,
-                    onClick = toolAction
-                )
-                SimpleToolButton(
-                    EditClusterTool.Delete,
+                    EditClusterTool.AdjustExpr,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun BoxScope.LockedCircleSelectionContextActions(
-    canvasSize: IntSize,
-    toolAction: (EditClusterTool) -> Unit,
-    toolPredicate: (EditClusterTool) -> Boolean,
-    getMostCommonCircleColorInSelection: () -> Color?
-) {
-    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
-        // duplicate & delete buttons
-        SimpleToolButton(
-            EditClusterTool.Duplicate,
-            topRightUnderScaleModifier,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.PickCircleColor,
-            halfBottomRightModifier,
-            tint = getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.Delete,
-            bottomRightModifier,
-            onClick = toolAction
-        )
-        TwoIconButton(
-            painterResource(EditClusterTool.MarkAsPhantoms.icon),
-            painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
-            stringResource(EditClusterTool.MarkAsPhantoms.name),
-            enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
-            bottomMidModifier,
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
-        )
-        SimpleToolButton(
-            EditClusterTool.Detach,
-            bottomLeftModifier,
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = toolAction
-        )
-    }
-}
-
-@Composable
-fun BoxScope.CircleSelectionContextActions(
-    canvasSize: IntSize,
-    showDirectionArrows: Boolean,
-    toolAction: (EditClusterTool) -> Unit,
-    toolPredicate: (EditClusterTool) -> Boolean,
-    getMostCommonCircleColorInSelection: () -> Color?,
-) {
-    // infinity button to the left-center
-    // + a way to trigger a visual effect over it
-//    SimpleButton(
-//        painterResource(Res.drawable.infinity),
-//        stringResource(Res.string.stub),
-//        Modifier.align(Alignment.CenterStart)
-//    ) {}
-    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
-        // expand & shrink buttons
-        SimpleToolButton(
-            EditClusterTool.Expand,
-            Modifier
-                .align(Alignment.TopStart)
-                .then(topRightModifier)
-            ,
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.Shrink,
-            scaleBottomRightModifier,
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = toolAction
-        )
-        // duplicate & delete buttons
-        SimpleToolButton(
-            EditClusterTool.Duplicate,
-            topRightUnderScaleModifier,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.PickCircleColor,
-            halfBottomRightModifier,
-            tint = getMostCommonCircleColorInSelection() ?: MaterialTheme.extendedColorScheme.highAccentColor,
-            onClick = toolAction
-        )
-        SimpleToolButton(
-            EditClusterTool.Delete,
-            bottomRightModifier,
-            onClick = toolAction
-        )
-        // TODO: make it make sense
-        if (showDirectionArrows) {
             SimpleToolButton(
-                EditClusterTool.SwapDirection,
-                bottomMidModifier,
-                tint = MaterialTheme.colorScheme.secondary,
+                EditClusterTool.PickCircleColor,
+                buttonModifier,
+                tint = objectColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
                 onClick = toolAction
             )
-        } else { // not the best way to go about it, but w/e
             TwoIconButton(
                 painterResource(EditClusterTool.MarkAsPhantoms.icon),
                 painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
                 stringResource(EditClusterTool.MarkAsPhantoms.name),
                 enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
-                bottomMidModifier,
-                tint = MaterialTheme.colorScheme.secondary,
+                buttonModifier,
                 onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
+            )
+            if (showOrientationToggle) {
+                SimpleToolButton(
+                    EditClusterTool.SwapDirection,
+                    buttonModifier,
+                    onClick = toolAction
+                )
+            }
+            if (isLocked) {
+                SimpleToolButton(
+                    EditClusterTool.Detach,
+                    buttonModifier,
+                    onClick = toolAction
+                )
+            }
+            SimpleToolButton(
+                EditClusterTool.Duplicate,
+                buttonModifier,
+                onClick = toolAction
+            )
+            SimpleToolButton(
+                EditClusterTool.Delete,
+                buttonModifier,
+                onClick = toolAction
             )
         }
     }
 }
 
+// only points
+// MAYBE: add scale/rotation handles if multiple are selected
 @Composable
-fun PointSelectionContextActions(
-    canvasSize: IntSize,
-    selectionIsLocked: Boolean,
+fun BoxScope.PointContextActions(
+//    objectColor: Color?,
+    showAdjustExprButton: Boolean,
+    isLocked: Boolean,
     toolAction: (EditClusterTool) -> Unit,
     toolPredicate: (EditClusterTool) -> Boolean,
 ) {
-    val buttonShape = CircleShape
-    val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
-        SimpleToolButton(
-            EditClusterTool.Delete,
-            // awkward position tbh
-            bottomRightModifier.background(buttonBackground, buttonShape),
-            onClick = toolAction
-        )
-        TwoIconButton(
-            painterResource(EditClusterTool.MarkAsPhantoms.icon),
-            painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
-            stringResource(EditClusterTool.MarkAsPhantoms.name),
-            enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
-            bottomMidModifier.background(buttonBackground, buttonShape),
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
-        )
-        if (selectionIsLocked) {
+    val buttonModifier = Modifier
+        .padding(8.dp)
+        .size(36.dp)
+    Surface(
+        Modifier
+            .align(Alignment.CenterEnd)
+            .padding(end = 8.dp)
+        ,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+        ) {
+            if (showAdjustExprButton) {
+                SimpleToolButton(
+                    EditClusterTool.AdjustExpr,
+                    buttonModifier,
+                    onClick = toolAction
+                )
+            }
+            TwoIconButton(
+                painterResource(EditClusterTool.MarkAsPhantoms.icon),
+                painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
+                stringResource(EditClusterTool.MarkAsPhantoms.name),
+                enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+                buttonModifier,
+                onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
+            )
+            if (isLocked) {
+                SimpleToolButton(
+                    EditClusterTool.Detach,
+                    buttonModifier,
+                    onClick = toolAction
+                )
+            }
             SimpleToolButton(
-                EditClusterTool.Detach,
-                halfBottomRightModifier.background(buttonBackground, buttonShape),
-                tint = MaterialTheme.colorScheme.secondary,
+                EditClusterTool.Delete,
+                buttonModifier,
                 onClick = toolAction
             )
         }
@@ -341,9 +239,9 @@ fun InterpolationInterface(
         nInterjacents = sliderState.value.roundToInt(),
         inBetween = interpolateInBetween,
         complementary =
-            if (interpolateCircles) {
-                if (circlesAreCoDirected) !interpolateInBetween else interpolateInBetween
-            } else interpolateInBetween
+        if (interpolateCircles) {
+            if (circlesAreCoDirected) !interpolateInBetween else interpolateInBetween
+        } else interpolateInBetween
     )
     val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
@@ -691,14 +589,14 @@ fun BoxScope.RegionManipulationStrategySelector(
         ) {
             RegionManipulationStrategy.entries.forEach { strategy ->
                 Row(Modifier
-                        .selectable(
-                            selected = (strategy == currentStrategy),
-                            onClick = { setStrategy(strategy) },
-                            role = Role.RadioButton
-                        )
-                        .height(56.dp)
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth()
+                    .selectable(
+                        selected = (strategy == currentStrategy),
+                        onClick = { setStrategy(strategy) },
+                        role = Role.RadioButton
+                    )
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
                     ,
                     verticalAlignment = Alignment.CenterVertically
                 ) {

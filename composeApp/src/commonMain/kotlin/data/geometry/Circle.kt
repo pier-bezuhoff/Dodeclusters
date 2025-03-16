@@ -329,7 +329,7 @@ data class Circle(
             }
             is Point -> {
                 b21 = Circle(base2.x, base2.y, this.radius)
-                b22 = b11
+                b22 = b21
             }
         }
         // out-out, out-in, in-out, in-in tangency cases
@@ -462,6 +462,7 @@ data class Circle(
             circle1: CircleOrLine, circle2: CircleOrLine
         ): List<Point> =
             when {
+                circle1 == circle2 -> emptyList()
                 circle1 is Line && circle2 is Line -> {
                     val (a1, b1, c1) = circle1
                     val (a2, b2, c2) = circle2

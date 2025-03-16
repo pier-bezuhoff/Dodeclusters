@@ -52,7 +52,6 @@ import domain.PartialArgList
 import domain.PointSnapResult
 import domain.Settings
 import domain.angleDeg
-import domain.cluster.ClusterV1
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
 import domain.compressConstraints
@@ -79,9 +78,6 @@ import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV4
 import domain.io.constellation2svg
-import domain.io.parseDdcV1
-import domain.io.parseDdcV2
-import domain.io.parseDdcV3
 import domain.io.tryParseDdc
 import domain.never
 import domain.reindexingMap
@@ -93,7 +89,6 @@ import domain.snapPointToPoints
 import domain.sortedByFrequency
 import domain.toArgPoint
 import domain.transpose
-import domain.tryCatch2
 import getPlatform
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -102,9 +97,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import ui.edit_cluster.dialogs.ColorPickerParameters
 import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultExtrapolationParameters
@@ -114,7 +107,6 @@ import ui.edit_cluster.dialogs.DialogType
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
-import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
@@ -1629,21 +1621,85 @@ class EditClusterViewModel : ViewModel() {
     fun adjustExpr() {
         val expr = expressions.expressions[selection[0]]?.expr
         val outputIndices = expressions.findExpr(expr)
-        val toolMode = when (expr) {
-            is Expr.CircleInterpolation -> ToolMode.CIRCLE_OR_POINT_INTERPOLATION
-            is Expr.PointInterpolation -> ToolMode.CIRCLE_OR_POINT_INTERPOLATION
-            is Expr.BiInversion -> ToolMode.BI_INVERSION
-            is Expr.LoxodromicMotion -> ToolMode.LOXODROMIC_MOTION
+        val tool = when (expr) {
+            is Expr.CircleInterpolation -> EditClusterTool.CircleOrPointInterpolation
+            is Expr.PointInterpolation -> EditClusterTool.CircleOrPointInterpolation
+            is Expr.BiInversion -> EditClusterTool.BiInversion
+            is Expr.LoxodromicMotion -> EditClusterTool.LoxodromicMotion
             else -> null
         }
-        if (toolMode != null && expr != null) {
-            recordCreateCommand() // save, since cancelling adj removes all affected objects
-            switchToMode(toolMode)
-            // MAYBE: fill in pArgList
-            // FIX: start with present parameters
+        when (val params = expr?.parameters) {
+            is InterpolationParameters ->
+                defaultInterpolationParameters = DefaultInterpolationParameters(params)
+            is BiInversionParameters ->
+                defaultBiInversionParameters = DefaultBiInversionParameters(params)
+            is LoxodromicMotionParameters ->
+                defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params)
+            else -> {}
+        }
+        if (tool != null && expr != null) {
+            recordCreateCommand() // create savepoint to go back to on cancel
+            partialArgList = when (expr) {
+                is Expr.CircleInterpolation ->
+                    PartialArgList(
+                        tool.signature,
+                        args = listOf(
+                            Arg.CircleOrPoint.CircleIndex(expr.startCircle),
+                            Arg.CircleOrPoint.CircleIndex(expr.endCircle)
+                        )
+                    )
+                is Expr.PointInterpolation ->
+                    PartialArgList(
+                        tool.signature,
+                        args = listOf(
+                            Arg.CircleOrPoint.Point.Index(expr.startPoint),
+                            Arg.CircleOrPoint.Point.Index(expr.endPoint)
+                        )
+                    )
+                is Expr.BiInversion ->
+                    PartialArgList(
+                        tool.signature,
+                        args = listOf(
+                            if (objects[expr.target] is Point)
+                                Arg.CircleAndPointIndices(
+                                    circleIndices = emptyList(),
+                                    pointIndices = listOf(expr.target)
+                                )
+                            else
+                                Arg.CircleAndPointIndices(
+                                    circleIndices = listOf(expr.target),
+                                    pointIndices = emptyList()
+                                )
+                            ,
+                            Arg.CircleIndex(expr.engine1),
+                            Arg.CircleIndex(expr.engine2),
+                        )
+                    )
+                is Expr.LoxodromicMotion ->
+                    PartialArgList(
+                        tool.signature,
+                        args = listOf(
+                            if (objects[expr.target] is Point)
+                                Arg.CircleAndPointIndices(
+                                    circleIndices = emptyList(),
+                                    pointIndices = listOf(expr.target)
+                                )
+                            else
+                                Arg.CircleAndPointIndices(
+                                    circleIndices = listOf(expr.target),
+                                    pointIndices = emptyList()
+                                )
+                            ,
+                            Arg.Point.Index(expr.divergencePoint),
+                            Arg.Point.Index(expr.convergencePoint),
+                        )
+                    )
+                else -> null
+            }
             submode = SubMode.ExprAdjustment(
                 listOf(AdjustableExpr(expr, outputIndices, outputIndices)),
             )
+            selection = emptyList() // clear selection to hide selection HUD
         }
     }
 
@@ -2562,18 +2618,7 @@ class EditClusterViewModel : ViewModel() {
                 KeyboardAction.ZOOM_OUT -> scaleSelection(1/KEYBOARD_ZOOM_INCREMENT)
                 KeyboardAction.UNDO -> undo()
                 KeyboardAction.REDO -> redo()
-                KeyboardAction.CANCEL -> when (mode) { // reset mode
-                    is ToolMode -> {
-                        if (submode is SubMode.ExprAdjustment)
-                            cancelExprAdjustment()
-                        partialArgList = partialArgList?.let { PartialArgList(it.signature) }
-                        partialArcPath = null
-                        submode = SubMode.None
-                    }
-                    is SelectionMode -> {
-                        selection = emptyList()
-                    }
-                }
+                KeyboardAction.CANCEL -> cancelOngoingActions()
                 KeyboardAction.MOVE -> switchToCategory(EditClusterCategory.Drag)
                 KeyboardAction.SELECT -> switchToCategory(EditClusterCategory.Multiselect)
                 KeyboardAction.REGION -> switchToCategory(EditClusterCategory.Region)
@@ -2713,6 +2758,25 @@ class EditClusterViewModel : ViewModel() {
             else -> {}
         }
         submode = SubMode.None
+    }
+
+    fun cancelOngoingActions() {
+        when (mode) { // reset mode
+            is ToolMode -> {
+                if (submode is SubMode.ExprAdjustment)
+                    cancelExprAdjustment()
+                partialArgList = partialArgList?.let { PartialArgList(it.signature) }
+                partialArcPath = null
+                submode = SubMode.None
+            }
+            is SelectionMode -> {
+                if (submode is SubMode.ExprAdjustment) {
+                    undo() // contrived way to go to before-adj savepoint
+                }
+                submode = SubMode.None
+                selection = emptyList()
+            }
+        }
     }
 
     fun cancelExprAdjustment() {
@@ -3157,6 +3221,7 @@ class EditClusterViewModel : ViewModel() {
         openedDialog = null
     }
 
+    // context: pArgList is full and we are in submode
     fun openDetailsDialog() {
         openedDialog = when (mode) {
             ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
@@ -3164,6 +3229,17 @@ class EditClusterViewModel : ViewModel() {
             ToolMode.BI_INVERSION -> DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> DialogType.LOXODROMIC_MOTION
             else -> null
+        } ?: submode.let { sm ->
+            if (sm is SubMode.ExprAdjustment) {
+                when (sm.parameters) {
+                    is InterpolationParameters -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
+                    is BiInversionParameters -> DialogType.BI_INVERSION
+                    is LoxodromicMotionParameters -> DialogType.LOXODROMIC_MOTION
+                    else -> null
+                }
+            } else {
+                null
+            }
         }
     }
 

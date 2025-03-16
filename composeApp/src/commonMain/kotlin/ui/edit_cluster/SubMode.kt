@@ -47,7 +47,7 @@ sealed interface SubMode {
      * @property[adjustables] non-empty list of [Expr]s together with occupied and
      * reserved output indices for each
      * @property[regions] indices of regions resulted from the [adjustables] expressions, this
-     * number is generally divisible by n-steps parameter
+     * number is generally divisible by the n-steps parameter
      * @property[parameters] should be the same for all [adjustables]
      */
     data class ExprAdjustment(
