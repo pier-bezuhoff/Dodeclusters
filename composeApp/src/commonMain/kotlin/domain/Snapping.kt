@@ -193,7 +193,6 @@ fun snapCircleToCircles(
             val ix1 = closestCircles.first()
             val c1 = circlesLinesOrPoints[ix1]!!
             val newCircle = circle.translatedUntilTangency(c1)
-                .also { println("tUT($circle, $c1) -> $it") }
             CircleSnapResult.Tangent(newCircle, ix1)
         }
         else -> { // 2 tangents
@@ -202,7 +201,6 @@ fun snapCircleToCircles(
             val c1 = circlesLinesOrPoints[ix1]!!
             val c2 = circlesLinesOrPoints[ix2]!!
             val newCircle = c.translatedUntilBiTangency(c1, c2)
-                .also { println("tUBT($c, $c1, $c2) -> $it") }
             if (newCircle == null ||
                 newCircle.distanceBetweenCenters(c) >= bitangentTolerance * snapDistance
             ) {
