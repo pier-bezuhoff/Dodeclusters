@@ -3,6 +3,7 @@ package data.geometry
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import domain.never
+import domain.squareSum
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -215,13 +216,18 @@ fun CircleOrLine.translatedUntilTangency(base: CircleOrLineOrPoint): CircleOrLin
     when (this) {
         is Circle -> when (base) {
             is Circle -> {
-                val b0 = base.project(this.centerPoint)
-                val b =
-                    if (this.hasInsideEpsilon(base.centerPoint))
-                        Point(2*base.x - b0.x, 2*base.y - b0.y)
-                    else b0
-                val p = this.project(b)
-                this.translated(b.x - p.x, b.y - p.y)
+                val b1 = base.project(this.centerPoint)
+                val p1 = this.project(b1)
+                val dx1 = b1.x - p1.x
+                val dy1 = b1.y - p1.y
+                val b2 = Point(2*base.x - b1.x, 2*base.y - b1.y)
+                val p2 = this.project(b2)
+                val dx2 = b2.x - p2.x
+                val dy2 = b2.y - p2.y
+                if (squareSum(dx1, dy1) < squareSum(dx2, dy2))
+                    this.translated(dx1, dy1)
+                else
+                    this.translated(dx2, dy2)
             }
             is Line -> {
                 val b = base.project(this.centerPoint)

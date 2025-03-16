@@ -79,12 +79,14 @@ import kotlin.math.sinh
 @Composable
 fun BoxScope.SelectionContextActions(
     canvasSize: IntSize,
+    scaleSliderPercentage: Float,
     objectColor: Color?,
     showAdjustExprButton: Boolean,
     showOrientationToggle: Boolean,
     isLocked: Boolean,
     toolAction: (EditClusterTool) -> Unit,
     toolPredicate: (EditClusterTool) -> Boolean,
+    onScale: (newScaleSliderPercentage: Float) -> Unit,
 ) {
     // column 1:
     // expand
@@ -94,7 +96,36 @@ fun BoxScope.SelectionContextActions(
     val buttonModifier = Modifier
         .padding(8.dp)
         .size(36.dp)
+    val sliderColors = SliderDefaults.colors(
+        thumbColor = MaterialTheme.colorScheme.secondary,
+        activeTrackColor = MaterialTheme.colorScheme.secondary,
+        activeTickColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTickColor = MaterialTheme.colorScheme.secondary,
+    )
     with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
+        SimpleToolButton(
+            EditClusterTool.Expand,
+            topMidModifier
+            ,
+            tint = MaterialTheme.colorScheme.secondary,
+            onClick = toolAction
+        )
+        VerticalSlider(
+            scaleSliderPercentage,
+            onScale,
+            verticalSlider2Modifier
+                .height(verticalSliderHeight)
+            ,
+            colors = sliderColors,
+        )
+        SimpleToolButton(
+            EditClusterTool.Shrink,
+            underVerticalSlider2Modifier
+            ,
+            tint = MaterialTheme.colorScheme.secondary,
+            onClick = toolAction
+        )
     }
     Surface(
         Modifier

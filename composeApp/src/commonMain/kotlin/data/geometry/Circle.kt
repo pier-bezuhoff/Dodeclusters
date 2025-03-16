@@ -451,7 +451,7 @@ data class Circle(
 
         private const val TANGENTIAL_TOUCH_EPSILON = 2 * EPSILON
 
-        // NOTE: on android triple tangential intersections are brittle
+        // NOTE: on Android triple tangential intersections are brittle
         /** @return list of 0, 1 or 2 intersection points. When there are 2 intersection points,
          * they are ordered as follows:
          * [circle1] "needle" (internal orientation)
@@ -462,13 +462,15 @@ data class Circle(
             circle1: CircleOrLine, circle2: CircleOrLine
         ): List<Point> =
             when {
-                circle1 == circle2 -> emptyList()
+                circle1 == circle2 ->
+                    emptyList()
                 circle1 is Line && circle2 is Line -> {
                     val (a1, b1, c1) = circle1
                     val (a2, b2, c2) = circle2
                     val w = a1*b2 - a2*b1
-                    if (abs(w / circle1.norm / circle2.norm) < TANGENTIAL_TOUCH_EPSILON) { // parallel condition
-                        listOf(Point.CONFORMAL_INFINITY)
+                    // collinearity condition
+                    if (abs(w / circle1.norm / circle2.norm) < EPSILON) {
+                        listOf(Point.CONFORMAL_INFINITY) // & potentially full coincidence
                     } else {
                         val wx = b1*c2 - b2*c1 // det in homogenous coordinates
                         val wy = a2*c1 - a1*c2

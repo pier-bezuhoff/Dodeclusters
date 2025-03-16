@@ -61,9 +61,8 @@ data class Line(
     }
 
     infix fun isCollinearTo(line: Line): Boolean {
-        val (a,b) = this.normalized()
-        val (a1,b1) = line.normalized()
-        return abs(a*b1 - a1*b) < EPSILON
+        val crossProduct = (this.a*line.b - this.b*line.a) / this.norm / line.norm
+        return abs(crossProduct) < EPSILON
     }
 
     /** Project [point] down onto this line */

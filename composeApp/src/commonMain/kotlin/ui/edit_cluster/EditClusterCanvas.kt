@@ -203,12 +203,18 @@ fun BoxScope.EditClusterCanvas(
         if (viewModel.circleSelectionIsActive) {
             SelectionContextActions(
                 viewModel.canvasSize,
+                scaleSliderPercentage = viewModel.submode.let { sm ->
+                    if (sm is SubMode.ScaleViaSlider)
+                        sm.sliderPercentage
+                    else 0.5f
+                },
                 objectColor = viewModel.getMostCommonCircleColorInSelection(),
                 showAdjustExprButton = viewModel.showAdjustExprButton(),
                 showOrientationToggle = viewModel.showDirectionArrows,
                 isLocked = viewModel.selectionIsLocked,
                 toolAction = viewModel::toolAction,
                 toolPredicate = viewModel::toolPredicate,
+                onScale = {  }
             )
         } else if (viewModel.pointSelectionIsActive) {
             PointContextActions( // only points are selected
@@ -1209,7 +1215,7 @@ data class ConcreteScreenPositions(
     val density: Density,
     val halfSize: Dp = (48/2).dp,
 ) {
-    private val positions: SelectionControlsPositions = SelectionControlsPositions(size)
+    val positions: SelectionControlsPositions = SelectionControlsPositions(size)
 
     @Stable
     fun offsetModifier(x: Float, y: Float): Modifier =
@@ -1255,5 +1261,10 @@ data class ConcreteScreenPositions(
         with (density) { Modifier.offset(
             x = positions.mid.toDp() - halfSize,
             y = (positions.top + positions.scaleSliderPadding).toDp()
+        ) }
+    val underVerticalSlider2Modifier =
+        with (density) { Modifier.offset(
+            x = positions.mid.toDp() - halfSize,
+            y = (positions.top + positions.scaleSliderPadding + positions.scaleSliderFullHeight).toDp()
         ) }
 }

@@ -540,3 +540,41 @@ fun VerticalSlider(
         colors = colors,
     )
 }
+
+@Composable
+fun VerticalSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    valueRange: ClosedFloatingPointRange<Float> = 0f .. 1f,
+    steps: Int = 0,
+    colors: SliderColors = SliderDefaults.colors(),
+) {
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier
+            .graphicsLayer {
+                rotationZ = 270f
+                transformOrigin = TransformOrigin(0f, 0f)
+            }.layout { measurable, constraints ->
+                val placeable = measurable.measure(
+                    Constraints( // transposed constraints
+                        minWidth = constraints.minHeight,
+                        maxWidth = constraints.maxHeight,
+                        minHeight = constraints.minWidth,
+                        maxHeight = constraints.maxWidth,
+                    )
+                )
+                layout(placeable.height, placeable.width) {
+                    placeable.place(-placeable.width, 0)
+                }
+            } //.size(w,h)
+        ,
+        enabled = enabled,
+        valueRange = valueRange,
+        steps = steps,
+        colors = colors,
+    )
+}

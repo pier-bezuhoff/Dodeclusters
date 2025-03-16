@@ -193,6 +193,7 @@ fun snapCircleToCircles(
             val ix1 = closestCircles.first()
             val c1 = circlesLinesOrPoints[ix1]!!
             val newCircle = circle.translatedUntilTangency(c1)
+//                .also { println("tUT($circle, $c1) -> $it") }
             CircleSnapResult.Tangent(newCircle, ix1)
         }
         else -> { // 2 tangents
