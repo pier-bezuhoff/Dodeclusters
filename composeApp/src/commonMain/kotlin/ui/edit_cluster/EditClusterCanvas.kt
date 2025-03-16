@@ -35,12 +35,14 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StampedPathEffectStyle
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -51,6 +53,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import data.geometry.Circle
 import data.geometry.CircleOrLine
@@ -73,6 +76,7 @@ import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.rotateBy
+import domain.rotateByAround
 import getPlatform
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
@@ -120,6 +124,7 @@ fun BoxScope.EditClusterCanvas(
     val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
     val sliderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
     val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+    val rotationHandleColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
     // MAYBE: black/dark grey for light scheme
     val circleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
     val freeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
@@ -195,6 +200,7 @@ fun BoxScope.EditClusterCanvas(
                 drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             }
             if (viewModel.circleSelectionIsActive && viewModel.showUI) {
+                drawRotationHandle(size, 0f, rotationHandleColor)
 //                drawSelectionControls(canvasSize = viewModel.canvasSize, selectionIsLocked = viewModel.selectionIsLocked, subMode = viewModel.submode, sliderColor = sliderColor, jCarcassColor = jCarcassColor, rotateHandleColor = rotateIconColor, handleRadius = handleRadius, iconDim = iconDim, rotateIcon = rotateIcon)
             }
 //        }.also { println("full draw: $it") } // not that long
@@ -203,18 +209,15 @@ fun BoxScope.EditClusterCanvas(
         if (viewModel.circleSelectionIsActive) {
             SelectionContextActions(
                 viewModel.canvasSize,
-                scaleSliderPercentage = viewModel.submode.let { sm ->
-                    if (sm is SubMode.ScaleViaSlider)
-                        sm.sliderPercentage
-                    else 0.5f
-                },
+                scaleSliderPercentage = viewModel.scaleSliderPercentage,
                 objectColor = viewModel.getMostCommonCircleColorInSelection(),
                 showAdjustExprButton = viewModel.showAdjustExprButton(),
                 showOrientationToggle = viewModel.showDirectionArrows,
                 isLocked = viewModel.selectionIsLocked,
                 toolAction = viewModel::toolAction,
                 toolPredicate = viewModel::toolPredicate,
-                onScale = {  }
+                onScale = viewModel::scaleViaSlider,
+                onScaleFinished = viewModel::finishScalingViaSlider,
             )
         } else if (viewModel.pointSelectionIsActive) {
             PointContextActions( // only points are selected
@@ -1054,6 +1057,55 @@ private inline fun DrawScope.drawHandles(
             )
         }
     }
+}
+
+fun DrawScope.drawRotationHandle(
+    canvasSize: Size,
+    rotationAngle: Float,
+    handleColor: Color,
+) {
+    val centerX = canvasSize.width/2f
+    val centerY = canvasSize.height/2f
+    val screenCenter = Offset(centerX, centerY)
+    val radius = 0.4f*min(canvasSize.width, canvasSize.height)
+    val startAngle = 15f - rotationAngle
+    val sweepAngle = 60f
+    val topLeft = Offset(centerX - radius, centerY - radius)
+    val stroke = Stroke(6f)
+    val arrowStrokeWidth = 4f
+    val arrowHalfAngle = 18f
+    val arrowLength = 24f
+    val tip = Offset(centerX, centerY - radius)
+    val tail = Offset(centerX + arrowLength, centerY - radius)
+    val start1 = tail.rotateByAround(arrowHalfAngle, tip)
+    val end1 = tail.rotateByAround(-arrowHalfAngle, tip)
+    val start2 = tail.rotateByAround(180f + arrowHalfAngle, tip)
+    val end2 = tail.rotateByAround(180f - arrowHalfAngle, tip)
+    rotate(startAngle + 90f, screenCenter) {
+        drawPoints(
+            listOf(start1, tip, end1),
+            PointMode.Polygon,
+            handleColor,
+            strokeWidth = arrowStrokeWidth,
+            cap = StrokeCap.Round,
+        )
+    }
+    rotate(startAngle + sweepAngle + 90f, screenCenter) {
+        drawPoints(
+            listOf(start2, tip, end2),
+            PointMode.Polygon,
+            handleColor,
+            strokeWidth = arrowStrokeWidth,
+            cap = StrokeCap.Square,
+        )
+    }
+    drawArc(
+        handleColor,
+        startAngle, sweepAngle,
+        useCenter = false,
+        topLeft, Size(2*radius, 2*radius),
+        style = stroke,
+    )
 }
 
 // FIX: J and o dont blend well (especially on white), fuse them

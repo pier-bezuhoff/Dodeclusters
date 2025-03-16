@@ -209,6 +209,12 @@ class EditClusterViewModel : ViewModel() {
             else -> null
         }
     }
+    inline val scaleSliderPercentage: Float
+        get() = submode.let { sm ->
+            if (sm is SubMode.ScaleViaSlider)
+                sm.sliderPercentage
+            else 0.5f
+        }
     /** when changing [expressions], flip this to forcibly recalculate [selectionIsLocked] */
     private var selectionIsLockedTrigger: Boolean by mutableStateOf(false)
     // MAYBE: show quick prompt/popup instead of button
@@ -1767,13 +1773,6 @@ class EditClusterViewModel : ViewModel() {
                 val screenCenter = absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
                 when {
                     isCloseEnoughToSelect(
-                        absolutePosition = absolute(selectionControlsPositions.scaleSliderMiddleOffset),
-                        visiblePosition = visiblePosition,
-                        lowAccuracy = true
-                    ) -> {
-                        submode = SubMode.ScaleViaSlider(screenCenter)
-                    }
-                    isCloseEnoughToSelect(
                         absolutePosition = absolute(selectionControlsPositions.rotationHandleOffset),
                         visiblePosition = visiblePosition,
                         lowAccuracy = true
@@ -2059,15 +2058,6 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    private fun scaleViaSliderSingleCircle(pan: Offset, h: HandleConfig.SingleCircle, sm: SubMode.ScaleViaSlider) {
-        val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
-        if (sm.sliderPercentage != newPercentage) {
-            val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
-            transformWhatWeCan(listOf(h.ix), focus = sm.center, zoom = scaleFactor)
-            submode = sm.copy(sliderPercentage = newPercentage)
-        }
-    }
-
     private fun rotateSingleCircle(pan: Offset, c: Offset, h: HandleConfig.SingleCircle, sm: SubMode.Rotate) {
         val center = sm.center
         val centerToCurrent = c - center
@@ -2093,13 +2083,21 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    private fun scaleViaSliderSeveralCircles(pan: Offset, sm: SubMode.ScaleViaSlider, targets: List<Ix>) {
-        val newPercentage = selectionControlsPositions.addPanToPercentage(sm.sliderPercentage, pan)
-        if (sm.sliderPercentage != newPercentage) {
-            val scaleFactor = sliderPercentageDeltaToZoom(newPercentage - sm.sliderPercentage)
-            transformWhatWeCan(targets, focus = sm.center, zoom = scaleFactor)
-            submode = sm.copy(sliderPercentage = newPercentage)
+    fun scaleViaSlider(newSliderPercentage: Float) {
+        val sm = when (val sm0 = submode) {
+            is SubMode.ScaleViaSlider -> sm0
+            else -> {
+                val screenCenter = absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
+                SubMode.ScaleViaSlider(screenCenter)
+            }
         }
+        val scaleFactor = sliderPercentageDeltaToZoom(newSliderPercentage - sm.sliderPercentage)
+        transformWhatWeCan(selection, focus = sm.center, zoom = scaleFactor)
+        submode = sm.copy(sliderPercentage = newSliderPercentage)
+    }
+
+    fun finishScalingViaSlider() {
+        submode = SubMode.None
     }
 
     private fun rotateSeveralCircles(pan: Offset, c: Offset, sm: SubMode.Rotate, targets: List<Ix>) {
@@ -2320,7 +2318,6 @@ class EditClusterViewModel : ViewModel() {
                 is HandleConfig.SingleCircle -> {
                     when (val sm = submode) {
                         is SubMode.Scale -> scaleSingleCircle(c = c, zoom = zoom, h = h, sm = sm)
-                        is SubMode.ScaleViaSlider -> scaleViaSliderSingleCircle(pan = pan, h = h, sm = sm)
                         is SubMode.Rotate -> rotateSingleCircle(pan = pan, c = c, h = h, sm = sm)
                         else -> {}
                     }
@@ -2329,8 +2326,6 @@ class EditClusterViewModel : ViewModel() {
                     when (val sm = submode) {
                         is SubMode.Scale ->
                             scaleSeveralCircles(pan, selection)
-                        is SubMode.ScaleViaSlider ->
-                            scaleViaSliderSeveralCircles(pan = pan, sm = sm, targets = selection)
                         is SubMode.Rotate ->
                             rotateSeveralCircles(pan = pan, c = c, sm = sm, targets = selection)
                         else -> {}

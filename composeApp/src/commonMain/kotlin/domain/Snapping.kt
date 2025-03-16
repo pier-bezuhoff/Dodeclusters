@@ -173,7 +173,7 @@ fun snapCircleToCircles(
     circle: CircleOrLine,
     circlesLinesOrPoints: List<CircleOrLineOrPoint?>,
     snapDistance: Double,
-    bitangentTolerance: Double = 1.5
+    bitangentTolerance: Double = 1.2
 ): CircleSnapResult {
     val closestCircles: List<Ix> = circlesLinesOrPoints.asSequence()
         .mapIndexed { ix, c ->
@@ -193,7 +193,6 @@ fun snapCircleToCircles(
             val ix1 = closestCircles.first()
             val c1 = circlesLinesOrPoints[ix1]!!
             val newCircle = circle.translatedUntilTangency(c1)
-//                .also { println("tUT($circle, $c1) -> $it") }
             CircleSnapResult.Tangent(newCircle, ix1)
         }
         else -> { // 2 tangents

@@ -87,11 +87,8 @@ fun BoxScope.SelectionContextActions(
     toolAction: (EditClusterTool) -> Unit,
     toolPredicate: (EditClusterTool) -> Boolean,
     onScale: (newScaleSliderPercentage: Float) -> Unit,
+    onScaleFinished: () -> Unit,
 ) {
-    // column 1:
-    // expand
-    // scale slider
-    // shrink
     // rotate handle
     val buttonModifier = Modifier
         .padding(8.dp)
@@ -103,11 +100,19 @@ fun BoxScope.SelectionContextActions(
         inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
         inactiveTickColor = MaterialTheme.colorScheme.secondary,
     )
+    // scale slider mid column is too far from the right
     with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
+        Column(
+            Modifier
+                .offset()
+            ,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+
+        }
         SimpleToolButton(
             EditClusterTool.Expand,
-            topMidModifier
-            ,
+            topMidModifier,
             tint = MaterialTheme.colorScheme.secondary,
             onClick = toolAction
         )
@@ -117,12 +122,12 @@ fun BoxScope.SelectionContextActions(
             verticalSlider2Modifier
                 .height(verticalSliderHeight)
             ,
+            onValueChangeFinished = onScaleFinished,
             colors = sliderColors,
         )
         SimpleToolButton(
             EditClusterTool.Shrink,
-            underVerticalSlider2Modifier
-            ,
+            underVerticalSlider2Modifier,
             tint = MaterialTheme.colorScheme.secondary,
             onClick = toolAction
         )

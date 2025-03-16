@@ -11,7 +11,7 @@ import kotlin.math.sin
 /**
  * Rotates the given offset around the origin by the given angle in degrees.
  *
- * A positive angle indicates a counterclockwise rotation around the right-handed 2D Cartesian
+ * A positive angle indicates a counterclockwise rotation in the right-handed 2D Cartesian
  * coordinate system.
  *
  * See: [Rotation matrix](https://en.wikipedia.org/wiki/Rotation_matrix)
@@ -24,6 +24,16 @@ inline fun Offset.rotateBy(angle: Float): Offset {
         (x * sin(angleInRadians) + y * cos(angleInRadians)).toFloat()
     )
 }
+
+/**
+ * Rotates the given offset around [pivot] by the given [angle] in degrees.
+ *
+ * A positive angle indicates a counterclockwise rotation in the right-handed 2D Cartesian
+ * coordinate system.
+ */
+@Suppress("NOTHING_TO_INLINE")
+inline fun Offset.rotateByAround(angle: Float, pivot: Offset): Offset =
+    (this - pivot).rotateBy(angle) + pivot
 
 fun Offset.rotateBy(angleCos: Double, angleSin: Double): Offset {
     return Offset(

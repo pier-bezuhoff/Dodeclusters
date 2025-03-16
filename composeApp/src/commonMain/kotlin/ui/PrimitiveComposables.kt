@@ -549,6 +549,7 @@ fun VerticalSlider(
     enabled: Boolean = true,
     valueRange: ClosedFloatingPointRange<Float> = 0f .. 1f,
     steps: Int = 0,
+    onValueChangeFinished: (() -> Unit)? = null,
     colors: SliderColors = SliderDefaults.colors(),
 ) {
     Slider(
@@ -575,6 +576,7 @@ fun VerticalSlider(
         enabled = enabled,
         valueRange = valueRange,
         steps = steps,
+        onValueChangeFinished = onValueChangeFinished,
         colors = colors,
     )
 }
