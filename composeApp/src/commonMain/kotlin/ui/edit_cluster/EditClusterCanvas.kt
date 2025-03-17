@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -124,7 +125,8 @@ fun BoxScope.EditClusterCanvas(
     val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
     val sliderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
     val jCarcassColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
-    val rotationHandleColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+    val rotationHandleBackgroundColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+    val rotationHandleColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
     // MAYBE: black/dark grey for light scheme
     val circleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
     val freeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
@@ -200,7 +202,7 @@ fun BoxScope.EditClusterCanvas(
                 drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             }
             if (viewModel.circleSelectionIsActive && viewModel.showUI) {
-                drawRotationHandle(size, 0f, rotationHandleColor)
+                drawRotationHandle(size, 0f, rotationHandleColor, rotationHandleBackgroundColor)
 //                drawSelectionControls(canvasSize = viewModel.canvasSize, selectionIsLocked = viewModel.selectionIsLocked, subMode = viewModel.submode, sliderColor = sliderColor, jCarcassColor = jCarcassColor, rotateHandleColor = rotateIconColor, handleRadius = handleRadius, iconDim = iconDim, rotateIcon = rotateIcon)
             }
 //        }.also { println("full draw: $it") } // not that long
@@ -1059,15 +1061,28 @@ private inline fun DrawScope.drawHandles(
     }
 }
 
+private const val ARROW_TAIL_LENGTH = 4f
+private const val ARROW_HEAD_LENGTH = 24f
+private const val ARROW_HALF_HEIGHT = 8f
+/** Filled right/east-oriented arrow */
+private val MEDIUM_ARROW_PATH = Path().apply {
+    // starts at (0,0)
+    lineTo(-ARROW_TAIL_LENGTH, -ARROW_HALF_HEIGHT)
+    lineTo(ARROW_HEAD_LENGTH, 0f)
+    lineTo(-ARROW_TAIL_LENGTH, ARROW_HALF_HEIGHT)
+    close()
+}
+
 fun DrawScope.drawRotationHandle(
     canvasSize: Size,
     rotationAngle: Float,
     handleColor: Color,
+    handleBackgroundColor: Color,
 ) {
     val centerX = canvasSize.width/2f
     val centerY = canvasSize.height/2f
     val screenCenter = Offset(centerX, centerY)
-    val radius = 0.4f*min(canvasSize.width, canvasSize.height)
+    val radius = 0.45f*min(canvasSize.width, canvasSize.height)
     val startAngle = 15f - rotationAngle
     val sweepAngle = 60f
     val topLeft = Offset(centerX - radius, centerY - radius)
@@ -1081,26 +1096,42 @@ fun DrawScope.drawRotationHandle(
     val end1 = tail.rotateByAround(-arrowHalfAngle, tip)
     val start2 = tail.rotateByAround(180f + arrowHalfAngle, tip)
     val end2 = tail.rotateByAround(180f - arrowHalfAngle, tip)
+    val brush = Brush.sweepGradient(
+        1f/24f to handleColor,
+        0.10f to handleBackgroundColor,
+        0.15f to handleBackgroundColor,
+        5f/24f to handleColor,
+        center = screenCenter,
+    )
     rotate(startAngle + 90f, screenCenter) {
-        drawPoints(
-            listOf(start1, tip, end1),
-            PointMode.Polygon,
-            handleColor,
-            strokeWidth = arrowStrokeWidth,
-            cap = StrokeCap.Round,
-        )
+        translate(centerX, centerY - radius) {
+            rotate(180f, Offset.Zero) {
+                drawPath(MEDIUM_ARROW_PATH, handleColor)
+            }
+        }
+//        drawPoints(
+//            listOf(start1, tip, end1),
+//            PointMode.Polygon,
+//            handleColor,
+//            strokeWidth = arrowStrokeWidth,
+//            cap = StrokeCap.Round,
+//        )
     }
     rotate(startAngle + sweepAngle + 90f, screenCenter) {
-        drawPoints(
-            listOf(start2, tip, end2),
-            PointMode.Polygon,
-            handleColor,
-            strokeWidth = arrowStrokeWidth,
-            cap = StrokeCap.Square,
-        )
+        translate(centerX, centerY - radius) {
+            drawPath(MEDIUM_ARROW_PATH, handleColor)
+        }
+//        drawPoints(
+//            listOf(start2, tip, end2),
+//            PointMode.Polygon,
+//            handleColor,
+//            strokeWidth = arrowStrokeWidth,
+//            cap = StrokeCap.Square,
+//        )
     }
     drawArc(
-        handleColor,
+        brush,
+//        handleColor,
         startAngle, sweepAngle,
         useCenter = false,
         topLeft, Size(2*radius, 2*radius),
