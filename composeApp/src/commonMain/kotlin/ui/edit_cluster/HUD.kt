@@ -1,7 +1,11 @@
 package ui.edit_cluster
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.draggable2D
+import androidx.compose.foundation.gestures.rememberDraggable2DState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -39,7 +43,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntSize
@@ -52,6 +66,7 @@ import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
+import domain.angleDeg
 import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
@@ -76,10 +91,12 @@ import kotlin.math.sinh
 
 // MAYBE: add tooltips to buttons
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BoxScope.SelectionContextActions(
     canvasSize: IntSize,
     scaleSliderPercentage: Float,
+    rotationHandleAngle: Float,
     objectColor: Color?,
     showAdjustExprButton: Boolean,
     showOrientationToggle: Boolean,
@@ -88,6 +105,9 @@ fun BoxScope.SelectionContextActions(
     toolPredicate: (EditClusterTool) -> Boolean,
     onScale: (newScaleSliderPercentage: Float) -> Unit,
     onScaleFinished: () -> Unit,
+    onRotate: (newRotationAngle: Float) -> Unit,
+    onRotateStarted: (center: Offset) -> Unit,
+    onRotateFinished: () -> Unit,
 ) {
     // rotate handle
     val buttonModifier = Modifier
@@ -100,8 +120,11 @@ fun BoxScope.SelectionContextActions(
         inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
         inactiveTickColor = MaterialTheme.colorScheme.secondary,
     )
+    val rotationHandleStripeColor = MaterialTheme.colorScheme.onSecondaryContainer
     // scale slider mid column is too far from the right
     with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
+        /** position of the grabbed rotation handle if it followed the cursor */
+        var virtualRotationHandlePosition by remember { mutableStateOf(Offset.Unspecified) }
         Column(
             Modifier
                 .offset()
@@ -131,6 +154,49 @@ fun BoxScope.SelectionContextActions(
             tint = MaterialTheme.colorScheme.secondary,
             onClick = toolAction
         )
+        // MAYBE: adjust radius when handle is moved to the center for faster rotations
+        Box(
+            rotationHandleModifier(rotationHandleAngle)
+                .size(48.dp)
+                .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
+                .drawWithCache {
+                    val mask = Path().apply {
+                        addOval(Rect(Offset.Zero, size).deflate(0.1f*size.width))
+                    }
+                    onDrawWithContent {
+                        this.drawContent()
+                        rotate(rotationHandleAngle) {
+                            clipPath(mask) {
+                                val step = size.minDimension/4f
+                                for (i in 1..7) {
+                                    drawLine(
+                                        rotationHandleStripeColor,
+                                        Offset(0f, i*step),
+                                        Offset(i*step, 0f),
+                                        strokeWidth = 2f,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                .pointerHoverIcon(PointerIcon.Hand)
+                .draggable2D(
+                    rememberDraggable2DState { delta ->
+                        virtualRotationHandlePosition += delta
+                        val newAngle = positions.center
+                            .angleDeg(positions.southEast, virtualRotationHandlePosition)
+                        onRotate(newAngle)
+                    },
+                    onDragStarted = {
+                        virtualRotationHandlePosition = positions.rotationHandleOffset(0f)
+                        onRotateStarted(positions.center)
+                    },
+                    onDragStopped = {
+                        onRotateFinished()
+                    }
+                )
+        ) {}
     }
     Surface(
         Modifier

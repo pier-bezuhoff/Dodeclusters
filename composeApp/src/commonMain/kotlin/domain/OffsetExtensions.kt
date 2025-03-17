@@ -48,6 +48,10 @@ fun Offset.angleDeg(other: Offset): Float =
         x*other.x + y*other.y
     ) * 180/PI).toFloat()
 
+/** B.angleDeg(A, C) measures angle ABC with A being the pivot */
+fun Offset.angleDeg(position1: Offset, position2: Offset): Float =
+    (position1 - this).angleDeg(position2 - this)
+
 fun Offset.angleCos(other: Offset): Double {
     return (x.toDouble()*other.x + y*other.y)/getDistance()/other.getDistance()
 }

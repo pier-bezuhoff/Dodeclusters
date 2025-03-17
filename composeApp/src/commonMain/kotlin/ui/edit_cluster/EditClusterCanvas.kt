@@ -17,9 +17,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
@@ -36,7 +39,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
-import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StampedPathEffectStyle
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -45,6 +47,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.painter.Painter
@@ -54,7 +57,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import data.geometry.Circle
 import data.geometry.CircleOrLine
@@ -202,8 +204,7 @@ fun BoxScope.EditClusterCanvas(
                 drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             }
             if (viewModel.circleSelectionIsActive && viewModel.showUI) {
-                drawRotationHandle(size, 0f, rotationHandleColor, rotationHandleBackgroundColor)
-//                drawSelectionControls(canvasSize = viewModel.canvasSize, selectionIsLocked = viewModel.selectionIsLocked, subMode = viewModel.submode, sliderColor = sliderColor, jCarcassColor = jCarcassColor, rotateHandleColor = rotateIconColor, handleRadius = handleRadius, iconDim = iconDim, rotateIcon = rotateIcon)
+                drawRotationHandle(size, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)
             }
 //        }.also { println("full draw: $it") } // not that long
     }
@@ -212,6 +213,7 @@ fun BoxScope.EditClusterCanvas(
             SelectionContextActions(
                 viewModel.canvasSize,
                 scaleSliderPercentage = viewModel.scaleSliderPercentage,
+                rotationHandleAngle = viewModel.rotationHandleAngle,
                 objectColor = viewModel.getMostCommonCircleColorInSelection(),
                 showAdjustExprButton = viewModel.showAdjustExprButton(),
                 showOrientationToggle = viewModel.showDirectionArrows,
@@ -219,7 +221,10 @@ fun BoxScope.EditClusterCanvas(
                 toolAction = viewModel::toolAction,
                 toolPredicate = viewModel::toolPredicate,
                 onScale = viewModel::scaleViaSlider,
-                onScaleFinished = viewModel::finishScalingViaSlider,
+                onScaleFinished = viewModel::concludeSubmode,
+                onRotate = viewModel::rotateViaHandle,
+                onRotateStarted = { viewModel.startHandleRotation() },
+                onRotateFinished = viewModel::concludeSubmode
             )
         } else if (viewModel.pointSelectionIsActive) {
             PointContextActions( // only points are selected
@@ -1082,164 +1087,45 @@ fun DrawScope.drawRotationHandle(
     val centerX = canvasSize.width/2f
     val centerY = canvasSize.height/2f
     val screenCenter = Offset(centerX, centerY)
-    val radius = 0.45f*min(canvasSize.width, canvasSize.height)
-    val startAngle = 15f - rotationAngle
-    val sweepAngle = 60f
+    val radius = SelectionControlsPositions.RELATIVE_ROTATION_HANDLE_RADIUS *
+        min(canvasSize.width, canvasSize.height)
+    val sweepAngle = 45f
+    val preAngle = (90f - sweepAngle)/2f
+    val startAngle = preAngle + rotationAngle
     val topLeft = Offset(centerX - radius, centerY - radius)
     val stroke = Stroke(6f)
-    val arrowStrokeWidth = 4f
-    val arrowHalfAngle = 18f
-    val arrowLength = 24f
-    val tip = Offset(centerX, centerY - radius)
-    val tail = Offset(centerX + arrowLength, centerY - radius)
-    val start1 = tail.rotateByAround(arrowHalfAngle, tip)
-    val end1 = tail.rotateByAround(-arrowHalfAngle, tip)
-    val start2 = tail.rotateByAround(180f + arrowHalfAngle, tip)
-    val end2 = tail.rotateByAround(180f - arrowHalfAngle, tip)
     val brush = Brush.sweepGradient(
-        1f/24f to handleColor,
+        0.07f to handleColor,
         0.10f to handleBackgroundColor,
         0.15f to handleBackgroundColor,
-        5f/24f to handleColor,
+        0.18f to handleColor,
         center = screenCenter,
     )
-    rotate(startAngle + 90f, screenCenter) {
-        translate(centerX, centerY - radius) {
-            rotate(180f, Offset.Zero) {
-                drawPath(MEDIUM_ARROW_PATH, handleColor)
-            }
-        }
-//        drawPoints(
-//            listOf(start1, tip, end1),
-//            PointMode.Polygon,
-//            handleColor,
-//            strokeWidth = arrowStrokeWidth,
-//            cap = StrokeCap.Round,
-//        )
+    withTransform({
+        rotate(startAngle + 90f, screenCenter)
+        translate(centerX, centerY - radius)
+        rotate(180f, Offset.Zero)
+    }) {
+        drawPath(MEDIUM_ARROW_PATH, handleColor)
     }
-    rotate(startAngle + sweepAngle + 90f, screenCenter) {
-        translate(centerX, centerY - radius) {
-            drawPath(MEDIUM_ARROW_PATH, handleColor)
-        }
-//        drawPoints(
-//            listOf(start2, tip, end2),
-//            PointMode.Polygon,
-//            handleColor,
-//            strokeWidth = arrowStrokeWidth,
-//            cap = StrokeCap.Square,
-//        )
+    withTransform({
+        rotate(startAngle + sweepAngle + 90f, screenCenter)
+        translate(centerX, centerY - radius)
+    }) {
+        drawPath(MEDIUM_ARROW_PATH, handleColor)
     }
-    drawArc(
-        brush,
+    rotate(rotationAngle, screenCenter) { // orient Eastward
+        drawArc(
+            brush,
 //        handleColor,
-        startAngle, sweepAngle,
-        useCenter = false,
-        topLeft, Size(2*radius, 2*radius),
-        style = stroke,
-    )
+            preAngle, sweepAngle,
+            useCenter = false,
+            topLeft, Size(2*radius, 2*radius),
+            style = stroke,
+        )
+    }
 }
 
-// FIX: J and o dont blend well (especially on white), fuse them
-fun DrawScope.drawSelectionControls(
-    canvasSize: IntSize,
-    selectionIsLocked: Boolean,
-    subMode: SubMode,
-    sliderColor: Color,
-    jCarcassColor: Color,
-    rotateHandleColor: Color,
-    handleRadius: Float,
-    iconDim: Float,
-    rotateIcon: Painter,
-) {
-    val carcassStyle = Stroke(0.7f * iconDim, cap = StrokeCap.Round)
-    val buttonBackdropRadius = 0.8f * iconDim
-    val iconSize = Size(iconDim, iconDim)
-    val (w, h) = canvasSize
-    val positions = SelectionControlsPositions(w, h)
-    val cornerRect = Rect(
-        center = Offset(
-            positions.right - positions.cornerRadius,
-            positions.bottom - positions.cornerRadius
-        ),
-        radius = positions.cornerRadius
-    )
-    if (!selectionIsLocked) {
-        val sliderBGPath = Path().apply {
-            moveTo(positions.right, positions.top)
-            lineTo(positions.right, positions.scaleSliderBottom)
-        }
-        drawPath(
-            sliderBGPath, jCarcassColor,
-            style = carcassStyle
-        )
-    }
-    // J-shaped carcass (always active when selection isn't empty)
-    val jPath = Path().apply {
-        moveTo(positions.right, positions.topUnderScaleSlider)
-        lineTo(positions.right, positions.bottom - positions.cornerRadius)
-        arcTo(cornerRect, 0f, 90f, forceMoveTo = true)
-        lineTo(positions.left, positions.bottom)
-    }
-    drawPath(
-        jPath, jCarcassColor,
-        style = carcassStyle
-    )
-    if (!selectionIsLocked) {
-        drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.top))
-        drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.scaleSliderBottom))
-    }
-    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.topUnderScaleSlider))
-    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.halfHigherThanBottom))
-    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.left, positions.bottom))
-    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.mid, positions.bottom))
-    drawCircle(jCarcassColor, radius = buttonBackdropRadius, center = Offset(positions.right, positions.bottom))
-    if (!selectionIsLocked) {
-        drawLine(
-            sliderColor,
-            Offset(positions.right, positions.top + positions.scaleSliderPadding),
-            Offset(positions.right, positions.scaleSliderBottom - positions.scaleSliderPadding)
-        )
-        val sliderPercentage = when (subMode) {
-            is SubMode.ScaleViaSlider -> subMode.sliderPercentage
-            else -> 0.5f
-        }
-        drawCircle( // slider handle
-            sliderColor,
-            handleRadius,
-            Offset(positions.right, positions.calculateSliderY(sliderPercentage))
-        )
-        translate(
-            positions.rotationHandleOffset.x - iconDim / 2f,
-            positions.rotationHandleOffset.y - iconDim / 2f
-        ) {
-            with (rotateIcon) {
-                draw(iconSize, colorFilter = ColorFilter.tint(rotateHandleColor))
-            }
-        }
-    }
-    // MAYBE: when in rotation mode, draw rotation anchor/center
-    //  potentially add custom fields to specify angle & scale manually
-}
-
-//            .
-//            .
-//           (+)   [scale up]
-//            |
-//            |
-//            ^
-//            O    [scale slider]
-//            v
-//            |
-//            |
-//           (-)   [scale down]
-//            .
-//            | x2 [copy]
-//            |
-//        ____J
-//      [R]   . x  [delete]
-//       ^    .
-//       |
-//    rotate handle
 // TODO: remove/decrease bottom margin when in landscape
 @Immutable
 data class SelectionControlsPositions(
@@ -1249,6 +1135,9 @@ data class SelectionControlsPositions(
     constructor(intSize: IntSize) : this(intSize.width, intSize.height)
 
     val minDim = min(width, height)
+    val center = Offset(width/2f, height/2f)
+    val southEast = Offset(width/2f + minDim, height/2f + minDim)
+
     val cornerRadius = minDim * RELATIVE_CORNER_RADIUS
 
     val top = height * RELATIVE_VERTICAL_MARGIN
@@ -1281,6 +1170,16 @@ data class SelectionControlsPositions(
         return (currentPercentage + p).coerceIn(0f, 1f)
     }
 
+    @Stable
+    inline fun rotationHandleOffset(rotationAngle: Float): Offset {
+        val centerX = width/2f
+        val centerY = height/2f
+        val radius = RELATIVE_ROTATION_HANDLE_RADIUS *minDim
+        val offset = Offset(centerX + radius, centerY)
+            .rotateByAround(45f + rotationAngle, Offset(centerX, centerY))
+        return offset
+    }
+
     companion object {
         const val RELATIVE_RIGHT_MARGIN = 0.05f // = % of W
         const val RELATIVE_VERTICAL_MARGIN = 0.15f // = % of H
@@ -1289,6 +1188,7 @@ data class SelectionControlsPositions(
         const val RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT = 0.10f // = % of H
         const val RELATIVE_CORNER_RADIUS = 0.10f // % of minDim
         const val RELATIVE_HORIZONTAL_SLIDER_SPAN = 0.60f // = 60% of min-dimension
+        const val RELATIVE_ROTATION_HANDLE_RADIUS = 0.45f // 45% of min dimension
     }
 }
 
@@ -1350,4 +1250,15 @@ data class ConcreteScreenPositions(
             x = positions.mid.toDp() - halfSize,
             y = (positions.top + positions.scaleSliderPadding + positions.scaleSliderFullHeight).toDp()
         ) }
+
+    @Stable
+    fun rotationHandleModifier(rotationAngle: Float): Modifier {
+        val offset = positions.rotationHandleOffset(rotationAngle)
+        return with (density) {
+            Modifier.offset(
+                offset.x.toDp() - halfSize,
+                offset.y.toDp() - halfSize
+            )
+        }
+    }
 }

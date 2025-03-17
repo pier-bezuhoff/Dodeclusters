@@ -55,6 +55,7 @@ import domain.angleDeg
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
 import domain.compressConstraints
+import domain.degrees
 import domain.entails
 import domain.expressions.BiInversionParameters
 import domain.expressions.Expr
@@ -80,6 +81,7 @@ import domain.io.DdcV4
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
 import domain.never
+import domain.radians
 import domain.reindexingMap
 import domain.removeAtIndices
 import domain.snapAngle
@@ -214,6 +216,12 @@ class EditClusterViewModel : ViewModel() {
             if (sm is SubMode.ScaleViaSlider)
                 sm.sliderPercentage
             else 0.5f
+        }
+    inline val rotationHandleAngle: Float
+        get() = submode.let { sm ->
+            if (sm is SubMode.Rotate)
+                sm.angle.toFloat()
+            else 0f
         }
     /** when changing [expressions], flip this to forcibly recalculate [selectionIsLocked] */
     private var selectionIsLockedTrigger: Boolean by mutableStateOf(false)
@@ -2096,8 +2104,27 @@ class EditClusterViewModel : ViewModel() {
         submode = sm.copy(sliderPercentage = newSliderPercentage)
     }
 
-    fun finishScalingViaSlider() {
+    fun concludeSubmode() {
         submode = SubMode.None
+    }
+
+    fun startHandleRotation() {
+        submode = SubMode.Rotate(computeAbsoluteCenter() ?: Offset.Zero)
+    }
+
+    fun rotateViaHandle(newRotationAngle: Float) {
+        when (val sm = submode) {
+            is SubMode.Rotate -> {
+                val newAngle = newRotationAngle.toDouble()
+                val snappedAngle =
+                    if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
+                    else newAngle
+                val dAngle = (snappedAngle - sm.snappedAngle).toFloat()
+                transformWhatWeCan(selection, focus = sm.center, rotationAngle = dAngle)
+                submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
+            }
+            else -> {}
+        }
     }
 
     private fun rotateSeveralCircles(pan: Offset, c: Offset, sm: SubMode.Rotate, targets: List<Ix>) {
