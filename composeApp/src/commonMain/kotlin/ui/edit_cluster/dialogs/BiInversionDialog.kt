@@ -37,7 +37,6 @@ import dodeclusters.composeapp.generated.resources.degrees_suffix
 import domain.degrees
 import domain.expressions.BiInversionParameters
 import domain.radians
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import ui.CancelOkRow
 import ui.DialogTitle

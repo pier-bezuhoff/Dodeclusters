@@ -15,7 +15,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -36,6 +35,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
+import data.geometry.Line
 import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt1
@@ -45,15 +45,15 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_in_betwe
 import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.circle_interpolation_title
 import domain.expressions.InterpolationParameters
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
+import ui.IntTextField
 import ui.LabelColonBigValue
-import ui.component1
-import ui.component2
+import ui.PreTextFieldLabel
 import ui.hideSystemBars
+import ui.isCompact
 import kotlin.math.roundToInt
 
 @Immutable
@@ -73,7 +73,7 @@ data class DefaultInterpolationParameters(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun CircleOrPointInterpolationDialog(
     startCircle: GCircle,
@@ -86,26 +86,27 @@ fun CircleOrPointInterpolationDialog(
     val start = GeneralizedCircle.fromGCircle(startCircle)
     val end = GeneralizedCircle.fromGCircle(endCircle)
     val coDirected = start.scalarProduct(end) >= 0
-    val minCount = defaults.minCircleCount
-    val maxCount = defaults.maxCircleCount
-    val sliderState = remember { SliderState(
-        value = defaults.nInterjacents.toFloat(),
-        steps = maxCount - minCount - 1, // only counts intermediates
-        valueRange = defaults.nInterjacentsRange
-    ) }
-    val hideInBetweenToggle = startCircle is Point // && endCircle is Point
+    var nInterjacents by remember(defaults) { mutableStateOf(defaults.nInterjacents) }
+    val hideInBetweenToggle =
+        startCircle is Point ||
+        startCircle is Line && endCircle is Line && startCircle.isCollinearTo(endCircle)
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
-    val (widthClass, heightClass) = calculateWindowSizeClass()
-    val compactHeight = heightClass == WindowHeightSizeClass.Compact
+    val windowSizeClass = calculateWindowSizeClass()
+    val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
+    val isCompact = windowSizeClass.isCompact
     val okFontSize =
-        if (widthClass == WindowWidthSizeClass.Compact)
+        if (isCompact)
             18.sp
         else 24.sp
     val onConfirm0 = { onConfirm(
         InterpolationParameters(
-            nInterjacents = sliderState.value.roundToInt(),
+            nInterjacents = nInterjacents,
             inBetween = interpolateInBetween,
-            complementary = if (coDirected) !interpolateInBetween else interpolateInBetween
+            complementary = when {
+                hideInBetweenToggle -> false
+                coDirected -> !interpolateInBetween
+                else -> interpolateInBetween
+            }
         )
     ) }
     Dialog(
@@ -119,28 +120,66 @@ fun CircleOrPointInterpolationDialog(
             ,
             shape = MaterialTheme.shapes.extraLarge,
         ) {
-            if (heightClass == WindowHeightSizeClass.Compact) {
-                CircleInterpolationHorizontalCompact(
-                    sliderState, interpolateInBetween,
-                    hideInBetweenToggle = hideInBetweenToggle,
-                    setInterpolateInBetween = { interpolateInBetween = it },
-                    onDismissRequest = onCancel,
-                    onConfirm = onConfirm0
-                )
+            if (windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact) {
+                Column(
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    DialogTitle(Res.string.circle_interpolation_title,
+                        smallerFont = true,
+                        Modifier.align(Alignment.CenterHorizontally)
+                    )
+                    Row(Modifier.fillMaxWidth()) {
+                        Column(Modifier.fillMaxWidth(0.5f)) {
+                            Row {
+                                PreTextFieldLabel(Res.string.circle_interpolation_prompt, smallerFont = true)
+                                IntTextField(
+                                    value = nInterjacents,
+                                    onNewValue = { nInterjacents = it },
+                                )
+                            }
+                            Slider(
+                                value = nInterjacents.toFloat(),
+                                onValueChange = { nInterjacents = it.roundToInt() },
+                                valueRange = defaults.nInterjacentsRange,
+                                steps = defaults.maxCircleCount - defaults.minCircleCount - 1, // only counts intermediates
+                                modifier = Modifier.padding(
+                                    top = 16.dp,
+                                    start = 16.dp,
+                                    end = 16.dp
+                                )
+                                ,
+                            )
+                        }
+                        if (!hideInBetweenToggle) {
+                            Column {
+                                InsideOutsideToggle(interpolateInBetween, { interpolateInBetween = it })
+                            }
+                        }
+                    }
+                    CancelOkRow(onCancel, onConfirm0, fontSize = 18.sp)
+                }
             } else {
                 Column(
                     horizontalAlignment = Alignment.Start
                 ) {
                     DialogTitle(Res.string.circle_interpolation_title,
-                        smallerFont = false,
+                        smallerFont = isCompact,
                         Modifier.align(Alignment.CenterHorizontally)
                     )
-                    // TODO: input text field
-                    LabelColonBigValue(
-                        value = sliderState.value.roundToInt().toString(),
-                        labelResource = Res.string.circle_interpolation_prompt
+                    Row {
+                        PreTextFieldLabel(Res.string.circle_interpolation_prompt, smallerFont = isCompact)
+                        IntTextField(
+                            value = nInterjacents,
+                            onNewValue = { nInterjacents = it },
+                        )
+                    }
+                    Slider(
+                        value = nInterjacents.toFloat(),
+                        onValueChange = { nInterjacents = it.roundToInt() },
+                        valueRange = defaults.nInterjacentsRange,
+                        steps = defaults.maxCircleCount - defaults.minCircleCount - 1, // only counts intermediates
+                        modifier = Modifier.padding(16.dp),
                     )
-                    Slider(sliderState, Modifier.padding(16.dp))
                     if (!hideInBetweenToggle) {
                         InsideOutsideToggle(
                             interpolateInBetween,
@@ -165,45 +204,6 @@ fun CircleOrPointInterpolationDialog(
                 DialogAction.CONFIRM -> onConfirm0()
             }
         }
-    }
-}
-
-@Composable
-private fun CircleInterpolationHorizontalCompact(
-    sliderState: SliderState,
-    interpolateInBetween: Boolean,
-    hideInBetweenToggle: Boolean,
-    setInterpolateInBetween: (Boolean) -> Unit,
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        horizontalAlignment = Alignment.Start
-    ) {
-        DialogTitle(Res.string.circle_interpolation_title,
-            smallerFont = true,
-            Modifier.align(Alignment.CenterHorizontally)
-        )
-        Row(Modifier.fillMaxWidth()) {
-            Column(Modifier.fillMaxWidth(0.5f)) {
-                LabelColonBigValue(
-                    value = sliderState.value.roundToInt().toString(),
-                    labelResource = Res.string.circle_interpolation_prompt
-                )
-                Slider(sliderState, Modifier.padding(
-                    top = 16.dp,
-                    start = 16.dp,
-                    end = 16.dp
-                ))
-            }
-            if (!hideInBetweenToggle) {
-                Column {
-                    InsideOutsideToggle(interpolateInBetween, setInterpolateInBetween)
-                }
-            }
-        }
-        CancelOkRow(onDismissRequest, onConfirm, fontSize = 18.sp)
     }
 }
 

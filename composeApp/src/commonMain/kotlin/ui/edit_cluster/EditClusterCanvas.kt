@@ -581,7 +581,7 @@ private fun DrawScope.drawAnimation(
     strokeWidth: Float,
 ) {
     val borderStrokeWidth = 10*strokeWidth
-    val pointRadius = 6*strokeWidth
+    val pointRadius = 6*strokeWidth // unused
     val visibleScreenPath = Path().apply {
         addRect(visibleRect.inflate(10*strokeWidth))
     }

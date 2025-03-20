@@ -3,7 +3,9 @@ package data.geometry
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isFinite
-import domain.rotateBy
+import data.geometry.RegionPointLocation.BORDERING
+import data.geometry.RegionPointLocation.IN
+import data.geometry.RegionPointLocation.OUT
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
@@ -24,7 +26,7 @@ data class Point(
     init {
         require(
             x.isFinite() && y.isFinite() ||
-            x == CONFORMAL_INFINITY.x && y == CONFORMAL_INFINITY.y
+            x.isInfinite() && y.isInfinite()
         ) { "Invalid Point($x, $y)" }
     }
 
