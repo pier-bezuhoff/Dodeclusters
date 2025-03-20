@@ -1089,16 +1089,17 @@ fun DrawScope.drawRotationHandle(
     val screenCenter = Offset(centerX, centerY)
     val radius = SelectionControlsPositions.RELATIVE_ROTATION_HANDLE_RADIUS *
         min(canvasSize.width, canvasSize.height)
-    val sweepAngle = 45f
+    val sweepAngle = 30f
     val preAngle = (90f - sweepAngle)/2f
     val startAngle = preAngle + rotationAngle
     val topLeft = Offset(centerX - radius, centerY - radius)
     val stroke = Stroke(6f)
     val brush = Brush.sweepGradient(
-        0.07f to handleColor,
-        0.10f to handleBackgroundColor,
-        0.15f to handleBackgroundColor,
-        0.18f to handleColor,
+        0.08f to handleColor,
+        0.11f to handleBackgroundColor,
+        // 0.125 = 1/8
+        0.14f to handleBackgroundColor,
+        0.17f to handleColor,
         center = screenCenter,
     )
     withTransform({
@@ -1170,6 +1171,7 @@ data class SelectionControlsPositions(
         return (currentPercentage + p).coerceIn(0f, 1f)
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     @Stable
     inline fun rotationHandleOffset(rotationAngle: Float): Offset {
         val centerX = width/2f

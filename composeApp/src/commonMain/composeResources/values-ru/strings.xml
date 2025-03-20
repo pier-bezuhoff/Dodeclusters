@@ -22,7 +22,7 @@
     <string name="toggle_select_all_description">Снять выделение</string>
     <string name="toggle_select_all_disabled_description">Выделить всё</string>
     <string name="region_name">Области</string>
-    <string name="region_description">Режим выбора областей между окружностями для заливки</string>
+    <string name="region_description">Режим заливки областей между окружностями</string>
     <string name="flow_fill_name">Свайп-заливка</string>
     <string name="flow_fill_description">Режим заливки областей проводя курсором через них</string>
     <string name="fill_chessboard_pattern_name">Узор шахматной доски</string>
@@ -30,7 +30,7 @@
     <string name="fill_chessboard_pattern_alternative_description">Очистить шахматную заливку</string>
     <string name="fill_chessboard_pattern_disabled_description">Шахматная доска: залить области через одну</string>
     <string name="restrict_region_to_selection_name">Ограничить области выделением</string>
-    <string name="restrict_region_to_selection_description">Снять ограничение на област</string>
+    <string name="restrict_region_to_selection_description">Снять ограничение на области</string>
     <string name="restrict_region_to_selection_disabled_description">Ограничить области только окружностями из выделения</string>
     <string name="delete_all_parts_name">Очистить все области</string>
     <string name="delete_all_parts_description">Очистить все области</string>

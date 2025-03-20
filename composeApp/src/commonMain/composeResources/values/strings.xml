@@ -24,7 +24,7 @@
     <string name="toggle_select_all_description">Deselect all objects</string>
     <string name="toggle_select_all_disabled_description">Select all objects</string>
     <string name="region_name">Region</string>
-    <string name="region_description">Mode: Pick regions between circles to fill with color</string>
+    <string name="region_description">Mode: fill with color regions between circles</string>
     <string name="flow_fill_name">Flow-fill</string>
     <string name="flow_fill_description">Fill regions by swiping through them</string>
     <string name="fill_chessboard_pattern_name">Check pattern</string>
