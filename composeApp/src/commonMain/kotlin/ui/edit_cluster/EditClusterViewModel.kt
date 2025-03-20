@@ -1779,18 +1779,6 @@ class EditClusterViewModel : ViewModel() {
                 }
                 else -> {}
             }
-            if (selection.any { objects[it] is CircleOrLine } && mode.isSelectingCircles() && submode is SubMode.None) {
-                val screenCenter = absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
-                when {
-                    isCloseEnoughToSelect(
-                        absolutePosition = absolute(selectionControlsPositions.rotationHandleOffset),
-                        visiblePosition = visiblePosition,
-                        lowAccuracy = true
-                    ) -> {
-                        submode = SubMode.Rotate(screenCenter)
-                    }
-                }
-            }
             // NOTE: this enables drag-only behavior, you lose your selection when grabbing new circle
             if (mode == SelectionMode.Drag && submode is SubMode.None) {
                 val selectedPointIndex = selectPointAt(visiblePosition)
@@ -2218,13 +2206,13 @@ class EditClusterViewModel : ViewModel() {
      * each circle choose its center, for each point -- itself, for each line -- screen center
      * projected onto it
      */
-    private inline fun transformWhatWeCan(
+    private fun transformWhatWeCan(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-        crossinline updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
+        updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
             expressions.update(it)
         },
     ) {
@@ -2243,7 +2231,7 @@ class EditClusterViewModel : ViewModel() {
                     }.distinct()
                 }
                 InversionOfControl.LEVEL_INFINITY -> {
-                    (targets.toSet() + expressions.getAllParents(targets)).toList()
+                    (targets.toSet() + expressions.getAllParents(targets)).distinct()
                 }
             }
         if (actualTargets.isEmpty()) {
@@ -2264,13 +2252,13 @@ class EditClusterViewModel : ViewModel() {
      * each circle choose its center, for each point -- itself, for each line -- screen center
      * projected onto it
      */
-    private inline fun transform(
+    private fun transform(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-        crossinline updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
+        updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
             expressions.update(it)
         },
     ) {

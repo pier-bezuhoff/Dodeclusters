@@ -17,12 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
@@ -40,7 +37,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StampedPathEffectStyle
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -584,7 +580,7 @@ private fun DrawScope.drawAnimation(
     visibleRect: Rect,
     strokeWidth: Float,
 ) {
-    val borderStrokeWidth = 8*strokeWidth
+    val borderStrokeWidth = 10*strokeWidth
     val pointRadius = 6*strokeWidth
     val visibleScreenPath = Path().apply {
         addRect(visibleRect.inflate(10*strokeWidth))
@@ -1066,15 +1062,15 @@ private inline fun DrawScope.drawHandles(
     }
 }
 
-private const val ARROW_TAIL_LENGTH = 4f
-private const val ARROW_HEAD_LENGTH = 24f
-private const val ARROW_HALF_HEIGHT = 8f
+private const val MEDIUM_ARROW_TAIL_LENGTH = 6f
+private const val MEDIUM_ARROW_HEAD_LENGTH = 32f
+private const val MEDIUM_ARROW_HALF_HEIGHT = 12f
 /** Filled right/east-oriented arrow */
 private val MEDIUM_ARROW_PATH = Path().apply {
     // starts at (0,0)
-    lineTo(-ARROW_TAIL_LENGTH, -ARROW_HALF_HEIGHT)
-    lineTo(ARROW_HEAD_LENGTH, 0f)
-    lineTo(-ARROW_TAIL_LENGTH, ARROW_HALF_HEIGHT)
+    lineTo(-MEDIUM_ARROW_TAIL_LENGTH, -MEDIUM_ARROW_HALF_HEIGHT)
+    lineTo(MEDIUM_ARROW_HEAD_LENGTH, 0f)
+    lineTo(-MEDIUM_ARROW_TAIL_LENGTH, MEDIUM_ARROW_HALF_HEIGHT)
     close()
 }
 
@@ -1093,7 +1089,7 @@ fun DrawScope.drawRotationHandle(
     val preAngle = (90f - sweepAngle)/2f
     val startAngle = preAngle + rotationAngle
     val topLeft = Offset(centerX - radius, centerY - radius)
-    val stroke = Stroke(6f)
+    val stroke = Stroke(9f)
     val brush = Brush.sweepGradient(
         0.08f to handleColor,
         0.11f to handleBackgroundColor,
@@ -1139,15 +1135,11 @@ data class SelectionControlsPositions(
     val center = Offset(width/2f, height/2f)
     val southEast = Offset(width/2f + minDim, height/2f + minDim)
 
-    val cornerRadius = minDim * RELATIVE_CORNER_RADIUS
-
     val top = height * RELATIVE_VERTICAL_MARGIN
-    val scaleSliderPadding = height * RELATIVE_SCALE_SLIDER_PADDING
-    val scaleSliderFullHeight = height * RELATIVE_SCALE_SLIDER_HEIGHT
-    val scaleSliderHeight = scaleSliderFullHeight - 2*scaleSliderPadding
-    val scaleSliderMiddlePosition = top + scaleSliderFullHeight / 2f
-    val scaleSliderBottom = top + height * RELATIVE_SCALE_SLIDER_HEIGHT
-    val topUnderScaleSlider = scaleSliderBottom + height * RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT
+    val verticalSliderPadding = height * RELATIVE_VERTICAL_SLIDER_PADDING
+    val verticalSliderSpan = height * RELATIVE_VERTICAL_SLIDER_HEIGHT
+    val verticalSliderBottom = top + height * RELATIVE_VERTICAL_SLIDER_HEIGHT
+    val topUnderScaleSlider = verticalSliderBottom + height * RELATIVE_VERTICAL_SLIDER_BOTTOM_INDENT
     val bottom = height * (1 - RELATIVE_VERTICAL_MARGIN)
     val halfHigherThanBottom = (topUnderScaleSlider + bottom)/2f
 
@@ -1157,9 +1149,6 @@ data class SelectionControlsPositions(
 
     val horizontalSliderStart = width - min(width, height) * RELATIVE_HORIZONTAL_SLIDER_SPAN
     val horizontalSliderSpan = right - horizontalSliderStart
-
-    val scaleSliderMiddleOffset = Offset(right, scaleSliderMiddlePosition)
-    val rotationHandleOffset = Offset(left, bottom)
 
     @Suppress("NOTHING_TO_INLINE")
     @Stable
@@ -1175,10 +1164,9 @@ data class SelectionControlsPositions(
     companion object {
         const val RELATIVE_RIGHT_MARGIN = 0.05f // = % of W
         const val RELATIVE_VERTICAL_MARGIN = 0.15f // = % of H
-        const val RELATIVE_SCALE_SLIDER_HEIGHT = 0.40f // = % of H
-        const val RELATIVE_SCALE_SLIDER_PADDING = 0.02f // = % of H
-        const val RELATIVE_SCALE_SLIDER_TO_ROTATE_ARC_INDENT = 0.10f // = % of H
-        const val RELATIVE_CORNER_RADIUS = 0.10f // % of minDim
+        const val RELATIVE_VERTICAL_SLIDER_HEIGHT = 0.40f // = % of H
+        const val RELATIVE_VERTICAL_SLIDER_PADDING = 0.02f // = % of H
+        const val RELATIVE_VERTICAL_SLIDER_BOTTOM_INDENT = 0.10f // = % of H
         const val RELATIVE_HORIZONTAL_SLIDER_SPAN = 0.60f // = 60% of min-dimension
         const val RELATIVE_ROTATION_HANDLE_RADIUS = 0.45f // 45% of min dimension
     }
@@ -1206,11 +1194,10 @@ data class ConcreteScreenPositions(
     } - halfSize
 
     val verticalSliderHeight = with (density) {
-        positions.scaleSliderFullHeight.toDp()
+        positions.verticalSliderSpan.toDp()
     }
 
     val topRightModifier = offsetModifier(positions.right, positions.top)
-    val scaleBottomRightModifier = offsetModifier(positions.right, positions.scaleSliderBottom)
     val topRightUnderScaleModifier = offsetModifier(positions.right, positions.topUnderScaleSlider)
     val halfBottomRightModifier = offsetModifier(positions.right, positions.halfHigherThanBottom)
     val bottomRightModifier = offsetModifier(positions.right, positions.bottom)
@@ -1229,18 +1216,13 @@ data class ConcreteScreenPositions(
     val verticalSliderModifier =
         with (density) { Modifier.offset(
             x = positions.right.toDp() - halfSize,
-            y = (positions.top + positions.scaleSliderPadding).toDp()
+            y = (positions.top + positions.verticalSliderPadding).toDp()
         ) }
     val topMidModifier = offsetModifier(positions.mid, positions.top)
     val verticalSlider2Modifier =
         with (density) { Modifier.offset(
             x = positions.mid.toDp() - halfSize,
-            y = (positions.top + positions.scaleSliderPadding).toDp()
-        ) }
-    val underVerticalSlider2Modifier =
-        with (density) { Modifier.offset(
-            x = positions.mid.toDp() - halfSize,
-            y = (positions.top + positions.scaleSliderPadding + positions.scaleSliderFullHeight).toDp()
+            y = (positions.top + positions.verticalSliderPadding).toDp()
         ) }
 
     // FIX: it's shivering during rotation (!?)
@@ -1250,7 +1232,7 @@ data class ConcreteScreenPositions(
         return with (density) {
             Modifier.offset(
                 offset.x.toDp() - halfSize,
-                offset.y.toDp() - halfSize
+                offset.y.toDp() - halfSize,
             )
         }
     }

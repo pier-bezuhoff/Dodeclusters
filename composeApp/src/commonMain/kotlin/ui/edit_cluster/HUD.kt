@@ -165,7 +165,7 @@ fun BoxScope.SelectionContextActions(
         }
         Box(
             rotationHandleModifier(rotationHandleAngle)
-                .size(48.dp)
+                .size(36.dp)
                 .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
                 .drawWithCache {
                     val mask = Path().apply {
@@ -218,6 +218,7 @@ fun BoxScope.SelectionContextActions(
         Column(
             verticalArrangement = Arrangement.Center,
         ) {
+            // TODO: tooltips
             if (showAdjustExprButton) {
                 SimpleToolButton(
                     EditClusterTool.AdjustExpr,

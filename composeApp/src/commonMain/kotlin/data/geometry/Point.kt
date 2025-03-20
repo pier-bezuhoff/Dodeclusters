@@ -12,6 +12,7 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
+// NOTE: do NOT forget CONFORMAL_INFINITY checks
 @Immutable
 @Serializable
 @SerialName("point")
@@ -19,6 +20,14 @@ data class Point(
     val x: Double,
     val y: Double
 ) : CircleOrLineOrPoint, GCircle {
+
+    init {
+        require(
+            x.isFinite() && y.isFinite() ||
+            x == CONFORMAL_INFINITY.x && y == CONFORMAL_INFINITY.y
+        ) { "Invalid Point($x, $y)" }
+    }
+
     fun toOffset(): Offset =
         if (this == CONFORMAL_INFINITY)
             Offset.Infinite
@@ -35,7 +44,10 @@ data class Point(
         }
 
     override fun translated(vector: Offset): Point =
-        Point(x + vector.x, y + vector.y)
+        if (this == CONFORMAL_INFINITY)
+            CONFORMAL_INFINITY
+        else
+            Point(x + vector.x, y + vector.y)
 
     fun scaled(focus: Offset, zoom: Float): Point =
         if (this == CONFORMAL_INFINITY)
@@ -46,21 +58,34 @@ data class Point(
                 (y - focus.y) * zoom + focus.y,
             )
 
-    override fun scaled(focusX: Double, focusY: Double, zoom: Double): Point {
-        val newX = (x - focusX) * zoom + focusX
-        val newY = (y - focusY) * zoom + focusY
-        return if (this == CONFORMAL_INFINITY)
+    override fun scaled(focusX: Double, focusY: Double, zoom: Double): Point =
+        if (this == CONFORMAL_INFINITY)
             CONFORMAL_INFINITY
-        else
-            Point(newX, newY)
-    }
+        else Point(
+            (x - focusX) * zoom + focusX,
+            (y - focusY) * zoom + focusY,
+        )
 
-    fun rotated(focus: Offset, angleDeg: Float): Point {
-        val newOffset = (toOffset() - focus).rotateBy(angleDeg) + focus
-        return fromOffset(newOffset)
-    }
+    fun rotated(focus: Offset, angleDeg: Float): Point =
+        if (this == CONFORMAL_INFINITY)
+            CONFORMAL_INFINITY
+        else { // cmp with Offset.rotateBy
+            val focusX = focus.x
+            val focusY = focus.y
+            val x0 = x - focusX
+            val y0 = y - focusY
+            val phi: Double = angleDeg * PI/180.0
+            val cosPhi = cos(phi)
+            val sinPhi = sin(phi)
+            Point(
+                (x0 * cosPhi - y0 * sinPhi) + focusX,
+                (x0 * sinPhi + y0 * cosPhi) + focusY,
+            )
+        }
 
     override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): Point {
+        if (this == CONFORMAL_INFINITY)
+            return CONFORMAL_INFINITY
         var newX: Double = x + translation.x
         var newY: Double = y + translation.y
         if (focus != Offset.Unspecified) {
@@ -79,7 +104,8 @@ data class Point(
 
     /** = `(this + point)/2` */
     fun middle(point: Point): Point =
-        if (this == CONFORMAL_INFINITY || point == CONFORMAL_INFINITY) CONFORMAL_INFINITY
+        if (this == CONFORMAL_INFINITY || point == CONFORMAL_INFINITY)
+            CONFORMAL_INFINITY
         else Point((x + point.x)/2, (y + point.y)/2)
 
     companion object {

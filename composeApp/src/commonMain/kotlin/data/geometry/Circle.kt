@@ -55,7 +55,11 @@ data class Circle(
         radius * radius
 
     init {
-        require(radius > 0.0) // points and imaginary circle should not be mixed in
+        require(
+            x.isFinite() && y.isFinite() && radius.isFinite() &&
+            radius > 0.0
+        ) { "Invalid Circle($x, $y, $radius, isCCW = $isCCW)" }
+        // points and imaginary circle should not be mixed in
     }
 
     constructor(center: Offset, radius: Double, isCCW: Boolean = true) :

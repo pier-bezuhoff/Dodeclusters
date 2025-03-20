@@ -29,6 +29,12 @@ data class Line(
     val c: Double
 ) : CircleOrLine {
 
+    init {
+        require(
+            a.isFinite() && b.isFinite() && c.isFinite()
+        ) { "Invalid Line($a, $b, $c)" }
+    }
+
     @Transient
     val norm: Double =
         hypot(a, b)

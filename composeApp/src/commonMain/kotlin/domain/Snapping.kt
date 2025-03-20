@@ -169,6 +169,7 @@ sealed interface CircleSnapResult {
 }
 
 // NOTE: dont forget to exclude [circle], its immediate parents and all children from [circles]
+// MAYBE: only snap to *visible* tangential touches (not offscreen)
 fun snapCircleToCircles(
     circle: CircleOrLine,
     circlesLinesOrPoints: List<CircleOrLineOrPoint?>,
@@ -177,7 +178,7 @@ fun snapCircleToCircles(
 ): CircleSnapResult {
     val closestCircles: List<Ix> = circlesLinesOrPoints.asSequence()
         .mapIndexed { ix, c ->
-            ix to (c?.perpendicularDistance(circle) ?: Double.POSITIVE_INFINITY)
+            ix to abs(c?.perpendicularDistance(circle) ?: Double.POSITIVE_INFINITY)
         }
         .filter { (_, d) -> d <= snapDistance }
         .sortedBy { (_, d) -> d }

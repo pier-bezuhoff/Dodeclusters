@@ -234,6 +234,7 @@ fun CircleOrLine.translatedUntilTangency(base: CircleOrLineOrPoint): CircleOrLin
                 val p = this.project(b)
                 this.translated(b.x - p.x, b.y - p.y)
             }
+            Point.CONFORMAL_INFINITY -> this // idk what the right result should be...
             is Point -> {
                 val p = this.project(base)
                 this.translated(base.x - p.x, base.y - p.y)
@@ -242,6 +243,7 @@ fun CircleOrLine.translatedUntilTangency(base: CircleOrLineOrPoint): CircleOrLin
         is Line -> when (base) {
             is Circle -> this.translatedTo(base.project(this.project(base.centerPoint)))
             is Line -> base // we assume collinearity
+            Point.CONFORMAL_INFINITY -> this
             is Point -> this.translatedTo(base)
         }
     }

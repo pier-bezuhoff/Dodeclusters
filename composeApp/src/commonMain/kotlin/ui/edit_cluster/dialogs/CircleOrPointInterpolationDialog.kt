@@ -135,6 +135,7 @@ fun CircleOrPointInterpolationDialog(
                         smallerFont = false,
                         Modifier.align(Alignment.CenterHorizontally)
                     )
+                    // TODO: input text field
                     LabelColonBigValue(
                         value = sliderState.value.roundToInt().toString(),
                         labelResource = Res.string.circle_interpolation_prompt
