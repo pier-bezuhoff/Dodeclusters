@@ -541,16 +541,20 @@ fun VerticalSlider(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VerticalSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    trackModifier: Modifier = Modifier,
+    thumbModifier: Modifier = Modifier,
     enabled: Boolean = true,
     valueRange: ClosedFloatingPointRange<Float> = 0f .. 1f,
     steps: Int = 0,
     onValueChangeFinished: (() -> Unit)? = null,
     colors: SliderColors = SliderDefaults.colors(),
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
 ) {
     Slider(
         value = value,
@@ -571,12 +575,30 @@ fun VerticalSlider(
                 layout(placeable.height, placeable.width) {
                     placeable.place(-placeable.width, 0)
                 }
-            } //.size(w,h)
+            }
         ,
         enabled = enabled,
         valueRange = valueRange,
         steps = steps,
         onValueChangeFinished = onValueChangeFinished,
         colors = colors,
+        interactionSource = interactionSource,
+        thumb = {
+            SliderDefaults.Thumb(
+                interactionSource = interactionSource,
+                modifier = thumbModifier,
+                colors = colors,
+                enabled = enabled,
+                // default thumb size is 4dp x 44dp
+            )
+        },
+        track = { sliderState ->
+            SliderDefaults.Track(
+                sliderState = sliderState,
+                modifier = trackModifier,
+                enabled = enabled,
+                colors = colors,
+            )
+        },
     )
 }

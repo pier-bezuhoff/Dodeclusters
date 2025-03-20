@@ -55,7 +55,6 @@ import domain.angleDeg
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
 import domain.compressConstraints
-import domain.degrees
 import domain.entails
 import domain.expressions.BiInversionParameters
 import domain.expressions.Expr
@@ -81,7 +80,6 @@ import domain.io.DdcV4
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
 import domain.never
-import domain.radians
 import domain.reindexingMap
 import domain.removeAtIndices
 import domain.snapAngle
@@ -349,9 +347,9 @@ class EditClusterViewModel : ViewModel() {
         }
 
     // TODO: make it suspend
-    fun loadFromYaml(yaml: String) {
+    fun loadDdc(content: String) {
         tryParseDdc(
-            content = yaml,
+            content = content,
             onDdc4 = { ddc4 ->
                 val constellation = ddc4.toConstellation()
                 loadNewConstellation(constellation)
@@ -419,8 +417,9 @@ class EditClusterViewModel : ViewModel() {
         history.clear()
         resetTransients()
         println("loaded new constellation")
-        if (!mode.isSelectingCircles())
-            switchToMode(SelectionMode.Drag)
+        if (!mode.isSelectingCircles()) {
+            selectTool(EditClusterTool.Drag)
+        }
     }
 
     private fun loadConstellation(constellation: Constellation) {
@@ -1282,16 +1281,19 @@ class EditClusterViewModel : ViewModel() {
     // MAYBE: wrap into state that depends only on [regions] for caching
     // MAYBE: also add backgroundColor (tho it is MT.surface by default and thus 0-contrast)
     fun getColorsByMostUsed(): List<Color> =
-        regions.flatMap { region ->
-            region.borderColor?.let { listOf(region.fillColor, it) }
-                ?: listOf(region.fillColor)
-        }.let {
-            if (chessboardPattern == ChessboardPattern.NONE)
-                it
-            else
-                it + chessboardColor
-        }
-        .sortedByFrequency()
+        regions
+            .flatMap { region ->
+                region.borderColor?.let { listOf(region.fillColor, it) }
+                    ?: listOf(region.fillColor)
+            }
+            .plus(objectColors.values)
+            .plus(
+                if (chessboardPattern == ChessboardPattern.NONE)
+                    emptyList()
+                else
+                    listOf(chessboardColor)
+            )
+            .sortedByFrequency()
 
     /**
      * Try to snap [absolutePosition] to some existing object or their intersection.

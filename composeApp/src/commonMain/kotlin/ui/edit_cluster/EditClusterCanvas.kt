@@ -1161,16 +1161,6 @@ data class SelectionControlsPositions(
     val scaleSliderMiddleOffset = Offset(right, scaleSliderMiddlePosition)
     val rotationHandleOffset = Offset(left, bottom)
 
-    @Stable
-    fun calculateSliderY(percentage: Float = 0.5f): Float =
-        top + scaleSliderPadding + scaleSliderHeight * (1 - percentage)
-
-    @Stable
-    fun addPanToPercentage(currentPercentage: Float, pan: Offset): Float {
-        val p = -pan.y/scaleSliderHeight
-        return (currentPercentage + p).coerceIn(0f, 1f)
-    }
-
     @Suppress("NOTHING_TO_INLINE")
     @Stable
     inline fun rotationHandleOffset(rotationAngle: Float): Offset {
@@ -1253,6 +1243,7 @@ data class ConcreteScreenPositions(
             y = (positions.top + positions.scaleSliderPadding + positions.scaleSliderFullHeight).toDp()
         ) }
 
+    // FIX: it's shivering during rotation (!?)
     @Stable
     fun rotationHandleModifier(rotationAngle: Float): Modifier {
         val offset = positions.rotationHandleOffset(rotationAngle)

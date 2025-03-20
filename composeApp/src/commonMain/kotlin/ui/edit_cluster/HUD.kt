@@ -127,34 +127,42 @@ fun BoxScope.SelectionContextActions(
         var virtualRotationHandlePosition by remember { mutableStateOf(Offset.Unspecified) }
         Column(
             Modifier
-                .offset()
+                .align(Alignment.TopEnd)
+                .offset(
+                    x = (-67).dp,
+                    y = with (density) {
+                        positions.top.toDp() - halfSize
+                    }
+                )
             ,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-
+            SimpleToolButton(
+                EditClusterTool.Expand,
+                tint = MaterialTheme.colorScheme.secondary,
+                onClick = toolAction
+            )
+            VerticalSlider(
+                scaleSliderPercentage,
+                onScale,
+                Modifier
+                    .height(
+                        with (density) {
+                            (0.2f * positions.height).toDp()
+                        }
+                    )
+                ,
+                trackModifier = Modifier.height(8.dp), // height is transposed into width
+                thumbModifier = Modifier.height(24.dp),
+                onValueChangeFinished = onScaleFinished,
+                colors = sliderColors,
+            )
+            SimpleToolButton(
+                EditClusterTool.Shrink,
+                tint = MaterialTheme.colorScheme.secondary,
+                onClick = toolAction
+            )
         }
-        SimpleToolButton(
-            EditClusterTool.Expand,
-            topMidModifier,
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = toolAction
-        )
-        VerticalSlider(
-            scaleSliderPercentage,
-            onScale,
-            verticalSlider2Modifier
-                .height(verticalSliderHeight)
-            ,
-            onValueChangeFinished = onScaleFinished,
-            colors = sliderColors,
-        )
-        SimpleToolButton(
-            EditClusterTool.Shrink,
-            underVerticalSlider2Modifier,
-            tint = MaterialTheme.colorScheme.secondary,
-            onClick = toolAction
-        )
-        // MAYBE: adjust radius when handle is moved to the center for faster rotations
         Box(
             rotationHandleModifier(rotationHandleAngle)
                 .size(48.dp)
@@ -201,7 +209,7 @@ fun BoxScope.SelectionContextActions(
     Surface(
         Modifier
             .align(Alignment.CenterEnd)
-            .padding(end = 8.dp)
+            .padding(end = 4.dp)
         ,
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),

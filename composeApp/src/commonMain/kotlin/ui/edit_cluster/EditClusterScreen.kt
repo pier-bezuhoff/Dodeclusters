@@ -216,7 +216,7 @@ fun EditClusterScreen(
                         showSaveOptionsDialog = { viewModel.toolAction(EditClusterTool.SaveCluster) },
                         loadFromYaml = { content ->
                             content?.let {
-                                viewModel.loadFromYaml(content)
+                                viewModel.loadDdc(content)
                             }
                         },
                         undo = viewModel::undo,
@@ -377,11 +377,11 @@ fun EditClusterScreen(
     LaunchedEffect(viewModel, ddcContent, sampleName, ddcRepository) {
         if (ddcContent != null) {
             println("loading external ddc...")
-            viewModel.loadFromYaml(ddcContent)
+            viewModel.loadDdc(ddcContent)
         } else if (sampleName != null) {
             val content = ddcRepository.loadSampleClusterYaml(sampleName)
             if (content != null) {
-                viewModel.loadFromYaml(content)
+                viewModel.loadDdc(content)
             }
         }
     }
