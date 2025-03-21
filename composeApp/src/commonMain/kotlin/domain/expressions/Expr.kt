@@ -265,7 +265,7 @@ inline fun Expr.eval(
                 g(target)
             )
         }
-    } catch (e: NullPointerException) {
+    } catch (e: Exception) { // catches NullExceptions AND unforeseen cases (safety measure)
         return emptyList()
     }
 }

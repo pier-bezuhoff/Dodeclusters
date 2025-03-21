@@ -77,7 +77,6 @@ class ExpressionForest(
     private fun Expression.eval(
         multiExpressionCache: MutableMap<Expr.OneToMany, ExprResult>
     ): GCircle? =
-        // MAYBE: wrap into try-catch for safety
         when (this) {
             is Expression.Just ->
                 expr.eval(get).firstOrNull()

@@ -16,8 +16,15 @@ data class ImaginaryCircle(
     val y: Double,
     val radius: Double,
 ) : CircleOrLineOrImaginaryCircle, GCircle {
+
+    init {
+        require(
+            x.isFinite() && y.isFinite() && radius.isFinite() && radius > 0.0
+        ) { "Invalid ImaginaryCircle($x, $y, $radius)" }
+    }
+
     override fun translated(vector: Offset): ImaginaryCircle =
-        ImaginaryCircle(x + vector.x, y + vector.y, radius)
+        copy(x = x + vector.x, y = y + vector.y)
 
     override fun scaled(focusX: Double, focusY: Double, zoom: Double): ImaginaryCircle {
         val newX = (x - focusX) * zoom + focusX

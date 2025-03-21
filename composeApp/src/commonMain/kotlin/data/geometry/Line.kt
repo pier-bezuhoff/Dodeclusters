@@ -160,18 +160,18 @@ data class Line(
     }
 
     override fun translated(vector: Offset): Line =
-       Line(a, b, c - (a*vector.x + b*vector.y))
+       copy(c = c - (a*vector.x + b*vector.y))
 
     fun translated(dx: Double, dy: Double): Line =
-        Line(a, b, c - (a*dx + b*dy))
+        copy(c = c - (a*dx + b*dy))
 
     fun translatedTo(point: Point): Line =
-        Line(a, b, -a*point.x - b*point.y)
+        copy(c = -a*point.x - b*point.y)
 
     override fun scaled(focus: Offset, zoom: Float): Line {
         // dist1 -> zoom * dist 1
         val newC = zoom*(a*focus.x + b*focus.y + c) - a*focus.x - b*focus.y
-        return Line(a, b, newC)
+        return copy(c = newC)
     }
 
     // scaling doesn't scale incident points
@@ -179,7 +179,7 @@ data class Line(
     override fun scaled(focusX: Double, focusY: Double, zoom: Double): Line {
         // dist1 -> zoom * dist 1
         val newC = zoom*(a*focusX + b*focusY + c) - a*focusX - b*focusY
-        return Line(a, b, newC)
+        return copy(c = newC)
     }
 
     override fun rotated(focus: Offset, angleInDegrees: Float): Line {

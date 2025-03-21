@@ -43,13 +43,11 @@ data class Circle(
      * */
     val isCCW: Boolean = true,
 ) : UndirectedCircle {
-    val center: Offset
-        get() =
-            Offset(x.toFloat(), y.toFloat())
+    val center: Offset get() =
+        Offset(x.toFloat(), y.toFloat())
 
-    val centerPoint: Point
-        get() =
-            Point(x, y)
+    val centerPoint: Point get() =
+        Point(x, y)
 
     val r2: Double get() =
         radius * radius
@@ -63,10 +61,10 @@ data class Circle(
     }
 
     constructor(center: Offset, radius: Double, isCCW: Boolean = true) :
-            this(center.x.toDouble(), center.y.toDouble(), radius, isCCW)
+        this(center.x.toDouble(), center.y.toDouble(), radius, isCCW)
 
     constructor(center: Offset, radius: Float, isCCW: Boolean = true) :
-            this(center.x.toDouble(), center.y.toDouble(), radius.toDouble(), isCCW)
+        this(center.x.toDouble(), center.y.toDouble(), radius.toDouble(), isCCW)
 
     override fun project(point: Point): Point {
         val (x1, y1) = point
@@ -87,7 +85,8 @@ data class Circle(
         abs((point - center).getDistance() - radius)
 
     override fun distanceFrom(point: Point): Double =
-        if (point == Point.CONFORMAL_INFINITY) Double.POSITIVE_INFINITY
+        if (point == Point.CONFORMAL_INFINITY)
+            Double.POSITIVE_INFINITY
         else abs(hypot(point.x - x, point.y - y) - radius)
 
     fun distanceBetweenCenters(circle: Circle): Double =
@@ -104,7 +103,7 @@ data class Circle(
             distance > r ->
                 if (isCCW) RegionPointLocation.OUT
                 else RegionPointLocation.IN
-            else -> throw IllegalStateException("Illegal comparison")
+            else -> never()
         }
     }
 
@@ -171,25 +170,41 @@ data class Circle(
     }
 
     override fun translated(vector: Offset): Circle =
-        Circle(center + vector, radius, isCCW)
+        copy(
+            x = x + vector.x,
+            y = y + vector.y,
+        )
 
     fun translated(dx: Double, dy: Double): Circle =
-        Circle(x + dx, y + dy, radius, isCCW)
+        copy(
+            x = x + dx,
+            y = y + dy,
+        )
 
-    override fun scaled(focus: Offset, zoom: Float): Circle {
-        val newOffset = (center - focus) * zoom + focus
-        return Circle(newOffset, zoom * radius, isCCW)
-    }
+    override fun scaled(focus: Offset, zoom: Float): Circle =
+        copy(
+            x = (x - focus.x) * zoom + focus.x,
+            y = (y - focus.y) * zoom + focus.y,
+            radius = zoom * radius,
+        )
 
-    override fun scaled(focusX: Double, focusY: Double, zoom: Double): Circle {
-        val newX = (x - focusX) * zoom + focusX
-        val newY = (y - focusY) * zoom + focusY
-        return Circle(newX, newY, zoom * radius, isCCW)
-    }
+    override fun scaled(focusX: Double, focusY: Double, zoom: Double): Circle =
+        copy(
+            x = (x - focusX) * zoom + focusX,
+            y = (y - focusY) * zoom + focusY,
+            radius = zoom * radius,
+        )
 
     override fun rotated(focus: Offset, angleInDegrees: Float): Circle {
-        val newOffset = (center - focus).rotateBy(angleInDegrees) + focus
-        return Circle(newOffset, radius, isCCW)
+        val x0 = x - focus.x
+        val y0 = y - focus.y
+        val phi: Double = angleInDegrees * PI/180.0
+        val cosPhi = cos(phi)
+        val sinPhi = sin(phi)
+        return copy(
+            x = (x0 * cosPhi - y0 * sinPhi) + focus.x,
+            y = (x0 * sinPhi + y0 * cosPhi) + focus.y,
+        )
     }
 
     override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): Circle {
@@ -206,7 +221,11 @@ data class Circle(
             newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
             newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
         } // tbf because of T;S;R order it is not completely accurate
-        return Circle(newX, newY, zoom * radius, isCCW = isCCW)
+        return copy(
+            x = newX,
+            y = newY,
+            radius = zoom * radius,
+        )
     }
 
     override fun reversed(): Circle =
