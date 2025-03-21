@@ -55,12 +55,6 @@
     <string name="palette_description">Выбор цвета</string>
     <string name="applied_color_name">Использованный цвет</string>
     <string name="applied_color_description">Выбрать этот уже использованный цвет</string>
-    <string name="duplicate_name">Дублировать</string>
-    <string name="duplicate_description">Продублировать выделенные окружности</string>
-    <string name="pick_circle_color_name">Цвет окружности</string>
-    <string name="pick_circle_color_description">Выбор цвета окружности</string>
-    <string name="delete_name">Удалить</string>
-    <string name="delete_description">Удалить выделенные окружности</string>
     <string name="circle_inversion_name">Инверсия относительно окружности</string>
     <string name="circle_inversion_description">Инвертировать объект относительно окружности</string>
     <string-array name="circle_inversion_arg_descriptions">
@@ -137,6 +131,35 @@
     <string name="tool_arg_input_prompt">Пожалуйста, укажите</string>
     <string name="set_selection_as_tool_arg_prompt">Использовать выделение как</string>
     <string name="tool_arg_parameter_adjustment_prompt">Пожалуйста, подтвердите выбранные параметры</string>
+    <!-- contextual tools -->
+    <string name="expand_name">Увеличить</string>
+    <string name="expand_description">Увеличить на 10%</string>
+    <string name="shrink_name">Уменьшить</string>
+    <string name="shrink_description">Уменьшить на 10%</string>
+    <string name="adjust_expr_name">Настроить формулу</string>
+    <string name="adjust_expr_description">Перенастроить формулу выделенных объектов</string>
+    <string name="pick_circle_color_name">Цвет окружности</string>
+    <string name="pick_circle_color_description">Выбор цвета (границы) окружности</string>
+    <string name="mark_as_phantoms_name">Фантомность</string>
+    <string name="mark_as_phantoms_description">Пометить как фантомные: сделать невидимыми</string>
+    <string name="mark_as_phantoms_disabled_description">Отключить фантомность: сделать видимыми</string>
+    <string name="swap_direction_name">Сменить направление</string>
+    <string name="swap_direction_description">Сменить ориентацию</string>
+    <string name="detach_name">Открепить</string>
+    <string name="detach_description">Освободить: убрать динамическую зависимость</string>
+    <string name="duplicate_name">Дублировать</string>
+    <string name="duplicate_description">Продублировать выделенные объекты</string>
+    <string name="delete_name">Удалить</string>
+    <string name="delete_description">Удалить выделенные объекты</string>
+    <!-- HUD adjustment interface -->
+    <string name="detailed_adjustment_name">Детальная настройка</string>
+    <string name="detailed_adjustment_description">Открыть диалог детальной настройки формулы</string>
+    <string name="in_between_name">Между</string>
+    <string name="in_between_description">Внутри</string>
+    <string name="in_between_disabled_description">Снаружи</string>
+    <string name="reverse_direction_name">Обратить направление</string>
+    <string name="reverse_direction_description">Обратить направление</string>
+    <string name="steps_slider_name">N шагов</string>
 
     <!-- categories -->
     <string name="drag_category_name">Перетаскивание</string>

@@ -7,6 +7,7 @@ import dodeclusters.composeapp.generated.resources.add_image
 import dodeclusters.composeapp.generated.resources.add_point_arg_descriptions
 import dodeclusters.composeapp.generated.resources.add_point_description
 import dodeclusters.composeapp.generated.resources.add_point_name
+import dodeclusters.composeapp.generated.resources.adjust_expr_description
 import dodeclusters.composeapp.generated.resources.adjust_expr_name
 import dodeclusters.composeapp.generated.resources.applied_color_description
 import dodeclusters.composeapp.generated.resources.applied_color_name
@@ -54,7 +55,9 @@ import dodeclusters.composeapp.generated.resources.delete_description
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.delete_name
 import dodeclusters.composeapp.generated.resources.deselect
+import dodeclusters.composeapp.generated.resources.detach_description
 import dodeclusters.composeapp.generated.resources.detach_name
+import dodeclusters.composeapp.generated.resources.detailed_adjustment_description
 import dodeclusters.composeapp.generated.resources.detailed_adjustment_name
 import dodeclusters.composeapp.generated.resources.dotted_rectangle
 import dodeclusters.composeapp.generated.resources.double_reflection
@@ -64,6 +67,7 @@ import dodeclusters.composeapp.generated.resources.drag_name
 import dodeclusters.composeapp.generated.resources.duplicate_description
 import dodeclusters.composeapp.generated.resources.duplicate_name
 import dodeclusters.composeapp.generated.resources.expand
+import dodeclusters.composeapp.generated.resources.expand_description
 import dodeclusters.composeapp.generated.resources.expand_name
 import dodeclusters.composeapp.generated.resources.extrapolate_lines
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_alternative_description
@@ -83,6 +87,8 @@ import dodeclusters.composeapp.generated.resources.hide_haired_arrow
 import dodeclusters.composeapp.generated.resources.hide_layers
 import dodeclusters.composeapp.generated.resources.hide_ui_description
 import dodeclusters.composeapp.generated.resources.hide_ui_name
+import dodeclusters.composeapp.generated.resources.in_between_description
+import dodeclusters.composeapp.generated.resources.in_between_disabled_description
 import dodeclusters.composeapp.generated.resources.in_between_name
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_description
 import dodeclusters.composeapp.generated.resources.insert_centered_cross_name
@@ -97,6 +103,9 @@ import dodeclusters.composeapp.generated.resources.lock_open
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_description
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_name
+import dodeclusters.composeapp.generated.resources.mark_as_phantoms_description
+import dodeclusters.composeapp.generated.resources.mark_as_phantoms_disabled_description
+import dodeclusters.composeapp.generated.resources.mark_as_phantoms_name
 import dodeclusters.composeapp.generated.resources.multiselect
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_name
@@ -124,6 +133,8 @@ import dodeclusters.composeapp.generated.resources.regions_blend_settings_name
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_description
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_disabled_description
 import dodeclusters.composeapp.generated.resources.restrict_region_to_selection_name
+import dodeclusters.composeapp.generated.resources.reverse_direction_description
+import dodeclusters.composeapp.generated.resources.reverse_direction_name
 import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.road
 import dodeclusters.composeapp.generated.resources.save
@@ -132,10 +143,12 @@ import dodeclusters.composeapp.generated.resources.screenshot_pc
 import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.shark_fin_striped
 import dodeclusters.composeapp.generated.resources.shrink
+import dodeclusters.composeapp.generated.resources.shrink_description
 import dodeclusters.composeapp.generated.resources.shrink_name
 import dodeclusters.composeapp.generated.resources.spiral
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
+import dodeclusters.composeapp.generated.resources.swap_direction_description
 import dodeclusters.composeapp.generated.resources.swap_direction_name
 import dodeclusters.composeapp.generated.resources.three_sliders
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_description
@@ -463,11 +476,41 @@ sealed class EditClusterTool(
     // these are inlined into canvas HUD
     data object Expand: ContextAction(
         Res.string.expand_name,
-        icon = Res.drawable.expand
+        Res.string.expand_description,
+        Res.drawable.expand
     )
     data object Shrink: ContextAction(
         Res.string.shrink_name,
-        icon = Res.drawable.shrink
+        Res.string.shrink_description,
+        Res.drawable.shrink
+    )
+    data object AdjustExpr: ContextAction(
+        Res.string.adjust_expr_name,
+        Res.string.adjust_expr_description,
+        Res.drawable.two_vertical_sliders
+    )
+    data object PickCircleColor: ContextAction(
+        Res.string.pick_circle_color_name,
+        Res.string.pick_circle_color_description,
+        Res.drawable.paint_splash
+    )
+    data object MarkAsPhantoms: ContextAction(
+        Res.string.mark_as_phantoms_name,
+        Res.string.mark_as_phantoms_description,
+        Res.drawable.visible,
+    ), Tool.BinaryToggle {
+        override val disabledIcon = Res.drawable.phantom
+        override val disabledDescription = Res.string.mark_as_phantoms_disabled_description
+    }
+    data object SwapDirection: ContextAction(
+        Res.string.swap_direction_name,
+        Res.string.swap_direction_description,
+        Res.drawable.right_left
+    )
+    data object Detach: ContextAction(
+        Res.string.detach_name,
+        Res.string.detach_description,
+        Res.drawable.lock_open
     )
     data object Duplicate: ContextAction(
         Res.string.duplicate_name,
@@ -476,11 +519,6 @@ sealed class EditClusterTool(
     ), Tool.Tinted {
         override val tint = DodeclustersColors.skyBlue.copy(alpha = 0.9f)
     }
-    data object PickCircleColor: ContextAction(
-        Res.string.pick_circle_color_name,
-        Res.string.pick_circle_color_description,
-        Res.drawable.paint_splash
-    )
     // MAYBE: eraser-like mode
     data object Delete: ContextAction(
         Res.string.delete_name,
@@ -489,31 +527,22 @@ sealed class EditClusterTool(
     ), Tool.Tinted {
         override val tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
     }
-    data object Detach: ContextAction(
-        Res.string.detach_name,
-        icon = Res.drawable.lock_open
-    )
-    data object SwapDirection: ContextAction(
-        Res.string.swap_direction_name,
-        icon = Res.drawable.right_left
-    )
-    data object MarkAsPhantoms: ContextAction(
-        Res.string.toggle_phantoms_name,
-        icon = Res.drawable.visible,
-    ), Tool.BinaryToggle {
-        override val disabledIcon = Res.drawable.phantom
-        override val disabledDescription = Res.string.toggle_phantoms_disabled_description
-    }
     data object DetailedAdjustment: ContextAction(
         Res.string.detailed_adjustment_name,
-        icon = Res.drawable.three_sliders
-    )
-    data object AdjustExpr: ContextAction(
-        Res.string.adjust_expr_name,
-        icon = Res.drawable.two_vertical_sliders
+        Res.string.detailed_adjustment_description,
+        Res.drawable.three_sliders
     )
     data object InBetween: ContextAction(
         Res.string.in_between_name,
-        icon = Res.drawable.road
+        Res.string.in_between_description,
+        Res.drawable.road
+    ), Tool.BinaryToggle {
+        override val disabledIcon = Res.drawable.road
+        override val disabledDescription= Res.string.in_between_disabled_description
+    }
+    data object ReverseDirection: ContextAction(
+        Res.string.reverse_direction_name,
+        Res.string.reverse_direction_description,
+        Res.drawable.right_left
     )
 }

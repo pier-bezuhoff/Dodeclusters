@@ -1616,13 +1616,22 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun swapDirectionsOfSelectedCircles() {
-        for (ix in selection) { // no recording (idk why)
-            val obj = objects[ix]
-            if (obj is CircleOrLine && isFree(ix)) {
+        val targets = selection.filter { ix ->
+            objects[ix] is CircleOrLine && isFree(ix)
+        }
+        if (targets.isEmpty()) {
+            if (targets.size == 1)
+                queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
+            else if (targets.size > 1)
+                queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
+        } else {
+            recordCommand(Command.ROTATE, targets = targets) // hijacking rotation
+            for (ix in targets) {
+                val obj = objects[ix] as CircleOrLine
                 objects[ix] = obj.reversed()
             }
+            expressions.update(selection)
         }
-        expressions.update(selection)
     }
 
     inline fun showAdjustExprButton(): Boolean =
@@ -2206,13 +2215,13 @@ class EditClusterViewModel : ViewModel() {
      * each circle choose its center, for each point -- itself, for each line -- screen center
      * projected onto it
      */
-    private fun transformWhatWeCan(
+    private inline fun transformWhatWeCan(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-        updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
+        crossinline updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
             expressions.update(it)
         },
     ) {
@@ -2252,13 +2261,13 @@ class EditClusterViewModel : ViewModel() {
      * each circle choose its center, for each point -- itself, for each line -- screen center
      * projected onto it
      */
-    private fun transform(
+    private inline fun transform(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-        updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
+        crossinline updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
             expressions.update(it)
         },
     ) {
@@ -3297,6 +3306,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.DetailedAdjustment -> openDetailsDialog()
             EditClusterTool.AdjustExpr -> adjustExpr()
             EditClusterTool.InBetween -> {} // unused, potentially updateParams(...)
+            EditClusterTool.ReverseDirection -> {}
         }
     }
 

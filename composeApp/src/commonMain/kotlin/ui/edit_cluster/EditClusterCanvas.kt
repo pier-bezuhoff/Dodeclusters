@@ -1062,9 +1062,9 @@ private inline fun DrawScope.drawHandles(
     }
 }
 
-private const val MEDIUM_ARROW_TAIL_LENGTH = 6f
-private const val MEDIUM_ARROW_HEAD_LENGTH = 32f
-private const val MEDIUM_ARROW_HALF_HEIGHT = 12f
+private const val MEDIUM_ARROW_TAIL_LENGTH = 5f
+private const val MEDIUM_ARROW_HEAD_LENGTH = 30f
+private const val MEDIUM_ARROW_HALF_HEIGHT = 10f
 /** Filled right/east-oriented arrow */
 private val MEDIUM_ARROW_PATH = Path().apply {
     // starts at (0,0)
@@ -1089,7 +1089,7 @@ fun DrawScope.drawRotationHandle(
     val preAngle = (90f - sweepAngle)/2f
     val startAngle = preAngle + rotationAngle
     val topLeft = Offset(centerX - radius, centerY - radius)
-    val stroke = Stroke(9f)
+    val stroke = Stroke(7.5f)
     val brush = Brush.sweepGradient(
         0.08f to handleColor,
         0.11f to handleBackgroundColor,
@@ -1155,7 +1155,7 @@ data class SelectionControlsPositions(
     inline fun rotationHandleOffset(rotationAngle: Float): Offset {
         val centerX = width/2f
         val centerY = height/2f
-        val radius = RELATIVE_ROTATION_HANDLE_RADIUS *minDim
+        val radius = RELATIVE_ROTATION_HANDLE_RADIUS * minDim
         val offset = Offset(centerX + radius, centerY)
             .rotateByAround(45f + rotationAngle, Offset(centerX, centerY))
         return offset
@@ -1229,10 +1229,11 @@ data class ConcreteScreenPositions(
     @Stable
     fun rotationHandleModifier(rotationAngle: Float): Modifier {
         val offset = positions.rotationHandleOffset(rotationAngle)
+        val handleHalfSize = 18.dp
         return with (density) {
             Modifier.offset(
-                offset.x.toDp() - halfSize,
-                offset.y.toDp() - halfSize,
+                offset.x.toDp() - handleHalfSize,
+                offset.y.toDp() - handleHalfSize,
             )
         }
     }

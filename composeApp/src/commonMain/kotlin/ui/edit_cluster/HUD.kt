@@ -46,11 +46,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -62,7 +60,6 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.ok_name
-import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
@@ -75,9 +72,10 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.OnOffButton
 import ui.SimpleFilledButton
-import ui.SimpleToolButton
+import ui.SimpleToolButtonWithTooltip
 import ui.TwoIconButton
 import ui.VerticalSlider
+import ui.WithTooltip
 import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
@@ -88,8 +86,6 @@ import kotlin.math.acosh
 import kotlin.math.asinh
 import kotlin.math.roundToInt
 import kotlin.math.sinh
-
-// MAYBE: add tooltips to buttons
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -137,7 +133,7 @@ fun BoxScope.SelectionContextActions(
             ,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SimpleToolButton(
+            SimpleToolButtonWithTooltip(
                 EditClusterTool.Expand,
                 tint = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
@@ -148,7 +144,7 @@ fun BoxScope.SelectionContextActions(
                 Modifier
                     .height(
                         with (density) {
-                            (0.2f * positions.height).toDp()
+                            (0.2f * size.height).toDp()
                         }
                     )
                 ,
@@ -157,7 +153,7 @@ fun BoxScope.SelectionContextActions(
                 onValueChangeFinished = onScaleFinished,
                 colors = sliderColors,
             )
-            SimpleToolButton(
+            SimpleToolButtonWithTooltip(
                 EditClusterTool.Shrink,
                 tint = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
@@ -218,48 +214,54 @@ fun BoxScope.SelectionContextActions(
         Column(
             verticalArrangement = Arrangement.Center,
         ) {
-            // TODO: tooltips
             if (showAdjustExprButton) {
-                SimpleToolButton(
+                SimpleToolButtonWithTooltip(
                     EditClusterTool.AdjustExpr,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
-            SimpleToolButton(
+            SimpleToolButtonWithTooltip(
                 EditClusterTool.PickCircleColor,
                 buttonModifier,
                 tint = objectColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
                 onClick = toolAction
             )
-            TwoIconButton(
-                painterResource(EditClusterTool.MarkAsPhantoms.icon),
-                painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
-                stringResource(EditClusterTool.MarkAsPhantoms.name),
-                enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
-                buttonModifier,
-                onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
-            )
+            WithTooltip(
+                if (toolPredicate(EditClusterTool.MarkAsPhantoms))
+                    stringResource(EditClusterTool.MarkAsPhantoms.description)
+                else
+                    stringResource(EditClusterTool.MarkAsPhantoms.disabledDescription)
+            ) {
+                TwoIconButton(
+                    painterResource(EditClusterTool.MarkAsPhantoms.icon),
+                    painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
+                    stringResource(EditClusterTool.MarkAsPhantoms.name),
+                    enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+                    buttonModifier,
+                    onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
+                )
+            }
             if (showOrientationToggle) {
-                SimpleToolButton(
+                SimpleToolButtonWithTooltip(
                     EditClusterTool.SwapDirection,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
             if (isLocked) {
-                SimpleToolButton(
+                SimpleToolButtonWithTooltip(
                     EditClusterTool.Detach,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
-            SimpleToolButton(
+            SimpleToolButtonWithTooltip(
                 EditClusterTool.Duplicate,
                 buttonModifier,
                 onClick = toolAction
             )
-            SimpleToolButton(
+            SimpleToolButtonWithTooltip(
                 EditClusterTool.Delete,
                 buttonModifier,
                 onClick = toolAction
@@ -268,8 +270,8 @@ fun BoxScope.SelectionContextActions(
     }
 }
 
-// only points
 // MAYBE: add scale/rotation handles if multiple are selected
+// only points
 @Composable
 fun BoxScope.PointContextActions(
 //    objectColor: Color?,
@@ -294,28 +296,35 @@ fun BoxScope.PointContextActions(
             verticalArrangement = Arrangement.Center,
         ) {
             if (showAdjustExprButton) {
-                SimpleToolButton(
+                SimpleToolButtonWithTooltip(
                     EditClusterTool.AdjustExpr,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
-            TwoIconButton(
-                painterResource(EditClusterTool.MarkAsPhantoms.icon),
-                painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
-                stringResource(EditClusterTool.MarkAsPhantoms.name),
-                enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
-                buttonModifier,
-                onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
-            )
+            WithTooltip(
+                if (toolPredicate(EditClusterTool.MarkAsPhantoms))
+                    stringResource(EditClusterTool.MarkAsPhantoms.description)
+                else
+                    stringResource(EditClusterTool.MarkAsPhantoms.disabledDescription)
+            ) {
+                TwoIconButton(
+                    painterResource(EditClusterTool.MarkAsPhantoms.icon),
+                    painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
+                    stringResource(EditClusterTool.MarkAsPhantoms.name),
+                    enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+                    buttonModifier,
+                    onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
+                )
+            }
             if (isLocked) {
-                SimpleToolButton(
+                SimpleToolButtonWithTooltip(
                     EditClusterTool.Detach,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
-            SimpleToolButton(
+            SimpleToolButtonWithTooltip(
                 EditClusterTool.Delete,
                 buttonModifier,
                 onClick = toolAction
@@ -368,25 +377,34 @@ fun InterpolationInterface(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
         ) {
             if (interpolateCircles) {
-                OnOffButton(
-                    painterResource(EditClusterTool.InBetween.icon),
-                    stringResource(EditClusterTool.InBetween.name),
-                    isOn = interpolateInBetween,
-                    modifier = topRightUnderScaleModifier,
-                    contentColor = MaterialTheme.colorScheme.secondary,
-                    checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    containerColor = buttonBackground,
-                    checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                ) {
-                    interpolateInBetween = !interpolateInBetween
-                    // triggers params upd => triggers VM.updParams
+                Box(topRightUnderScaleModifier) {
+                    WithTooltip(
+                        if (interpolateInBetween)
+                            stringResource(EditClusterTool.InBetween.description)
+                        else
+                            stringResource(EditClusterTool.InBetween.disabledDescription)
+                    ) {
+                        OnOffButton(
+                            painterResource(EditClusterTool.InBetween.icon),
+                            stringResource(EditClusterTool.InBetween.name),
+                            isOn = interpolateInBetween,
+                            contentColor = MaterialTheme.colorScheme.secondary,
+                            checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            containerColor = buttonBackground,
+                            checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        ) {
+                            interpolateInBetween = !interpolateInBetween
+                            // triggers params upd => triggers VM.updParams
+                        }
+                    }
                 }
             }
-            SimpleToolButton(
+            SimpleToolButtonWithTooltip(
                 EditClusterTool.DetailedAdjustment,
-                halfBottomRightModifier
+                Modifier
                     .background(buttonBackground, buttonShape)
                 ,
+                positionModifier = halfBottomRightModifier,
                 onClick = { openDetailsDialog() }
             )
             Icon(
@@ -479,24 +497,20 @@ fun BiInversionInterface(
                 ,
                 colors = sliderColors,
             )
-            OnOffButton( // negate speed toggle
-                painterResource(Res.drawable.right_left),
-                "negate speed",
+            ReverseDirectionToggle(
                 isOn = negateSpeed,
-                modifier = topRightUnderScaleModifier,
-                contentColor = MaterialTheme.colorScheme.secondary,
-                checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                positionModifier = topRightUnderScaleModifier,
                 containerColor = buttonBackground,
-                checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 negateSpeed = !negateSpeed
                 // triggers params upd => triggers VM.updParams
             }
-            SimpleToolButton(
+            SimpleToolButtonWithTooltip(
                 EditClusterTool.DetailedAdjustment,
-                halfBottomRightModifier
+                Modifier
                     .background(buttonBackground, buttonShape)
                 ,
+                positionModifier = halfBottomRightModifier,
                 onClick = { openDetailsDialog() }
             )
             Icon(
@@ -598,23 +612,19 @@ fun LoxodromicMotionInterface(
                 ,
                 colors = sliderColors,
             )
-            OnOffButton(
-                painterResource(Res.drawable.right_left),
-                "reverse direction",
+            ReverseDirectionToggle(
                 isOn = reverseDirection,
-                modifier = topRightUnderScaleModifier,
-                contentColor = MaterialTheme.colorScheme.secondary,
-                checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                positionModifier = topRightUnderScaleModifier,
                 containerColor = buttonBackground,
-                checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 reverseDirection = !reverseDirection
             }
-            SimpleToolButton(
+            SimpleToolButtonWithTooltip(
                 EditClusterTool.DetailedAdjustment,
-                halfBottomRightModifier
+                Modifier
                     .background(buttonBackground, buttonShape)
                 ,
+                positionModifier = halfBottomRightModifier,
                 onClick = { openDetailsDialog() }
             )
             Icon(
@@ -644,6 +654,31 @@ fun LoxodromicMotionInterface(
     key(params) { // this feels hacky, `key(params)` serves only a semantic purpose btw
         coroutineScope.launch {
             updateParameters(params)
+        }
+    }
+}
+
+@Composable
+private fun ReverseDirectionToggle(
+    isOn: Boolean,
+    positionModifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
+    onClick: () -> Unit,
+) {
+    Box(positionModifier) {
+        WithTooltip(stringResource(EditClusterTool.ReverseDirection.description)) {
+            OnOffButton(
+                painterResource(EditClusterTool.ReverseDirection.icon),
+                stringResource(EditClusterTool.ReverseDirection.name),
+                isOn = isOn,
+                modifier = modifier,
+                contentColor = MaterialTheme.colorScheme.secondary,
+                checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerColor = containerColor,
+                checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                onClick = onClick
+            )
         }
     }
 }

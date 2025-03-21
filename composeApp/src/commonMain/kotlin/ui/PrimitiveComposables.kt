@@ -3,6 +3,7 @@ package ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -108,6 +109,36 @@ inline fun <reified T> SimpleToolButton(
     tint = tint,
     onClick = { onClick(tool) },
 )
+
+/**
+ * @param[positionModifier] for proper tooltip positioning pass `Modifier.offset(...)` and
+ * such separately from [modifier]
+ */
+@Composable
+inline fun <reified T> SimpleToolButtonWithTooltip(
+    tool: T,
+    modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    positionModifier: Modifier = Modifier,
+    tint: Color =
+        if (tool is Tool.Tinted) tool.tint
+        else LocalContentColor.current,
+    crossinline onClick: (tool: T) -> Unit
+) where T : Tool =
+    Box(positionModifier) {
+        WithTooltip(
+            stringResource(tool.description),
+        ) {
+            SimpleButton(
+                iconPainter = painterResource(tool.icon),
+                name = stringResource(tool.name),
+                modifier = modifier,
+                iconModifier = iconModifier,
+                tint = tint,
+                onClick = { onClick(tool) },
+            )
+        }
+    }
 
 @Composable
 fun SimpleFilledButton(
@@ -273,8 +304,10 @@ fun OnOffButton(
 //  because of popup realization, more here:
 // https://androidx.tech/artifacts/compose.material3/material3-android/1.3.0-source/androidMain/androidx/compose/material3/internal/BasicTooltip.android.kt.html
 /**
+ * NOTE: if you use `Modifier.offset(...)` on the [content], instead wrap [WithTooltip] in
+ *  a [Box] with that offset for proper tooltip positioning
  * @param[tooltipDuration] in milliseconds
- * */
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WithTooltip(
@@ -286,12 +319,13 @@ fun WithTooltip(
     //  on android (since it requires hover vs long-press there)
     TooltipBox(
         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(
-            8.dp
-        ),
+            spacingBetweenTooltipAndAnchor = 8.dp
+        )
+        ,
         tooltip = {
             PlainTooltip(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
             ) { Text(description) }
         },
         state = rememberMyTooltipState(tooltipDuration = tooltipDuration),
