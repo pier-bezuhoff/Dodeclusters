@@ -272,9 +272,6 @@ class EditClusterViewModel : ViewModel() {
 
     var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
         private set
-    private val selectionControlsPositions: SelectionControlsPositions by derivedStateOf {
-        SelectionControlsPositions(canvasSize)
-    }
     var translation: Offset by mutableStateOf(Offset.Zero)
         private set
 

@@ -424,28 +424,45 @@ fun EditClusterScreen(
  * which is noticeable & jarring */
 @Composable
 fun preloadIcons() {
-    for (category in listOf(
-        EditClusterCategory.Create, EditClusterCategory.Drag, EditClusterCategory.Multiselect, EditClusterCategory.Region, EditClusterCategory.Transform, EditClusterCategory.Visibility
-    )) {
-        for (tool in category.tools) {
-            painterResource(tool.icon)
-            if (tool is Tool.BinaryToggle) {
-                tool.disabledIcon?.let {
-                    painterResource(it)
-                }
+    val categoryList = listOf(
+        EditClusterCategory.Drag,
+        EditClusterCategory.Multiselect,
+        EditClusterCategory.Region,
+        EditClusterCategory.Visibility,
+        EditClusterCategory.Transform,
+        EditClusterCategory.Create,
+    )
+    val toolList = categoryList
+        .flatMap { it.tools }
+        .plus(
+            listOf(
+                EditClusterTool.Expand, EditClusterTool.Shrink,
+                EditClusterTool.PickCircleColor,
+                EditClusterTool.MarkAsPhantoms,
+                EditClusterTool.SwapDirection,
+                EditClusterTool.Detach,
+                EditClusterTool.Duplicate,
+                EditClusterTool.Delete,
+                EditClusterTool.DetailedAdjustment,
+                EditClusterTool.InBetween,
+                EditClusterTool.ReverseDirection,
+            )
+        )
+    for (tool in toolList) {
+        painterResource(tool.icon)
+        if (tool is Tool.BinaryToggle) {
+            tool.disabledIcon?.let {
+                painterResource(it)
             }
         }
     }
     for (resource in listOf(
-        EditClusterTool.PngExport.icon, EditClusterTool.SvgExport.icon,
-        Res.drawable.confirm, Res.drawable.cancel, // from dialogs
+        // from dialogs
+        Res.drawable.confirm, Res.drawable.cancel,
         Res.drawable.collapse_down, Res.drawable.collapse_left,
         // from canvas HUD
-        Res.drawable.expand, Res.drawable.shrink,
-        Res.drawable.copy, Res.drawable.delete_forever, Res.drawable.lock_open,
-        Res.drawable.rotate_counterclockwise, Res.drawable.right_left,
-        Res.drawable.three_dots_in_angle_brackets, EditClusterTool.DetailedAdjustment.icon,
-        EditClusterTool.InBetween.icon,
+        Res.drawable.rotate_counterclockwise,
+        Res.drawable.three_dots_in_angle_brackets,
     )) {
         painterResource(resource)
     }

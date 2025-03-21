@@ -240,7 +240,7 @@ sealed class EditClusterTool(
     }
     data object SvgExport: CustomAction(
         Res.string.svg_export_name,
-        icon = Res.drawable.upload
+        icon = Res.drawable.upload // unused
     ) {
         const val DEFAULT_NAME = DdcV4.DEFAULT_NAME
         const val EXTENSION = "svg"
@@ -248,7 +248,7 @@ sealed class EditClusterTool(
     }
     data object PngExport: CustomAction(
         Res.string.png_export_name,
-        icon = Res.drawable.screenshot_pc
+        icon = Res.drawable.screenshot_pc // unused
     ) {
         const val DEFAULT_NAME = "dodeclusters-screenshot"
         const val EXTENSION = "png"

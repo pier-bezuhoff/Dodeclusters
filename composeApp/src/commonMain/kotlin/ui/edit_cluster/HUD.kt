@@ -56,6 +56,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.expand
@@ -90,7 +91,7 @@ import kotlin.math.sinh
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BoxScope.SelectionContextActions(
-    canvasSize: IntSize,
+    concretePositions: ConcreteOnScreenPositions,
     scaleSliderPercentage: Float,
     rotationHandleAngle: Float,
     objectColor: Color?,
@@ -118,7 +119,7 @@ fun BoxScope.SelectionContextActions(
     )
     val rotationHandleStripeColor = MaterialTheme.colorScheme.onSecondaryContainer
     // scale slider mid column is too far from the right
-    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
+    with (concretePositions) {
         /** position of the grabbed rotation handle if it followed the cursor */
         var virtualRotationHandlePosition by remember { mutableStateOf(Offset.Unspecified) }
         Column(
@@ -169,7 +170,7 @@ fun BoxScope.SelectionContextActions(
                     }
                     onDrawWithContent {
                         this.drawContent()
-                        rotate(rotationHandleAngle) {
+                        rotate(-45f + positions.rotationHandle0Angle + rotationHandleAngle) {
                             clipPath(mask) {
                                 val step = size.minDimension/4f
                                 for (i in 1..7) {
@@ -189,11 +190,11 @@ fun BoxScope.SelectionContextActions(
                     rememberDraggable2DState { delta ->
                         virtualRotationHandlePosition += delta
                         val newAngle = positions.center
-                            .angleDeg(positions.southEast, virtualRotationHandlePosition)
+                            .angleDeg(positions.rotationHandle0, virtualRotationHandlePosition)
                         onRotate(newAngle)
                     },
                     onDragStarted = {
-                        virtualRotationHandlePosition = positions.rotationHandleOffset(0f)
+                        virtualRotationHandlePosition = positions.rotationHandle0
                         onRotateStarted(positions.center)
                     },
                     onDragStopped = {
@@ -339,7 +340,7 @@ fun BoxScope.PointContextActions(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterpolationInterface(
-    canvasSize: IntSize,
+    concretePositions: ConcreteOnScreenPositions,
     interpolateCircles: Boolean,
     circlesAreCoDirected: Boolean,
     defaults: DefaultInterpolationParameters,
@@ -372,7 +373,7 @@ fun InterpolationInterface(
         inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
         inactiveTickColor = MaterialTheme.colorScheme.secondary,
     )
-    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
+    with (concretePositions) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
         ) {
@@ -441,7 +442,7 @@ fun InterpolationInterface(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BiInversionInterface(
-    canvasSize: IntSize,
+    concretePositions: ConcreteOnScreenPositions,
     defaults: DefaultBiInversionParameters,
     updateParameters: (BiInversionParameters) -> Unit,
     openDetailsDialog: () -> Unit,
@@ -480,7 +481,7 @@ fun BiInversionInterface(
         inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
         inactiveTickColor = MaterialTheme.colorScheme.secondary,
     )
-    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
+    with (concretePositions) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
         ) {
@@ -547,7 +548,7 @@ fun BiInversionInterface(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoxodromicMotionInterface(
-    canvasSize: IntSize,
+    concretePositions: ConcreteOnScreenPositions,
     defaults: DefaultLoxodromicMotionParameters,
     updateParameters: (LoxodromicMotionParameters) -> Unit,
     openDetailsDialog: () -> Unit,
@@ -582,7 +583,7 @@ fun LoxodromicMotionInterface(
         inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
         inactiveTickColor = MaterialTheme.colorScheme.secondary,
     )
-    with (ConcreteScreenPositions(canvasSize, LocalDensity.current)) {
+    with (concretePositions) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
         ) {
@@ -691,7 +692,7 @@ fun BoxScope.ArcPathContextActions(
 ) {
     val (w, h) = canvasSize
     val verticalMargin = with (LocalDensity.current) {
-        (h*SelectionControlsPositions.RELATIVE_VERTICAL_MARGIN).toDp()
+        (h*OnScreenPositions.RELATIVE_VERTICAL_MARGIN).toDp()
     }
     Button(
         onClick = { toolAction(EditClusterTool.CompleteArcPath) },
