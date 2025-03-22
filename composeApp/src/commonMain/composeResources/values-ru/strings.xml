@@ -136,8 +136,8 @@
     <string name="expand_description">Увеличить на 10%</string>
     <string name="shrink_name">Уменьшить</string>
     <string name="shrink_description">Уменьшить на 10%</string>
-    <string name="adjust_expr_name">Настроить формулу</string>
-    <string name="adjust_expr_description">Перенастроить формулу выделенных объектов</string>
+    <string name="adjust_expr_name">Настроить параметры формулы</string>
+    <string name="adjust_expr_description">Поменять параметры формулы выделенных объектов</string>
     <string name="pick_circle_color_name">Цвет окружности</string>
     <string name="pick_circle_color_description">Выбор цвета (границы) окружности</string>
     <string name="mark_as_phantoms_name">Фантомность</string>
@@ -146,14 +146,14 @@
     <string name="swap_direction_name">Сменить направление</string>
     <string name="swap_direction_description">Сменить ориентацию</string>
     <string name="detach_name">Открепить</string>
-    <string name="detach_description">Освободить: убрать динамическую зависимость</string>
+    <string name="detach_description">Освободить: убрать формулу / динамическую зависимость</string>
     <string name="duplicate_name">Дублировать</string>
     <string name="duplicate_description">Продублировать выделенные объекты</string>
     <string name="delete_name">Удалить</string>
     <string name="delete_description">Удалить выделенные объекты</string>
     <!-- HUD adjustment interface -->
     <string name="detailed_adjustment_name">Детальная настройка</string>
-    <string name="detailed_adjustment_description">Открыть диалог детальной настройки формулы</string>
+    <string name="detailed_adjustment_description">Открыть диалог детальной настройки параметров формулы</string>
     <string name="in_between_name">Между</string>
     <string name="in_between_description">Внутри</string>
     <string name="in_between_disabled_description">Снаружи</string>

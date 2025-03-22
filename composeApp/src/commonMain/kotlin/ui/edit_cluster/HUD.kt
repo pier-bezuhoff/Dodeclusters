@@ -56,7 +56,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.toSize
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.expand
@@ -696,7 +695,8 @@ fun BoxScope.ArcPathContextActions(
     }
     Button(
         onClick = { toolAction(EditClusterTool.CompleteArcPath) },
-        Modifier // NOTE: this position is not optimal, especially for desktop
+        // NOTE: this position is not optimal, especially for desktop
+        Modifier
             .align(Alignment.BottomEnd)
             .offset(y = -verticalMargin)
         ,

@@ -52,7 +52,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import data.geometry.Circle
@@ -375,7 +374,7 @@ private fun SelectionsCanvas(
             .drawBehind {
                 val (w, h) = size
                 val maxDimension = max(w, h)
-                val nLines = 2*halfNLines
+                // val nLines = 2*halfNLines
                 for (i in 0 until halfNLines) {
                     val x = (i+1).toFloat()/halfNLines*maxDimension
                     val y = (i+1).toFloat()/halfNLines*maxDimension
@@ -1129,7 +1128,6 @@ data class OnScreenPositions(
     val width: Float,
     val height: Float,
 ) {
-    val minDim = min(width, height)
     val center = Offset(width/2f, height/2f)
     val east = Offset(width, center.y)
 
@@ -1207,8 +1205,6 @@ data class ConcreteOnScreenPositions(
     val topRightUnderScaleModifier = offsetModifier(positions.right, positions.topUnderScaleSlider)
     val halfBottomRightModifier = offsetModifier(positions.right, positions.halfHigherThanBottom)
     val bottomRightModifier = offsetModifier(positions.right, positions.bottom)
-    val bottomLeftModifier = offsetModifier(positions.left, positions.bottom)
-    val bottomMidModifier = offsetModifier(positions.mid, positions.bottom)
     val horizontalSliderModifier =
         with (density) { Modifier.offset(
             x = positions.horizontalSliderStart.toDp(),

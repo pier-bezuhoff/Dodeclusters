@@ -69,16 +69,10 @@ import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.confirm
-import dodeclusters.composeapp.generated.resources.copy
-import dodeclusters.composeapp.generated.resources.delete_forever
-import dodeclusters.composeapp.generated.resources.expand
-import dodeclusters.composeapp.generated.resources.lock_open
 import dodeclusters.composeapp.generated.resources.ok_name
-import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
-import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
@@ -87,6 +81,7 @@ import domain.PartialArgList
 import domain.io.DdcRepository
 import domain.io.LookupData
 import domain.io.OpenFileButton
+import domain.never
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
@@ -1140,7 +1135,7 @@ fun ToolButton(
                     )
                 }
             }
-            else -> throw IllegalStateException("Never: $tool")
+            else -> never("$tool")
         }
     }
 }

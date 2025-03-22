@@ -137,7 +137,7 @@
     <string name="shrink_name">Shrink</string>
     <string name="shrink_description">Scale down by 10%</string>
     <string name="adjust_expr_name">Adjust expression</string>
-    <string name="adjust_expr_description">Adjust expression of selected objects</string>
+    <string name="adjust_expr_description">Adjust expression parameters of selected objects</string>
     <string name="pick_circle_color_name">Border color</string>
     <string name="pick_circle_color_description">Pick border color</string>
     <string name="mark_as_phantoms_name">Phantom toggle</string>
@@ -146,14 +146,14 @@
     <string name="swap_direction_name">Swap direction</string>
     <string name="swap_direction_description">Swap orientation</string>
     <string name="detach_name">Detach</string>
-    <string name="detach_description">Detach: remove dynamic dependency</string>
+    <string name="detach_description">Detach: remove formula / dynamic dependency</string>
     <string name="duplicate_name">Duplicate</string>
     <string name="duplicate_description">Duplicate selected objects</string>
     <string name="delete_name">Delete</string>
     <string name="delete_description">Delete selected objects</string>
     <!-- HUD adjustment interface -->
     <string name="detailed_adjustment_name">Detailed adjustment</string>
-    <string name="detailed_adjustment_description">Open detailed adjustment dialog</string>
+    <string name="detailed_adjustment_description">Open detailed parameter adjustment dialog</string>
     <string name="in_between_name">In between</string>
     <string name="in_between_description">Inside</string>
     <string name="in_between_disabled_description">Outside</string>
