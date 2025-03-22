@@ -1587,7 +1587,7 @@ class EditClusterViewModel : ViewModel() {
             transformWhatWeCan(selection, focus = focus, zoom = zoom)
         } else if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
 //            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
-        } else { // NOTE: scaling everything instead of canvas can produce more artifacts
+        } else {
             val targets = objects.indices.toList()
             val center = computeAbsoluteCenter() ?: Offset.Zero
             transform(targets, focus = center, zoom = zoom)
