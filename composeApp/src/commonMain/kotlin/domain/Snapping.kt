@@ -1,12 +1,14 @@
 package domain
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.geometry.Rect
 import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.CircleOrLineOrPoint
 import data.geometry.EPSILON
 import data.geometry.Line
 import data.geometry.Point
+import data.geometry.closestPerpendicularPoint
 import data.geometry.perpendicularDistance
 import data.geometry.translatedUntilTangency
 import kotlin.math.abs
@@ -168,19 +170,25 @@ sealed interface CircleSnapResult {
     }
 }
 
-// NOTE: dont forget to exclude [circle], its immediate parents and all children from [circles]
-// MAYBE: only snap to *visible* tangential touches (not offscreen)
+// NOTE: dont forget to exclude [circle], its immediate parents and all children from snappanbles
 fun snapCircleToCircles(
     circle: CircleOrLine,
     circlesLinesOrPoints: List<CircleOrLineOrPoint?>,
     snapDistance: Double,
-    bitangentTolerance: Double = 1.2
+    bitangentTolerance: Double = 1.2,
+    visibleRect: Rect? = null,
 ): CircleSnapResult {
     val closestCircles: List<Ix> = circlesLinesOrPoints.asSequence()
         .mapIndexed { ix, c ->
             ix to abs(c?.perpendicularDistance(circle) ?: Double.POSITIVE_INFINITY)
         }
-        .filter { (_, d) -> d <= snapDistance }
+        .filter { (ix, d) ->
+            d <= snapDistance && circlesLinesOrPoints[ix]?.let { o ->
+                visibleRect
+                    ?.contains(circle.closestPerpendicularPoint(o).toOffset())
+                    ?: true
+            } ?: false
+        }
         .sortedBy { (_, d) -> d }
         .take(2)
         .map { (ix, _) -> ix }

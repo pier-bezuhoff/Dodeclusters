@@ -1,6 +1,7 @@
 [versions]
-dodeclusters-versionCode = "5"
-dodeclusters-version = "0.3.4"
+dodeclusters-version = "0.4.0"
+dodeclusters-android-versionCode = "6"
+dodeclusters-desktop-packageVersion = "1.0.4" # cannot start with 0 it seems
 # NOTE: Andorid 15 (api 35) is already out, but
 #  you need AndroidStudio 2024.2.1 & agp 8.6.0,
 #  see https://developer.android.com/build/releases/gradle-plugin#api-level-support

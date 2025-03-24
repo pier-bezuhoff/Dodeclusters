@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
 import kotlin.math.cos
@@ -11,6 +12,7 @@ sealed interface CircleOrLineOrImaginaryCircle : GCircle
 
 @Immutable
 @Serializable
+@SerialName("imaginary-circle")
 data class ImaginaryCircle(
     val x: Double,
     val y: Double,

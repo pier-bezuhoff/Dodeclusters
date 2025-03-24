@@ -2154,7 +2154,19 @@ class EditClusterViewModel : ViewModel() {
                 if (ix in excludedCircles || !showPhantomObjects && ix in phantoms) null
                 else c as? CircleOrLineOrPoint
             }
-            val snap = snapCircleToCircles(result0, snappableCLPs, snapDistance = snapDistance)
+            val center = computeAbsoluteCenter()
+            val absoluteVisibilityRect =
+                if (center != null && canvasSize != IntSize.Zero)
+                    Rect(
+                        center.x - canvasSize.width/2f, center.y - canvasSize.height/2f,
+                        center.x + canvasSize.width/2f, center.y + canvasSize.height/2f,
+                    )
+                else null
+            val snap = snapCircleToCircles(
+                result0, snappableCLPs,
+                snapDistance = snapDistance,
+                visibleRect = absoluteVisibilityRect,
+            )
             val delta = result0 translationDelta snap.result
             transformWhatWeCan(listOf(selectedIndex), translation = pan + delta, zoom = zoom, rotationAngle = rotationAngle)
         } else {

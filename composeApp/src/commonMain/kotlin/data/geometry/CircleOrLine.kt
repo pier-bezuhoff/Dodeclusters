@@ -212,6 +212,38 @@ fun CircleOrLine.calculateSegmentTopLeft(start: Point, end: Point): SegmentPoint
         }
     }
 
+fun CircleOrLine.closestPerpendicularPoint(base: CircleOrLineOrPoint): Point =
+    when (this) {
+        is Circle -> when (base) {
+            is Circle -> {
+                val b1 = base.project(this.centerPoint)
+                val p1 = this.project(b1)
+                val dx1 = b1.x - p1.x
+                val dy1 = b1.y - p1.y
+                val b2 = Point(2*base.x - b1.x, 2*base.y - b1.y)
+                val p2 = this.project(b2)
+                val dx2 = b2.x - p2.x
+                val dy2 = b2.y - p2.y
+                if (squareSum(dx1, dy1) < squareSum(dx2, dy2))
+                    b1
+                else
+                    b2
+            }
+            is Line ->
+                base.project(this.centerPoint)
+            is Point ->
+                base
+        }
+        is Line -> when (base) {
+            is Circle ->
+                base.project(this.project(base.centerPoint))
+            is Line ->
+                base.order2point(0.0) // wrong but no one cares
+            is Point ->
+                base
+        }
+    }
+
 fun CircleOrLine.translatedUntilTangency(base: CircleOrLineOrPoint): CircleOrLine =
     when (this) {
         is Circle -> when (base) {

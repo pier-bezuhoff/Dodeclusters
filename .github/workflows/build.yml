@@ -1,5 +1,5 @@
-name: build-and-delpoy
-run-name: Build & deploy to Github Pages
+name: build-web-desktop-mobile
+run-name: Build for Web, Desktop, Android
 on:
   push:
     branches:

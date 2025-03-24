@@ -46,7 +46,7 @@ kotlin {
     androidTarget {
         tasks.withType<KotlinJvmCompile>().configureEach {
             compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_11) //JVM_1_8)
+                jvmTarget.set(JvmTarget.JVM_11)
             }
         }
     }
@@ -126,7 +126,7 @@ android {
         applicationId = "com.pierbezuhoff.dodeclusters"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = libs.versions.dodeclusters.versionCode.get().toInt()
+        versionCode = libs.versions.dodeclusters.android.versionCode.get().toInt()
         versionName = libs.versions.dodeclusters.version.get()
     }
     packaging {
@@ -140,8 +140,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11 //VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_11 //VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     dependencies {
         debugImplementation(libs.compose.ui.tooling)
@@ -165,11 +165,12 @@ compose.desktop {
                 TargetFormat.Exe,
                 TargetFormat.AppImage, // universal Linux
                 TargetFormat.Deb, // Debian-based
-                TargetFormat.Rpm, // Red Hat, Fedora, OpenSUSE, CentOS (doesnt seem it can be generated on arch)
-                TargetFormat.Dmg, // macOS, unused
+                // github doesn't presently have VMs with non-Ubuntu Linux, so idk about generating rpm-s
+                // TargetFormat.Rpm, // Red Hat, Fedora, OpenSUSE, CentOS (doesn't seem it can be generated on arch)
+                // TargetFormat.Dmg, // macOS
             )
             packageName = "com.pierbezuhoff.dodeclusters"
-            packageVersion = "1.0.0" // cannot start with 0 it seems //libs.versions.dodeclusters.version.get()
+            packageVersion = libs.versions.dodeclusters.desktop.packageVersion.get()
             macOS {
                 iconFile.set(project.file("icon.icns"))
             }
