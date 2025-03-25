@@ -184,7 +184,7 @@
     <string name="color_picker_default_palette_label">Default palette</string>
     <string name="color_picker_save_color_description">Save current color</string>
     <string name="color_picker_forget_color_description">Forget current color</string>
-    <string name="hex_name">hex&#8321;&#8326; #</string>
+    <string name="hex_name">hex #</string>
     <string name="cancel_name">Cancel</string>
     <string name="ok_name">OK</string>
     <string name="ok_description">Confirm</string>

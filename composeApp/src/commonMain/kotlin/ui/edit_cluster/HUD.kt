@@ -74,6 +74,7 @@ import ui.OnOffButton
 import ui.SimpleFilledButton
 import ui.SimpleToolButtonWithTooltip
 import ui.TwoIconButton
+import ui.TwoIconButtonWithTooltip
 import ui.VerticalSlider
 import ui.WithTooltip
 import ui.edit_cluster.dialogs.DefaultBiInversionParameters
@@ -227,21 +228,16 @@ fun BoxScope.SelectionContextActions(
                 tint = objectColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
                 onClick = toolAction
             )
-            WithTooltip(
-                if (toolPredicate(EditClusterTool.MarkAsPhantoms))
-                    stringResource(EditClusterTool.MarkAsPhantoms.description)
-                else
-                    stringResource(EditClusterTool.MarkAsPhantoms.disabledDescription)
-            ) {
-                TwoIconButton(
-                    painterResource(EditClusterTool.MarkAsPhantoms.icon),
-                    painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
-                    stringResource(EditClusterTool.MarkAsPhantoms.name),
-                    enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
-                    buttonModifier,
-                    onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
-                )
-            }
+            TwoIconButtonWithTooltip(
+                painterResource(EditClusterTool.MarkAsPhantoms.icon),
+                painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
+                description = stringResource(EditClusterTool.MarkAsPhantoms.description),
+                disabledDescription = stringResource(EditClusterTool.MarkAsPhantoms.disabledDescription),
+                name = stringResource(EditClusterTool.MarkAsPhantoms.name),
+                enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+                modifier = buttonModifier,
+                onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
+            )
             if (showOrientationToggle) {
                 SimpleToolButtonWithTooltip(
                     EditClusterTool.SwapDirection,
@@ -302,21 +298,16 @@ fun BoxScope.PointContextActions(
                     onClick = toolAction
                 )
             }
-            WithTooltip(
-                if (toolPredicate(EditClusterTool.MarkAsPhantoms))
-                    stringResource(EditClusterTool.MarkAsPhantoms.description)
-                else
-                    stringResource(EditClusterTool.MarkAsPhantoms.disabledDescription)
-            ) {
-                TwoIconButton(
-                    painterResource(EditClusterTool.MarkAsPhantoms.icon),
-                    painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
-                    stringResource(EditClusterTool.MarkAsPhantoms.name),
-                    enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
-                    buttonModifier,
-                    onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
-                )
-            }
+            TwoIconButtonWithTooltip(
+                painterResource(EditClusterTool.MarkAsPhantoms.icon),
+                painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
+                description = stringResource(EditClusterTool.MarkAsPhantoms.description),
+                disabledDescription = stringResource(EditClusterTool.MarkAsPhantoms.disabledDescription),
+                name = stringResource(EditClusterTool.MarkAsPhantoms.name),
+                enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+                modifier = buttonModifier,
+                onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
+            )
             if (isLocked) {
                 SimpleToolButtonWithTooltip(
                     EditClusterTool.Detach,
@@ -735,15 +726,16 @@ fun BoxScope.RegionManipulationStrategySelector(
             .selectableGroup()
         ) {
             RegionManipulationStrategy.entries.forEach { strategy ->
-                Row(Modifier
-                    .selectable(
-                        selected = (strategy == currentStrategy),
-                        onClick = { setStrategy(strategy) },
-                        role = Role.RadioButton
-                    )
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp)
-                    .fillMaxWidth()
+                Row(
+                    Modifier
+                        .selectable(
+                            selected = (strategy == currentStrategy),
+                            onClick = { setStrategy(strategy) },
+                            role = Role.RadioButton
+                        )
+                        .height(56.dp)
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
                     ,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -759,9 +751,10 @@ fun BoxScope.RegionManipulationStrategySelector(
                         modifier = Modifier
                             .padding(start = 16.dp)
                             .weight(1f),
-                        color = if (strategy == currentStrategy)
-                            MaterialTheme.colorScheme.onSecondaryContainer
-                        else MaterialTheme.colorScheme.onSurface,
+                        color =
+                            if (strategy == currentStrategy)
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            else MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }

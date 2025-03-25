@@ -80,9 +80,7 @@ import ui.CancelButton
 import ui.DialogTitle
 import ui.OkButton
 import ui.SimpleButton
-import ui.TwoIconButton
 import ui.TwoIconButtonWithTooltip
-import ui.WithTooltip
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.hideSystemBars
