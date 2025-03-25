@@ -223,6 +223,38 @@ fun TwoIconButton(
     }
 }
 
+@Composable
+fun TwoIconButtonWithTooltip(
+    iconPainter: Painter,
+    disabledIconPainter: Painter,
+    description: String,
+    enabled: Boolean,
+    disabledDescription: String = description,
+    name: String = description,
+    modifier: Modifier = Modifier,
+    positionModifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
+    tint: Color = LocalContentColor.current,
+    onClick: () -> Unit
+) {
+    Box(positionModifier) {
+        WithTooltip(
+            if (enabled) description else disabledDescription
+        ) {
+            TwoIconButton(
+                iconPainter = iconPainter,
+                disabledIconPainter = disabledIconPainter,
+                name = name,
+                enabled = enabled,
+                modifier = modifier,
+                iconModifier = iconModifier,
+                tint = tint,
+                onClick = onClick
+            )
+        }
+    }
+}
+
 /** 3 states:
  * 1. [enabled]=true & [alternative]=false
  * 2. [enabled]=true & [alternative]=true
@@ -306,12 +338,14 @@ fun OnOffButton(
 /**
  * NOTE: if you use `Modifier.offset(...)` on the [content], instead wrap [WithTooltip] in
  *  a [Box] with that offset for proper tooltip positioning
+ * @param[modifier] pass position-related modifier here
  * @param[tooltipDuration] in milliseconds
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WithTooltip(
     description: String,
+    modifier: Modifier = Modifier,
     tooltipDuration: Long = 5_000,
     content: @Composable () -> Unit
 ) {
@@ -329,6 +363,7 @@ fun WithTooltip(
             ) { Text(description) }
         },
         state = rememberMyTooltipState(tooltipDuration = tooltipDuration),
+        modifier = modifier,
     ) {
         content()
     }

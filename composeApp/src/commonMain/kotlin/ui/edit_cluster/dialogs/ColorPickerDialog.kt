@@ -65,7 +65,11 @@ import com.github.ajalt.colormath.RenderCondition
 import com.github.ajalt.colormath.model.RGB
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.add_circle
+import dodeclusters.composeapp.generated.resources.color_picker_default_palette_label
+import dodeclusters.composeapp.generated.resources.color_picker_forget_color_description
+import dodeclusters.composeapp.generated.resources.color_picker_save_color_description
 import dodeclusters.composeapp.generated.resources.color_picker_title
+import dodeclusters.composeapp.generated.resources.color_picker_used_and_saved_colors_label
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.hex_name
 import dodeclusters.composeapp.generated.resources.paint_splash
@@ -77,6 +81,8 @@ import ui.DialogTitle
 import ui.OkButton
 import ui.SimpleButton
 import ui.TwoIconButton
+import ui.TwoIconButtonWithTooltip
+import ui.WithTooltip
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
 import ui.hideSystemBars
@@ -135,9 +141,10 @@ fun ColorPickerDialog(
     val color = colorState.value.toColor()
     val savedColorsState = remember(parameters) { mutableStateOf(parameters.savedColors) }
     var savedColors by savedColorsState
-    val setColor = { newColor: Color ->
+    val setColor = remember(colorState) { { newColor: Color ->
         colorState.value = HsvColor.from(newColor)
-    }
+    } }
+    val newUnsavedColor = color !in savedColors
     val lightDarkVerticalGradientBrush = remember { Brush.verticalGradient(
         0.1f to Color.White,
         0.9f to Color.Black,
@@ -173,18 +180,18 @@ fun ColorPickerDialog(
             else if (isExpanded) 40.dp
             else 32.dp
         )
-    val onConfirm0 = { // MAYBE: wrap into remember(parameters) { { ... } }
+    val onConfirm0 = remember(parameters) { {
         onConfirm(
             parameters.copy(
                 // important that we capture states in the closure
                 // otherwise changing values would invalidate this lambda
                 // and the lambda captured by LaunchedEffect would be outdated one
-                // that uses outdated values
+                // that uses outdated values (i think)
                 currentColor = colorState.value.toColor(),
                 savedColors = savedColorsState.value,
             )
         )
-    }
+    } }
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -254,8 +261,15 @@ fun ColorPickerDialog(
                                         .clickable(enabled = false, onClick = {}) // blocks thru-clicks
                                 ) {}
                             }
-                            // MAYBE: add icons/explanations for color-palette rows
-                            // TODO: small secondary-color test atop secondary-color box
+                            Text(
+                                text = stringResource(Res.string.color_picker_used_and_saved_colors_label),
+                                modifier = Modifier
+                                    .padding(start = 12.dp)
+                                    .offset(y = 4.dp)
+                                ,
+                                color = MaterialTheme.colorScheme.secondary,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                             FlowRow(
                                 paletteModifier,
                                 verticalArrangement = Arrangement.Center,
@@ -270,18 +284,19 @@ fun ColorPickerDialog(
                                         tint = clr,
                                     ) { setColor(clr) }
                                 }
-                                TwoIconButton(
-                                    painterResource(Res.drawable.add_circle),
-                                    painterResource(Res.drawable.delete_forever),
-                                    "save/forget color",
-                                    enabled = color !in savedColors,
-                                    Modifier.align(Alignment.CenterVertically),
+                                TwoIconButtonWithTooltip(
+                                    iconPainter = painterResource(Res.drawable.add_circle),
+                                    disabledIconPainter = painterResource(Res.drawable.delete_forever),
+                                    description = stringResource(Res.string.color_picker_save_color_description),
+                                    disabledDescription = stringResource(Res.string.color_picker_forget_color_description),
+                                    enabled = newUnsavedColor,
+                                    positionModifier = Modifier.align(Alignment.CenterVertically),
                                     tint = MaterialTheme.colorScheme.secondary
                                 ) {
-                                    if (color in savedColors)
-                                        savedColors -= color
-                                    else
+                                    if (newUnsavedColor)
                                         savedColors += color
+                                    else
+                                        savedColors -= color
                                 }
                                 for (clr in savedColors.reversed()) { // newest-to-oldest
                                     SimpleButton(
@@ -293,6 +308,15 @@ fun ColorPickerDialog(
                                     ) { setColor(clr) }
                                 }
                             }
+                            Text(
+                                text = stringResource(Res.string.color_picker_default_palette_label),
+                                modifier = Modifier
+                                    .padding(start = 12.dp)
+                                    .offset(y = 4.dp)
+                                ,
+                                color = MaterialTheme.colorScheme.secondary,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                             FlowRow(
                                 paletteModifier,
                                 maxItemsInEachRow = maxColorsPerRowLandscape,
@@ -353,7 +377,15 @@ fun ColorPickerDialog(
                             ) {}
                         }
                         Column() {
-                            // add icons/explanations for color-palette rows
+                            Text(
+                                text = stringResource(Res.string.color_picker_used_and_saved_colors_label),
+                                modifier = Modifier
+                                    .padding(start = 12.dp)
+                                    .offset(y = 4.dp)
+                                ,
+                                color = MaterialTheme.colorScheme.secondary,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                             FlowRow(
                                 paletteModifier,
                                 verticalArrangement = Arrangement.Center,
@@ -368,18 +400,19 @@ fun ColorPickerDialog(
                                         tint = clr,
                                     ) { setColor(clr) }
                                 }
-                                TwoIconButton(
-                                    painterResource(Res.drawable.add_circle),
-                                    painterResource(Res.drawable.delete_forever),
-                                    "save/forget color",
-                                    enabled = color !in savedColors,
-                                    Modifier.align(Alignment.CenterVertically),
+                                TwoIconButtonWithTooltip(
+                                    iconPainter = painterResource(Res.drawable.add_circle),
+                                    disabledIconPainter = painterResource(Res.drawable.delete_forever),
+                                    description = stringResource(Res.string.color_picker_save_color_description),
+                                    disabledDescription = stringResource(Res.string.color_picker_forget_color_description),
+                                    enabled = newUnsavedColor,
+                                    positionModifier = Modifier.align(Alignment.CenterVertically),
                                     tint = MaterialTheme.colorScheme.secondary
                                 ) {
-                                    if (color in savedColors)
-                                        savedColors -= color
-                                    else
+                                    if (newUnsavedColor)
                                         savedColors += color
+                                    else
+                                        savedColors -= color
                                 }
                                 for (clr in savedColors.reversed()) { // newest-to-oldest
                                     SimpleButton(
@@ -391,6 +424,15 @@ fun ColorPickerDialog(
                                     ) { setColor(clr) }
                                 }
                             }
+                            Text(
+                                text = stringResource(Res.string.color_picker_default_palette_label),
+                                modifier = Modifier
+                                    .padding(start = 12.dp)
+                                    .offset(y = 4.dp)
+                                ,
+                                color = MaterialTheme.colorScheme.secondary,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                             FlowRow(
                                 paletteModifier,
                                 maxItemsInEachRow = maxColorsPerRowPortrait,
