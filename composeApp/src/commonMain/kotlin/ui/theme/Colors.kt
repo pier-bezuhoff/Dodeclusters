@@ -176,14 +176,27 @@ object DodeclustersColors {
     val dimPurple = Color(0xff_9141BD) // similar to purple but slightly less intensive
     val deepAmethyst = Color(0xff_6e3083) // strong & dark pinkish violet
     val puce = Color(0xff_cc8899) // cute dark pink
-    val golden = tertiaryDark
     val veryStrongSalad = Color(0xff_8aff00)
     val strongSalad = Color(0xff_a0db5a)
     val darkestGray = Color(0xff_121212)
     val lightestWhite = Color(0xff_FAF8FF)
 
+    // used for the default palette
+    val peachyPink = Color(0xFF_FFC0CB)
+    val pinkishRed = Color(0xFF_FF7373)
+    val venousBloodRed = Color(0xFF_800000)
+    val deepBrown = Color(0xFF_321E1E)
+    val orange = Color(0xFF_F08A5D)
+    val orangeOrange = Color(0xFF_FFA500) // my naming is very original
+    val goldenBananaYellow = Color(0xFF_FFD700)
+    val veryDarkForestyGreen = Color(0xFF_065535)
+    val aquamarine = Color(0xFF_08D9D6) // visually similar to cyan
+    val teal = Color(0xFF_008080)
+    val darkPurple = Color(0xFF_6A2C70)
+
     val gray = Color.Gray
-    val red = Color.Red
+    // used for imaginary circles
+    val fadedRed = Color.hsl(20f, 0.9f, 0.5f, alpha = 0.5f)
     val lightRed = Color(0xff_ff7777)
     val pinkish = Color(1f, 0.5f, 0.5f)
     val green = Color(0f, 1f, 0f)

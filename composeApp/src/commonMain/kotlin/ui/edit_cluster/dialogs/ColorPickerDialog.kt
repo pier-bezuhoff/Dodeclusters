@@ -101,20 +101,20 @@ data class ColorPickerParameters(
     val savedColors: List<Color> = emptyList(),
     val predefinedColors: List<Color> = listOf(
         Color.White, Color.LightGray, Color.Gray, Color.DarkGray, Color.Black,
-        // RGB & CMY[K] -> R Y G C B M
+        // RGB & CMY[-K] -> R Y G C B M
         Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta,
         // fun colors
-        Color(0xFF_FFC0CB), // peachy pink
-        Color(0xFF_FF7373), // pinkish red
-        Color(0xFF_800000), // venous blood red
-        Color(0xFF_321E1E), // deep brown
-        Color(0xFF_F08A5D), // orange
-        Color(0xFF_FFA500), // orange orange
-        Color(0xFF_FFD700), // golden banana yellow
-        Color(0xFF_065535), // very dark, forest-y green
-        Color(0xFF_08D9D6), // aquamarine (visually similar to cyan)
-        Color(0xFF_008080), // teal
-        Color(0xFF_6A2C70), // dark purple
+        DodeclustersColors.peachyPink,
+        DodeclustersColors.pinkishRed,
+        DodeclustersColors.venousBloodRed,
+        DodeclustersColors.deepBrown,
+        DodeclustersColors.orange,
+        DodeclustersColors.orangeOrange,
+        DodeclustersColors.goldenBananaYellow,
+        DodeclustersColors.veryDarkForestyGreen,
+        DodeclustersColors.aquamarine,
+        DodeclustersColors.teal,
+        DodeclustersColors.darkPurple,
         // UI colors (not sure it's a good idea... no contrast)
         DodeclustersColors.skyBlue,
         DodeclustersColors.primaryDark, DodeclustersColors.primaryLight,

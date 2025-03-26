@@ -369,7 +369,7 @@ fun EditClusterScreen(
         }
         null -> {}
     }
-    LaunchedEffect(viewModel, ddcContent, sampleName, ddcRepository) {
+    LaunchedEffect(ddcContent, sampleName, ddcRepository) {
         if (ddcContent != null) {
             println("loading external ddc...")
             viewModel.loadDdc(ddcContent)
@@ -380,14 +380,14 @@ fun EditClusterScreen(
             }
         }
     }
-    LaunchedEffect(keyboardActions, viewModel) {
+    LaunchedEffect(keyboardActions) {
         keyboardActions?.let {
             keyboardActions.collect { action ->
                 viewModel.processKeyboardAction(action)
             }
         }
     }
-    LaunchedEffect(lifecycleEvents, viewModel) {
+    LaunchedEffect(lifecycleEvents) {
         lifecycleEvents?.let {
             lifecycleEvents.collect { action ->
                 when (action) {
@@ -403,7 +403,7 @@ fun EditClusterScreen(
     val snackbarMessageStrings = SnackbarMessage.entries.associateWith {
         stringResource(it.stringResource)
     }
-    LaunchedEffect(viewModel, snackbarHostState, snackbarMessageStrings) {
+    LaunchedEffect(snackbarHostState, snackbarMessageStrings) {
         viewModel.snackbarMessages.collectLatest { (message, postfix) ->
             // with this setup string interpolation with args is not possible
             val s = snackbarMessageStrings[message] + postfix

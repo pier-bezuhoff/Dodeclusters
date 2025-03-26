@@ -100,7 +100,7 @@ fun BoxScope.EditClusterCanvas(
     viewModel: EditClusterViewModel,
     modifier: Modifier = Modifier
 ) {
-    // MAYBE: im supposed to remember { } all of these things
+    // MAYBE: im supposed to remember { } all of these things (thatd be insane)
     val strokeWidth = with (LocalDensity.current) { 2.dp.toPx() }
     val circleStroke = Stroke(
         width = strokeWidth
@@ -129,11 +129,9 @@ fun BoxScope.EditClusterCanvas(
     val freeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
     val pointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
     val freePointColor = freeCircleColor
-    val selectedCircleColor =
-//        MaterialTheme.colorScheme.secondary
-        DodeclustersColors.strongSalad
+    val selectedCircleColor = DodeclustersColors.strongSalad
     val selectedPointColor = selectedCircleColor
-    val imaginaryCircleColor = Color.hsl(20f, 0.9f, 0.5f, alpha = 0.5f) // faded red
+    val imaginaryCircleColor = DodeclustersColors.fadedRed
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val thiccSelectionCircleAlpha = 0.9f
     val concretePositions = ConcreteOnScreenPositions(viewModel.canvasSize.toSize(), LocalDensity.current)
@@ -307,7 +305,7 @@ fun ScreenshotableCanvas(
     val selectedCircleColor = DodeclustersColors.strongSalad
 //        MaterialTheme.colorScheme.primary
     val selectedPointColor = selectedCircleColor
-    val imaginaryCircleColor = Color.hsl(20f, 0.9f, 0.5f, alpha = 0.5f) // faded red
+    val imaginaryCircleColor = DodeclustersColors.fadedRed
     val thiccSelectionCircleAlpha = 0.9f
     val graphicsLayer = rememberGraphicsLayer()
     Box(modifier
@@ -349,9 +347,9 @@ fun ScreenshotableCanvas(
             }
         }
         LaunchedEffect(viewModel, bitmapFlow) {
-            println("started {graphics layer -> bitmap} conversion")
+//            println("started {graphics layer -> bitmap} conversion")
             val bitmap = graphicsLayer.toImageBitmap()
-            println("completed {graphics layer -> bitmap} conversion")
+//            println("completed {graphics layer -> bitmap} conversion")
             bitmapFlow.emit(bitmap)
         }
     }
