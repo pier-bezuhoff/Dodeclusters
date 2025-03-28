@@ -195,6 +195,17 @@ data class Circle(
             radius = zoom * radius,
         )
 
+    override fun rotated(focus: Point, angleInRadians: Double): Circle {
+        val x0 = x - focus.x
+        val y0 = y - focus.y
+        val cosPhi = cos(angleInRadians)
+        val sinPhi = sin(angleInRadians)
+        return copy(
+            x = (x0 * cosPhi - y0 * sinPhi) + focus.x,
+            y = (x0 * sinPhi + y0 * cosPhi) + focus.y,
+        )
+    }
+
     override fun rotated(focus: Offset, angleInDegrees: Float): Circle {
         val x0 = x - focus.x
         val y0 = y - focus.y

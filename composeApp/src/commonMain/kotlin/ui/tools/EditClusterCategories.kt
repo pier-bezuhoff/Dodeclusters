@@ -25,7 +25,7 @@ sealed class EditClusterCategory(
     data object Drag : EditClusterCategory(
         Res.string.drag_category_name,
         listOf(EditClusterTool.Drag)
-    )
+    ) // ~mode-like
     data object Multiselect : EditClusterCategory(
         Res.string.multiselect_category_name,
         listOf(
@@ -35,12 +35,7 @@ sealed class EditClusterCategory(
             EditClusterTool.ToggleSelectAll,
         ),
         defaultables = listOf(0)
-    ) { // ~mode-like
-        // potentially add:
-        // submode2: xor selection logic
-        // submode2: add selection logic
-        // submode2: subtract selection logic
-    }
+    ) // ~mode-like
     data object Region : EditClusterCategory(
         Res.string.region_category_name,
         listOf(
@@ -53,8 +48,7 @@ sealed class EditClusterCategory(
             // EditClusterTool.AppliedColor's are auto-added
         ),
         defaultables = listOf(0, 1)
-    ) { // ~mode-like
-    }
+    ) // ~mode-like
     data object Visibility : EditClusterCategory(
         Res.string.visibility_category_name,
         listOf(
@@ -67,15 +61,13 @@ sealed class EditClusterCategory(
         ),
         defaultables = emptyList(),
         icon = Res.drawable.visible
-    ) { // ~button/switch-like
-    }
+    )
     data object Colors : EditClusterCategory(
         Res.string.colors_category_name,
         listOf(
             EditClusterTool.Palette
         )
-    ) { // ~button-like
-    }
+    ) // ~button-like
     data object Transform : EditClusterCategory(
         Res.string.transform_category_name,
         listOf(
@@ -83,9 +75,8 @@ sealed class EditClusterCategory(
             EditClusterTool.LoxodromicMotion,
             EditClusterTool.CircleOrPointInterpolation,
             EditClusterTool.BiInversion,
-            EditClusterTool.CircleExtrapolation,
         ),
-        defaultables = listOf(0, 1, 2, 3),
+        defaultables = listOf(0, 1, 2),
     ) { // ~mode-like
         // button: kaleidoscopic reflection
     }
@@ -97,13 +88,12 @@ sealed class EditClusterCategory(
             EditClusterTool.ConstructLineBy2Points,
             EditClusterTool.AddPoint,
             EditClusterTool.ConstructCircleByPencilAndPoint,
-            EditClusterTool.ConstructArcPath,
             EditClusterTool.InsertCenteredCross,
+            EditClusterTool.ConstructArcPath,
         ),
-        defaultables = listOf(0, 1, 2, 3, 4, 5)
+        defaultables = listOf(0, 1, 2, 3, 4)
     ) { // ~mode-like
         // mode: rectangle by top-left & bottom-right
         // mode: polygon
-        // toggle: enable point-to-circle snapping
     }
 }

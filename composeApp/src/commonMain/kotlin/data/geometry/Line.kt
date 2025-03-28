@@ -43,14 +43,20 @@ data class Line(
     val normalVector: Offset get() =
         Offset((a/norm).toFloat(), (b/norm).toFloat())
 
+    inline val normalX: Double get() =
+        a/norm
+
+    inline val normalY: Double get() =
+        b/norm
+
     /** length=1 direction vector */
     val directionVector: Offset get() =
         Offset((b/norm).toFloat(), (-a/norm).toFloat())
 
-    val directionX: Double get() =
+    inline val directionX: Double get() =
         b/norm
 
-    val directionY: Double get() =
+    inline val directionY: Double get() =
         -a/norm
 
     /** Direction-preserving, ensures that `hypot(a, b) == 1` */
@@ -180,6 +186,13 @@ data class Line(
         // dist1 -> zoom * dist 1
         val newC = zoom*(a*focusX + b*focusY + c) - a*focusX - b*focusY
         return copy(c = newC)
+    }
+
+    override fun rotated(focus: Point, angleInRadians: Double): Line {
+        val newA = normalX * cos(angleInRadians) - normalY * sin(angleInRadians)
+        val newB = normalX * sin(angleInRadians) + normalY * cos(angleInRadians)
+        val newC = (hypot(newA, newB)/hypot(a, b)) * (a*focus.x + b*focus.y + c) - newA*focus.x - newB*focus.y
+        return Line(newA, newB, newC)
     }
 
     override fun rotated(focus: Offset, angleInDegrees: Float): Line {

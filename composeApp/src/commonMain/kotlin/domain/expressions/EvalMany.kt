@@ -4,6 +4,8 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
+import data.geometry.ImaginaryCircle
+import data.geometry.Line
 import data.geometry.Point
 import data.geometry.Rotor
 import domain.never
@@ -122,6 +124,17 @@ fun computeBiInversion(
         trajectory.add(result)
     }
     return trajectory
+}
+
+fun computeRotation(
+    params: Parameters, // dAngle, steps
+    pivot: Point,
+    target: GCircle,
+): List<GCircle> {
+    val angles = listOf(0.0, TODO())
+    return angles.map { angle ->
+        target.rotated(pivot, angle)
+    }
 }
 
 // NOTE: without downscaling it visibly diverges (even at 1/500 downscaling)

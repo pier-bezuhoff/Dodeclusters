@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import data.geometry.Point.Companion.CONFORMAL_INFINITY
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
@@ -38,6 +39,17 @@ data class ImaginaryCircle(
         val newX = (x - focus.x) * zoom + focus.x
         val newY = (y - focus.y) * zoom + focus.y
         return ImaginaryCircle(newX, newY, zoom * radius)
+    }
+
+    override fun rotated(focus: Point, angleInRadians: Double): ImaginaryCircle {
+        val x0 = x - focus.x
+        val y0 = y - focus.y
+        val cosPhi = cos(angleInRadians)
+        val sinPhi = sin(angleInRadians)
+        return copy(
+            x = (x0 * cosPhi - y0 * sinPhi) + focus.x,
+            y = (x0 * sinPhi + y0 * cosPhi) + focus.y,
+        )
     }
 
     override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): ImaginaryCircle {

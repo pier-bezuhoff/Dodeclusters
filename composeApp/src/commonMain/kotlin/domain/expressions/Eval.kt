@@ -137,3 +137,26 @@ fun computeSagittaRatio(
     val sagitta = circle.radius - hypot(apothemX, apothemY)
     return sign*sagitta/hypot(chordX, chordY)
 }
+
+fun computePolarLine(
+    circle: CircleOrLine,
+    point: Point,
+): Line =
+    when (circle) {
+        is Circle -> {
+            // (px - cx)(x - cx) + (py - cy)(y - cy) = R^2
+            val dx = point.x - circle.x
+            val dy = point.y - circle.y
+            Line(dx, dy, -(circle.x*dx + circle.y*dy + circle.r2))
+        }
+        is Line -> { // parallel line case
+            circle.translatedTo(point)
+        }
+    }
+
+fun computeTangentialCircle(
+    carrier: CircleOrLine,
+    pointOnCarrier: Point,
+    anotherPoint: Point,
+): CircleOrLine? =
+    computeCircleByPencilAndPoint(carrier, pointOnCarrier, anotherPoint) as? CircleOrLine

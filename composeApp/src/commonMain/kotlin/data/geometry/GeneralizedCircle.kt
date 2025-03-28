@@ -26,6 +26,7 @@ sealed interface GCircle {
         zoom: Float = 1f,
         rotationAngle: Float = 0f
     ): GCircle
+    fun rotated(focus: Point, angleInRadians: Double): GCircle
 }
 
 // MAYBE: Clifford algebra (geometric product + other operations)
@@ -555,8 +556,10 @@ data class GeneralizedCircle(
             val y = -w3*y2*z1 + w3*y1*z2 + w2*y1*z3 - w1*y2*z3 - x3*x2*y1 + x3*x1*y2
             val z = w2*z3*z1 - w1*z3*z2 - x3*x2*z1 + x3*x1*z2 - y3*y2*z1 + y3*y1*z2
             if (isNear0000(w,x,y,z)) {
-                println("GeneralizedCircle.parallel2perp1 resulted in near-zero: " +
-                        "($w, $x, $y, $z) aka 0 or infinite number of solutions")
+                println(
+                    "GeneralizedCircle.parallel2perp1 resulted in near-zero: " +
+                    "($w, $x, $y, $z) aka 0 or infinite number of solutions"
+                )
                 return null
             }
             if (!isValidHomogenousCoordinates(w,x,y,z)) {

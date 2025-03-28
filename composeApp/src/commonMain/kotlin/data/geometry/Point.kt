@@ -68,6 +68,20 @@ data class Point(
             (y - focusY) * zoom + focusY,
         )
 
+    override fun rotated(focus: Point, angleInRadians: Double): Point =
+        if (this == CONFORMAL_INFINITY)
+            CONFORMAL_INFINITY
+        else { // cmp with Offset.rotateBy
+            val x0 = x - focus.x
+            val y0 = y - focus.y
+            val cosPhi = cos(angleInRadians)
+            val sinPhi = sin(angleInRadians)
+            Point(
+                (x0 * cosPhi - y0 * sinPhi) + focus.x,
+                (x0 * sinPhi + y0 * cosPhi) + focus.y,
+            )
+        }
+
     fun rotated(focus: Offset, angleDeg: Float): Point =
         if (this == CONFORMAL_INFINITY)
             CONFORMAL_INFINITY
