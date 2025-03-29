@@ -423,6 +423,7 @@ class EditClusterViewModel : ViewModel() {
         selection = emptyList()
         regions.clear()
         objectColors.clear()
+        phantoms = emptySet()
         objects.clear()
         objects.addAll(
             constellation.objects.map {
@@ -554,9 +555,10 @@ class EditClusterViewModel : ViewModel() {
     private fun removeObjects(ixs: List<Ix>) {
         for (ix in ixs) {
             objects[ix] = null
-            objectColors.remove(ix)
-            phantoms -= ix
         }
+        val ixsSet = ixs.toSet()
+        objectColors -= ixsSet
+        phantoms = phantoms - ixsSet
     }
 
     /** Use BEFORE modifying the state by the [command]!
@@ -923,7 +925,11 @@ class EditClusterViewModel : ViewModel() {
             )
             val oldRegions = regions.toList()
             regions.clear()
-            if (!everythingIsDeleted) {
+            if (everythingIsDeleted) {
+                if (chessboardPattern == ChessboardPattern.STARTS_COLORED) {
+                    chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
+                }
+            } else {
                 regions.addAll(
                     oldRegions
                         // to avoid stray chessboard selections
@@ -939,9 +945,6 @@ class EditClusterViewModel : ViewModel() {
                         }
                         .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
                 )
-            } else {
-                if (chessboardPattern == ChessboardPattern.STARTS_COLORED)
-                    chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
             }
             val deletedCircles = deletedCircleIndices.mapNotNull { objects[it] as? CircleOrLine }
             circleAnimationInit(deletedCircles)?.let { circleAnimation ->

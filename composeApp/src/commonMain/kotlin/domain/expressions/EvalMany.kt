@@ -9,6 +9,7 @@ import data.geometry.Line
 import data.geometry.Point
 import data.geometry.Rotor
 import domain.never
+import domain.radians
 import kotlin.math.PI
 
 // eval for one-to-many functions
@@ -127,14 +128,15 @@ fun computeBiInversion(
 }
 
 fun computeRotation(
-    params: Parameters, // dAngle, steps
+    params: RotationParameters,
     pivot: Point,
     target: GCircle,
 ): List<GCircle> {
-    val angles = listOf(0.0, TODO())
-    return angles.map { angle ->
-        target.rotated(pivot, angle)
-    }
+    val dAngle = params.angle.radians
+    return (1 .. params.nSteps)
+        .map { i ->
+            target.rotated(pivot, i * dAngle)
+        }
 }
 
 // NOTE: without downscaling it visibly diverges (even at 1/500 downscaling)

@@ -9,8 +9,11 @@ import kotlin.math.abs
 
 /**
  * tier = 0: free object,
+ *
  * tier = 1: depends only on free objects,
+ *
  * ...
+ *
  * tier = n+1: max dependency tier is n
  */
 typealias Tier = Int
@@ -24,11 +27,11 @@ private const val ABANDONED_TIER: Tier = -2
 /**
  * Class for managing expressions (AST controller)
  * @param[get] [GCircle]s are stored separately by design, so we have to access them somehow
- * @param[set] used to set updated objects when calling [update] or [reEval] */
+ * @param[set] used to set updated objects (when calling [update] or [reEval]) */
 class ExpressionForest(
     initialExpressions: Map<Ix, Expression?>, // pls include all possible indices
     // find indexed args -> downscale them -> eval expr -> upscale result
-    private val get: (Ix) -> GCircle?, // TODO: replace with params for every functino that needs these 2
+    private val get: (Ix) -> GCircle?, // TODO: replace with params for every function that needs these 2
     private val set: (Ix, GCircle?) -> Unit,
 ) {
     // for the VM.objects list nulls correspond to unrealized outputs of multi-functions

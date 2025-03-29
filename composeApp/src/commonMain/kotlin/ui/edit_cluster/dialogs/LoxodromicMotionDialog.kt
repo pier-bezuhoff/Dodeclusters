@@ -43,7 +43,6 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_n_steps_pla
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_steps_prompt
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
 import domain.expressions.LoxodromicMotionParameters
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
@@ -74,6 +73,7 @@ data class DefaultLoxodromicMotionParameters(
     val maxDilation: Double = 1.0,
     val minNSteps: Int = 1,
     val maxNSteps: Int = 50,
+    // forwardAndBackward: Boolean = false,
 ) {
     val params: LoxodromicMotionParameters = LoxodromicMotionParameters.fromDifferential(
         anglePerStep, dilationPerStep, nTotalSteps

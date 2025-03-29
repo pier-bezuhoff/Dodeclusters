@@ -611,60 +611,16 @@ fun EditClusterTopBar(
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             Spacer(Modifier.width(16.dp))
-            val saveCluster = EditClusterTool.SaveCluster
+            // TODO: button to create new [empty?] document
             WithTooltip(stringResource(Res.string.save_name)) {
                 SimpleButton(
-                    painterResource(saveCluster.icon),
-                    stringResource(saveCluster.name),
+                    painterResource(EditClusterTool.SaveCluster.icon),
+                    stringResource(EditClusterTool.SaveCluster.name),
                     modifier = iconModifier,
                     iconModifier = iconModifier,
                     onClick = showSaveOptionsDialog
                 )
-//                SaveFileButton(
-//                    painterResource(saveCluster.icon),
-//                    stringResource(saveCluster.name),
-//                    saveData = SaveData(
-//                        name = saveCluster.DEFAULT_NAME,
-//                        extension = saveCluster.EXTENSION, // yml
-//                        otherDisplayedExtensions = saveCluster.otherDisplayedExtensions,
-//                        mimeType = saveCluster.MIME_TYPE,
-//                        prepareContent = saveAsYaml
-//                    ),
-//                    modifier = iconModifier
-//                ) {
-//                    println(if (it) "saved" else "not saved")
-//                }
             }
-//            val pngExport = EditClusterTool.PngExport
-//            WithTooltip(stringResource(pngExport.description)) {
-//                SaveBitmapAsPngButton(
-//                    painterResource(pngExport.icon),
-//                    stringResource(pngExport.name),
-//                    saveData = SaveData(
-//                        name = pngExport.DEFAULT_NAME,
-//                        extension = pngExport.EXTENSION,
-//                        mimeType = pngExport.MIME_TYPE,
-//                        prepareContent = { exportAsPng() }
-//                    ),
-//                    modifier = iconModifier
-//                ) {
-//                    println(if (it) "exported" else "not exported")
-//                }
-//                val svgExport = EditClusterTool.SvgExport
-//                SaveFileButton(
-//                    painterResource(svgExport.icon),
-//                    stringResource(svgExport.name),
-//                    saveData = SaveData(
-//                        name = svgExport.DEFAULT_NAME,
-//                        extension = svgExport.EXTENSION,
-//                        mimeType = svgExport.MIME_TYPE,
-//                        content = exportAsSvg
-//                    ),
-//                    modifier = iconModifier
-//                ) {
-//                    println(if (it) "exported" else "not exported")
-//                }
-//            }
             WithTooltip(stringResource(EditClusterTool.OpenFile.description)) {
                 OpenFileButton(
                     painterResource(EditClusterTool.OpenFile.icon),

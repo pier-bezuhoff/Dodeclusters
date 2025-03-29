@@ -97,3 +97,12 @@ data class BiInversionParameters(
     val reverseSecondEngine: Boolean
 ) : Parameters
 
+/**
+ * @param[angle] rotation angle in degrees per each step
+ */
+@Immutable
+@Serializable
+data class RotationParameters(
+    val angle: Float,
+    val nSteps: Int,
+) : Parameters
