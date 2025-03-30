@@ -23,20 +23,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import data.geometry.CirclePencilType
-import data.geometry.GCircle
-import data.geometry.GeneralizedCircle
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.angle_in_degrees_placeholder
-import dodeclusters.composeapp.generated.resources.bi_inversion_angle_prompt
-import dodeclusters.composeapp.generated.resources.bi_inversion_speed_prompt
-import dodeclusters.composeapp.generated.resources.bi_inversion_title
 import dodeclusters.composeapp.generated.resources.degrees_suffix
 import dodeclusters.composeapp.generated.resources.n_steps_placeholder
 import dodeclusters.composeapp.generated.resources.n_steps_prompt
-import domain.degrees
-import domain.expressions.BiInversionParameters
-import domain.radians
+import dodeclusters.composeapp.generated.resources.rotation_angle_prompt
+import dodeclusters.composeapp.generated.resources.rotation_title
+import domain.expressions.RotationParameters
 import kotlinx.coroutines.flow.SharedFlow
 import ui.CancelOkRow
 import ui.DialogTitle
@@ -45,56 +39,46 @@ import ui.IntTextField
 import ui.PreTextFieldLabel
 import ui.hideSystemBars
 import ui.isCompact
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
+/**
+ * @param[angleDiscretization] angle step = 5 degrees
+ */
 @Immutable
-data class DefaultBiInversionParameters(
-    val speed: Double = 1.0,
-    val nSteps: Int = 5,
-    val reverseSecondEngine: Boolean = false,
-    val minSpeed: Float = 0f,
-    val maxSpeed: Float = 10f,
+data class DefaultRotationParameters(
+    val angle: Float = 30f,
+    val nSteps: Int = 1,
     val minAngle: Float = 0f,
     val maxAngle: Float = 360f,
+    val angleDiscretization: Float = 5f,
     val minNSteps: Int = 1,
     val maxNSteps: Int = 50,
 ) {
-    val speedRange = minSpeed .. maxSpeed
-    val stepsRange = minNSteps.toFloat() .. maxNSteps.toFloat()
-    val angleRange = minAngle .. maxAngle
-    val params = BiInversionParameters(
-        speed = speed,
+    val angleRange = minAngle..maxAngle
+    val nAngleDiscretizationSteps: Int = ceil((maxAngle - minAngle)/angleDiscretization).toInt()
+    val stepsRange = minNSteps.toFloat()..maxNSteps.toFloat()
+    val params = RotationParameters(
+        angle = angle,
         nSteps = nSteps,
-        reverseSecondEngine = reverseSecondEngine
     )
 
-    constructor(parameters: BiInversionParameters) : this(
-        speed = parameters.speed,
+    constructor(parameters: RotationParameters) : this(
+        angle = parameters.angle,
         nSteps = parameters.nSteps,
-        reverseSecondEngine = parameters.reverseSecondEngine
     )
 }
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-fun BiInversionDialog(
-    engine1: GCircle,
-    engine2: GCircle,
-    onConfirm: (BiInversionParameters) -> Unit,
+fun RotationDialog(
+    onConfirm: (RotationParameters) -> Unit,
     onCancel: () -> Unit,
-    defaults: DefaultBiInversionParameters = DefaultBiInversionParameters(),
+    defaults: DefaultRotationParameters = DefaultRotationParameters(),
     dialogActions: SharedFlow<DialogAction>? = null,
 ) {
-    val engine1GC = GeneralizedCircle.fromGCircle(engine1)
-    val engine2GC0 = GeneralizedCircle.fromGCircle(engine2)
-    val reverseSecondEngine = engine1GC.scalarProduct(engine2GC0) < 0
-    val engine2GC = if (reverseSecondEngine) -engine2GC0 else engine2GC0
-    val pencil = engine1GC.calculatePencilType(engine2GC)
-    val inversiveAngle = 2.0*engine1GC.inversiveAngle(engine2GC) // angle or log-dilation
-    val showAngleSlider = pencil == CirclePencilType.ELLIPTIC
+    var angle: Float by remember(defaults) { mutableStateOf(defaults.angle) }
     var nSteps by remember(defaults) { mutableStateOf(defaults.nSteps) }
-    var speed: Double by remember(defaults) { mutableStateOf(defaults.speed) }
-    val dAngle: Float = (speed * inversiveAngle).degrees
     val isCompact = calculateWindowSizeClass().isCompact
     Dialog(
         onDismissRequest = onCancel,
@@ -115,39 +99,24 @@ fun BiInversionDialog(
                 ,
                 horizontalAlignment = Alignment.Start
             ) {
-                DialogTitle(Res.string.bi_inversion_title, smallerFont = isCompact)
+                DialogTitle(Res.string.rotation_title, smallerFont = isCompact)
                 Row {
-                    PreTextFieldLabel(Res.string.bi_inversion_speed_prompt, smallerFont = isCompact)
+                    PreTextFieldLabel(Res.string.rotation_angle_prompt, smallerFont = isCompact)
                     FloatTextField(
-                        value = speed.toFloat(),
-                        onNewValue = { speed = it.toDouble() },
+                        value = angle,
+                        onNewValue = { angle = it },
+                        placeholderStringResource = Res.string.angle_in_degrees_placeholder,
+                        suffixStringResource = Res.string.degrees_suffix,
                         nFractionalDigits = 4,
                     )
                 }
                 Slider(
-                    value = speed.toFloat(),
-                    onValueChange = { speed = it.toDouble() },
+                    value = angle,
+                    onValueChange = { angle = it },
                     modifier = Modifier,
-                    valueRange = defaults.speedRange,
+                    valueRange = defaults.angleRange,
+                    steps = defaults.nAngleDiscretizationSteps - 1,
                 )
-                if (showAngleSlider) {
-                    Row {
-                        PreTextFieldLabel(Res.string.bi_inversion_angle_prompt, smallerFont = isCompact)
-                        FloatTextField(
-                            value = dAngle,
-                            onNewValue = { speed = it.radians / inversiveAngle },
-                            placeholderStringResource = Res.string.angle_in_degrees_placeholder,
-                            suffixStringResource = Res.string.degrees_suffix,
-                            nFractionalDigits = 2,
-                        )
-                    }
-                    Slider(
-                        value = dAngle,
-                        onValueChange = { speed = it.radians / inversiveAngle },
-                        modifier = Modifier,
-                        valueRange = defaults.angleRange,
-                    )
-                }
                 Row {
                     PreTextFieldLabel(Res.string.n_steps_prompt, smallerFont = isCompact)
                     IntTextField(
@@ -164,7 +133,7 @@ fun BiInversionDialog(
                 )
                 CancelOkRow(
                     onDismissRequest = onCancel,
-                    onConfirm = { onConfirm(BiInversionParameters(speed, nSteps, reverseSecondEngine)) },
+                    onConfirm = { onConfirm(RotationParameters(angle, nSteps)) },
                     fontSize = fontSize
                 )
             }
@@ -174,7 +143,7 @@ fun BiInversionDialog(
         dialogActions?.collect { dialogAction ->
             when (dialogAction) {
                 DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm(BiInversionParameters(speed, nSteps, reverseSecondEngine))
+                DialogAction.CONFIRM -> onConfirm(RotationParameters(angle, nSteps))
             }
         }
     }

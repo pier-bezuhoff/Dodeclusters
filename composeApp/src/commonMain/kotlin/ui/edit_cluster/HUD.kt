@@ -67,24 +67,26 @@ import domain.angleDeg
 import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
+import domain.expressions.RotationParameters
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.OnOffButton
 import ui.SimpleFilledButton
 import ui.SimpleToolButtonWithTooltip
-import ui.TwoIconButton
 import ui.TwoIconButtonWithTooltip
 import ui.VerticalSlider
 import ui.WithTooltip
 import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
+import ui.edit_cluster.dialogs.DefaultRotationParameters
 import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
 import kotlin.math.abs
 import kotlin.math.acosh
 import kotlin.math.asinh
+import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.math.sinh
 
@@ -410,6 +412,107 @@ fun InterpolationInterface(
                     .width(horizontalSliderWidth)
                 ,
                 colors = sliderColors,
+            )
+            SimpleFilledButton(
+                painterResource(Res.drawable.confirm),
+                stringResource(Res.string.ok_name),
+                bottomRightModifier,
+                contentColor = MaterialTheme.colorScheme.onSecondary,
+                containerColor = MaterialTheme.colorScheme.secondary,
+                onClick = confirmParameters
+            )
+        }
+    }
+    val coroutineScope = rememberCoroutineScope()
+    key(params) { // this feels hacky, `key(params)` serves only a semantic purpose btw
+        coroutineScope.launch {
+            updateParameters(params)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RotationInterface(
+    concretePositions: ConcreteOnScreenPositions,
+    defaults: DefaultRotationParameters,
+    updateParameters: (RotationParameters) -> Unit,
+    openDetailsDialog: () -> Unit,
+    confirmParameters: () -> Unit,
+) {
+    var rotateClockwise by remember { mutableStateOf(false) }
+    val angleSliderState = remember { SliderState(
+        value = defaults.angle,
+        steps = defaults.nAngleDiscretizationSteps - 1,
+        valueRange = defaults.angleRange,
+    ) }
+    val stepsSliderState = remember { SliderState(
+        value = defaults.nSteps.toFloat(),
+        steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
+        valueRange = defaults.stepsRange
+    ) }
+    val params = RotationParameters(
+        angle = round( // we round cuz all angles coming from the slider are supposed to be integers
+            if (rotateClockwise)
+                -angleSliderState.value
+            else angleSliderState.value
+        ),
+        nSteps = stepsSliderState.value.roundToInt(),
+    )
+    val buttonShape = CircleShape
+    val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+    val sliderColors = SliderDefaults.colors(
+        thumbColor = MaterialTheme.colorScheme.secondary,
+        activeTrackColor = MaterialTheme.colorScheme.secondary,
+        activeTickColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTickColor = MaterialTheme.colorScheme.secondary,
+    )
+    with (concretePositions) {
+        CompositionLocalProvider(
+            LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
+        ) {
+            Icon(
+                painterResource(Res.drawable.rotate_counterclockwise),
+                "angle slider",
+                topRightModifier
+                    .padding(start = 12.dp)
+            )
+            VerticalSlider(
+                angleSliderState,
+                verticalSliderModifier
+                    .height(verticalSliderHeight)
+                ,
+                colors = sliderColors,
+            )
+            ReverseDirectionToggle(
+                isOn = rotateClockwise,
+                positionModifier = topRightUnderScaleModifier,
+                containerColor = buttonBackground,
+            ) {
+                rotateClockwise = !rotateClockwise
+                // triggers params upd => triggers VM.updParams
+            }
+            SimpleToolButtonWithTooltip(
+                EditClusterTool.DetailedAdjustment,
+                Modifier
+                    .background(buttonBackground, buttonShape)
+                ,
+                positionModifier = halfBottomRightModifier,
+                onClick = { openDetailsDialog() }
+            )
+            Icon(
+                painterResource(Res.drawable.three_dots_in_angle_brackets),
+                stringResource(Res.string.steps_slider_name),
+                preHorizontalSliderModifier
+                    .padding(vertical = 12.dp)
+            )
+            Slider(
+                stepsSliderState,
+                horizontalSliderModifier
+                    .width(horizontalSliderWidth)
+                ,
+                colors = sliderColors
             )
             SimpleFilledButton(
                 painterResource(Res.drawable.confirm),

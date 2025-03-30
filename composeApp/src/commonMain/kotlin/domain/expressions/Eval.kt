@@ -149,6 +149,7 @@ fun computePolarLine(
             val dy = point.y - circle.y
             Line(dx, dy, -(circle.x*dx + circle.y*dy + circle.r2))
         }
+        // NOTE: parallel line is NOT a limiting case of polar...
         is Line -> { // parallel line case
             circle.translatedTo(point)
         }

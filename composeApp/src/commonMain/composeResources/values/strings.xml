@@ -75,6 +75,12 @@
         <item>Start-circle</item>
         <item>End-circle</item>
     </string-array>
+    <string name="rotation_name">Rotation</string>
+    <string name="rotation_description">Rotate an object around a point</string>
+    <string-array name="rotation_arg_descriptions">
+        <item>The object to rotate</item>
+        <item>The rotation center</item>
+    </string-array>
     <string name="bi_inversion_name">Bi-inversion</string>
     <string name="bi_inversion_description">Apply composition of 2 inversions several times</string>
     <string-array name="bi_inversion_arg_descriptions">
@@ -184,16 +190,22 @@
     <string name="region_manipulation_strategy_add">Add</string>
     <string name="region_manipulation_strategy_erase">Erase</string>
 
+    <!-- dialog commons -->
+    <string name="hex_name">hex #</string>
+    <string name="cancel_name">Cancel</string>
+    <string name="ok_name">OK</string>
+    <string name="ok_description">Confirm</string>
+    <string name="n_steps_prompt">Number of steps</string>
+    <string name="n_steps_placeholder">&lt;number of steps&gt;</string>
+    <string name="angle_in_degrees_placeholder">&lt;angle in degrees&gt;</string>
+    <string name="degrees_suffix">°</string>
+    <string name="dilation_placeholder">&lt;log-dilation&gt;</string>
     <!-- color picker dialog -->
     <string name="color_picker_title">Pick a color</string>
     <string name="color_picker_used_and_saved_colors_label">Used colors | Saved colors</string>
     <string name="color_picker_default_palette_label">Default palette</string>
     <string name="color_picker_save_color_description">Save current color</string>
     <string name="color_picker_forget_color_description">Forget current color</string>
-    <string name="hex_name">hex #</string>
-    <string name="cancel_name">Cancel</string>
-    <string name="ok_name">OK</string>
-    <string name="ok_description">Confirm</string>
     <!-- circle interpolation dialog -->
     <string name="circle_interpolation_title">Choose the number of interpolation steps</string>
     <string name="circle_interpolation_prompt">Number of in-betweens</string>
@@ -207,27 +219,22 @@
     <string name="circle_extrapolation_left_prompt2">left of the first one</string>
     <string name="circle_extrapolation_right_prompt1">The number of new circles to the</string>
     <string name="circle_extrapolation_right_prompt2">right of the second one</string>
+    <!-- rotation dialog -->
+    <string name="rotation_title">Configure rotation parameters</string>
+    <string name="rotation_angle_prompt">Rotation angle in degrees per step</string>
     <!-- bi-inversion dialog -->
     <string name="bi_inversion_title">Configure bi-inversion trajectory</string>
     <string name="bi_inversion_speed_prompt">Speed</string>
     <string name="bi_inversion_angle_prompt">Rotation angle per step</string>
-    <string name="bi_inversion_hyperbolic_prompt">Logarithmic dilation per step</string>
-    <string name="bi_inversion_steps_prompt">Number of steps</string>
-    <string name="bi_inversion_dilation_placeholder">&lt;log-dilation&gt;</string>
-    <string name="bi_inversion_n_steps_placeholder">&lt;number of steps&gt;</string>
     <!-- loxodromic motion dialog -->
     <string name="loxodromic_motion_title">Configure loxodromic spiral motion</string>
     <string name="loxodromic_motion_angle_prompt">Rotation angle per step</string>
     <string name="loxodromic_motion_hyperbolic_prompt">Logarithm of scaling per step</string>
     <string name="loxodromic_motion_steps_prompt">Number of steps</string>
-    <string name="angle_in_degrees_placeholder">&lt;angle in degrees&gt;</string>
-    <string name="degrees_suffix">°</string>
     <string name="loxodromic_motion_angle_direction_prompt1">Rotate</string>
     <string name="loxodromic_motion_angle_direction_ccw">counterclockwise</string>
     <string name="loxodromic_motion_angle_direction_cw">clockwise</string>
     <string name="loxodromic_motion_angle_direction_prompt2">from the 1st point</string>
-    <string name="loxodromic_motion_dilation_placeholder">&lt;log-dilation&gt;</string>
-    <string name="loxodromic_motion_n_steps_placeholder">&lt;number of steps&gt;</string>
     <!-- file dialog -->
     <string name="save_cluster_title">Save this cluster</string>
     <string name="choose_name">Choose a name</string>

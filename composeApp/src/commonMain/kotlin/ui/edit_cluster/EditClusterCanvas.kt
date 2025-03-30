@@ -75,6 +75,7 @@ import domain.cluster.LogicalRegion
 import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
+import domain.expressions.RotationParameters
 import domain.rotateBy
 import domain.rotateByAround
 import getPlatform
@@ -241,6 +242,14 @@ fun BoxScope.EditClusterCanvas(
                             interpolateCircles = viewModel.interpolateCircles,
                             circlesAreCoDirected = viewModel.circlesAreCoDirected,
                             defaults = viewModel.defaultInterpolationParameters,
+                            updateParameters = viewModel::updateParameters,
+                            openDetailsDialog = viewModel::openDetailsDialog,
+                            confirmParameters = viewModel::confirmAdjustedParameters,
+                        )
+                    is RotationParameters ->
+                        RotationInterface(
+                            concretePositions = concretePositions,
+                            defaults = viewModel.defaultRotationParameters,
                             updateParameters = viewModel::updateParameters,
                             openDetailsDialog = viewModel::openDetailsDialog,
                             confirmParameters = viewModel::confirmAdjustedParameters,

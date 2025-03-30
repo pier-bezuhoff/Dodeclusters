@@ -98,7 +98,7 @@ data class BiInversionParameters(
 ) : Parameters
 
 /**
- * @param[angle] rotation angle in degrees per each step
+ * @param[angle] CCW rotation angle in degrees per each step [0; 360)
  */
 @Immutable
 @Serializable

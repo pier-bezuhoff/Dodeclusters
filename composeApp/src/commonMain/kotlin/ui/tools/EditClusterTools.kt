@@ -141,6 +141,11 @@ import dodeclusters.composeapp.generated.resources.reverse_direction_description
 import dodeclusters.composeapp.generated.resources.reverse_direction_name
 import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.road
+import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
+import dodeclusters.composeapp.generated.resources.rotation_arg_descriptions
+import dodeclusters.composeapp.generated.resources.rotation_around_point
+import dodeclusters.composeapp.generated.resources.rotation_description
+import dodeclusters.composeapp.generated.resources.rotation_name
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.screenshot_pc
@@ -186,6 +191,7 @@ import domain.SIGNATURE_CIRCLE_AND_POINT
 import domain.SIGNATURE_INDEXED_AND_2_CIRCLES
 import domain.SIGNATURE_INDEXED_AND_2_POINTS
 import domain.SIGNATURE_INDEXED_AND_CIRCLE
+import domain.SIGNATURE_INDEXED_AND_POINT
 import domain.SIGNATURE_N_POINTS_PLACEHOLDER
 import domain.Signature
 import domain.io.DdcV4
@@ -402,12 +408,12 @@ sealed class EditClusterTool(
         Res.array.circle_interpolation_arg_descriptions,
         Res.drawable.interpolate_lines
     )
-    data object CircleExtrapolation: MultiArg(
-        SIGNATURE_2_CIRCLES,
-        Res.string.circle_extrapolation_name,
-        Res.string.circle_extrapolation_description,
-        Res.array.circle_extrapolation_arg_descriptions,
-        Res.drawable.extrapolate_lines
+    data object Rotation: MultiArg(
+        SIGNATURE_INDEXED_AND_POINT,
+        Res.string.rotation_name,
+        Res.string.rotation_description,
+        Res.array.rotation_arg_descriptions,
+        Res.drawable.rotation_around_point
     )
     data object BiInversion: MultiArg(
         SIGNATURE_INDEXED_AND_2_CIRCLES,
@@ -422,6 +428,13 @@ sealed class EditClusterTool(
         Res.string.loxodromic_motion_description,
         Res.array.loxodromic_motion_arg_descriptions,
         Res.drawable.spiral
+    )
+    data object CircleExtrapolation: MultiArg(
+        SIGNATURE_2_CIRCLES,
+        Res.string.circle_extrapolation_name,
+        Res.string.circle_extrapolation_description,
+        Res.array.circle_extrapolation_arg_descriptions,
+        Res.drawable.extrapolate_lines
     )
 
     // MAYBE: add partial argument icon(s)

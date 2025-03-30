@@ -66,6 +66,7 @@ import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.ObjectConstruct
 import domain.expressions.Parameters
+import domain.expressions.RotationParameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
@@ -103,6 +104,7 @@ import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultExtrapolationParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
+import ui.edit_cluster.dialogs.DefaultRotationParameters
 import ui.edit_cluster.dialogs.DialogType
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
@@ -248,6 +250,8 @@ class EditClusterViewModel : ViewModel() {
     var defaultInterpolationParameters = DefaultInterpolationParameters()
         private set
     var defaultExtrapolationParameters = DefaultExtrapolationParameters()
+        private set
+    var defaultRotationParameters = DefaultRotationParameters()
         private set
     var defaultBiInversionParameters = DefaultBiInversionParameters()
         private set
@@ -1648,6 +1652,7 @@ class EditClusterViewModel : ViewModel() {
         selection.isNotEmpty() && (expressions.expressions[selection[0]]?.expr?.let { expr0 ->
             (expr0 is Expr.CircleInterpolation ||
             expr0 is Expr.PointInterpolation ||
+            expr0 is Expr.Rotation ||
             expr0 is Expr.BiInversion ||
             expr0 is Expr.LoxodromicMotion) &&
             selection.all { expressions.expressions[it]?.expr == expr0 }
@@ -1659,6 +1664,7 @@ class EditClusterViewModel : ViewModel() {
         val tool = when (expr) {
             is Expr.CircleInterpolation -> EditClusterTool.CircleOrPointInterpolation
             is Expr.PointInterpolation -> EditClusterTool.CircleOrPointInterpolation
+            is Expr.Rotation -> EditClusterTool.Rotation
             is Expr.BiInversion -> EditClusterTool.BiInversion
             is Expr.LoxodromicMotion -> EditClusterTool.LoxodromicMotion
             else -> null
@@ -1666,6 +1672,8 @@ class EditClusterViewModel : ViewModel() {
         when (val params = expr?.parameters) {
             is InterpolationParameters ->
                 defaultInterpolationParameters = DefaultInterpolationParameters(params)
+            is RotationParameters ->
+                defaultRotationParameters = DefaultRotationParameters(params)
             is BiInversionParameters ->
                 defaultBiInversionParameters = DefaultBiInversionParameters(params)
             is LoxodromicMotionParameters ->
@@ -1689,6 +1697,24 @@ class EditClusterViewModel : ViewModel() {
                         args = listOf(
                             Arg.CircleOrPoint.Point.Index(expr.startPoint),
                             Arg.CircleOrPoint.Point.Index(expr.endPoint)
+                        )
+                    )
+                is Expr.Rotation ->
+                    PartialArgList(
+                        tool.signature,
+                        args = listOf(
+                            if (objects[expr.target] is Point)
+                                Arg.CircleAndPointIndices(
+                                    circleIndices = emptyList(),
+                                    pointIndices = listOf(expr.target)
+                                )
+                            else
+                                Arg.CircleAndPointIndices(
+                                    circleIndices = listOf(expr.target),
+                                    pointIndices = emptyList()
+                                )
+                            ,
+                            Arg.Point.Index(expr.pivot),
                         )
                     )
                 is Expr.BiInversion ->
@@ -2684,6 +2710,7 @@ class EditClusterViewModel : ViewModel() {
             // transform
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
             ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> startCircleOrPointInterpolationParameterAdjustment()
+            ToolMode.ROTATION -> startRotationParameterAdjustment()
             ToolMode.BI_INVERSION -> startBiInversionParameterAdjustment()
             ToolMode.LOXODROMIC_MOTION -> startLoxodromicMotionParameterAdjustment()
             ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
@@ -2728,7 +2755,9 @@ class EditClusterViewModel : ViewModel() {
                     ))
                 }
                 // multiple adjustable exprs
-                is BiInversionParameters, is LoxodromicMotionParameters -> {
+                is RotationParameters,
+                is BiInversionParameters,
+                is LoxodromicMotionParameters -> {
                     regions.removeAtIndices(sm.regions)
                     val newAdjustables = mutableListOf<AdjustableExpr>()
                     val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
@@ -2767,8 +2796,10 @@ class EditClusterViewModel : ViewModel() {
                             sourceIndex to newIndices
                         )
                     }
-                    val regions =
-                        copySourceRegionsOntoTrajectories(source2trajectory, flipRegionsInAndOut = false)
+                    val regions = copySourceRegionsOntoTrajectories(
+                        source2trajectory,
+                        flipRegionsInAndOut = false
+                    )
                     SubMode.ExprAdjustment(newAdjustables, regions)
                 }
                 else -> sm
@@ -2776,6 +2807,8 @@ class EditClusterViewModel : ViewModel() {
             when (parameters) { // upd defaults for dialog, not sure it's sensible
                 is InterpolationParameters ->
                     defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
+                is RotationParameters ->
+                    defaultRotationParameters = DefaultRotationParameters(parameters)
                 is BiInversionParameters ->
                     defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
                 is LoxodromicMotionParameters ->
@@ -2794,6 +2827,8 @@ class EditClusterViewModel : ViewModel() {
                 when (val parameters = sm.parameters) {
                     is InterpolationParameters ->
                         defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
+                    is RotationParameters ->
+                        defaultRotationParameters = DefaultRotationParameters(parameters)
                     is BiInversionParameters ->
                         defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
                     is LoxodromicMotionParameters ->
@@ -3061,12 +3096,6 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    fun completeCircleOrPointInterpolation(params: InterpolationParameters) {
-        openedDialog = null
-        updateParameters(params)
-        confirmAdjustedParameters()
-    }
-
     fun completeCircleExtrapolation(
         params: ExtrapolationParameters,
     ) {
@@ -3087,6 +3116,44 @@ class EditClusterViewModel : ViewModel() {
     fun resetCircleExtrapolation() {
         openedDialog = null
         partialArgList = PartialArgList(EditClusterTool.CircleExtrapolation.signature)
+    }
+
+    fun startRotationParameterAdjustment() {
+        val argList = partialArgList!!
+        val args = argList.args
+        val objArg = args[0] as Arg.CircleAndPointIndices
+        val targetCircleIndices = objArg.circleIndices
+        val targetPointsIndices = objArg.pointIndices
+        recordCreateCommand()
+        val pivotPointIndex = when (val pointArg = args[1] as Arg.Point) {
+            is Arg.Point.Index -> pointArg.index
+            is Arg.Point.XY -> createNewFreePoint(pointArg.toPoint(), triggerRecording = false)
+        }
+        val targetIndices = targetCircleIndices + targetPointsIndices
+        val adjustables = mutableListOf<AdjustableExpr>()
+        val params0 = defaultRotationParameters.params
+        val oldSize = objects.size
+        var outputIndex = oldSize
+        val source2trajectory = targetIndices.map { targetIndex ->
+            val expr = Expr.Rotation(params0, pivotPointIndex, targetIndex)
+            val result = expressions
+                .addMultiExpr(expr)
+                .map { it?.upscale() } // multi expression creates a whole trajectory at a time
+            val outputRange = (outputIndex until (outputIndex + result.size)).toList()
+            adjustables.add(
+                AdjustableExpr(expr, outputRange, outputRange)
+            )
+            outputIndex += result.size
+            return@map targetIndex to result
+        }
+        val newObjects = source2trajectory.flatMap { it.second }
+        addObjects(newObjects) // row-column order
+        copySourceColorsOntoTrajectories(source2trajectory, oldSize)
+        val regions = copySourceRegionsOntoTrajectories(
+            source2trajectory, oldSize,
+            flipRegionsInAndOut = false
+        )
+        submode = SubMode.ExprAdjustment(adjustables, regions)
     }
 
     fun startBiInversionParameterAdjustment() {
@@ -3131,14 +3198,6 @@ class EditClusterViewModel : ViewModel() {
         submode = SubMode.ExprAdjustment(adjustables, regions)
     }
 
-    fun completeBiInversion(
-        params: BiInversionParameters,
-    ) {
-        openedDialog = null
-        updateParameters(params)
-        confirmAdjustedParameters()
-    }
-
     // TODO: inf point input
     fun startLoxodromicMotionParameterAdjustment() {
         val argList = partialArgList!!
@@ -3177,14 +3236,6 @@ class EditClusterViewModel : ViewModel() {
             flipRegionsInAndOut = false
         )
         submode = SubMode.ExprAdjustment(adjustables, regions)
-    }
-
-    fun completeLoxodromicMotion(
-        params: LoxodromicMotionParameters,
-    ) {
-        openedDialog = null
-        updateParameters(params)
-        confirmAdjustedParameters()
     }
 
     fun completeArcPath() {
@@ -3278,6 +3329,14 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
+    fun confirmDialogSelectedParameters(
+        parameters: Parameters
+    ) {
+        openedDialog = null
+        updateParameters(parameters)
+        confirmAdjustedParameters()
+    }
+
     fun closeDialog() {
         openedDialog = null
     }
@@ -3300,6 +3359,7 @@ class EditClusterViewModel : ViewModel() {
             if (sm is SubMode.ExprAdjustment) {
                 when (sm.parameters) {
                     is InterpolationParameters -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
+                    is RotationParameters -> DialogType.ROTATION
                     is BiInversionParameters -> DialogType.BI_INVERSION
                     is LoxodromicMotionParameters -> DialogType.LOXODROMIC_MOTION
                     else -> null

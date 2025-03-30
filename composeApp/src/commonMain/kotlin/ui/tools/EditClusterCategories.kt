@@ -74,9 +74,10 @@ sealed class EditClusterCategory(
             EditClusterTool.CircleInversion,
             EditClusterTool.LoxodromicMotion,
             EditClusterTool.CircleOrPointInterpolation,
+            EditClusterTool.Rotation,
             EditClusterTool.BiInversion,
         ),
-        defaultables = listOf(0, 1, 2),
+        defaultables = listOf(0, 1, 2, 3),
     ) { // ~mode-like
         // button: kaleidoscopic reflection
     }

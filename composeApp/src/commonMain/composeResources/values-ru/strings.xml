@@ -73,6 +73,12 @@
         <item>Стартовую окружность</item>
         <item>Конечную окружность</item>
     </string-array>
+    <string name="rotation_name">Вращение</string>
+    <string name="rotation_description">Повернуть объект вокруг точки (центра)</string>
+    <string-array name="rotation_arg_descriptions">
+        <item>Объект</item>
+        <item>Точку-центр вращения</item>
+    </string-array>
     <string name="bi_inversion_name">Би-инверсия</string>
     <string name="bi_inversion_description">Применить композицию 2 инверсий несколько раз</string>
     <string-array name="bi_inversion_arg_descriptions">
@@ -179,16 +185,23 @@
     <string name="region_manipulation_strategy_replace">Замена</string>
     <string name="region_manipulation_strategy_add">Добавление</string>
     <string name="region_manipulation_strategy_erase">Стирание</string>
+
+    <!-- dialog commons -->
+    <string name="hex_name">hex #</string>
+    <string name="cancel_name">Отмена</string>
+    <string name="ok_name">OK</string>
+    <string name="ok_description">Подтвердить</string>
+    <string name="n_steps_prompt">Число шагов</string>
+    <string name="n_steps_placeholder">&lt;число шагов&gt;</string>
+    <string name="angle_in_degrees_placeholder">&lt;угол в градусах&gt;</string>
+    <string name="degrees_suffix">°</string>
+    <string name="dilation_placeholder">&lt;логарифм раздутия/сжатия&gt;</string>
     <!-- color picker dialog -->
     <string name="color_picker_title">Выберите цвет</string>
     <string name="color_picker_used_and_saved_colors_label">Использованные цвета | Сохранённые цвета</string>
     <string name="color_picker_default_palette_label">Палитра по умолчанию</string>
     <string name="color_picker_save_color_description">Сохранить текущий цвет</string>
     <string name="color_picker_forget_color_description">Забыть текущий цвет</string>
-    <string name="hex_name">hex #</string>
-    <string name="cancel_name">Отмена</string>
-    <string name="ok_name">OK</string>
-    <string name="ok_description">Подтвердить</string>
     <!-- circle interpolation dialog -->
     <string name="circle_interpolation_title">Выберите число шагов интерполяции</string>
     <string name="circle_interpolation_prompt">Число промежуточных объектов</string>
@@ -202,27 +215,21 @@
     <string name="circle_extrapolation_left_prompt2">слева от первой выбранной</string>
     <string name="circle_extrapolation_right_prompt1">Число новых окружностей</string>
     <string name="circle_extrapolation_right_prompt2">справа от второй выбранной</string>
+    <!-- rotation dialog -->
+    <string name="rotation_title">Параметры вращения</string>
+    <string name="rotation_angle_prompt">Угол поворота в градусах (за 1 шаг)</string>
     <!-- bi-inversion dialog -->
     <string name="bi_inversion_title">Параметры двойной инверсии</string>
     <string name="bi_inversion_speed_prompt">Скорость</string>
     <string name="bi_inversion_angle_prompt">Угол поворота за шаг</string>
-    <string name="bi_inversion_hyperbolic_prompt">One-step logarithmic dilation</string>
-    <string name="bi_inversion_steps_prompt">Число шагов</string>
-    <string name="bi_inversion_dilation_placeholder">&lt;log-dilation&gt;</string>
-    <string name="bi_inversion_n_steps_placeholder">&lt;число шагов&gt;</string>
     <!-- loxodromic motion dialog -->
     <string name="loxodromic_motion_title">Параметры локсодромического спирального движения</string>
     <string name="loxodromic_motion_angle_prompt">Угол вращения за шаг</string>
     <string name="loxodromic_motion_hyperbolic_prompt">Логарифм расширения/сжатия за шаг</string>
-    <string name="loxodromic_motion_steps_prompt">Число шагов</string>
-    <string name="angle_in_degrees_placeholder">&lt;угол в градусах&gt;</string>
-    <string name="degrees_suffix">°</string>
     <string name="loxodromic_motion_angle_direction_prompt1">Вращать</string>
     <string name="loxodromic_motion_angle_direction_ccw">против часовой стрелки</string>
     <string name="loxodromic_motion_angle_direction_cw">по часовой стрелке</string>
     <string name="loxodromic_motion_angle_direction_prompt2">вокруг 1ой точки</string>
-    <string name="loxodromic_motion_dilation_placeholder">&lt;деформация размера&gt;</string>
-    <string name="loxodromic_motion_n_steps_placeholder">&lt;число шагов&gt;</string>
     <!-- file dialog -->
     <string name="save_cluster_title">Сохранить кластер</string>
     <string name="choose_name">Выберите название</string>

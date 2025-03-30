@@ -105,6 +105,7 @@ import ui.edit_cluster.dialogs.ColorPickerDialog
 import ui.edit_cluster.dialogs.DialogAction
 import ui.edit_cluster.dialogs.DialogType
 import ui.edit_cluster.dialogs.LoxodromicMotionDialog
+import ui.edit_cluster.dialogs.RotationDialog
 import ui.edit_cluster.dialogs.SaveOptionsDialog
 import ui.isCompact
 import ui.isLandscape
@@ -281,7 +282,7 @@ fun EditClusterScreen(
                     CircleOrPointInterpolationDialog(
                         startObject, endObject,
                         onCancel = viewModel::closeDialog,
-                        onConfirm = viewModel::completeCircleOrPointInterpolation,
+                        onConfirm = viewModel::confirmDialogSelectedParameters,
                         defaults = viewModel.defaultInterpolationParameters,
                         dialogActions = dialogActions,
                     )
@@ -302,6 +303,16 @@ fun EditClusterScreen(
                 )
             }
         }
+        DialogType.ROTATION -> {
+            if (viewModel.partialArgList?.isFull == true) {
+                RotationDialog(
+                    onCancel = viewModel::closeDialog,
+                    onConfirm = viewModel::confirmDialogSelectedParameters,
+                    defaults = viewModel.defaultRotationParameters,
+                    dialogActions = dialogActions,
+                )
+            }
+        }
         DialogType.BI_INVERSION -> {
             if (viewModel.partialArgList?.isFull == true) {
                 val (engine1, engine2) = viewModel.partialArgList!!.args
@@ -312,7 +323,7 @@ fun EditClusterScreen(
                     BiInversionDialog(
                         engine1, engine2,
                         onCancel = viewModel::closeDialog,
-                        onConfirm = viewModel::completeBiInversion,
+                        onConfirm = viewModel::confirmDialogSelectedParameters,
                         defaults = viewModel.defaultBiInversionParameters,
                         dialogActions = dialogActions,
                     )
@@ -331,7 +342,7 @@ fun EditClusterScreen(
                 if (divergencePoint != null && convergencePoint != null) {
                     LoxodromicMotionDialog(
                         onCancel = viewModel::closeDialog,
-                        onConfirm = viewModel::completeLoxodromicMotion,
+                        onConfirm = viewModel::confirmDialogSelectedParameters,
                         defaults = viewModel.defaultLoxodromicMotionParameters,
                         dialogActions = dialogActions,
                     )

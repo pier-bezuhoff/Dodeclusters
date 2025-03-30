@@ -32,16 +32,16 @@ import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.angle_in_degrees_placeholder
 import dodeclusters.composeapp.generated.resources.degrees_suffix
+import dodeclusters.composeapp.generated.resources.dilation_placeholder
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_ccw
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_cw
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_prompt1
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_direction_prompt2
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_angle_prompt
-import dodeclusters.composeapp.generated.resources.loxodromic_motion_dilation_placeholder
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_hyperbolic_prompt
-import dodeclusters.composeapp.generated.resources.loxodromic_motion_n_steps_placeholder
-import dodeclusters.composeapp.generated.resources.loxodromic_motion_steps_prompt
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
+import dodeclusters.composeapp.generated.resources.n_steps_placeholder
+import dodeclusters.composeapp.generated.resources.n_steps_prompt
 import domain.expressions.LoxodromicMotionParameters
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource
@@ -142,7 +142,7 @@ fun LoxodromicMotionDialog(
                     DoubleTextField(
                         value = dilation,
                         onNewValue = { dilation = it },
-                        placeholderStringResource = Res.string.loxodromic_motion_dilation_placeholder,
+                        placeholderStringResource = Res.string.dilation_placeholder,
                         nFractionalDigits = 3,
                     )
                 }
@@ -150,11 +150,11 @@ fun LoxodromicMotionDialog(
                     valueRange = defaults.dilationRange
                 )
                 Row {
-                    PreTextFieldLabel(Res.string.loxodromic_motion_steps_prompt, smallerFont = compactWidth)
+                    PreTextFieldLabel(Res.string.n_steps_prompt, smallerFont = compactWidth)
                     IntTextField(
                         value = nSteps,
                         onNewValue = { nSteps = it },
-                        placeholderStringResource = Res.string.loxodromic_motion_n_steps_placeholder,
+                        placeholderStringResource = Res.string.n_steps_placeholder,
                     )
                 }
                 Slider(nSteps.toFloat(), { nSteps = it.roundToInt() },

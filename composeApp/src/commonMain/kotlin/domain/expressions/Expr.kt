@@ -19,6 +19,7 @@ import domain.expressions.Expr.Intersection
 import domain.expressions.Expr.LineBy2Points
 import domain.expressions.Expr.BiInversion
 import domain.expressions.Expr.LoxodromicMotion
+import domain.expressions.Expr.Rotation
 import domain.expressions.Expr.OneToMany
 import domain.expressions.Expr.OneToOne
 import kotlinx.serialization.SerialName
@@ -167,6 +168,19 @@ sealed interface Expr : ExprLike {
     ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
 
     @Serializable
+    @SerialName("Rotation")
+    data class Rotation(
+        override val parameters: RotationParameters,
+        val pivot: Ix,
+        override val target: Ix,
+    ) : OneToMany
+        , ExprLike by E(parameters, listOf(pivot, target))
+        , TransformLike {
+        @Transient
+        override val nSteps: Int = parameters.nSteps
+    }
+
+    @Serializable
     @SerialName("BiInversion")
     data class BiInversion(
         override val parameters: BiInversionParameters,
@@ -179,6 +193,7 @@ sealed interface Expr : ExprLike {
         @Transient
         override val nSteps: Int = parameters.nSteps
     }
+
     @Serializable
     @SerialName("LoxodromicMotion")
     data class LoxodromicMotion( // MAYBE: add backwards steps
@@ -276,6 +291,11 @@ inline fun Expr.eval(
                 c(startCircle),
                 c(endCircle)
             )
+            is Rotation -> computeRotation(
+                parameters,
+                p(pivot),
+                g(target),
+            )
             is BiInversion -> computeBiInversion(
                 parameters,
                 g(engine1),
@@ -358,6 +378,11 @@ fun Expr._eval(objects: List<GCircle?>): ExprResult {
             objects[startCircle] as? CircleOrLine ?: return emptyList(),
             objects[endCircle] as? CircleOrLine ?: return emptyList(),
         )
+        is Rotation -> computeRotation(
+            parameters,
+            objects[pivot] as? Point ?: return emptyList(),
+            objects[target] ?: return emptyList(),
+        )
         is BiInversion -> computeBiInversion(
             parameters,
             objects[engine1] ?: return emptyList(),
@@ -426,15 +451,19 @@ inline fun Expr.reIndex(
             startCircle = reIndexer(startCircle),
             endCircle = reIndexer(endCircle),
         )
+        is Rotation -> copy(
+            pivot = reIndexer(pivot),
+            target = reIndexer(target),
+        )
         is BiInversion -> copy(
             engine1 = reIndexer(engine1),
             engine2 = reIndexer(engine2),
-            target = reIndexer(target)
+            target = reIndexer(target),
         )
         is LoxodromicMotion -> copy(
             divergencePoint = reIndexer(divergencePoint),
             convergencePoint = reIndexer(convergencePoint),
-            target = reIndexer(target)
+            target = reIndexer(target),
         )
     }
 
@@ -464,6 +493,9 @@ fun Expr.copyWithNewParameters(
         )
         is CircleExtrapolation -> copy(
             parameters = newParameters as ExtrapolationParameters
+        )
+        is Rotation -> copy(
+            parameters = newParameters as RotationParameters
         )
         is BiInversion -> copy(
             parameters = newParameters as BiInversionParameters

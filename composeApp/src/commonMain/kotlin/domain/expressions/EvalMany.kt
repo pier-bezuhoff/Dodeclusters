@@ -132,7 +132,8 @@ fun computeRotation(
     pivot: Point,
     target: GCircle,
 ): List<GCircle> {
-    val dAngle = params.angle.radians
+    // Q: why minus?
+    val dAngle = -params.angle.radians
     return (1 .. params.nSteps)
         .map { i ->
             target.rotated(pivot, i * dAngle)
