@@ -115,6 +115,12 @@
         <item>The 1st point / perpendicular object</item>
         <item>The 2nd point / perpendicular object</item>
     </string-array>
+    <string name="polar_line_by_circle_and_point_name">Polar by circle and point</string>
+    <string name="polar_line_by_circle_and_point_description">Construct a tangent/polar/parallel line to a circle/line thru a point</string>
+    <string-array name="polar_line_by_circle_and_point_arg_descriptions">
+        <item>The circle/line</item>
+        <item>The point</item>
+    </string-array>
     <string name="insert_centered_cross_name">Insert a centered cross</string>
     <string name="insert_centered_cross_description">Insert a centered cross</string>
     <string name="arc_path_name">Arc-path</string>

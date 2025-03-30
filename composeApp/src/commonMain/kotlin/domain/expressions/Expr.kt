@@ -9,6 +9,7 @@ import domain.expressions.Expr.CircleBy2PointsAndSagittaRatio
 import domain.expressions.Expr.CircleBy3Points
 import domain.expressions.Expr.CircleByCenterAndRadius
 import domain.expressions.Expr.CircleByPencilAndPoint
+import domain.expressions.Expr.PolarLineByCircleAndPoint
 import domain.expressions.Expr.CircleExtrapolation
 import domain.expressions.Expr.CircleInterpolation
 import domain.expressions.Expr.PointInterpolation
@@ -68,18 +69,21 @@ sealed interface Expr : ExprLike {
 
     // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr
     //  p' = f(Δ(f⁻¹(p)), where point p on dependent carrier f(<free>) moves to p' when <free> is affected by Δ
+
     @Serializable
-    @SerialName("IncidentPoint")
-    data class Incidence(
-        override val parameters: IncidenceParameters,
-        val carrier: Ix,
-    ) : OneToOne, ExprLike by E(parameters, listOf(carrier))
+    @SerialName("Intersection")
+    data class Intersection(
+        val circle1: Ix,
+        val circle2: Ix,
+    ) : OneToMany, ExprLike by E(Parameters.None, listOf(circle1, circle2))
+
     @Serializable
     @SerialName("CircleByCenterAndRadius")
     data class CircleByCenterAndRadius(
         val center: Ix,
         val radiusPoint: Ix
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(center, radiusPoint))
+
     @Serializable
     @SerialName("CircleBy3PerpendicularObjects")
     data class CircleBy3Points(
@@ -87,6 +91,21 @@ sealed interface Expr : ExprLike {
         val object2: Ix,
         val object3: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2, object3))
+
+    @Serializable
+    @SerialName("LineBy2PerpendicularObjects")
+    data class LineBy2Points(
+        val object1: Ix,
+        val object2: Ix,
+    ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2))
+
+    @Serializable
+    @SerialName("IncidentPoint")
+    data class Incidence(
+        override val parameters: IncidenceParameters,
+        val carrier: Ix,
+    ) : OneToOne, ExprLike by E(parameters, listOf(carrier))
+
     @Serializable
     @SerialName("CircleBy2ObjectsFromItsPencilAndPerpendicularObject")
     data class CircleByPencilAndPoint(
@@ -94,21 +113,26 @@ sealed interface Expr : ExprLike {
         val pencilObject2: Ix,
         val perpendicularObject: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(pencilObject1, pencilObject2, perpendicularObject))
+
     @Serializable
-    @SerialName("LineBy2PerpendicularObjects")
-    data class LineBy2Points(
-        val object1: Ix,
-        val object2: Ix,
-    ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2))
+    @SerialName("PolarLineByCircleAndPoint")
+    data class PolarLineByCircleAndPoint(
+        val circle: Ix,
+        val point: Ix,
+    ) : OneToOne, ExprLike by E(Parameters.None, listOf(circle, point))
+
     @Serializable
     @SerialName("CircleInversion")
     data class CircleInversion(
         override val target: Ix,
         val engine: Ix,
-    ) : OneToOne, ExprLike by E(Parameters.None, listOf(target, engine)), TransformLike {
+    ) : OneToOne
+    , ExprLike by E(Parameters.None, listOf(target, engine))
+    , TransformLike {
         @Transient
         override val nSteps: Int = 1
     }
+
     @Serializable
     @SerialName("CircleBy2PointsAndSagittaRatio")
     data class CircleBy2PointsAndSagittaRatio(
@@ -118,18 +142,13 @@ sealed interface Expr : ExprLike {
     ) : OneToOne, ExprLike by E(parameters, listOf(chordStartPoint, chordEndPoint))
 
     @Serializable
-    @SerialName("Intersection")
-    data class Intersection(
-        val circle1: Ix,
-        val circle2: Ix,
-    ) : OneToMany, ExprLike by E(Parameters.None, listOf(circle1, circle2))
-    @Serializable
     @SerialName("CircleInterpolation")
     data class CircleInterpolation(
         override val parameters: InterpolationParameters,
         val startCircle: Ix,
         val endCircle: Ix,
     ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
+
     @Serializable
     @SerialName("PointInterpolation")
     data class PointInterpolation(
@@ -137,8 +156,8 @@ sealed interface Expr : ExprLike {
         val startPoint: Ix,
         val endPoint: Ix,
     ) : OneToMany, ExprLike by E(parameters, listOf(startPoint, endPoint))
-    // MAYBE: completely replace CircleExtrapolation with BiInversion
-    //  since it's more general
+
+    // NOTE: deprecated, since BiInversion is more general
     @Serializable
     @SerialName("CircleExtrapolation")
     data class CircleExtrapolation(
@@ -146,6 +165,7 @@ sealed interface Expr : ExprLike {
         val startCircle: Ix,
         val endCircle: Ix,
     ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
+
     @Serializable
     @SerialName("BiInversion")
     data class BiInversion(
@@ -212,14 +232,18 @@ inline fun Expr.eval(
                         g(object2),
                         g(object3)
                     )
+                    is LineBy2Points -> computeLineBy2Points(
+                        g(object1),
+                        g(object2)
+                    )
                     is CircleByPencilAndPoint -> computeCircleByPencilAndPoint(
                         g(pencilObject1),
                         g(pencilObject2),
                         g(perpendicularObject),
                     )
-                    is LineBy2Points -> computeLineBy2Points(
-                        g(object1),
-                        g(object2)
+                    is PolarLineByCircleAndPoint -> computePolarLine(
+                        c(circle),
+                        p(point),
                     )
                     is CircleInversion -> computeCircleInversion(
                         g(target),
@@ -299,6 +323,10 @@ fun Expr._eval(objects: List<GCircle?>): ExprResult {
                     objects[object1] ?: return emptyList(),
                     objects[object2] ?: return emptyList(),
                 )
+                is PolarLineByCircleAndPoint -> computePolarLine(
+                    objects[circle] as? CircleOrLine ?: return emptyList(),
+                    objects[point] as? Point ?: return emptyList(),
+                )
                 is CircleInversion -> computeCircleInversion(
                     objects[target] ?: return emptyList(),
                     objects[engine] ?: return emptyList(),
@@ -370,6 +398,10 @@ inline fun Expr.reIndex(
             object1 = reIndexer(object1),
             object2 = reIndexer(object2),
         )
+        is PolarLineByCircleAndPoint -> copy(
+            circle = reIndexer(circle),
+            point = reIndexer(point),
+        )
         is CircleInversion -> copy(
             target = reIndexer(target),
             engine = reIndexer(engine),
@@ -418,6 +450,7 @@ fun Expr.copyWithNewParameters(
         is CircleBy3Points -> this
         is CircleByPencilAndPoint -> this
         is LineBy2Points -> this
+        is PolarLineByCircleAndPoint -> this
         is CircleInversion -> this
         is CircleBy2PointsAndSagittaRatio -> copy(
             parameters = newParameters as SagittaRatioParameters

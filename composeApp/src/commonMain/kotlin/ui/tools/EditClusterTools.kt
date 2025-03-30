@@ -44,6 +44,7 @@ import dodeclusters.composeapp.generated.resources.circle_inversion
 import dodeclusters.composeapp.generated.resources.circle_inversion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_inversion_description
 import dodeclusters.composeapp.generated.resources.circle_inversion_name
+import dodeclusters.composeapp.generated.resources.circle_tangent
 import dodeclusters.composeapp.generated.resources.circled_region
 import dodeclusters.composeapp.generated.resources.complete_arc_path
 import dodeclusters.composeapp.generated.resources.confirm
@@ -121,6 +122,9 @@ import dodeclusters.composeapp.generated.resources.phantom_crossed
 import dodeclusters.composeapp.generated.resources.pick_circle_color_description
 import dodeclusters.composeapp.generated.resources.pick_circle_color_name
 import dodeclusters.composeapp.generated.resources.png_export_name
+import dodeclusters.composeapp.generated.resources.polar_line_by_circle_and_point_arg_descriptions
+import dodeclusters.composeapp.generated.resources.polar_line_by_circle_and_point_description
+import dodeclusters.composeapp.generated.resources.polar_line_by_circle_and_point_name
 import dodeclusters.composeapp.generated.resources.propeller
 import dodeclusters.composeapp.generated.resources.rectangular_select_description
 import dodeclusters.composeapp.generated.resources.rectangular_select_name
@@ -178,6 +182,7 @@ import domain.SIGNATURE_2_CIRCLES
 import domain.SIGNATURE_2_GENERALIZED_CIRCLES
 import domain.SIGNATURE_2_POINTS
 import domain.SIGNATURE_3_GENERALIZED_CIRCLE
+import domain.SIGNATURE_CIRCLE_AND_POINT
 import domain.SIGNATURE_INDEXED_AND_2_CIRCLES
 import domain.SIGNATURE_INDEXED_AND_2_POINTS
 import domain.SIGNATURE_INDEXED_AND_CIRCLE
@@ -240,7 +245,7 @@ sealed class EditClusterTool(
     }
     data object SvgExport: CustomAction(
         Res.string.svg_export_name,
-        icon = Res.drawable.upload // unused
+        icon = Res.drawable.upload // presently unused
     ) {
         const val DEFAULT_NAME = DdcV4.DEFAULT_NAME
         const val EXTENSION = "svg"
@@ -248,7 +253,7 @@ sealed class EditClusterTool(
     }
     data object PngExport: CustomAction(
         Res.string.png_export_name,
-        icon = Res.drawable.screenshot_pc // unused
+        icon = Res.drawable.screenshot_pc // presently unused
     ) {
         const val DEFAULT_NAME = "dodeclusters-screenshot"
         const val EXTENSION = "png"
@@ -348,7 +353,7 @@ sealed class EditClusterTool(
         Res.drawable.phantom_crossed,
         disabledDescription = Res.string.toggle_phantoms_disabled_description
     )
-    data object ToggleFilledOrOutline: Switch( // unused
+    data object ToggleFilledOrOutline: Switch( // presently unused
         Res.string.toggle_filled_or_outline_name,
         Res.string.toggle_filled_or_outline_description,
         Res.drawable.filled_circle,
@@ -434,6 +439,20 @@ sealed class EditClusterTool(
         Res.array.circle_by_3_points_arg_descriptions,
         Res.drawable.circle_3_points
     )
+    data object ConstructLineBy2Points: MultiArg(
+        SIGNATURE_2_GENERALIZED_CIRCLES,
+        Res.string.line_by_2_points_name,
+        Res.string.line_by_2_points_description,
+        Res.array.line_by_2_points_arg_descriptions,
+        Res.drawable.line_2_points
+    )
+    data object AddPoint: MultiArg(
+        SIGNATURE_1_POINT,
+        Res.string.add_point_name,
+        Res.string.add_point_description,
+        Res.array.add_point_arg_descriptions,
+        Res.drawable.flagged_point
+    )
     data object ConstructCircleByPencilAndPoint: MultiArg(
         SIGNATURE_3_GENERALIZED_CIRCLE,
         Res.string.circle_by_pencil_and_point_name,
@@ -441,12 +460,12 @@ sealed class EditClusterTool(
         Res.array.circle_by_pencil_and_point_arg_descriptions,
         Res.drawable.propeller
     )
-    data object ConstructLineBy2Points: MultiArg(
-        SIGNATURE_2_GENERALIZED_CIRCLES,
-        Res.string.line_by_2_points_name,
-        Res.string.line_by_2_points_description,
-        Res.array.line_by_2_points_arg_descriptions,
-        Res.drawable.line_2_points
+    data object ConstructPolarLineByCircleAndPoint: MultiArg(
+        SIGNATURE_CIRCLE_AND_POINT,
+        Res.string.polar_line_by_circle_and_point_name,
+        Res.string.polar_line_by_circle_and_point_description,
+        Res.array.polar_line_by_circle_and_point_arg_descriptions,
+        Res.drawable.circle_tangent
     )
     data object InsertCenteredCross: Action(
         Res.string.insert_centered_cross_name,
@@ -463,13 +482,6 @@ sealed class EditClusterTool(
     data object CompleteArcPath: ContextAction(
         Res.string.complete_arc_path,
         icon = Res.drawable.confirm
-    )
-    data object AddPoint: MultiArg(
-        SIGNATURE_1_POINT,
-        Res.string.add_point_name,
-        Res.string.add_point_description,
-        Res.array.add_point_arg_descriptions,
-        Res.drawable.flagged_point
     )
     // insert rect/square
 

@@ -449,7 +449,8 @@ class EditClusterViewModel : ViewModel() {
         regions.addAll(
             constellation.parts
                 .filter { part -> // region validation
-                    part.insides.all { it in objectIndices } && part.outsides.all { it in objectIndices }
+                    part.insides.all { it in objectIndices } &&
+                    part.outsides.all { it in objectIndices }
                 }
         )
         objectColors.putAll(
@@ -2680,17 +2681,20 @@ class EditClusterViewModel : ViewModel() {
         require(argList != null && argList.isFull && argList.isValid && argList.lastArgIsConfirmed) { "Invalid partialArgList in completeToolMode(): $argList" }
         require(toolMode is ToolMode && toolMode.signature == argList.signature) { "Invalid signature in completeToolMode(): $toolMode's ${(toolMode as ToolMode).signature} != ${argList.signature}" }
         when (toolMode) {
-            ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> completeCircleByCenterAndRadius()
-            ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
-            ToolMode.CIRCLE_BY_PENCIL_AND_POINT -> completeCircleByPencilAndPoint()
-            ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
-            ToolMode.POINT -> completePoint()
-            ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
+            // transform
             ToolMode.CIRCLE_INVERSION -> completeCircleInversion()
             ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> startCircleOrPointInterpolationParameterAdjustment()
-            ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
             ToolMode.BI_INVERSION -> startBiInversionParameterAdjustment()
             ToolMode.LOXODROMIC_MOTION -> startLoxodromicMotionParameterAdjustment()
+            ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
+            // create
+            ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> completeCircleByCenterAndRadius()
+            ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
+            ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
+            ToolMode.POINT -> completePoint()
+            ToolMode.CIRCLE_BY_PENCIL_AND_POINT -> completeCircleByPencilAndPoint()
+            ToolMode.POLAR_LINE_BY_CIRCLE_AND_POINT -> completePolarLineByCircleAndPoint()
+            ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
         }
     }
 
@@ -2805,8 +2809,9 @@ class EditClusterViewModel : ViewModel() {
     fun cancelOngoingActions() {
         when (mode) { // reset mode
             is ToolMode -> {
-                if (submode is SubMode.ExprAdjustment)
+                if (submode is SubMode.ExprAdjustment) {
                     cancelExprAdjustment()
+                }
                 partialArgList = partialArgList?.let { PartialArgList(it.signature) }
                 partialArcPath = null
                 submode = SubMode.None
@@ -2966,6 +2971,26 @@ class EditClusterViewModel : ViewModel() {
             )
             createNewGCircle(newGCircle?.upscale())
         }
+        partialArgList = PartialArgList(argList.signature)
+    }
+
+    private fun completePolarLineByCircleAndPoint() {
+        val argList = partialArgList!!
+        val carrierArg = argList.args[0] as Arg.CircleIndex
+        val pointArg = argList.args[1] as Arg.Point
+        recordCreateCommand()
+        val realizedPointIndex = when (pointArg) {
+            is Arg.Point.Index -> pointArg.index
+            is Arg.Point.XY ->
+                createNewFreePoint(pointArg.toPoint(), triggerRecording = false)
+        }
+        val newGCircle = expressions.addSoloExpr(
+            Expr.PolarLineByCircleAndPoint(
+                circle = carrierArg.index,
+                point = realizedPointIndex,
+            ),
+        )
+        createNewGCircle(newGCircle?.upscale())
         partialArgList = PartialArgList(argList.signature)
     }
 

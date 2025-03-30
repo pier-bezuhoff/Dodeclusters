@@ -62,6 +62,7 @@ data class Signature(val argTypes: List<ArgType>) {
 val SIGNATURE_1_POINT = Signature(ArgType.Point)
 val SIGNATURE_2_POINTS = Signature(ArgType.Point, ArgType.Point)
 val SIGNATURE_2_CIRCLES = Signature(ArgType.Circle, ArgType.Circle)
+val SIGNATURE_CIRCLE_AND_POINT = Signature(ArgType.Circle, ArgType.Point)
 val SIGNATURE_INDEXED_AND_CIRCLE = Signature(ArgType.CircleAndPointIndices, ArgType.Circle)
 val SIGNATURE_2_GENERALIZED_CIRCLES = Signature(ArgType.CircleOrPoint, ArgType.CircleOrPoint)
 val SIGNATURE_3_GENERALIZED_CIRCLE = Signature(ArgType.CircleOrPoint, ArgType.CircleOrPoint, ArgType.CircleOrPoint)
