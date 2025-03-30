@@ -423,7 +423,6 @@ class EditClusterViewModel : ViewModel() {
         selection = emptyList()
         regions.clear()
         objectColors.clear()
-        phantoms = emptySet()
         objects.clear()
         objects.addAll(
             constellation.objects.map {
@@ -446,10 +445,20 @@ class EditClusterViewModel : ViewModel() {
 //        expressions.update(
 //            expressions.scaleLineIncidenceExpressions(DOWNSCALING_FACTOR)
 //        )
-        regions.addAll(constellation.parts)
-        objectColors.putAll(constellation.objectColors)
+        val objectIndices = objects.indices.toSet()
+        regions.addAll(
+            constellation.parts
+                .filter { part -> // region validation
+                    part.insides.all { it in objectIndices } && part.outsides.all { it in objectIndices }
+                }
+        )
+        objectColors.putAll(
+            constellation.objectColors
+                .filterKeys { it in objectIndices }
+        )
         backgroundColor = constellation.backgroundColor
-        phantoms = constellation.phantoms.toSet()
+        phantoms = constellation.phantoms
+            .intersect(objectIndices) // prevention from orphaned phantoms
     }
 
     fun toConstellation(): Constellation {
