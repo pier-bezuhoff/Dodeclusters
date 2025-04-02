@@ -171,6 +171,9 @@
     <string name="in_between_disabled_description">Outside</string>
     <string name="reverse_direction_name">Reverse direction</string>
     <string name="reverse_direction_description">Reverse direction</string>
+    <string name="bidirectional_spiral_name">Bidirectional</string>
+    <string name="bidirectional_spiral_description">Make unidirectional</string>
+    <string name="bidirectional_spiral_disabled_description">Make bidirectional</string>
     <string name="steps_slider_name">N steps</string>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->

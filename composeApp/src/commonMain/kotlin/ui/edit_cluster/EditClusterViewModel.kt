@@ -925,11 +925,14 @@ class EditClusterViewModel : ViewModel() {
 
     private inline fun deleteObjectsWithDependenciesColorsAndRegions(
         indicesToDelete: List<Ix>,
+        triggerRecording: Boolean = true,
         crossinline circleAnimationInit: (List<CircleOrLine>) -> CircleAnimation? = { deletedCircles ->
             CircleAnimation.Exit(deletedCircles)
         },
     ) {
-        recordCommand(Command.DELETE, unique = true)
+        if (triggerRecording) {
+            recordCommand(Command.DELETE, unique = true)
+        }
         val toBeDeleted = expressions.deleteNodes(indicesToDelete)
         val deletedCircleIndices = toBeDeleted
             .filter { objects[it] is CircleOrLine }
@@ -2797,10 +2800,28 @@ class EditClusterViewModel : ViewModel() {
                             sourceIndex to newIndices
                         )
                     }
-                    val regions = copySourceRegionsOntoTrajectories(
-                        source2trajectory,
-                        flipRegionsInAndOut = false
-                    )
+                    val regions: List<Int>
+                    if (sm.parameters is LoxodromicMotionParameters && defaultLoxodromicMotionParameters.bidirectional) {
+                        // s2t structure is
+                        // t1^+1 .. t1^+n; t2^+1 .. t2^+n; ... tm^+1 .. tm^+n;
+                        // t1^-1 .. t1^-n; t2^-1 .. t2^-n; ... tm^-1 .. tm^-n;
+                        val size = source2trajectory.size.div(2)
+                        val foldedSource2trajectory = source2trajectory
+                            .take(size)
+                            .mapIndexed { i, (sourceIndex, forwardTrajectory) ->
+                                val backwardTrajectory = source2trajectory[size + i].second //.reversed()
+                                sourceIndex to (backwardTrajectory + forwardTrajectory)
+                            }
+                        regions = copySourceRegionsOntoTrajectories(
+                            foldedSource2trajectory,
+                            flipRegionsInAndOut = false
+                        )
+                    } else {
+                        regions = copySourceRegionsOntoTrajectories(
+                            source2trajectory,
+                            flipRegionsInAndOut = false
+                        )
+                    }
                     SubMode.ExprAdjustment(newAdjustables, regions)
                 }
                 else -> sm
@@ -2814,6 +2835,7 @@ class EditClusterViewModel : ViewModel() {
                     defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
                 is LoxodromicMotionParameters ->
                     defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters)
+                        .copy(bidirectional = defaultLoxodromicMotionParameters.bidirectional)
                 else -> {}
             }
         }
@@ -3201,12 +3223,16 @@ class EditClusterViewModel : ViewModel() {
 
     // TODO: inf point input
     fun startLoxodromicMotionParameterAdjustment() {
+        recordCreateCommand()
+        setupLoxodromicSpiral(defaultLoxodromicMotionParameters.bidirectional)
+    }
+
+    private fun setupLoxodromicSpiral(bidirectional: Boolean) {
         val argList = partialArgList!!
         val args = argList.args
         val objArg = args[0] as Arg.CircleAndPointIndices
         val targetCircleIndices = objArg.circleIndices
         val targetPointsIndices = objArg.pointIndices
-        recordCreateCommand()
         val (divergencePointIndex, convergencePointIndex) = args.drop(1).take(2)
             .map { when (val arg = it as Arg.Point) {
                 is Arg.Point.Index -> arg.index
@@ -3217,46 +3243,7 @@ class EditClusterViewModel : ViewModel() {
         val params0 = defaultLoxodromicMotionParameters.params
         val oldSize = objects.size
         var outputIndex = oldSize
-        val source2trajectory = targetIndices.map { targetIndex ->
-            val expr = Expr.LoxodromicMotion(params0, divergencePointIndex, convergencePointIndex, targetIndex)
-            val result = expressions
-                .addMultiExpr(expr)
-                .map { it?.upscale() } // multi expression creates a whole trajectory at a time
-            val outputRange = (outputIndex until (outputIndex + result.size)).toList()
-            adjustables.add(
-                AdjustableExpr(expr, outputRange, outputRange)
-            )
-            outputIndex += result.size
-            return@map targetIndex to result
-        }
-        val newObjects = source2trajectory.flatMap { it.second }
-        addObjects(newObjects) // row-column order
-        copySourceColorsOntoTrajectories(source2trajectory, oldSize)
-        val regions = copySourceRegionsOntoTrajectories(
-            source2trajectory, oldSize,
-            flipRegionsInAndOut = false
-        )
-        submode = SubMode.ExprAdjustment(adjustables, regions)
-    }
-
-    private fun setupLoxodromicSpiral() {
-        val bidirectional = defaultLoxodromicMotionParameters.forwardAndBackward
         if (bidirectional) {
-            val argList = partialArgList!!
-            val args = argList.args
-            val objArg = args[0] as Arg.CircleAndPointIndices
-            val targetCircleIndices = objArg.circleIndices
-            val targetPointsIndices = objArg.pointIndices
-            val (divergencePointIndex, convergencePointIndex) = args.drop(1).take(2)
-                .map { when (val arg = it as Arg.Point) {
-                    is Arg.Point.Index -> arg.index
-                    is Arg.Point.XY -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
-                } }
-            val targetIndices = targetCircleIndices + targetPointsIndices
-            val adjustables = mutableListOf<AdjustableExpr>()
-            val params0 = defaultLoxodromicMotionParameters.params
-            val oldSize = objects.size
-            var outputIndex = oldSize
             val source2trajectory1 = targetIndices.map { targetIndex ->
                 val expr = Expr.LoxodromicMotion(params0, divergencePointIndex, convergencePointIndex, targetIndex)
                 val result = expressions
@@ -3269,6 +3256,7 @@ class EditClusterViewModel : ViewModel() {
                 outputIndex += result.size
                 return@map targetIndex to result
             }
+            val interimSize = outputIndex
             // reversing convergence-divergence for 2nd trajectory
             val source2trajectory2 = targetIndices.map { targetIndex ->
                 val expr = Expr.LoxodromicMotion(params0, convergencePointIndex, divergencePointIndex, targetIndex)
@@ -3285,28 +3273,19 @@ class EditClusterViewModel : ViewModel() {
             val source2trajectory = source2trajectory1 + source2trajectory2
             val newObjects = source2trajectory.flatMap { it.second }
             addObjects(newObjects) // row-column order
-            copySourceColorsOntoTrajectories(source2trajectory, oldSize)
+            copySourceColorsOntoTrajectories(source2trajectory1, startIndex = oldSize)
+            copySourceColorsOntoTrajectories(source2trajectory2, startIndex = interimSize)
             val regions = copySourceRegionsOntoTrajectories(
-                source2trajectory, oldSize,
+                source2trajectory1,
+                startIndex = oldSize,
+                flipRegionsInAndOut = false
+            ) + copySourceRegionsOntoTrajectories(
+                source2trajectory2,
+                startIndex = interimSize,
                 flipRegionsInAndOut = false
             )
             submode = SubMode.ExprAdjustment(adjustables, regions)
         } else {
-            val argList = partialArgList!!
-            val args = argList.args
-            val objArg = args[0] as Arg.CircleAndPointIndices
-            val targetCircleIndices = objArg.circleIndices
-            val targetPointsIndices = objArg.pointIndices
-            val (divergencePointIndex, convergencePointIndex) = args.drop(1).take(2)
-                .map { when (val arg = it as Arg.Point) {
-                    is Arg.Point.Index -> arg.index
-                    is Arg.Point.XY -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
-                } }
-            val targetIndices = targetCircleIndices + targetPointsIndices
-            val adjustables = mutableListOf<AdjustableExpr>()
-            val params0 = defaultLoxodromicMotionParameters.params
-            val oldSize = objects.size
-            var outputIndex = oldSize
             val source2trajectory = targetIndices.map { targetIndex ->
                 val expr = Expr.LoxodromicMotion(params0, divergencePointIndex, convergencePointIndex, targetIndex)
                 val result = expressions
@@ -3321,28 +3300,31 @@ class EditClusterViewModel : ViewModel() {
             }
             val newObjects = source2trajectory.flatMap { it.second }
             addObjects(newObjects) // row-column order
-            copySourceColorsOntoTrajectories(source2trajectory, oldSize)
+            copySourceColorsOntoTrajectories(source2trajectory, startIndex = oldSize)
             val regions = copySourceRegionsOntoTrajectories(
-                source2trajectory, oldSize,
+                source2trajectory,
+                startIndex = oldSize,
                 flipRegionsInAndOut = false
             )
             submode = SubMode.ExprAdjustment(adjustables, regions)
         }
     }
 
-    fun updateLoxodromicBidirectionality(forwardAndBackward: Boolean) {
+    fun updateLoxodromicBidirectionality(bidirectional: Boolean) {
         val sm = submode
         if (sm is SubMode.ExprAdjustment) {
             when (sm.parameters) {
                 is LoxodromicMotionParameters -> {
-                    if (forwardAndBackward) {
-                        // cr x2 adjustables
-                    } else {
-                        // cr x1 adjustables
-                    }
                     defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters.copy(
-                        forwardAndBackward = forwardAndBackward,
+                        bidirectional = bidirectional,
                     )
+                    regions.removeAtIndices(sm.regions)
+                    deleteObjectsWithDependenciesColorsAndRegions(
+                        indicesToDelete = sm.adjustables.flatMap { it.outputIndices },
+                        triggerRecording = false,
+                        circleAnimationInit = { null },
+                    )
+                    setupLoxodromicSpiral(bidirectional)
                 }
                 else -> {}
             }
@@ -3674,7 +3656,7 @@ class EditClusterViewModel : ViewModel() {
             defaultInterpolationParameters = defaultInterpolationParameters,
             defaultRotationParameters = defaultRotationParameters,
             defaultBiInversionParameters = defaultBiInversionParameters,
-            defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters
+            defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters,
         )
 
     // NOTE: i never seen this proc on Android or Wasm tbh

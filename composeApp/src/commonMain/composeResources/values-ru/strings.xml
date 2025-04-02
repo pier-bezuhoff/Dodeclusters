@@ -171,6 +171,9 @@
     <string name="in_between_disabled_description">Снаружи</string>
     <string name="reverse_direction_name">Обратить направление</string>
     <string name="reverse_direction_description">Обратить направление</string>
+    <string name="bidirectional_spiral_name">Двусторонняя</string>
+    <string name="bidirectional_spiral_description">Сделать одно-направленной</string>
+    <string name="bidirectional_spiral_disabled_description">Сделать дву-направленной</string>
     <string name="steps_slider_name">N шагов</string>
 
     <!-- categories -->

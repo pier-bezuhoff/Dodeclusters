@@ -17,6 +17,10 @@ import dodeclusters.composeapp.generated.resources.arc_path_name
 import dodeclusters.composeapp.generated.resources.bi_inversion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.bi_inversion_description
 import dodeclusters.composeapp.generated.resources.bi_inversion_name
+import dodeclusters.composeapp.generated.resources.bidirectional_spiral
+import dodeclusters.composeapp.generated.resources.bidirectional_spiral_description
+import dodeclusters.composeapp.generated.resources.bidirectional_spiral_disabled_description
+import dodeclusters.composeapp.generated.resources.bidirectional_spiral_name
 import dodeclusters.composeapp.generated.resources.change_background_description
 import dodeclusters.composeapp.generated.resources.change_background_name
 import dodeclusters.composeapp.generated.resources.chessboard
@@ -563,7 +567,7 @@ sealed class EditClusterTool(
         Res.drawable.road
     ), Tool.BinaryToggle {
         override val disabledIcon = Res.drawable.road
-        override val disabledDescription= Res.string.in_between_disabled_description
+        override val disabledDescription = Res.string.in_between_disabled_description
     }
     data object ReverseDirection: ContextAction(
         Res.string.reverse_direction_name,
@@ -571,8 +575,10 @@ sealed class EditClusterTool(
         Res.drawable.right_left
     )
     data object BidirectionalSpiral: ContextAction(
-        Res.string.stub,
-        Res.string.stub,
-        Res.drawable.spiral
-    )
+        Res.string.bidirectional_spiral_name,
+        Res.string.bidirectional_spiral_description,
+        Res.drawable.bidirectional_spiral
+    ) {
+        val disabledDescription = Res.string.bidirectional_spiral_disabled_description
+    }
 }

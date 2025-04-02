@@ -650,19 +650,20 @@ fun LoxodromicMotionInterface(
 ) {
     // equivalent to swapping the order of engines
     var reverseDirection by remember { mutableStateOf(false) }
-    var forwardAndBackward by remember(defaults) { mutableStateOf(defaults.forwardAndBackward) }
+    // we maintain state here cuz VM.defaults isn't state...
+    var bidirectional by remember { mutableStateOf(defaults.bidirectional) }
     val angleSliderState = remember { SliderState(
         value = defaults.anglePerStep,
-        valueRange = defaults.angleRange
+        valueRange = defaults.angleRange,
     ) }
     val dilationSliderState = remember { SliderState(
         value = defaults.dilationPerStep.toFloat(),
-        valueRange = defaults.dilationRange
+        valueRange = defaults.dilationRange,
     ) }
     val stepsSliderState = remember { SliderState(
         value = defaults.nTotalSteps.toFloat(),
         steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
-        valueRange = defaults.stepsRange
+        valueRange = defaults.stepsRange,
     ) }
     val params = LoxodromicMotionParameters.fromDifferential(
         anglePerStep = (if (reverseDirection) -1 else +1) * angleSliderState.value,
@@ -709,18 +710,23 @@ fun LoxodromicMotionInterface(
                 colors = sliderColors,
             )
             Box(midUnderVerticalSliderModifier) {
-                WithTooltip(stringResource(EditClusterTool.BidirectionalSpiral.description)) {
+                WithTooltip(
+                    if (bidirectional)
+                        stringResource(EditClusterTool.BidirectionalSpiral.description)
+                    else
+                        stringResource(EditClusterTool.BidirectionalSpiral.disabledDescription)
+                ) {
                     OnOffButton(
                         painterResource(EditClusterTool.BidirectionalSpiral.icon),
                         stringResource(EditClusterTool.BidirectionalSpiral.name),
-                        isOn = forwardAndBackward,
+                        isOn = bidirectional,
                         contentColor = MaterialTheme.colorScheme.secondary,
                         checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                         containerColor = buttonBackground,
                         checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                     ) {
-                        forwardAndBackward = !forwardAndBackward
-                        updateBidirectionality(forwardAndBackward)
+                        bidirectional = !bidirectional
+                        updateBidirectionality(bidirectional)
                     }
                 }
             }
