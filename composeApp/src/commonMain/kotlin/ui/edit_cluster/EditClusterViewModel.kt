@@ -3622,6 +3622,7 @@ class EditClusterViewModel : ViewModel() {
         defaultRotationParameters = settings.defaultRotationParameters
         defaultBiInversionParameters = settings.defaultBiInversionParameters
         defaultLoxodromicMotionParameters = settings.defaultLoxodromicMotionParameters
+        toolbarState = toolbarState.copy(categoryDefaultIndices = settings.categoryDefaultIndices)
     }
 
     private fun restoreFromState(state: State) {
@@ -3659,6 +3660,7 @@ class EditClusterViewModel : ViewModel() {
             defaultRotationParameters = defaultRotationParameters,
             defaultBiInversionParameters = defaultBiInversionParameters,
             defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters,
+            categoryDefaultIndices = toolbarState.categoryDefaultIndices,
         )
 
     // NOTE: i never seen this proc on Android or Wasm tbh

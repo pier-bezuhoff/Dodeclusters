@@ -26,7 +26,6 @@ data class CategorySetup(
 @Immutable
 data class ToolbarState(
     val categorySetup: CategorySetup = CategorySetup(),
-    // TODO: this int list is to be persisted/preserved
     val categoryDefaultIndices: List<Int?> =
         categorySetup.categories.map { category ->
             category.default?.let { defaultTool ->

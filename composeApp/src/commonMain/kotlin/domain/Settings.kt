@@ -3,6 +3,7 @@ package domain
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import ui.edit_cluster.ToolbarState
 import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
@@ -30,6 +31,7 @@ data class Settings(
     val defaultRotationParameters: DefaultRotationParameters = DefaultRotationParameters(),
     val defaultBiInversionParameters: DefaultBiInversionParameters = DefaultBiInversionParameters(),
     val defaultLoxodromicMotionParameters: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
+    val categoryDefaultIndices: List<Int?> = ToolbarState().categoryDefaultIndices,
 ) {
     companion object {
         val JSON_FORMAT = Json {
