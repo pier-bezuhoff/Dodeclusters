@@ -370,7 +370,7 @@ fun InterpolationInterface(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
         ) {
             if (interpolateCircles) {
-                Box(topRightUnderScaleModifier) {
+                Box(rightUnderVerticalSliderModifier) {
                     WithTooltip(
                         if (interpolateInBetween)
                             stringResource(EditClusterTool.InBetween.description)
@@ -487,7 +487,7 @@ fun RotationInterface(
             )
             ReverseDirectionToggle(
                 isOn = rotateClockwise,
-                positionModifier = topRightUnderScaleModifier,
+                positionModifier = rightUnderVerticalSliderModifier,
                 containerColor = buttonBackground,
             ) {
                 rotateClockwise = !rotateClockwise
@@ -593,7 +593,7 @@ fun BiInversionInterface(
             )
             ReverseDirectionToggle(
                 isOn = negateSpeed,
-                positionModifier = topRightUnderScaleModifier,
+                positionModifier = rightUnderVerticalSliderModifier,
                 containerColor = buttonBackground,
             ) {
                 negateSpeed = !negateSpeed
@@ -644,11 +644,13 @@ fun LoxodromicMotionInterface(
     concretePositions: ConcreteOnScreenPositions,
     defaults: DefaultLoxodromicMotionParameters,
     updateParameters: (LoxodromicMotionParameters) -> Unit,
+    updateBidirectionality: (forwardAndBackward: Boolean) -> Unit,
     openDetailsDialog: () -> Unit,
     confirmParameters: () -> Unit,
 ) {
     // equivalent to swapping the order of engines
     var reverseDirection by remember { mutableStateOf(false) }
+    var forwardAndBackward by remember(defaults) { mutableStateOf(defaults.forwardAndBackward) }
     val angleSliderState = remember { SliderState(
         value = defaults.anglePerStep,
         valueRange = defaults.angleRange
@@ -706,9 +708,25 @@ fun LoxodromicMotionInterface(
                 ,
                 colors = sliderColors,
             )
+            Box(midUnderVerticalSliderModifier) {
+                WithTooltip(stringResource(EditClusterTool.BidirectionalSpiral.description)) {
+                    OnOffButton(
+                        painterResource(EditClusterTool.BidirectionalSpiral.icon),
+                        stringResource(EditClusterTool.BidirectionalSpiral.name),
+                        isOn = forwardAndBackward,
+                        contentColor = MaterialTheme.colorScheme.secondary,
+                        checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        containerColor = buttonBackground,
+                        checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ) {
+                        forwardAndBackward = !forwardAndBackward
+                        updateBidirectionality(forwardAndBackward)
+                    }
+                }
+            }
             ReverseDirectionToggle(
                 isOn = reverseDirection,
-                positionModifier = topRightUnderScaleModifier,
+                positionModifier = rightUnderVerticalSliderModifier,
                 containerColor = buttonBackground,
             ) {
                 reverseDirection = !reverseDirection

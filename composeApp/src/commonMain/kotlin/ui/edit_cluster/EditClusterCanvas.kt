@@ -267,6 +267,7 @@ fun BoxScope.EditClusterCanvas(
                             concretePositions = concretePositions,
                             defaults = viewModel.defaultLoxodromicMotionParameters,
                             updateParameters = viewModel::updateParameters,
+                            updateBidirectionality = viewModel::updateLoxodromicBidirectionality,
                             openDetailsDialog = viewModel::openDetailsDialog,
                             confirmParameters = viewModel::confirmAdjustedParameters,
                         )
@@ -1142,12 +1143,12 @@ data class OnScreenPositions(
     val verticalSliderPadding = height * RELATIVE_VERTICAL_SLIDER_PADDING
     val verticalSliderSpan = height * RELATIVE_VERTICAL_SLIDER_HEIGHT
     val verticalSliderBottom = top + height * RELATIVE_VERTICAL_SLIDER_HEIGHT
-    val topUnderScaleSlider = verticalSliderBottom + height * RELATIVE_VERTICAL_SLIDER_BOTTOM_INDENT
+    val underVerticalSlider = verticalSliderBottom + height * RELATIVE_VERTICAL_SLIDER_BOTTOM_INDENT
     val bottom = height * (1 - RELATIVE_VERTICAL_MARGIN)
-    val halfHigherThanBottom = (topUnderScaleSlider + bottom)/2f
+    val halfHigherThanBottom = (underVerticalSlider + bottom)/2f
 
     val right = width * (1 - RELATIVE_RIGHT_MARGIN)
-    val left = right - (bottom - topUnderScaleSlider)
+    val left = right - (bottom - underVerticalSlider)
     val mid = (right + left)/2
 
     val horizontalSliderStart = width - min(width, height) * RELATIVE_HORIZONTAL_SLIDER_SPAN
@@ -1209,7 +1210,8 @@ data class ConcreteOnScreenPositions(
     }
 
     val topRightModifier = offsetModifier(positions.right, positions.top)
-    val topRightUnderScaleModifier = offsetModifier(positions.right, positions.topUnderScaleSlider)
+    val rightUnderVerticalSliderModifier = offsetModifier(positions.right, positions.underVerticalSlider)
+    val midUnderVerticalSliderModifier = offsetModifier(positions.mid, positions.underVerticalSlider)
     val halfBottomRightModifier = offsetModifier(positions.right, positions.halfHigherThanBottom)
     val bottomRightModifier = offsetModifier(positions.right, positions.bottom)
     val horizontalSliderModifier =

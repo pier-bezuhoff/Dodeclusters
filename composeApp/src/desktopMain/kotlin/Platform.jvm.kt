@@ -20,10 +20,16 @@ object JVMPlatform: Platform {
     override val maxCircleRadius: Float = 1e5f
     private val dataDir: Path by lazy { getAppDataDir() }
     override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
-        storeOf(file = Path(dataDir, Platform.LAST_STATE_STORE_FILE_NAME + ".json"))
+        storeOf(
+            file = Path(dataDir, Platform.LAST_STATE_STORE_FILE_NAME + ".json"),
+            json = EditClusterViewModel.State.SERIALIZATION_FORMAT,
+        )
     }
     override val settingsStore: KStore<Settings> by lazy {
-        storeOf(file = Path(dataDir, Platform.SETTINGS_STORE_FILE_NAME + ".json"))
+        storeOf(
+            file = Path(dataDir, Platform.SETTINGS_STORE_FILE_NAME + ".json"),
+            json = Settings.SERIALIZATION_FORMAT,
+        )
     }
 
     // reference: https://stackoverflow.com/a/75734381/7143065

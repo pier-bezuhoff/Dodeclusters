@@ -61,6 +61,8 @@ import kotlin.math.roundToInt
  * @param[anglePerStep] rotational angular speed per step, in degrees
  * @param[dilationPerStep] hyperbolic speed in `ln(r2/r1)` per step
  * @param[nTotalSteps] total number of loxodromic steps
+ * @param[forwardAndBackward] construct both divergence->convergence and
+ * convergence->divergence spirals, [nTotalSteps] each
  */
 @Immutable
 data class DefaultLoxodromicMotionParameters(
@@ -73,7 +75,7 @@ data class DefaultLoxodromicMotionParameters(
     val maxDilation: Double = 1.0,
     val minNSteps: Int = 1,
     val maxNSteps: Int = 50,
-    // forwardAndBackward: Boolean = false,
+    val forwardAndBackward: Boolean = false,
 ) {
     val params: LoxodromicMotionParameters = LoxodromicMotionParameters.fromDifferential(
         anglePerStep, dilationPerStep, nTotalSteps

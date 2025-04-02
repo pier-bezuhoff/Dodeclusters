@@ -14,15 +14,21 @@ object WasmPlatform: Platform {
     override val kind: PlatformKind = PlatformKind.WEB
     override val fileSeparator: Char =
         if (underlyingPlatform == UnderlyingPlatform.WINDOWS)
-            '\\'
+            '\\' // iirc Windows generally supports forward slash nowadays
         else '/'
     override val tapRadius: Float = 10f
     override val maxCircleRadius: Float = 1e5f
     override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
-        storeOf(key = Platform.LAST_STATE_STORE_FILE_NAME)
+        storeOf(
+            key = Platform.LAST_STATE_STORE_FILE_NAME,
+            format = EditClusterViewModel.State.SERIALIZATION_FORMAT,
+        )
     }
     override val settingsStore: KStore<Settings> by lazy {
-        storeOf(key = Platform.SETTINGS_STORE_FILE_NAME)
+        storeOf(
+            key = Platform.SETTINGS_STORE_FILE_NAME,
+            format = Settings.SERIALIZATION_FORMAT,
+        )
     }
 
     @OptIn(DelicateCoroutinesApi::class)

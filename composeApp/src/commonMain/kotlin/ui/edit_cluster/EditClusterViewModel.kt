@@ -99,6 +99,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import ui.edit_cluster.dialogs.ColorPickerParameters
 import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultExtrapolationParameters
@@ -3238,6 +3239,28 @@ class EditClusterViewModel : ViewModel() {
         submode = SubMode.ExprAdjustment(adjustables, regions)
     }
 
+    private fun setupLoxodromicSpiral() {
+    }
+
+    fun updateLoxodromicBidirectionality(forwardAndBackward: Boolean) {
+        val sm = submode
+        if (sm is SubMode.ExprAdjustment) {
+            when (sm.parameters) {
+                is LoxodromicMotionParameters -> {
+                    if (forwardAndBackward) {
+                        // cr x2 adjustables
+                    } else {
+                        // cr x1 adjustables
+                    }
+                    defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters.copy(
+                        forwardAndBackward = forwardAndBackward,
+                    )
+                }
+                else -> {}
+            }
+        }
+    }
+
     fun completeArcPath() {
         require(partialArcPath != null) { "Cannot complete non-existent arc path during completeArcPath()" }
         partialArcPath?.let { pArcPath ->
@@ -3413,6 +3436,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.AdjustExpr -> adjustExpr()
             EditClusterTool.InBetween -> {} // unused, potentially updateParams(...)
             EditClusterTool.ReverseDirection -> {}
+            EditClusterTool.BidirectionalSpiral -> {}
         }
     }
 
@@ -3579,7 +3603,14 @@ class EditClusterViewModel : ViewModel() {
         val regionColor: ColorAsCss? = null,
         val chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
         val chessboardColor: ColorAsCss? = null,
-    )
+    ) {
+        companion object {
+            val SERIALIZATION_FORMAT = Json {
+                ignoreUnknownKeys = true
+                encodeDefaults = true
+            }
+        }
+    }
 
     companion object {
         // reference: https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-factories
@@ -3603,7 +3634,7 @@ class EditClusterViewModel : ViewModel() {
         const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
-        const val ENABLE_TANGENT_SNAPPING = true
+        const val ENABLE_TANGENT_SNAPPING = false
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false

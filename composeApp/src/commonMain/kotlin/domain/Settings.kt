@@ -2,6 +2,7 @@ package domain
 
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 @Immutable
 @Serializable
@@ -18,4 +19,11 @@ data class Settings(
     val regionsBlendModeType: BlendModeType = BlendModeType.SRC_OVER,
     // default tools for categories
     val savedColors: List<ColorAsCss> = emptyList(),
-)
+) {
+    companion object {
+        val SERIALIZATION_FORMAT = Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
+    }
+}

@@ -570,4 +570,9 @@ sealed class EditClusterTool(
         Res.string.reverse_direction_description,
         Res.drawable.right_left
     )
+    data object BidirectionalSpiral: ContextAction(
+        Res.string.stub,
+        Res.string.stub,
+        Res.drawable.spiral
+    )
 }
