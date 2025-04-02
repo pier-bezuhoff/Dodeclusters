@@ -1682,6 +1682,7 @@ class EditClusterViewModel : ViewModel() {
                 defaultBiInversionParameters = DefaultBiInversionParameters(params)
             is LoxodromicMotionParameters ->
                 defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params)
+                    .copy(bidirectional = defaultLoxodromicMotionParameters.bidirectional)
             else -> {}
         }
         if (tool != null && expr != null) {
@@ -2856,6 +2857,7 @@ class EditClusterViewModel : ViewModel() {
                         defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
                     is LoxodromicMotionParameters ->
                         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters)
+                            .copy(bidirectional = defaultLoxodromicMotionParameters.bidirectional)
                     else -> {}
                 }
             }
