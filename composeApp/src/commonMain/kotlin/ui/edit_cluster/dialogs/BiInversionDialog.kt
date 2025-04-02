@@ -38,6 +38,8 @@ import domain.degrees
 import domain.expressions.BiInversionParameters
 import domain.radians
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import ui.CancelOkRow
 import ui.DialogTitle
 import ui.FloatTextField
@@ -48,6 +50,7 @@ import ui.isCompact
 import kotlin.math.roundToInt
 
 @Immutable
+@Serializable
 data class DefaultBiInversionParameters(
     val speed: Double = 1.0,
     val nSteps: Int = 5,
@@ -59,9 +62,13 @@ data class DefaultBiInversionParameters(
     val minNSteps: Int = 1,
     val maxNSteps: Int = 50,
 ) {
+    @Transient
     val speedRange = minSpeed .. maxSpeed
+    @Transient
     val stepsRange = minNSteps.toFloat() .. maxNSteps.toFloat()
+    @Transient
     val angleRange = minAngle .. maxAngle
+    @Transient
     val params = BiInversionParameters(
         speed = speed,
         nSteps = nSteps,

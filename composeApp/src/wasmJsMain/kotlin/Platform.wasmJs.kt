@@ -21,13 +21,13 @@ object WasmPlatform: Platform {
     override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
         storeOf(
             key = Platform.LAST_STATE_STORE_FILE_NAME,
-            format = EditClusterViewModel.State.SERIALIZATION_FORMAT,
+            format = EditClusterViewModel.State.JSON_FORMAT,
         )
     }
     override val settingsStore: KStore<Settings> by lazy {
         storeOf(
             key = Platform.SETTINGS_STORE_FILE_NAME,
-            format = Settings.SERIALIZATION_FORMAT,
+            format = Settings.JSON_FORMAT,
         )
     }
 

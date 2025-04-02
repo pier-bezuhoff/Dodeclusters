@@ -3,7 +3,14 @@ package domain
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import ui.edit_cluster.dialogs.DefaultBiInversionParameters
+import ui.edit_cluster.dialogs.DefaultInterpolationParameters
+import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
+import ui.edit_cluster.dialogs.DefaultRotationParameters
 
+/**
+ * [savedColors] user-defined & saved in the color picker as part of [ColorPickerParameters]
+ */
 @Immutable
 @Serializable
 data class Settings(
@@ -19,9 +26,13 @@ data class Settings(
     val regionsBlendModeType: BlendModeType = BlendModeType.SRC_OVER,
     // default tools for categories
     val savedColors: List<ColorAsCss> = emptyList(),
+    val defaultInterpolationParameters: DefaultInterpolationParameters = DefaultInterpolationParameters(),
+    val defaultRotationParameters: DefaultRotationParameters = DefaultRotationParameters(),
+    val defaultBiInversionParameters: DefaultBiInversionParameters = DefaultBiInversionParameters(),
+    val defaultLoxodromicMotionParameters: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
 ) {
     companion object {
-        val SERIALIZATION_FORMAT = Json {
+        val JSON_FORMAT = Json {
             ignoreUnknownKeys = true
             encodeDefaults = true
         }

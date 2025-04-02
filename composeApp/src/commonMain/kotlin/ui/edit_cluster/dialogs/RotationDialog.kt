@@ -32,6 +32,8 @@ import dodeclusters.composeapp.generated.resources.rotation_angle_prompt
 import dodeclusters.composeapp.generated.resources.rotation_title
 import domain.expressions.RotationParameters
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import ui.CancelOkRow
 import ui.DialogTitle
 import ui.FloatTextField
@@ -46,6 +48,7 @@ import kotlin.math.roundToInt
  * @param[angleDiscretization] angle step = 5 degrees
  */
 @Immutable
+@Serializable
 data class DefaultRotationParameters(
     val angle: Float = 30f,
     val nSteps: Int = 1,
@@ -55,9 +58,13 @@ data class DefaultRotationParameters(
     val minNSteps: Int = 1,
     val maxNSteps: Int = 50,
 ) {
+    @Transient
     val angleRange = minAngle..maxAngle
+    @Transient
     val nAngleDiscretizationSteps: Int = ceil((maxAngle - minAngle)/angleDiscretization).toInt()
+    @Transient
     val stepsRange = minNSteps.toFloat()..maxNSteps.toFloat()
+    @Transient
     val params = RotationParameters(
         angle = angle,
         nSteps = nSteps,

@@ -22,13 +22,13 @@ object JVMPlatform: Platform {
     override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
         storeOf(
             file = Path(dataDir, Platform.LAST_STATE_STORE_FILE_NAME + ".json"),
-            json = EditClusterViewModel.State.SERIALIZATION_FORMAT,
+            json = EditClusterViewModel.State.JSON_FORMAT,
         )
     }
     override val settingsStore: KStore<Settings> by lazy {
         storeOf(
             file = Path(dataDir, Platform.SETTINGS_STORE_FILE_NAME + ".json"),
-            json = Settings.SERIALIZATION_FORMAT,
+            json = Settings.JSON_FORMAT,
         )
     }
 

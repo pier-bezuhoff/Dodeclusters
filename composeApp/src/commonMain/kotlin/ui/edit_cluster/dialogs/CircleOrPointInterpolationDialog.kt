@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -46,25 +45,28 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.circle_interpolation_title
 import domain.expressions.InterpolationParameters
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
 import ui.IntTextField
-import ui.LabelColonBigValue
 import ui.PreTextFieldLabel
 import ui.hideSystemBars
 import ui.isCompact
 import kotlin.math.roundToInt
 
 @Immutable
+@Serializable
 data class DefaultInterpolationParameters(
     val nInterjacents: Int = 1,
     val inBetween: Boolean = true,
     val minCircleCount: Int = 1,
     val maxCircleCount: Int = 20
 ) {
+    @Transient
     val nInterjacentsRange = minCircleCount.toFloat() .. maxCircleCount.toFloat()
-
+    @Transient
     val params = InterpolationParameters(nInterjacents, inBetween)
 
     constructor(parameters: InterpolationParameters) : this(

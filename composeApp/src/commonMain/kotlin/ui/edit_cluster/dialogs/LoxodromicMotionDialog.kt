@@ -44,6 +44,8 @@ import dodeclusters.composeapp.generated.resources.n_steps_placeholder
 import dodeclusters.composeapp.generated.resources.n_steps_prompt
 import domain.expressions.LoxodromicMotionParameters
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
@@ -65,6 +67,7 @@ import kotlin.math.roundToInt
  * convergence->divergence spirals, [nTotalSteps] each
  */
 @Immutable
+@Serializable
 data class DefaultLoxodromicMotionParameters(
     val anglePerStep: Float = 15f,
     val dilationPerStep: Double = 0.1,
@@ -77,11 +80,15 @@ data class DefaultLoxodromicMotionParameters(
     val maxNSteps: Int = 50,
     val forwardAndBackward: Boolean = false,
 ) {
+    @Transient
     val params: LoxodromicMotionParameters = LoxodromicMotionParameters.fromDifferential(
         anglePerStep, dilationPerStep, nTotalSteps
     )
+    @Transient
     val angleRange = minAngle .. maxAngle
+    @Transient
     val dilationRange = minDilation.toFloat() .. maxDilation.toFloat()
+    @Transient
     val stepsRange = minNSteps.toFloat() .. maxNSteps.toFloat()
 
     constructor(parameters: LoxodromicMotionParameters) : this(
