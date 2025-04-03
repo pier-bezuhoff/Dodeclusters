@@ -91,10 +91,11 @@ data class DefaultLoxodromicMotionParameters(
     @Transient
     val stepsRange = minNSteps.toFloat() .. maxNSteps.toFloat()
 
-    constructor(parameters: LoxodromicMotionParameters) : this(
+    constructor(parameters: LoxodromicMotionParameters, bidirectional: Boolean) : this(
         anglePerStep = parameters.anglePerStep,
         dilationPerStep = parameters.dilationPerStep,
         nTotalSteps = parameters.nTotalSteps,
+        bidirectional = bidirectional,
     )
 }
 

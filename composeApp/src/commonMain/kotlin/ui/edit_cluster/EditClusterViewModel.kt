@@ -1681,8 +1681,10 @@ class EditClusterViewModel : ViewModel() {
             is BiInversionParameters ->
                 defaultBiInversionParameters = DefaultBiInversionParameters(params)
             is LoxodromicMotionParameters ->
-                defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params)
-                    .copy(bidirectional = defaultLoxodromicMotionParameters.bidirectional)
+                defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params, bidirectional = false)
+            // NOTE: we disable bidirectional when coming from existing spiral,
+            //  because spiral branches are desync and can only be adjusted separately
+            //  otherwise you'd need to delete existing desync branch to avoid duplication
             else -> {}
         }
         if (tool != null && expr != null) {
@@ -2835,8 +2837,9 @@ class EditClusterViewModel : ViewModel() {
                 is BiInversionParameters ->
                     defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
                 is LoxodromicMotionParameters ->
-                    defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters)
-                        .copy(bidirectional = defaultLoxodromicMotionParameters.bidirectional)
+                    defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters,
+                        bidirectional = defaultLoxodromicMotionParameters.bidirectional
+                    )
                 else -> {}
             }
         }
@@ -2856,8 +2859,9 @@ class EditClusterViewModel : ViewModel() {
                     is BiInversionParameters ->
                         defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
                     is LoxodromicMotionParameters ->
-                        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters)
-                            .copy(bidirectional = defaultLoxodromicMotionParameters.bidirectional)
+                        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters,
+                            bidirectional = defaultLoxodromicMotionParameters.bidirectional
+                        )
                     else -> {}
                 }
             }
