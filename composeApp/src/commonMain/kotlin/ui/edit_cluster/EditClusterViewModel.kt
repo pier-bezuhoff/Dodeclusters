@@ -3244,6 +3244,12 @@ class EditClusterViewModel : ViewModel() {
                 is Arg.Point.Index -> arg.index
                 is Arg.Point.XY -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
             } }
+        partialArgList = argList.copy(
+            // we dont want to spam create the same Point.XY each time
+            args = listOf(
+                objArg, Arg.Point.Index(divergencePointIndex), Arg.Point.Index(convergencePointIndex)
+            ),
+        )
         val targetIndices = targetCircleIndices + targetPointsIndices
         val adjustables = mutableListOf<AdjustableExpr>()
         val params0 = defaultLoxodromicMotionParameters.params
