@@ -38,7 +38,7 @@ jobs:
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
-          name: Browser distribution
+          name: Dodeclusters-web
           path: './composeApp/build/dist/wasmJs/productionExecutable/'
       - name: Deploy to Github Pages
         uses: JamesIves/github-pages-deploy-action@v4
@@ -78,7 +78,7 @@ jobs:
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
-          name: "Folder with dependencies and EXE launcher for Windows"
+          name: Dodeclusters-windows-standalone
           path: 'composeApp/build/compose/binaries/main-release/app'
 
   build-appimage:
@@ -106,7 +106,7 @@ jobs:
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
-          name: "AppImage AppDir"
+          name: Dodeclusters-linux-standalone
           path: 'composeApp/build/compose/binaries/main-release/app'
 
   build-deb:
@@ -134,7 +134,7 @@ jobs:
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
-          name: "deb package"
+          name: Dodeclusters-deb
           path: 'composeApp/build/compose/binaries/main-release/deb'
 
   build-android:
@@ -162,6 +162,6 @@ jobs:
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
-          name: "Android debug apk"
-          path: 'composeApp/build/outputs/apk/debug'
+          name: Dodeclusters-android-debug
+          path: 'composeApp/build/outputs/apk/debug/composeApp-debug.apk'
 
