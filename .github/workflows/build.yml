@@ -79,7 +79,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Dodeclusters-windows-standalone
-          path: 'composeApp/build/compose/binaries/main-release/app'
+          path: 'composeApp/build/compose/binaries/main-release/app/com.pierbezuhoff.dodeclusters'
 
   build-appimage:
     name: "Build AppImage for Linux Desktop (WIP)"
@@ -107,7 +107,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Dodeclusters-linux-standalone
-          path: 'composeApp/build/compose/binaries/main-release/app'
+          path: 'composeApp/build/compose/binaries/main-release/app/com.pierbezuhoff.dodeclusters'
 
   build-deb:
     name: "Build deb for Ubuntu & Debian-based systems"
@@ -163,5 +163,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Dodeclusters-android-debug
-          path: 'composeApp/build/outputs/apk/debug/composeApp-debug.apk'
+          path: 'composeApp/build/outputs/apk/debug'
 
