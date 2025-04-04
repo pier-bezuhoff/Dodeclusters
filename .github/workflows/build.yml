@@ -134,7 +134,7 @@ jobs:
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
-          name: Dodeclusters-deb
+          name: Dodeclusters-linux-deb
           path: 'composeApp/build/compose/binaries/main-release/deb'
 
   build-android:

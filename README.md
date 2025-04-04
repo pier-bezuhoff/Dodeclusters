@@ -37,22 +37,22 @@ and specific type of animations ~ [Möbius transformations](https://en.wikipedia
 
 ## Installation
 [Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch.  
-Executables for Linux, Window and Android can be found in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/) or [on Google Drive](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=sharing).
+Executables for Linux, Window and Android can be found in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) or [on Google Drive](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=sharing).
 
 ### Windows
-1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/tag/v0.3.0) go to `assets` and download `windows.zip`
+1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) go to `assets` and download `windows.zip`
 2. Unarchive it
 3. In folder `com.pierbezuhoff.dodeclusters` find file `com.pierbezuhoff.dodeclusters.exe`
 4. Run it! That's it~ (it is bundled with JVM)
 
 ### Linux
-1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/) go to `assets` and download `linux.zip`
+1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) go to `assets` and download `linux.zip`
 2. Unarchive it
 3. Go into folder `com.pierbezuhoff.dodeclusters/bin`, you'll find executable file `com.pierbezuhoff.dodeclusters`
 4. `chmod +x` it and you can run it as `./com.pierbezuhoff.dodeclusters` (bundled with JVM)
 
 ### Android
-You can find the apk in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/).
+You can find the apk in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest).
 
 > [!NOTE]
 > Bundled binaries are likely behind web version
@@ -70,6 +70,7 @@ You can find the apk in the assets [attached to the latest release](https://gith
 - `R`: go to **R**egions mode
 - `T`: open **T**ransform tools
 - `C`: open **C**reate tools
+- `Enter`: confirm & conclude current action
 
 
 ## Build and run via Gradle
