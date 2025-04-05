@@ -104,14 +104,18 @@ fun BoxScope.EditClusterCanvas(
     // MAYBE: im supposed to remember { } all of these things (thatd be insane)
     val strokeWidth = with (LocalDensity.current) { 2.dp.toPx() }
     val circleStroke = Stroke(
-        width = strokeWidth
+        width = strokeWidth,
     )
     val circleThiccStroke = Stroke(
-        width = 2 * strokeWidth
+        width = 2 * strokeWidth,
     )
     val dottedStroke = remember { Stroke(
         width = strokeWidth,
-        pathEffect = dottedPathEffect
+        pathEffect = dottedPathEffect,
+    ) }
+    val thiccDottedStroke = remember { Stroke(
+        width = 2 * strokeWidth,
+        pathEffect = dottedPathEffect,
     ) }
     // handles stuff
     val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
@@ -193,7 +197,7 @@ fun BoxScope.EditClusterCanvas(
                 if (viewModel.showCircles) {
                     val selectionIsActive = viewModel.showCircles && viewModel.mode.isSelectingCircles() && viewModel.selection.isNotEmpty()
                     drawObjects(objects = viewModel.objects, hiddenObjectIndices = hiddenObjectIndices, objectColors = viewModel.objectColors, selection = viewModel.selection, selectionIsActive = selectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
-                    drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, selectionIsActive = selectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius)
+                    drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, selectionIsActive = selectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleThiccStroke = thiccDottedStroke)
                 }
                 drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getPointArg = { viewModel.getArg(it) }, getCircleOrPointArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke)
                 drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
@@ -209,7 +213,13 @@ fun BoxScope.EditClusterCanvas(
                 concretePositions = concretePositions,
                 scaleSliderPercentage = viewModel.scaleSliderPercentage,
                 rotationHandleAngle = viewModel.rotationHandleAngle,
-                objectColor = viewModel.getMostCommonCircleColorInSelection(),
+                objectColor =
+                    viewModel.getMostCommonCircleColorInSelection()
+                        ?: if (viewModel.selection.all { viewModel.objects[it] is ImaginaryCircle })
+                            imaginaryCircleColor
+                        else
+                            freeCircleColor
+                ,
                 showAdjustExprButton = viewModel.showAdjustExprButton(),
                 showOrientationToggle = viewModel.showDirectionArrows,
                 isLocked = viewModel.selectionIsLocked,
@@ -288,7 +298,7 @@ fun BoxScope.EditClusterCanvas(
 /**
  * Used to make a screenshot of the current state of [viewModel].
  * Recreates the content of [EditClusterCanvas] on screen, saving operations into a
- * graphics layer, and then queues async graphics-layer-to-bitmap conversion with.
+ * graphics layer, and then queues async graphics-layer-to-bitmap conversion with
  * result to be emitted into [bitmapFlow].
  *
  * NOTE: It is blocking and rather slow. Also idk why but the async _always_ happens on
@@ -305,7 +315,11 @@ fun ScreenshotableCanvas(
     val circleThiccStroke = Stroke(width = 2 * strokeWidth)
     val dottedStroke = remember { Stroke(
         width = strokeWidth,
-        pathEffect = dottedPathEffect
+        pathEffect = dottedPathEffect,
+    ) }
+    val thiccDottedStroke = remember { Stroke(
+        width = 2 * strokeWidth,
+        pathEffect = dottedPathEffect,
     ) }
     val pointRadius = 2.5f * strokeWidth
     val circleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
@@ -351,15 +365,13 @@ fun ScreenshotableCanvas(
                     if (viewModel.showCircles) {
                         val selectionIsActive = viewModel.showCircles && viewModel.mode.isSelectingCircles() && viewModel.selection.isNotEmpty()
                         drawObjects(objects = viewModel.objects, hiddenObjectIndices = hiddenObjectIndices, objectColors = viewModel.objectColors, selection = viewModel.selection, selectionIsActive = selectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
-                        drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, selectionIsActive = selectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius)
+                        drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, selectionIsActive = selectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleThiccStroke = thiccDottedStroke)
                     }
                 }
             }
         }
         LaunchedEffect(viewModel, bitmapFlow) {
-//            println("started {graphics layer -> bitmap} conversion")
             val bitmap = graphicsLayer.toImageBitmap()
-//            println("completed {graphics layer -> bitmap} conversion")
             bitmapFlow.emit(bitmap)
         }
     }
@@ -644,25 +656,26 @@ private inline fun DrawScope.drawObjects(
     val showImaginaryCircles = EditClusterViewModel.SHOW_IMAGINARY_CIRCLES
     for (ix in objects.indices) {
         if (ix !in hiddenObjectIndices && (!selectionIsActive || ix !in selection)) {
+            val objectColor = objectColors[ix]
             when (val o = objects[ix]) {
                 is CircleOrLine -> {
                     val color =
-                        objectColors[ix] ?:
-                        if (isObjectFree(ix)) freeCircleColor else circleColor
+                        objectColor ?: if (isObjectFree(ix)) freeCircleColor else circleColor
                     drawCircleOrLine(o, visibleRect, color,
                         style = circleStroke,
                     )
                 }
                 is Point -> {
                     val color =
-                        if (isObjectFree(ix)) freePointColor else pointColor
+                        objectColor ?: if (isObjectFree(ix)) freePointColor else pointColor
                     drawCircle(color, pointRadius, o.toOffset())
                 }
                 is ImaginaryCircle -> {
                     if (showImaginaryCircles) {
                         drawCircleOrLine(
                             Circle(o.x, o.y, o.radius), visibleRect,
-                            color = imaginaryCircleColor, style = imaginaryCircleStroke,
+                            color = objectColor ?: imaginaryCircleColor,
+                            style = imaginaryCircleStroke,
                         )
                     }
                 }
@@ -687,33 +700,42 @@ private fun DrawScope.drawSelectedCircles(
     circleThiccStroke: Stroke,
     selectedPointColor: Color,
     pointRadius: Float,
+    imaginaryCircleColor: Color,
+    imaginaryCircleThiccStroke: Stroke,
 ) {
     val showPoints = selectionIsActive
     val showCircles = selectionIsActive || mode == SelectionMode.Region && restrictRegionsToSelection
-        for (ix in selection) {
-            when (val o = objects[ix]) {
-                is CircleOrLine -> if (showCircles) {
-                    val color =
-                        objectColors[ix] ?:
-                        selectedCircleColor
-                    drawCircleOrLine(
-                        o, visibleRect, color,
-                        alpha = thiccSelectionCircleAlpha,
-                        style = circleThiccStroke,
-                    )
-                    if (showDirectionArrows) {
-                        if (patchForAndroid)
-                            drawArrowsPatchedForAndroid(o, visibleRect, color)
-                        else
-                            drawArrows(o, visibleRect, color)
-                    }
+    val showImaginaryCircles = EditClusterViewModel.SHOW_IMAGINARY_CIRCLES
+    for (ix in selection) {
+        val objectColor = objectColors[ix]
+        when (val o = objects[ix]) {
+            is CircleOrLine -> if (showCircles) {
+                val color = objectColor ?: selectedCircleColor
+                drawCircleOrLine(
+                    o, visibleRect, color,
+                    alpha = thiccSelectionCircleAlpha,
+                    style = circleThiccStroke,
+                )
+                if (showDirectionArrows) {
+                    if (patchForAndroid)
+                        drawArrowsPatchedForAndroid(o, visibleRect, color)
+                    else
+                        drawArrows(o, visibleRect, color)
                 }
-                is Point -> if (showPoints) {
-                    drawCircle(selectedPointColor, pointRadius, o.toOffset())
-                }
-                else -> {}
             }
+            is Point -> if (showPoints) {
+                drawCircle(objectColor ?: selectedPointColor, pointRadius, o.toOffset())
+            }
+            is ImaginaryCircle -> if (showImaginaryCircles) {
+                drawCircleOrLine(
+                    Circle(o.x, o.y, o.radius), visibleRect,
+                    color = objectColor ?: imaginaryCircleColor,
+                    style = imaginaryCircleThiccStroke,
+                )
+            }
+            else -> {}
         }
+    }
 }
 
 /**

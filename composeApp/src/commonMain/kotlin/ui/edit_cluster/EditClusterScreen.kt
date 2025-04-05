@@ -62,6 +62,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import data.geometry.CircleOrLine
+import data.geometry.ImaginaryCircle
 import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cancel
@@ -249,7 +250,10 @@ fun EditClusterScreen(
         }
         DialogType.CIRCLE_COLOR_PICKER -> {
             val initialColor = viewModel.getMostCommonCircleColorInSelection()
-                ?: MaterialTheme.extendedColorScheme.highAccentColor
+                ?: if (viewModel.selection.all { viewModel.objects[it] is ImaginaryCircle })
+                    DodeclustersColors.fadedRed.copy(alpha = 1f) // imaginary circle
+                else
+                    MaterialTheme.extendedColorScheme.highAccentColor // free real circle
             ColorPickerDialog(
                 parameters = viewModel.colorPickerParameters.copy(
                     currentColor = initialColor,

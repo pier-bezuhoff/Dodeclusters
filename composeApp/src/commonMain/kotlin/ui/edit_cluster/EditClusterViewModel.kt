@@ -29,6 +29,7 @@ import data.geometry.ArcPathCircle
 import data.geometry.ArcPathPoint
 import data.geometry.Circle
 import data.geometry.CircleOrLine
+import data.geometry.CircleOrLineOrImaginaryCircle
 import data.geometry.CircleOrLineOrPoint
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
@@ -191,12 +192,10 @@ class EditClusterViewModel : ViewModel() {
         private set
 
     // these 2 are NG
-    val circleSelectionIsActive: Boolean by derivedStateOf {
-        showCircles && selection.any { objects[it] is CircleOrLine } && mode.isSelectingCircles()
-    }
-    val pointSelectionIsActive: Boolean by derivedStateOf {
+    inline val circleSelectionIsActive: Boolean get() =
+        showCircles && selection.any { objects[it] is CircleOrLineOrImaginaryCircle } && mode.isSelectingCircles()
+    inline val pointSelectionIsActive: Boolean get() =
         showCircles && selection.any { objects[it] is Point } && mode.isSelectingCircles()
-    }
     val handleConfig: HandleConfig? by derivedStateOf { // depends on selectionMode & selection
         when (mode) {
             SelectionMode.Drag ->
@@ -212,14 +211,14 @@ class EditClusterViewModel : ViewModel() {
             else -> null
         }
     }
-    inline val scaleSliderPercentage: Float
-        get() = submode.let { sm ->
+    inline val scaleSliderPercentage: Float get() =
+        submode.let { sm ->
             if (sm is SubMode.ScaleViaSlider)
                 sm.sliderPercentage
             else 0.5f
         }
-    inline val rotationHandleAngle: Float
-        get() = submode.let { sm ->
+    inline val rotationHandleAngle: Float get() =
+        submode.let { sm ->
             if (sm is SubMode.Rotate)
                 sm.angle.toFloat()
             else 0f
@@ -1060,6 +1059,9 @@ class EditClusterViewModel : ViewModel() {
         return nearPointIndex
     }
 
+    /**
+     * @param[targets] to select [ImaginaryCircle] convert it to real [Circle]
+     */
     fun selectCircle(
         targets: List<CircleOrLine?>,
         visiblePosition: Offset,
@@ -1088,7 +1090,15 @@ class EditClusterViewModel : ViewModel() {
 
     /** [selectCircle] around [visiblePosition] while prioritizing free circles */
     fun selectCircleAt(visiblePosition: Offset): Ix? {
-        val circles = objects.map { it as? CircleOrLine }
+        val circles = objects.map { o ->
+            when (o) {
+                is Circle -> o
+                is Line -> o
+                // imaginary circles selected as if they were real
+                is ImaginaryCircle -> Circle(o.x, o.y, o.radius)
+                else -> null
+            }
+        }
         val nearCircleIndex = selectCircle(circles, visiblePosition,
             priorityTargets = circles.indices
                 .filter { expressions.expressions[it] == null }
@@ -1099,7 +1109,14 @@ class EditClusterViewModel : ViewModel() {
 
     /** [selectCircle] & add/remove it from selection if it's new/already in */
     fun xorSelectCircleAt(visiblePosition: Offset): Ix? {
-        val circles = objects.map { it as? CircleOrLine }
+        val circles = objects.map { o ->
+            when (o) {
+                is Circle -> o
+                is Line -> o
+                is ImaginaryCircle -> Circle(o.x, o.y, o.radius)
+                else -> null
+            }
+        }
         return selectCircle(circles, visiblePosition)?.also { ix ->
             if (ix in selection)
                 selection -= ix
@@ -1898,7 +1915,14 @@ class EditClusterViewModel : ViewModel() {
                             }
                         }
                         ArgType.Circle -> {
-                            val circles = objects.map { it as? CircleOrLine }
+                            val circles = objects.map { o ->
+                                when (o) {
+                                    is Circle -> o
+                                    is Line -> o
+                                    is ImaginaryCircle -> Circle(o.x, o.y, o.radius)
+                                    else -> null
+                                }
+                            }
                             selectCircle(circles, visiblePosition)?.let { circleIndex ->
                                 val newArg = Arg.CircleIndex(circleIndex)
                                 val previous = pArgList.currentArg
@@ -1934,7 +1958,14 @@ class EditClusterViewModel : ViewModel() {
                                     .addArg(newArg, confirmThisArg = false)
                                     .copy(lastSnap = result)
                             } else {
-                                val circles = objects.map { it as? CircleOrLine }
+                                val circles = objects.map { o ->
+                                    when (o) {
+                                        is Circle -> o
+                                        is Line -> o
+                                        is ImaginaryCircle -> Circle(o.x, o.y, o.radius)
+                                        else -> null
+                                    }
+                                }
                                 val circleIndex = selectCircle(circles, visiblePosition)
                                 if (circleIndex != null) {
                                     // if 1st interpolation arg is point we cannot reach here
@@ -1954,7 +1985,14 @@ class EditClusterViewModel : ViewModel() {
                             val points = objects.map { it as? Point }
                             val selectedPointIndex = selectPoint(points, visiblePosition)
                             if (selectedPointIndex == null) {
-                                val circles = objects.map { it as? CircleOrLine }
+                                val circles = objects.map { o ->
+                                    when (o) {
+                                        is Circle -> o
+                                        is Line -> o
+                                        is ImaginaryCircle -> Circle(o.x, o.y, o.radius)
+                                        else -> null
+                                    }
+                                }
                                 val selectedCircleIndex = selectCircle(circles, visiblePosition)
                                 if (selectedCircleIndex != null) {
                                     val newArg = Arg.CircleAndPointIndices(
@@ -2391,7 +2429,7 @@ class EditClusterViewModel : ViewModel() {
     fun onPanZoomRotate(pan: Offset, centroid: Offset, zoom: Float, rotationAngle: Float) {
         movementAfterDown = true
         val c = absolute(centroid)
-        val selectedCircles = selection.filter { objects[it] is CircleOrLine }
+        val selectedCircles = selection.filter { objects[it] is CircleOrLineOrImaginaryCircle }
         val selectedPoints = selection.filter { objects[it] is Point }
         if (submode !is SubMode.None) {
             // drag handle

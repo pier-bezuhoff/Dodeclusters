@@ -81,7 +81,6 @@ import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
 import ui.edit_cluster.dialogs.DefaultRotationParameters
-import ui.theme.extendedColorScheme
 import ui.tools.EditClusterTool
 import kotlin.math.abs
 import kotlin.math.acosh
@@ -96,7 +95,7 @@ fun BoxScope.SelectionContextActions(
     concretePositions: ConcreteOnScreenPositions,
     scaleSliderPercentage: Float,
     rotationHandleAngle: Float,
-    objectColor: Color?,
+    objectColor: Color,
     showAdjustExprButton: Boolean,
     showOrientationToggle: Boolean,
     isLocked: Boolean,
@@ -227,7 +226,7 @@ fun BoxScope.SelectionContextActions(
             SimpleToolButtonWithTooltip(
                 EditClusterTool.PickCircleColor,
                 buttonModifier,
-                tint = objectColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
+                tint = objectColor,
                 onClick = toolAction
             )
             TwoIconButtonWithTooltip(
