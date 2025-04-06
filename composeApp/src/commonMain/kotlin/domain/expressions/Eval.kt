@@ -6,7 +6,10 @@ import data.geometry.EPSILON
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.Line
+import data.geometry.LineOrPoint
 import data.geometry.Point
+import data.geometry.RegionPointLocation
+import domain.squareSum
 import kotlin.math.hypot
 import kotlin.math.sign
 
@@ -18,8 +21,14 @@ fun computeCircleByCenterAndRadius(
     radiusPoint: Point
 ): Circle? {
     val radius = hypot(radiusPoint.x - center.x, radiusPoint.y - center.y)
-    return if (radius == 0.0 || !radius.isFinite()) null
-    else Circle(center.x, center.y, radius)
+    return when {
+        radius == 0.0 ->
+            null // we could return Point but idk
+        center == Point.CONFORMAL_INFINITY || radiusPoint == Point.CONFORMAL_INFINITY ->
+            null // or conformal infinity ig
+        else ->
+            Circle(center.x, center.y, radius)
+    }
 }
 
 // NOTE: can produce non-CCW circle
@@ -88,7 +97,7 @@ fun computeIncidence(
  *
  * @return circle thru [chordStart] and [chordEnd], with radius scaling proportionally
  * to the chord length
- * */
+ */
 fun computeCircleBy2PointsAndSagittaRatio(
     params: SagittaRatioParameters,
     chordStart: Point,
@@ -127,6 +136,7 @@ fun computeSagittaRatio(
     chordStart: Point,
     chordEnd: Point,
 ): Double {
+    require(chordStart != Point.CONFORMAL_INFINITY && chordEnd != Point.CONFORMAL_INFINITY)
     val chordMidX = (chordStart.x + chordEnd.x)/2.0
     val chordMidY = (chordStart.y + chordEnd.y)/2.0
     val chordX = chordEnd.x - chordStart.x
@@ -138,22 +148,59 @@ fun computeSagittaRatio(
     return sign*sagitta/hypot(chordX, chordY)
 }
 
+fun computePolarity(
+    circle: CircleOrLine,
+    polarLineOrPole: LineOrPoint,
+): LineOrPoint? = when (polarLineOrPole) {
+    is Line ->
+        if (circle is Circle)
+            computePole(circle, polarLineOrPole)
+        else null
+    is Point ->
+        computePolarLine(circle, polarLineOrPole)
+}
+
 fun computePolarLine(
     circle: CircleOrLine,
     point: Point,
-): Line =
-    when (circle) {
+): Line? {
+    if (point == Point.CONFORMAL_INFINITY)
+        return null // conformal infinity isn't compatible with projective infinities
+    val (x, y) = point
+    return when (circle) {
         is Circle -> {
             // (px - cx)(x - cx) + (py - cy)(y - cy) = R^2
-            val dx = point.x - circle.x
-            val dy = point.y - circle.y
-            Line(dx, dy, -(circle.x*dx + circle.y*dy + circle.r2))
+            val dx = x - circle.x
+            val dy = y - circle.y
+            Line(dx, dy, -(circle.x * dx + circle.y * dy + circle.r2))
         }
-        // NOTE: parallel line is NOT a limiting case of polar...
-        is Line -> { // parallel line case
-            circle.translatedTo(point)
+        is Line -> { // parallel line thru REFLECTED point
+            val (a, b, c) = circle
+            val eq = (a*x + b*y + c)/squareSum(a, b)
+            val p = Point(
+                x - 2 * a * eq,
+                y - 2 * b * eq,
+            ) // point reflected w.r.t. line
+            circle.translatedTo(p)
         }
     }
+}
+
+fun computePole(
+    circle: Circle,
+    polarLine: Line,
+): Point {
+    val (x, y, r) = circle
+    val (a, b, c) = polarLine
+    if (polarLine.calculateLocationEpsilon(circle.centerPoint) == RegionPointLocation.BORDERING) {
+        // NOTE: projectively correct pole would be the infinite point in a direction that
+        //  is perpendicular to the polar line
+        return Point.CONFORMAL_INFINITY
+    }
+    val eq = a*x + b*y + c
+    val k = r*r/eq
+    return Point(x - a*k, y - b*k)
+}
 
 fun computeTangentialCircle(
     carrier: CircleOrLine,

@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import data.geometry.Point
 import kotlinx.serialization.Serializable
 
+/** NOTE: [Circle] includes lines and imaginary circles */
 @Immutable
 enum class ArgType {
     Point,
@@ -62,7 +63,7 @@ data class Signature(val argTypes: List<ArgType>) {
 val SIGNATURE_1_POINT = Signature(ArgType.Point)
 val SIGNATURE_2_POINTS = Signature(ArgType.Point, ArgType.Point)
 val SIGNATURE_2_CIRCLES = Signature(ArgType.Circle, ArgType.Circle)
-val SIGNATURE_CIRCLE_AND_POINT = Signature(ArgType.Circle, ArgType.Point)
+val SIGNATURE_CIRCLE_AND_CIRCLE_OR_POINT = Signature(ArgType.Circle, ArgType.CircleOrPoint)
 val SIGNATURE_INDEXED_AND_CIRCLE = Signature(ArgType.CircleAndPointIndices, ArgType.Circle)
 val SIGNATURE_INDEXED_AND_POINT = Signature(ArgType.CircleAndPointIndices, ArgType.Point)
 val SIGNATURE_2_GENERALIZED_CIRCLES = Signature(ArgType.CircleOrPoint, ArgType.CircleOrPoint)

@@ -145,7 +145,6 @@ import dodeclusters.composeapp.generated.resources.reverse_direction_description
 import dodeclusters.composeapp.generated.resources.reverse_direction_name
 import dodeclusters.composeapp.generated.resources.right_left
 import dodeclusters.composeapp.generated.resources.road
-import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.rotation_arg_descriptions
 import dodeclusters.composeapp.generated.resources.rotation_around_point
 import dodeclusters.composeapp.generated.resources.rotation_description
@@ -159,7 +158,6 @@ import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_description
 import dodeclusters.composeapp.generated.resources.shrink_name
 import dodeclusters.composeapp.generated.resources.spiral
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_description
 import dodeclusters.composeapp.generated.resources.swap_direction_name
@@ -191,7 +189,7 @@ import domain.SIGNATURE_2_CIRCLES
 import domain.SIGNATURE_2_GENERALIZED_CIRCLES
 import domain.SIGNATURE_2_POINTS
 import domain.SIGNATURE_3_GENERALIZED_CIRCLE
-import domain.SIGNATURE_CIRCLE_AND_POINT
+import domain.SIGNATURE_CIRCLE_AND_CIRCLE_OR_POINT
 import domain.SIGNATURE_INDEXED_AND_2_CIRCLES
 import domain.SIGNATURE_INDEXED_AND_2_POINTS
 import domain.SIGNATURE_INDEXED_AND_CIRCLE
@@ -477,8 +475,8 @@ sealed class EditClusterTool(
         Res.array.circle_by_pencil_and_point_arg_descriptions,
         Res.drawable.propeller
     )
-    data object ConstructPolarLineByCircleAndPoint: MultiArg(
-        SIGNATURE_CIRCLE_AND_POINT,
+    data object ConstructPolarityByCircleAndLineOrPoint: MultiArg(
+        SIGNATURE_CIRCLE_AND_CIRCLE_OR_POINT,
         Res.string.polar_line_by_circle_and_point_name,
         Res.string.polar_line_by_circle_and_point_description,
         Res.array.polar_line_by_circle_and_point_arg_descriptions,

@@ -3,6 +3,7 @@ package domain.expressions
 import androidx.compose.runtime.Immutable
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
+import data.geometry.LineOrPoint
 import data.geometry.Point
 import domain.Ix
 import domain.expressions.Expr.CircleBy2PointsAndSagittaRatio
@@ -10,6 +11,7 @@ import domain.expressions.Expr.CircleBy3Points
 import domain.expressions.Expr.CircleByCenterAndRadius
 import domain.expressions.Expr.CircleByPencilAndPoint
 import domain.expressions.Expr.PolarLineByCircleAndPoint
+import domain.expressions.Expr.PolarityByCircleAndLineOrPoint
 import domain.expressions.Expr.CircleExtrapolation
 import domain.expressions.Expr.CircleInterpolation
 import domain.expressions.Expr.PointInterpolation
@@ -115,12 +117,20 @@ sealed interface Expr : ExprLike {
         val perpendicularObject: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(pencilObject1, pencilObject2, perpendicularObject))
 
+    @Deprecated("Deprecated in favor of more general PolarityByCircleAndLineOrPoint")
     @Serializable
     @SerialName("PolarLineByCircleAndPoint")
     data class PolarLineByCircleAndPoint(
         val circle: Ix,
         val point: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(circle, point))
+
+    @Serializable
+    @SerialName("PolarityByCircleAndLineOrPoint")
+    data class PolarityByCircleAndLineOrPoint(
+        val circle: Ix,
+        val polarLineOrPole: Ix,
+    ) : OneToOne, ExprLike by E(Parameters.None, listOf(circle, polarLineOrPole))
 
     @Serializable
     @SerialName("CircleInversion")
@@ -256,9 +266,11 @@ inline fun Expr.eval(
                         g(pencilObject2),
                         g(perpendicularObject),
                     )
-                    is PolarLineByCircleAndPoint -> computePolarLine(
+                    is PolarLineByCircleAndPoint -> null
+                    is PolarityByCircleAndLineOrPoint -> computePolarity(
                         c(circle),
-                        p(point),
+                        get(polarLineOrPole) as? LineOrPoint ?: throw NullPointerException()
+                        ,
                     )
                     is CircleInversion -> computeCircleInversion(
                         g(target),
@@ -316,6 +328,7 @@ inline fun Expr.eval(
 
 // this eval is 4 times to 15 times faster (but lacks downscale)
 // BUT adding downscale completely cancels speed improvement
+/*
 fun Expr._eval(objects: List<GCircle?>): ExprResult {
     return when (this) {
         // idt it's worth to polymorphism eval
@@ -343,9 +356,9 @@ fun Expr._eval(objects: List<GCircle?>): ExprResult {
                     objects[object1] ?: return emptyList(),
                     objects[object2] ?: return emptyList(),
                 )
-                is PolarLineByCircleAndPoint -> computePolarLine(
+                is PolarityByCircleAndLineOrPoint -> computePolarity(
                     objects[circle] as? CircleOrLine ?: return emptyList(),
-                    objects[point] as? Point ?: return emptyList(),
+                    objects[polarLineOrPole] as? LineOrPoint ?: return emptyList(),
                 )
                 is CircleInversion -> computeCircleInversion(
                     objects[target] ?: return emptyList(),
@@ -397,6 +410,7 @@ fun Expr._eval(objects: List<GCircle?>): ExprResult {
         )
     }
 }
+*/
 
 inline fun Expr.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
@@ -423,9 +437,13 @@ inline fun Expr.reIndex(
             object1 = reIndexer(object1),
             object2 = reIndexer(object2),
         )
-        is PolarLineByCircleAndPoint -> copy(
+        is PolarLineByCircleAndPoint -> PolarityByCircleAndLineOrPoint(
             circle = reIndexer(circle),
-            point = reIndexer(point),
+            polarLineOrPole = reIndexer(point),
+        )
+        is PolarityByCircleAndLineOrPoint -> copy(
+            circle = reIndexer(circle),
+            polarLineOrPole = reIndexer(polarLineOrPole),
         )
         is CircleInversion -> copy(
             target = reIndexer(target),
@@ -480,6 +498,7 @@ fun Expr.copyWithNewParameters(
         is CircleByPencilAndPoint -> this
         is LineBy2Points -> this
         is PolarLineByCircleAndPoint -> this
+        is PolarityByCircleAndLineOrPoint -> this
         is CircleInversion -> this
         is CircleBy2PointsAndSagittaRatio -> copy(
             parameters = newParameters as SagittaRatioParameters

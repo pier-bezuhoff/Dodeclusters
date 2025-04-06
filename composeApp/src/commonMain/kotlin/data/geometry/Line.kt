@@ -27,7 +27,7 @@ data class Line(
     val a: Double,
     val b: Double,
     val c: Double
-) : CircleOrLine {
+) : CircleOrLine, LineOrPoint {
 
     init {
         require(
@@ -58,6 +58,11 @@ data class Line(
 
     inline val directionY: Double get() =
         -a/norm
+
+    /** [a] * [x] + [b] * [y] + [c] */
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun equation(x: Double, y: Double): Double =
+        a*x + b*y + c
 
     /** Direction-preserving, ensures that `hypot(a, b) == 1` */
     fun normalized(): Line =

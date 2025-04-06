@@ -2765,7 +2765,7 @@ class EditClusterViewModel : ViewModel() {
             ToolMode.LINE_BY_2_POINTS -> completeLineBy2Points()
             ToolMode.POINT -> completePoint()
             ToolMode.CIRCLE_BY_PENCIL_AND_POINT -> completeCircleByPencilAndPoint()
-            ToolMode.POLAR_LINE_BY_CIRCLE_AND_POINT -> completePolarLineByCircleAndPoint()
+            ToolMode.POLARITY_BY_CIRCLE_AND_LINE_OR_POINT -> completePolarityByCircleAndLineOrPoint()
             ToolMode.ARC_PATH -> throw IllegalStateException("Use separate function to route completion")
         }
     }
@@ -3076,20 +3076,21 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
-    private fun completePolarLineByCircleAndPoint() {
+    private fun completePolarityByCircleAndLineOrPoint() {
         val argList = partialArgList!!
-        val carrierArg = argList.args[0] as Arg.CircleIndex
-        val pointArg = argList.args[1] as Arg.Point
+        val circleArg = argList.args[0] as Arg.CircleIndex
+        val lineOrPointArg = argList.args[1] as Arg.CircleOrPoint
         recordCreateCommand()
-        val realizedPointIndex = when (pointArg) {
-            is Arg.Point.Index -> pointArg.index
-            is Arg.Point.XY ->
-                createNewFreePoint(pointArg.toPoint(), triggerRecording = false)
+        val realizedLineOrPointIndex = when (lineOrPointArg) {
+            is Arg.CircleOrPoint.CircleIndex -> lineOrPointArg.index
+            is Arg.CircleOrPoint.Point.Index -> lineOrPointArg.index
+            is Arg.CircleOrPoint.Point.XY ->
+                createNewFreePoint(lineOrPointArg.toPoint(), triggerRecording = false)
         }
         val newGCircle = expressions.addSoloExpr(
-            Expr.PolarLineByCircleAndPoint(
-                circle = carrierArg.index,
-                point = realizedPointIndex,
+            Expr.PolarityByCircleAndLineOrPoint(
+                circle = circleArg.index,
+                polarLineOrPole = realizedLineOrPointIndex,
             ),
         )
         createNewGCircle(newGCircle?.upscale())

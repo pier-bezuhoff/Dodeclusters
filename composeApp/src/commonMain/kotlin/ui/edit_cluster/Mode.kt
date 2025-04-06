@@ -46,7 +46,7 @@ enum class ToolMode(
     LINE_BY_2_POINTS(EditClusterTool.ConstructLineBy2Points),
     POINT(EditClusterTool.AddPoint),
     CIRCLE_BY_PENCIL_AND_POINT(EditClusterTool.ConstructCircleByPencilAndPoint),
-    POLAR_LINE_BY_CIRCLE_AND_POINT(EditClusterTool.ConstructPolarLineByCircleAndPoint),
+    POLARITY_BY_CIRCLE_AND_LINE_OR_POINT(EditClusterTool.ConstructPolarityByCircleAndLineOrPoint),
     ARC_PATH(EditClusterTool.ConstructArcPath),
     ;
 

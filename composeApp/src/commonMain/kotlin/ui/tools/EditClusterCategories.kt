@@ -89,7 +89,7 @@ sealed class EditClusterCategory(
             EditClusterTool.ConstructLineBy2Points,
             EditClusterTool.AddPoint,
             EditClusterTool.ConstructCircleByPencilAndPoint,
-            EditClusterTool.ConstructPolarLineByCircleAndPoint,
+            EditClusterTool.ConstructPolarityByCircleAndLineOrPoint,
             EditClusterTool.InsertCenteredCross,
             EditClusterTool.ConstructArcPath,
         ),

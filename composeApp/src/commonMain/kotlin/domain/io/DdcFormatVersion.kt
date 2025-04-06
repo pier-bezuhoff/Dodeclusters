@@ -22,6 +22,8 @@ val permissiveJsonDdcSerializingSettings = Json {
 
 /**
  * Attempts to parse Ddc formats, newest-to-oldest
+ *
+ * NOTE: fails on unrecognized types
  */
 inline fun tryParseDdc(
     content: String,
