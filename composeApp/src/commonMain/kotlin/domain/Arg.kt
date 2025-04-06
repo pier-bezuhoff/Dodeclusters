@@ -2,7 +2,6 @@ package domain
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
-import data.geometry.ImaginaryCircle
 import data.geometry.Point
 import kotlinx.serialization.Serializable
 
@@ -56,13 +55,37 @@ data class ArgType internal constructor(
 sealed interface Arg {
     val primitiveArgType: PrimitiveArgType
 
-    data class Index(val index: Ix, override val primitiveArgType: PrimitiveArgType) : Arg
-    data class PointXY(val x: Double, val y: Double) : Arg {
+    sealed interface Index : Arg {
+        val index: Ix
+    }
+    // sum types doko
+    /** Circle, Line, Imaginary circle or Point (i.e. anything BUT [Indices]) */
+    sealed interface CLIP : Arg
+    sealed interface CLI : CLIP, Index
+    sealed interface LP : CLIP
+    sealed interface Point : LP
+
+    data class CircleIndex(override val index: Ix) : Index, CLI {
+        override val primitiveArgType: PrimitiveArgType = PrimitiveArgType.CIRCLE
+    }
+    data class LineIndex(override val index: Ix) : Index, CLI, LP {
+        override val primitiveArgType: PrimitiveArgType = PrimitiveArgType.LINE
+    }
+    data class ImaginaryCircleIndex(override val index: Ix) : Index, CLI {
+        override val primitiveArgType: PrimitiveArgType = PrimitiveArgType.IMAGINARY_CIRCLE
+    }
+    data class PointIndex(override val index: Ix) : Point, Index, CLI {
         override val primitiveArgType: PrimitiveArgType = PrimitiveArgType.POINT
-        constructor(point: Point) : this(point.x, point.y)
+    }
+    data class PointXY(
+        val x: Double,
+        val y: Double
+    ) : Point {
+        override val primitiveArgType: PrimitiveArgType = PrimitiveArgType.POINT
+        constructor(point: data.geometry.Point) : this(point.x, point.y)
         fun toOffset(): Offset =
             Offset(x.toFloat(), y.toFloat())
-        fun toPoint(): Point =
+        fun toPoint(): data.geometry.Point =
             Point(x, y)
     }
     data class Indices(val indices: List<Ix>) : Arg {
@@ -71,17 +94,6 @@ sealed interface Arg {
 
     infix fun isType(argType: ArgType): Boolean =
         primitiveArgType in argType.possibleTypes
-
-    companion object {
-        fun PointIndex(index: Ix) : Index =
-            Index(index, PrimitiveArgType.POINT)
-        fun CircleIndex(index: Ix) : Index =
-            Index(index, PrimitiveArgType.CIRCLE)
-        fun LineIndex(index: Ix) : Index =
-            Index(index, PrimitiveArgType.LINE)
-        fun ImaginaryCircleIndex(index: Ix) : Index =
-            Index(index, PrimitiveArgType.IMAGINARY_CIRCLE)
-    }
 }
 
 @Immutable
