@@ -26,6 +26,9 @@ data class ImaginaryCircle(
         ) { "Invalid ImaginaryCircle($x, $y, $radius)" }
     }
 
+    fun toRealCircle(): Circle =
+        Circle(x, y, radius)
+
     override fun translated(vector: Offset): ImaginaryCircle =
         copy(x = x + vector.x, y = y + vector.y)
 

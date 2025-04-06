@@ -70,6 +70,7 @@ import domain.Arg
 import domain.ChessboardPattern
 import domain.Ix
 import domain.PartialArgList
+import domain.PrimitiveArgType
 import domain.angleDeg
 import domain.cluster.LogicalRegion
 import domain.expressions.BiInversionParameters
@@ -199,7 +200,7 @@ fun BoxScope.EditClusterCanvas(
                     drawObjects(objects = viewModel.objects, hiddenObjectIndices = hiddenObjectIndices, objectColors = viewModel.objectColors, selection = viewModel.selection, selectionIsActive = selectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
                     drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, selectionIsActive = selectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleThiccStroke = thiccDottedStroke)
                 }
-                drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getPointArg = { viewModel.getArg(it) }, getCircleOrPointArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke)
+                drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke)
                 drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             }
             if (viewModel.circleSelectionIsActive && viewModel.showUI) {
@@ -806,89 +807,76 @@ private inline fun DrawScope.drawPartialConstructs(
     mode: Mode,
     partialArgList: PartialArgList?,
     partialArcPath: PartialArcPath?,
-    crossinline getPointArg: (Arg.Point) -> Point?,
-    crossinline getCircleOrPointArg: (Arg.CircleOrPoint) -> GCircle?,
+    crossinline getArg: (Arg) -> GCircle?,
     visibleRect: Rect,
     handleRadius: Float,
-    circleStroke: DrawStyle,
+    circleStroke: Stroke,
+    imaginaryCircleStroke: Stroke,
     creationPointRadius: Float = handleRadius * 3/4,
     selectedArgColor: Color = DodeclustersColors.green, //pureSecondary,
     creationPrototypeColor: Color = DodeclustersColors.green.copy(alpha = 0.7f),
 ) {
     // generic display for selected tool args
     partialArgList?.args?.let { args ->
-        for (arg in args)
+        for (arg in args) {
             when (arg) {
-                is Arg.CircleIndex -> {
-                    val circle = objects[arg.index]
-                    if (circle is CircleOrLine)
-                        drawCircleOrLine(
-                            circle,
-                            visibleRect, selectedArgColor, style = circleStroke
+                is Arg.Index -> when (val o = getArg(arg)) {
+                    is CircleOrLine -> {
+                        drawCircleOrLine(o, visibleRect, selectedArgColor,
+                            style = circleStroke
                         )
-                }
-                is Arg.Point.Index -> {
-                    val center = objects[arg.index]
-                    if (center is Point)
-                        drawCircle(
-                            color = selectedArgColor,
-                            radius = creationPointRadius,
-                            center = center.toOffset()
-                        )
-                }
-                is Arg.Point.XY ->
-                    drawCircle(
-                        color = selectedArgColor,
-                        radius = creationPointRadius,
-                        center = arg.toOffset()
-                    )
-                is Arg.CircleOrPoint.Point.Index -> {
-                    val center = objects[arg.index]
-                    if (center is Point)
-                        drawCircle(
-                            color = selectedArgColor,
-                            radius = creationPointRadius,
-                            center = center.toOffset()
-                        )
-                }
-                is Arg.CircleOrPoint.Point.XY ->
-                    drawCircle(
-                        color = selectedArgColor,
-                        radius = creationPointRadius,
-                        center = arg.toOffset()
-                    )
-                is Arg.CircleOrPoint.CircleIndex -> {
-                    val circle = objects[arg.index]
-                    if (circle is CircleOrLine)
-                        drawCircleOrLine(
-                            circle,
-                            visibleRect, selectedArgColor, style = circleStroke
-                        )
-                }
-                is Arg.CircleAndPointIndices -> {
-                    for (ix in arg.circleIndices) {
-                        val circle = objects[ix]
-                        if (circle is CircleOrLine)
-                            drawCircleOrLine(circle, visibleRect, selectedArgColor, style = circleStroke)
                     }
-                    for (ix in arg.pointIndices) {
-                        val point = objects[ix]
-                        if (point is Point)
-                            drawCircle(
-                                color = selectedArgColor,
-                                radius = creationPointRadius,
-                                center = point.toOffset()
-                            )
+                    is ImaginaryCircle -> {
+                        drawCircleOrLine(o.toRealCircle(), visibleRect, selectedArgColor,
+                            style = imaginaryCircleStroke
+                        )
+                    }
+                    is Point -> {
+                        drawCircle(
+                            color = selectedArgColor,
+                            radius = creationPointRadius,
+                            center = o.toOffset()
+                        )
+                    }
+                    else -> {}
+                }
+                is Arg.PointXY -> {
+                    drawCircle(
+                        color = selectedArgColor,
+                        radius = creationPointRadius,
+                        center = arg.toOffset()
+                    )
+                }
+                is Arg.Indices -> {
+                    for (ix in arg.indices) {
+                        when (val o = objects[ix]) {
+                            is CircleOrLine ->
+                                drawCircleOrLine(o, visibleRect, selectedArgColor,
+                                    style = circleStroke
+                                )
+                            is ImaginaryCircle ->
+                                drawCircleOrLine(o.toRealCircle(), visibleRect, selectedArgColor,
+                                    style = imaginaryCircleStroke
+                                )
+                            is Point ->
+                                drawCircle(
+                                    color = selectedArgColor,
+                                    radius = creationPointRadius,
+                                    center = o.toOffset()
+                                )
+                            null -> {}
+                        }
                     }
                 }
             }
+        }
     }
     // custom previews for some tools
     when (mode) {
         ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> partialArgList!!.args.let { args ->
             if (args.size == 2) {
                 val (center, radiusPoint) = args.map {
-                    getPointArg(it as Arg.Point)!!
+                    getArg(it) as Point
                 }
                 val radius = center.distanceFrom(radiusPoint)
                 drawCircle(
@@ -900,7 +888,7 @@ private inline fun DrawScope.drawPartialConstructs(
             }
         }
         ToolMode.CIRCLE_BY_3_POINTS -> partialArgList!!.args.let { args ->
-            val gCircles = args.map { getCircleOrPointArg(it as Arg.CircleOrPoint)!! }
+            val gCircles = args.map { getArg(it)!! }
             if (args.size == 2) {
                 val line = GeneralizedCircle.perp3(
                     GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
@@ -908,7 +896,9 @@ private inline fun DrawScope.drawPartialConstructs(
                     GeneralizedCircle.fromGCircle(gCircles[1]),
                 )?.toGCircle() as? Line
                 if (line != null)
-                    drawCircleOrLine(line, visibleRect, creationPrototypeColor, style = circleStroke)
+                    drawCircleOrLine(line, visibleRect, creationPrototypeColor,
+                        style = circleStroke
+                    )
             } else if (args.size == 3) {
                 val circle = GeneralizedCircle.perp3(
                     GeneralizedCircle.fromGCircle(gCircles[0]),
@@ -916,11 +906,13 @@ private inline fun DrawScope.drawPartialConstructs(
                     GeneralizedCircle.fromGCircle(gCircles[2]),
                 )?.toGCircle() as? CircleOrLine
                 if (circle != null)
-                    drawCircleOrLine(circle, visibleRect, creationPrototypeColor, style = circleStroke)
+                    drawCircleOrLine(circle, visibleRect, creationPrototypeColor,
+                        style = circleStroke
+                    )
             }
         }
         ToolMode.CIRCLE_BY_PENCIL_AND_POINT -> partialArgList!!.args.let { args ->
-            val gCircles = args.map { getCircleOrPointArg(it as Arg.CircleOrPoint)!! }
+            val gCircles = args.map { getArg(it)!! }
             if (args.size == 2) {
                 val line = GeneralizedCircle.parallel2perp1(
                     GeneralizedCircle.fromGCircle(gCircles[0]),
@@ -936,21 +928,22 @@ private inline fun DrawScope.drawPartialConstructs(
                     GeneralizedCircle.fromGCircle(gCircles[2]),
                 )?.toGCircle() as? CircleOrLine
                 if (circle != null)
-                    drawCircleOrLine(circle, visibleRect, creationPrototypeColor, style = circleStroke)
+                    drawCircleOrLine(circle, visibleRect, creationPrototypeColor,
+                        style = circleStroke
+                    )
             }
         }
         ToolMode.LINE_BY_2_POINTS -> partialArgList!!.args.let { args ->
             if (args.size == 2) {
-                val gCircles = args.map { getCircleOrPointArg(it as Arg.CircleOrPoint)!! }
+                val gCircles = args.map { getArg(it)!! }
                 val line = GeneralizedCircle.perp3(
                     GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
                     GeneralizedCircle.fromGCircle(gCircles[0]),
                     GeneralizedCircle.fromGCircle(gCircles[1]),
                 )?.toGCircle() as? Line
                 if (line != null)
-                    drawCircleOrLine(
-                        line,
-                        visibleRect, creationPrototypeColor, style = circleStroke
+                    drawCircleOrLine(line, visibleRect, creationPrototypeColor,
+                        style = circleStroke
                     )
             }
         }

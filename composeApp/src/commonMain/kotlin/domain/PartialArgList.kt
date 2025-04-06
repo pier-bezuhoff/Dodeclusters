@@ -9,21 +9,22 @@ data class PartialArgList(
     val lastArgIsConfirmed: Boolean = true,
     val lastSnap: PointSnapResult? = null,
 ) {
-
     val isFull =
         args.size == signature.argTypes.size
-
     val isValid: Boolean =
         args.size <= signature.argTypes.size &&
-        args.zip(signature.argTypes).all { (arg, argType) -> arg.argType == argType }
-
+        args.zip(signature.argTypes).all { (arg, argType) -> arg isType argType }
     val currentArg: Arg? =
         args.lastOrNull()
     val currentArgType: ArgType? =
-        currentArg?.argType
-
+        if (args.isEmpty())
+            null
+        else
+            signature.argTypes[args.size - 1]
     val nextArgType: ArgType? =
-        if (isFull) null else signature.argTypes[args.size]
+        if (isFull)
+            null
+        else signature.argTypes[args.size]
 
     init {
         require(isValid) { "Invalid type signature $signature, with args $args" }
@@ -36,8 +37,8 @@ data class PartialArgList(
             updateCurrentArg(arg, confirmThisArg)
 
     fun updateCurrentArg(arg: Arg, confirmThisArg: Boolean = true): PartialArgList {
-        require(currentArg != null) { "The PartialArgList is empty, nothing to update" }
-        require(currentArg.argType == arg.argType) { "Invalid arg type, expected: $currentArgType, actual: $arg" }
+        require(currentArg != null && currentArgType != null) { "The PartialArgList is empty, nothing to update" }
+        require(arg isType currentArgType) { "Invalid arg type, expected: $currentArgType, actual: $arg" }
         return PartialArgList(
             signature,
             args.dropLast(1) + arg,
@@ -47,8 +48,8 @@ data class PartialArgList(
 
     // MAYBE: smarter currying, when arg types resolve uniquely regardless of order if applicable
     fun addArg(arg: Arg, confirmThisArg: Boolean = false): PartialArgList {
-        require(!isFull) { "The $this is already full" }
-        require(arg.argType == nextArgType) { "Invalid arg type, expected: $nextArgType, actual: $arg" }
+        require(!isFull && nextArgType != null) { "The $this is already full" }
+        require(arg isType nextArgType) { "Invalid arg type, expected: $nextArgType, actual: $arg" }
         return PartialArgList(
             signature,
             args + arg,

@@ -51,6 +51,7 @@ import domain.InversionOfControl
 import domain.Ix
 import domain.PartialArgList
 import domain.PointSnapResult
+import domain.PrimitiveArgType
 import domain.Settings
 import domain.angleDeg
 import domain.cluster.Constellation
@@ -973,17 +974,11 @@ class EditClusterViewModel : ViewModel() {
         removeObjects(toBeDeleted.toList())
     }
 
-    fun getArg(arg: Arg.Point): Point? =
+    fun getArg(arg: Arg): GCircle? =
         when (arg) {
-            is Arg.Point.Index -> objects[arg.index] as? Point
-            is Arg.Point.XY -> arg.toPoint()
-        }
-
-    fun getArg(arg: Arg.CircleOrPoint): GCircle? =
-        when (arg) {
-            is Arg.CircleOrPoint.Point.Index -> objects[arg.index]
-            is Arg.CircleOrPoint.Point.XY -> arg.toPoint()
-            is Arg.CircleOrPoint.CircleIndex -> objects[arg.index]
+            is Arg.Index -> objects[arg.index]
+            is Arg.PointXY -> arg.toPoint()
+            is Arg.Indices -> null
         }
 
     fun switchToMode(newMode: Mode) {
@@ -993,7 +988,7 @@ class EditClusterViewModel : ViewModel() {
         showPromptToSetActiveSelectionAsToolArg = false
         if (newMode is ToolMode) {
             if (selection.size > 1 &&
-                newMode.signature.argTypes.first() == ArgType.CircleAndPointIndices
+                newMode.signature.argTypes.first() == ArgType.INDICES
             ) {
                 showPromptToSetActiveSelectionAsToolArg = true
             } else {
@@ -1578,15 +1573,12 @@ class EditClusterViewModel : ViewModel() {
         toolbarState.activeTool.let { tool ->
             require(
                 tool is EditClusterTool.MultiArg &&
-                tool.signature.argTypes.first() == ArgType.CircleAndPointIndices &&
+                tool.signature.argTypes.first() == ArgType.INDICES &&
                 selection.isNotEmpty()
             ) { "Illegal state in setActiveSelectionAsToolArg(): tool = $tool, selection == $selection" }
         }
         partialArgList = partialArgList!!.addArg(
-            Arg.CircleAndPointIndices(
-                circleIndices = selection.filter { objects[it] is CircleOrLine },
-                pointIndices = selection.filter { objects[it] is Point },
-            ),
+            Arg.Indices(selection.filter { objects[it] != null }),
             confirmThisArg = true
         )
         cancelSelectionAsToolArgPrompt()
@@ -1711,51 +1703,33 @@ class EditClusterViewModel : ViewModel() {
                     PartialArgList(
                         tool.signature,
                         args = listOf(
-                            Arg.CircleOrPoint.CircleIndex(expr.startCircle),
-                            Arg.CircleOrPoint.CircleIndex(expr.endCircle)
+                            // prim arg type can be any CLI tbh but who cares
+                            Arg.CircleIndex(expr.startCircle),
+                            Arg.CircleIndex(expr.endCircle)
                         )
                     )
                 is Expr.PointInterpolation ->
                     PartialArgList(
                         tool.signature,
                         args = listOf(
-                            Arg.CircleOrPoint.Point.Index(expr.startPoint),
-                            Arg.CircleOrPoint.Point.Index(expr.endPoint)
+                            Arg.PointIndex(expr.startPoint),
+                            Arg.PointIndex(expr.endPoint)
                         )
                     )
                 is Expr.Rotation ->
                     PartialArgList(
                         tool.signature,
                         args = listOf(
-                            if (objects[expr.target] is Point)
-                                Arg.CircleAndPointIndices(
-                                    circleIndices = emptyList(),
-                                    pointIndices = listOf(expr.target)
-                                )
-                            else
-                                Arg.CircleAndPointIndices(
-                                    circleIndices = listOf(expr.target),
-                                    pointIndices = emptyList()
-                                )
-                            ,
-                            Arg.Point.Index(expr.pivot),
+                            Arg.Indices(listOf(expr.target)),
+                            Arg.PointIndex(expr.pivot),
                         )
                     )
                 is Expr.BiInversion ->
                     PartialArgList(
                         tool.signature,
                         args = listOf(
-                            if (objects[expr.target] is Point)
-                                Arg.CircleAndPointIndices(
-                                    circleIndices = emptyList(),
-                                    pointIndices = listOf(expr.target)
-                                )
-                            else
-                                Arg.CircleAndPointIndices(
-                                    circleIndices = listOf(expr.target),
-                                    pointIndices = emptyList()
-                                )
-                            ,
+                            Arg.Indices(listOf(expr.target)),
+                            // prim arg type can be any CLI tbh but who cares
                             Arg.CircleIndex(expr.engine1),
                             Arg.CircleIndex(expr.engine2),
                         )
@@ -1764,19 +1738,9 @@ class EditClusterViewModel : ViewModel() {
                     PartialArgList(
                         tool.signature,
                         args = listOf(
-                            if (objects[expr.target] is Point)
-                                Arg.CircleAndPointIndices(
-                                    circleIndices = emptyList(),
-                                    pointIndices = listOf(expr.target)
-                                )
-                            else
-                                Arg.CircleAndPointIndices(
-                                    circleIndices = listOf(expr.target),
-                                    pointIndices = emptyList()
-                                )
-                            ,
-                            Arg.Point.Index(expr.divergencePoint),
-                            Arg.Point.Index(expr.convergencePoint),
+                            Arg.Indices(listOf(expr.target)),
+                            Arg.PointIndex(expr.divergencePoint),
+                            Arg.PointIndex(expr.convergencePoint),
                         )
                     )
                 else -> null
@@ -1892,6 +1856,19 @@ class EditClusterViewModel : ViewModel() {
                     }
                 } else if (mode is ToolMode && partialArgList?.isFull != true) {
                     val pArgList = partialArgList
+                    val nextType = pArgList?.nextArgType
+                    if (nextType != null) {
+                        for (primitiveType in nextType.possibleTypes) {
+                            when (primitiveType) {
+                                PrimitiveArgType.CIRCLE -> TODO()
+                                PrimitiveArgType.LINE -> TODO()
+                                PrimitiveArgType.IMAGINARY_CIRCLE -> TODO()
+                                PrimitiveArgType.POINT -> TODO()
+                                PrimitiveArgType.NULL -> TODO()
+                                PrimitiveArgType.INDICES -> TODO()
+                            }
+                        }
+                    }
                     when (pArgList?.nextArgType) {
                         ArgType.Point -> {
                             val result = snapped(absolute(visiblePosition))
@@ -1899,7 +1876,7 @@ class EditClusterViewModel : ViewModel() {
                                 // we have to realize the first point here so we don't forget its
                                 // snap after panning
                                 val newArg = realizePointCircleSnap(result).toArgPoint()
-                                val newArg2 = Arg.Point.XY(result.result)
+                                val newArg2 = Arg.Point.Coordinates(result.result)
                                 partialArgList = pArgList
                                     .addArg(newArg, confirmThisArg = true)
                                     .addArg(newArg2, confirmThisArg = false)
@@ -1907,7 +1884,7 @@ class EditClusterViewModel : ViewModel() {
                             } else {
                                 val newArg = when (result) {
                                     is PointSnapResult.Eq -> Arg.Point.Index(result.pointIndex)
-                                    else -> Arg.Point.XY(result.result)
+                                    else -> Arg.Point.Coordinates(result.result)
                                 }
                                 partialArgList = pArgList
                                     .addArg(newArg, confirmThisArg = false)
@@ -2509,7 +2486,7 @@ class EditClusterViewModel : ViewModel() {
             ) {
                 val newArg = when (result) {
                     is PointSnapResult.Eq -> Arg.Point.Index(result.pointIndex)
-                    else -> Arg.Point.XY(absolutePoint)
+                    else -> Arg.Point.Coordinates(absolutePoint)
                 }
                 partialArgList = partialArgList!!
                     .updateCurrentArg(newArg, confirmThisArg = false)
@@ -2558,7 +2535,7 @@ class EditClusterViewModel : ViewModel() {
                             val firstPoint: Point =
                                 when (val first = args.first() as Arg.Point) {
                                     is Arg.Point.Index -> objects[first.index] as Point
-                                    is Arg.Point.XY -> first.toPoint()
+                                    is Arg.Point.Coordinates -> first.toPoint()
                                 }
                             val pointsAreTooClose = firstPoint.distanceFrom(snap.result) < 1e-3
                             if (pointsAreTooClose) { // haxxz
@@ -2947,10 +2924,10 @@ class EditClusterViewModel : ViewModel() {
         val argList = partialArgList!!
         val args = argList.args.map { it as Arg.Point }
         recordCreateCommand()
-        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.Point.XY }) {
+        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.Point.Coordinates }) {
             val newCircle = computeCircleByCenterAndRadius(
-                center = (args[0] as Arg.Point.XY).toPoint().downscale(),
-                radiusPoint = (args[1] as Arg.Point.XY).toPoint().downscale(),
+                center = (args[0] as Arg.Point.Coordinates).toPoint().downscale(),
+                radiusPoint = (args[1] as Arg.Point.Coordinates).toPoint().downscale(),
             )?.upscale()
             expressions.addFree()
             createNewGCircle(newCircle)
@@ -2958,7 +2935,7 @@ class EditClusterViewModel : ViewModel() {
             val realized = args.map {
                 when (it) {
                     is Arg.Point.Index -> it.index
-                    is Arg.Point.XY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
+                    is Arg.Point.Coordinates -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
             val newCircle = expressions.addSoloExpr(
@@ -3195,7 +3172,7 @@ class EditClusterViewModel : ViewModel() {
         recordCreateCommand()
         val pivotPointIndex = when (val pointArg = args[1] as Arg.Point) {
             is Arg.Point.Index -> pointArg.index
-            is Arg.Point.XY -> createNewFreePoint(pointArg.toPoint(), triggerRecording = false)
+            is Arg.Point.Coordinates -> createNewFreePoint(pointArg.toPoint(), triggerRecording = false)
         }
         val targetIndices = targetCircleIndices + targetPointsIndices
         val adjustables = mutableListOf<AdjustableExpr>()
@@ -3281,7 +3258,7 @@ class EditClusterViewModel : ViewModel() {
         val (divergencePointIndex, convergencePointIndex) = args.drop(1).take(2)
             .map { when (val arg = it as Arg.Point) {
                 is Arg.Point.Index -> arg.index
-                is Arg.Point.XY -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
+                is Arg.Point.Coordinates -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
             } }
         partialArgList = argList.copy(
             // we dont want to spam create the same Point.XY each time
@@ -3466,7 +3443,7 @@ class EditClusterViewModel : ViewModel() {
         val argList = partialArgList!!
         val args = argList.args.map { it as Arg.Point }
         val arg0 = args[0]
-        if (arg0 is Arg.Point.XY) {
+        if (arg0 is Arg.Point.Coordinates) {
             val newPoint = arg0.toPoint()
             createNewFreePoint(newPoint)
         } // it could have already done it with realized PSR.Eq, which results in Arg.Point.Index

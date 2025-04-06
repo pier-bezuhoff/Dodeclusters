@@ -189,11 +189,11 @@ import domain.SIGNATURE_2_CIRCLES
 import domain.SIGNATURE_2_GENERALIZED_CIRCLES
 import domain.SIGNATURE_2_POINTS
 import domain.SIGNATURE_3_GENERALIZED_CIRCLE
-import domain.SIGNATURE_CIRCLE_AND_CIRCLE_OR_POINT
-import domain.SIGNATURE_INDEXED_AND_2_CIRCLES
-import domain.SIGNATURE_INDEXED_AND_2_POINTS
-import domain.SIGNATURE_INDEXED_AND_CIRCLE
-import domain.SIGNATURE_INDEXED_AND_POINT
+import domain.SIGNATURE_REAL_CIRCLE_AND_LINE_OR_POINT
+import domain.SIGNATURE_INDICES_AND_2_CIRCLES
+import domain.SIGNATURE_INDICES_AND_2_POINTS
+import domain.SIGNATURE_INDICES_AND_CIRCLE
+import domain.SIGNATURE_INDICES_AND_POINT
 import domain.SIGNATURE_N_POINTS_PLACEHOLDER
 import domain.Signature
 import domain.io.DdcV4
@@ -397,7 +397,7 @@ sealed class EditClusterTool(
     )
 
     data object CircleInversion: MultiArg(
-        SIGNATURE_INDEXED_AND_CIRCLE,
+        SIGNATURE_INDICES_AND_CIRCLE,
         Res.string.circle_inversion_name,
         Res.string.circle_inversion_description,
         Res.array.circle_inversion_arg_descriptions,
@@ -411,21 +411,21 @@ sealed class EditClusterTool(
         Res.drawable.interpolate_lines
     )
     data object Rotation: MultiArg(
-        SIGNATURE_INDEXED_AND_POINT,
+        SIGNATURE_INDICES_AND_POINT,
         Res.string.rotation_name,
         Res.string.rotation_description,
         Res.array.rotation_arg_descriptions,
         Res.drawable.rotation_around_point
     )
     data object BiInversion: MultiArg(
-        SIGNATURE_INDEXED_AND_2_CIRCLES,
+        SIGNATURE_INDICES_AND_2_CIRCLES,
         Res.string.bi_inversion_name,
         Res.string.bi_inversion_description,
         Res.array.bi_inversion_arg_descriptions,
         Res.drawable.double_reflection
     )
     data object LoxodromicMotion: MultiArg(
-        SIGNATURE_INDEXED_AND_2_POINTS,
+        SIGNATURE_INDICES_AND_2_POINTS,
         Res.string.loxodromic_motion_name,
         Res.string.loxodromic_motion_description,
         Res.array.loxodromic_motion_arg_descriptions,
@@ -476,7 +476,7 @@ sealed class EditClusterTool(
         Res.drawable.propeller
     )
     data object ConstructPolarityByCircleAndLineOrPoint: MultiArg(
-        SIGNATURE_CIRCLE_AND_CIRCLE_OR_POINT,
+        SIGNATURE_REAL_CIRCLE_AND_LINE_OR_POINT,
         Res.string.polar_line_by_circle_and_point_name,
         Res.string.polar_line_by_circle_and_point_description,
         Res.array.polar_line_by_circle_and_point_arg_descriptions,

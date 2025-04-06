@@ -280,7 +280,7 @@ fun EditClusterScreen(
             if (viewModel.partialArgList?.isFull == true) {
                 val (startObject, endObject) = viewModel.partialArgList!!.args
                     .map {
-                        viewModel.getArg(it as Arg.CircleOrPoint)
+                        viewModel.getArg(it)
                     }
                 if (startObject != null && endObject != null) {
                     CircleOrPointInterpolationDialog(
@@ -297,7 +297,7 @@ fun EditClusterScreen(
             if (viewModel.partialArgList?.isFull == true) {
                 val (startCircle, endCircle) = viewModel.partialArgList!!.args
                     .map {
-                        viewModel.objects[(it as Arg.CircleIndex).index] as CircleOrLine
+                        viewModel.getArg(it) as CircleOrLine
                     }
                 CircleExtrapolationDialog(
                     startCircle, endCircle,
@@ -321,8 +321,7 @@ fun EditClusterScreen(
             if (viewModel.partialArgList?.isFull == true) {
                 val (engine1, engine2) = viewModel.partialArgList!!.args
                     .drop(1)
-                    .map { it as Arg.CircleIndex }
-                    .map { viewModel.objects[it.index] as? CircleOrLine }
+                    .map { viewModel.getArg(it) as? CircleOrLine }
                 if (engine1 != null && engine2 != null) {
                     BiInversionDialog(
                         engine1, engine2,
@@ -338,11 +337,7 @@ fun EditClusterScreen(
             if (viewModel.partialArgList?.isFull == true) {
                 val (divergencePoint, convergencePoint) = viewModel.partialArgList!!.args
                     .drop(1)
-                    .map { it as Arg.Point }
-                    .map { when (it) {
-                        is Arg.Point.XY -> it.toPoint()
-                        is Arg.Point.Index -> viewModel.objects[it.index] as? Point
-                    } }
+                    .map { viewModel.getArg(it) as? Point }
                 if (divergencePoint != null && convergencePoint != null) {
                     LoxodromicMotionDialog(
                         onCancel = viewModel::closeDialog,
