@@ -148,18 +148,6 @@ fun computeSagittaRatio(
     return sign*sagitta/hypot(chordX, chordY)
 }
 
-fun computePolarity(
-    circle: CircleOrLine,
-    polarLineOrPole: LineOrPoint,
-): LineOrPoint? = when (polarLineOrPole) {
-    is Line ->
-        if (circle is Circle)
-            computePole(circle, polarLineOrPole)
-        else null
-    is Point ->
-        computePolarLine(circle, polarLineOrPole)
-}
-
 fun computePolarLine(
     circle: CircleOrLine,
     point: Point,

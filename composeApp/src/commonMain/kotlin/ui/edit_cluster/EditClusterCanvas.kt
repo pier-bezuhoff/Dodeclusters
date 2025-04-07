@@ -70,7 +70,6 @@ import domain.Arg
 import domain.ChessboardPattern
 import domain.Ix
 import domain.PartialArgList
-import domain.PrimitiveArgType
 import domain.angleDeg
 import domain.cluster.LogicalRegion
 import domain.expressions.BiInversionParameters

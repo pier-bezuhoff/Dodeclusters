@@ -269,8 +269,9 @@ fun distance(c1: CircleOrLine, c2: CircleOrLine): Double =
         else -> distance(c2, c1) // circle & line
     }
 
-fun PointSnapResult.PointToPoint.toArgPoint(): Arg.Point =
+fun PointSnapResult.toArgPoint(): Arg.Point =
     when (this) {
-        is PointSnapResult.Free -> Arg.PointXY(this.result)
         is PointSnapResult.Eq -> Arg.PointIndex(this.pointIndex)
+        is PointSnapResult.Free -> Arg.PointXY(this.result)
+        else -> Arg.PointXY(this.result)
     }
