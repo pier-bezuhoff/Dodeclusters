@@ -11,7 +11,8 @@ enum class PrimitiveArgType {
     CIRCLE,
     LINE,
     IMAGINARY_CIRCLE,
-    POINT,
+    POINT_XY,
+    POINT_INDEX,
     NULL,
     /** Raw, untyped indices [Ix] */
     INDICES,
@@ -32,12 +33,13 @@ data class ArgType internal constructor(
 
     companion object {
         val CIRCLE = ArgType(PrimitiveArgType.CIRCLE)
-        val POINT = ArgType(PrimitiveArgType.POINT)
+        val POINT = ArgType(PrimitiveArgType.POINT_INDEX, PrimitiveArgType.POINT_XY)
         val INDICES = ArgType(PrimitiveArgType.INDICES)
         /** Circle, Line, Imaginary circle or Point */
         val CLIP = ArgType(
-            PrimitiveArgType.POINT,
+            PrimitiveArgType.POINT_INDEX,
             PrimitiveArgType.CIRCLE, PrimitiveArgType.LINE, PrimitiveArgType.IMAGINARY_CIRCLE,
+            PrimitiveArgType.POINT_XY,
         )
         /** Circle, Line or Imaginary circle */
         val CLI = ArgType(
@@ -45,8 +47,9 @@ data class ArgType internal constructor(
         )
         /** Line or Point */
         val LP = ArgType(
-            PrimitiveArgType.POINT,
+            PrimitiveArgType.POINT_INDEX,
             PrimitiveArgType.LINE,
+            PrimitiveArgType.POINT_XY,
         )
     }
 }
@@ -58,7 +61,7 @@ sealed interface Arg {
     sealed interface Index : Arg {
         val index: Ix
     }
-    // sum types doko
+    // jb, sum types doko?
     /** Circle, Line, Imaginary circle or Point (i.e. anything BUT [Indices]) */
     sealed interface CLIP : Arg
     sealed interface CLI : CLIP, Index
@@ -75,13 +78,13 @@ sealed interface Arg {
         override val primitiveArgType: PrimitiveArgType = PrimitiveArgType.IMAGINARY_CIRCLE
     }
     data class PointIndex(override val index: Ix) : Point, Index, CLI {
-        override val primitiveArgType: PrimitiveArgType = PrimitiveArgType.POINT
+        override val primitiveArgType: PrimitiveArgType = PrimitiveArgType.POINT_INDEX
     }
     data class PointXY(
         val x: Double,
         val y: Double
     ) : Point {
-        override val primitiveArgType: PrimitiveArgType = PrimitiveArgType.POINT
+        override val primitiveArgType: PrimitiveArgType = PrimitiveArgType.POINT_XY
         constructor(point: data.geometry.Point) : this(point.x, point.y)
         fun toOffset(): Offset =
             Offset(x.toFloat(), y.toFloat())
