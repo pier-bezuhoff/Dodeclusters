@@ -119,11 +119,11 @@
         <item>1-ую точку / перпендикулярный объект</item>
         <item>2-ую точку / перпендикулярный объект</item>
     </string-array>
-    <string name="polar_line_by_circle_and_point_name">Поляра по окружности и точке</string>
-    <string name="polar_line_by_circle_and_point_description">Построить касательную/поляру к окружности через точку</string>
-    <string-array name="polar_line_by_circle_and_point_arg_descriptions">
+    <string name="polarity_by_circle_and_line_or_point_name">Полярность по окружности и точке/прямой</string>
+    <string name="polarity_by_circle_and_line_or_point_description">Построить касательную/поляру или полюс относительно окружности по точке или прямой</string>
+    <string-array name="polarity_by_circle_and_line_or_point_arg_descriptions">
         <item>Окружность</item>
-        <item>Точку</item>
+        <item>Точку или прямую</item>
     </string-array>
     <string name="insert_centered_cross_name">Вставить крест по центру</string>
     <string name="insert_centered_cross_description">Вставить крест по центру</string>

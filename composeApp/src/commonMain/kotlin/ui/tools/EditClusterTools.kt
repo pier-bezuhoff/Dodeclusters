@@ -126,9 +126,9 @@ import dodeclusters.composeapp.generated.resources.phantom_crossed
 import dodeclusters.composeapp.generated.resources.pick_circle_color_description
 import dodeclusters.composeapp.generated.resources.pick_circle_color_name
 import dodeclusters.composeapp.generated.resources.png_export_name
-import dodeclusters.composeapp.generated.resources.polar_line_by_circle_and_point_arg_descriptions
-import dodeclusters.composeapp.generated.resources.polar_line_by_circle_and_point_description
-import dodeclusters.composeapp.generated.resources.polar_line_by_circle_and_point_name
+import dodeclusters.composeapp.generated.resources.polarity_by_circle_and_line_or_point_arg_descriptions
+import dodeclusters.composeapp.generated.resources.polarity_by_circle_and_line_or_point_description
+import dodeclusters.composeapp.generated.resources.polarity_by_circle_and_line_or_point_name
 import dodeclusters.composeapp.generated.resources.propeller
 import dodeclusters.composeapp.generated.resources.rectangular_select_description
 import dodeclusters.composeapp.generated.resources.rectangular_select_name
@@ -477,9 +477,9 @@ sealed class EditClusterTool(
     )
     data object ConstructPolarityByCircleAndLineOrPoint: MultiArg(
         SIGNATURE_REAL_CIRCLE_AND_LINE_OR_POINT,
-        Res.string.polar_line_by_circle_and_point_name,
-        Res.string.polar_line_by_circle_and_point_description,
-        Res.array.polar_line_by_circle_and_point_arg_descriptions,
+        Res.string.polarity_by_circle_and_line_or_point_name,
+        Res.string.polarity_by_circle_and_line_or_point_description,
+        Res.array.polarity_by_circle_and_line_or_point_arg_descriptions,
         Res.drawable.circle_tangent
     )
     data object InsertCenteredCross: Action(

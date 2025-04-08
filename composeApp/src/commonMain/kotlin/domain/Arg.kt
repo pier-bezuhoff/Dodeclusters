@@ -139,6 +139,7 @@ data class ArgType(
             Arg.LineIndex,
             Arg.PointXY,
         )
+        /** Accept nothing, use for ArcPath */
         val NOTHING = ArgType()
     }
 }
@@ -160,4 +161,3 @@ val SIGNATURE_INDICES_AND_POINT = Signature(ArgType.INDICES, ArgType.POINT)
 val SIGNATURE_INDICES_AND_2_CIRCLES = Signature(ArgType.INDICES, ArgType.CLI, ArgType.CLI)
 val SIGNATURE_INDICES_AND_2_POINTS = Signature(ArgType.INDICES, ArgType.POINT, ArgType.POINT)
 val SIGNATURE_N_POINTS_PLACEHOLDER = Signature(ArgType.NOTHING)
-

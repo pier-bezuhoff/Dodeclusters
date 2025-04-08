@@ -2486,9 +2486,9 @@ class EditClusterViewModel : ViewModel() {
                     .copy(lastSnap = result)
             } else {
 //                recordCommand(Command.CHANGE_POV)
-                if (zoom != 1f) {
-                    scaleSelection(zoom)
-                }
+                val targets = objects.indices.toList()
+                val center = computeAbsoluteCenter() ?: Offset.Zero
+                transform(targets, focus = center, zoom = zoom, rotationAngle = rotationAngle)
                 translation += pan // navigate canvas
             }
         }
