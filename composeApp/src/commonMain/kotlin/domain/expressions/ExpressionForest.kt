@@ -523,25 +523,17 @@ class ExpressionForest(
                     pointExpr.circle1 == carrierExpr.pencilObject2 && pointExpr.circle2 == carrierExpr.pencilObject1
                 )
             is Expr.LineBy2Points -> carrierExpr.object1 == pointIndex || carrierExpr.object2 == pointIndex
-            is Expr.CircleInversion ->
-                pointExpr is Expr.CircleInversion &&
-                carrierExpr.engine == pointExpr.engine &&
-                testDependentIncidence(pointExpr.target, carrierExpr.target)
-            is Expr.TransformLike -> {
+            is Expr.TransformLike -> if (pointExpr is Expr.TransformLike) {
                 val sameOutputIndex = (expressions[carrierIndex] as? Expression.OneOf)?.outputIndex == (expressions[pointIndex] as? Expression.OneOf)?.outputIndex
                 val sameExpr = when (pointExpr) {
-                    is Expr.Rotation ->
-                        carrierExpr is Expr.Rotation && pointExpr.copy(target = carrierIndex) == carrierExpr
-                    is Expr.BiInversion ->
-                        carrierExpr is Expr.BiInversion && pointExpr.copy(target = carrierIndex) == carrierExpr
-                    is Expr.LoxodromicMotion ->
-                        carrierExpr is Expr.LoxodromicMotion && pointExpr.copy(target = carrierIndex) == carrierExpr
-                    else -> false
+                    is Expr.CircleInversion -> pointExpr.copy(target = carrierIndex) == carrierExpr
+                    is Expr.Rotation -> pointExpr.copy(target = carrierIndex) == carrierExpr
+                    is Expr.BiInversion -> pointExpr.copy(target = carrierIndex) == carrierExpr
+                    is Expr.LoxodromicMotion -> pointExpr.copy(target = carrierIndex) == carrierExpr
                 }
-                pointExpr is Expr.TransformLike &&
                 sameOutputIndex && sameExpr &&
                 testDependentIncidence(pointExpr.target, carrierExpr.target)
-            }
+            } else false
             // there could exist even more indirect, 2+ step incidence tbh
             else -> false
         }
