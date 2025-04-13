@@ -32,6 +32,9 @@ data class ImaginaryCircle(
     override fun translated(vector: Offset): ImaginaryCircle =
         copy(x = x + vector.x, y = y + vector.y)
 
+    override fun translated(dx: Double, dy: Double): ImaginaryCircle =
+        copy(x = x + dx, y = y + dy)
+
     override fun scaled(focusX: Double, focusY: Double, zoom: Double): ImaginaryCircle {
         val newX = (x - focusX) * zoom + focusX
         val newY = (y - focusY) * zoom + focusY
@@ -44,14 +47,14 @@ data class ImaginaryCircle(
         return ImaginaryCircle(newX, newY, zoom * radius)
     }
 
-    override fun rotated(focus: Point, angleInRadians: Double): ImaginaryCircle {
-        val x0 = x - focus.x
-        val y0 = y - focus.y
+    override fun rotated(focusX: Double, focusY: Double, angleInRadians: Double): ImaginaryCircle {
+        val x0 = x - focusY
+        val y0 = y - focusY
         val cosPhi = cos(angleInRadians)
         val sinPhi = sin(angleInRadians)
         return copy(
-            x = (x0 * cosPhi - y0 * sinPhi) + focus.x,
-            y = (x0 * sinPhi + y0 * cosPhi) + focus.y,
+            x = (x0 * cosPhi - y0 * sinPhi) + focusX,
+            y = (x0 * sinPhi + y0 * cosPhi) + focusY,
         )
     }
 
@@ -68,7 +71,7 @@ data class ImaginaryCircle(
             val sinPhi = sin(phi)
             newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
             newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
-        } // tbf because of T;S;R order it is not completely accurate
+        }
         return ImaginaryCircle(newX, newY, zoom * radius)
     }
 }

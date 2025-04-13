@@ -175,7 +175,7 @@ data class Circle(
             y = y + vector.y,
         )
 
-    fun translated(dx: Double, dy: Double): Circle =
+    override fun translated(dx: Double, dy: Double): Circle =
         copy(
             x = x + dx,
             y = y + dy,
@@ -195,14 +195,14 @@ data class Circle(
             radius = zoom * radius,
         )
 
-    override fun rotated(focus: Point, angleInRadians: Double): Circle {
-        val x0 = x - focus.x
-        val y0 = y - focus.y
+    override fun rotated(focusX: Double, focusY: Double, angleInRadians: Double): Circle {
+        val x0 = x - focusX
+        val y0 = y - focusY
         val cosPhi = cos(angleInRadians)
         val sinPhi = sin(angleInRadians)
         return copy(
-            x = (x0 * cosPhi - y0 * sinPhi) + focus.x,
-            y = (x0 * sinPhi + y0 * cosPhi) + focus.y,
+            x = (x0 * cosPhi - y0 * sinPhi) + focusX,
+            y = (x0 * sinPhi + y0 * cosPhi) + focusY,
         )
     }
 
@@ -231,7 +231,7 @@ data class Circle(
             val sinPhi = sin(phi)
             newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
             newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
-        } // tbf because of T;S;R order it is not completely accurate
+        }
         return copy(
             x = newX,
             y = newY,

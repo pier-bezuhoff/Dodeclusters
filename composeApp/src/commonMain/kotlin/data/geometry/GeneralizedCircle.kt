@@ -3,7 +3,6 @@
 package data.geometry
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.geometry.Offset
 import domain.never
 import domain.signNonZero
 import kotlinx.serialization.Serializable
@@ -13,21 +12,6 @@ import kotlin.math.acosh
 import kotlin.math.pow
 import kotlin.math.sign
 import kotlin.math.sqrt
-
-/** A circle, line, imaginary circle or point */
-@Immutable
-sealed interface GCircle {
-    fun scaled(focusX: Double, focusY: Double, zoom: Double): GCircle
-    fun translated(vector: Offset): GCircle
-    /** @param[rotationAngle] CCW in degrees */
-    fun transformed(
-        translation: Offset,
-        focus: Offset = Offset.Unspecified,
-        zoom: Float = 1f,
-        rotationAngle: Float = 0f
-    ): GCircle
-    fun rotated(focus: Point, angleInRadians: Double): GCircle
-}
 
 // MAYBE: Clifford algebra (geometric product + other operations)
 /**

@@ -136,7 +136,7 @@ fun computeRotation(
     val dAngle = -params.angle.radians
     return (1 .. params.nSteps)
         .map { i ->
-            target.rotated(pivot, i * dAngle)
+            target.rotated(pivot.x, pivot.y, i * dAngle)
         }
 }
 

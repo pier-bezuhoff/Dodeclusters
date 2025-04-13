@@ -51,6 +51,12 @@ data class Point(
         else
             Point(x + vector.x, y + vector.y)
 
+    override fun translated(dx: Double, dy: Double): Point =
+        if (this == CONFORMAL_INFINITY)
+            CONFORMAL_INFINITY
+        else
+            Point(x + dx, y + dy)
+
     fun scaled(focus: Offset, zoom: Float): Point =
         if (this == CONFORMAL_INFINITY)
             CONFORMAL_INFINITY
@@ -68,17 +74,17 @@ data class Point(
             (y - focusY) * zoom + focusY,
         )
 
-    override fun rotated(focus: Point, angleInRadians: Double): Point =
+    override fun rotated(focusX: Double, focusY: Double, angleInRadians: Double): Point =
         if (this == CONFORMAL_INFINITY)
             CONFORMAL_INFINITY
         else { // cmp with Offset.rotateBy
-            val x0 = x - focus.x
-            val y0 = y - focus.y
+            val x0 = x - focusX
+            val y0 = y - focusY
             val cosPhi = cos(angleInRadians)
             val sinPhi = sin(angleInRadians)
             Point(
-                (x0 * cosPhi - y0 * sinPhi) + focus.x,
-                (x0 * sinPhi + y0 * cosPhi) + focus.y,
+                (x0 * cosPhi - y0 * sinPhi) + focusX,
+                (x0 * sinPhi + y0 * cosPhi) + focusY,
             )
         }
 
@@ -115,6 +121,29 @@ data class Point(
             newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
             newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
         } // tbf because of T;S;R order it is not completely accurate
+        return Point(newX, newY)
+    }
+
+    fun transformed(
+        translationX: Double = 0.0,
+        translationY: Double = 0.0,
+        focusX: Double,
+        focusY: Double,
+        zoom: Double = 1.0,
+        rotationAngle: Float = 0f,
+    ): Point {
+        if (this == CONFORMAL_INFINITY)
+            return CONFORMAL_INFINITY
+        var newX: Double = x + translationX
+        var newY: Double = y + translationY
+        // cmp. Offset.rotateBy & zoom and rotation are commutative
+        val dx = newX - focusX
+        val dy = newY - focusY
+        val phi: Double = rotationAngle * PI/180.0
+        val cosPhi = cos(phi)
+        val sinPhi = sin(phi)
+        newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
+        newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
         return Point(newX, newY)
     }
 

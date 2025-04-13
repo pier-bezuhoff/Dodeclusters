@@ -1057,29 +1057,37 @@ private inline fun DrawScope.drawHandles(
             }
             null -> {}
         }
-        (submode as? SubMode.RectangularSelect)?.let { rectSubmode ->
-            val (corner1, corner2) = rectSubmode
-            if (corner1 != null && corner2 != null) {
-                val rect = Rect.fromCorners(corner1, corner2)
-                drawRect(
-                    color = selectionMarkingsColor,
-                    topLeft = rect.topLeft,
-                    size = rect.size,
-                    style = dottedStroke,
+        when (submode) {
+            is SubMode.RectangularSelect -> {
+                val (corner1, corner2) = submode
+                if (corner1 != null && corner2 != null) {
+                    val rect = Rect.fromCorners(corner1, corner2)
+                    drawRect(
+                        color = selectionMarkingsColor,
+                        topLeft = rect.topLeft,
+                        size = rect.size,
+                        style = dottedStroke,
+                    )
+                }
+            }
+            is SubMode.Rotate -> {
+                val (center, angle) = submode
+                val currentDirection = Offset(0f, -1f).rotateBy(angle.toFloat())
+                val maxDim = size.maxDimension
+                val sameDirectionFarAway =
+                    center + currentDirection * maxDim
+                drawLine(
+                    color = rotationIndicatorColor,
+                    start = center,
+                    end = sameDirectionFarAway,
+                    strokeWidth = 2f
                 )
             }
-        }
-        (submode as? SubMode.Rotate)?.let { (center, angle) ->
-            val currentDirection = Offset(0f, -1f).rotateBy(angle.toFloat())
-            val maxDim = size.maxDimension
-            val sameDirectionFarAway =
-                center + currentDirection * maxDim
-            drawLine(
-                color = rotationIndicatorColor,
-                start = center,
-                end = sameDirectionFarAway,
-                strokeWidth = 2f
-            )
+            is SubMode.RotateSphere -> {
+                // draw south handle
+                // draw grid with equator emboldened
+            }
+            else -> {}
         }
     }
 }

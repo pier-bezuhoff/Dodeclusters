@@ -2,7 +2,6 @@
 
 package ui.edit_cluster
 
-import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -38,7 +37,9 @@ import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.PartialArcPath
 import data.geometry.Point
+import data.geometry.calculateSphereRotationBiEngine
 import data.geometry.fromCorners
+import data.geometry.generateSphereGrid
 import data.geometry.selectWithRectangle
 import data.geometry.translationDelta
 import domain.Arg
@@ -69,6 +70,7 @@ import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.ObjectConstruct
 import domain.expressions.Parameters
 import domain.expressions.RotationParameters
+import domain.expressions.computeBiInversion
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
@@ -83,6 +85,7 @@ import domain.io.DdcV4
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
 import domain.never
+import domain.radians
 import domain.reindexingMap
 import domain.removeAtIndices
 import domain.snapAngle
@@ -112,7 +115,10 @@ import ui.edit_cluster.dialogs.DialogType
 import ui.theme.DodeclustersColors
 import ui.tools.EditClusterCategory
 import ui.tools.EditClusterTool
+import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.time.Duration.Companion.seconds
 
 // MAYBE: use UiState functional pattern + StateFlow's instead of this mess
@@ -1464,6 +1470,29 @@ class EditClusterViewModel : ViewModel() {
             queueSnackbarMessage(SnackbarMessage.PHANTOM_OBJECT_EXPLANATION)
     }
 
+    fun toggleSphereRotationMode() {
+        if (mode == ViewMode.SphereRotation) {
+            submode = SubMode.None
+            switchToCategory(EditClusterCategory.Drag)
+        } else {
+            switchToMode(ViewMode.SphereRotation)
+            val sphereProjection = Circle(
+                computeAbsoluteCenter() ?: Offset.Zero,
+                // sphere radius == equator radius
+                min(canvasSize.width/2.0, canvasSize.height/2.0)
+            )
+            submode = SubMode.RotateSphere(
+                sphereRadius = sphereProjection.radius,
+                grabbedTarget = sphereProjection.center,
+                south = sphereProjection.centerPoint,
+                grid = generateSphereGrid(
+                    sphereProjection,
+                    angleStep = SubMode.RotateSphere.GRID_ANGLE_STEP
+                ),
+            )
+        }
+    }
+
     fun hidePanel() {
         showPanel = false
     }
@@ -1852,6 +1881,21 @@ class EditClusterViewModel : ViewModel() {
                     } else {
                         reselectRegionAt(visiblePosition)
                     }
+                } else if (mode == ViewMode.SphereRotation) {
+                    val sphereProjection = Circle(
+                        computeAbsoluteCenter() ?: Offset.Zero,
+                        // sphere radius == equator radius
+                        min(canvasSize.width/2.0, canvasSize.height/2.0)
+                    )
+                    submode = SubMode.RotateSphere(
+                        sphereRadius = sphereProjection.radius,
+                        grabbedTarget = absolute(visiblePosition),
+                        south = sphereProjection.centerPoint,
+                        grid = generateSphereGrid(
+                            sphereProjection,
+                            angleStep = SubMode.RotateSphere.GRID_ANGLE_STEP
+                        ),
+                    )
                 } else if (mode is ToolMode && partialArgList?.isFull != true) {
                     val pArgList = partialArgList
                     val nextType = pArgList?.nextArgType
@@ -2394,21 +2438,23 @@ class EditClusterViewModel : ViewModel() {
     // MAYBE: handle key arrows as panning
     fun onPanZoomRotate(pan: Offset, centroid: Offset, zoom: Float, rotationAngle: Float) {
         movementAfterDown = true
+        /** absolute cursor/pointer position */
         val c = absolute(centroid)
         val selectedCircles = selection.filter { objects[it] is CircleOrLineOrImaginaryCircle }
         val selectedPoints = selection.filter { objects[it] is Point }
-        if (submode !is SubMode.None) {
+        val sm = submode
+        if (sm !is SubMode.None) {
             // drag handle
             when (val h = handleConfig) {
                 is HandleConfig.SingleCircle -> {
-                    when (val sm = submode) {
+                    when (sm) {
                         is SubMode.Scale -> scaleSingleCircle(c = c, zoom = zoom, h = h, sm = sm)
                         is SubMode.Rotate -> rotateSingleCircle(pan = pan, c = c, h = h, sm = sm)
                         else -> {}
                     }
                 }
                 is HandleConfig.SeveralCircles -> {
-                    when (val sm = submode) {
+                    when (sm) {
                         is SubMode.Scale ->
                             scaleSeveralCircles(pan, selection)
                         is SubMode.Rotate ->
@@ -2418,16 +2464,16 @@ class EditClusterViewModel : ViewModel() {
                 }
                 else -> {}
             }
-            if (mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect) {
-                val corner1 = (submode as SubMode.RectangularSelect).corner1
+            if (mode == SelectionMode.Multiselect && sm is SubMode.RectangularSelect) {
+                val corner1 = sm.corner1
                 val rect = Rect.fromCorners(corner1 ?: c, c)
                 val selectables = objects.mapIndexed { ix, o ->
                     if (showPhantomObjects || ix !in phantoms) o else null
                 }
                 selection = selectWithRectangle(selectables, rect)
                 submode = SubMode.RectangularSelect(corner1, c)
-            } else if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) {
-                val qualifiedRegion = (submode as SubMode.FlowSelect).lastQualifiedRegion
+            } else if (mode == SelectionMode.Multiselect && sm is SubMode.FlowSelect) {
+                val qualifiedRegion = sm.lastQualifiedRegion
                 val (_, newQualifiedRegion) = selectRegionAt(centroid)
                 if (qualifiedRegion == null) {
                     submode = SubMode.FlowSelect(newQualifiedRegion)
@@ -2439,8 +2485,8 @@ class EditClusterViewModel : ViewModel() {
                         (newQualifiedRegion.outsides - qualifiedRegion.outsides)
                     selection += diff.filter { it !in selection && (showPhantomObjects || it !in phantoms) }
                 }
-            } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
-                val qualifiedRegion = (submode as SubMode.FlowFill).lastQualifiedRegion
+            } else if (mode == SelectionMode.Region && sm is SubMode.FlowFill) {
+                val qualifiedRegion = sm.lastQualifiedRegion
                 val (_, newQualifiedRegion) = selectRegionAt(centroid)
                 if (qualifiedRegion == null) {
                     submode = SubMode.FlowFill(newQualifiedRegion)
@@ -2451,6 +2497,32 @@ class EditClusterViewModel : ViewModel() {
                     } else {
                         reselectRegionAt(centroid)
                     }
+                }
+            } else if (mode == ViewMode.SphereRotation && sm is SubMode.RotateSphere) {
+                val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
+                val biEngine = calculateSphereRotationBiEngine(
+                    sphereProjection = Circle(screenCenter, sm.sphereRadius),
+                    start = Point.fromOffset(sm.grabbedTarget),
+                    end = Point.fromOffset(c)
+                )
+                if (biEngine != null) {
+                    val params = BiInversionParameters(0.5, 1, false)
+                    val (engine1, engine2) = biEngine
+                    for (ix in objects.indices) {
+                        val o = objects[ix]
+                        if (o != null) {
+                            objects[ix] = computeBiInversion(params, engine1, engine2, o)[0]
+                        }
+                    }
+                    val newSouth = computeBiInversion(params, engine1, engine2, sm.south)[0] as? Point
+                    val newGrid = sm.grid.mapNotNull { o ->
+                        computeBiInversion(params, engine1, engine2, o)[0] as? CircleOrLine
+                    }
+                    submode = sm.copy(
+                        grabbedTarget = c,
+                        south = newSouth ?: sm.south,
+                        grid = newGrid,
+                    )
                 }
             }
         } else if (mode == SelectionMode.Drag && selectedCircles.isNotEmpty() && showCircles) {
@@ -2501,6 +2573,23 @@ class EditClusterViewModel : ViewModel() {
                 // MAYBE: try to re-attach free points
             }
             ToolMode.ARC_PATH -> {}
+            ViewMode.SphereRotation -> {
+                // reset grid
+                val sphereProjection = Circle(
+                    computeAbsoluteCenter() ?: Offset.Zero,
+                    // sphere radius == equator radius
+                    min(canvasSize.width/2.0, canvasSize.height/2.0)
+                )
+                submode = SubMode.RotateSphere(
+                    sphereRadius = sphereProjection.radius,
+                    grabbedTarget = sphereProjection.center,
+                    south = sphereProjection.centerPoint,
+                    grid = generateSphereGrid(
+                        sphereProjection,
+                        angleStep = SubMode.RotateSphere.GRID_ANGLE_STEP
+                    ),
+                )
+            }
             is ToolMode -> if (submode == SubMode.None) {
                 val pArgList = partialArgList
                 // we only confirm args in onUp, they are created in onDown etc.
@@ -2862,6 +2951,8 @@ class EditClusterViewModel : ViewModel() {
                 partialArcPath = null
                 submode = SubMode.None
             }
+            ViewMode.SphereRotation ->
+                switchToCategory(EditClusterCategory.Drag)
             is SelectionMode -> {
                 if (submode is SubMode.ExprAdjustment) {
                     undo() // contrived way to go to before-adj savepoint
@@ -3476,6 +3567,7 @@ class EditClusterViewModel : ViewModel() {
             EditClusterTool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
             // TODO: 2 options: solid color or external image
             EditClusterTool.AddBackgroundImage -> openedDialog = DialogType.BACKGROUND_COLOR_PICKER
+            EditClusterTool.SphereRotation -> toggleSphereRotationMode()
             EditClusterTool.InsertCenteredCross -> insertCenteredCross()
             EditClusterTool.CompleteArcPath -> completeArcPath()
             EditClusterTool.Palette -> openedDialog = DialogType.REGION_COLOR_PICKER

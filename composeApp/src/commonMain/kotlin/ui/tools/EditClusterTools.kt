@@ -158,6 +158,7 @@ import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_description
 import dodeclusters.composeapp.generated.resources.shrink_name
 import dodeclusters.composeapp.generated.resources.spiral
+import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_description
 import dodeclusters.composeapp.generated.resources.swap_direction_name
@@ -347,6 +348,11 @@ sealed class EditClusterTool(
         Res.drawable.intersection_settings
     )
 
+    data object SphereRotation: Switch(
+        Res.string.stub,
+        Res.string.stub,
+        Res.drawable.rotation_around_point,
+    )
     data object ToggleObjects: Switch(
         Res.string.toggle_objects_name,
         Res.string.toggle_objects_description,

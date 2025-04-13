@@ -523,6 +523,7 @@ class ExpressionForest(
                     pointExpr.circle1 == carrierExpr.pencilObject2 && pointExpr.circle2 == carrierExpr.pencilObject1
                 )
             is Expr.LineBy2Points -> carrierExpr.object1 == pointIndex || carrierExpr.object2 == pointIndex
+            // recursive transform check
             is Expr.TransformLike -> if (pointExpr is Expr.TransformLike) {
                 val sameOutputIndex = (expressions[carrierIndex] as? Expression.OneOf)?.outputIndex == (expressions[pointIndex] as? Expression.OneOf)?.outputIndex
                 val sameExpr = when (pointExpr) {
@@ -531,10 +532,9 @@ class ExpressionForest(
                     is Expr.BiInversion -> pointExpr.copy(target = carrierIndex) == carrierExpr
                     is Expr.LoxodromicMotion -> pointExpr.copy(target = carrierIndex) == carrierExpr
                 }
-                sameOutputIndex && sameExpr &&
-                testDependentIncidence(pointExpr.target, carrierExpr.target)
+                sameOutputIndex && sameExpr && testDependentIncidence(pointExpr.target, carrierExpr.target)
             } else false
-            // there could exist even more indirect, 2+ step incidence tbh
+            // NOTE: there could exist even more indirect, 2+ step incidence cases tbh
             else -> false
         }
         return directIncidence || indirectIncidence

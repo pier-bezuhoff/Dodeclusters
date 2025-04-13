@@ -37,6 +37,7 @@ sealed interface CircleOrLine : CircleOrLineOrImaginaryCircle, CircleOrLineOrPoi
      * `A isOutside B` == A ⊆ Bꟲ*/
     infix fun isOutside(circle: CircleOrLine): Boolean
     override fun translated(vector: Offset): CircleOrLine
+    override fun translated(dx: Double, dy: Double): CircleOrLine
     fun scaled(focus: Offset, zoom: Float): CircleOrLine
     override fun scaled(focusX: Double, focusY: Double, zoom: Double): CircleOrLine
     fun rotated(focus: Offset, angleInDegrees: Float): CircleOrLine

@@ -35,6 +35,7 @@ data class Line(
         ) { "Invalid Line($a, $b, $c)" }
     }
 
+    /** `sqrt(a^2 + b^2)` */
     @Transient
     val norm: Double =
         hypot(a, b)
@@ -173,7 +174,7 @@ data class Line(
     override fun translated(vector: Offset): Line =
        copy(c = c - (a*vector.x + b*vector.y))
 
-    fun translated(dx: Double, dy: Double): Line =
+    override fun translated(dx: Double, dy: Double): Line =
         copy(c = c - (a*dx + b*dy))
 
     fun translatedTo(point: Point): Line =
@@ -193,10 +194,10 @@ data class Line(
         return copy(c = newC)
     }
 
-    override fun rotated(focus: Point, angleInRadians: Double): Line {
+    override fun rotated(focusX: Double, focusY: Double, angleInRadians: Double): Line {
         val newA = normalX * cos(angleInRadians) - normalY * sin(angleInRadians)
         val newB = normalX * sin(angleInRadians) + normalY * cos(angleInRadians)
-        val newC = (hypot(newA, newB)/hypot(a, b)) * (a*focus.x + b*focus.y + c) - newA*focus.x - newB*focus.y
+        val newC = (hypot(newA, newB)/hypot(a, b)) * (a*focusX + b*focusY + c) - newA*focusX - newB*focusY
         return Line(newA, newB, newC)
     }
 

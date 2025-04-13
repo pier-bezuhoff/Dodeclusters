@@ -52,6 +52,7 @@ sealed class EditClusterCategory(
     data object Visibility : EditClusterCategory(
         Res.string.visibility_category_name,
         listOf(
+            EditClusterTool.SphereRotation,
             EditClusterTool.ToggleObjects,
             EditClusterTool.TogglePhantoms,
 //            EditClusterTool.ToggleFilledOrOutline,

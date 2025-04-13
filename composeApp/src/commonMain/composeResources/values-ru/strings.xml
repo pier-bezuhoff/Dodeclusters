@@ -11,9 +11,9 @@
     <!-- tools -->
     <string name="collapse">Свернуть</string>
     <string name="drag_name">Перетаскивание</string>
-    <string name="drag_description">Режим перетаскивания окружностей по одной</string>
+    <string name="drag_description">Режим перетаскивания объектов по одному</string>
     <string name="multiselect_name">Выбор многих</string>
-    <string name="multiselect_description">Режим выбора групп окружностей</string>
+    <string name="multiselect_description">Режим выбора групп объектов</string>
     <string name="rectangular_select_name">Прямоугольное выделение</string>
     <string name="rectangular_select_description">Режим выбора объектов прямоугольным выделением</string>
     <string name="flow_multiselect_name">Свайп-выбор</string>

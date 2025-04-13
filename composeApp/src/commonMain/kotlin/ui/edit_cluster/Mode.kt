@@ -30,6 +30,15 @@ enum class SelectionMode(
 
 @Immutable
 @Serializable
+enum class ViewMode(
+    @Transient
+    override val tool: EditClusterTool
+) : Mode {
+    SphereRotation(EditClusterTool.SphereRotation),
+}
+
+@Immutable
+@Serializable
 enum class ToolMode(
     @Transient
     override val tool: EditClusterTool.MultiArg

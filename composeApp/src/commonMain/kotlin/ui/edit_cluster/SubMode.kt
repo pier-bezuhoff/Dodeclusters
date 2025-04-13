@@ -2,10 +2,11 @@ package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import data.geometry.CircleOrLine
+import data.geometry.Point
 import domain.Ix
 import domain.cluster.LogicalRegion
 import domain.expressions.Expr
-import domain.expressions.Parameters
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -39,6 +40,29 @@ sealed interface SubMode {
     data class FlowFill(
         val lastQualifiedRegion: LogicalRegion? = null
     ) : SubMode
+
+    /**
+     * Rotate domain-sphere of stereographic projection
+     * (the plane-cuts-thru-sphere-center type). All coordinates are _absolute_
+     * @param[grabbedTarget] the point offset with grabbed to drag around
+     * @param[south] (absolute) original screen center (projection of sphere's south)
+     * @param[grid] regularly spaced lines of
+     * constant latitude and longitude, after the rotation is applied to them
+     */
+    data class RotateSphere(
+        val sphereRadius: Double,
+        val grabbedTarget: Offset,
+        val south: Point,
+        val grid: List<CircleOrLine>,
+    ) : SubMode {
+        companion object {
+            /** in degrees */
+            const val GRID_ANGLE_STEP = 15
+            // NOTE: equator index depends on angle step
+            /** [grid]`[it]` is the equator */
+            const val EQUATOR_GRID_INDEX = 5
+        }
+    }
 
     // generic type E doesn't actually enforce anything...
     /** Sub-mode accompanying [ToolMode], that allows live adjustment of expression parameters.
