@@ -495,6 +495,7 @@ class EditClusterViewModel : ViewModel() {
             } else {
                 ObjectConstruct.Dynamic(
                     // since children are auto-deleted with their parent we can !! safely
+                    // BUG: null pointer after 1/2-assed sphere rotation
                     e.reIndex(reIndexer = { reindexing[it]!! })
                 )
             }
@@ -2508,12 +2509,12 @@ class EditClusterViewModel : ViewModel() {
                 if (biEngine != null) {
                     val params = BiInversionParameters(0.5, 1, false)
                     val (engine1, engine2) = biEngine
-                    for (ix in objects.indices) {
-                        val o = objects[ix]
-                        if (o != null) {
-                            objects[ix] = computeBiInversion(params, engine1, engine2, o)[0]
-                        }
-                    }
+//                    for (ix in objects.indices) {
+//                        val o = objects[ix]
+//                        if (o != null) {
+//                            objects[ix] = computeBiInversion(params, engine1, engine2, o)[0]
+//                        }
+//                    }
                     val newSouth = computeBiInversion(params, engine1, engine2, sm.south)[0] as? Point
                     val newGrid = sm.grid.mapNotNull { o ->
                         computeBiInversion(params, engine1, engine2, o)[0] as? CircleOrLine
@@ -2652,11 +2653,16 @@ class EditClusterViewModel : ViewModel() {
                 submode = SubMode.RectangularSelect(corner1, corner2)
             }
         }
-        if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) // haxx
+        if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) { // haxx
             toolbarState = toolbarState.copy(activeTool = EditClusterTool.Multiselect)
+        }
         // we don't want to exit flow-fill or expr-adj that we started with completeToolMode()
-        if (submode !is SubMode.FlowFill && submode !is SubMode.ExprAdjustment)
+        if (submode !is SubMode.FlowFill &&
+            submode !is SubMode.ExprAdjustment &&
+            submode !is SubMode.RotateSphere
+        ) {
             submode = SubMode.None
+        }
     }
 
     fun onVerticalScroll(yDelta: Float) {
@@ -3613,6 +3619,8 @@ class EditClusterViewModel : ViewModel() {
                 chessboardPattern != ChessboardPattern.NONE
             EditClusterTool.RestrictRegionToSelection ->
                 restrictRegionsToSelection
+            EditClusterTool.SphereRotation ->
+                mode == ViewMode.SphereRotation
             EditClusterTool.ToggleObjects ->
                 showCircles
             EditClusterTool.TogglePhantoms ->

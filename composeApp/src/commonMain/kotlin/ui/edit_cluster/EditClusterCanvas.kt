@@ -200,7 +200,7 @@ fun BoxScope.EditClusterCanvas(
                     drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, selectionIsActive = selectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleThiccStroke = thiccDottedStroke)
                 }
                 drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke)
-                drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
+                drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke, visibleRect = visibleRect)
             }
             if (viewModel.circleSelectionIsActive && viewModel.showUI) {
                 drawRotationHandle(concretePositions.positions, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)
@@ -999,6 +999,7 @@ private inline fun DrawScope.drawHandles(
     scaleIcon: Painter,
     rotateIcon: Painter,
     dottedStroke: DrawStyle,
+    visibleRect: Rect,
 ) {
     if (showCircles) {
         val iconSize = Size(iconDim, iconDim)
@@ -1084,8 +1085,22 @@ private inline fun DrawScope.drawHandles(
                 )
             }
             is SubMode.RotateSphere -> {
-                // draw south handle
-                // draw grid with equator emboldened
+                drawCircle(
+                    color = scaleIconColor,
+                    alpha = 0.7f,
+                    radius = handleRadius,
+                    center = submode.south.toOffset(),
+                )
+                for (i in submode.grid.indices) {
+                    val circleOrLine = submode.grid[i]
+                    val alpha = if (i == SubMode.RotateSphere.EQUATOR_GRID_INDEX) 0.9f else 0.5f
+                    drawCircleOrLine(circleOrLine,
+                        visibleRect = visibleRect,
+                        color = scaleIconColor,
+                        alpha = alpha,
+                        style = dottedStroke,
+                    )
+                }
             }
             else -> {}
         }

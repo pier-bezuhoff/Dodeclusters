@@ -1,6 +1,5 @@
 package data.geometry
 
-import androidx.compose.ui.geometry.Offset
 import domain.radians
 import domain.squareSum
 import kotlin.math.cos
@@ -84,10 +83,9 @@ fun generateSphereGrid(sphereProjection: Circle, angleStep: Int): List<CircleOrL
     val lines = lineAngles.map { angle ->
         val radians = angle.toFloat().radians
         Line(cos(radians), sin(radians), 0.0)
-            .translated(-sphereProjection.x, -sphereProjection.y)
+            .translated(sphereProjection.x, sphereProjection.y)
     }
-    val circleAngles = angleStep until 180 step angleStep
-    // angle=90 => equator == circles[5]
+    val circleAngles = (angleStep - 90) until 90 step angleStep
     val circles = circleAngles.map { angle ->
         val radians = angle.toFloat().radians
         sphereProjection.copy(
