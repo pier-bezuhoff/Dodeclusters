@@ -3,19 +3,19 @@ package ui.edit_cluster
 import androidx.compose.runtime.Immutable
 import domain.indexOfOrNull
 import domain.updated
-import ui.tools.EditClusterCategory
-import ui.tools.EditClusterTool
+import ui.tools.Category
+import ui.tools.Tool
 
 @Immutable
 data class CategorySetup(
-    val categories: List<EditClusterCategory> = listOf(
-        EditClusterCategory.Drag,
-        EditClusterCategory.Multiselect,
-        EditClusterCategory.Region,
-        EditClusterCategory.Visibility,
-        EditClusterCategory.Colors,
-        EditClusterCategory.Transform,
-        EditClusterCategory.Create, // FAB
+    val categories: List<Category> = listOf(
+        Category.Drag,
+        Category.Multiselect,
+        Category.Region,
+        Category.Visibility,
+        Category.Colors,
+        Category.Transform,
+        Category.Create, // FAB
     ),
 )
 
@@ -36,8 +36,8 @@ data class ToolbarState(
             }
         }
     ,
-    val activeCategory: EditClusterCategory = EditClusterCategory.Drag,
-    val activeTool: EditClusterTool = EditClusterTool.Drag,
+    val activeCategory: Category = Category.Drag,
+    val activeTool: Tool = Tool.Drag,
 ) {
     val categories = categorySetup.categories
     val panelNeedsToBeShown =
@@ -46,7 +46,7 @@ data class ToolbarState(
         else
             activeCategory.tools.size > 1
 
-    fun getDefaultTool(category: EditClusterCategory): EditClusterTool? {
+    fun getDefaultTool(category: Category): Tool? {
         val categoryIndex = categories.indexOf(category)
         return if (categoryIndex == -1) {
             null
@@ -59,12 +59,12 @@ data class ToolbarState(
         }
     }
 
-    fun getCategory(tool: EditClusterTool): EditClusterCategory {
+    fun getCategory(tool: Tool): Category {
         val categoryIndex = categories.indexOfFirst { tool in it.tools }
         return categories[categoryIndex]
     }
 
-    fun updateDefault(category: EditClusterCategory, newDefaultTool: EditClusterTool?): ToolbarState {
+    fun updateDefault(category: Category, newDefaultTool: Tool?): ToolbarState {
         val categoryIndex = categories.indexOf(category)
         val newDefaultIndex: Int? =
             if (newDefaultTool == null)

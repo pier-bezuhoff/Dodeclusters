@@ -25,7 +25,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.edit_cluster.EditClusterViewModel
 import ui.hideSystemBars
-import ui.tools.EditClusterTool
+import ui.tools.Tool
 
 @Composable
 fun SaveOptionsDialog(
@@ -56,7 +56,7 @@ fun SaveOptionsDialog(
                 val rowModifier = Modifier.fillMaxWidth() //.padding(end = 8.dp)
                 val containerColor = MaterialTheme.colorScheme.surface
                 val contentColor = MaterialTheme.colorScheme.onSurface
-                val saveCluster = EditClusterTool.SaveCluster
+                val saveCluster = Tool.SaveCluster
                 // NOTE: optimize by starting to encode bitmap when user is
                 //  shown name-choosing dialog
                 SaveFileButton(
@@ -82,7 +82,7 @@ fun SaveOptionsDialog(
                     onConfirm()
                 }
                 // for one reason or another png export is quite slow on Web (desktop is quite fast, mobile is unimplemented)
-                val pngExport = EditClusterTool.PngExport
+                val pngExport = Tool.PngExport
                 SaveBitmapAsPngButton(
                     viewModel = viewModel,
                     saveData = SaveData(
@@ -105,7 +105,7 @@ fun SaveOptionsDialog(
                     onSavedStatus(success, filename)
                     onConfirm()
                 }
-                val svgExport = EditClusterTool.SvgExport
+                val svgExport = Tool.SvgExport
                 SaveFileButton(
                     saveData = SaveData(
                         name = svgExport.DEFAULT_NAME,

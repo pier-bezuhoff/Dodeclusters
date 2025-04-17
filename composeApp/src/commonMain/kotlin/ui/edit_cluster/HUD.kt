@@ -81,7 +81,7 @@ import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
 import ui.edit_cluster.dialogs.DefaultRotationParameters
-import ui.tools.EditClusterTool
+import ui.tools.Tool
 import kotlin.math.abs
 import kotlin.math.acosh
 import kotlin.math.asinh
@@ -99,8 +99,8 @@ fun BoxScope.SelectionContextActions(
     showAdjustExprButton: Boolean,
     showOrientationToggle: Boolean,
     isLocked: Boolean,
-    toolAction: (EditClusterTool) -> Unit,
-    toolPredicate: (EditClusterTool) -> Boolean,
+    toolAction: (Tool) -> Unit,
+    toolPredicate: (Tool) -> Boolean,
     onScale: (newScaleSliderPercentage: Float) -> Unit,
     onScaleFinished: () -> Unit,
     onRotate: (newRotationAngle: Float) -> Unit,
@@ -136,7 +136,7 @@ fun BoxScope.SelectionContextActions(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             SimpleToolButtonWithTooltip(
-                EditClusterTool.Expand,
+                Tool.Expand,
                 tint = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
@@ -156,7 +156,7 @@ fun BoxScope.SelectionContextActions(
                 colors = sliderColors,
             )
             SimpleToolButtonWithTooltip(
-                EditClusterTool.Shrink,
+                Tool.Shrink,
                 tint = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
@@ -218,48 +218,48 @@ fun BoxScope.SelectionContextActions(
         ) {
             if (showAdjustExprButton) {
                 SimpleToolButtonWithTooltip(
-                    EditClusterTool.AdjustExpr,
+                    Tool.AdjustExpr,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
             SimpleToolButtonWithTooltip(
-                EditClusterTool.PickCircleColor,
+                Tool.PickCircleColor,
                 buttonModifier,
                 tint = objectColor,
                 onClick = toolAction
             )
             TwoIconButtonWithTooltip(
-                painterResource(EditClusterTool.MarkAsPhantoms.icon),
-                painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
-                description = stringResource(EditClusterTool.MarkAsPhantoms.description),
-                disabledDescription = stringResource(EditClusterTool.MarkAsPhantoms.disabledDescription),
-                name = stringResource(EditClusterTool.MarkAsPhantoms.name),
-                enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+                painterResource(Tool.MarkAsPhantoms.icon),
+                painterResource(Tool.MarkAsPhantoms.disabledIcon),
+                description = stringResource(Tool.MarkAsPhantoms.description),
+                disabledDescription = stringResource(Tool.MarkAsPhantoms.disabledDescription),
+                name = stringResource(Tool.MarkAsPhantoms.name),
+                enabled = toolPredicate(Tool.MarkAsPhantoms),
                 modifier = buttonModifier,
-                onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
+                onClick = { toolAction(Tool.MarkAsPhantoms) }
             )
             if (showOrientationToggle) {
                 SimpleToolButtonWithTooltip(
-                    EditClusterTool.SwapDirection,
+                    Tool.SwapDirection,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
             if (isLocked) {
                 SimpleToolButtonWithTooltip(
-                    EditClusterTool.Detach,
+                    Tool.Detach,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
             SimpleToolButtonWithTooltip(
-                EditClusterTool.Duplicate,
+                Tool.Duplicate,
                 buttonModifier,
                 onClick = toolAction
             )
             SimpleToolButtonWithTooltip(
-                EditClusterTool.Delete,
+                Tool.Delete,
                 buttonModifier,
                 onClick = toolAction
             )
@@ -274,8 +274,8 @@ fun BoxScope.PointContextActions(
 //    objectColor: Color?,
     showAdjustExprButton: Boolean,
     isLocked: Boolean,
-    toolAction: (EditClusterTool) -> Unit,
-    toolPredicate: (EditClusterTool) -> Boolean,
+    toolAction: (Tool) -> Unit,
+    toolPredicate: (Tool) -> Boolean,
 ) {
     val buttonModifier = Modifier
         .padding(8.dp)
@@ -294,30 +294,30 @@ fun BoxScope.PointContextActions(
         ) {
             if (showAdjustExprButton) {
                 SimpleToolButtonWithTooltip(
-                    EditClusterTool.AdjustExpr,
+                    Tool.AdjustExpr,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
             TwoIconButtonWithTooltip(
-                painterResource(EditClusterTool.MarkAsPhantoms.icon),
-                painterResource(EditClusterTool.MarkAsPhantoms.disabledIcon),
-                description = stringResource(EditClusterTool.MarkAsPhantoms.description),
-                disabledDescription = stringResource(EditClusterTool.MarkAsPhantoms.disabledDescription),
-                name = stringResource(EditClusterTool.MarkAsPhantoms.name),
-                enabled = toolPredicate(EditClusterTool.MarkAsPhantoms),
+                painterResource(Tool.MarkAsPhantoms.icon),
+                painterResource(Tool.MarkAsPhantoms.disabledIcon),
+                description = stringResource(Tool.MarkAsPhantoms.description),
+                disabledDescription = stringResource(Tool.MarkAsPhantoms.disabledDescription),
+                name = stringResource(Tool.MarkAsPhantoms.name),
+                enabled = toolPredicate(Tool.MarkAsPhantoms),
                 modifier = buttonModifier,
-                onClick = { toolAction(EditClusterTool.MarkAsPhantoms) }
+                onClick = { toolAction(Tool.MarkAsPhantoms) }
             )
             if (isLocked) {
                 SimpleToolButtonWithTooltip(
-                    EditClusterTool.Detach,
+                    Tool.Detach,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
             SimpleToolButtonWithTooltip(
-                EditClusterTool.Delete,
+                Tool.Delete,
                 buttonModifier,
                 onClick = toolAction
             )
@@ -372,13 +372,13 @@ fun InterpolationInterface(
                 Box(rightUnderVerticalSliderModifier) {
                     WithTooltip(
                         if (interpolateInBetween)
-                            stringResource(EditClusterTool.InBetween.description)
+                            stringResource(Tool.InBetween.description)
                         else
-                            stringResource(EditClusterTool.InBetween.disabledDescription)
+                            stringResource(Tool.InBetween.disabledDescription)
                     ) {
                         OnOffButton(
-                            painterResource(EditClusterTool.InBetween.icon),
-                            stringResource(EditClusterTool.InBetween.name),
+                            painterResource(Tool.InBetween.icon),
+                            stringResource(Tool.InBetween.name),
                             isOn = interpolateInBetween,
                             contentColor = MaterialTheme.colorScheme.secondary,
                             checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -392,7 +392,7 @@ fun InterpolationInterface(
                 }
             }
             SimpleToolButtonWithTooltip(
-                EditClusterTool.DetailedAdjustment,
+                Tool.DetailedAdjustment,
                 Modifier
                     .background(buttonBackground, buttonShape)
                 ,
@@ -493,7 +493,7 @@ fun RotationInterface(
                 // triggers params upd => triggers VM.updParams
             }
             SimpleToolButtonWithTooltip(
-                EditClusterTool.DetailedAdjustment,
+                Tool.DetailedAdjustment,
                 Modifier
                     .background(buttonBackground, buttonShape)
                 ,
@@ -599,7 +599,7 @@ fun BiInversionInterface(
                 // triggers params upd => triggers VM.updParams
             }
             SimpleToolButtonWithTooltip(
-                EditClusterTool.DetailedAdjustment,
+                Tool.DetailedAdjustment,
                 Modifier
                     .background(buttonBackground, buttonShape)
                 ,
@@ -711,13 +711,13 @@ fun LoxodromicMotionInterface(
             Box(midUnderVerticalSliderModifier) {
                 WithTooltip(
                     if (bidirectional)
-                        stringResource(EditClusterTool.BidirectionalSpiral.description)
+                        stringResource(Tool.BidirectionalSpiral.description)
                     else
-                        stringResource(EditClusterTool.BidirectionalSpiral.disabledDescription)
+                        stringResource(Tool.BidirectionalSpiral.disabledDescription)
                 ) {
                     OnOffButton(
-                        painterResource(EditClusterTool.BidirectionalSpiral.icon),
-                        stringResource(EditClusterTool.BidirectionalSpiral.name),
+                        painterResource(Tool.BidirectionalSpiral.icon),
+                        stringResource(Tool.BidirectionalSpiral.name),
                         isOn = bidirectional,
                         contentColor = MaterialTheme.colorScheme.secondary,
                         checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -737,7 +737,7 @@ fun LoxodromicMotionInterface(
                 reverseDirection = !reverseDirection
             }
             SimpleToolButtonWithTooltip(
-                EditClusterTool.DetailedAdjustment,
+                Tool.DetailedAdjustment,
                 Modifier
                     .background(buttonBackground, buttonShape)
                 ,
@@ -784,10 +784,10 @@ private fun ReverseDirectionToggle(
     onClick: () -> Unit,
 ) {
     Box(positionModifier) {
-        WithTooltip(stringResource(EditClusterTool.ReverseDirection.description)) {
+        WithTooltip(stringResource(Tool.ReverseDirection.description)) {
             OnOffButton(
-                painterResource(EditClusterTool.ReverseDirection.icon),
-                stringResource(EditClusterTool.ReverseDirection.name),
+                painterResource(Tool.ReverseDirection.icon),
+                stringResource(Tool.ReverseDirection.name),
                 isOn = isOn,
                 modifier = modifier,
                 contentColor = MaterialTheme.colorScheme.secondary,
@@ -804,14 +804,14 @@ private fun ReverseDirectionToggle(
 @Composable
 fun BoxScope.ArcPathContextActions(
     canvasSize: IntSize,
-    toolAction: (EditClusterTool) -> Unit,
+    toolAction: (Tool) -> Unit,
 ) {
     val (w, h) = canvasSize
     val verticalMargin = with (LocalDensity.current) {
         (h*OnScreenPositions.RELATIVE_VERTICAL_MARGIN).toDp()
     }
     Button(
-        onClick = { toolAction(EditClusterTool.CompleteArcPath) },
+        onClick = { toolAction(Tool.CompleteArcPath) },
         // NOTE: this position is not optimal, especially for desktop
         Modifier
             .align(Alignment.BottomEnd)
@@ -824,12 +824,12 @@ fun BoxScope.ArcPathContextActions(
             )
     ) {
         Icon(
-            painterResource(EditClusterTool.CompleteArcPath.icon),
-            stringResource(EditClusterTool.CompleteArcPath.name),
+            painterResource(Tool.CompleteArcPath.icon),
+            stringResource(Tool.CompleteArcPath.name),
         )
         Spacer(Modifier.width(16.dp))
         Text(
-            stringResource(EditClusterTool.CompleteArcPath.description),
+            stringResource(Tool.CompleteArcPath.description),
             style = MaterialTheme.typography.titleSmall
         )
     }

@@ -7,6 +7,7 @@ import data.geometry.GCircle
 import data.geometry.ImaginaryCircle
 import data.geometry.Line
 import data.geometry.Point
+import domain.Arg.PointXY.Companion
 import kotlinx.serialization.Serializable
 
 /**
@@ -39,6 +40,9 @@ sealed interface Arg {
     sealed interface CLI : CLIP, Index
     sealed interface LP : CLIP
     sealed interface Point : LP
+    sealed interface FixedPoint : Point {
+        fun toPoint(): data.geometry.Point
+    }
 
     data class CircleIndex(override val index: Ix) : Index, CLI {
         override val type: Type.Circle = Companion
@@ -67,7 +71,7 @@ sealed interface Arg {
     data class PointXY(
         val x: Double,
         val y: Double
-    ) : Point {
+    ) : FixedPoint {
         override val type: Type.Point = Companion
 
         constructor(point: data.geometry.Point) :
@@ -76,8 +80,18 @@ sealed interface Arg {
         fun toOffset(): Offset =
             Offset(x.toFloat(), y.toFloat())
 
-        fun toPoint(): data.geometry.Point =
+        override fun toPoint(): data.geometry.Point =
             Point(x, y)
+
+        @Serializable
+        companion object : Type.Point
+    }
+
+    class InfinitePoint : FixedPoint {
+        override val type: Type.Point = Companion
+
+        override fun toPoint(): data.geometry.Point =
+            data.geometry.Point.CONFORMAL_INFINITY
 
         @Serializable
         companion object : Type.Point
@@ -89,6 +103,7 @@ sealed interface Arg {
         companion object : Type
     }
 
+    @Serializable
     data object Null : Type
 
     infix fun isType(argType: ArgType): Boolean =
@@ -122,6 +137,7 @@ data class ArgType(
     companion object {
         val CIRCLE = ArgType(Arg.CircleIndex)
         val POINT = ArgType(Arg.PointIndex, Arg.PointXY)
+        val POINT_OR_INFINITY = ArgType(Arg.PointIndex, Arg.InfinitePoint, Arg.PointXY)
         val INDICES = ArgType(Arg.Indices)
         /** Circle, Line, Imaginary circle or Point */
         val CLIP = ArgType(

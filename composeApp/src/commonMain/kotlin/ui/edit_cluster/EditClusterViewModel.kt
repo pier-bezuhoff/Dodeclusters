@@ -112,8 +112,8 @@ import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
 import ui.edit_cluster.dialogs.DefaultRotationParameters
 import ui.edit_cluster.dialogs.DialogType
 import ui.theme.DodeclustersColors
-import ui.tools.EditClusterCategory
-import ui.tools.EditClusterTool
+import ui.tools.Category
+import ui.tools.Tool
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
@@ -425,7 +425,7 @@ class EditClusterViewModel : ViewModel() {
         resetTransients()
         println("loaded new constellation")
         if (!mode.isSelectingCircles()) {
-            selectTool(EditClusterTool.Drag)
+            selectTool(Tool.Drag)
         }
     }
 
@@ -531,7 +531,7 @@ class EditClusterViewModel : ViewModel() {
         } else {
             val currentSelection = selection.toList()
             when (submode) {
-                is SubMode.RotateStereographicSphere -> switchToCategory(EditClusterCategory.Drag)
+                is SubMode.RotateStereographicSphere -> switchToCategory(Category.Drag)
                 else -> switchToMode(mode) // clears up stuff
             }
             selection = emptyList()
@@ -988,6 +988,7 @@ class EditClusterViewModel : ViewModel() {
             is Arg.Index -> objects[arg.index]
             is Arg.PointXY -> arg.toPoint()
             is Arg.Indices -> null
+            is Arg.InfinitePoint -> Point.CONFORMAL_INFINITY
         }
 
     fun switchToMode(newMode: Mode) {
@@ -1476,7 +1477,7 @@ class EditClusterViewModel : ViewModel() {
     fun toggleStereographicRotationMode() {
         if (mode == ViewMode.StereographicRotation) {
             submode = null
-            switchToCategory(EditClusterCategory.Drag)
+            switchToCategory(Category.Drag)
         } else {
             switchToMode(ViewMode.StereographicRotation)
             val sphereProjection = Circle(
@@ -1531,7 +1532,7 @@ class EditClusterViewModel : ViewModel() {
         openedDialog = null
         regionColor = colorPickerParameters.currentColor
         this.colorPickerParameters = colorPickerParameters
-        switchToCategory(EditClusterCategory.Region)
+        switchToCategory(Category.Region)
     }
 
     fun concludeCircleColorPicker(colorPickerParameters: ColorPickerParameters) {
@@ -1553,7 +1554,7 @@ class EditClusterViewModel : ViewModel() {
     fun setNewRegionColorToSelectedColorSplash(color: Color) {
         openedDialog = null
         regionColor = color
-        switchToCategory(EditClusterCategory.Region)
+        switchToCategory(Category.Region)
     }
 
     fun dismissRegionColorPicker() {
@@ -1602,7 +1603,7 @@ class EditClusterViewModel : ViewModel() {
     fun setActiveSelectionAsToolArg() {
         toolbarState.activeTool.let { tool ->
             require(
-                tool is EditClusterTool.MultiArg &&
+                tool is Tool.MultiArg &&
                 tool.signature.argTypes.first() == ArgType.INDICES &&
                 selection.isNotEmpty()
             ) { "Illegal state in setActiveSelectionAsToolArg(): tool = $tool, selection == $selection" }
@@ -1705,11 +1706,11 @@ class EditClusterViewModel : ViewModel() {
         val expr = expressions.expressions[selection[0]]?.expr
         val outputIndices = expressions.findExpr(expr)
         val tool = when (expr) {
-            is Expr.CircleInterpolation -> EditClusterTool.CircleOrPointInterpolation
-            is Expr.PointInterpolation -> EditClusterTool.CircleOrPointInterpolation
-            is Expr.Rotation -> EditClusterTool.Rotation
-            is Expr.BiInversion -> EditClusterTool.BiInversion
-            is Expr.LoxodromicMotion -> EditClusterTool.LoxodromicMotion
+            is Expr.CircleInterpolation -> Tool.CircleOrPointInterpolation
+            is Expr.PointInterpolation -> Tool.CircleOrPointInterpolation
+            is Expr.Rotation -> Tool.Rotation
+            is Expr.BiInversion -> Tool.BiInversion
+            is Expr.LoxodromicMotion -> Tool.LoxodromicMotion
             else -> null
         }
         when (val params = expr?.parameters) {
@@ -2599,7 +2600,7 @@ class EditClusterViewModel : ViewModel() {
                             val firstPoint: Point =
                                 when (val first = args.first() as Arg.Point) {
                                     is Arg.PointIndex -> objects[first.index] as Point
-                                    is Arg.PointXY -> first.toPoint()
+                                    is Arg.FixedPoint -> first.toPoint()
                                 }
                             val pointsAreTooClose = firstPoint.distanceFrom(snap.result) < 1e-3
                             if (pointsAreTooClose) { // haxxz
@@ -2648,7 +2649,7 @@ class EditClusterViewModel : ViewModel() {
             }
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) { // haxx
-            toolbarState = toolbarState.copy(activeTool = EditClusterTool.Multiselect)
+            toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
         }
         // we don't want to exit flow-fill or expr-adj that we started with completeToolMode()
         if (submode !is SubMode.FlowFill &&
@@ -2717,7 +2718,7 @@ class EditClusterViewModel : ViewModel() {
         expressions.adjustIncidentPointExpressions(ix2point)
     }
 
-    private fun selectCategory(category: EditClusterCategory, togglePanel: Boolean = false) {
+    private fun selectCategory(category: Category, togglePanel: Boolean = false) {
         val wasSelected = toolbarState.activeCategory == category
         val panelWasShown = showPanel
         toolbarState = toolbarState.copy(activeCategory = category)
@@ -2727,10 +2728,10 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    fun selectTool(tool: EditClusterTool, togglePanel: Boolean = false) {
-        val category: EditClusterCategory
-        if (tool is EditClusterTool.AppliedColor) {
-            category = EditClusterCategory.Colors
+    fun selectTool(tool: Tool, togglePanel: Boolean = false) {
+        val category: Category
+        if (tool is Tool.AppliedColor) {
+            category = Category.Colors
         } else {
             category = toolbarState.getCategory(tool)
             toolbarState = toolbarState.updateDefault(category, tool)
@@ -2740,7 +2741,7 @@ class EditClusterViewModel : ViewModel() {
         toolAction(tool)
     }
 
-    fun switchToCategory(category: EditClusterCategory, togglePanel: Boolean = false) {
+    fun switchToCategory(category: Category, togglePanel: Boolean = false) {
         val defaultTool = toolbarState.getDefaultTool(category)
         if (defaultTool == null) {
             selectCategory(category, togglePanel = togglePanel)
@@ -2756,7 +2757,7 @@ class EditClusterViewModel : ViewModel() {
                 KeyboardAction.SELECT_ALL -> {
                     if (!mode.isSelectingCircles() || !showCircles) // more intuitive behavior
                         selection = emptyList() // forces to select all instead of toggling
-                    switchToCategory(EditClusterCategory.Multiselect)
+                    switchToCategory(Category.Multiselect)
                     toggleSelectAll()
                 }
                 KeyboardAction.DELETE -> deleteSelectedPointsAndCircles()
@@ -2766,12 +2767,12 @@ class EditClusterViewModel : ViewModel() {
                 KeyboardAction.UNDO -> undo()
                 KeyboardAction.REDO -> redo()
                 KeyboardAction.CANCEL -> cancelOngoingActions()
-                KeyboardAction.MOVE -> switchToCategory(EditClusterCategory.Drag)
-                KeyboardAction.SELECT -> switchToCategory(EditClusterCategory.Multiselect)
-                KeyboardAction.REGION -> switchToCategory(EditClusterCategory.Region)
-                KeyboardAction.PALETTE -> toolAction(EditClusterTool.Palette)
-                KeyboardAction.TRANSFORM -> switchToCategory(EditClusterCategory.Transform)
-                KeyboardAction.CREATE -> switchToCategory(EditClusterCategory.Create)
+                KeyboardAction.MOVE -> switchToCategory(Category.Drag)
+                KeyboardAction.SELECT -> switchToCategory(Category.Multiselect)
+                KeyboardAction.REGION -> switchToCategory(Category.Region)
+                KeyboardAction.PALETTE -> toolAction(Tool.Palette)
+                KeyboardAction.TRANSFORM -> switchToCategory(Category.Transform)
+                KeyboardAction.CREATE -> switchToCategory(Category.Create)
                 KeyboardAction.OPEN -> {}
                 KeyboardAction.CONFIRM -> if (submode is SubMode.ExprAdjustment)
                     confirmAdjustedParameters()
@@ -2952,7 +2953,7 @@ class EditClusterViewModel : ViewModel() {
                 submode = null
             }
             ViewMode.StereographicRotation ->
-                switchToCategory(EditClusterCategory.Drag)
+                switchToCategory(Category.Drag)
             is SelectionMode -> {
                 if (submode is SubMode.ExprAdjustment) {
                     undo() // contrived way to go to before-adj savepoint
@@ -2993,7 +2994,7 @@ class EditClusterViewModel : ViewModel() {
             val realized = args.map { arg ->
                 when (arg) {
                     is Arg.PointIndex -> arg.index
-                    is Arg.PointXY -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
+                    is Arg.FixedPoint -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
                 }
             }
             val newCircle = expressions.addSoloExpr(
@@ -3022,7 +3023,7 @@ class EditClusterViewModel : ViewModel() {
             val realized = args.map {
                 when (it) {
                     is Arg.Index -> it.index
-                    is Arg.PointXY -> createNewFreePoint(it.toPoint(), triggerRecording = false)
+                    is Arg.FixedPoint -> createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
             val newGCircle = expressions.addSoloExpr(
@@ -3054,7 +3055,7 @@ class EditClusterViewModel : ViewModel() {
             val realized = args.map {
                 when (it) {
                     is Arg.Index -> it.index
-                    is Arg.PointXY ->
+                    is Arg.FixedPoint ->
                         createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
@@ -3087,7 +3088,7 @@ class EditClusterViewModel : ViewModel() {
             val realized = args.map {
                 when (it) {
                     is Arg.Index -> it.index
-                    is Arg.PointXY ->
+                    is Arg.FixedPoint ->
                         createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
@@ -3117,7 +3118,7 @@ class EditClusterViewModel : ViewModel() {
             is Arg.Point -> {
                 val realizedPointIndex = when (lineOrPointArg) {
                     is Arg.PointIndex -> lineOrPointArg.index
-                    is Arg.PointXY ->
+                    is Arg.FixedPoint ->
                         createNewFreePoint(lineOrPointArg.toPoint(), triggerRecording = false)
                 }
                 Expr.PolarLineByCircleAndPoint(
@@ -3182,7 +3183,7 @@ class EditClusterViewModel : ViewModel() {
             val (startPointIx, endPointIx) = listOf(arg1, arg2).map { pointArg ->
                 when (pointArg) {
                     is Arg.PointIndex -> pointArg.index
-                    is Arg.PointXY ->
+                    is Arg.FixedPoint ->
                         createNewFreePoint(pointArg.toPoint(), triggerRecording = false)
                 }
             }
@@ -3218,7 +3219,7 @@ class EditClusterViewModel : ViewModel() {
 
     fun resetCircleExtrapolation() {
         openedDialog = null
-        partialArgList = PartialArgList(EditClusterTool.CircleExtrapolation.signature)
+        partialArgList = PartialArgList(Tool.CircleExtrapolation.signature)
     }
 
     fun startRotationParameterAdjustment() {
@@ -3228,7 +3229,7 @@ class EditClusterViewModel : ViewModel() {
         recordCreateCommand()
         val pivotPointIndex = when (val pointArg = args[1] as Arg.Point) {
             is Arg.PointIndex -> pointArg.index
-            is Arg.PointXY -> createNewFreePoint(pointArg.toPoint(), triggerRecording = false)
+            is Arg.FixedPoint -> createNewFreePoint(pointArg.toPoint(), triggerRecording = false)
         }
         val targetIndices = objArg.indices
         val adjustables = mutableListOf<AdjustableExpr>()
@@ -3310,7 +3311,7 @@ class EditClusterViewModel : ViewModel() {
         val (divergencePointIndex, convergencePointIndex) = args.drop(1).take(2)
             .map { when (val arg = it as Arg.Point) {
                 is Arg.PointIndex -> arg.index
-                is Arg.PointXY-> createNewFreePoint(arg.toPoint(), triggerRecording = false)
+                is Arg.FixedPoint -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
             } }
         partialArgList = argList.copy(
             // we dont want to spam create the same Point.XY each time
@@ -3543,97 +3544,97 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    fun toolAction(tool: EditClusterTool) {
+    fun toolAction(tool: Tool) {
 //        println("toolAction($tool)")
         when (tool) {
-            EditClusterTool.Undo -> undo()
-            EditClusterTool.Redo -> redo()
-            EditClusterTool.SaveCluster -> openedDialog = DialogType.SAVE_OPTIONS
-            EditClusterTool.Drag -> switchToMode(SelectionMode.Drag)
-            EditClusterTool.Multiselect -> switchToMode(SelectionMode.Multiselect)
-            EditClusterTool.RectangularSelect -> activateRectangularSelect()
-            EditClusterTool.FlowSelect -> activateFlowSelect()
-            EditClusterTool.ToggleSelectAll -> toggleSelectAll()
-            EditClusterTool.Region -> switchToMode(SelectionMode.Region)
-            EditClusterTool.FlowFill -> activateFlowFill()
-            EditClusterTool.FillChessboardPattern -> toggleChessboardPattern()
-            EditClusterTool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
-            EditClusterTool.DeleteAllParts -> deleteAllRegions()
-            EditClusterTool.BlendSettings -> openedDialog = DialogType.BLEND_SETTINGS
-            EditClusterTool.ToggleObjects -> toggleShowCircles()
-            EditClusterTool.TogglePhantoms -> togglePhantomObjects()
-            EditClusterTool.ToggleFilledOrOutline -> showWireframes = !showWireframes
-            EditClusterTool.HideUI -> hideUIFor30s()
-            EditClusterTool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
+            Tool.Undo -> undo()
+            Tool.Redo -> redo()
+            Tool.SaveCluster -> openedDialog = DialogType.SAVE_OPTIONS
+            Tool.Drag -> switchToMode(SelectionMode.Drag)
+            Tool.Multiselect -> switchToMode(SelectionMode.Multiselect)
+            Tool.RectangularSelect -> activateRectangularSelect()
+            Tool.FlowSelect -> activateFlowSelect()
+            Tool.ToggleSelectAll -> toggleSelectAll()
+            Tool.Region -> switchToMode(SelectionMode.Region)
+            Tool.FlowFill -> activateFlowFill()
+            Tool.FillChessboardPattern -> toggleChessboardPattern()
+            Tool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
+            Tool.DeleteAllParts -> deleteAllRegions()
+            Tool.BlendSettings -> openedDialog = DialogType.BLEND_SETTINGS
+            Tool.ToggleObjects -> toggleShowCircles()
+            Tool.TogglePhantoms -> togglePhantomObjects()
+            Tool.ToggleFilledOrOutline -> showWireframes = !showWireframes
+            Tool.HideUI -> hideUIFor30s()
+            Tool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
             // TODO: 2 options: solid color or external image
-            EditClusterTool.AddBackgroundImage -> openedDialog = DialogType.BACKGROUND_COLOR_PICKER
-            EditClusterTool.StereographicRotation -> toggleStereographicRotationMode()
-            EditClusterTool.InsertCenteredCross -> insertCenteredCross()
-            EditClusterTool.CompleteArcPath -> completeArcPath()
-            EditClusterTool.Palette -> openedDialog = DialogType.REGION_COLOR_PICKER
-            EditClusterTool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
-            EditClusterTool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
-            EditClusterTool.Detach -> detachEverySelectedObject()
-            EditClusterTool.SwapDirection -> swapDirectionsOfSelectedCircles()
-            EditClusterTool.MarkAsPhantoms ->
+            Tool.AddBackgroundImage -> openedDialog = DialogType.BACKGROUND_COLOR_PICKER
+            Tool.StereographicRotation -> toggleStereographicRotationMode()
+            Tool.InsertCenteredCross -> insertCenteredCross()
+            Tool.CompleteArcPath -> completeArcPath()
+            Tool.Palette -> openedDialog = DialogType.REGION_COLOR_PICKER
+            Tool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
+            Tool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
+            Tool.Detach -> detachEverySelectedObject()
+            Tool.SwapDirection -> swapDirectionsOfSelectedCircles()
+            Tool.MarkAsPhantoms ->
                 if (toolPredicate(tool)) markSelectedObjectsAsPhantoms() else unmarkSelectedObjectsAsPhantoms()
-            EditClusterTool.Duplicate -> duplicateSelectedCircles()
-            EditClusterTool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
-            EditClusterTool.Delete -> deleteSelectedPointsAndCircles()
-            is EditClusterTool.AppliedColor -> setNewRegionColorToSelectedColorSplash(tool.color)
-            is EditClusterTool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
-            is EditClusterTool.CustomAction -> {} // custom, platform-dependent handlers for open/save
-            EditClusterTool.DetailedAdjustment -> openDetailsDialog()
-            EditClusterTool.AdjustExpr -> adjustExpr()
-            EditClusterTool.InBetween -> {} // unused, potentially updateParams(...)
-            EditClusterTool.ReverseDirection -> {}
-            EditClusterTool.BidirectionalSpiral -> {}
+            Tool.Duplicate -> duplicateSelectedCircles()
+            Tool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
+            Tool.Delete -> deleteSelectedPointsAndCircles()
+            is Tool.AppliedColor -> setNewRegionColorToSelectedColorSplash(tool.color)
+            is Tool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
+            is Tool.CustomAction -> {} // custom, platform-dependent handlers for open/save
+            Tool.DetailedAdjustment -> openDetailsDialog()
+            Tool.AdjustExpr -> adjustExpr()
+            Tool.InBetween -> {} // unused, potentially updateParams(...)
+            Tool.ReverseDirection -> {}
+            Tool.BidirectionalSpiral -> {}
         }
     }
 
     /** Is [tool] enabled? */
-    fun toolPredicate(tool: EditClusterTool): Boolean =
+    fun toolPredicate(tool: Tool): Boolean =
         when (tool) { // NOTE: i think this has to return State<Boolean> to work properly
-            EditClusterTool.Drag ->
+            Tool.Drag ->
                 mode == SelectionMode.Drag
-            EditClusterTool.Multiselect ->
+            Tool.Multiselect ->
                 mode == SelectionMode.Multiselect &&
                 submode !is SubMode.FlowSelect && submode !is SubMode.RectangularSelect
-            EditClusterTool.RectangularSelect ->
+            Tool.RectangularSelect ->
                 mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect
-            EditClusterTool.FlowSelect ->
+            Tool.FlowSelect ->
                 mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
-            EditClusterTool.ToggleSelectAll ->
+            Tool.ToggleSelectAll ->
                 selection.containsAll(objects.filterIndices { it is CircleOrLineOrPoint })
-            EditClusterTool.Region ->
+            Tool.Region ->
                 mode == SelectionMode.Region && submode !is SubMode.FlowFill
-            EditClusterTool.FlowFill ->
+            Tool.FlowFill ->
                 mode == SelectionMode.Region && submode is SubMode.FlowFill
-            EditClusterTool.FillChessboardPattern ->
+            Tool.FillChessboardPattern ->
                 chessboardPattern != ChessboardPattern.NONE
-            EditClusterTool.RestrictRegionToSelection ->
+            Tool.RestrictRegionToSelection ->
                 restrictRegionsToSelection
-            EditClusterTool.StereographicRotation ->
+            Tool.StereographicRotation ->
                 mode == ViewMode.StereographicRotation
-            EditClusterTool.ToggleObjects ->
+            Tool.ToggleObjects ->
                 showCircles
-            EditClusterTool.TogglePhantoms ->
+            Tool.TogglePhantoms ->
                 showPhantomObjects
-            EditClusterTool.ToggleFilledOrOutline ->
+            Tool.ToggleFilledOrOutline ->
                 !showWireframes
-            EditClusterTool.ToggleDirectionArrows ->
+            Tool.ToggleDirectionArrows ->
                 showDirectionArrows
-            EditClusterTool.MarkAsPhantoms ->
+            Tool.MarkAsPhantoms ->
                 selection.none { it in phantoms }
-            is EditClusterTool.MultiArg ->
+            is Tool.MultiArg ->
                 mode == ToolMode.correspondingTo(tool)
             else -> true
         }
 
     /** alternative enabled, mainly for 3-state buttons */
-    fun toolAlternativePredicate(tool: EditClusterTool): Boolean =
+    fun toolAlternativePredicate(tool: Tool): Boolean =
         when (tool) {
-            EditClusterTool.FillChessboardPattern ->
+            Tool.FillChessboardPattern ->
                 chessboardPattern == ChessboardPattern.STARTS_TRANSPARENT
             else -> false
         }

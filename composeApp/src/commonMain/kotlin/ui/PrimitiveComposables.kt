@@ -62,7 +62,7 @@ import domain.formatDecimals
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import ui.tools.Tool
+import ui.tools.ITool
 
 @Composable
 fun SimpleButton(
@@ -98,10 +98,10 @@ inline fun <reified T> SimpleToolButton(
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
     tint: Color =
-        if (tool is Tool.Tinted) tool.tint
+        if (tool is ITool.Tinted) tool.tint
         else LocalContentColor.current,
     crossinline onClick: (tool: T) -> Unit
-) where T : Tool = SimpleButton(
+) where T : ITool = SimpleButton(
     iconPainter = painterResource(tool.icon),
     name = stringResource(tool.name),
     modifier = modifier,
@@ -121,10 +121,10 @@ inline fun <reified T> SimpleToolButtonWithTooltip(
     iconModifier: Modifier = Modifier,
     positionModifier: Modifier = Modifier,
     tint: Color =
-        if (tool is Tool.Tinted) tool.tint
+        if (tool is ITool.Tinted) tool.tint
         else LocalContentColor.current,
     crossinline onClick: (tool: T) -> Unit
-) where T : Tool =
+) where T : ITool =
     Box(positionModifier) {
         WithTooltip(
             stringResource(tool.description),

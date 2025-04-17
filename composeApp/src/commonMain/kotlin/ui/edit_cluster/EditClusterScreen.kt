@@ -77,7 +77,6 @@ import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_pro
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
-import domain.Arg
 import domain.PartialArgList
 import domain.io.DdcRepository
 import domain.io.LookupData
@@ -112,9 +111,9 @@ import ui.isCompact
 import ui.isLandscape
 import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
-import ui.tools.EditClusterCategory
-import ui.tools.EditClusterTool
+import ui.tools.Category
 import ui.tools.Tool
+import ui.tools.ITool
 import kotlin.math.max
 import kotlin.math.min
 
@@ -159,7 +158,7 @@ fun EditClusterScreen(
         floatingActionButton = {
             if (!isLandscape && viewModel.showUI) {
                 // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
-                val category = EditClusterCategory.Create
+                val category = Category.Create
                 FloatingActionButton(
                     onClick = {
                         viewModel.switchToCategory(category, togglePanel = true)
@@ -210,7 +209,7 @@ fun EditClusterScreen(
                         compact = compact,
                         undoIsEnabled = viewModel.undoIsEnabled,
                         redoIsEnabled = viewModel.redoIsEnabled,
-                        showSaveOptionsDialog = { viewModel.toolAction(EditClusterTool.SaveCluster) },
+                        showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
                         loadFromYaml = { content ->
                             content?.let {
                                 viewModel.loadDdc(content)
@@ -430,32 +429,32 @@ fun EditClusterScreen(
 @Composable
 fun preloadIcons() {
     val categoryList = listOf(
-        EditClusterCategory.Drag,
-        EditClusterCategory.Multiselect,
-        EditClusterCategory.Region,
-        EditClusterCategory.Visibility,
-        EditClusterCategory.Transform,
-        EditClusterCategory.Create,
+        Category.Drag,
+        Category.Multiselect,
+        Category.Region,
+        Category.Visibility,
+        Category.Transform,
+        Category.Create,
     )
     val toolList = categoryList
         .flatMap { it.tools }
         .plus(
             listOf(
-                EditClusterTool.Expand, EditClusterTool.Shrink,
-                EditClusterTool.PickCircleColor,
-                EditClusterTool.MarkAsPhantoms,
-                EditClusterTool.SwapDirection,
-                EditClusterTool.Detach,
-                EditClusterTool.Duplicate,
-                EditClusterTool.Delete,
-                EditClusterTool.DetailedAdjustment,
-                EditClusterTool.InBetween,
-                EditClusterTool.ReverseDirection,
+                Tool.Expand, Tool.Shrink,
+                Tool.PickCircleColor,
+                Tool.MarkAsPhantoms,
+                Tool.SwapDirection,
+                Tool.Detach,
+                Tool.Duplicate,
+                Tool.Delete,
+                Tool.DetailedAdjustment,
+                Tool.InBetween,
+                Tool.ReverseDirection,
             )
         )
     for (tool in toolList) {
         painterResource(tool.icon)
-        if (tool is Tool.BinaryToggle) {
+        if (tool is ITool.BinaryToggle) {
             tool.disabledIcon?.let {
                 painterResource(it)
             }
@@ -475,7 +474,7 @@ fun preloadIcons() {
 
 @Composable
 fun ToolDescription(
-    tool: EditClusterTool,
+    tool: Tool,
     toolIsEnabled: Boolean,
     partialArgList: PartialArgList?,
     isLandscape: Boolean,
@@ -494,7 +493,7 @@ fun ToolDescription(
     ) {
         Crossfade(Pair(tool, toolIsEnabled)) { (currentTool, currentToolIsEnabled) ->
             val description = when (currentTool) {
-                is Tool.BinaryToggle ->
+                is ITool.BinaryToggle ->
                     if (currentToolIsEnabled)
                         stringResource(currentTool.description)
                     else
@@ -521,13 +520,13 @@ fun ToolDescription(
             )
         }
         val inputPrompt = stringResource(Res.string.tool_arg_input_prompt)
-        val argDescriptions = (tool as? EditClusterTool.MultiArg)?.let {
+        val argDescriptions = (tool as? Tool.MultiArg)?.let {
             stringArrayResource(it.argDescriptions)
         }
         val confirmParametersPrompt = stringResource(Res.string.tool_arg_parameter_adjustment_prompt)
         val number =
             if (partialArgList == null ||
-                tool !is EditClusterTool.MultiArg ||
+                tool !is Tool.MultiArg ||
                 partialArgList.isFull && !partialArgList.lastArgIsConfirmed
             )
                 null
@@ -538,7 +537,7 @@ fun ToolDescription(
             else
                 max(0, partialArgList.args.size - 1)
         AnimatedContent(Triple(tool, number, showSelectionAsArgPrompt)) { (currentTool, currentNumber, currentShowPrompt) ->
-            if (currentTool is EditClusterTool.MultiArg &&
+            if (currentTool is Tool.MultiArg &&
                 currentNumber != null &&
                 argDescriptions != null &&
                 argDescriptions.size > currentNumber
@@ -624,35 +623,35 @@ fun EditClusterTopBar(
             // TODO: button to create new [empty?] document
             WithTooltip(stringResource(Res.string.save_name)) {
                 SimpleButton(
-                    painterResource(EditClusterTool.SaveCluster.icon),
-                    stringResource(EditClusterTool.SaveCluster.name),
+                    painterResource(Tool.SaveCluster.icon),
+                    stringResource(Tool.SaveCluster.name),
                     modifier = iconModifier,
                     iconModifier = iconModifier,
                     onClick = showSaveOptionsDialog
                 )
             }
-            WithTooltip(stringResource(EditClusterTool.OpenFile.description)) {
+            WithTooltip(stringResource(Tool.OpenFile.description)) {
                 OpenFileButton(
-                    painterResource(EditClusterTool.OpenFile.icon),
-                    stringResource(EditClusterTool.OpenFile.name),
+                    painterResource(Tool.OpenFile.icon),
+                    stringResource(Tool.OpenFile.name),
                     LookupData.YAML,
                     modifier = iconModifier,
                     onOpen = loadFromYaml,
                 )
             }
-            WithTooltip(stringResource(EditClusterTool.Undo.description)) {
+            WithTooltip(stringResource(Tool.Undo.description)) {
                 DisableableButton(
-                    painterResource(EditClusterTool.Undo.icon),
-                    stringResource(EditClusterTool.Undo.name),
+                    painterResource(Tool.Undo.icon),
+                    stringResource(Tool.Undo.name),
                     undoIsEnabled,
                     iconModifier,
                     onClick = undo
                 )
             }
-            WithTooltip(stringResource(EditClusterTool.Redo.description)) {
+            WithTooltip(stringResource(Tool.Redo.description)) {
                 DisableableButton(
-                    painterResource(EditClusterTool.Redo.icon),
-                    stringResource(EditClusterTool.Redo.name),
+                    painterResource(Tool.Redo.icon),
+                    stringResource(Tool.Redo.name),
                     redoIsEnabled,
                     iconModifier,
                     onClick = redo
@@ -752,17 +751,17 @@ private fun BottomToolbar(
         Alignment.CenterVertically
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
-            CategoryButton(viewModel, EditClusterCategory.Drag, compact = compact)
-            CategoryButton(viewModel, EditClusterCategory.Multiselect, compact = compact)
-            CategoryButton(viewModel, EditClusterCategory.Region, compact = compact)
+            CategoryButton(viewModel, Category.Drag, compact = compact)
+            CategoryButton(viewModel, Category.Multiselect, compact = compact)
+            CategoryButton(viewModel, Category.Region, compact = compact)
             Spacer(Modifier.size(12.dp, 0.dp))
             VerticalDivider(Modifier
                 .fillMaxHeight(0.7f)
                 .align(Alignment.CenterVertically)
             )
-            CategoryButton(viewModel, EditClusterCategory.Visibility, compact = compact)
-            CategoryButton(viewModel, EditClusterCategory.Colors, compact = compact)
-            CategoryButton(viewModel, EditClusterCategory.Transform, compact = compact)
+            CategoryButton(viewModel, Category.Visibility, compact = compact)
+            CategoryButton(viewModel, Category.Colors, compact = compact)
+            CategoryButton(viewModel, Category.Transform, compact = compact)
         }
     }
 }
@@ -798,24 +797,24 @@ private fun LeftToolbar(
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             if (compact)
                 Spacer(Modifier.height(6.dp))
-            CategoryButton(viewModel, EditClusterCategory.Drag, compact = compact)
-            CategoryButton(viewModel, EditClusterCategory.Multiselect, compact = compact)
-            CategoryButton(viewModel, EditClusterCategory.Region, compact = compact)
+            CategoryButton(viewModel, Category.Drag, compact = compact)
+            CategoryButton(viewModel, Category.Multiselect, compact = compact)
+            CategoryButton(viewModel, Category.Region, compact = compact)
             HorizontalDivider(Modifier
                 .padding(dividerPaddings)
                 .fillMaxWidth(0.7f)
                 .align(Alignment.CenterHorizontally)
             )
-            CategoryButton(viewModel, EditClusterCategory.Visibility, compact = compact)
-            CategoryButton(viewModel, EditClusterCategory.Colors, compact = compact)
-            CategoryButton(viewModel, EditClusterCategory.Transform, compact = compact)
+            CategoryButton(viewModel, Category.Visibility, compact = compact)
+            CategoryButton(viewModel, Category.Colors, compact = compact)
+            CategoryButton(viewModel, Category.Transform, compact = compact)
             HorizontalDivider(Modifier
                 .padding(dividerPaddings)
                 .fillMaxWidth(0.7f)
                 .align(Alignment.CenterHorizontally)
             )
             CategoryButton(
-                viewModel, EditClusterCategory.Create, compact = compact,
+                viewModel, Category.Create, compact = compact,
 //                tint = MaterialTheme.colorScheme.secondary
             )
             Spacer(Modifier.height(
@@ -828,7 +827,7 @@ private fun LeftToolbar(
 @Composable
 fun CategoryButton(
     viewModel: EditClusterViewModel,
-    category: EditClusterCategory,
+    category: Category,
     compact: Boolean = false,
     modifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current,
@@ -873,12 +872,12 @@ fun CategoryButton(
 // MAYBE: just make individual panel for every category instead of generalization
 @Composable
 private fun HorizontalPanel(
-    activeCategory: EditClusterCategory,
+    activeCategory: Category,
     compact: Boolean,
     regionColor: Color,
-    isToolEnabled: (EditClusterTool) -> Boolean,
-    isToolAlternativeEnabled: (EditClusterTool) -> Boolean,
-    selectTool: (EditClusterTool) -> Unit,
+    isToolEnabled: (Tool) -> Boolean,
+    isToolAlternativeEnabled: (Tool) -> Boolean,
+    selectTool: (Tool) -> Unit,
     getColorsByMostUsed: () -> List<Color>,
     hidePanel: () -> Unit,
     modifier: Modifier = Modifier
@@ -913,7 +912,7 @@ private fun HorizontalPanel(
                 onClick = selectTool
             )
         }
-        if (activeCategory is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
+        if (activeCategory is Category.Region) { // || category is EditClusterCategory.Colors) {
             VerticalDivider(Modifier
                 .height(40.dp)
                 .padding(horizontal = 8.dp)
@@ -941,12 +940,12 @@ private fun HorizontalPanel(
 
 @Composable
 private fun VerticalPanel(
-    activeCategory: EditClusterCategory,
+    activeCategory: Category,
     compact: Boolean,
     regionColor: Color,
-    isToolEnabled: (EditClusterTool) -> Boolean,
-    isToolAlternativeEnabled: (EditClusterTool) -> Boolean,
-    selectTool: (EditClusterTool) -> Unit,
+    isToolEnabled: (Tool) -> Boolean,
+    isToolAlternativeEnabled: (Tool) -> Boolean,
+    selectTool: (Tool) -> Unit,
     getColorsByMostUsed: () -> List<Color>,
     hidePanel: () -> Unit,
     modifier: Modifier = Modifier
@@ -982,7 +981,7 @@ private fun VerticalPanel(
                 onClick = selectTool
             )
         }
-        if (activeCategory is EditClusterCategory.Region) { // || category is EditClusterCategory.Colors) {
+        if (activeCategory is Category.Region) { // || category is EditClusterCategory.Colors) {
             HorizontalDivider(Modifier
                 .width(40.dp)
                 .padding(vertical = 8.dp)
@@ -1011,25 +1010,25 @@ private fun VerticalPanel(
  */
 @Composable
 fun ToolButton(
-    tool: EditClusterTool,
+    tool: Tool,
     enabled: Boolean,
     alternative: Boolean = false,
     regionColor: Color,
     tint: Color = LocalContentColor.current,
     modifier: Modifier = Modifier.padding(4.dp),
-    onClick: (EditClusterTool) -> Unit,
+    onClick: (Tool) -> Unit,
 ) {
     val icon = painterResource(tool.icon)
     val name = stringResource(tool.name)
     val description = when (tool) {
-        is Tool.TernaryToggle ->
+        is ITool.TernaryToggle ->
             if (!enabled)
                 stringResource(tool.disabledDescription)
             else if (alternative)
                 stringResource(tool.alternativeDescription)
             else
                 stringResource(tool.description)
-        is Tool.BinaryToggle ->
+        is ITool.BinaryToggle ->
             if (enabled)
                 stringResource(tool.description)
             else
@@ -1039,10 +1038,10 @@ fun ToolButton(
     val callback = { onClick(tool) }
     WithTooltip(description) {
         when (tool) {
-            EditClusterTool.Palette -> {
+            Tool.Palette -> {
                 PaletteButton(regionColor, modifier, callback)
             }
-            is EditClusterTool.AppliedColor -> {
+            is Tool.AppliedColor -> {
                 IconButton(
                     onClick = callback,
                     modifier = modifier,
@@ -1055,7 +1054,7 @@ fun ToolButton(
                     )
                 }
             }
-            is Tool.TernaryToggle -> {
+            is ITool.TernaryToggle -> {
                 ThreeIconButton(
                     iconPainter = icon,
                     alternativeIconPainter = painterResource(tool.alternativeIcon),
@@ -1068,7 +1067,7 @@ fun ToolButton(
                     onClick = callback
                 )
             }
-            is Tool.InstantAction -> {
+            is ITool.InstantAction -> {
                 SimpleButton(
                     iconPainter = icon,
                     name = name,
@@ -1077,7 +1076,7 @@ fun ToolButton(
                     onClick = callback
                 )
             }
-            is Tool.BinaryToggle -> {
+            is ITool.BinaryToggle -> {
                 if (tool.disabledIcon == null) {
                     OnOffButton(
                         iconPainter = icon,
@@ -1125,8 +1124,8 @@ fun PaletteButton(
         )
     ) {
         Icon(
-            painterResource(EditClusterTool.Palette.icon),
-            contentDescription = stringResource(EditClusterTool.Palette.name),
+            painterResource(Tool.Palette.icon),
+            contentDescription = stringResource(Tool.Palette.name),
             modifier = modifier,
         )
     }
@@ -1136,9 +1135,9 @@ fun PaletteButton(
 fun AppliedColorButton(
     color: Color,
     modifier: Modifier = Modifier,
-    onClick: (EditClusterTool.AppliedColor) -> Unit,
+    onClick: (Tool.AppliedColor) -> Unit,
 ) {
-    val tool = EditClusterTool.AppliedColor(color)
+    val tool = Tool.AppliedColor(color)
     val icon = painterResource(tool.icon)
     val name = stringResource(tool.name)
     val description = stringResource(tool.description)
