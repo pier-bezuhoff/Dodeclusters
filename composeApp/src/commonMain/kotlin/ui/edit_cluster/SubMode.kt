@@ -16,7 +16,6 @@ import kotlinx.serialization.Transient
  * carrying [SubMode]-specific relevant data, also
  * they have specific behavior for VM.[onPanZoom] */
 sealed interface SubMode {
-    data object None : SubMode
     // center uses absolute positioning
     /** Scale via top-right selection rect handle */
     data class Scale(val center: Offset) : SubMode

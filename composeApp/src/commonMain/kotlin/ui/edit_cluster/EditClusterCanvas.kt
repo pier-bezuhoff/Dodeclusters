@@ -201,6 +201,12 @@ fun BoxScope.EditClusterCanvas(
                 }
                 drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke)
                 drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke, visibleRect = visibleRect)
+                for (o in viewModel._debugObjects)
+                    when (o) {
+                        is CircleOrLine -> drawCircleOrLine(o, visibleRect, rotateIconColor, style = circleStroke)
+                        is ImaginaryCircle -> drawCircleOrLine(o.toRealCircle(), visibleRect, rotateIconColor, style = circleStroke)
+                        is Point -> drawCircle(rotateIconColor, pointRadius, o.toOffset())
+                    }
             }
             if (viewModel.circleSelectionIsActive && viewModel.showUI) {
                 drawRotationHandle(concretePositions.positions, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)
@@ -985,7 +991,7 @@ private inline fun DrawScope.drawPartialConstructs(
 private inline fun DrawScope.drawHandles(
     objects: List<GCircle?>,
     selection: List<Ix>,
-    submode: SubMode,
+    submode: SubMode?,
     handleConfig: HandleConfig?,
     crossinline getSelectionRect: () -> Rect?,
     showCircles: Boolean,

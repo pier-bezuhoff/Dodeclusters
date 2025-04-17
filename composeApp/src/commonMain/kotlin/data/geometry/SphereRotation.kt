@@ -11,6 +11,7 @@ private inline val Point.antipodal: Point get() {
     return Point(-x/l2, -y/l2)
 }
 
+// FIX: seems wrong
 /**
  * @return bi-inversion engines, generating sphere rotation (double speed)
  */

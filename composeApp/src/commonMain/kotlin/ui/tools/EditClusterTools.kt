@@ -157,6 +157,8 @@ import dodeclusters.composeapp.generated.resources.shark_fin_striped
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_description
 import dodeclusters.composeapp.generated.resources.shrink_name
+import dodeclusters.composeapp.generated.resources.sphere_rotation_description
+import dodeclusters.composeapp.generated.resources.sphere_rotation_name
 import dodeclusters.composeapp.generated.resources.spiral
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
@@ -349,9 +351,9 @@ sealed class EditClusterTool(
     )
 
     data object SphereRotation: Switch(
-        Res.string.stub,
-        Res.string.stub,
-        Res.drawable.rotation_around_point,
+        Res.string.sphere_rotation_name,
+        Res.string.sphere_rotation_description,
+        Res.drawable.rotation_around_point, // TODO: icon
     )
     data object ToggleObjects: Switch(
         Res.string.toggle_objects_name,
