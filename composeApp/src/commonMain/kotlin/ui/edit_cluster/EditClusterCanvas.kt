@@ -138,6 +138,7 @@ fun BoxScope.EditClusterCanvas(
     val selectedPointColor = selectedCircleColor
     val imaginaryCircleColor = DodeclustersColors.fadedRed
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
+    val stereographicGridColor = MaterialTheme.colorScheme.secondary
     val thiccSelectionCircleAlpha = 0.9f
     val concretePositions = ConcreteOnScreenPositions(viewModel.canvasSize.toSize(), LocalDensity.current)
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
@@ -200,7 +201,7 @@ fun BoxScope.EditClusterCanvas(
                     drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, selectionIsActive = selectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleThiccStroke = thiccDottedStroke)
                 }
                 drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke)
-                drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke, visibleRect = visibleRect)
+                drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke, visibleRect = visibleRect, stereographicGridColor = stereographicGridColor, stereographicGridStroke = circleStroke)
                 for (o in viewModel._debugObjects)
                     when (o) {
                         is CircleOrLine -> drawCircleOrLine(o, visibleRect, rotateIconColor, style = circleStroke)
@@ -1006,6 +1007,8 @@ private inline fun DrawScope.drawHandles(
     rotateIcon: Painter,
     dottedStroke: DrawStyle,
     visibleRect: Rect,
+    stereographicGridColor: Color,
+    stereographicGridStroke: Stroke,
 ) {
     if (showCircles) {
         val iconSize = Size(iconDim, iconDim)
@@ -1090,21 +1093,23 @@ private inline fun DrawScope.drawHandles(
                     strokeWidth = 2f
                 )
             }
-            is SubMode.RotateSphere -> {
+            is SubMode.RotateStereographicSphere -> {
                 drawCircle(
-                    color = scaleIconColor,
+                    color = stereographicGridColor,
                     alpha = 0.7f,
                     radius = handleRadius,
                     center = submode.south.toOffset(),
                 )
                 for (i in submode.grid.indices) {
                     val circleOrLine = submode.grid[i]
-                    val alpha = if (i == SubMode.RotateSphere.EQUATOR_GRID_INDEX) 0.9f else 0.5f
+                    val alpha =
+                        if (i == SubMode.RotateStereographicSphere.EQUATOR_GRID_INDEX) 0.9f
+                        else 0.5f
                     drawCircleOrLine(circleOrLine,
                         visibleRect = visibleRect,
-                        color = scaleIconColor,
+                        color = stereographicGridColor,
                         alpha = alpha,
-                        style = dottedStroke,
+                        style = stereographicGridStroke,
                     )
                 }
             }

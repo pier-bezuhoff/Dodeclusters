@@ -48,7 +48,7 @@ sealed interface SubMode {
      * @param[grid] regularly spaced lines of
      * constant latitude and longitude, after the rotation is applied to them
      */
-    data class RotateSphere(
+    data class RotateStereographicSphere(
         val sphereRadius: Double,
         val grabbedTarget: Offset,
         val south: Point,

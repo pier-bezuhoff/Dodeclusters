@@ -8,14 +8,15 @@ import kotlin.math.sin
 /** Sphere (0,0,0; 1) antipodes projected stereographicly */
 private inline val Point.antipodal: Point get() {
     val l2 = squareSum(x, y)
-    return Point(-x/l2, -y/l2)
+    return if (l2 < EPSILON2)
+        Point.CONFORMAL_INFINITY
+    else Point(-x/l2, -y/l2)
 }
 
-// FIX: seems wrong
 /**
- * @return bi-inversion engines, generating sphere rotation (double speed)
+ * @return bi-inversion engines, generating stereographic sphere rotation (double speed)
  */
-fun calculateSphereRotationBiEngine(
+fun calculateStereographicRotationBiEngine(
     sphereProjection: Circle,
     start: Point,
     end: Point,
@@ -73,6 +74,22 @@ fun calculateSphereRotationBiEngine(
             ,
         )
     else null
+}
+
+fun rotateStereographically(
+    engine1: CircleOrLine,
+    engine2: CircleOrLine,
+): (GCircle) -> GCircle? {
+    val e1 = GeneralizedCircle.fromGCircle(engine1)
+    val e2 = GeneralizedCircle.fromGCircle(engine2)
+    val bivector0 = Rotor.fromPencil(e1, e2)
+    val bivector = bivector0 * 0.5
+    val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
+    return { target ->
+        val t = GeneralizedCircle.fromGCircle(target)
+        rotor.applyTo(t).toGCircleAs(target)
+        rotor.applyTo(GeneralizedCircle.fromGCircle(target)).toGCircleAs(target)
+    }
 }
 
 /**

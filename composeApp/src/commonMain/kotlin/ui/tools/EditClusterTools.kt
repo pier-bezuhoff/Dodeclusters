@@ -157,10 +157,9 @@ import dodeclusters.composeapp.generated.resources.shark_fin_striped
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_description
 import dodeclusters.composeapp.generated.resources.shrink_name
-import dodeclusters.composeapp.generated.resources.sphere_rotation_description
-import dodeclusters.composeapp.generated.resources.sphere_rotation_name
 import dodeclusters.composeapp.generated.resources.spiral
-import dodeclusters.composeapp.generated.resources.stub
+import dodeclusters.composeapp.generated.resources.stereographic_rotation_description
+import dodeclusters.composeapp.generated.resources.stereographic_rotation_name
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_description
 import dodeclusters.composeapp.generated.resources.swap_direction_name
@@ -350,9 +349,9 @@ sealed class EditClusterTool(
         Res.drawable.intersection_settings
     )
 
-    data object SphereRotation: Switch(
-        Res.string.sphere_rotation_name,
-        Res.string.sphere_rotation_description,
+    data object StereographicRotation: Switch(
+        Res.string.stereographic_rotation_name, // TODO: TL
+        Res.string.stereographic_rotation_description,
         Res.drawable.rotation_around_point, // TODO: icon
     )
     data object ToggleObjects: Switch(

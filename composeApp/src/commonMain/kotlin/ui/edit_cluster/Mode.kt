@@ -34,7 +34,7 @@ enum class ViewMode(
     @Transient
     override val tool: EditClusterTool
 ) : Mode {
-    SphereRotation(EditClusterTool.SphereRotation),
+    StereographicRotation(EditClusterTool.StereographicRotation),
 }
 
 @Immutable
