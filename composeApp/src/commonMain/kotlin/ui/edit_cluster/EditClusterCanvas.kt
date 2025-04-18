@@ -853,6 +853,7 @@ private inline fun DrawScope.drawPartialConstructs(
                         center = arg.toOffset()
                     )
                 }
+                is Arg.InfinitePoint -> {}
                 is Arg.Indices -> {
                     for (ix in arg.indices) {
                         when (val o = objects[ix]) {

@@ -350,7 +350,7 @@ sealed class Tool(
     )
 
     data object StereographicRotation: Switch(
-        Res.string.stereographic_rotation_name, // TODO: TL
+        Res.string.stereographic_rotation_name,
         Res.string.stereographic_rotation_description,
         Res.drawable.rotation_around_point, // TODO: icon
     )

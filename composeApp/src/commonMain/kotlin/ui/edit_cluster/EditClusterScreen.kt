@@ -557,8 +557,9 @@ fun ToolDescription(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                             )
                     ) {
+                        // NOTE: this functionality is non-obvious
                         Text(
-                            "$selectionAsArgPrompt: $argDescription",
+                            "$selectionAsArgPrompt: $argDescription?",
                             Modifier.padding(4.dp, 4.dp),
                             textDecoration = TextDecoration.Underline,
                             style = textStyle,

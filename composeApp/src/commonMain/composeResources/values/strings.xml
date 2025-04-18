@@ -38,8 +38,8 @@
     <string name="delete_all_parts_description">Clear all filled regions</string>
     <string name="regions_blend_settings_name">Region blending settings</string>
     <string name="regions_blend_settings_description">Change region transparency and blending when they overlap</string>
-    <string name="stereographic_rotation_name">Sphere rotation</string>
-    <string name="stereographic_rotation_description">Rotate stereographic projection's domain sphere</string>
+    <string name="stereographic_rotation_name">Stereographic rotation</string>
+    <string name="stereographic_rotation_description">Rotate stereographic sphere</string>
     <string name="toggle_objects_name">Toggle objects</string>
     <string name="toggle_objects_description">Hide all objects</string>
     <string name="toggle_objects_disabled_description">Show all objects (non-phantom)</string>

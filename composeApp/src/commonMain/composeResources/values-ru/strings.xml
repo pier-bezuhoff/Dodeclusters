@@ -36,6 +36,8 @@
     <string name="delete_all_parts_description">Очистить все области</string>
     <string name="regions_blend_settings_name">Настройка наложения областей</string>
     <string name="regions_blend_settings_description">Настроить прозрачность и наложение областей</string>
+    <string name="stereographic_rotation_name">Стереографическое вращение</string>
+    <string name="stereographic_rotation_description">Вращение стереографической сферы</string>
     <string name="toggle_objects_name">Видимость объектов</string>
     <string name="toggle_objects_description">Скрыть все объекты</string>
     <string name="toggle_objects_disabled_description">Показать все объекты (не фантомные)</string>

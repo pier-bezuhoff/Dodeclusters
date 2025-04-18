@@ -2,12 +2,8 @@ package domain
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
-import data.geometry.Circle
 import data.geometry.GCircle
-import data.geometry.ImaginaryCircle
-import data.geometry.Line
 import data.geometry.Point
-import domain.Arg.PointXY.Companion
 import kotlinx.serialization.Serializable
 
 /**
@@ -21,6 +17,7 @@ sealed interface Arg {
     sealed interface Type {
         // some sum types
         sealed interface Index : Type
+        /** [Circle] + [Line] + [ImaginaryCircle] + [Point] */
         sealed interface CLIP : Type
         sealed interface CLI : Index, CLIP
         sealed interface Circle : CLI
@@ -39,24 +36,28 @@ sealed interface Arg {
     sealed interface CLIP : Arg
     sealed interface CLI : CLIP, Index
     sealed interface LP : CLIP
+    sealed interface Circle : CLI
+    sealed interface Line : CLI, LP
+    sealed interface ImaginaryCircle : CLI
     sealed interface Point : LP
+    /** non-indexed [Point] with fixed coordinates (XY or infinity) */
     sealed interface FixedPoint : Point {
         fun toPoint(): data.geometry.Point
     }
 
-    data class CircleIndex(override val index: Ix) : Index, CLI {
+    data class CircleIndex(override val index: Ix) : Circle, Index {
         override val type: Type.Circle = Companion
         @Serializable
         companion object : Type.Circle
     }
 
-    data class LineIndex(override val index: Ix) : Index, CLI, LP {
+    data class LineIndex(override val index: Ix) : Line, Index {
         override val type: Type.Line = Companion
         @Serializable
         companion object : Type.Line
     }
 
-    data class ImaginaryCircleIndex(override val index: Ix) : Index, CLI {
+    data class ImaginaryCircleIndex(override val index: Ix) : ImaginaryCircle, Index {
         override val type: Type.ImaginaryCircle = Companion
         @Serializable
         companion object : Type.ImaginaryCircle
@@ -70,7 +71,7 @@ sealed interface Arg {
 
     data class PointXY(
         val x: Double,
-        val y: Double
+        val y: Double,
     ) : FixedPoint {
         override val type: Type.Point = Companion
 
@@ -87,14 +88,13 @@ sealed interface Arg {
         companion object : Type.Point
     }
 
-    class InfinitePoint : FixedPoint {
-        override val type: Type.Point = Companion
+    // value - type puning, InfinitePoint is both a type and a singular value of this type
+    @Serializable
+    object InfinitePoint : FixedPoint, Type.Point {
+        override val type: Type.Point = InfinitePoint
 
         override fun toPoint(): data.geometry.Point =
             data.geometry.Point.CONFORMAL_INFINITY
-
-        @Serializable
-        companion object : Type.Point
     }
 
     data class Indices(val indices: List<Ix>) : Arg {
@@ -103,18 +103,15 @@ sealed interface Arg {
         companion object : Type
     }
 
-    @Serializable
-    data object Null : Type
-
     infix fun isType(argType: ArgType): Boolean =
         type in argType.possibleTypes
 
     companion object {
         fun IndexOf(index: Ix, obj: GCircle): Arg.Index =
             when (obj) {
-                is Circle -> CircleIndex(index)
-                is Line -> LineIndex(index)
-                is ImaginaryCircle -> ImaginaryCircleIndex(index)
+                is data.geometry.Circle -> CircleIndex(index)
+                is data.geometry.Line -> LineIndex(index)
+                is data.geometry.ImaginaryCircle -> ImaginaryCircleIndex(index)
                 is data.geometry.Point -> PointIndex(index)
             }
     }
@@ -155,7 +152,7 @@ data class ArgType(
             Arg.LineIndex,
             Arg.PointXY,
         )
-        /** Accept nothing, use for ArcPath */
+        /** Accept nothing, used for ArcPath */
         val NOTHING = ArgType()
     }
 }
