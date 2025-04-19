@@ -494,7 +494,6 @@ class EditClusterViewModel : ViewModel() {
             } else {
                 ObjectConstruct.Dynamic(
                     // since children are auto-deleted with their parent we can !! safely
-                    // BUG: null pointer after 1/2-assed sphere rotation
                     e.reIndex(reIndexer = { reindexing[it]!! })
                 )
             }
@@ -516,7 +515,7 @@ class EditClusterViewModel : ViewModel() {
             }.toMap(),
             backgroundColor = backgroundColor,
             // NOTE: we keep track of phantoms EVEN when they are shown
-            phantoms = phantoms.toList(),
+            phantoms = phantoms.mapNotNull { reindexing[it] },
         )
     }
 

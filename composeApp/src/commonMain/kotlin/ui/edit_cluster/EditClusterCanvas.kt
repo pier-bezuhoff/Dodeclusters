@@ -1104,7 +1104,7 @@ private inline fun DrawScope.drawHandles(
                 for (i in submode.grid.indices) {
                     val circleOrLine = submode.grid[i]
                     val alpha =
-                        if (i == SubMode.RotateStereographicSphere.EQUATOR_GRID_INDEX) 0.9f
+                        if (i == SubMode.RotateStereographicSphere.EQUATOR_GRID_INDEX) 0.8f
                         else 0.5f
                     drawCircleOrLine(circleOrLine,
                         visibleRect = visibleRect,
