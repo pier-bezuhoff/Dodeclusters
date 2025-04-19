@@ -201,13 +201,14 @@ fun BoxScope.EditClusterCanvas(
                     drawSelectedCircles(objects = viewModel.objects, objectColors = viewModel.objectColors, selection = viewModel.selection, mode = viewModel.mode, selectionIsActive = selectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, selectedPointColor = selectedPointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleThiccStroke = thiccDottedStroke)
                 }
                 drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke)
-                drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke, visibleRect = visibleRect, stereographicGridColor = stereographicGridColor, stereographicGridStroke = circleStroke)
-                for (o in viewModel._debugObjects)
-                    when (o) {
-                        is CircleOrLine -> drawCircleOrLine(o, visibleRect, rotateIconColor, style = circleStroke)
-                        is ImaginaryCircle -> drawCircleOrLine(o.toRealCircle(), visibleRect, rotateIconColor, style = circleStroke)
-                        is Point -> drawCircle(rotateIconColor, pointRadius, o.toOffset())
-                    }
+                drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
+                drawGrids(visibleRect = visibleRect, submode = viewModel.submode, stereographicGridColor = stereographicGridColor, stereographicGridStroke = circleStroke, southPointRadius = handleRadius)
+//                for (o in viewModel._debugObjects)
+//                    when (o) {
+//                        is CircleOrLine -> drawCircleOrLine(o, visibleRect, rotateIconColor, style = circleStroke)
+//                        is ImaginaryCircle -> drawCircleOrLine(o.toRealCircle(), visibleRect, rotateIconColor, style = circleStroke)
+//                        is Point -> drawCircle(rotateIconColor, pointRadius, o.toOffset())
+//                    }
             }
             if (viewModel.circleSelectionIsActive && viewModel.showUI) {
                 drawRotationHandle(concretePositions.positions, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)
@@ -1007,9 +1008,6 @@ private inline fun DrawScope.drawHandles(
     scaleIcon: Painter,
     rotateIcon: Painter,
     dottedStroke: DrawStyle,
-    visibleRect: Rect,
-    stereographicGridColor: Color,
-    stereographicGridStroke: Stroke,
 ) {
     if (showCircles) {
         val iconSize = Size(iconDim, iconDim)
@@ -1094,28 +1092,43 @@ private inline fun DrawScope.drawHandles(
                     strokeWidth = 2f
                 )
             }
-            is SubMode.RotateStereographicSphere -> {
-                drawCircle(
-                    color = stereographicGridColor,
-                    alpha = 0.7f,
-                    radius = handleRadius,
-                    center = submode.south.toOffset(),
-                )
-                for (i in submode.grid.indices) {
-                    val circleOrLine = submode.grid[i]
-                    val alpha =
-                        if (i == SubMode.RotateStereographicSphere.EQUATOR_GRID_INDEX) 0.8f
-                        else 0.5f
-                    drawCircleOrLine(circleOrLine,
-                        visibleRect = visibleRect,
-                        color = stereographicGridColor,
-                        alpha = alpha,
-                        style = stereographicGridStroke,
-                    )
-                }
-            }
             else -> {}
         }
+    }
+}
+
+private fun DrawScope.drawGrids(
+    visibleRect: Rect,
+    submode: SubMode?,
+    stereographicGridColor: Color,
+    stereographicGridStroke: Stroke,
+    southPointRadius: Float,
+    gridLineAlpha: Float = 0.5f,
+    equatorGridLineAlpha: Float = 0.8f,
+    southPointAlpha: Float = 0.8f,
+) {
+    when (submode) {
+        is SubMode.RotateStereographicSphere -> {
+            drawCircle(
+                color = stereographicGridColor,
+                alpha = southPointAlpha,
+                radius = southPointRadius,
+                center = submode.south.toOffset(),
+            )
+            for (i in submode.grid.indices) {
+                val circleOrLine = submode.grid[i]
+                val alpha =
+                    if (i == SubMode.RotateStereographicSphere.EQUATOR_GRID_INDEX) equatorGridLineAlpha
+                    else gridLineAlpha
+                drawCircleOrLine(circleOrLine,
+                    visibleRect = visibleRect,
+                    color = stereographicGridColor,
+                    alpha = alpha,
+                    style = stereographicGridStroke,
+                )
+            }
+        }
+        else -> {}
     }
 }
 

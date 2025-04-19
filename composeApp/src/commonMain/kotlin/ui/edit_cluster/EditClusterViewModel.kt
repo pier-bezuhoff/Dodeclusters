@@ -137,7 +137,7 @@ class EditClusterViewModel : ViewModel() {
     )
         private set
 
-    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
+//    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
     var mode: Mode by mutableStateOf(SelectionMode.Drag)
         private set
@@ -477,6 +477,7 @@ class EditClusterViewModel : ViewModel() {
         val deleted = objects.indices.filter { ix ->
             objects[ix] == null && expressions.expressions[ix] == null
         }.toSet()
+        // reindexing because of pruning
         val reindexing = reindexingMap(
             originalIndices = objects.indices,
             deletedIndices = deleted
@@ -1882,14 +1883,6 @@ class EditClusterViewModel : ViewModel() {
                     } else {
                         reselectRegionAt(visiblePosition)
                     }
-                } else if (mode == ViewMode.StereographicRotation) {
-                    when (val sm = submode) {
-                        is SubMode.RotateStereographicSphere ->
-                            submode = sm.copy(
-                                grabbedTarget = absolute(visiblePosition),
-                            )
-                        else -> {}
-                    }
                 } else if (mode is ToolMode && partialArgList?.isFull != true) {
                     val pArgList = partialArgList
                     val nextType = pArgList?.nextArgType
@@ -2049,6 +2042,14 @@ class EditClusterViewModel : ViewModel() {
                     }
                 }
             }
+        }
+        // should work independent of circle visibility
+        when (val sm = submode) {
+            is SubMode.RotateStereographicSphere ->
+                submode = sm.copy(
+                    grabbedTarget = absolute(visiblePosition),
+                )
+            else -> {}
         }
     }
 
