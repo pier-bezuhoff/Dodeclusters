@@ -2495,6 +2495,7 @@ class EditClusterViewModel : ViewModel() {
                 }
             } else if (mode == ViewMode.StereographicRotation && sm is SubMode.RotateStereographicSphere) {
                 // MAYBE: wrap in try-catch
+                // MAYBE: snap North & South to screen center
                 val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
                 val biEngine = calculateStereographicRotationBiEngine(
                     sphereProjection = Circle(screenCenter, sm.sphereRadius),

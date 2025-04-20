@@ -157,6 +157,7 @@ import dodeclusters.composeapp.generated.resources.shark_fin_striped
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_description
 import dodeclusters.composeapp.generated.resources.shrink_name
+import dodeclusters.composeapp.generated.resources.spinning_sphere
 import dodeclusters.composeapp.generated.resources.spiral
 import dodeclusters.composeapp.generated.resources.stereographic_rotation_description
 import dodeclusters.composeapp.generated.resources.stereographic_rotation_name
@@ -352,7 +353,7 @@ sealed class Tool(
     data object StereographicRotation: Switch(
         Res.string.stereographic_rotation_name,
         Res.string.stereographic_rotation_description,
-        Res.drawable.rotation_around_point, // TODO: icon
+        Res.drawable.spinning_sphere,
     )
     data object ToggleObjects: Switch(
         Res.string.toggle_objects_name,
