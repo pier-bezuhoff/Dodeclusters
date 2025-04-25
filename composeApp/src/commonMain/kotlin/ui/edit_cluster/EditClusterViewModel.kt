@@ -136,6 +136,8 @@ class EditClusterViewModel : ViewModel() {
         set = { _, _ -> }
     )
         private set
+    /** same as [objects] but additionally downscaled (optimal for calculations) */
+    private val _objects: MutableList<GCircle?> = mutableListOf()
 
 //    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
