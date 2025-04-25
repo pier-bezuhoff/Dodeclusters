@@ -6,6 +6,7 @@ import data.geometry.Line
 import data.geometry.Point
 import domain.Ix
 import kotlin.math.abs
+import kotlin.math.exp
 
 /**
  * tier = 0: free object,
@@ -458,6 +459,21 @@ class ExpressionForest(
                 expressions[ix] = Expression.Just(expr.copy(
                     parameters = IncidenceParameters(order = parent.point2order(point))
                 ))
+            }
+        }
+    }
+
+    fun adjustAllIncidentPointExpressions() {
+        for ((ix, e) in expressions.entries) {
+            val expr = e?.expr
+            val o = get(ix)
+            if (expr is Expr.Incidence && o is Point) {
+                val parent = get(expr.carrier)
+                if (parent is CircleOrLine) {
+                    expressions[ix] = Expression.Just(expr.copy(
+                        parameters = IncidenceParameters(order = parent.point2order(o))
+                    ))
+                }
             }
         }
     }

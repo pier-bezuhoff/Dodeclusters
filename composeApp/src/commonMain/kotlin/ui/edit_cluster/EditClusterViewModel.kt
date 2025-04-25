@@ -2303,6 +2303,56 @@ class EditClusterViewModel : ViewModel() {
         transformWhatWeCan(targets, translation = pan, focus = c, zoom = zoom, rotationAngle = rotationAngle)
     }
 
+    private fun stereographicallyRotateEverything(
+        sm: SubMode.RotateStereographicSphere,
+        absolutePointerPosition: Offset,
+    ) {
+        // MAYBE: wrap in try-catch
+        // MAYBE: snap North & South to screen center
+        val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
+        val biEngine = calculateStereographicRotationBiEngine(
+            sphereProjection = Circle(screenCenter, sm.sphereRadius),
+            start = Point.fromOffset(sm.grabbedTarget),
+            end = Point.fromOffset(absolutePointerPosition),
+        )
+        if (biEngine != null) {
+            recordCommand(Command.MOVE)
+            // inlined computeBiInversion for efficiency
+            val engine1 = biEngine.first.downscale()
+            val engine2 = biEngine.second.downscale()
+            val e1 = GeneralizedCircle.fromGCircle(engine1)
+            val e2 = GeneralizedCircle.fromGCircle(engine2)
+            val bivector0 = Rotor.fromPencil(e1, e2)
+            val bivector = bivector0 * 0.5
+            val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
+            for (ix in objects.indices) {
+                val o = objects[ix]
+                if (o != null) {
+                    objects[ix] = rotor.applyTo(GeneralizedCircle.fromGCircle(
+                        o.downscale()
+                    )).toGCircleAs(o)
+                        ?.upscale()
+                }
+            }
+            expressions.adjustAllIncidentPointExpressions()
+            val newSouth = (rotor.applyTo(GeneralizedCircle.fromGCircle(
+                sm.south.downscale()
+            )).toGCircleAs(sm.south) as? Point)
+                ?.upscale()
+            val newGrid = sm.grid.mapNotNull { o ->
+                (rotor.applyTo(GeneralizedCircle.fromGCircle(
+                    o.downscale()
+                )).toGCircleAs(o) as? CircleOrLine)
+                    ?.upscale()
+            }
+            submode = sm.copy(
+                grabbedTarget = absolutePointerPosition,
+                south = newSouth ?: sm.south,
+                grid = newGrid,
+            )
+        }
+    }
+
     /**
      * Wrapper around [transform] that adjusts [targets] based on [INVERSION_OF_CONTROL].
      *
@@ -2494,49 +2544,7 @@ class EditClusterViewModel : ViewModel() {
                     }
                 }
             } else if (mode == ViewMode.StereographicRotation && sm is SubMode.RotateStereographicSphere) {
-                // MAYBE: wrap in try-catch
-                // MAYBE: snap North & South to screen center
-                val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
-                val biEngine = calculateStereographicRotationBiEngine(
-                    sphereProjection = Circle(screenCenter, sm.sphereRadius),
-                    start = Point.fromOffset(sm.grabbedTarget),
-                    end = Point.fromOffset(c),
-                )
-                if (biEngine != null) {
-                    recordCommand(Command.MOVE)
-                    // inlined computeBiInversion for efficiency
-                    val engine1 = biEngine.first.downscale()
-                    val engine2 = biEngine.second.downscale()
-                    val e1 = GeneralizedCircle.fromGCircle(engine1)
-                    val e2 = GeneralizedCircle.fromGCircle(engine2)
-                    val bivector0 = Rotor.fromPencil(e1, e2)
-                    val bivector = bivector0 * 0.5
-                    val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
-                    for (ix in objects.indices) {
-                        val o = objects[ix]
-                        if (o != null) {
-                            objects[ix] = rotor.applyTo(GeneralizedCircle.fromGCircle(
-                                o.downscale()
-                            )).toGCircleAs(o)
-                                ?.upscale()
-                        }
-                    }
-                    val newSouth = (rotor.applyTo(GeneralizedCircle.fromGCircle(
-                        sm.south.downscale()
-                    )).toGCircleAs(sm.south) as? Point)
-                        ?.upscale()
-                    val newGrid = sm.grid.mapNotNull { o ->
-                        (rotor.applyTo(GeneralizedCircle.fromGCircle(
-                            o.downscale()
-                        )).toGCircleAs(o) as? CircleOrLine)
-                            ?.upscale()
-                    }
-                    submode = sm.copy(
-                        grabbedTarget = c,
-                        south = newSouth ?: sm.south,
-                        grid = newGrid,
-                    )
-                }
+                stereographicallyRotateEverything(sm, c)
             }
         } else if (mode == SelectionMode.Drag && selectedCircles.isNotEmpty() && showCircles) {
             dragCircle(pan = pan, zoom = zoom, rotationAngle = rotationAngle)

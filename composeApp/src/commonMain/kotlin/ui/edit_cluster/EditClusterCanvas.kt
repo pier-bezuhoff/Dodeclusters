@@ -1103,8 +1103,8 @@ private fun DrawScope.drawGrids(
     stereographicGridColor: Color,
     stereographicGridStroke: Stroke,
     southPointRadius: Float,
-    gridLineAlpha: Float = 0.5f,
-    equatorGridLineAlpha: Float = 0.8f,
+    gridLineAlpha: Float = 0.4f,
+    equatorGridLineAlpha: Float = 0.7f,
     southPointAlpha: Float = 0.8f,
 ) {
     when (submode) {
