@@ -6,7 +6,6 @@ import data.geometry.Line
 import data.geometry.Point
 import domain.Ix
 import kotlin.math.abs
-import kotlin.math.exp
 
 /**
  * tier = 0: free object,
@@ -27,13 +26,11 @@ private const val ABANDONED_TIER: Tier = -2
 
 /**
  * Class for managing expressions (AST controller)
- * @param[get] [GCircle]s are stored separately by design, so we have to access them somehow
- * @param[set] used to set updated objects (when calling [update] or [reEval]) */
+ * @param[_objects] reference to shared, downscaled mutable mirror-list of VM.objects
+ */
 class ExpressionForest(
     initialExpressions: Map<Ix, Expression?>, // pls include all possible indices
-    // find indexed args -> downscale them -> eval expr -> upscale result
-    private val get: (Ix) -> GCircle?, // TODO: replace with params for every function that needs these 2
-    private val set: (Ix, GCircle?) -> Unit,
+    private val _objects: MutableList<GCircle?>,
 ) {
     // for the VM.objects list nulls correspond to unrealized outputs of multi-functions
     // here nulls correspond to free objects
@@ -83,10 +80,10 @@ class ExpressionForest(
     ): GCircle? =
         when (this) {
             is Expression.Just ->
-                expr.eval(get).firstOrNull()
+                expr.eval(_objects).firstOrNull()
             is Expression.OneOf -> {
                 val results = multiExpressionCache.getOrPut(expr) {
-                    expr.eval(get)
+                    expr.eval(_objects)
                 }
                 results.getOrNull(outputIndex)
             }
@@ -121,7 +118,7 @@ class ExpressionForest(
         } else { // no hopping over tiers, we good
             tier2ixs.add(setOf(ix))
         }
-        val result = expr.eval(get)
+        val result = expr.eval(_objects)
         return result.firstOrNull()
             .also { println("$ix -> $expr -> $result") }
     }
@@ -129,7 +126,7 @@ class ExpressionForest(
     /** don't forget to upscale the result afterwards! */
     fun addMultiExpression(expression: Expression.OneOf): GCircle? {
         val expr = expression.expr
-        val result = expr.eval(get)[expression.outputIndex]
+        val result = expr.eval(_objects)[expression.outputIndex]
         val ix = calculateNextIndex()
         val tier = computeTier(ix, expr)
         expressions[ix] = expression
@@ -150,7 +147,7 @@ class ExpressionForest(
     fun addMultiExpr(expr: Expr.OneToMany): ExprResult {
         val periodicRotation =
             expr is Expr.LoxodromicMotion && expr.parameters.dilation == 0.0 && abs(expr.parameters.angle) == 360f
-        val result = expr.eval(get)
+        val result = expr.eval(_objects)
         val ix0 = calculateNextIndex()
         val tier = computeTier(ix0, expr)
         val resultSize =
@@ -220,7 +217,7 @@ class ExpressionForest(
             tier2ixs.add(setOf(ix))
         }
         recomputeChildrenTiers(ix)
-        val result = newExpr.eval(get)
+        val result = newExpr.eval(_objects)
         return result.firstOrNull()
 //            .also {
 //                println("change $ix -> $newExpr -> $result")
@@ -251,12 +248,15 @@ class ExpressionForest(
         return deleted
     }
 
-    /** recursively re-evaluates expressions given that [changedIxs] have changed
-     * and updates via [set] */
+    /**
+     * Recursively re-evaluates expressions given that [changedIxs]/parents have changed
+     * and updates [_objects]
+     * @return all affected/child indices that were altered by [update] (excluding [changedIxs])
+     */
     fun update(
         changedIxs: List<Ix>,
         // deltas (translation, rotation, scaling) to apply to immediate carried objects
-    ) {
+    ): List<Ix> {
         val changed = mutableSetOf<Ix>()
         var lvl = changedIxs
         while (lvl.isNotEmpty()) {
@@ -267,27 +267,20 @@ class ExpressionForest(
             .sortedBy { ix2tier[it] }
         val cache: MutableMap<Expr.OneToMany, ExprResult> = mutableMapOf()
         for (ix in toBeUpdated) {
-            expressions[ix]?.let { expression -> // tbh the expression cannot be null
-                set(ix, expression.eval(cache))
-            }
+            // children always have non-null expressions
+            _objects[ix] = expressions[ix]?.eval(cache)
         }
-        // idk, being so easily detachable feels wrong
-//        for (changedIx in changedIxs) {
-//            if (expressions[changedIx] != null && changedIx !in changed) {
-//                // we have moved a non-free node, but haven't touched its parents
-//                changeToFree(changedIx)
-//            }
-//        }
+        return toBeUpdated
     }
 
-    /** Re-evaluates all expressions and [set]s updated results */
+    /** Re-evaluates all expressions and write them to [_objects] */
     fun reEval() {
         val cache = mutableMapOf<Expr.OneToMany, ExprResult>()
         val deps = tier2ixs.drop(1) // no need to calc for tier 0
         for (ixs in deps) {
             for (ix in ixs) {
                 expressions[ix]?.let { expression ->
-                    set(ix, expression.eval(cache))
+                    _objects[ix] = expression.eval(cache)
                 }
             }
         }
@@ -348,7 +341,7 @@ class ExpressionForest(
         }
         val tier = ix2tier[i0]!!
         var newMaxRange = reservedIndices
-        val result = newExpr.eval(get)
+        val result = newExpr.eval(_objects)
         val sizeIncrease = result.size - targetIndices.size
         val newTargetIndices: List<Ix>
         if (sizeIncrease > 0) {
@@ -451,11 +444,12 @@ class ExpressionForest(
         (children[parentIx] ?: emptySet())
             .filter { expressions[it]?.expr is Expr.Incidence }
 
+    // TODO: instead apply transformation to incident children and then re-calc their 'order'
     fun adjustIncidentPointExpressions(ix2point: Map<Ix, Point?>) {
         for ((ix, point) in ix2point) {
             if (point != null) {
                 val expr = expressions[ix]?.expr as Expr.Incidence
-                val parent = get(expr.carrier) as CircleOrLine
+                val parent = _objects[expr.carrier] as CircleOrLine
                 expressions[ix] = Expression.Just(expr.copy(
                     parameters = IncidenceParameters(order = parent.point2order(point))
                 ))
@@ -466,9 +460,9 @@ class ExpressionForest(
     fun adjustAllIncidentPointExpressions() {
         for ((ix, e) in expressions.entries) {
             val expr = e?.expr
-            val o = get(ix)
+            val o = _objects[ix]
             if (expr is Expr.Incidence && o is Point) {
-                val parent = get(expr.carrier)
+                val parent = _objects[expr.carrier]
                 if (parent is CircleOrLine) {
                     expressions[ix] = Expression.Just(expr.copy(
                         parameters = IncidenceParameters(order = parent.point2order(o))
@@ -490,7 +484,7 @@ class ExpressionForest(
         val changedIxs = mutableListOf<Ix>()
         for ((ix, e) in expressions) {
             val expr = e?.expr
-            if (expr is Expr.Incidence && get(expr.carrier) is Line) {
+            if (expr is Expr.Incidence && _objects[expr.carrier] is Line) {
                 expressions[ix] = Expression.Just(
                     expr.copy(IncidenceParameters(
                         order = zoom * expr.parameters.order

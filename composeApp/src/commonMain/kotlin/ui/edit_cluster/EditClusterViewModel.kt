@@ -128,16 +128,16 @@ class EditClusterViewModel : ViewModel() {
      * [Expr.OneToMany], or to forever deleted objects (they have `null` [expressions]),
      * or (rarely) to mismatching type casts */
     val objects: SnapshotStateList<GCircle?> = mutableStateListOf()
+    /** same as [objects] but additionally downscaled (optimal for calculations)
+     * NOTE: u are responsible for MANUALLY sync-ing them */
+    private val _objects: MutableList<GCircle?> = mutableListOf()
     /** Filled regions delimited by some objects from [objects] */
     val regions: SnapshotStateList<LogicalRegion> = mutableStateListOf()
     var expressions: ExpressionForest = ExpressionForest( // stub
         initialExpressions = emptyMap(),
-        get = { null },
-        set = { _, _ -> }
+        _objects = _objects,
     )
         private set
-    /** same as [objects] but additionally downscaled (optimal for calculations) */
-    private val _objects: MutableList<GCircle?> = mutableListOf()
 
 //    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
@@ -436,6 +436,7 @@ class EditClusterViewModel : ViewModel() {
         regions.clear()
         objectColors.clear()
         objects.clear()
+        _objects.clear()
         objects.addAll(
             constellation.objects.map {
                 when (it) {
@@ -446,14 +447,17 @@ class EditClusterViewModel : ViewModel() {
                 }
             }
         )
+        _objects.addAll(
+            objects.map { it?.downscale() }
+        )
         expressions = ExpressionForest(
             initialExpressions = constellation.toExpressionMap(),
-            get = { objects[it]?.downscale() },
-            set = { ix, value ->
-                objects[ix] = value?.upscale()
-            }
+            _objects = _objects,
         )
         expressions.reEval() // calculates all dependent objects
+        for (ix in objects.indices) {
+            objects[ix] = _objects[ix]?.upscale()
+        }
 //        expressions.update(
 //            expressions.scaleLineIncidenceExpressions(DOWNSCALING_FACTOR)
 //        )
@@ -571,16 +575,19 @@ class EditClusterViewModel : ViewModel() {
 
     private fun addObject(obj: GCircle?): Ix {
         objects.add(obj)
+        _objects.add(obj?.downscale())
         return objects.size - 1
     }
 
     private fun addObjects(objs: List<GCircle?>) {
         objects.addAll(objs)
+        _objects.addAll(objs.map { it?.downscale() })
     }
 
     private fun removeObjects(ixs: List<Ix>) {
         for (ix in ixs) {
             objects[ix] = null
+            _objects[ix] = null
         }
         val ixsSet = ixs.toSet()
         objectColors -= ixsSet
@@ -1687,10 +1694,15 @@ class EditClusterViewModel : ViewModel() {
         } else {
             recordCommand(Command.ROTATE, targets = targets) // hijacking rotation
             for (ix in targets) {
-                val obj = objects[ix] as CircleOrLine
-                objects[ix] = obj.reversed()
+                val obj0 = objects[ix] as CircleOrLine
+                val obj = obj0.reversed()
+                objects[ix] = obj
+                _objects[ix] = obj.downscale()
             }
-            expressions.update(selection)
+            val toBeUpdated = expressions.update(selection)
+            for (ix in toBeUpdated) {
+                objects[ix] = _objects[ix]?.upscale()
+            }
         }
     }
 
@@ -2293,8 +2305,12 @@ class EditClusterViewModel : ViewModel() {
         val order = carrier.downscale().point2order(newPoint.downscale())
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
         objects[pointIndex] = newPoint
+        _objects[pointIndex] = newPoint.downscale()
         expressions.changeExpression(pointIndex, newExpr)
-        expressions.update(listOf(pointIndex))
+        val toBeUpdated = expressions.update(listOf(pointIndex))
+        for (ix in toBeUpdated) {
+            objects[ix] = _objects[ix]?.upscale()
+        }
     }
 
     private fun dragCirclesOrPoints(pan: Offset, c: Offset, zoom: Float, rotationAngle: Float) {
@@ -2305,6 +2321,9 @@ class EditClusterViewModel : ViewModel() {
         transformWhatWeCan(targets, translation = pan, focus = c, zoom = zoom, rotationAngle = rotationAngle)
     }
 
+    // NOTE: polar line transforms weirdly:
+    //  it becomes circle during st-rot, but afterwards when
+    //  its carrier is moved it becomes line again
     private fun stereographicallyRotateEverything(
         sm: SubMode.RotateStereographicSphere,
         absolutePointerPosition: Offset,
@@ -2372,7 +2391,10 @@ class EditClusterViewModel : ViewModel() {
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
         crossinline updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
-            expressions.update(it)
+            val toBeUpdated = expressions.update(it)
+            for (ix in toBeUpdated) {
+                objects[ix] = _objects[ix]?.upscale()
+            }
         },
     ) {
         val actualTargets: List<Ix> =
@@ -2418,7 +2440,10 @@ class EditClusterViewModel : ViewModel() {
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
         crossinline updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
-            expressions.update(it)
+            val toBeUpdated = expressions.update(it)
+            for (ix in toBeUpdated) {
+                objects[ix] = _objects[ix]?.upscale()
+            }
         },
     ) {
         if (targets.isEmpty()) {
@@ -2437,8 +2462,9 @@ class EditClusterViewModel : ViewModel() {
             for (ix in targets) {
                 val o = objects[ix]
                 objects[ix] = o?.translated(translation)
-                if (o is Line)
+                if (o is Line) {
                     adjustIncidentPoints(parentIx = ix, translation = translation)
+                }
             }
         } else {
             val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
@@ -2476,6 +2502,9 @@ class EditClusterViewModel : ViewModel() {
                     null -> {}
                 }
             }
+        }
+        for (ix in targets) {
+            _objects[ix] = objects[ix]?.downscale()
         }
 //        measureTime {
         updateExpressions(targets)
@@ -2596,7 +2625,9 @@ class EditClusterViewModel : ViewModel() {
                 // MAYBE: try to re-attach free points
             }
             ToolMode.ARC_PATH -> {}
-            ViewMode.StereographicRotation -> {}
+            ViewMode.StereographicRotation -> {
+                // MAYBE: normalize line-only-output expressions (e.g. polar line)
+            }
             is ToolMode -> if (submode == null) {
                 val pArgList = partialArgList
                 // we only confirm args in onUp, they are created in onDown etc.
@@ -2708,6 +2739,7 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
+    // TODO: apply transformation to points and then re-calc their 'order' instead
     /**
      * transform points incident to the circle #[parentIx] via
      * [translation] >>> scaling ([centroid], [zoom]) >>> rotation ([centroid], [rotationAngle])

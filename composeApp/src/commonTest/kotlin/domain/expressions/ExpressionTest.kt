@@ -45,15 +45,15 @@ class ExpressionTest {
             }
         )
         val ds = 1.0/200.0
-        val ast = ExpressionForest(
-            initialExpressions = constellation.toExpressionMap(),
-            get = { objects[it]?.scaled(0.0, 0.0, ds)
-            },
-            set = { ix, value ->
-                objects[ix] = value?.scaled(0.0, 0.0, 200.0)
-            }
-        )
-        ast.reEval()
+//        val ast = ExpressionForest(
+//            initialExpressions = constellation.toExpressionMap(),
+//            get = { objects[it]?.scaled(0.0, 0.0, ds)
+//            },
+//            set = { ix, value ->
+//                objects[ix] = value?.scaled(0.0, 0.0, 200.0)
+//            }
+//        )
+//        ast.reEval()
         println(objects)
         /*
         val variationTimes: MutableMap<Variation, Duration> = mutableMapOf(

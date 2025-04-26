@@ -332,8 +332,7 @@ inline fun Expr.eval(
 
 // this eval is 4 times to 15 times faster (but lacks downscale)
 // BUT adding downscale completely cancels speed improvement
-/*
-fun Expr._eval(objects: List<GCircle?>): ExprResult {
+fun Expr.eval(objects: List<GCircle?>): ExprResult {
     return when (this) {
         // idt it's worth to polymorphism eval
         is OneToOne -> {
@@ -360,9 +359,13 @@ fun Expr._eval(objects: List<GCircle?>): ExprResult {
                     objects[object1] ?: return emptyList(),
                     objects[object2] ?: return emptyList(),
                 )
-                is PolarityByCircleAndLineOrPoint -> computePolarity(
+                is PolarLineByCircleAndPoint -> computePolarLine(
                     objects[circle] as? CircleOrLine ?: return emptyList(),
-                    objects[polarLineOrPole] as? LineOrPoint ?: return emptyList(),
+                    objects[point] as? Point ?: return emptyList(),
+                )
+                is PoleByCircleAndLine -> computePole(
+                    objects[circle] as? Circle ?: return emptyList(),
+                    objects[line] as? Line ?: return emptyList(),
                 )
                 is CircleInversion -> computeCircleInversion(
                     objects[target] ?: return emptyList(),
@@ -414,7 +417,6 @@ fun Expr._eval(objects: List<GCircle?>): ExprResult {
         )
     }
 }
-*/
 
 inline fun Expr.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
