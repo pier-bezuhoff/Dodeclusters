@@ -251,6 +251,8 @@ class ExpressionForest(
     /**
      * Recursively re-evaluates expressions given that [changedIxs]/parents have changed
      * and updates [_objects]
+     *
+     * NOTE: don't forget to sync `VM.objects` with [_objects] at returned indices
      * @return all affected/child indices that were altered by [update] (excluding [changedIxs])
      */
     fun update(
@@ -273,7 +275,11 @@ class ExpressionForest(
         return toBeUpdated
     }
 
-    /** Re-evaluates all expressions and write them to [_objects] */
+    /**
+     * Re-evaluates all expressions and write them to [_objects]
+     *
+     * NOTE: don't forget to sync all `VM.objects` with [_objects]
+     */
     fun reEval() {
         val cache = mutableMapOf<Expr.OneToMany, ExprResult>()
         val deps = tier2ixs.drop(1) // no need to calc for tier 0

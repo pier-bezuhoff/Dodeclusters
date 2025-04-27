@@ -41,6 +41,7 @@ import data.geometry.Rotor
 import data.geometry.calculateStereographicRotationBiEngine
 import data.geometry.fromCorners
 import data.geometry.generateSphereGrid
+import data.geometry.scaled00
 import data.geometry.selectWithRectangle
 import data.geometry.translationDelta
 import domain.Arg
@@ -126,10 +127,13 @@ import kotlin.time.Duration.Companion.seconds
 class EditClusterViewModel : ViewModel() {
     /** All existing [GCircle]s; `null`s correspond either to unrealized outputs of
      * [Expr.OneToMany], or to forever deleted objects (they have `null` [expressions]),
-     * or (rarely) to mismatching type casts */
+     * or (rarely) to mismatching type casts
+     * NOTE: don't forget to sync changes to [objects] with [_objects]
+     */
     val objects: SnapshotStateList<GCircle?> = mutableStateListOf()
     /** same as [objects] but additionally downscaled (optimal for calculations)
-     * NOTE: u are responsible for MANUALLY sync-ing them */
+     * NOTE: u are responsible for MANUALLY sync-ing them
+     */
     private val _objects: MutableList<GCircle?> = mutableListOf()
     /** Filled regions delimited by some objects from [objects] */
     val regions: SnapshotStateList<LogicalRegion> = mutableStateListOf()
@@ -437,42 +441,36 @@ class EditClusterViewModel : ViewModel() {
         objectColors.clear()
         objects.clear()
         _objects.clear()
-        objects.addAll(
-            constellation.objects.map {
-                when (it) {
-                    is ObjectConstruct.ConcreteCircle -> it.circle
-                    is ObjectConstruct.ConcreteLine -> it.line
-                    is ObjectConstruct.ConcretePoint -> it.point
-                    is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
-                }
+        for (objectConstruct in constellation.objects) {
+            val o = when (objectConstruct) {
+                is ObjectConstruct.ConcreteCircle -> objectConstruct.circle
+                is ObjectConstruct.ConcreteLine -> objectConstruct.line
+                is ObjectConstruct.ConcretePoint -> objectConstruct.point
+                is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
             }
-        )
-        _objects.addAll(
-            objects.map { it?.downscale() }
-        )
+            objects.add(o)
+            _objects.add(o?.downscale())
+        }
         expressions = ExpressionForest(
             initialExpressions = constellation.toExpressionMap(),
             _objects = _objects,
         )
         expressions.reEval() // calculates all dependent objects
-        for (ix in objects.indices) {
-            objects[ix] = _objects[ix]?.upscale()
-        }
+        syncUpscaledObjects()
 //        expressions.update(
 //            expressions.scaleLineIncidenceExpressions(DOWNSCALING_FACTOR)
 //        )
         val objectIndices = objects.indices.toSet()
-        regions.addAll(
-            constellation.parts
-                .filter { part -> // region validation
-                    part.insides.all { it in objectIndices } &&
-                    part.outsides.all { it in objectIndices }
-                }
-        )
-        objectColors.putAll(
-            constellation.objectColors
-                .filterKeys { it in objectIndices }
-        )
+        constellation.parts
+            .filterTo(regions) { part -> // region validation
+                part.insides.all { it in objectIndices } &&
+                part.outsides.all { it in objectIndices }
+            }
+        for ((ix, color) in constellation.objectColors) {
+            if (ix in objectIndices) {
+                objectColors[ix] = color
+            }
+        }
         backgroundColor = constellation.backgroundColor
         phantoms = constellation.phantoms
             .intersect(objectIndices) // prevention from orphaned phantoms
@@ -581,7 +579,9 @@ class EditClusterViewModel : ViewModel() {
 
     private fun addObjects(objs: List<GCircle?>) {
         objects.addAll(objs)
-        _objects.addAll(objs.map { it?.downscale() })
+        for (o in objs) {
+            _objects.add(o?.downscale())
+        }
     }
 
     private fun removeObjects(ixs: List<Ix>) {
@@ -1700,9 +1700,7 @@ class EditClusterViewModel : ViewModel() {
                 _objects[ix] = obj.downscale()
             }
             val toBeUpdated = expressions.update(selection)
-            for (ix in toBeUpdated) {
-                objects[ix] = _objects[ix]?.upscale()
-            }
+            syncUpscaledObjects(toBeUpdated)
         }
     }
 
@@ -2308,9 +2306,7 @@ class EditClusterViewModel : ViewModel() {
         _objects[pointIndex] = newPoint.downscale()
         expressions.changeExpression(pointIndex, newExpr)
         val toBeUpdated = expressions.update(listOf(pointIndex))
-        for (ix in toBeUpdated) {
-            objects[ix] = _objects[ix]?.upscale()
-        }
+        syncUpscaledObjects(toBeUpdated)
     }
 
     private fun dragCirclesOrPoints(pan: Offset, c: Offset, zoom: Float, rotationAngle: Float) {
@@ -2390,16 +2386,11 @@ class EditClusterViewModel : ViewModel() {
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-        crossinline updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
-            val toBeUpdated = expressions.update(it)
-            for (ix in toBeUpdated) {
-                objects[ix] = _objects[ix]?.upscale()
-            }
-        },
     ) {
         val actualTargets: List<Ix> =
             when (INVERSION_OF_CONTROL) {
-                InversionOfControl.NONE -> targets.filter { isFree(it) }
+                InversionOfControl.NONE ->
+                    targets.filter { isFree(it) }
                 InversionOfControl.LEVEL_1 -> {
                     targets.flatMap { targetIx ->
                         if (isFree(targetIx)) {
@@ -2421,7 +2412,7 @@ class EditClusterViewModel : ViewModel() {
             else
                 queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
-            transform(actualTargets, translation, focus, zoom, rotationAngle, updateExpressions)
+            transform(actualTargets, translation, focus, zoom, rotationAngle)
         }
     }
 
@@ -2439,12 +2430,6 @@ class EditClusterViewModel : ViewModel() {
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-        crossinline updateExpressions: (affectedTargets: List<Ix>) -> Unit = {
-            val toBeUpdated = expressions.update(it)
-            for (ix in toBeUpdated) {
-                objects[ix] = _objects[ix]?.upscale()
-            }
-        },
     ) {
         if (targets.isEmpty()) {
             return
@@ -2503,11 +2488,10 @@ class EditClusterViewModel : ViewModel() {
                 }
             }
         }
-        for (ix in targets) {
-            _objects[ix] = objects[ix]?.downscale()
-        }
+        syncDownscaledObjects(targets)
 //        measureTime {
-        updateExpressions(targets)
+        val toBeUpdated = expressions.update(targets)
+        syncUpscaledObjects(toBeUpdated)
 //        }.also { println("update time: $it") }
     }
 
@@ -3683,12 +3667,24 @@ class EditClusterViewModel : ViewModel() {
         }
 
     // NOTE: downscaling each arg for eval is an extreme performance bottleneck (4 - 15 times)
-    private fun GCircle.downscale(): GCircle = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
-    private fun GCircle.upscale(): GCircle = scaled(0.0, 0.0, UPSCALING_FACTOR)
-    private fun CircleOrLine.downscale(): CircleOrLine = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
-    private fun CircleOrLine.upscale(): CircleOrLine = scaled(0.0, 0.0, UPSCALING_FACTOR)
-    private fun Point.downscale(): Point = scaled(0.0, 0.0, DOWNSCALING_FACTOR)
-    private fun Point.upscale(): Point = scaled(0.0, 0.0, UPSCALING_FACTOR)
+    private inline fun GCircle.downscale(): GCircle = scaled00(DOWNSCALING_FACTOR)
+    private inline fun GCircle.upscale(): GCircle = scaled00(UPSCALING_FACTOR)
+    private inline fun CircleOrLine.downscale(): CircleOrLine = scaled00(DOWNSCALING_FACTOR)
+    private inline fun CircleOrLine.upscale(): CircleOrLine = scaled00(UPSCALING_FACTOR)
+    private inline fun Point.downscale(): Point = scaled00(DOWNSCALING_FACTOR)
+    private inline fun Point.upscale(): Point = scaled00(UPSCALING_FACTOR)
+
+    private fun syncDownscaledObjects(indices: Iterable<Ix> = objects.indices) {
+        for (ix in indices) {
+            _objects[ix] = objects[ix]?.scaled00(DOWNSCALING_FACTOR)
+        }
+    }
+
+    private fun syncUpscaledObjects(indices: Iterable<Ix> = _objects.indices) {
+        for (ix in indices) {
+            objects[ix] = _objects[ix]?.scaled00(UPSCALING_FACTOR)
+        }
+    }
 
     fun saveState(): State {
         val center = computeAbsoluteCenter() ?: Offset.Zero
