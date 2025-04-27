@@ -2351,7 +2351,7 @@ class EditClusterViewModel : ViewModel() {
                         ?.upscale()
                 }
             }
-            expressions.adjustAllIncidentPointExpressions()
+            expressions.adjustIncidentPointExpressions()
             val newSouth = (rotor.applyTo(GeneralizedCircle.fromGCircle(
                 sm.south.downscale()
             )).toGCircleAs(sm.south) as? Point)
@@ -2397,7 +2397,8 @@ class EditClusterViewModel : ViewModel() {
                             listOf(targetIx)
                         } else {
                             val parents = expressions.getImmediateParents(targetIx)
-                            if (parents.all { isFree(it) }) parents
+                            if (parents.all { isFree(it) })
+                                parents
                             else emptyList()
                         }
                     }.distinct()
@@ -2416,6 +2417,7 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
+    // NOTE: idk, handling incident points is messy
     /**
      * Apply [translation];scaling;rotation to [targets] (that are all assumed free).
      *
@@ -2434,6 +2436,7 @@ class EditClusterViewModel : ViewModel() {
         if (targets.isEmpty()) {
             return
         }
+        val targetsSet = targets.toSet()
         val requiresTranslation = translation != Offset.Zero
         val requiresZoom = zoom != 1f
         val requiresRotation = rotationAngle != 0f
@@ -2444,13 +2447,21 @@ class EditClusterViewModel : ViewModel() {
         else
             recordCommand(Command.ROTATE, targets)
         if (!requiresZoom && !requiresRotation) {
+            val allIncidentPoints = mutableListOf<Ix>()
             for (ix in targets) {
                 val o = objects[ix]
                 objects[ix] = o?.translated(translation)
                 if (o is Line) {
-                    adjustIncidentPoints(parentIx = ix, translation = translation)
+                    expressions.getIncidentPointsTo(ix, allIncidentPoints)
                 }
             }
+            allIncidentPoints -= targetsSet
+            for (ix in allIncidentPoints) {
+                val p0 = objects[ix] as? Point
+                val p = p0?.translated(translation)
+                _objects[ix] = p?.downscale() // objects[ix] will be recalculated & set during update phase
+            }
+            expressions.adjustIncidentPointExpressions(allIncidentPoints)
         } else {
             val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
             for (ix in targets) {
@@ -2458,25 +2469,30 @@ class EditClusterViewModel : ViewModel() {
                     is Circle -> {
                         objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
                         if (requiresRotation) {
-                            adjustIncidentPoints(
-                                parentIx = ix,
-                                centroid = focus,
-                                rotationAngle = rotationAngle
-                            )
+                            val actualFocus = if (focus == Offset.Unspecified)
+                                o.center
+                            else focus
+                            val incidentPoints = expressions.getIncidentPoints(ix) - targetsSet
+                            for (j in incidentPoints) {
+                                val p0 = objects[j] as? Point
+                                val p = p0?.transformed(translation, actualFocus, zoom, rotationAngle)
+                                _objects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
+                            }
+                            expressions.adjustIncidentPointExpressions(incidentPoints)
                         }
                     }
                     is Line -> {
-                        val f = if (focus == Offset.Unspecified)
+                        val actualFocus = if (focus == Offset.Unspecified)
                             o.project(screenCenter)
                         else focus
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                        adjustIncidentPoints(
-                            parentIx = ix,
-                            translation = translation,
-                            centroid = f,
-                            zoom = zoom,
-                            rotationAngle = rotationAngle
-                        )
+                        objects[ix] = o.transformed(translation, actualFocus, zoom, rotationAngle)
+                        val incidentPoints = expressions.getIncidentPoints(ix) - targetsSet
+                        for (j in incidentPoints) {
+                            val p0 = objects[j] as? Point
+                            val p = p0?.transformed(translation, actualFocus, zoom, rotationAngle)
+                            _objects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
+                        }
+                        expressions.adjustIncidentPointExpressions(incidentPoints)
                     }
                     is Point -> {
                         objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
@@ -2721,28 +2737,6 @@ class EditClusterViewModel : ViewModel() {
                 _animations.emit(HighlightAnimation(allParents))
             }
         }
-    }
-
-    // TODO: apply transformation to points and then re-calc their 'order' instead
-    /**
-     * transform points incident to the circle #[parentIx] via
-     * [translation] >>> scaling ([centroid], [zoom]) >>> rotation ([centroid], [rotationAngle])
-     * @param[rotationAngle] in degrees
-     */
-    private fun adjustIncidentPoints(
-        parentIx: Ix,
-        translation: Offset = Offset.Zero,
-        centroid: Offset = Offset.Zero,
-        zoom: Float = 1f,
-        rotationAngle: Float = 0f,
-    ) {
-        val ix2point = expressions.getIncidentPoints(parentIx)
-            .associateWith { child ->
-                (objects[child] as? Point)
-                    ?.transformed(translation, centroid, zoom, rotationAngle)
-                    ?.downscale()
-            }
-        expressions.adjustIncidentPointExpressions(ix2point)
     }
 
     private fun selectCategory(category: Category, togglePanel: Boolean = false) {

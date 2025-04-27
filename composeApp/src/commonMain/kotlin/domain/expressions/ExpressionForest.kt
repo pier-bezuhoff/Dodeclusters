@@ -450,22 +450,16 @@ class ExpressionForest(
         (children[parentIx] ?: emptySet())
             .filter { expressions[it]?.expr is Expr.Incidence }
 
-    // TODO: instead apply transformation to incident children and then re-calc their 'order'
-    fun adjustIncidentPointExpressions(ix2point: Map<Ix, Point?>) {
-        for ((ix, point) in ix2point) {
-            if (point != null) {
-                val expr = expressions[ix]?.expr as Expr.Incidence
-                val parent = _objects[expr.carrier] as CircleOrLine
-                expressions[ix] = Expression.Just(expr.copy(
-                    parameters = IncidenceParameters(order = parent.point2order(point))
-                ))
-            }
-        }
+    fun getIncidentPointsTo(parentIx: Ix, destination: MutableCollection<in Ix>) {
+        (children[parentIx] ?: emptySet())
+            .filterTo(destination) { expressions[it]?.expr is Expr.Incidence }
     }
 
-    fun adjustAllIncidentPointExpressions() {
-        for ((ix, e) in expressions.entries) {
-            val expr = e?.expr
+    // still unsure about potentially better ways of doing it
+    // especially for incident-p on dependent objects of those transformed
+    fun adjustIncidentPointExpressions(incidentPointIndices: Collection<Ix> = expressions.keys) {
+        for (ix in incidentPointIndices) {
+            val expr = expressions[ix]?.expr
             val o = _objects[ix]
             if (expr is Expr.Incidence && o is Point) {
                 val parent = _objects[expr.carrier]
