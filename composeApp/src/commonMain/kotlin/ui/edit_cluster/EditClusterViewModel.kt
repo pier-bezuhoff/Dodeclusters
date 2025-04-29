@@ -2741,12 +2741,12 @@ class EditClusterViewModel : ViewModel() {
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) { // haxx
             toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
         }
-        // we don't want to exit flow-fill or expr-adj that we started with completeToolMode()
-        if (submode !is SubMode.FlowFill &&
-            submode !is SubMode.ExprAdjustment &&
-            submode !is SubMode.RotateStereographicSphere
-        ) {
-            submode = null
+        when (submode) {
+            is SubMode.Rotate,
+            is SubMode.Scale,
+            is SubMode.ScaleViaSlider, ->
+                submode = null
+            else -> {}
         }
     }
 

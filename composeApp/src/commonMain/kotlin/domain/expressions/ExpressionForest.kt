@@ -24,6 +24,7 @@ private const val UNCALCULATED_TIER: Tier = -1
 /** stub tier for forever-deleted object index */
 private const val ABANDONED_TIER: Tier = -2
 
+// MAYBE: cache carrier->incident points lookup (since it's called on every VM.transform)
 /**
  * Class for managing expressions (AST controller)
  * @param[_objects] reference to shared, downscaled mutable mirror-list of VM.objects
@@ -340,6 +341,8 @@ class ExpressionForest(
         targetIndices: List<Ix>,
         reservedIndices: List<Ix>,
     ): Triple<List<Ix>, List<Ix>, List<GCircle?>> {
+        if (targetIndices.isEmpty()) // idk why it can happen but i had witnessed it
+            return Triple(targetIndices, reservedIndices, emptyList())
         val i0 = targetIndices.first()
         val oldExpr = expressions[i0]!!.expr
         require(oldExpr.args == newExpr.args && targetIndices.all { expressions[it]?.expr == oldExpr }) {
@@ -446,6 +449,7 @@ class ExpressionForest(
         }
     }
 
+    // MAYBE: cache
     fun getIncidentPoints(parentIx: Ix): List<Ix> =
         (children[parentIx] ?: emptySet())
             .filter { expressions[it]?.expr is Expr.Incidence }
