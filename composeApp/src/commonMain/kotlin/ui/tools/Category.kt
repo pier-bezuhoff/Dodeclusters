@@ -34,7 +34,7 @@ sealed class Category(
             Tool.FlowSelect,
             Tool.ToggleSelectAll,
         ),
-        defaultables = listOf(0)
+        defaultables = listOf(0, 1, 2)
     ) // ~mode-like
     data object Region : Category(
         Res.string.region_category_name,

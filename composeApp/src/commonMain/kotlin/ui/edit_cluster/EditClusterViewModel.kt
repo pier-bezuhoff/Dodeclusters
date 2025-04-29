@@ -2468,12 +2468,6 @@ class EditClusterViewModel : ViewModel() {
                     expressions.getIncidentPointsTo(ix, allIncidentPoints)
                 }
             }
-            allIncidentPoints -= targetsSet
-            for (ix in allIncidentPoints) {
-                val p0 = objects[ix] as? Point
-                val p = p0?.translated(translation)
-                _objects[ix] = p?.downscale() // objects[ix] will be recalculated & set during update phase
-            }
         } else {
             for (ix in targets) {
                 when (val o = objects[ix]) {
@@ -2496,11 +2490,12 @@ class EditClusterViewModel : ViewModel() {
                     null -> {}
                 }
             }
-            for (j in allIncidentPoints) {
-                val p0 = objects[j] as? Point
-                val p = p0?.transformed(translation, focus, zoom, rotationAngle)
-                _objects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
-            }
+        }
+        allIncidentPoints -= targetsSet
+        for (j in allIncidentPoints) {
+            val p0 = objects[j] as? Point
+            val p = p0?.transformed(translation, focus, zoom, rotationAngle)
+            _objects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
         }
         syncDownscaledObjects(targets)
         expressions.adjustIncidentPointExpressions(allIncidentPoints)
