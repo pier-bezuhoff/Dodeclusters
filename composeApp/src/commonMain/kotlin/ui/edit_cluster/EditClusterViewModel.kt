@@ -2741,11 +2741,14 @@ class EditClusterViewModel : ViewModel() {
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) { // haxx
             toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
         }
-        when (submode) {
+        when (submode) { // submode cleanup/reset
             is SubMode.Rotate,
             is SubMode.Scale,
-            is SubMode.ScaleViaSlider, ->
+            is SubMode.ScaleViaSlider,
+            is SubMode.FlowSelect, ->
                 submode = null
+            is SubMode.RectangularSelect ->
+                submode = SubMode.RectangularSelect()
             else -> {}
         }
     }
