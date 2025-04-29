@@ -2239,12 +2239,15 @@ class EditClusterViewModel : ViewModel() {
     }
 
     // dragging circle: move + scale radius & rotate [line]
-    private fun dragCircle(pan: Offset, zoom: Float, rotationAngle: Float) {
+    private fun dragCircle(
+        absoluteCentroid: Offset,
+        translation: Offset, zoom: Float, rotationAngle: Float
+    ) {
         val selectedIndex = selection.single()
         // tangential snap
         if (ENABLE_TANGENT_SNAPPING) {
             val circle = objects[selectedIndex] as CircleOrLine
-            val result0 = circle.transformed(translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+            val result0 = circle.transformed(translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
                 as CircleOrLine
             val snapDistance = tapRadius.toDouble()/TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR
             val excludedCircles =
@@ -2269,24 +2272,26 @@ class EditClusterViewModel : ViewModel() {
                 visibleRect = absoluteVisibilityRect,
             )
             val delta = result0 translationDelta snap.result
-            transformWhatWeCan(listOf(selectedIndex), translation = pan + delta, zoom = zoom, rotationAngle = rotationAngle)
+            transformWhatWeCan(listOf(selectedIndex), translation = translation + delta, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
         } else {
-            transformWhatWeCan(listOf(selectedIndex), translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+            transformWhatWeCan(listOf(selectedIndex), translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
         }
     }
 
-    private fun dragPoint(c: Offset) {
+    private fun dragPoint(absolutePointerPosition: Offset) {
         val ix = selection.first()
         val expr = expressions.expressions[ix]?.expr
         if (expr is Expr.Incidence) {
-            slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, cursorLocation = c)
+            slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, absolutePointerPosition = absolutePointerPosition)
         } else {
             val childCircles = expressions.getAllChildren(ix)
                 .filter { objects[it] is CircleOrLine }
                 .toSet()
             // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
             val parents = expressions.getAllParents(listOf(ix))
-            val newPoint = snapped(c, excludePoints = true, excludedCircles = childCircles + parents).result
+            val newPoint = snapped(absolutePointerPosition,
+                excludePoints = true, excludedCircles = childCircles + parents
+            ).result
             transformWhatWeCan(
                 listOf(ix),
                 translation = newPoint.toOffset() - (objects[ix] as Point).toOffset(),
@@ -2296,10 +2301,13 @@ class EditClusterViewModel : ViewModel() {
 
     // special case that is not handled by transform()
     // MAYBE: instead transform then snap/project onto carrier and transform by snap-delta again
-    private fun slidePointAcrossCarrier(pointIndex: Ix, carrierIndex: Ix, cursorLocation: Offset) {
+    private fun slidePointAcrossCarrier(
+        pointIndex: Ix, carrierIndex: Ix,
+        absolutePointerPosition: Offset
+    ) {
         recordCommand(Command.MOVE, target = pointIndex)
         val carrier = objects[carrierIndex] as CircleOrLine
-        val newPoint = carrier.project(Point.fromOffset(cursorLocation))
+        val newPoint = carrier.project(Point.fromOffset(absolutePointerPosition))
         val order = carrier.downscale().point2order(newPoint.downscale())
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
         objects[pointIndex] = newPoint
@@ -2309,12 +2317,19 @@ class EditClusterViewModel : ViewModel() {
         syncUpscaledObjects(toBeUpdated)
     }
 
-    private fun dragCirclesOrPoints(pan: Offset, c: Offset, zoom: Float, rotationAngle: Float) {
+    private fun dragCirclesOrPoints(
+        absoluteCentroid: Offset,
+        translation: Offset,
+        zoom: Float,
+        rotationAngle: Float,
+    ) {
         val targets = selection.filter {
             val o = objects[it]
             o is CircleOrLine || o is Point
         }
-        transformWhatWeCan(targets, translation = pan, focus = c, zoom = zoom, rotationAngle = rotationAngle)
+        transformWhatWeCan(targets,
+            translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle
+        )
     }
 
     // NOTE: polar line transforms weirdly:
@@ -2417,14 +2432,12 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    // NOTE: idk, handling incident points is messy
+    // NOTE: idk, handling of incident points is messy
     /**
      * Apply [translation];scaling;rotation to [targets] (that are all assumed free).
      *
      * Scaling and rotation are w.r.t. fixed [focus] by the factor of
-     * [zoom] and by [rotationAngle] degrees. If [focus] is [Offset.Unspecified] for
-     * each circle choose its center, for each point -- itself, for each line -- screen center
-     * projected onto it
+     * [zoom] and by [rotationAngle] degrees.
      */
     private inline fun transform(
         targets: List<Ix>,
@@ -2446,8 +2459,8 @@ class EditClusterViewModel : ViewModel() {
             recordCommand(Command.SCALE, targets) // scale & rotate case doesn't happen usually
         else
             recordCommand(Command.ROTATE, targets)
+        val allIncidentPoints = mutableListOf<Ix>()
         if (!requiresZoom && !requiresRotation) {
-            val allIncidentPoints = mutableListOf<Ix>()
             for (ix in targets) {
                 val o = objects[ix]
                 objects[ix] = o?.translated(translation)
@@ -2461,38 +2474,78 @@ class EditClusterViewModel : ViewModel() {
                 val p = p0?.translated(translation)
                 _objects[ix] = p?.downscale() // objects[ix] will be recalculated & set during update phase
             }
-            expressions.adjustIncidentPointExpressions(allIncidentPoints)
+        } else {
+            for (ix in targets) {
+                when (val o = objects[ix]) {
+                    is Circle -> {
+                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
+                        if (requiresRotation) {
+                            expressions.getIncidentPointsTo(ix, allIncidentPoints)
+                        }
+                    }
+                    is Line -> {
+                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
+                        expressions.getIncidentPointsTo(ix, allIncidentPoints)
+                    }
+                    is Point -> {
+                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
+                    }
+                    is ImaginaryCircle -> {
+                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
+                    }
+                    null -> {}
+                }
+            }
+            for (j in allIncidentPoints) {
+                val p0 = objects[j] as? Point
+                val p = p0?.transformed(translation, focus, zoom, rotationAngle)
+                _objects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
+            }
+        }
+        syncDownscaledObjects(targets)
+        expressions.adjustIncidentPointExpressions(allIncidentPoints)
+//        measureTime {
+        val toBeUpdated = expressions.update(targets)
+        syncUpscaledObjects(toBeUpdated)
+//        }.also { println("update time: $it") }
+    }
+
+    private inline fun transformWithoutIncidentAdjustments(
+        targets: List<Ix>,
+        translation: Offset = Offset.Zero,
+        focus: Offset = Offset.Unspecified,
+        zoom: Float = 1f,
+        rotationAngle: Float = 0f,
+    ) {
+        if (targets.isEmpty()) {
+            return
+        }
+        val requiresTranslation = translation != Offset.Zero
+        val requiresZoom = zoom != 1f
+        val requiresRotation = rotationAngle != 0f
+        if (requiresTranslation)
+            recordCommand(Command.MOVE, targets)
+        else if (requiresZoom)
+            recordCommand(Command.SCALE, targets) // scale & rotate case doesn't happen usually
+        else
+            recordCommand(Command.ROTATE, targets)
+        if (!requiresZoom && !requiresRotation) {
+            for (ix in targets) {
+                val o = objects[ix]
+                objects[ix] = o?.translated(translation)
+            }
         } else {
             val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
             for (ix in targets) {
                 when (val o = objects[ix]) {
                     is Circle -> {
                         objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                        if (requiresRotation) {
-                            val actualFocus = if (focus == Offset.Unspecified)
-                                o.center
-                            else focus
-                            val incidentPoints = expressions.getIncidentPoints(ix) - targetsSet
-                            for (j in incidentPoints) {
-                                val p0 = objects[j] as? Point
-                                val p = p0?.transformed(translation, actualFocus, zoom, rotationAngle)
-                                _objects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
-                            }
-                            expressions.adjustIncidentPointExpressions(incidentPoints)
-                        }
                     }
                     is Line -> {
                         val actualFocus = if (focus == Offset.Unspecified)
                             o.project(screenCenter)
                         else focus
                         objects[ix] = o.transformed(translation, actualFocus, zoom, rotationAngle)
-                        val incidentPoints = expressions.getIncidentPoints(ix) - targetsSet
-                        for (j in incidentPoints) {
-                            val p0 = objects[j] as? Point
-                            val p = p0?.transformed(translation, actualFocus, zoom, rotationAngle)
-                            _objects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
-                        }
-                        expressions.adjustIncidentPointExpressions(incidentPoints)
                     }
                     is Point -> {
                         objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
@@ -2578,14 +2631,14 @@ class EditClusterViewModel : ViewModel() {
                 stereographicallyRotateEverything(sm, c)
             }
         } else if (mode == SelectionMode.Drag && selectedCircles.isNotEmpty() && showCircles) {
-            dragCircle(pan = pan, zoom = zoom, rotationAngle = rotationAngle)
+            dragCircle(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
         } else if (mode == SelectionMode.Drag && selectedPoints.isNotEmpty() && showCircles) {
-            dragPoint(c = c)
+            dragPoint(absolutePointerPosition = c)
         } else if (
             mode == SelectionMode.Multiselect &&
             (selectedCircles.isNotEmpty() && showCircles || selectedPoints.isNotEmpty())
         ) {
-            dragCirclesOrPoints(pan = pan, c = c, zoom = zoom, rotationAngle = rotationAngle)
+            dragCirclesOrPoints(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
         } else {
             val result = snapped(c)
             val absolutePoint = result.result
