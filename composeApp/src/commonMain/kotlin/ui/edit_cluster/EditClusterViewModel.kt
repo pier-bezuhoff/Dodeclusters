@@ -1704,15 +1704,17 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    inline fun showAdjustExprButton(): Boolean =
-        selection.isNotEmpty() && (expressions.expressions[selection[0]]?.expr?.let { expr0 ->
+    inline fun showAdjustExprButton(): Boolean {
+        val sel = selection
+        return sel.isNotEmpty() && (expressions.expressions[sel[0]]?.expr?.let { expr0 ->
             (expr0 is Expr.CircleInterpolation ||
-            expr0 is Expr.PointInterpolation ||
-            expr0 is Expr.Rotation ||
-            expr0 is Expr.BiInversion ||
-            expr0 is Expr.LoxodromicMotion) &&
-            selection.all { expressions.expressions[it]?.expr == expr0 }
+                    expr0 is Expr.PointInterpolation ||
+                    expr0 is Expr.Rotation ||
+                    expr0 is Expr.BiInversion ||
+                    expr0 is Expr.LoxodromicMotion) &&
+                    sel.all { expressions.expressions[it]?.expr == expr0 }
         } ?: false)
+    }
 
     fun adjustExpr() {
         val expr = expressions.expressions[selection[0]]?.expr
@@ -2067,9 +2069,8 @@ class EditClusterViewModel : ViewModel() {
 
     // pointer input callbacks
     // onDown -> onUp -> onTap OR
-    // onDown -> onUp -> onDown! -> onTap -> onUp
+    // onDown -> onUp -> onDown! -> onTap -> onUp (i.e. double tap)
     fun onTap(position: Offset, pointerCount: Int) {
-//        println("onTap(pointerCount = $pointerCount)")
         // 2-finger tap for undo (works only on Android afaik)
         if (TWO_FINGER_TAP_FOR_UNDO && pointerCount == 2) {
             if (undoIsEnabled)
@@ -3206,8 +3207,7 @@ class EditClusterViewModel : ViewModel() {
 
     private fun completeCircleInversion() {
         val argList = partialArgList!!
-        val objArg = argList.args[0] as Arg.Indices
-        val targetIxs = objArg.indices
+        val targetIxs = (argList.args[0] as Arg.Indices).indices
         val invertingCircleIndex = (argList.args[1] as Arg.CLI).index
         recordCreateCommand()
         val newIndexedGCircles = targetIxs.map { ix ->
@@ -3223,12 +3223,12 @@ class EditClusterViewModel : ViewModel() {
 
     private fun startCircleOrPointInterpolationParameterAdjustment() {
         val argList = partialArgList!!
-        val (arg1, arg2) = argList.args.map { it as Arg.CLIP }
-        if (arg1 is Arg.CLI && arg2 is Arg.CLI) {
+        val (startArg, endArg) = argList.args.map { it as Arg.CLIP }
+        if (startArg is Arg.CLI && endArg is Arg.CLI) {
             interpolateCircles = true
             val scalarProduct =
-                GeneralizedCircle.fromGCircle(objects[arg1.index]!!) scalarProduct
-                GeneralizedCircle.fromGCircle(objects[arg2.index]!!)
+                GeneralizedCircle.fromGCircle(objects[startArg.index]!!) scalarProduct
+                GeneralizedCircle.fromGCircle(objects[endArg.index]!!)
             circlesAreCoDirected = scalarProduct >= 0.0
             val expr = Expr.CircleInterpolation(
                 defaultInterpolationParameters.params.let {
@@ -3236,7 +3236,7 @@ class EditClusterViewModel : ViewModel() {
                         complementary = if (circlesAreCoDirected) !it.inBetween else it.inBetween
                     )
                 },
-                arg1.index, arg2.index
+                startArg.index, endArg.index
             )
             recordCreateCommand()
             val oldSize = objects.size
@@ -3250,9 +3250,9 @@ class EditClusterViewModel : ViewModel() {
             if (newGCircles.any { it is ImaginaryCircle }) {
                 queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
             }
-        } else if (arg1 is Arg.Point && arg2 is Arg.Point) {
+        } else if (startArg is Arg.Point && endArg is Arg.Point) {
             recordCreateCommand()
-            val (startPointIx, endPointIx) = listOf(arg1, arg2).map { pointArg ->
+            val (startPointIx, endPointIx) = listOf(startArg, endArg).map { pointArg ->
                 when (pointArg) {
                     is Arg.PointIndex -> pointArg.index
                     is Arg.FixedPoint ->
@@ -3277,9 +3277,8 @@ class EditClusterViewModel : ViewModel() {
     ) {
         openedDialog = null
         val argList = partialArgList!!
-        val args = argList.args.map { it as Arg.CLI }
-        val startCircleIx = args[0].index
-        val endCircleIx = args[1].index
+        val startCircleIx = (argList.args[0] as Arg.CLI).index
+        val endCircleIx = (argList.args[1] as Arg.CLI).index
         recordCreateCommand()
         val newGCircles = expressions.addMultiExpr(
             Expr.CircleExtrapolation(params, startCircleIx, endCircleIx),
@@ -3294,12 +3293,13 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(Tool.CircleExtrapolation.signature)
     }
 
+    // Q: witnessed abnormal index skipping whe rotating lines, observing closely...
     fun startRotationParameterAdjustment() {
         val argList = partialArgList!!
-        val args = argList.args
-        val objArg = args[0] as Arg.Indices
+        val objArg = argList.args[0] as Arg.Indices
+        val pointArg = argList.args[1] as Arg.Point
         recordCreateCommand()
-        val pivotPointIndex = when (val pointArg = args[1] as Arg.Point) {
+        val pivotPointIndex = when (pointArg) {
             is Arg.PointIndex -> pointArg.index
             is Arg.FixedPoint -> createNewFreePoint(pointArg.toPoint(), triggerRecording = false)
         }
@@ -3334,8 +3334,8 @@ class EditClusterViewModel : ViewModel() {
         val argList = partialArgList!!
         val args = argList.args
         val objArg = args[0] as Arg.Indices
-        val (engine1, engine2) = args.drop(1).take(2)
-            .map { (it as Arg.CLI).index }
+        val engine1 = (args[1] as Arg.CLI).index
+        val engine2 = (args[2] as Arg.CLI).index
         val engine1GC = GeneralizedCircle.fromGCircle(objects[engine1]!!)
         val engine2GC0 = GeneralizedCircle.fromGCircle(objects[engine2]!!)
         val reverseSecondEngine = engine1GC scalarProduct engine2GC0 < 0 // anti-parallel
@@ -3380,8 +3380,10 @@ class EditClusterViewModel : ViewModel() {
         val argList = partialArgList!!
         val args = argList.args
         val objArg = args[0] as Arg.Indices
-        val (divergencePointIndex, convergencePointIndex) = args.drop(1).take(2)
-            .map { when (val arg = it as Arg.Point) {
+        val divergenceArg = args[1] as Arg.Point
+        val convergenceArg = args[2] as Arg.Point
+        val (divergencePointIndex, convergencePointIndex) = listOf(divergenceArg, convergenceArg)
+            .map { when (val arg = it) {
                 is Arg.PointIndex -> arg.index
                 is Arg.FixedPoint -> createNewFreePoint(arg.toPoint(), triggerRecording = false)
             } }
