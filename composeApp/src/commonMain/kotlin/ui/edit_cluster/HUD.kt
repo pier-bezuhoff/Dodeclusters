@@ -453,7 +453,7 @@ fun RotationInterface(
     val params = RotationParameters(
         angle = round( // we round cuz all angles coming from the slider are supposed to be integers
             if (rotateClockwise)
-                -angleSliderState.value
+                360f - angleSliderState.value
             else angleSliderState.value
         ),
         nSteps = stepsSliderState.value.roundToInt(),

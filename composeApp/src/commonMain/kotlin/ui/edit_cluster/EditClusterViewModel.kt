@@ -584,7 +584,14 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
-    private fun removeObjects(ixs: List<Ix>) {
+    private fun removeObjectAt(ix: Ix) {
+        objects[ix] = null
+        _objects[ix] = null
+        objectColors -= ix
+        phantoms = phantoms - ix
+    }
+
+    private fun removeObjectsAt(ixs: List<Ix>) {
         for (ix in ixs) {
             objects[ix] = null
             _objects[ix] = null
@@ -989,7 +996,7 @@ class EditClusterViewModel : ViewModel() {
                 }
             }
         }
-        removeObjects(toBeDeleted.toList())
+        removeObjectsAt(toBeDeleted.toList())
     }
 
     fun getArg(arg: Arg): GCircle? =
@@ -2358,13 +2365,12 @@ class EditClusterViewModel : ViewModel() {
             val bivector0 = Rotor.fromPencil(e1, e2)
             val bivector = bivector0 * 0.5
             val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
-            for (ix in objects.indices) {
-                val o = objects[ix]
+            for (ix in _objects.indices) {
+                val o = _objects[ix]
                 if (o != null) {
-                    objects[ix] = rotor.applyTo(GeneralizedCircle.fromGCircle(
-                        o.downscale()
-                    )).toGCircleAs(o)
-                        ?.upscale()
+                    val newObject = rotor.applyTo(GeneralizedCircle.fromGCircle(o)).toGCircleAs(o)
+                    _objects[ix] = newObject
+                    objects[ix] = newObject?.upscale()
                 }
             }
             expressions.adjustIncidentPointExpressions()
@@ -2736,10 +2742,14 @@ class EditClusterViewModel : ViewModel() {
                     if (showPhantomObjects || ix !in phantoms) o else null
                 }
                 selection = selectWithRectangle(selectables, rect)
+                    .also {
+                        println("rectangle selection -> $it")
+                    }
                 submode = SubMode.RectangularSelect(corner1, corner2)
             }
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) { // haxx
+            println("flow-select -> $selection")
             toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
         }
         when (submode) { // submode cleanup/reset
@@ -2892,15 +2902,16 @@ class EditClusterViewModel : ViewModel() {
                         reservedIndices = reservedIndices,
                     )
                     for (ix in newReservedIndices) { // we have to cleanup abandoned but reserved indices
-                        if (ix < objects.size)
-                            objects[ix] = null
-                        else
+                        if (ix < objects.size) {
+                            removeObjectAt(ix)
+                        } else {
                             addObject(null)
+                        }
                     }
                     for (i in newIndices.indices) {
                         val ix = newIndices[i]
-                        val newObject = newObjects[i]?.upscale()
-                        objects[ix] = newObject
+                        _objects[ix] = newObjects[i]
+                        objects[ix] = newObjects[i]?.upscale()
                     }
                     SubMode.ExprAdjustment(listOf(
                         AdjustableExpr(newExpr, newIndices, newReservedIndices)
@@ -2924,7 +2935,7 @@ class EditClusterViewModel : ViewModel() {
                         // NOTE: reserved indices will be generally non-contiguous
                         // we have to cleanup abandoned indices
                         for (ix in (outputIndices - newIndices.toSet())) {
-                            objects[ix] = null
+                            removeObjectAt(ix)
                         }
                         for (ix in (newReservedIndices - reservedIndices.toSet())) {
                             if (ix >= objects.size) {
@@ -2935,8 +2946,8 @@ class EditClusterViewModel : ViewModel() {
                         val sourceColor = objectColors[sourceIndex]
                         for (i in newIndices.indices) {
                             val ix = newIndices[i]
-                            val newObject = newObjects[i]?.upscale()
-                            objects[ix] = newObject
+                            _objects[ix] = newObjects[i]
+                            objects[ix] = newObjects[i]?.upscale()
                             sourceColor?.also {
                                 objectColors[ix] = it
                             }
