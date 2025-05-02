@@ -90,6 +90,7 @@ import ui.theme.extendedColorScheme
 import ui.visibleHalfPlanePath
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.time.measureTime
 
 private val defaultMaxCircleRadius: Float = getPlatform().maxCircleRadius
 private val dottedPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
@@ -189,7 +190,7 @@ fun BoxScope.EditClusterCanvas(
 //                renderEffect = BlurEffect(20f, 20f) // funi
             )
     ) {
-//        measureTime {
+        measureTime {
             translate(viewModel.translation.x, viewModel.translation.y) {
                 val visibleRect = size.toRect().translate(-viewModel.translation)
                 val hiddenObjectIndices = if (viewModel.showPhantomObjects) emptySet() else viewModel.phantoms
@@ -213,7 +214,7 @@ fun BoxScope.EditClusterCanvas(
             if (viewModel.circleSelectionIsActive && viewModel.showUI) {
                 drawRotationHandle(concretePositions.positions, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)
             }
-//        }.also { println("full draw: $it") } // not that long
+        }.also { println("full draw time: $it") } // not that long
     }
     if (viewModel.showUI) { // HUD
         if (viewModel.circleSelectionIsActive) {

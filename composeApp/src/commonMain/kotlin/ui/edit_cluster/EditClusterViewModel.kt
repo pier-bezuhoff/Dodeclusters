@@ -118,6 +118,7 @@ import ui.tools.Tool
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
 
 // MAYBE: use UiState functional pattern + StateFlow's instead of this mess
 // this class is obviously too big
@@ -2446,13 +2447,14 @@ class EditClusterViewModel : ViewModel() {
      * Scaling and rotation are w.r.t. fixed [focus] by the factor of
      * [zoom] and by [rotationAngle] degrees.
      */
-    private inline fun transform(
+    private fun transform(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
     ) {
+        measureTime {
         if (targets.isEmpty()) {
             return
         }
@@ -2506,10 +2508,11 @@ class EditClusterViewModel : ViewModel() {
         }
         syncDownscaledObjects(targets)
         expressions.adjustIncidentPointExpressions(allIncidentPoints)
-//        measureTime {
+        }.also { println("transform pre-update time: $it") }
+        measureTime {
         val toBeUpdated = expressions.update(targets)
         syncUpscaledObjects(toBeUpdated)
-//        }.also { println("update time: $it") }
+        }.also { println("update time: $it") }
     }
 
     private inline fun transformWithoutIncidentAdjustments(
