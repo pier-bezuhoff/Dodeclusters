@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.geometry.Offset
@@ -85,6 +86,7 @@ import domain.io.DdcV2
 import domain.io.DdcV4
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
+import domain.measureAndPrintPerformance
 import domain.never
 import domain.reindexingMap
 import domain.removeAtIndices
@@ -118,7 +120,6 @@ import ui.tools.Tool
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.measureTime
 
 // MAYBE: use UiState functional pattern + StateFlow's instead of this mess
 // this class is obviously too big
@@ -126,6 +127,7 @@ import kotlin.time.measureTime
 // MAYBE: timed autosave (cron-like), e.g. every 10min
 @Suppress("MemberVisibilityCanBePrivate")
 class EditClusterViewModel : ViewModel() {
+    // NOTE: using snapshot list degrades write performance significantly
     /** All existing [GCircle]s; `null`s correspond either to unrealized outputs of
      * [Expr.OneToMany], or to forever deleted objects (they have `null` [expressions]),
      * or (rarely) to mismatching type casts
@@ -2447,17 +2449,17 @@ class EditClusterViewModel : ViewModel() {
      * Scaling and rotation are w.r.t. fixed [focus] by the factor of
      * [zoom] and by [rotationAngle] degrees.
      */
-    private fun transform(
+    private inline fun transform(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
     ) {
-        measureTime {
         if (targets.isEmpty()) {
             return
         }
+        measureAndPrintPerformance("transform") {
         val targetsSet = targets.toSet()
         val requiresTranslation = translation != Offset.Zero
         val requiresZoom = zoom != 1f
@@ -2470,12 +2472,14 @@ class EditClusterViewModel : ViewModel() {
             recordCommand(Command.ROTATE, targets)
         val allIncidentPoints = mutableListOf<Ix>()
         if (!requiresZoom && !requiresRotation) {
+            measureAndPrintPerformance("transform/translate") {
             for (ix in targets) {
                 val o = objects[ix]
                 objects[ix] = o?.translated(translation)
                 if (o is Line) {
                     expressions.getIncidentPointsTo(ix, allIncidentPoints)
                 }
+            }
             }
         } else {
             for (ix in targets) {
@@ -2508,14 +2512,14 @@ class EditClusterViewModel : ViewModel() {
         }
         syncDownscaledObjects(targets)
         expressions.adjustIncidentPointExpressions(allIncidentPoints)
-        }.also { println("transform pre-update time: $it") }
-        measureTime {
+        }
+        measureAndPrintPerformance("update") {
         val toBeUpdated = expressions.update(targets)
         syncUpscaledObjects(toBeUpdated)
-        }.also { println("update time: $it") }
+        }
     }
 
-    private inline fun transformWithoutIncidentAdjustments(
+    private inline fun _transformWithoutIncidentAdjustments(
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
         focus: Offset = Offset.Unspecified,
@@ -2525,6 +2529,7 @@ class EditClusterViewModel : ViewModel() {
         if (targets.isEmpty()) {
             return
         }
+        measureAndPrintPerformance("transform -inc") {
         val requiresTranslation = translation != Offset.Zero
         val requiresZoom = zoom != 1f
         val requiresRotation = rotationAngle != 0f
@@ -2550,7 +2555,8 @@ class EditClusterViewModel : ViewModel() {
                         val actualFocus = if (focus == Offset.Unspecified)
                             o.project(screenCenter)
                         else focus
-                        objects[ix] = o.transformed(translation, actualFocus, zoom, rotationAngle)
+                        objects[ix] =
+                            o.transformed(translation, actualFocus, zoom, rotationAngle)
                     }
                     is Point -> {
                         objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
@@ -2563,10 +2569,11 @@ class EditClusterViewModel : ViewModel() {
             }
         }
         syncDownscaledObjects(targets)
-//        measureTime {
+        }
+        measureAndPrintPerformance("update") {
         val toBeUpdated = expressions.update(targets)
         syncUpscaledObjects(toBeUpdated)
-//        }.also { println("update time: $it") }
+        }
     }
 
     // MAYBE: handle key arrows as panning
@@ -2668,9 +2675,11 @@ class EditClusterViewModel : ViewModel() {
                     .copy(lastSnap = result)
             } else {
 //                recordCommand(Command.CHANGE_POV)
-                val targets = objects.indices.toList()
-                val center = computeAbsoluteCenter() ?: Offset.Zero
-                transform(targets, focus = center, zoom = zoom, rotationAngle = rotationAngle)
+                if (zoom != 1.0f || rotationAngle != 0.0f) {
+                    val targets = objects.indices.toList()
+                    val center = computeAbsoluteCenter() ?: Offset.Zero
+                    transform(targets, focus = center, zoom = zoom, rotationAngle = rotationAngle)
+                }
                 translation += pan // navigate canvas
             }
         }

@@ -45,7 +45,7 @@ private const val IMAGINARY_CIRCLE_TYPE: Byte = 5
  *
  * Not thread-safe, so beware
  * */
-class ObjectsHost {
+class ObjectHost {
     // cmp: MutableDoubleList from kotlin collections
     // reference: https://developer.android.com/reference/kotlin/androidx/collection/MutableDoubleList
     var size = 0

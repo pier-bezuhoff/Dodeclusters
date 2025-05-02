@@ -76,6 +76,7 @@ import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
+import domain.measureAndPrintPerformance
 import domain.rotateBy
 import domain.rotateByAround
 import getPlatform
@@ -190,7 +191,7 @@ fun BoxScope.EditClusterCanvas(
 //                renderEffect = BlurEffect(20f, 20f) // funi
             )
     ) {
-        measureTime {
+        measureAndPrintPerformance("draw") {
             translate(viewModel.translation.x, viewModel.translation.y) {
                 val visibleRect = size.toRect().translate(-viewModel.translation)
                 val hiddenObjectIndices = if (viewModel.showPhantomObjects) emptySet() else viewModel.phantoms
@@ -214,7 +215,7 @@ fun BoxScope.EditClusterCanvas(
             if (viewModel.circleSelectionIsActive && viewModel.showUI) {
                 drawRotationHandle(concretePositions.positions, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)
             }
-        }.also { println("full draw time: $it") } // not that long
+        } // not that long
     }
     if (viewModel.showUI) { // HUD
         if (viewModel.circleSelectionIsActive) {
