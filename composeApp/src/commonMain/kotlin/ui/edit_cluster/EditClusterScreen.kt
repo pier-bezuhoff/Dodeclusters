@@ -49,7 +49,6 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -113,8 +112,8 @@ import ui.isLandscape
 import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
 import ui.tools.Category
-import ui.tools.Tool
 import ui.tools.ITool
+import ui.tools.Tool
 import kotlin.math.max
 import kotlin.math.min
 

@@ -1587,9 +1587,7 @@ class EditClusterViewModel : ViewModel() {
         if (showCircles && mode.isSelectingCircles() && selection.isNotEmpty()) {
             val rect = getSelectionRect()
             val focus =
-                if (selection.size == 1 && isFree(selection.single()))
-                    Offset.Unspecified
-                else if (rect == null || rect.minDimension >= 5_000)
+                if (rect == null || rect.minDimension >= 5_000)
                     computeAbsoluteCenter() ?: Offset.Zero
                 else rect.center
             transformWhatWeCan(Command.SCALE, selection, focus = focus, zoom = zoom)
