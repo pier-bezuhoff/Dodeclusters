@@ -29,6 +29,7 @@ kaml = "0.67.0"
 kstore = "0.9.1"
 appdirs = "1.2.0"
 accompanist = "0.37.0"
+collection = "1.5.0"
 
 [libraries]
 compose-ui-graphics = { module = "org.jetbrains.compose.ui:ui-graphics", version.ref = "compose-multiplatform" }
@@ -51,6 +52,7 @@ kstore-file = { module = "io.github.xxfast:kstore-file", version.ref = "kstore" 
 kstore-storage = { module = "io.github.xxfast:kstore-storage", version.ref = "kstore" }
 appdirs = { module = "ca.gosyer:kotlin-multiplatform-appdirs", version.ref = "appdirs" }
 accompanist = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist" }
+collection = { module = "androidx.collection:collection", version.ref = "collection" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -5,13 +5,8 @@ package ui.edit_cluster
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
-import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -54,6 +49,7 @@ import domain.Command
 import domain.History
 import domain.InversionOfControl
 import domain.Ix
+import domain.ObjectModel
 import domain.PartialArgList
 import domain.PointSnapResult
 import domain.Settings
@@ -81,15 +77,14 @@ import domain.expressions.computeLineBy2Points
 import domain.expressions.copyWithNewParameters
 import domain.expressions.reIndex
 import domain.filterIndices
+import domain.hug
 import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV4
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
-import domain.measureAndPrintPerformance
 import domain.never
 import domain.reindexingMap
-import domain.removeAtIndices
 import domain.snapAngle
 import domain.snapCircleToCircles
 import domain.snapPointToCircles
@@ -97,6 +92,9 @@ import domain.snapPointToPoints
 import domain.sortedByFrequency
 import domain.toArgPoint
 import domain.transpose
+import domain.updated
+import domain.withoutElementAt
+import domain.withoutElementsAt
 import getPlatform
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -127,22 +125,13 @@ import kotlin.time.Duration.Companion.seconds
 // MAYBE: timed autosave (cron-like), e.g. every 10min
 @Suppress("MemberVisibilityCanBePrivate")
 class EditClusterViewModel : ViewModel() {
-    // NOTE: using snapshot list degrades write performance significantly
-    /** All existing [GCircle]s; `null`s correspond either to unrealized outputs of
-     * [Expr.OneToMany], or to forever deleted objects (they have `null` [expressions]),
-     * or (rarely) to mismatching type casts
-     * NOTE: don't forget to sync changes to [objects] with [_objects]
-     */
-    val objects: SnapshotStateList<GCircle?> = mutableStateListOf()
-    /** same as [objects] but additionally downscaled (optimal for calculations)
-     * NOTE: u are responsible for MANUALLY sync-ing them
-     */
-    private val _objects: MutableList<GCircle?> = mutableListOf()
+    val objectModel = ObjectModel()
+    val objects: List<GCircle?> = objectModel.objects
     /** Filled regions delimited by some objects from [objects] */
-    val regions: SnapshotStateList<LogicalRegion> = mutableStateListOf()
+    var regions: List<LogicalRegion> by mutableStateOf(listOf())
     var expressions: ExpressionForest = ExpressionForest( // stub
         initialExpressions = emptyMap(),
-        _objects = _objects,
+        objects = objectModel.downscaledObjects,
     )
         private set
 
@@ -181,13 +170,12 @@ class EditClusterViewModel : ViewModel() {
     var regionsBlendModeType: BlendModeType by mutableStateOf(BlendModeType.SRC_OVER)
         private set
     /** custom colors for circle/line borders or points */
-    val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
+//    val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
     var backgroundColor: Color? by mutableStateOf(null)
     var showCircles: Boolean by mutableStateOf(true)
         private set
     // alt name: ghost[ed] objects
-    var phantoms: Set<Ix> by mutableStateOf(emptySet())
-        private set
+    val phantoms: Set<Ix> = objectModel.phantomObjectIndices
     var showPhantomObjects: Boolean by mutableStateOf(false)
         private set
     /** which style to use when drawing regions: true = stroke, false = fill */
@@ -241,8 +229,8 @@ class EditClusterViewModel : ViewModel() {
     /** when changing [expressions], flip this to forcibly recalculate [selectionIsLocked] */
     private var selectionIsLockedTrigger: Boolean by mutableStateOf(false)
     // MAYBE: show quick prompt/popup instead of button
-    val selectionIsLocked: Boolean by derivedStateOf {
-        selectionIsLockedTrigger // haxxz
+    val selectionIsLocked: Boolean get() = run {
+        hug(selectionIsLockedTrigger, objectModel.invalidations)
         selection.all { objects[it] == null || !isFree(it) }
     }
 
@@ -439,11 +427,9 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun loadConstellation(constellation: Constellation) {
+        regions = emptyList() // important, since draws are async (otherwise can crash)
         selection = emptyList()
-        regions.clear()
-        objectColors.clear()
-        objects.clear()
-        _objects.clear()
+        objectModel.clearObjects()
         for (objectConstruct in constellation.objects) {
             val o = when (objectConstruct) {
                 is ObjectConstruct.ConcreteCircle -> objectConstruct.circle
@@ -451,32 +437,34 @@ class EditClusterViewModel : ViewModel() {
                 is ObjectConstruct.ConcretePoint -> objectConstruct.point
                 is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
             }
-            objects.add(o)
-            _objects.add(o?.downscale())
+            objectModel.addObject(o)
         }
         expressions = ExpressionForest(
             initialExpressions = constellation.toExpressionMap(),
-            _objects = _objects,
+            objects = objectModel.downscaledObjects,
         )
         expressions.reEval() // calculates all dependent objects
-        syncUpscaledObjects()
+        objectModel.syncObjects()
 //        expressions.update(
 //            expressions.scaleLineIncidenceExpressions(DOWNSCALING_FACTOR)
 //        )
         val objectIndices = objects.indices.toSet()
-        constellation.parts
-            .filterTo(regions) { part -> // region validation
+        regions = constellation.parts
+            .filter { part -> // region validation
                 part.insides.all { it in objectIndices } &&
                 part.outsides.all { it in objectIndices }
             }
         for ((ix, color) in constellation.objectColors) {
             if (ix in objectIndices) {
-                objectColors[ix] = color
+                objectModel.objectColors[ix] = color
             }
         }
         backgroundColor = constellation.backgroundColor
-        phantoms = constellation.phantoms
-            .intersect(objectIndices) // prevention from orphaned phantoms
+        for (phantomIndex in constellation.phantoms)
+            if (phantomIndex in objectIndices) {
+                objectModel.phantomObjectIndices.add(phantomIndex)
+            }
+        objectModel.invalidate()
     }
 
     fun toConstellation(): Constellation {
@@ -518,12 +506,12 @@ class EditClusterViewModel : ViewModel() {
         return Constellation(
             objects = objectConstructs,
             parts = logicalRegions,
-            objectColors = objectColors.mapNotNull { (ix, color) ->
+            objectColors = objectModel.objectColors.mapNotNull { (ix, color) ->
                 reindexing[ix]?.let { it to color }
             }.toMap(),
             backgroundColor = backgroundColor,
             // NOTE: we keep track of phantoms EVEN when they are shown
-            phantoms = phantoms.mapNotNull { reindexing[it] },
+            phantoms = objectModel.phantomObjectIndices.mapNotNull { reindexing[it] },
         )
     }
 
@@ -572,36 +560,6 @@ class EditClusterViewModel : ViewModel() {
         submode = null
         undoIsEnabled = history.undoIsEnabled
         redoIsEnabled = history.redoIsEnabled
-    }
-
-    private fun addObject(obj: GCircle?): Ix {
-        objects.add(obj)
-        _objects.add(obj?.downscale())
-        return objects.size - 1
-    }
-
-    private fun addObjects(objs: List<GCircle?>) {
-        objects.addAll(objs)
-        for (o in objs) {
-            _objects.add(o?.downscale())
-        }
-    }
-
-    private fun removeObjectAt(ix: Ix) {
-        objects[ix] = null
-        _objects[ix] = null
-        objectColors -= ix
-        phantoms = phantoms - ix
-    }
-
-    private fun removeObjectsAt(ixs: List<Ix>) {
-        for (ix in ixs) {
-            objects[ix] = null
-            _objects[ix] = null
-        }
-        val ixsSet = ixs.toSet()
-        objectColors -= ixsSet
-        phantoms = phantoms - ixsSet
     }
 
     /** Use BEFORE modifying the state by the [command]!
@@ -663,7 +621,7 @@ class EditClusterViewModel : ViewModel() {
         if (validNewGCircles.isNotEmpty()) {
             showCircles = true
             val prevSize = objects.size
-            addObjects(normalizedGCircles)
+            objectModel.addObjects(normalizedGCircles)
             selection = (prevSize until objects.size).filter { objects[it] != null }
             viewModelScope.launch {
                 _animations.emit(
@@ -671,9 +629,10 @@ class EditClusterViewModel : ViewModel() {
                 )
             }
         } else { // all nulls
-            addObjects(normalizedGCircles)
+            objectModel.addObjects(normalizedGCircles)
             selection = emptyList()
         }
+        objectModel.invalidate()
     }
 
     fun createNewFreePoint(
@@ -682,8 +641,9 @@ class EditClusterViewModel : ViewModel() {
     ): Ix {
         if (triggerRecording)
             recordCreateCommand()
-        addObject(point)
+        objectModel.addObject(point)
         val newIx = expressions.addFree()
+        objectModel.invalidate()
         require(newIx == objects.size - 1) { "Incorrect index retrieved from expression.addFree() during createNewFreePoint()" }
         return newIx
     }
@@ -708,58 +668,16 @@ class EditClusterViewModel : ViewModel() {
     ) {
         val oldSize = objects.size
         val newObjects = sourceIndex2NewTrajectory.flatMap { it.second }
-        addObjects(newObjects) // row-column order
-        copySourceColorsOntoTrajectories(sourceIndex2NewTrajectory, oldSize)
+        objectModel.addObjects(newObjects) // row-column order
+        objectModel.copySourceColorsOntoTrajectories(sourceIndex2NewTrajectory, oldSize)
         copySourceRegionsOntoTrajectories(sourceIndex2NewTrajectory, oldSize, flipRegionsInAndOut)
         selection = (oldSize until objects.size).filter { ix ->
             objects[ix] is CircleOrLine || objects[ix] is Point
         }
+        objectModel.invalidate()
         circleAnimationInit(newObjects.filterIsInstance<CircleOrLine>())?.let { circleAnimation ->
             viewModelScope.launch {
                 _animations.emit(circleAnimation)
-            }
-        }
-    }
-
-    /**
-     * Copy [objectColors] from source indices onto trajectories specified
-     * by [sourceIndex2NewTrajectory]. Trajectory objects are assumed to be laid out in
-     * row-column order of [sourceIndex2NewTrajectory]`.flatten` starting from [startIndex]
-     * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`
-     */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun copySourceColorsOntoTrajectories(
-        sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
-        startIndex: Ix,
-    ) {
-        var outputIndex = startIndex
-        sourceIndex2NewTrajectory.forEach { (sourceIndex, trajectory) ->
-            val sourceColor = objectColors[sourceIndex]
-            if (sourceColor != null) {
-                trajectory.forEach { _ ->
-                    objectColors[outputIndex] = sourceColor
-                    outputIndex += 1
-                }
-            } else {
-                outputIndex += trajectory.size
-            }
-        }
-    }
-
-    /**
-     * Copy [objectColors] from source indices onto trajectories specified
-     * by [sourceIndex2TrajectoryOfIndices].
-     * @param[sourceIndex2TrajectoryOfIndices] `[(original index ~ style source, [trajectory of indices of objects])]`,
-     */
-    private inline fun copySourceColorsOntoTrajectories(
-        sourceIndex2TrajectoryOfIndices: List<Pair<Ix, List<Ix>>>,
-    ) {
-        sourceIndex2TrajectoryOfIndices.forEach { (sourceIndex, trajectory) ->
-            val sourceColor = objectColors[sourceIndex]
-            if (sourceColor != null) {
-                trajectory.forEach { ix ->
-                    objectColors[ix] = sourceColor
-                }
             }
         }
     }
@@ -866,11 +784,11 @@ class EditClusterViewModel : ViewModel() {
                 as List<Pair<Ix, CircleOrLine>>
         val sourceIndicesOfNewCircles = ix2circle.map { it.first }
         val oldSize = objects.size
-        addObjects(sourceIndex2NewObject.map { it.second })
+        objectModel.addObjects(sourceIndex2NewObject.map { it.second })
         for ((i, sourceIndex) in sourceIndices.withIndex()) {
-            if (objectColors.containsKey(sourceIndex)) {
+            objectModel.objectColors[sourceIndex]?.let { color ->
                 val correspondingIx = oldSize + i
-                objectColors[correspondingIx] = objectColors[sourceIndex]!!
+                objectModel.objectColors[correspondingIx] = color
             }
         }
         val newIndicesOfCircles = sourceIndex2NewObject
@@ -903,6 +821,7 @@ class EditClusterViewModel : ViewModel() {
                     CircleAnimation.ReEntrance(circles)
                 }
                 expressions.copyExpressionsWithDependencies(toBeCopied)
+                objectModel.invalidate()
             }
         }
     }
@@ -940,7 +859,7 @@ class EditClusterViewModel : ViewModel() {
             )
         }
         val oldSize = regions.size
-        regions.addAll(newRegions)
+        regions += newRegions
         return oldSize until regions.size
     }
 
@@ -970,27 +889,25 @@ class EditClusterViewModel : ViewModel() {
                 objects.filterIndices { it is CircleOrLine }
             )
             val oldRegions = regions.toList()
-            regions.clear()
+            regions = emptyList()
             if (everythingIsDeleted) {
                 if (chessboardPattern == ChessboardPattern.STARTS_COLORED) {
                     chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
                 }
             } else {
-                regions.addAll(
-                    oldRegions
-                        // to avoid stray chessboard selections
-                        .filterNot { (ins, _, _) ->
-                            ins.isNotEmpty() && ins.minus(deletedCircleIndices).isEmpty()
-                        }
-                        .map { (ins, outs, fillColor) ->
-                            LogicalRegion(
-                                insides = ins.minus(deletedCircleIndices),
-                                outsides = outs.minus(deletedCircleIndices),
-                                fillColor = fillColor
-                            )
-                        }
-                        .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
-                )
+                regions = oldRegions
+                    // to avoid stray chessboard selections
+                    .filterNot { (ins, _, _) ->
+                        ins.isNotEmpty() && ins.minus(deletedCircleIndices).isEmpty()
+                    }
+                    .map { (ins, outs, fillColor) ->
+                        LogicalRegion(
+                            insides = ins.minus(deletedCircleIndices),
+                            outsides = outs.minus(deletedCircleIndices),
+                            fillColor = fillColor
+                        )
+                    }
+                    .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
             }
             val deletedCircles = deletedCircleIndices.mapNotNull { objects[it] as? CircleOrLine }
             circleAnimationInit(deletedCircles)?.let { circleAnimation ->
@@ -999,7 +916,8 @@ class EditClusterViewModel : ViewModel() {
                 }
             }
         }
-        removeObjectsAt(toBeDeleted.toList())
+        objectModel.removeObjectsAt(toBeDeleted.toList())
+        objectModel.invalidate()
     }
 
     fun getArg(arg: Arg): GCircle? =
@@ -1201,7 +1119,7 @@ class EditClusterViewModel : ViewModel() {
             RegionManipulationStrategy.REPLACE -> {
                 if (outerRegions.isEmpty()) {
                     recordCommand(Command.FILL_REGION, target = regions.size)
-                    regions.add(region)
+                    regions += region
                     if (shouldUpdateSelection) {
                         selection = (region.insides + region.outsides).toList()
                     }
@@ -1211,11 +1129,11 @@ class EditClusterViewModel : ViewModel() {
                     val outer = outerRegions.single()
                     if (region.fillColor == outer.fillColor) {
                         recordCommand(Command.FILL_REGION, unique = true)
-                        regions.removeAt(i)
+                        regions = regions.withoutElementAt(i)
                         println("removed singular same-color outer $outer")
                     } else { // we are trying to change the color im guessing
                         recordCommand(Command.FILL_REGION, target = i)
-                        regions[i] = outer.copy(fillColor = region.fillColor)
+                        regions = regions.updated(i, outer.copy(fillColor = region.fillColor))
                         if (shouldUpdateSelection) {
                             selection = (region.insides + region.outsides).toList()
                         }
@@ -1228,7 +1146,7 @@ class EditClusterViewModel : ViewModel() {
                     if (sameBoundsSameColorRegionsIndices.isNotEmpty()) {
                         recordCommand(Command.FILL_REGION, unique = true)
                         val sameRegions = sameBoundsSameColorRegionsIndices.map { regions[it] }
-                        regions.removeAll(sameRegions)
+                        regions -= sameRegions
                         println("removed all same-bounds same-color $sameBoundsSameColorRegionsIndices ~ $region")
                     } else { // we are trying to change the color im guessing
                         val i = sameBoundsRegionsIndices.last()
@@ -1236,12 +1154,14 @@ class EditClusterViewModel : ViewModel() {
                             recordCommand(Command.FILL_REGION, target = i)
                         else // cleanup can shift region index
                             recordCommand(Command.FILL_REGION, unique = true)
-                        regions[i] = region
+                        val _regions = regions.toMutableList()
+                        _regions[i] = region
                         sameBoundsRegions
                             .dropLast(1)
                             .forEach {
-                                regions.remove(it) // cleanup
+                                _regions.remove(it) // cleanup
                             }
+                        regions = _regions
                         if (shouldUpdateSelection) {
                             selection = (region.insides + region.outsides).toList()
                         }
@@ -1254,11 +1174,11 @@ class EditClusterViewModel : ViewModel() {
                         recordCommand(Command.FILL_REGION, unique = true)
                         // NOTE: this removes regions of the same color that lie under
                         //  others (potentially invisible), which can be counter-intuitive
-                        regions.removeAll(outerRegionsOfTheSameColor)
+                        regions = regions.filter { it !in outerRegionsOfTheSameColor }
                         println("removed same color regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
                     } else { // there are several outer regions, but none of the color of region.fillColor
                         recordCommand(Command.FILL_REGION, target = regions.size)
-                        regions.add(region)
+                        regions += region
                         if (shouldUpdateSelection) {
                             selection = (region.insides + region.outsides).toList()
                         }
@@ -1269,7 +1189,7 @@ class EditClusterViewModel : ViewModel() {
             RegionManipulationStrategy.ADD -> {
                 if (sameBoundsRegionsIndices.isEmpty()) {
                     recordCommand(Command.FILL_REGION, target = regions.size)
-                    regions.add(region)
+                    regions += region
                     if (shouldUpdateSelection) {
                         selection = (region.insides + region.outsides).toList()
                     }
@@ -1277,11 +1197,13 @@ class EditClusterViewModel : ViewModel() {
                 } else if (sameBoundsRegions.last().fillColor == region.fillColor) {
                     // im gonna cleanup same bounds until only 1 is left
                     // cleanup & skip
+                    val _regions = regions.toMutableList()
                     sameBoundsRegions
                         .dropLast(1)
                         .forEach {
-                            regions.remove(it) // cannot use removeAll cuz it could remove the last one too
+                            _regions.remove(it) // cannot use removeAll cuz it could remove the last one too
                         }
+                    regions = _regions
                 } else { // same bounds, different color
                     // replace & cleanup
                     val i = sameBoundsRegionsIndices.last()
@@ -1289,28 +1211,30 @@ class EditClusterViewModel : ViewModel() {
                         recordCommand(Command.FILL_REGION, target = i)
                     else
                         recordCommand(Command.FILL_REGION, unique = true)
-                    regions[i] = region
+                    val _regions = regions.toMutableList()
+                    _regions[i] = region
                     if (shouldUpdateSelection) {
                         selection = (region.insides + region.outsides).toList()
                     }
                     sameBoundsRegions
                         .dropLast(1)
                         .forEach {
-                            regions.remove(it) // cannot use removeAll cuz it could remove the last one too
+                            _regions.remove(it) // cannot use removeAll cuz it could remove the last one too
                         }
+                    regions = _regions
                     println("recolored $i (same bounds ~ $region)")
                 }
             }
             RegionManipulationStrategy.ERASE -> {
                 if (sameBoundsRegions.isNotEmpty()) {
                     recordCommand(Command.FILL_REGION, unique = true)
-                    regions.removeAll(sameBoundsRegions)
+                    regions = regions.filter { it !in sameBoundsRegions }
                     println("removed [${sameBoundsRegionsIndices.joinToString(prefix = "\n", separator = ";\n")}] (same bounds ~ $region)")
                 } else if (outerRegions.isNotEmpty()) {
                     // maybe find minimal and erase it OR remove last outer
                     // tho it would stop working like eraser then
                     recordCommand(Command.FILL_REGION, unique = true)
-                    regions.removeAll(outerRegions)
+                    regions = regions.filter { it !in outerRegions }
                     println("removed outer [${outerRegions.joinToString(prefix = "\n", separator = ";\n")}]")
                 } // when clicking on nowhere nothing happens
             }
@@ -1345,7 +1269,7 @@ class EditClusterViewModel : ViewModel() {
                 region.borderColor?.let { listOf(region.fillColor, it) }
                     ?: listOf(region.fillColor)
             }
-            .plus(objectColors.values)
+            .plus(objectModel.objectColors.values)
             .plus(
                 if (chessboardPattern == ChessboardPattern.NONE)
                     emptyList()
@@ -1406,7 +1330,8 @@ class EditClusterViewModel : ViewModel() {
                 recordCreateCommand()
                 val newPoint = (expressions.addSoloExpr(expr) as Point).upscale()
                 val newIx = objects.size
-                addObjects(listOf(newPoint))
+                objectModel.addObjects(listOf(newPoint))
+                objectModel.invalidate()
                 PointSnapResult.Eq(newPoint, newIx)
             }
             is PointSnapResult.Intersection -> {
@@ -1438,13 +1363,14 @@ class EditClusterViewModel : ViewModel() {
                     if (closestIndex != null) { // far intersection already exists
                         val p = expressions.addMultiExpression(Expression.OneOf(expr, intersectionOutputIndex))
                             as Point
-                        addObject(p.upscale())
+                        objectModel.addDownscaledObject(p)
+                        objectModel.invalidate()
                         PointSnapResult.Eq(snapResult.result, oldSize)
                     } else {
                         val ps = expressions.addMultiExpr(expr)
                             .map { it as? Point }
-                            .map { it?.upscale() }
-                        addObjects(ps)
+                        objectModel.addDownscaledObjects(ps)
+                        objectModel.invalidate()
                         PointSnapResult.Eq(snapResult.result, oldSize + intersectionOutputIndex)
                     }
                 }
@@ -1557,7 +1483,7 @@ class EditClusterViewModel : ViewModel() {
     fun concludeCircleColorPicker(colorPickerParameters: ColorPickerParameters) {
         recordCommand(Command.CHANGE_COLOR)
         for (ix in selection) {
-            objectColors[ix] = colorPickerParameters.currentColor
+            objectModel.objectColors[ix] = colorPickerParameters.currentColor
         }
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
@@ -1586,12 +1512,14 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun getMostCommonCircleColorInSelection(): Color? =
-        selection
-            .mapNotNull { objectColors[it] }
-            .groupingBy { it }
-            .eachCount()
-            .maxByOrNull { (_, k) -> k }
-            ?.key
+        objectModel.invalidations.let {
+            selection
+                .mapNotNull { objectModel.objectColors[it] }
+                .groupingBy { it }
+                .eachCount()
+                .maxByOrNull { (_, k) -> k }
+                ?.key
+        }
 
     fun dismissCircleColorPicker() {
         openedDialog = null
@@ -1605,7 +1533,7 @@ class EditClusterViewModel : ViewModel() {
     fun deleteAllRegions() {
         recordCommand(Command.DELETE, unique = true)
         chessboardPattern = ChessboardPattern.NONE
-        regions.clear()
+        regions = emptyList()
     }
 
     fun setRegionsManipulationStrategy(newStrategy: RegionManipulationStrategy) {
@@ -1664,13 +1592,14 @@ class EditClusterViewModel : ViewModel() {
                 else if (rect == null || rect.minDimension >= 5_000)
                     computeAbsoluteCenter() ?: Offset.Zero
                 else rect.center
-            transformWhatWeCan(selection, focus = focus, zoom = zoom)
+            transformWhatWeCan(Command.SCALE, selection, focus = focus, zoom = zoom)
         } else if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
 //            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
         } else {
             val targets = objects.indices.toList()
             val center = computeAbsoluteCenter() ?: Offset.Zero
-            transform(targets, focus = center, zoom = zoom)
+            recordCommand(Command.SCALE, selection)
+            objectModel.transform(expressions, targets, focus = center, zoom = zoom)
         }
     }
 
@@ -1683,13 +1612,13 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun markSelectedObjectsAsPhantoms() {
-        phantoms = phantoms + selection
+        objectModel.phantomObjectIndices.addAll(selection)
         // selection = emptyList() // being able to instantly undo is prob better ux
         // showPhantomObjects = false // i think this behavior is confuzzling
     }
 
     private fun unmarkSelectedObjectsAsPhantoms() {
-        phantoms = phantoms - selection.toSet()
+        objectModel.phantomObjectIndices.removeAll(selection.toSet())
     }
 
     private fun swapDirectionsOfSelectedCircles() {
@@ -1706,23 +1635,23 @@ class EditClusterViewModel : ViewModel() {
             for (ix in targets) {
                 val obj0 = objects[ix] as CircleOrLine
                 val obj = obj0.reversed()
-                objects[ix] = obj
-                _objects[ix] = obj.downscale()
+                objectModel.setObject(ix, obj)
             }
             val toBeUpdated = expressions.update(selection)
-            syncUpscaledObjects(toBeUpdated)
+            objectModel.syncObjects(toBeUpdated)
+            objectModel.invalidate()
         }
     }
 
-    inline fun showAdjustExprButton(): Boolean {
+    inline val showAdjustExprButton: Boolean get() {
         val sel = selection
         return sel.isNotEmpty() && (expressions.expressions[sel[0]]?.expr?.let { expr0 ->
             (expr0 is Expr.CircleInterpolation ||
-                    expr0 is Expr.PointInterpolation ||
-                    expr0 is Expr.Rotation ||
-                    expr0 is Expr.BiInversion ||
-                    expr0 is Expr.LoxodromicMotion) &&
-                    sel.all { expressions.expressions[it]?.expr == expr0 }
+            expr0 is Expr.PointInterpolation ||
+            expr0 is Expr.Rotation ||
+            expr0 is Expr.BiInversion ||
+            expr0 is Expr.LoxodromicMotion) &&
+            sel.all { expressions.expressions[it]?.expr == expr0 }
         } ?: false)
     }
 
@@ -2167,10 +2096,10 @@ class EditClusterViewModel : ViewModel() {
         if (circle is Circle) {
             val center = sm.center
             val r = (c - center).getDistance()
-            transformWhatWeCan(listOf(ix), focus = center, zoom = (r/circle.radius).toFloat())
+            transformWhatWeCan(Command.SCALE, listOf(ix), focus = center, zoom = (r/circle.radius).toFloat())
         } else if (circle is Line) {
             val center = circle.project(c)
-            transformWhatWeCan(listOf(ix), focus = center, zoom = zoom)
+            transformWhatWeCan(Command.SCALE, listOf(ix), focus = center, zoom = zoom)
         }
     }
 
@@ -2184,7 +2113,7 @@ class EditClusterViewModel : ViewModel() {
             if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
             else newAngle
         val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
-        transformWhatWeCan(listOf(h.ix), focus = center, rotationAngle = angle1)
+        transformWhatWeCan(Command.ROTATE, listOf(h.ix), focus = center, rotationAngle = angle1)
         submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
     }
 
@@ -2195,7 +2124,7 @@ class EditClusterViewModel : ViewModel() {
             val centerToHandle = scaleHandlePosition - center
             val centerToCurrent = centerToHandle + pan
             val scaleFactor = centerToCurrent.getDistance()/centerToHandle.getDistance()
-            transformWhatWeCan(targets, focus = center, zoom = scaleFactor)
+            transformWhatWeCan(Command.SCALE, targets, focus = center, zoom = scaleFactor)
         }
     }
 
@@ -2208,7 +2137,7 @@ class EditClusterViewModel : ViewModel() {
             }
         }
         val scaleFactor = sliderPercentageDeltaToZoom(newSliderPercentage - sm.sliderPercentage)
-        transformWhatWeCan(selection, focus = sm.center, zoom = scaleFactor)
+        transformWhatWeCan(Command.SCALE, selection, focus = sm.center, zoom = scaleFactor)
         submode = sm.copy(sliderPercentage = newSliderPercentage)
     }
 
@@ -2228,7 +2157,7 @@ class EditClusterViewModel : ViewModel() {
                     if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
                     else newAngle
                 val dAngle = (snappedAngle - sm.snappedAngle).toFloat()
-                transformWhatWeCan(selection, focus = sm.center, rotationAngle = dAngle)
+                transformWhatWeCan(Command.ROTATE, selection, focus = sm.center, rotationAngle = dAngle)
                 submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
             }
             else -> {}
@@ -2245,7 +2174,7 @@ class EditClusterViewModel : ViewModel() {
             if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
             else newAngle
         val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
-        transformWhatWeCan(targets, focus = sm.center, rotationAngle = angle1)
+        transformWhatWeCan(Command.ROTATE, targets, focus = sm.center, rotationAngle = angle1)
         submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
     }
 
@@ -2283,9 +2212,9 @@ class EditClusterViewModel : ViewModel() {
                 visibleRect = absoluteVisibilityRect,
             )
             val delta = result0 translationDelta snap.result
-            transformWhatWeCan(listOf(selectedIndex), translation = translation + delta, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
+            transformWhatWeCan(Command.MOVE, listOf(selectedIndex), translation = translation + delta, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
         } else {
-            transformWhatWeCan(listOf(selectedIndex), translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
+            transformWhatWeCan(Command.MOVE, listOf(selectedIndex), translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
         }
     }
 
@@ -2304,6 +2233,7 @@ class EditClusterViewModel : ViewModel() {
                 excludePoints = true, excludedCircles = childCircles + parents
             ).result
             transformWhatWeCan(
+                Command.MOVE,
                 listOf(ix),
                 translation = newPoint.toOffset() - (objects[ix] as Point).toOffset(),
             )
@@ -2317,15 +2247,16 @@ class EditClusterViewModel : ViewModel() {
         absolutePointerPosition: Offset
     ) {
         recordCommand(Command.MOVE, target = pointIndex)
-        val carrier = objects[carrierIndex] as CircleOrLine
-        val newPoint = carrier.project(Point.fromOffset(absolutePointerPosition))
-        val order = carrier.downscale().point2order(newPoint.downscale())
+        val carrier = objectModel.downscaledObjects[carrierIndex] as CircleOrLine
+        val pointer = Point.fromOffset(absolutePointerPosition).downscale()
+        val newPoint = carrier.project(pointer)
+        val order = carrier.point2order(newPoint)
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
-        objects[pointIndex] = newPoint
-        _objects[pointIndex] = newPoint.downscale()
+        objectModel.setDownscaledObject(pointIndex, newPoint)
         expressions.changeExpression(pointIndex, newExpr)
         val toBeUpdated = expressions.update(listOf(pointIndex))
-        syncUpscaledObjects(toBeUpdated)
+        objectModel.syncObjects(toBeUpdated)
+        objectModel.invalidate()
     }
 
     private fun dragCirclesOrPoints(
@@ -2338,7 +2269,7 @@ class EditClusterViewModel : ViewModel() {
             val o = objects[it]
             o is CircleOrLine || o is Point
         }
-        transformWhatWeCan(targets,
+        transformWhatWeCan(Command.MOVE, targets,
             translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle
         )
     }
@@ -2368,12 +2299,11 @@ class EditClusterViewModel : ViewModel() {
             val bivector0 = Rotor.fromPencil(e1, e2)
             val bivector = bivector0 * 0.5
             val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
-            for (ix in _objects.indices) {
-                val o = _objects[ix]
+            for (ix in objectModel.downscaledObjects.indices) {
+                val o = objectModel.downscaledObjects[ix]
                 if (o != null) {
                     val newObject = rotor.applyTo(GeneralizedCircle.fromGCircle(o)).toGCircleAs(o)
-                    _objects[ix] = newObject
-                    objects[ix] = newObject?.upscale()
+                    objectModel.setDownscaledObject(ix, newObject)
                 }
             }
             expressions.adjustIncidentPointExpressions()
@@ -2392,13 +2322,15 @@ class EditClusterViewModel : ViewModel() {
                 south = newSouth ?: sm.south,
                 grid = newGrid,
             )
+            objectModel.invalidate()
         }
     }
 
     /**
-     * Wrapper around [transform] that adjusts [targets] based on [INVERSION_OF_CONTROL].
+     * Wrapper around [ObjectModel.transform] that adjusts [targets] based on [INVERSION_OF_CONTROL].
      *
-     * [transform] applies [translation];scaling;rotation to [targets] (that are all assumed free).
+     * [ObjectModel.transform] applies [translation];scaling;rotation
+     * to [targets] (that are all assumed free).
      *
      * Scaling and rotation are w.r.t. fixed [focus] by the factor of
      * [zoom] and by [rotationAngle] degrees. If [focus] is [Offset.Unspecified] for
@@ -2406,6 +2338,7 @@ class EditClusterViewModel : ViewModel() {
      * projected onto it
      */
     private inline fun transformWhatWeCan(
+        command: Command,
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
         focus: Offset = Offset.Unspecified,
@@ -2438,141 +2371,8 @@ class EditClusterViewModel : ViewModel() {
             else
                 queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
-            transform(actualTargets, translation, focus, zoom, rotationAngle)
-        }
-    }
-
-    // NOTE: idk, handling of incident points is messy
-    /**
-     * Apply [translation];scaling;rotation to [targets] (that are all assumed free).
-     *
-     * Scaling and rotation are w.r.t. fixed [focus] by the factor of
-     * [zoom] and by [rotationAngle] degrees.
-     */
-    private inline fun transform(
-        targets: List<Ix>,
-        translation: Offset = Offset.Zero,
-        focus: Offset = Offset.Unspecified,
-        zoom: Float = 1f,
-        rotationAngle: Float = 0f,
-    ) {
-        if (targets.isEmpty()) {
-            return
-        }
-        measureAndPrintPerformance("transform") {
-        val targetsSet = targets.toSet()
-        val requiresTranslation = translation != Offset.Zero
-        val requiresZoom = zoom != 1f
-        val requiresRotation = rotationAngle != 0f
-        if (requiresTranslation)
-            recordCommand(Command.MOVE, targets)
-        else if (requiresZoom)
-            recordCommand(Command.SCALE, targets) // scale & rotate case doesn't happen usually
-        else
-            recordCommand(Command.ROTATE, targets)
-        val allIncidentPoints = mutableListOf<Ix>()
-        if (!requiresZoom && !requiresRotation) {
-            measureAndPrintPerformance("transform/translate") {
-            for (ix in targets) {
-                val o = objects[ix]
-                objects[ix] = o?.translated(translation)
-                if (o is Line) {
-                    expressions.getIncidentPointsTo(ix, allIncidentPoints)
-                }
-            }
-            }
-        } else {
-            for (ix in targets) {
-                when (val o = objects[ix]) {
-                    is Circle -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                        if (requiresRotation) {
-                            expressions.getIncidentPointsTo(ix, allIncidentPoints)
-                        }
-                    }
-                    is Line -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                        expressions.getIncidentPointsTo(ix, allIncidentPoints)
-                    }
-                    is Point -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                    }
-                    is ImaginaryCircle -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                    }
-                    null -> {}
-                }
-            }
-        }
-        allIncidentPoints -= targetsSet
-        for (j in allIncidentPoints) {
-            val p0 = objects[j] as? Point
-            val p = p0?.transformed(translation, focus, zoom, rotationAngle)
-            _objects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
-        }
-        syncDownscaledObjects(targets)
-        expressions.adjustIncidentPointExpressions(allIncidentPoints)
-        }
-        measureAndPrintPerformance("update") {
-        val toBeUpdated = expressions.update(targets)
-        syncUpscaledObjects(toBeUpdated)
-        }
-    }
-
-    private inline fun _transformWithoutIncidentAdjustments(
-        targets: List<Ix>,
-        translation: Offset = Offset.Zero,
-        focus: Offset = Offset.Unspecified,
-        zoom: Float = 1f,
-        rotationAngle: Float = 0f,
-    ) {
-        if (targets.isEmpty()) {
-            return
-        }
-        measureAndPrintPerformance("transform -inc") {
-        val requiresTranslation = translation != Offset.Zero
-        val requiresZoom = zoom != 1f
-        val requiresRotation = rotationAngle != 0f
-        if (requiresTranslation)
-            recordCommand(Command.MOVE, targets)
-        else if (requiresZoom)
-            recordCommand(Command.SCALE, targets) // scale & rotate case doesn't happen usually
-        else
-            recordCommand(Command.ROTATE, targets)
-        if (!requiresZoom && !requiresRotation) {
-            for (ix in targets) {
-                val o = objects[ix]
-                objects[ix] = o?.translated(translation)
-            }
-        } else {
-            val screenCenter = computeAbsoluteCenter() ?: Offset.Zero
-            for (ix in targets) {
-                when (val o = objects[ix]) {
-                    is Circle -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                    }
-                    is Line -> {
-                        val actualFocus = if (focus == Offset.Unspecified)
-                            o.project(screenCenter)
-                        else focus
-                        objects[ix] =
-                            o.transformed(translation, actualFocus, zoom, rotationAngle)
-                    }
-                    is Point -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                    }
-                    is ImaginaryCircle -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                    }
-                    null -> {}
-                }
-            }
-        }
-        syncDownscaledObjects(targets)
-        }
-        measureAndPrintPerformance("update") {
-        val toBeUpdated = expressions.update(targets)
-        syncUpscaledObjects(toBeUpdated)
+            recordCommand(command, actualTargets)
+            objectModel.transform(expressions, actualTargets, translation, focus, zoom, rotationAngle)
         }
     }
 
@@ -2678,7 +2478,8 @@ class EditClusterViewModel : ViewModel() {
                 if (zoom != 1.0f || rotationAngle != 0.0f) {
                     val targets = objects.indices.toList()
                     val center = computeAbsoluteCenter() ?: Offset.Zero
-                    transform(targets, focus = center, zoom = zoom, rotationAngle = rotationAngle)
+                    recordCommand(Command.MOVE)
+                    objectModel.transform(expressions, targets, focus = center, zoom = zoom, rotationAngle = rotationAngle)
                 }
                 translation += pan // navigate canvas
             }
@@ -2915,15 +2716,14 @@ class EditClusterViewModel : ViewModel() {
                     )
                     for (ix in newReservedIndices) { // we have to cleanup abandoned but reserved indices
                         if (ix < objects.size) {
-                            removeObjectAt(ix)
+                            objectModel.removeObjectAt(ix)
                         } else {
-                            addObject(null)
+                            objectModel.addObject(null)
                         }
                     }
                     for (i in newIndices.indices) {
                         val ix = newIndices[i]
-                        _objects[ix] = newObjects[i]
-                        objects[ix] = newObjects[i]?.upscale()
+                        objectModel.setDownscaledObject(ix, newObjects[i])
                     }
                     SubMode.ExprAdjustment(listOf(
                         AdjustableExpr(newExpr, newIndices, newReservedIndices)
@@ -2933,7 +2733,7 @@ class EditClusterViewModel : ViewModel() {
                 is RotationParameters,
                 is BiInversionParameters,
                 is LoxodromicMotionParameters -> {
-                    regions.removeAtIndices(sm.regions)
+                    regions = regions.withoutElementsAt(sm.regions)
                     val newAdjustables = mutableListOf<AdjustableExpr>()
                     val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
                     for ((expr, outputIndices, reservedIndices) in sm.adjustables) {
@@ -2947,21 +2747,20 @@ class EditClusterViewModel : ViewModel() {
                         // NOTE: reserved indices will be generally non-contiguous
                         // we have to cleanup abandoned indices
                         for (ix in (outputIndices - newIndices.toSet())) {
-                            removeObjectAt(ix)
+                            objectModel.removeObjectAt(ix)
                         }
                         for (ix in (newReservedIndices - reservedIndices.toSet())) {
                             if (ix >= objects.size) {
-                                addObject(null) // pad with nulls
+                                objectModel.addObject(null) // pad with nulls
                             }
                         }
-                        objectColors -= outputIndices.toSet()
-                        val sourceColor = objectColors[sourceIndex]
+                        objectModel.objectColors -= outputIndices.toSet()
+                        val sourceColor = objectModel.objectColors[sourceIndex]
                         for (i in newIndices.indices) {
                             val ix = newIndices[i]
-                            _objects[ix] = newObjects[i]
-                            objects[ix] = newObjects[i]?.upscale()
+                            objectModel.setDownscaledObject(ix, newObjects[i])
                             sourceColor?.also {
-                                objectColors[ix] = it
+                                objectModel.objectColors[ix] = it
                             }
                         }
                         newAdjustables.add(
@@ -3010,6 +2809,7 @@ class EditClusterViewModel : ViewModel() {
                     )
                 else -> {}
             }
+            objectModel.invalidate()
         }
     }
 
@@ -3242,6 +3042,7 @@ class EditClusterViewModel : ViewModel() {
             CircleAnimation.Entrance(it)
         }
         partialArgList = PartialArgList(argList.signature)
+        objectModel.invalidate()
     }
 
     private fun startCircleOrPointInterpolationParameterAdjustment() {
@@ -3265,7 +3066,7 @@ class EditClusterViewModel : ViewModel() {
             val oldSize = objects.size
             val newGCircles = expressions.addMultiExpr(expr)
             val newCircles = newGCircles.map { it?.upscale() }
-            addObjects(newCircles)
+            objectModel.addObjects(newCircles)
             val outputRange = (oldSize until objects.size).toList()
             submode = SubMode.ExprAdjustment(listOf(
                 AdjustableExpr(expr, outputRange, outputRange)
@@ -3287,12 +3088,13 @@ class EditClusterViewModel : ViewModel() {
             val oldSize = objects.size
             val newGCircles = expressions.addMultiExpr(expr)
             val newPoints = newGCircles.map { it?.upscale() as? Point }
-            addObjects(newPoints)
+            objectModel.addObjects(newPoints)
             val outputRange = (oldSize until objects.size).toList()
             submode = SubMode.ExprAdjustment(listOf(
                 AdjustableExpr(expr, outputRange, outputRange)
             ))
         }
+        objectModel.invalidate()
     }
 
     fun completeCircleExtrapolation(
@@ -3344,13 +3146,14 @@ class EditClusterViewModel : ViewModel() {
             return@map targetIndex to result
         }
         val newObjects = source2trajectory.flatMap { it.second }
-        addObjects(newObjects) // row-column order
-        copySourceColorsOntoTrajectories(source2trajectory, oldSize)
+        objectModel.addObjects(newObjects) // row-column order
+        objectModel.copySourceColorsOntoTrajectories(source2trajectory, oldSize)
         val regions = copySourceRegionsOntoTrajectories(
             source2trajectory, oldSize,
             flipRegionsInAndOut = false
         )
         submode = SubMode.ExprAdjustment(adjustables, regions)
+        objectModel.invalidate()
     }
 
     fun startBiInversionParameterAdjustment() {
@@ -3384,13 +3187,14 @@ class EditClusterViewModel : ViewModel() {
             return@map targetIndex to result
         }
         val newObjects = source2trajectory.flatMap { it.second }
-        addObjects(newObjects) // row-column order
-        copySourceColorsOntoTrajectories(source2trajectory, oldSize)
+        objectModel.addObjects(newObjects) // row-column order
+        objectModel.copySourceColorsOntoTrajectories(source2trajectory, oldSize)
         val regions = copySourceRegionsOntoTrajectories(
             source2trajectory, oldSize,
             flipRegionsInAndOut = false
         )
         submode = SubMode.ExprAdjustment(adjustables, regions)
+        objectModel.invalidate()
     }
 
     // TODO: inf point input
@@ -3450,9 +3254,9 @@ class EditClusterViewModel : ViewModel() {
             }
             val source2trajectory = source2trajectory1 + source2trajectory2
             val newObjects = source2trajectory.flatMap { it.second }
-            addObjects(newObjects) // row-column order
-            copySourceColorsOntoTrajectories(source2trajectory1, startIndex = oldSize)
-            copySourceColorsOntoTrajectories(source2trajectory2, startIndex = interimSize)
+            objectModel.addObjects(newObjects) // row-column order
+            objectModel.copySourceColorsOntoTrajectories(source2trajectory1, startIndex = oldSize)
+            objectModel.copySourceColorsOntoTrajectories(source2trajectory2, startIndex = interimSize)
             val regions = copySourceRegionsOntoTrajectories(
                 source2trajectory1,
                 startIndex = oldSize,
@@ -3477,8 +3281,8 @@ class EditClusterViewModel : ViewModel() {
                 return@map targetIndex to result
             }
             val newObjects = source2trajectory.flatMap { it.second }
-            addObjects(newObjects) // row-column order
-            copySourceColorsOntoTrajectories(source2trajectory, startIndex = oldSize)
+            objectModel.addObjects(newObjects) // row-column order
+            objectModel.copySourceColorsOntoTrajectories(source2trajectory, startIndex = oldSize)
             val regions = copySourceRegionsOntoTrajectories(
                 source2trajectory,
                 startIndex = oldSize,
@@ -3486,6 +3290,7 @@ class EditClusterViewModel : ViewModel() {
             )
             submode = SubMode.ExprAdjustment(adjustables, regions)
         }
+        objectModel.invalidate()
     }
 
     fun updateLoxodromicBidirectionality(bidirectional: Boolean) {
@@ -3496,7 +3301,7 @@ class EditClusterViewModel : ViewModel() {
                     defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters.copy(
                         bidirectional = bidirectional,
                     )
-                    regions.removeAtIndices(sm.regions)
+                    regions = regions.withoutElementsAt(sm.regions)
                     deleteObjectsWithDependenciesColorsAndRegions(
                         indicesToDelete = sm.adjustables.flatMap { it.outputIndices },
                         triggerRecording = false,
@@ -3701,8 +3506,10 @@ class EditClusterViewModel : ViewModel() {
                 mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect
             Tool.FlowSelect ->
                 mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
-            Tool.ToggleSelectAll ->
+            Tool.ToggleSelectAll -> {
+                hug(objectModel.invalidations)
                 selection.containsAll(objects.filterIndices { it is CircleOrLineOrPoint })
+            }
             Tool.Region ->
                 mode == SelectionMode.Region && submode !is SubMode.FlowFill
             Tool.FlowFill ->
@@ -3721,8 +3528,10 @@ class EditClusterViewModel : ViewModel() {
                 !showWireframes
             Tool.ToggleDirectionArrows ->
                 showDirectionArrows
-            Tool.MarkAsPhantoms ->
+            Tool.MarkAsPhantoms -> {
+                hug(objectModel.invalidations)
                 selection.none { it in phantoms }
+            }
             is Tool.MultiArg ->
                 mode == ToolMode.correspondingTo(tool)
             else -> true
@@ -3743,18 +3552,6 @@ class EditClusterViewModel : ViewModel() {
     private inline fun CircleOrLine.upscale(): CircleOrLine = scaled00(UPSCALING_FACTOR)
     private inline fun Point.downscale(): Point = scaled00(DOWNSCALING_FACTOR)
     private inline fun Point.upscale(): Point = scaled00(UPSCALING_FACTOR)
-
-    private fun syncDownscaledObjects(indices: Iterable<Ix> = objects.indices) {
-        for (ix in indices) {
-            _objects[ix] = objects[ix]?.scaled00(DOWNSCALING_FACTOR)
-        }
-    }
-
-    private fun syncUpscaledObjects(indices: Iterable<Ix> = _objects.indices) {
-        for (ix in indices) {
-            objects[ix] = _objects[ix]?.scaled00(UPSCALING_FACTOR)
-        }
-    }
 
     fun saveState(): State {
         val center = computeAbsoluteCenter() ?: Offset.Zero
@@ -3920,8 +3717,8 @@ class EditClusterViewModel : ViewModel() {
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
         // NOTE: changing it presently breaks all line-incident points
         /** [Double] arithmetic is best in range that is closer to 0 */
-        const val UPSCALING_FACTOR = 2_000.0 //200.0
-        const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
+        const val UPSCALING_FACTOR = ObjectModel.UPSCALING_FACTOR
+        const val DOWNSCALING_FACTOR = ObjectModel.DOWNSCALING_FACTOR
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)

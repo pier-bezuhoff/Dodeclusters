@@ -86,6 +86,7 @@ kotlin {
             implementation(libs.coroutines.core)
             implementation(libs.compose.material3.window.size.klass)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.collection)
             implementation(libs.colormath)
             implementation(libs.kaml)
             implementation(libs.kstore)

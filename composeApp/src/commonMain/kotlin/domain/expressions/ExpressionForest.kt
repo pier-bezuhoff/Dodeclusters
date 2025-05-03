@@ -27,11 +27,11 @@ private const val ABANDONED_TIER: Tier = -2
 // MAYBE: cache carrier->incident points lookup (since it's called on every VM.transform)
 /**
  * Class for managing expressions (AST controller)
- * @param[_objects] reference to shared, downscaled mutable mirror-list of VM.objects
+ * @param[objects] reference to shared, downscaled mutable mirror-list of VM.objects
  */
 class ExpressionForest(
     initialExpressions: Map<Ix, Expression?>, // pls include all possible indices
-    private val _objects: MutableList<GCircle?>,
+    private val objects: MutableList<GCircle?>,
 ) {
     // for the VM.objects list nulls correspond to unrealized outputs of multi-functions
     // here nulls correspond to free objects
@@ -81,10 +81,10 @@ class ExpressionForest(
     ): GCircle? =
         when (this) {
             is Expression.Just ->
-                expr.eval(_objects).firstOrNull()
+                expr.eval(objects).firstOrNull()
             is Expression.OneOf -> {
                 val results = multiExpressionCache.getOrPut(expr) {
-                    expr.eval(_objects)
+                    expr.eval(objects)
                 }
                 results.getOrNull(outputIndex)
             }
@@ -119,7 +119,7 @@ class ExpressionForest(
         } else { // no hopping over tiers, we good
             tier2ixs.add(setOf(ix))
         }
-        val result = expr.eval(_objects)
+        val result = expr.eval(objects)
         return result.firstOrNull()
             .also { println("$ix -> $expr -> $result") }
     }
@@ -127,7 +127,7 @@ class ExpressionForest(
     /** don't forget to upscale the result afterwards! */
     fun addMultiExpression(expression: Expression.OneOf): GCircle? {
         val expr = expression.expr
-        val result = expr.eval(_objects)[expression.outputIndex]
+        val result = expr.eval(objects)[expression.outputIndex]
         val ix = calculateNextIndex()
         val tier = computeTier(ix, expr)
         expressions[ix] = expression
@@ -148,7 +148,7 @@ class ExpressionForest(
     fun addMultiExpr(expr: Expr.OneToMany): ExprResult {
         val periodicRotation =
             expr is Expr.LoxodromicMotion && expr.parameters.dilation == 0.0 && abs(expr.parameters.angle) == 360f
-        val result = expr.eval(_objects)
+        val result = expr.eval(objects)
         val ix0 = calculateNextIndex()
         val tier = computeTier(ix0, expr)
         val resultSize =
@@ -218,7 +218,7 @@ class ExpressionForest(
             tier2ixs.add(setOf(ix))
         }
         recomputeChildrenTiers(ix)
-        val result = newExpr.eval(_objects)
+        val result = newExpr.eval(objects)
         return result.firstOrNull()
 //            .also {
 //                println("change $ix -> $newExpr -> $result")
@@ -251,9 +251,9 @@ class ExpressionForest(
 
     /**
      * Recursively re-evaluates expressions given that [changedIxs]/parents have changed
-     * and updates [_objects]
+     * and updates [objects]
      *
-     * NOTE: don't forget to sync `VM.objects` with [_objects] at returned indices
+     * NOTE: don't forget to sync `VM.objects` with [objects] at returned indices
      * @return all affected/child indices that were altered by [update] (excluding [changedIxs])
      */
     fun update(
@@ -271,15 +271,15 @@ class ExpressionForest(
         val cache: MutableMap<Expr.OneToMany, ExprResult> = mutableMapOf()
         for (ix in toBeUpdated) {
             // children always have non-null expressions
-            _objects[ix] = expressions[ix]?.eval(cache)
+            objects[ix] = expressions[ix]?.eval(cache)
         }
         return toBeUpdated
     }
 
     /**
-     * Re-evaluates all expressions and write them to [_objects]
+     * Re-evaluates all expressions and write them to [objects]
      *
-     * NOTE: don't forget to sync all `VM.objects` with [_objects]
+     * NOTE: don't forget to sync all `VM.objects` with [objects]
      */
     fun reEval() {
         val cache = mutableMapOf<Expr.OneToMany, ExprResult>()
@@ -287,7 +287,7 @@ class ExpressionForest(
         for (ixs in deps) {
             for (ix in ixs) {
                 expressions[ix]?.let { expression ->
-                    _objects[ix] = expression.eval(cache)
+                    objects[ix] = expression.eval(cache)
                 }
             }
         }
@@ -350,7 +350,7 @@ class ExpressionForest(
         }
         val tier = ix2tier[i0]!!
         var newMaxRange = reservedIndices
-        val result = newExpr.eval(_objects)
+        val result = newExpr.eval(objects)
         val sizeIncrease = result.size - targetIndices.size
         val newTargetIndices: List<Ix>
         if (sizeIncrease > 0) {
@@ -454,7 +454,8 @@ class ExpressionForest(
         (children[parentIx] ?: emptySet())
             .filter { expressions[it]?.expr is Expr.Incidence }
 
-    fun getIncidentPointsTo(parentIx: Ix, destination: MutableCollection<in Ix>) {
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun getIncidentPointsTo(parentIx: Ix, destination: MutableCollection<in Ix>) {
         (children[parentIx] ?: emptySet())
             .filterTo(destination) { expressions[it]?.expr is Expr.Incidence }
     }
@@ -464,9 +465,9 @@ class ExpressionForest(
     fun adjustIncidentPointExpressions(incidentPointIndices: Collection<Ix> = expressions.keys) {
         for (ix in incidentPointIndices) {
             val expr = expressions[ix]?.expr
-            val o = _objects[ix]
+            val o = objects[ix]
             if (expr is Expr.Incidence && o is Point) {
-                val parent = _objects[expr.carrier]
+                val parent = objects[expr.carrier]
                 if (parent is CircleOrLine) {
                     expressions[ix] = Expression.Just(expr.copy(
                         parameters = IncidenceParameters(order = parent.point2order(o))
@@ -488,7 +489,7 @@ class ExpressionForest(
         val changedIxs = mutableListOf<Ix>()
         for ((ix, e) in expressions) {
             val expr = e?.expr
-            if (expr is Expr.Incidence && _objects[expr.carrier] is Line) {
+            if (expr is Expr.Incidence && objects[expr.carrier] is Line) {
                 expressions[ix] = Expression.Just(
                     expr.copy(IncidenceParameters(
                         order = zoom * expr.parameters.order

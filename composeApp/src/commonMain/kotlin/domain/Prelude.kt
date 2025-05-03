@@ -108,3 +108,7 @@ inline fun <reified A, reified B> tryCatch2(
 @Throws(IllegalStateException::class)
 inline fun never(info: String = ""): Nothing =
     throw IllegalStateException(if (info.isBlank()) "Never" else "Never ($info)")
+
+fun hug(something: Any) {}
+fun hug(something: Any, somethingElse: Any) {}
+

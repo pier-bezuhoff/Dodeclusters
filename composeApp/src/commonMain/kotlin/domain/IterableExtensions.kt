@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package domain
 
 inline fun <T> Iterable<T>.filterIndices(
@@ -19,11 +21,24 @@ inline fun <T> Iterable<T>.partitionIndices(
             )
         }
 
+inline fun <T> List<T>.withoutElementAt(index: Int): List<T> {
+    val list = this.toMutableList()
+    list.removeAt(index)
+    return list
+}
+
+fun <T> List<T>.withoutElementsAt(indices: List<Ix>): List<T> {
+    val list = this.toMutableList()
+    for (ix in indices.sortedDescending()) {
+        list.removeAt(ix)
+    }
+    return list
+}
+
 /**
  * Removes elements at [indices] starting from the highest index.
  * Not atomic, so if 2+ threads are trying to write it's NG
  */
-@Suppress("NOTHING_TO_INLINE")
 inline fun <E> MutableList<E>.removeAtIndices(indices: List<Ix>) {
     for (ix in indices.sortedDescending()) {
         removeAt(ix)
