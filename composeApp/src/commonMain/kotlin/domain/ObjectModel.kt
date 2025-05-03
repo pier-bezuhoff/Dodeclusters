@@ -40,7 +40,11 @@ class ObjectModel {
     var invalidationsState: MutableIntState = mutableIntStateOf(0)
     val invalidations: Int by invalidationsState
 
-    /** Triggers redraw. Do not forget to manually call this after finishing state-altering. */
+    /**
+     * Triggers redraw.
+     *
+     * NOTE: Do not forget to manually call this after finishing state-altering.
+     * */
     inline fun invalidate() {
         invalidationsState.value += 1
     }

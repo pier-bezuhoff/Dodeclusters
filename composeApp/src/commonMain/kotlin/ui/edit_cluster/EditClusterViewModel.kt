@@ -1487,6 +1487,7 @@ class EditClusterViewModel : ViewModel() {
         }
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
+        objectModel.invalidate()
     }
 
     fun concludeBackgroundColorPicker(colorPickerParameters: ColorPickerParameters) {
@@ -1511,15 +1512,15 @@ class EditClusterViewModel : ViewModel() {
         toolbarState = toolbarState.copy(activeTool = tool)
     }
 
-    fun getMostCommonCircleColorInSelection(): Color? =
-        objectModel.invalidations.let {
-            selection
-                .mapNotNull { objectModel.objectColors[it] }
-                .groupingBy { it }
-                .eachCount()
-                .maxByOrNull { (_, k) -> k }
-                ?.key
-        }
+    fun getMostCommonCircleColorInSelection(): Color? {
+        hug(objectModel.invalidations)
+        return selection
+            .mapNotNull { objectModel.objectColors[it] }
+            .groupingBy { it }
+            .eachCount()
+            .maxByOrNull { (_, k) -> k }
+            ?.key
+    }
 
     fun dismissCircleColorPicker() {
         openedDialog = null
@@ -1613,10 +1614,12 @@ class EditClusterViewModel : ViewModel() {
         objectModel.phantomObjectIndices.addAll(selection)
         // selection = emptyList() // being able to instantly undo is prob better ux
         // showPhantomObjects = false // i think this behavior is confuzzling
+        objectModel.invalidate()
     }
 
     private fun unmarkSelectedObjectsAsPhantoms() {
         objectModel.phantomObjectIndices.removeAll(selection.toSet())
+        objectModel.invalidate()
     }
 
     private fun swapDirectionsOfSelectedCircles() {
