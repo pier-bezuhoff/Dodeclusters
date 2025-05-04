@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.StampedPathEffectStyle
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
@@ -154,21 +155,22 @@ fun BoxScope.EditClusterCanvas(
                     animations[event]?.stop()
                     val animatable = Animatable(0f)
                     animations[event] = animatable
-                    animatable.animateTo(event.maxAlpha, tween(event.alpha01Duration, easing = LinearEasing))
+                    animatable.animateTo(
+                        targetValue = event.maxAlpha,
+                        tween(event.alpha01Duration, easing = LinearEasing)
+                    )
                     animatable.animateTo(
                         targetValue = 0f,
                         tween(event.alpha10Duration, easing = FastOutLinearInEasing),
-            //                animationSpec = tween(decayDuration, easing = CubicBezierEasing(0f, 0.7f, 0.75f, 0.55f)),
                     )
                     animations.remove(event)
                 }
             }
         }
     }
-    if (viewModel.backgroundColor == null)
+    if (viewModel.backgroundColor == null) {
         viewModel.backgroundColor = MaterialTheme.colorScheme.surface
-//    SelectionsCanvas(modifier, viewModel, selectionLinesColor, backgroundColor, selectedCircleColor, circleThiccStroke, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha)
-    // key(viewModel.objectAlterationTrigger) { Canvas(...) }
+    }
     Canvas(
         modifier
             .reactiveCanvas(
@@ -217,7 +219,7 @@ fun BoxScope.EditClusterCanvas(
         if (viewModel.circleSelectionIsActive && viewModel.showUI) {
             drawRotationHandle(concretePositions.positions, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)
         }
-//        } // not that long
+//        } // not that long (2~4ms)
     }
     if (viewModel.showUI) { // HUD
         if (viewModel.circleSelectionIsActive) {

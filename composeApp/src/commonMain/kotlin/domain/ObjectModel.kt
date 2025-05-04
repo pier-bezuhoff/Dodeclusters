@@ -15,6 +15,7 @@ import data.geometry.Point
 import data.geometry.scaled00
 import domain.expressions.Expr
 import domain.expressions.ExpressionForest
+import getPlatform
 
 // MAYBE: additionally store GeneralizedCircle representations
 /**
@@ -234,10 +235,24 @@ class ObjectModel {
         const val UPSCALING_FACTOR = 2_000.0
         const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
 
+        val MAX_CIRCLE_RADIUS = getPlatform().maxCircleRadius
+
         inline fun GCircle.downscale(): GCircle =
             scaled00(DOWNSCALING_FACTOR)
         inline fun GCircle.upscale(): GCircle =
-            scaled00(UPSCALING_FACTOR)
+            when (this) {
+                is Circle -> {
+                    // TODO: pass here absolute center/translation from VM
+                    val upscaledCircle =
+                        copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
+                    if (upscaledCircle.radius > MAX_CIRCLE_RADIUS)
+                        upscaledCircle.approximateToLine(Offset.Zero)
+                    else upscaledCircle
+                }
+                is Line -> copy(c = UPSCALING_FACTOR * c)
+                is Point -> copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y)
+                is ImaginaryCircle -> copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
+            }
     }
 }
 

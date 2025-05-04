@@ -8,6 +8,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -32,6 +33,7 @@ enum class KeyboardAction {
     MOVE, SELECT, REGION, // M: drag, S: multiselect, R: region
     PALETTE, // P
     TRANSFORM, CREATE, // T, C
+    HELP,
     // TODO: `?` for shortcut cheatsheet / help
     // TODO: arrow keys for finer movement
 }
@@ -72,6 +74,10 @@ fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
                 Key.Paste -> KeyboardAction.PASTE
                 Key.ZoomIn -> KeyboardAction.ZOOM_IN
                 Key.ZoomOut -> KeyboardAction.ZOOM_OUT
+                Key.Slash -> // '?'
+                    if (event.isShiftPressed)
+                        KeyboardAction.HELP
+                    else null
                 else -> null
             }
         }

@@ -2673,6 +2673,23 @@ class EditClusterViewModel : ViewModel() {
                 KeyboardAction.OPEN -> {}
                 KeyboardAction.CONFIRM -> if (submode is SubMode.ExprAdjustment)
                     confirmAdjustedParameters()
+                KeyboardAction.HELP -> { // temporarily hijacked for debugging
+                    val selectedObjectsString = selection.joinToString { ix ->
+                        "$ix: " + objects[ix].toString()
+                    }
+                    val selectedExpressionsString = selection.joinToString { ix ->
+                        "$ix: " + expressions.expressions[ix].toString()
+                    }
+                    println("mode = $mode, submode = $submode")
+                    println("selection = $selection")
+                    println("selected objects = $selectedObjectsString")
+                    println("selected objects downscaled = " + selection.joinToString { ix ->
+                        "$ix: " + objectModel.downscaledObjects[ix].toString()
+                    })
+                    println("selected objects expressions = $selectedExpressionsString")
+                    println("invalidation #${objectModel.invalidations}")
+                    queueSnackbarMessage(SnackbarMessage.STUB, " | $selectedObjectsString;\n$selectedExpressionsString")
+                }
             }
         }
     }

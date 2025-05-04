@@ -24,5 +24,6 @@ enum class SnackbarMessage(
     FAILED_OPEN(Res.string.failed_open_notice),
     SUCCESSFUL_SAVE(Res.string.successful_save_notice),
     FAILED_SAVE(Res.string.failed_save_notice),
-    PHANTOM_OBJECT_EXPLANATION(Res.string.phantom_object_explanation, duration = SnackbarDuration.Long)
+    PHANTOM_OBJECT_EXPLANATION(Res.string.phantom_object_explanation, duration = SnackbarDuration.Long),
+    STUB(Res.string.stub, duration = SnackbarDuration.Long),
 }

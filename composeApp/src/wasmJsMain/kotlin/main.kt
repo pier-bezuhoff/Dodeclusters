@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import org.jetbrains.skia.RuntimeShaderBuilder
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.get
@@ -67,7 +68,6 @@ fun main() {
 @Suppress("NOTHING_TO_INLINE")
 private inline fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction? =
     if (!event.altKey && !event.shiftKey) {
-        event.type
         if (event.ctrlKey || event.metaKey) { // meta key is apparently macos equiv of ctrl
             // using KeyEvent.code is language-invariant
             // reference: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
@@ -95,7 +95,9 @@ private inline fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction
                 "KeyC" -> KeyboardAction.CREATE
                 else -> null
             }
-    } else null
+    } else if (event.code == "Slash" && event.shiftKey)
+        KeyboardAction.HELP
+    else null
 
 fun getCurrentURL(): URL =
     js("new URL(window.location.href)")

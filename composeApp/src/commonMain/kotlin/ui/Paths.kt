@@ -16,6 +16,8 @@ import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+// NOTE: conic (rational quadratic bezier) segments are automatically approximated by
+//  cubic bezier (afaik circle is split into 4 90-degrees arcs)
 /** NOTE: ignores [circle]'s orientation at this point */
 fun circle2path(circle: Circle): Path =
     Path().apply {
