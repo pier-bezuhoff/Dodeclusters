@@ -2275,7 +2275,7 @@ class EditClusterViewModel : ViewModel() {
         )
     }
 
-    // NOTE: polar line transforms weirdly:
+    // NOTE: polar lines and line-by-2 transform weirdly:
     //  it becomes circle during st-rot, but afterwards when
     //  its carrier is moved it becomes line again
     private fun stereographicallyRotateEverything(
@@ -2687,6 +2687,11 @@ class EditClusterViewModel : ViewModel() {
                         "$ix: " + objectModel.downscaledObjects[ix].toString()
                     })
                     println("selected objects expressions = $selectedExpressionsString")
+                    println("regions bounded by some of selected objects = " + regions.filter {
+                        it.insides.any { ix -> ix in selection } ||
+                        it.outsides.any { ix -> ix in selection }
+                    }.joinToString { it.toString() }
+                    )
                     println("invalidation #${objectModel.invalidations}")
                     queueSnackbarMessage(SnackbarMessage.STUB, " | $selectedObjectsString;\n$selectedExpressionsString")
                 }
