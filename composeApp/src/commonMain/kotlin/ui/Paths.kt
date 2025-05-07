@@ -36,96 +36,94 @@ fun circle2path(circle: Circle): Path =
 fun bigCircle2path(circle: Circle, visibleRect: Rect): Path {
     val circle0 = circle.copy(isCCW = true)
     val screenCenter = visibleRect.center
-    val isEclipsing = circle0.hasInside(screenCenter)
     // visible rect is contained in it
-    val outerCircle = Circle(screenCenter, visibleRect.maxDimension/2f)
+    val outerRadius = visibleRect.maxDimension + VISIBLE_RECT_INDENT
+    val outerCircle = Circle(screenCenter, outerRadius)
     val intersections = Circle.calculateIntersectionPoints(
         circle0, // i think we ignore its original orientation atp?
         outerCircle
     )
     val path = Path()
     if (intersections.size == 2) {
-        // normal case, CCW order of points
+        // normal case, CCW order of points (wrt $circle)
+        val R = circle.radius.toFloat()
         val Ox = circle.x.toFloat()
         val Oy = circle.y.toFloat()
         val P1x = intersections[0].x.toFloat()
         val P1y = intersections[0].y.toFloat()
         val P2x = intersections[1].x.toFloat()
         val P2y = intersections[1].y.toFloat()
-        // arc middle
+        // dy = 4/3*h; h = R - |OM| = sagitta
         val Mx = (P1x + P2x)/2f
         val My = (P1y + P2y)/2f
         val OMx = Mx - Ox
         val OMy = My - Oy
         val OM = hypot(OMx, OMy)
-        val k = (2*circle.radius.toFloat() - OM)/OM
-        // quad bezier control point
-        val Cx = Ox + k*OMx
-        val Cy = Oy + k*OMy
+        val k = 4f/3*(R/OM - 1)
+        // CY = control point above-segment y-level-offset (if P1-P2 were horizontal)
+        val CYx = k*OMx
+        val CYy = k*OMy
+        val C1x = P1x*2/3 + P2x/3 + CYx
+        val C1y = P1y*2/3 + P2y/3 + CYy
+        val C2x = P1x/3 + P2x*2/3 + CYx
+        val C2y = P1y/3 + P2y*2/3 + CYy
         path.moveTo(P1x, P1y)
-        path.quadraticTo(Cx, Cy, P2x, P2y)
-        val left1 = P1x <= Ox
-        val left2 = P2x <= Ox
-        val right1 = Ox < P1x
-        val right2 = Ox < P2x
-        val top1 = P1y <= Oy
-        val top2 = P2y <= Oy
-        val bottom1 = Oy < P1y
-        val bottom2 = Oy < P2y
-        val bothLeft = left1 && left2
-        val bothRight = right1 && right2
-        val bothTop = top1 && top2
-        val bothBottom = bottom1 && bottom2
-        // FIX: wrong: does not account for intersection orientation
-        //  e.g. same 2 intersection points but in opposite direction
-        //  which cannot be reduced to 2 lines
-        when {
-            // 4x4 = 16 cases
-            // 4 same-corner cases
-            (bothLeft && bothTop) || (bothRight && bothBottom) -> {
-                path.lineTo(P2x, P1y)
+        path.cubicTo(C1x, C1y, C2x, C2y, P2x, P2y)
+        // lines
+        val OP1x = P1x - Ox
+        val OP1y = P1y - Oy
+        val OP2x = P2x - Ox
+        val OP2y = P2y - Oy
+        // lets go into in-square coordinates
+        // u = R/sqrt(2)*(1, 1); v = R/sqrt(2)*(1, -1)
+        val scaling = 1f/(sqrt(2f)*outerRadius)
+        val P1u = (OP1x + OP1y)*scaling
+        val P1v = (OP1x - OP1y)*scaling
+        val P2u = (OP2x + OP2y)*scaling
+        val P2v = (OP2x - OP2y)*scaling
+        // now we a working on a circle inscribed into 45 degree rotated square
+        // each square segment is described by a*u + b*v = 1, where |a|=|b|=1
+        val a1 = if (P1u >= 0) 1 else -1
+        val b1 = if (P1v >= 0) 1 else -1
+        val a2 = if (P2u >= 0) 1 else -1
+        val b2 = if (P2v >= 0) 1 else -1
+        // project on-circle points P1, P2 onto the square Q1, Q2
+        val q1scaling = 1f/(a1*P1u + b1*P1v)
+        val Q1u = P1u*q1scaling
+        val Q1v = P1v*q1scaling
+        val q2scaling = 1f/(a2*P2u + b2*P2v)
+        val Q2u = P2u*q2scaling
+        val Q2v = P2v*q2scaling
+        // now lets add all the missing lines from P2 back to P1
+        // we have P1->P2 cubic
+        // TODO: P2->Q2
+        // path.moveTo(Q2)
+        var a = a2
+        var b = b2
+        var u = Q2u
+        var v = Q2v
+        val isCCW = Q1u*Q2v - Q2u*Q1v <= 0 // wrt to outer circle or square
+        if (isCCW) {
+            while (!(a == a1 && b == b1)) {
+                val nextCornerU = (u + v)/2
+                val nextCornerV = (v - u)/2
+                // path.lineTo(nextCorner)
+                val nextA = -b
+                val nextB = a
+                a = nextA
+                b = nextB
+                u = nextCornerU
+                v = nextCornerV
             }
-            (bothLeft && bothBottom) || (bothRight && bothTop) -> {
-                path.lineTo(P1x, P2y)
-            }
-            // 8 same-row-or-column cases
-            // TODO: wrong in 4 cases cuz of direction
-            bothLeft -> { // P1y <= Oy < P2y || P2y <= Oy < P1y
-                val left = visibleRect.left - VISIBLE_RECT_INDENT
-                path.lineTo(left, P2y)
-                path.lineTo(left, P1y)
-            }
-            bothRight -> { // P1y <= Oy < P2y || P2y <= Oy < P1y
-                val right = visibleRect.right + VISIBLE_RECT_INDENT
-                path.lineTo(right, P2y)
-                path.lineTo(right, P1y)
-            }
-            bothTop -> { // P1x <= Ox < P2x || P2x <= Ox < P1x
-                val top = visibleRect.top - VISIBLE_RECT_INDENT
-                path.lineTo(P2x, top)
-                path.lineTo(P1x, top)
-            }
-            bothBottom -> { // P1x <= Ox < P2x || P2x <= Ox < P1x
-                val bottom = visibleRect.bottom + VISIBLE_RECT_INDENT
-                path.lineTo(P2x, bottom)
-                path.lineTo(P1x, bottom)
-            }
-            // 4 opposite-corner cases
-            else -> {
-                val P1P2x = P2x - P1x
-                val P1P2y = P2y - P1y
-                val vx = P1P2x/100f
-                val vy = P1P2y/100f
-                val P3x = P2x + vx
-                val P3y = P2y + vy
-                path.lineTo(P3x, P3y)
-                // ?
-                // ?
-                path.lineTo(P1x - vx, P1y - vy)
-            }
+            // path.lineTo(Q1)
+        } else { // CW
+            // same but diff next-segment and next-corner
+            // next corner = ( (u - v)/2, (u + v)/2 )
+            // next segment = (b, -a)
         }
-        path.close()
-    } else if (isEclipsing) {
+        // now we are in Q1
+        path.close() // Q1 -> P1
+    } else if (circle0.hasInside(screenCenter)) {
         // our circle includes all visible region
         path.addOval(visibleRect.inflate(VISIBLE_RECT_INDENT))
     } else {
