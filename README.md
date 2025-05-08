@@ -102,11 +102,11 @@ output directory: `composeApp/build/compose/binaries/main-release/app/`
 output directory: `composeApp/build/dist/wasmJs/productionExecutable/`  
 
 #### Package development version for web
-`./gradlew wasmJsBrowserDevelopmentExecutableDistribution`
+`./gradlew wasmJsBrowserDevelopmentExecutableDistribution`  
 output directory: `composeApp/build/dist/wasmJs/developmentExecutable/`  
 
 ### Generate debug .apk for Android
-`./gradlew assembleDebug`
+`./gradlew assembleDebug`  
 output directory: `composeApp/build/outputs/apk/debug/`
 
 

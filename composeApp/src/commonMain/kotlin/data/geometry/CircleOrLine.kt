@@ -24,8 +24,12 @@ sealed interface CircleOrLine : CircleOrLineOrImaginaryCircle, CircleOrLineOrPoi
         calculateLocation(point) == RegionPointLocation.IN
     fun hasOutside(point: Offset): Boolean =
         calculateLocation(point) == RegionPointLocation.OUT
+    /** tests if [point] is strictly inside `this`, within [EPSILON] of the border is
+     * not considered inside */
     fun hasInsideEpsilon(point: Point): Boolean =
         calculateLocationEpsilon(point) == RegionPointLocation.IN
+    /** tests if [point] is strictly outside of `this`, within [EPSILON] of the border is
+     * not considered outside */
     fun hasOutsideEpsilon(point: Point): Boolean =
         calculateLocationEpsilon(point) == RegionPointLocation.OUT
     /** = [point] is bordering `this` (within [EPSILON] distance) */

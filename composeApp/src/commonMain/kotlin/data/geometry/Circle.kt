@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package data.geometry
 
 import androidx.compose.runtime.Immutable
@@ -8,7 +10,6 @@ import data.kmath_complex.r2
 import domain.TAU
 import domain.degrees
 import domain.never
-import domain.rotateBy
 import domain.toComplex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -122,6 +123,33 @@ data class Circle(
         }
     }
 
+    override fun hasInsideEpsilon(point: Point): Boolean {
+        val distance = hypot(point.x - x, point.y - y)
+        return abs(radius - distance) >= EPSILON && distance < radius == isCCW
+    }
+
+    override fun hasInside(point: Offset): Boolean {
+        val distance = hypot(point.x - x, point.y - y)
+        // distance is infinite for infinite point
+        return distance < radius == isCCW
+    }
+
+    inline fun hasInside(px: Double, py: Double): Boolean {
+        val distance = hypot(x - px, y - py)
+        return distance < radius == isCCW
+    }
+
+    override fun hasOutsideEpsilon(point: Point): Boolean {
+        val distance = hypot(point.x - x, point.y - y)
+        return abs(radius - distance) >= EPSILON && distance < radius != isCCW
+    }
+
+    override fun hasOutside(point: Offset): Boolean {
+        val distance = hypot(point.x - x, point.y - y)
+        // distance is infinite for infinite point
+        return distance < radius != isCCW
+    }
+
     override fun point2angle(point: Point): Float {
         require(point != Point.CONFORMAL_INFINITY && point != centerPoint)
         return atan2(-point.y + y, point.x - x).degrees
@@ -135,12 +163,30 @@ data class Circle(
         return if (isCCW) order else -order
     }
 
+    /** CCW order in [-[PI]; +[PI]] starting from the East: ENWS */
+    inline fun point2order(px: Double, py: Double): Double {
+        // NOTE: atan2 uses CCW y-top, x-right coordinates
+        //  so we negate y for CCW direction
+        val order = atan2(-py + y, px - x)
+        return if (isCCW) order else -order
+    }
+
     override fun order2point(order: Double): Point {
         val o = if (isCCW) order else -order
         return Point(
             x + radius * cos(o),
             y - radius * sin(o)
         )
+    }
+
+    inline fun order2pointX(order: Double): Double {
+        val o = if (isCCW) order else -order
+        return x + radius * cos(o)
+    }
+
+    inline fun order2pointY(order: Double): Double {
+        val o = if (isCCW) order else -order
+        return y - radius * sin(o)
     }
 
     override fun orderInBetween(order1: Double, order2: Double): Double =
@@ -483,15 +529,18 @@ data class Circle(
                 }
             }
 
-        private const val TANGENTIAL_TOUCH_EPSILON = 2 * EPSILON
+        private const val TANGENTIAL_TOUCH_EPSILON: Double = 2 * EPSILON
+        private const val TANGENTIAL_TOUCH_EPSILON_F: Float = 2e-6f
 
         // NOTE: on Android triple tangential intersections are brittle
-        /** @return list of 0, 1 or 2 intersection points. When there are 2 intersection points,
+        /**
+         * @return list of 0, 1 or 2 intersection points. When there are 2 intersection points,
          * they are ordered as follows:
          * [circle1] "needle" (internal orientation)
          * goes thru
          * [circle2] "fabric" (external orientation). The entrance is the 1st, the
-         * exit is the 2nd of the resulting points */
+         * exit is the 2nd of the resulting points
+         */
         fun calculateIntersectionPoints(
             circle1: CircleOrLine, circle2: CircleOrLine
         ): List<Point> =
@@ -543,39 +592,109 @@ data class Circle(
                 circle1 is Circle && circle2 is Circle -> {
                     val (x1,y1,r1) = circle1
                     val (x2,y2,r2) = circle2
-                    val r12 = circle1.r2
-                    val r22 = circle2.r2
-                    val dcx = x2 - x1
-                    val dcy = y2 - y1
-                    val d2 = dcx*dcx + dcy*dcy
-                    val d = sqrt(d2) // distance between centers
-                    if (abs(r1 - r2) >= d + TANGENTIAL_TOUCH_EPSILON || d >= r1 + r2 + TANGENTIAL_TOUCH_EPSILON) {
+                    if (x1 == x2 && y1 == y2 && r1 == r2) {
                         emptyList()
-                    } else if (
-                        abs(abs(r1 - r2) - d) < TANGENTIAL_TOUCH_EPSILON || // inner touch
-                        abs(d - r1 - r2) < TANGENTIAL_TOUCH_EPSILON // outer touch
-                    ) {
-                        listOf(Point(x1 + dcx / d * r1, y1 + dcy / d * r1))
                     } else {
-                        val dr2 = r12 - r22
-                        // reference (0->1, 1->2):
-                        // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
-                        val a = (d2 + dr2)/(2 * d)
-                        val h = sqrt(r12 - a * a)
-                        val pcx = x1 + a * dcx / d
-                        val pcy = y1 + a * dcy / d
-                        val vx = h * dcx / d
-                        val vy = h * dcy / d
-                        val p = Point(pcx + vy, pcy - vx)
-                        val q = Point(pcx - vy, pcy + vx)
-                        val s = circle1.pointInBetween(p, q) // directed arc p->s->q
-                        if (circle2.hasInsideEpsilon(s))
-                            listOf(p, q)
-                        else
-                            listOf(q, p)
+                        val r12 = circle1.r2
+                        val r22 = circle2.r2
+                        val dcx = x2 - x1
+                        val dcy = y2 - y1
+                        val d2 = dcx*dcx + dcy*dcy
+                        val d = sqrt(d2) // distance between centers
+                        if (abs(r1 - r2) >= d + TANGENTIAL_TOUCH_EPSILON || d >= r1 + r2 + TANGENTIAL_TOUCH_EPSILON) {
+                            emptyList()
+                        } else if (
+                            abs(abs(r1 - r2) - d) < TANGENTIAL_TOUCH_EPSILON || // inner touch
+                            abs(d - r1 - r2) < TANGENTIAL_TOUCH_EPSILON // outer touch
+                        ) {
+                            listOf(Point(x1 + dcx / d * r1, y1 + dcy / d * r1))
+                        } else {
+                            val dr2 = r12 - r22
+                            // reference (0->1, 1->2):
+                            // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
+                            val a = (d2 + dr2)/(2 * d)
+                            val h = sqrt(r12 - a * a)
+                            val pcx = x1 + a * dcx / d
+                            val pcy = y1 + a * dcy / d
+                            val vx = h * dcx / d
+                            val vy = h * dcy / d
+                            val p = Point(pcx + vy, pcy - vx)
+                            val q = Point(pcx - vy, pcy + vx)
+                            val s = circle1.pointInBetween(p, q) // directed arc p->s->q
+                            if (circle2.hasInsideEpsilon(s))
+                                listOf(p, q)
+                            else
+                                listOf(q, p)
+                        }
                     }
                 }
                 else -> never()
             }
+
+
+        /**
+         * Same as [calculateIntersectionPoints], but operates on [Float]`s` and with less
+         * precision.
+         * @return list of 0, 2 or 4 (x,y) coordinates of intersection points.
+         * When there are 2 intersection points, they are ordered as follows:
+         * [circle1] "needle" (internal orientation)
+         * goes thru
+         * [circle2] "fabric" (external orientation). The entrance is the 1st, the
+         * exit is the 2nd of the resulting points
+         */
+        fun calculateIntersectionCoordinates(
+            circle1: Circle, circle2: Circle
+        ): List<Float> {
+            val x1 = circle1.x.toFloat()
+            val y1 = circle1.y.toFloat()
+            val r1 = circle1.radius.toFloat()
+            val x2 = circle2.x.toFloat()
+            val y2 = circle2.y.toFloat()
+            val r2 = circle2.radius.toFloat()
+            if (x1 == x2 && y1 == y2 && r1 == r2) {
+                return emptyList()
+            }
+            val r12 = r1 * r1
+            val r22 = r2 * r2
+            val dcx = x2 - x1
+            val dcy = y2 - y1
+            val d2 = dcx * dcx + dcy * dcy
+            val d = sqrt(d2) // distance between centers
+            if (abs(r1 - r2) >= d + TANGENTIAL_TOUCH_EPSILON_F ||
+                d >= r1 + r2 + TANGENTIAL_TOUCH_EPSILON_F
+            ) {
+                return emptyList()
+            } else if (
+                abs(abs(r1 - r2) - d) < TANGENTIAL_TOUCH_EPSILON_F || // inner touch
+                abs(d - r1 - r2) < TANGENTIAL_TOUCH_EPSILON_F // outer touch
+            ) {
+                return listOf(x1 + dcx / d * r1, y1 + dcy / d * r1)
+            } else {
+                val dr2 = r12 - r22
+                // reference (0->1, 1->2):
+                // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
+                val a = (d2 + dr2) / (2 * d)
+                val h = sqrt(r12 - a * a)
+                val pcx = x1 + a * dcx / d
+                val pcy = y1 + a * dcy / d
+                val vx = h * dcx / d
+                val vy = h * dcy / d
+                val px = pcx + vy
+                val py = pcy - vx
+                val qx = pcx - vy
+                val qy = pcy + vx
+                val pOrder = circle1.point2order(px.toDouble(), py.toDouble())
+                val qOrder = circle1.point2order(qx.toDouble(), qy.toDouble())
+                // lets find s: a point between p & q on circle1
+                val sOrder = circle1.orderInBetween(pOrder, qOrder)
+                val sx = circle1.order2pointX(sOrder)
+                val sy = circle1.order2pointY(sOrder)
+                // directed arc p->s->q
+                return if (circle2.hasInside(sx, sy))
+                    listOf(px, py, qx, qy)
+                else
+                    listOf(qx, qy, px, py)
+            }
+        }
     }
 }
