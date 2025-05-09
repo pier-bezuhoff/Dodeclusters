@@ -352,23 +352,24 @@ data class Circle(
             }
         }
 
+    /** Approximates this circle by its tangent, closest to [screenCenter] */
     fun approximateToLine(screenCenter: Offset): Line {
         // here = visible center
         val hereX = screenCenter.x // here = point P
         val hereY = screenCenter.y
         val toCX = x - hereX // center = point C
         val toCY = y - hereY
-        val pc = hypot(toCX, toCY)
+        val pc = hypot(toCX, toCY) // distance from here to the circle center
         val weAreIn = radius > pc // <here> is inside the big circle
         val inSign = if (weAreIn) -1 else 1
-        val rho = abs(pc - radius) // distance from <here> to the line
         val radiusSign = if (isCCW) +1 else -1
         val nx = inSign * toCX/pc // normal to the line from P = (cos phi, sin phi)
         val ny = inSign * toCY/pc
-        // <PX, n> = x*nx + y*ny = rho is the line's equation
+        // `<PX, n> === x*nx + y*ny = rho` is the line equation
         val directionSign = (radiusSign * inSign) // -1 is cancelled by xOy system being left-handed / y-axis is upside down
 //        val vx = directionSign * -ny // v = direction-vector of the line
 //        val vy = directionSign * nx // (-ny, nx) = CCW 90 deg rotation of (nx, ny)
+        val rho = abs(pc - radius) // distance from <here> to the line
         val p0x = hereX + nx * rho // closest point on the line to <here>
         val p0y = hereY + ny * rho
         val c = -p0x*nx - p0y*ny
@@ -450,7 +451,7 @@ data class Circle(
         /** Not really a line but still might be useful;
          * returns a circle thru [p1], [p2] with a very big radius and center to the right of (p2-p1) */
         fun almostALine(p1: Offset, p2: Offset): Circle {
-            val veryBigRadius = 100_000.0
+            val veryBigRadius = 10_000.0
             with (ComplexField) {
                 val z1 = p1.toComplex()
                 val z2 = p2.toComplex()
@@ -632,6 +633,7 @@ data class Circle(
             }
 
 
+        // NOTE: misbehaves for R>500k
         /**
          * Same as [calculateIntersectionPoints], but operates on [Float]`s` and with less
          * precision.

@@ -2,6 +2,8 @@
 
 package ui
 
+import MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS
+import MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
@@ -10,21 +12,43 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.EPSILON2
 import data.geometry.Line
-import domain.cluster.LogicalRegion
 import domain.cluster.ConcreteClosedArcPath
 import domain.cluster.ConcreteOpenArcPath
-import getPlatform
+import domain.cluster.LogicalRegion
 import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-private const val VISIBLE_RECT_INDENT = 100f
+const val VISIBLE_RECT_INDENT = 100f
 
 // NOTE: conic (rational quadratic bezier) segments are automatically approximated by
 //  cubic bezier (afaik circle is split into 4 90-degrees arcs)
 /** NOTE: ignores [circle]'s orientation at this point */
-inline fun circle2path(circle: Circle): Path =
+inline fun _circle2path(circle: Circle, visibleRect: Rect): Path {
+    return when {
+        circle.radius < MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS ->
+            Path().apply {
+                addOval(
+                    Rect(
+                        center = circle.center,
+                        radius = circle.radius.toFloat()
+                    )
+                )
+            }
+        // kinda bad for intersections...
+        circle.radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS ->
+            circle2cubicPath(circle, visibleRect, closed = true)
+        else -> {
+            val line = circle.approximateToLine(visibleRect.center)
+            halfPlanePath(line, visibleRect)
+        }
+    }
+}
+
+/** NOTE: ignores [circle]'s orientation at this point */
+inline fun circle2path(circle: Circle, visibleRect: Rect): Path =
     Path().apply {
         addOval(
             Rect(
@@ -34,40 +58,20 @@ inline fun circle2path(circle: Circle): Path =
         )
     }
 
+// FIX: square stuff is bugged
 /**
  * Given a big circle, that intersects a screen-enclosing
- * circle ([Ox], [Oy], [R]) at P1 ([P1x], [P1y]) and P2 ([P2x], [P2y]),
+ * circle ([Ox], [Oy], [R0]) at P1 ([P1x], [P1y]) and P2 ([P2x], [P2y]),
  * approximates its visible arc as cubic bezier and its out-of-screen arc as vertical/horizontal
  * line segments along the square the screen-enclosing circle is inscribed in
  */
 @Suppress("LocalVariableName")
-private inline fun wrapOutOfScreenCircleArcAroundSquare(
+private fun wrapOutOfScreenCircleArcAroundSquare(
     path: Path,
-    Ox: Float,
-    Oy: Float,
-    R: Float,
-    P1x: Float,
-    P1y: Float,
-    P2x: Float,
-    P2y: Float,
+    Ox: Float, Oy: Float, R0: Float,
+    P1x: Float, P1y: Float,
+    P2x: Float, P2y: Float,
 ) {
-    // dy = 4/3*h; h = R - |OM| = sagitta
-    val Mx = (P1x + P2x)/2f
-    val My = (P1y + P2y)/2f
-    val OMx = Mx - Ox
-    val OMy = My - Oy
-    val OM = hypot(OMx, OMy)
-    val k = 4f/3*(R/OM - 1)
-    // CY = control point above-segment y-level-offset (if P1-P2 were horizontal)
-    val CYx = k*OMx
-    val CYy = k*OMy
-    val C1x = P1x*2/3 + P2x/3 + CYx
-    val C1y = P1y*2/3 + P2y/3 + CYy
-    val C2x = P1x/3 + P2x*2/3 + CYx
-    val C2y = P1y/3 + P2y*2/3 + CYy
-    path.moveTo(P1x, P1y)
-    // good approximation for small sagitta
-    path.cubicTo(C1x, C1y, C2x, C2y, P2x, P2y)
     // lines
     val OP1x = P1x - Ox
     val OP1y = P1y - Oy
@@ -79,8 +83,8 @@ private inline fun wrapOutOfScreenCircleArcAroundSquare(
     // (v) =  R*sqrt(2)  (1 -1) (y)
     // (x)   R/        (1  1) (u)
     // (y) =  sqrt(2)  (1 -1) (v)
-    val xy2uvScaling = 1f/(sqrt(2f)*R)
-    val uv2xyScaling = R/sqrt(2f)
+    val xy2uvScaling = 1f/(sqrt(2f)*R0)
+    val uv2xyScaling = R0/sqrt(2f)
     val P1u = (OP1x + OP1y)*xy2uvScaling
     val P1v = (OP1x - OP1y)*xy2uvScaling
     val P2u = (OP2x + OP2y)*xy2uvScaling
@@ -157,67 +161,168 @@ private inline fun wrapOutOfScreenCircleArcAroundSquare(
     path.close() // Q1 -> P1
 }
 
-fun bigCircle2path(circle: Circle, visibleRect: Rect): Path {
+/** Add P1->P2 cubic bezier, closely approximating circular arc of
+ * circle ([Ax], [Ay], [R]) */
+@Suppress("LocalVariableName")
+private inline fun circle2cubicArcPath(
+    path: Path,
+    Ax: Float, Ay: Float, R: Float,
+    P1x: Float, P1y: Float,
+    P2x: Float, P2y: Float,
+) {
+    path.moveTo(P1x, P1y)
+    // dy = 4/3*h; h = R - |OM| = sagitta
+    val Mx = (P1x + P2x)/2f
+    val My = (P1y + P2y)/2f
+    val AMx = Mx - Ax
+    val AMy = My - Ay
+    val AM = hypot(AMx, AMy)
+    val k = 4f/3*(R/AM - 1)
+    // CY = control point above-segment y-level-offset (if P1-P2 were horizontal)
+    val CYx = k*AMx
+    val CYy = k*AMy
+    val C1x = P1x*2/3 + P2x/3 + CYx
+    val C1y = P1y*2/3 + P2y/3 + CYy
+    val C2x = P1x/3 + P2x*2/3 + CYx
+    val C2y = P1y/3 + P2y*2/3 + CYy
+    // NOTE: cubic bezier start collapsing at R=500k+
+    // good approximation for small sagitta
+    path.cubicTo(C1x, C1y, C2x, C2y, P2x, P2y)
+}
+
+@Suppress("LocalVariableName")
+private inline fun wrapOutOfScreenCircleArcAroundOuterCircle(
+    path: Path,
+    Ox: Float, Oy: Float, R0: Float,
+    P1x: Float, P1y: Float,
+    P2x: Float, P2y: Float,
+) {
+    val OP1x = P1x - Ox
+    val OP1y = P1y - Oy
+    val OP2x = P2x - Ox
+    val OP2y = P2y - Oy
+    // east -> OP2 CW angle
+    val startAngleRadians = atan2(OP2y, OP2x)
+    // OP2->OP1 CW angle
+    val sweepAngleRadians = atan2(
+        OP2x*OP1y - OP2y*OP1x,
+        OP2x*OP1x + OP2y*OP1y
+    )
+    path.arcToRad(
+        Rect(Offset(Ox, Oy), R0),
+        startAngleRadians = startAngleRadians,
+        sweepAngleRadians = sweepAngleRadians,
+        forceMoveTo = false,
+    )
+    path.close()
+}
+
+private inline fun wrapOutOfScreenCircleAsLines(
+    path: Path,
+    visibleRect: Rect,
+    // also circle center
+    p1x: Float, p1y: Float,
+    p2x: Float, p2y: Float,
+) {
+    val centerX = visibleRect.left + visibleRect.width/2f
+    val centerY = visibleRect.top + visibleRect.height/2f
+    val maxDim = visibleRect.maxDimension
+    // we also need to potentially extend p1-p2 segment so that
+    // the perpendicular square cannot intersect our outer circle
+    // TODO: mirror halfPlanePath
+//    val farBackX: Float = pointClosestToScreenCenterX - directionX * maxDim
+//    val farBackY: Float = pointClosestToScreenCenterY - directionY * maxDim
+//    val farForwardX: Float = pointClosestToScreenCenterX + directionX * maxDim
+//    val farForwardY: Float = pointClosestToScreenCenterY + directionY * maxDim
+//    val farInDirectionX: Float = line.normalX.toFloat() * 2 * maxDim
+//    val farInDirectionY: Float = line.normalY.toFloat() * 2 * maxDim
+//    val farInBackX: Float = farBackX + farInDirectionX
+//    val farInBackY: Float = farBackY + farInDirectionY
+//    val farInForwardX: Float = farForwardX + farInDirectionX
+//    val farInForwardY: Float = farForwardY + farInDirectionY
+//    path.moveTo(farBackX, farBackY)
+//    path.lineTo(farForwardX, farForwardY)
+//    path.lineTo(farInForwardX, farInForwardY)
+//    path.lineTo(farInBackX, farInBackY)
+//    path.close()
+}
+
+fun circle2cubicPath(circle: Circle, visibleRect: Rect, closed: Boolean): Path {
     val circle0 = circle.copy(isCCW = true) // i think we ignore its original orientation atp?
     val screenCenter = visibleRect.center
     // visible rect is contained in this circle
-    val outerRadius = visibleRect.minDimension - VISIBLE_RECT_INDENT // TMP
-//        visibleRect.maxDimension + VISIBLE_RECT_INDENT
+    val outerRadius =
+//        visibleRect.minDimension*0.48f
+        visibleRect.maxDimension + VISIBLE_RECT_INDENT
     val outerCircle = Circle(screenCenter, outerRadius)
     val intersectionCoordinates = Circle.calculateIntersectionCoordinates(circle0, outerCircle)
     val path = Path()
     if (intersectionCoordinates.size == 4) { // all 2 intersections present
         // normal case, CCW order of points (wrt $circle)
-        wrapOutOfScreenCircleArcAroundSquare(
+        circle2cubicArcPath(
             path = path,
-            Ox = screenCenter.x, Oy = screenCenter.y, R = outerRadius,
+            Ax = circle0.x.toFloat(), Ay = circle0.y.toFloat(), R = circle0.radius.toFloat(),
             P1x = intersectionCoordinates[0], P1y = intersectionCoordinates[1],
             P2x = intersectionCoordinates[2], P2y = intersectionCoordinates[3],
         )
-    } else if (circle0.hasInside(screenCenter)) {
+        if (closed) {
+//            wrapOutOfScreenCircleAsLines(
+//                path = path,
+//                visibleRect = visibleRect,
+//                p1x = intersectionCoordinates[0], p1y = intersectionCoordinates[1],
+//                p2x = intersectionCoordinates[2], p2y = intersectionCoordinates[3],
+//            )
+            wrapOutOfScreenCircleArcAroundOuterCircle(
+                path = path,
+                Ox = screenCenter.x, Oy = screenCenter.y, R0 = outerRadius,
+                P1x = intersectionCoordinates[0], P1y = intersectionCoordinates[1],
+                P2x = intersectionCoordinates[2], P2y = intersectionCoordinates[3],
+            )
+        }
+    } else if (closed && circle0.hasInside(screenCenter)) {
         // our circle includes all visible region
-        path.addOval(visibleRect.inflate(VISIBLE_RECT_INDENT))
+        path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
     } else {
         // empty path
     }
     return path
 }
 
-fun visibleHalfPlanePath(line: Line, visibleRect: Rect): Path {
-    val maxDim = visibleRect.maxDimension
-    val pointClosestToScreenCenter = line.project(visibleRect.center)
-    val direction =  line.directionVector
-    val farBack = pointClosestToScreenCenter - direction * maxDim
-    val farForward = pointClosestToScreenCenter + direction * maxDim
-    val farInDirection = line.normalVector * (2 * maxDim)
-    val farInBack = farBack + farInDirection
-    val farInForward = farForward + farInDirection
-    val visiblePath = Path().apply { addRect(visibleRect.inflate(VISIBLE_RECT_INDENT)) }
-    val path = Path().apply {
-        moveTo(farBack.x, farBack.y)
-        lineTo(farForward.x, farForward.y)
-        lineTo(farInForward.x, farInForward.y)
-        lineTo(farInBack.x, farInBack.y)
-        close()
+inline fun visibleHalfPlanePath(line: Line, visibleRect: Rect): Path {
+    val path = halfPlanePath(line, visibleRect)
+    val visiblePath = Path().apply {
+        addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
     }
     path.op(path, visiblePath, PathOperation.Intersect)
     return path
 }
 
-fun halfPlanePath(line: Line, visibleRect: Rect): Path {
+inline fun halfPlanePath(line: Line, visibleRect: Rect): Path {
+    val (a, b, c) = line
+    val centerX = visibleRect.left + visibleRect.width/2f
+    val centerY = visibleRect.top + visibleRect.height/2f
     val maxDim = visibleRect.maxDimension
-    val pointClosestToScreenCenter = line.project(visibleRect.center)
-    val direction =  line.directionVector
-    val farBack = pointClosestToScreenCenter - direction * maxDim
-    val farForward = pointClosestToScreenCenter + direction * maxDim
-    val farInDirection = line.normalVector * (2 * maxDim)
-    val farInBack = farBack + farInDirection
-    val farInForward = farForward + farInDirection
+    val t = b*centerX - a*centerY
+    val n2 = a*a + b*b
+    val pointClosestToScreenCenterX = ((b*t - a*c)/n2).toFloat()
+    val pointClosestToScreenCenterY = ((-a*t - b*c)/n2).toFloat()
+    val directionX =  line.directionX.toFloat()
+    val directionY =  line.directionY.toFloat()
+    val farBackX: Float = pointClosestToScreenCenterX - directionX * maxDim
+    val farBackY: Float = pointClosestToScreenCenterY - directionY * maxDim
+    val farForwardX: Float = pointClosestToScreenCenterX + directionX * maxDim
+    val farForwardY: Float = pointClosestToScreenCenterY + directionY * maxDim
+    val farInDirectionX: Float = line.normalX.toFloat() * 2 * maxDim
+    val farInDirectionY: Float = line.normalY.toFloat() * 2 * maxDim
+    val farInBackX: Float = farBackX + farInDirectionX
+    val farInBackY: Float = farBackY + farInDirectionY
+    val farInForwardX: Float = farForwardX + farInDirectionX
+    val farInForwardY: Float = farForwardY + farInDirectionY
     val path = Path().apply {
-        moveTo(farBack.x, farBack.y)
-        lineTo(farForward.x, farForward.y)
-        lineTo(farInForward.x, farInForward.y)
-        lineTo(farInBack.x, farInBack.y)
+        moveTo(farBackX, farBackY)
+        lineTo(farForwardX, farForwardY)
+        lineTo(farInForwardX, farInForwardY)
+        lineTo(farInBackX, farInBackY)
         close()
     }
     return path
@@ -232,19 +337,17 @@ fun chessboardPath(
     val path = Path()
     circles.forEach {
         val p = when (it) {
-            is Circle -> circle2path(it)
+            is Circle -> circle2path(it, visibleRect)
             is Line -> visibleHalfPlanePath(it, visibleRect)
         }
         path.op(path, p, PathOperation.Xor)
     }
     if (inverted) {
-        val visiblePath = Path().apply { addRect(visibleRect.inflate(100f)) }
+        val visiblePath = Path().apply { addRect(visibleRect.inflate(VISIBLE_RECT_INDENT)) }
         path.op(visiblePath, path, PathOperation.Difference)
     }
     return path
 }
-
-private val maxRadius = getPlatform().maxCircleRadius
 
 // TODO: benchmark & optimize
 /**
@@ -269,14 +372,7 @@ fun region2path(
     val insidePath: Path? = circleInsides
         .map {
             when (it) {
-                is Circle -> {
-                    if (it.radius <= maxRadius) {
-                        circle2path(it)
-                    } else { // TODO: instead calc arc from rect-circle intersection
-                        val line = it.approximateToLine(visibleRect.center)
-                        halfPlanePath(line, visibleRect)
-                    }
-                }
+                is Circle -> circle2path(it, visibleRect)
                 is Line -> halfPlanePath(it, visibleRect)
             }
         }
@@ -287,7 +383,7 @@ fun region2path(
     return if (insidePath == null) {
         val invertedPath = circleOutsides.map {
             when (it) {
-                is Circle -> circle2path(it)
+                is Circle -> circle2path(it, visibleRect)
                 is Line -> halfPlanePath(it, visibleRect)
             }
         }.fold(Path()) { acc: Path, anotherPath: Path ->
@@ -304,7 +400,7 @@ fun region2path(
     } else {
         circleOutsides.fold(insidePath) { acc: Path, circleOutside: CircleOrLine ->
             val path = when (circleOutside) {
-                is Circle -> circle2path(circleOutside)
+                is Circle -> circle2path(circleOutside, visibleRect)
                 is Line -> halfPlanePath(circleOutside, visibleRect)
             }
             acc.op(acc, path, PathOperation.Difference)

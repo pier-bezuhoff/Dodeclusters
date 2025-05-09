@@ -17,7 +17,8 @@ object JVMPlatform: Platform {
     override val kind: PlatformKind = PlatformKind.DESKTOP
     override val fileSeparator: Char = File.separatorChar
     override val tapRadius: Float = 10f
-    override val maxCircleRadius: Float = 1e5f
+    override val minCircleToCubicApproximationRadius: Float = 10_000f
+    override val minCircleToLineApproximationRadius: Float = 100_000f
     private val dataDir: Path by lazy { getAppDataDir() }
     override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
         storeOf(

@@ -17,7 +17,8 @@ object WasmPlatform: Platform {
             '\\' // iirc Windows generally supports forward slash nowadays
         else '/'
     override val tapRadius: Float = 10f
-    override val maxCircleRadius: Float = 1e5f
+    override val minCircleToCubicApproximationRadius: Float = 10_000f
+    override val minCircleToLineApproximationRadius: Float = 100_000f
     override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
         storeOf(
             key = Platform.LAST_STATE_STORE_FILE_NAME,

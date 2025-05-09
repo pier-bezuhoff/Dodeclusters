@@ -1,5 +1,9 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package ui.edit_cluster
 
+import MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS
+import MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS
 import PlatformKind
 import androidx.annotation.FloatRange
 import androidx.compose.animation.core.Animatable
@@ -28,7 +32,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -37,7 +40,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
-import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.StampedPathEffectStyle
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
@@ -79,14 +81,15 @@ import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
 import domain.hug
-import domain.measureAndPrintPerformance
 import domain.rotateBy
 import domain.rotateByAround
 import getPlatform
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
+import ui.circle2cubicPath
 import ui.circle2path
+import ui.halfPlanePath
 import ui.reactiveCanvas
 import ui.region2path
 import ui.theme.DodeclustersColors
@@ -95,7 +98,6 @@ import ui.visibleHalfPlanePath
 import kotlin.math.max
 import kotlin.math.min
 
-private val defaultMaxCircleRadius: Float = getPlatform().maxCircleRadius
 private val dottedPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
 
 // TODO: make colors dependent on light/dark scheme
@@ -447,7 +449,7 @@ private fun SelectionsCanvas(
 }
 
 private fun DrawScope.drawCircleOrLine(
-    circle: CircleOrLine,
+    circleOrLine: CircleOrLine,
     visibleRect: Rect,
     color: Color,
     alpha: Float = 1f,
@@ -455,39 +457,106 @@ private fun DrawScope.drawCircleOrLine(
     blendMode: BlendMode = DrawScope.DefaultBlendMode,
     drawHalfPlanesForLines: Boolean = false,
 ) {
-    when (circle) {
-        is Circle -> {
-            val radius = circle.radius.toFloat()
-            if (radius <= defaultMaxCircleRadius) {
-                // NOTE: the condition used to be `r < maxR || style != Fill`
-                //  but giant circles taint screenshots & it was unnatural
-                drawCircle(color, radius, circle.center, alpha, style, blendMode = blendMode)
-            } else {
-                val line = circle.approximateToLine(visibleRect.center)
-                drawCircleOrLine(line, visibleRect, color, alpha, style, blendMode, drawHalfPlanesForLines)
-            }
+    when (circleOrLine) {
+        is Circle ->
+            drawCircle(
+                circle = circleOrLine,
+                visibleRect = visibleRect,
+                color = color,
+                alpha = alpha,
+                style = style,
+                blendMode = blendMode,
+                drawHalfPlanesForLines = drawHalfPlanesForLines
+            )
+        is Line ->
+            drawLine(
+                line = circleOrLine,
+                visibleRect = visibleRect,
+                color = color,
+                alpha = alpha,
+                style = style,
+                blendMode = blendMode,
+                drawHalfPlanesForLines = drawHalfPlanesForLines
+            )
+    }
+}
+
+private inline fun DrawScope.drawCircle(
+    circle: Circle,
+    visibleRect: Rect,
+    color: Color,
+    alpha: Float = 1f,
+    style: DrawStyle = Fill,
+    blendMode: BlendMode = DrawScope.DefaultBlendMode,
+    drawHalfPlanesForLines: Boolean = false,
+) {
+    val radius = circle.radius.toFloat()
+    // NOTE: internally circles/conics are chopped into quad spline by skia/android,
+    //  but this looks BAD for large circles, so we approx them with singular cubic arc
+    if (radius < MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS) {
+        drawCircle(
+            color = color,
+            radius = radius,
+            center = circle.center,
+            alpha = alpha,
+            style = style,
+            blendMode = blendMode,
+        )
+    } else if (radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS) {
+        val wrappedPath = circle2cubicPath(circle, visibleRect, closed = style == Fill)
+        drawPath(wrappedPath, color, alpha, style, blendMode = blendMode)
+    } else {
+        val line = circle.approximateToLine(visibleRect.center)
+        drawLine(
+            line = line,
+            visibleRect = visibleRect,
+            color = color,
+            alpha = alpha,
+            style = style,
+            blendMode = blendMode,
+            drawHalfPlanesForLines = drawHalfPlanesForLines,
+        )
+    }
+}
+
+private inline fun DrawScope.drawLine(
+    line: Line,
+    visibleRect: Rect,
+    color: Color,
+    alpha: Float = 1f,
+    style: DrawStyle = Fill,
+    blendMode: BlendMode = DrawScope.DefaultBlendMode,
+    drawHalfPlanesForLines: Boolean = false,
+) {
+    when (style) {
+        Fill -> if (drawHalfPlanesForLines) {
+            val halfPlanePath = halfPlanePath(line, visibleRect)
+            drawPath(halfPlanePath, color, alpha, style, blendMode = blendMode)
         }
-        is Line -> {
+        is Stroke -> {
+            val (a, b, c) = line
+            val centerX = visibleRect.left + visibleRect.width/2f
+            val centerY = visibleRect.top + visibleRect.height/2f
             val maxDim = visibleRect.maxDimension
-            val pointClosestToScreenCenter = circle.project(visibleRect.center)
-            val direction =  circle.directionVector
-            val farBack = pointClosestToScreenCenter - direction * maxDim
-            val farForward = pointClosestToScreenCenter + direction * maxDim
-            when (style) {
-                Fill -> if (drawHalfPlanesForLines) {
-                    val halfPlanePath = visibleHalfPlanePath(circle, visibleRect)
-                    drawPath(halfPlanePath, color, alpha, style, blendMode = blendMode)
-                }
-                is Stroke -> {
-                    drawLine(
-                        color, farBack, farForward,
-                        alpha = alpha,
-                        strokeWidth = style.width,
-                        pathEffect = style.pathEffect,
-                        blendMode = blendMode
-                    )
-                }
-            }
+            val t = b*centerX - a*centerY
+            val n2 = a*a + b*b
+            val pointClosestToScreenCenterX = ((b*t - a*c)/n2).toFloat()
+            val pointClosestToScreenCenterY = ((-a*t - b*c)/n2).toFloat()
+            val directionX =  line.directionX.toFloat()
+            val directionY =  line.directionY.toFloat()
+            val farBackX: Float = pointClosestToScreenCenterX - directionX * maxDim
+            val farBackY: Float = pointClosestToScreenCenterY - directionY * maxDim
+            val farForwardX: Float = pointClosestToScreenCenterX + directionX * maxDim
+            val farForwardY: Float = pointClosestToScreenCenterY + directionY * maxDim
+            drawLine(
+                color,
+                Offset(farBackX, farBackY),
+                Offset(farForwardX, farForwardY),
+                alpha = alpha,
+                strokeWidth = style.width,
+                pathEffect = style.pathEffect,
+                blendMode = blendMode,
+            )
         }
     }
 }
@@ -624,7 +693,7 @@ private fun DrawScope.drawAnimation(
             val color = animation.color
             when (circle) {
                 is Circle -> {
-                    val path = circle2path(circle)
+                    val path = circle2path(circle, visibleRect)
                     path.op(path, visibleScreenPath, PathOperation.Intersect)
                     val style =
                         if (animation.fillCircle) Fill
