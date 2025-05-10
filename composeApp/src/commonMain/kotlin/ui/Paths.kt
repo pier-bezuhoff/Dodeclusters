@@ -16,9 +16,7 @@ import domain.cluster.ConcreteClosedArcPath
 import domain.cluster.ConcreteOpenArcPath
 import domain.cluster.LogicalRegion
 import kotlin.math.abs
-import kotlin.math.atan2
 import kotlin.math.hypot
-import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -55,108 +53,6 @@ inline fun _circle2path(circle: Circle, visibleRect: Rect): Path =
         )
     }
 
-// FIX: square stuff is bugged
-/**
- * Given a big circle, that intersects a screen-enclosing
- * circle ([Ox], [Oy], [R0]) at P1 ([P1x], [P1y]) and P2 ([P2x], [P2y]),
- * approximates its visible arc as cubic bezier and its out-of-screen arc as vertical/horizontal
- * line segments along the square the screen-enclosing circle is inscribed in
- */
-private fun wrapOutOfScreenCircleArcAsSquare(
-    path: Path,
-    Ox: Float, Oy: Float, R0: Float,
-    P1x: Float, P1y: Float,
-    P2x: Float, P2y: Float,
-) {
-    // lines
-    val OP1x = P1x - Ox
-    val OP1y = P1y - Oy
-    val OP2x = P2x - Ox
-    val OP2y = P2y - Oy
-    // lets go into in-square coordinates
-    // u = R/sqrt(2)*(1, 1); v = R/sqrt(2)*(1, -1)
-    // (u)   1/          (1  1) (x)
-    // (v) =  R*sqrt(2)  (1 -1) (y)
-    // (x)   R/        (1  1) (u)
-    // (y) =  sqrt(2)  (1 -1) (v)
-    val xy2uvScaling = 1f/(sqrt(2f)*R0)
-    val uv2xyScaling = R0/sqrt(2f)
-    val P1u = (OP1x + OP1y)*xy2uvScaling
-    val P1v = (OP1x - OP1y)*xy2uvScaling
-    val P2u = (OP2x + OP2y)*xy2uvScaling
-    val P2v = (OP2x - OP2y)*xy2uvScaling
-    // now we a working on a circle inscribed into 45 degree rotated square
-    // each square segment is described by a*u + b*v = 1, where |a|=|b|=1
-    val a1 = if (P1u >= 0) 1 else -1 // 2 segments, associated with P1 and P2
-    val b1 = if (P1v >= 0) 1 else -1
-    val a2 = if (P2u >= 0) 1 else -1
-    val b2 = if (P2v >= 0) 1 else -1
-    // project on-circle points P1, P2 onto the square Q1, Q2
-    val q1scaling = 1f/(a1*P1u + b1*P1v)
-    val Q1u = P1u*q1scaling
-    val Q1v = P1v*q1scaling
-    val q2scaling = 1f/(a2*P2u + b2*P2v)
-    val Q2u = P2u*q2scaling
-    val Q2v = P2v*q2scaling
-    // now lets add all the missing lines from P2 back to P1
-    // we have P1->P2 cubic
-     path.lineTo(
-         Ox + (Q2u + Q2v)*uv2xyScaling,
-         Oy + (Q2u - Q2v)*uv2xyScaling,
-     ) // P2 -> Q2
-    var a = a2
-    var b = b2
-    var u = Q2u
-    var v = Q2v
-    // swap placeholder variables
-    var aa: Int
-    var bb: Int
-    var uu: Float
-    var vv: Float
-    // since $circle is CCW, if it eclipses $outerCircle then P1->P2 are CCW on it
-    // and P2->P1 path is a major arc
-    // if P1->P2 are CW, then no eclipse and P2->P1 is a minor arc
-    val isCCW = Q1u*Q2v - Q2u*Q1v >= 0 // P1->P2 wrt to the outer circle or square
-    val isMajorArc = isCCW // CCW P1->P2 => major arc P2->P1
-    if (isMajorArc) {
-        do {
-            uu = (u + v)/2
-            vv = (v - u)/2
-            aa = -b
-            bb = a
-            a = aa
-            b = bb
-            u = uu
-            v = vv
-            path.lineTo(
-                Ox + (u + v)*uv2xyScaling,
-                Oy + (u - v)*uv2xyScaling,
-            )
-        } while (!(a == a1 && b == b1))
-    } else { // CW P1->P2 => minor arc P2->P1
-        while (!(a == a1 && b == b1)) {
-            uu = (u - v)/2
-            vv = (u + u)/2
-            aa = b
-            bb = -a
-            a = aa
-            b = bb
-            u = uu
-            v = vv
-            path.lineTo(
-                Ox + (u + v)*uv2xyScaling,
-                Oy + (u - v)*uv2xyScaling,
-            )
-        }
-    }
-     path.lineTo(
-         Ox + (Q1u + Q1v)*uv2xyScaling,
-         Oy + (Q1u - Q1v)*uv2xyScaling,
-     )
-    // now we are in Q1
-    path.close() // Q1 -> P1
-}
-
 /** Add P1->P2 cubic bezier, closely approximating circular arc of
  * circle ([Ax], [Ay], [R]) */
 private inline fun circle2cubicArcPath(
@@ -183,32 +79,6 @@ private inline fun circle2cubicArcPath(
     // NOTE: cubic bezier start collapsing at R=500k+
     // good approximation for small sagitta
     path.cubicTo(C1x, C1y, C2x, C2y, P2x, P2y)
-}
-
-private inline fun wrapOutOfScreenCircleArcAsOuterCircle(
-    path: Path,
-    Ox: Float, Oy: Float, R0: Float,
-    P1x: Float, P1y: Float,
-    P2x: Float, P2y: Float,
-) {
-    val OP1x = P1x - Ox
-    val OP1y = P1y - Oy
-    val OP2x = P2x - Ox
-    val OP2y = P2y - Oy
-    // east -> OP2 CW angle
-    val startAngleRadians = atan2(OP2y, OP2x)
-    // OP2->OP1 CW angle
-    val sweepAngleRadians = atan2(
-        OP2x*OP1y - OP2y*OP1x,
-        OP2x*OP1x + OP2y*OP1y
-    )
-    path.arcToRad(
-        Rect(Offset(Ox, Oy), R0),
-        startAngleRadians = startAngleRadians,
-        sweepAngleRadians = sweepAngleRadians,
-        forceMoveTo = false,
-    )
-    path.close()
 }
 
 private inline fun wrapOutOfScreenCircleAsRectangle(
