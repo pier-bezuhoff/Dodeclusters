@@ -81,6 +81,7 @@ import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
 import domain.hug
+import domain.measureAndPrintPerformance
 import domain.rotateBy
 import domain.rotateByAround
 import getPlatform
