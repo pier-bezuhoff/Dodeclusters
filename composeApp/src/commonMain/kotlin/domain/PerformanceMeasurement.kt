@@ -9,6 +9,7 @@ data class PerformanceRecord(
     val sumDuration: Duration,
 )
 
+// kinda need priority queue
 data class FullPerformanceRecord(
     val attempts: List<Duration>,
 )

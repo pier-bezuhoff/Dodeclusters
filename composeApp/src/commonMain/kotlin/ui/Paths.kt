@@ -22,8 +22,11 @@ import kotlin.math.sqrt
 
 const val VISIBLE_RECT_INDENT = 100f
 
-// NOTE: conic (rational quadratic bezier) segments are automatically approximated by
-//  cubic bezier (afaik circle is split into 4 90-degrees arcs)
+// NOTE: conic (rational quadratic bezier) segments are automatically chopped into
+//  quadratic splines: https://github.com/google/skia/blob/0feee17aeacab6b88ac8be3d8b35ae4c940eeea4/src/core/SkGeometry.cpp#L1570
+//  BUT each 90-degree segment has MAX 2^5=32 quads, which is not enough for larger circles,
+//  so we do custom approx starting from certain radii
+// MAYBE: separately pass visibleRect.center & maxDimension for optimization
 /** NOTE: ignores [circle]'s orientation at this point */
 inline fun circle2path(circle: Circle, visibleRect: Rect): Path =
     if (circle.radius < MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS) {
@@ -38,7 +41,8 @@ inline fun circle2path(circle: Circle, visibleRect: Rect): Path =
     } else if (circle.radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS) {
         circle2cubicPath(circle, visibleRect, closed = true)
     } else {
-        val line = circle.copy(isCCW = true).approximateToLine(visibleRect.center)
+        val line = circle.copy(isCCW = true)
+            .approximateToLine(visibleRect.center)
         halfPlanePath(line, visibleRect)
     }
 
@@ -182,13 +186,12 @@ inline fun halfPlanePath(line: Line, visibleRect: Rect): Path {
     val farBackY: Float = pointClosestToScreenCenterY - directionY * maxDim
     val farInDirectionX: Float = far * line.normalX.toFloat()
     val farInDirectionY: Float = far * line.normalY.toFloat()
-    val path = Path().apply {
-        moveTo(farBackX, farBackY)
-        relativeLineTo(forwardX, forwardY)
-        relativeLineTo(farInDirectionX, farInDirectionY)
-        relativeLineTo(-forwardX, -forwardY)
-        close()
-    }
+    val path = Path()
+    path.moveTo(farBackX, farBackY)
+    path.relativeLineTo(forwardX, forwardY)
+    path.relativeLineTo(farInDirectionX, farInDirectionY)
+    path.relativeLineTo(-forwardX, -forwardY)
+    path.close()
     return path
 }
 

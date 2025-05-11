@@ -13,10 +13,23 @@ interface Platform {
     val fileSeparator: Char
     /** min tap/grab distance to select an object in dp */
     val tapRadius: Float
-    /** Circles with radius larger than [minCircleToCubicApproximationRadius] will be
-     * approximated by cubic bezier on screen + lines off screen */
+    /**
+     * Circles with [minCircleToLineApproximationRadius] > radius >=
+     * [minCircleToCubicApproximationRadius] will be approximated by cubic bezier on screen +
+     * lines off screen. Cubic bezier approximation is
+     * worse quality-wise than no-approx for smaller (R<=10k) circles but faster;
+     * for larger circles it's visually better than non-approx, or line approximation.
+     * Slower than line approximation (especially on [my old] Android).
+     *
+     * [minCircleToCubicApproximationRadius] <= [minCircleToLineApproximationRadius]
+     */
     val minCircleToCubicApproximationRadius: Float
-    /** Circles with radius larger than [minCircleToLineApproximationRadius] will be approximated by lines */
+    /**
+     * Circles with radius >= [minCircleToLineApproximationRadius] will be
+     * approximated by lines. Lower values improve performance, but sacrifice display quality.
+     *
+     * [minCircleToCubicApproximationRadius] <= [minCircleToLineApproximationRadius]
+     */
     val minCircleToLineApproximationRadius: Float
     val lastStateStore: KStore<EditClusterViewModel.State>
     val settingsStore: KStore<Settings>

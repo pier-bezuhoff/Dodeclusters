@@ -360,6 +360,8 @@ data class Circle(
         val toCX = x - hereX // center = point C
         val toCY = y - hereY
         val pc = hypot(toCX, toCY) // distance from here to the circle center
+        if (pc == 0.0) // this should not happen too often
+            return Line(0.0, 1.0, -radius - hereY) // y = hereY + R
         val weAreIn = radius > pc // <here> is inside the big circle
         val inSign = if (weAreIn) -1 else 1
         val radiusSign = if (isCCW) +1 else -1

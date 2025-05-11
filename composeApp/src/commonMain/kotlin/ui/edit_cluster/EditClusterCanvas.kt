@@ -197,7 +197,7 @@ fun BoxScope.EditClusterCanvas(
 //                renderEffect = BlurEffect(20f, 20f) // funi
             )
     ) {
-//        measureAndPrintPerformance("draw") {
+        measureAndPrintPerformance("draw") { // | MEASURE START |
         hug(viewModel.objectModel.invalidations)
         translate(viewModel.translation.x, viewModel.translation.y) {
             val visibleRect = size.toRect().translate(-viewModel.translation)
@@ -222,7 +222,7 @@ fun BoxScope.EditClusterCanvas(
         if (viewModel.circleSelectionIsActive && viewModel.showUI) {
             drawRotationHandle(concretePositions.positions, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)
         }
-//        } // not that long (2~4ms)
+        } // | MEASURE END | // not that long (2~4ms)
     }
     if (viewModel.showUI) { // HUD
         if (viewModel.circleSelectionIsActive) {

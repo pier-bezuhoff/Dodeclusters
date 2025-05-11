@@ -2,6 +2,7 @@
 
 package domain
 
+import MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -245,7 +246,7 @@ class ObjectModel {
                     // TODO: pass here absolute center/translation from VM
 //                    val upscaledCircle =
 //                        copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
-//                    if (upscaledCircle.radius > MAX_CIRCLE_RADIUS)
+//                    if (upscaledCircle.radius >= MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS)
 //                        upscaledCircle.approximateToLine(Offset.Zero)
 //                    else upscaledCircle
                     copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)

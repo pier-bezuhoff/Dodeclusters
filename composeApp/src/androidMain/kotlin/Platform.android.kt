@@ -17,8 +17,9 @@ object AndroidPlatform : Platform {
     override val kind: PlatformKind = PlatformKind.ANDROID
     override val fileSeparator: Char = '/'
     override val tapRadius: Float = 15f
-    override val minCircleToCubicApproximationRadius: Float = 5_000f
-    override val minCircleToLineApproximationRadius: Float = 20_000f
+    // NOTE: cubic approx is performing remarkably bad on [my old] Android
+    override val minCircleToCubicApproximationRadius: Float = 7_000f
+    override val minCircleToLineApproximationRadius: Float = 7_000f
     lateinit var filesDir: Path
     override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
         storeOf(
