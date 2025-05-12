@@ -2,9 +2,7 @@
 
 package domain
 
-import MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS
 import androidx.compose.runtime.MutableIntState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -16,7 +14,6 @@ import data.geometry.Point
 import data.geometry.scaled00
 import domain.expressions.Expr
 import domain.expressions.ExpressionForest
-import getPlatform
 
 // MAYBE: additionally store GeneralizedCircle representations
 /**
@@ -39,8 +36,10 @@ class ObjectModel {
     val objectColors: MutableMap<Int, Color> = mutableMapOf()
     val phantomObjectIndices: MutableSet<Int> = mutableSetOf()
 
-    var invalidationsState: MutableIntState = mutableIntStateOf(0)
-    val invalidations: Int by invalidationsState
+    val invalidationsState: MutableIntState = mutableIntStateOf(0)
+    inline val invalidations: Int get() = invalidationsState.value
+
+    val pathCache = PathCache()
 
     /**
      * Triggers redraw.
@@ -54,21 +53,25 @@ class ObjectModel {
     inline fun setObject(ix: Ix, newObject: GCircle?) {
         objects[ix] = newObject
         downscaledObjects[ix] = newObject?.downscale()
+        pathCache.invalidateObjectPathAt(ix)
     }
 
     inline fun setDownscaledObject(ix: Ix, newDownscaledObject: GCircle?) {
         objects[ix] = newDownscaledObject?.upscale()
         downscaledObjects[ix] = newDownscaledObject
+        pathCache.invalidateObjectPathAt(ix)
     }
 
     fun addObject(newObject: GCircle?) {
         objects.add(newObject)
         downscaledObjects.add(newObject?.downscale())
+        pathCache.addObject()
     }
 
     fun addDownscaledObject(newDownscaledObject: GCircle?) {
         objects.add(newDownscaledObject?.upscale())
         downscaledObjects.add(newDownscaledObject)
+        pathCache.addObject()
     }
 
     fun addObjects(newObjects: List<GCircle?>) {
@@ -76,6 +79,7 @@ class ObjectModel {
         for (o in newObjects) {
             downscaledObjects.add(o?.downscale())
         }
+        pathCache.addObjects(newObjects.size)
     }
 
     fun addDownscaledObjects(newObjects: List<GCircle?>) {
@@ -83,6 +87,7 @@ class ObjectModel {
             objects.add(o?.upscale())
         }
         downscaledObjects.addAll(newObjects)
+        pathCache.addObjects(newObjects.size)
     }
 
     fun removeObjectAt(ix: Ix) {
@@ -90,6 +95,7 @@ class ObjectModel {
         downscaledObjects[ix] = null
         objectColors -= ix
         phantomObjectIndices.remove(ix)
+        pathCache.removeObjectAt(ix)
     }
 
     fun removeObjectsAt(ixs: List<Ix>) {
@@ -98,6 +104,7 @@ class ObjectModel {
             downscaledObjects[ix] = null
             objectColors.remove(ix)
             phantomObjectIndices.remove(ix)
+            pathCache.removeObjectAt(ix)
         }
     }
 
@@ -106,17 +113,20 @@ class ObjectModel {
         downscaledObjects.clear()
         objectColors.clear()
         phantomObjectIndices.clear()
+        pathCache.clear()
     }
 
     inline fun syncObjects(indices: Iterable<Ix> = downscaledObjects.indices) {
         for (ix in indices) {
             objects[ix] = downscaledObjects[ix]?.upscale()
+            pathCache.invalidateObjectPathAt(ix)
         }
     }
 
     inline fun syncDownscaledObjects(indices: Iterable<Ix> = objects.indices) {
         for (ix in indices) {
             downscaledObjects[ix] = objects[ix]?.downscale()
+            pathCache.invalidateObjectPathAt(ix)
         }
     }
 
@@ -243,7 +253,7 @@ class ObjectModel {
         ): GCircle =
             when (this) {
                 is Circle -> {
-                    // TODO: pass here absolute center/translation from VM
+                    // this introduces visual errors
 //                    val upscaledCircle =
 //                        copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
 //                    if (upscaledCircle.radius >= MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS)

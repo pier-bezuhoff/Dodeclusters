@@ -30,7 +30,7 @@ data class GeneralizedCircle(
     /** e_0 projection, homogenous scaling factor
      *
      * e_0 = (e_minus - e_plus) / 2
-     * */
+     */
     val w: Double,
     val x: Double,
     val y: Double,
@@ -39,7 +39,7 @@ data class GeneralizedCircle(
      * e_inf = e_plus + e_minus
      *
      * Circle upcasting: [z] = ([x]^2 + [y]^2 - r^2) / 2
-     * */
+     */
     val z: Double
 ) {
     init {
@@ -195,10 +195,10 @@ data class GeneralizedCircle(
     fun homogenousEquals(other: GeneralizedCircle, epsilon: Double = EPSILON): Boolean {
         val (w1,x1,y1,z1) = this
         val (w2,x2,y2,z2) = other
-        return (w2 == 0.0 && abs(w1) < epsilon || abs(w1/w2 - 1.0) < epsilon) &&
-                (x2 == 0.0 && abs(x1) < epsilon || abs(x1/x2 - 1.0) < epsilon) &&
-                (y2 == 0.0 && abs(y1) < epsilon || abs(y1/y2 - 1.0) < epsilon) &&
-                (z2 == 0.0 && abs(z1) < epsilon || abs(z1/z2 - 1.0) < epsilon)
+        return (w2 == 0.0 && abs(w1) < epsilon || w2 != 0.0 && abs(w1/w2 - 1.0) < epsilon) &&
+                (x2 == 0.0 && abs(x1) < epsilon || x2 != 0.0 && abs(x1/x2 - 1.0) < epsilon) &&
+                (y2 == 0.0 && abs(y1) < epsilon || y2 != 0.0 && abs(y1/y2 - 1.0) < epsilon) &&
+                (z2 == 0.0 && abs(z1) < epsilon || z2 != 0.0 && abs(z1/z2 - 1.0) < epsilon)
     }
 
     // NOTE: Let C:= 0.5 * A.normalized + 0.5 * B.normalized;

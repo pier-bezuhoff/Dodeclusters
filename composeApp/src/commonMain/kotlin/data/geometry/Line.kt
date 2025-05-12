@@ -2,6 +2,7 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import domain.radians
 import domain.rotateBy
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -31,18 +32,15 @@ data class Line(
 
     init {
         require(
-            a.isFinite() && b.isFinite() && c.isFinite()
+            a.isFinite() && b.isFinite() && c.isFinite() &&
+            (a != 0.0 || b != 0.0)
         ) { "Invalid Line($a, $b, $c)" }
     }
 
-    /** `sqrt(a^2 + b^2)` */
+    /** `sqrt(a^2 + b^2) > 0` */
     @Transient
     val norm: Double =
         hypot(a, b)
-
-    /** length=1 normal vector, to the left of the direction vector */
-    val normalVector: Offset get() =
-        Offset((a/norm).toFloat(), (b/norm).toFloat())
 
     inline val normalX: Double get() =
         a/norm
@@ -50,15 +48,19 @@ data class Line(
     inline val normalY: Double get() =
         b/norm
 
-    /** length=1 direction vector */
-    val directionVector: Offset get() =
-        Offset((b/norm).toFloat(), (-a/norm).toFloat())
+    /** length=1 normal vector, to the left of the direction vector */
+    val normalVector: Offset get() =
+        Offset(normalX.toFloat(), normalY.toFloat())
 
     inline val directionX: Double get() =
         b/norm
 
     inline val directionY: Double get() =
         -a/norm
+
+    /** length=1 direction vector */
+    val directionVector: Offset get() =
+        Offset((b/norm).toFloat(), (-a/norm).toFloat())
 
     /** [a] * [x] + [b] * [y] + [c] */
     @Suppress("NOTHING_TO_INLINE")
@@ -85,7 +87,8 @@ data class Line(
 
     /** Project [point] down onto this line */
     // reference: https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_an_equation
-    fun project(point: Offset): Offset {
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun project(point: Offset): Offset {
         val t = b*point.x - a*point.y
         val n2 = a*a + b*b
         return Offset(
@@ -100,7 +103,7 @@ data class Line(
             return point
         val (x, y) = point
         val t = b*x - a*y
-        val n2 = a*a + b*b
+        val n2 = norm*norm
         return Point(
             (b*t - a*c)/n2,
             (-a*t - b*c)/n2
@@ -197,7 +200,7 @@ data class Line(
     override fun rotated(focusX: Double, focusY: Double, angleInRadians: Double): Line {
         val newA = normalX * cos(angleInRadians) - normalY * sin(angleInRadians)
         val newB = normalX * sin(angleInRadians) + normalY * cos(angleInRadians)
-        val newC = (hypot(newA, newB)/hypot(a, b)) * (a*focusX + b*focusY + c) - newA*focusX - newB*focusY
+        val newC = (hypot(newA, newB)/norm) * (a*focusX + b*focusY + c) - newA*focusX - newB*focusY
         return Line(newA, newB, newC)
     }
 
@@ -205,23 +208,24 @@ data class Line(
         val newNormal = normalVector.rotateBy(angleInDegrees)
         val newA = newNormal.x.toDouble()
         val newB = newNormal.y.toDouble()
-        val newC = (hypot(newA, newB)/hypot(a, b)) * (a*focus.x + b*focus.y + c) - newA*focus.x - newB*focus.y
+        val newC = (hypot(newA, newB)/norm) * (a*focus.x + b*focus.y + c) - newA*focus.x - newB*focus.y
         return Line(newA, newB, newC)
     }
 
     override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): Line {
         val (focusX, focusY) =
-            if (focus == Offset.Unspecified) order2point(0.0).toOffset()
+            if (focus == Offset.Unspecified)
+                order2point(0.0).toOffset()
             else focus
         var c1: Double = c
         c1 -= a*translation.x + b*translation.y
         c1 = zoom*(a*focusX + b*focusY + c1) // - a*focusX - b*focusY // added back when rotating
-        val phi: Double = rotationAngle * PI/180.0
+        val phi: Double = rotationAngle.radians
         val cosPhi = cos(phi)
         val sinPhi = sin(phi)
         val a1 = a * cosPhi - b * sinPhi
         val b1 = a * sinPhi + b * cosPhi
-        c1 = (hypot(a1, b1)/hypot(a, b)) * c1 - a1*focusX - b1*focusY
+        c1 = (hypot(a1, b1)/norm) * c1 - a1*focusX - b1*focusY
         return Line(a1, b1, c1)
     }
 
@@ -234,7 +238,8 @@ data class Line(
                 if (circle.isCCW)
                     false
                 else
-                    circle.copy(isCCW = true).isOutside(this)
+                    circle.copy(isCCW = true)
+                        .isOutside(this)
             is Line -> {
                 val l1 = this.normalized()
                 val l2 = circle.normalized()

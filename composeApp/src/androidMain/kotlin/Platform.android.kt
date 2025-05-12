@@ -17,7 +17,7 @@ object AndroidPlatform : Platform {
     override val kind: PlatformKind = PlatformKind.ANDROID
     override val fileSeparator: Char = '/'
     override val tapRadius: Float = 15f
-    // NOTE: cubic approx is performing remarkably bad on [my old] Android
+    // NOTE: cubic approx is performing remarkably bad on Android [my old tablet]
     override val minCircleToCubicApproximationRadius: Float = 7_000f
     override val minCircleToLineApproximationRadius: Float = 7_000f
     lateinit var filesDir: Path

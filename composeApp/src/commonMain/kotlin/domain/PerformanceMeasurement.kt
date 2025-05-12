@@ -18,7 +18,7 @@ data class FullPerformanceRecord(
 val PERFORMANCE_RECORDS = mutableMapOf<String, PerformanceRecord>()
 val FULL_PERFORMANCE_RECORDS = mutableMapOf<String, FullPerformanceRecord>()
 
-inline fun _measureAndPrintPerformance(
+inline fun measureAndPrintPerformance(
     message: String,
     crossinline block: () -> Unit,
 ) {
@@ -35,7 +35,7 @@ inline fun _measureAndPrintPerformance(
     println("$message: $duration, average = $average")
 }
 
-inline fun measureAndPrintPerformance(
+inline fun measureAndPrintPerformancePercentiles(
     message: String,
     crossinline block: () -> Unit,
 ) {
@@ -48,14 +48,15 @@ inline fun measureAndPrintPerformance(
     FULL_PERFORMANCE_RECORDS[message] = updatedPerformance
     val sumDuration = updatedPerformance.attempts.reduce { acc, d -> acc + d }
     val average = sumDuration / updatedPerformance.attempts.size
-    val percentile90 = updatedPerformance.attempts[
-        ceil(updatedPerformance.attempts.size * 0.90f).toInt() - 1
-    ]
-    val percentile95 = updatedPerformance.attempts[
-        ceil(updatedPerformance.attempts.size * 0.95f).toInt() - 1
-    ]
-    val percentile99 = updatedPerformance.attempts[
-        ceil(updatedPerformance.attempts.size * 0.99f).toInt() - 1
-    ]
-    println("$message: $duration, average = $average, 90%-percentile = $percentile90, 95%-percentile = $percentile95, 99%-percentile = $percentile99")
+    val nAttempts = updatedPerformance.attempts.size
+    val median =
+        if (nAttempts % 2 == 0)
+            (updatedPerformance.attempts[nAttempts.div(2) - 1] +
+            updatedPerformance.attempts[nAttempts.div(2)])/2
+        else
+            updatedPerformance.attempts[(nAttempts + 1).div(2) - 1]
+    val percentile90 = updatedPerformance.attempts[ceil(nAttempts * 0.90f).toInt() - 1]
+    val percentile95 = updatedPerformance.attempts[ceil(nAttempts * 0.95f).toInt() - 1]
+    val percentile99 = updatedPerformance.attempts[ceil(nAttempts * 0.99f).toInt() - 1]
+    println("$message: $duration, average = $average, median = $median, 90%-percentile = $percentile90, 95%-percentile = $percentile95, 99%-percentile = $percentile99")
 }

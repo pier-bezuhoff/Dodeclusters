@@ -147,10 +147,15 @@ fun calculateIntersection(
             val dcy = y2 - y1
             val d2 = dcx*dcx + dcy*dcy
             val d = sqrt(d2) // distance between centers
-            if (abs(r1 - r2) > d + EPSILON || d > r1 + r2 + EPSILON) {
+            val rDiff = abs(r1 - r2)
+            if (d == 0.0 && rDiff < EPSILON) {
+                CircleLineIntersection.Eq
+            } else if (rDiff > d + EPSILON || // matryoshka
+                d > r1 + r2 + EPSILON // side-by-side
+            ) {
                 CircleLineIntersection.None
             } else if (
-                abs(abs(r1 - r2) - d) < EPSILON || // inner touch "o)" <_<
+                abs(rDiff - d) < EPSILON || // inner touch "o)" <_<
                 abs(d - r1 - r2) < EPSILON // outer touch oo
             ) {
                 CircleLineIntersection.Tangent(Point(x1 + dcx / d * r1, y1 + dcy / d * r1))
@@ -160,10 +165,12 @@ fun calculateIntersection(
                 // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
                 val a = (d2 + dr2)/(2 * d)
                 val h = sqrt(r12 - a * a)
-                val pcx = x1 + a * dcx / d
-                val pcy = y1 + a * dcy / d
-                val vx = h * dcx / d
-                val vy = h * dcy / d
+                val dc0x = dcx/d
+                val dc0y = dcy/d
+                val pcx = x1 + a * dc0x
+                val pcy = y1 + a * dc0y
+                val vx = h * dc0x
+                val vy = h * dc0y
                 val p = Point(pcx + vy, pcy - vx)
                 val q = Point(pcx - vy, pcy + vx)
                 val s = o1.pointInBetween(p, q) // directed arc p->s->q

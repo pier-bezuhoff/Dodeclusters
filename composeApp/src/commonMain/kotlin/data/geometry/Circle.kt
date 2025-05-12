@@ -10,6 +10,7 @@ import data.kmath_complex.r2
 import domain.TAU
 import domain.degrees
 import domain.never
+import domain.radians
 import domain.toComplex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -25,9 +26,16 @@ import kotlin.math.sqrt
 const val EPSILON: Double = 1e-6
 const val EPSILON2: Double = EPSILON*EPSILON
 
-/** Circle with center ([x], [y]) and [radius]
- * @param[isCCW] Counterclockwise or clockwise direction (_in_ vs _out_)
- * */
+/**
+ * Circle with center ([x], [y]) and [radius]
+ * @param[radius] `> 0`
+ * @param[isCCW] Counterclockwise or clockwise direction.
+ *
+ * _Internal orientation_ of CCW direction by convention is associated with
+ * _external orientation_ of the circle's _inside_, and CW with _outside_
+ *
+ * NOTE: odd number of inversions/reflections desyncs internal and external orientations
+ */
 @Immutable
 @Serializable
 @SerialName("circle")
@@ -35,22 +43,15 @@ data class Circle(
     override val x: Double,
     override val y: Double,
     override val radius: Double,
-    /** Counterclockwise or clockwise direction
-     *
-     * _internal orientation_ of CCW direction by convention is associated with
-     * _external orientation_ of the circle's _inside_, and CW with _outside_
-     *
-     * note: odd number of inversions/reflections desyncs internal and external orientations
-     * */
     val isCCW: Boolean = true,
 ) : UndirectedCircle {
-    val center: Offset get() =
+    inline val center: Offset get() =
         Offset(x.toFloat(), y.toFloat())
 
-    val centerPoint: Point get() =
+    inline val centerPoint: Point get() =
         Point(x, y)
 
-    val r2: Double get() =
+    inline val r2: Double get() =
         radius * radius
 
     init {
@@ -90,7 +91,7 @@ data class Circle(
             Double.POSITIVE_INFINITY
         else abs(hypot(point.x - x, point.y - y) - radius)
 
-    fun distanceBetweenCenters(circle: Circle): Double =
+    inline fun distanceBetweenCenters(circle: Circle): Double =
         hypot(x - circle.x, y - circle.y)
 
     override fun calculateLocation(point: Offset): RegionPointLocation {
@@ -255,7 +256,7 @@ data class Circle(
     override fun rotated(focus: Offset, angleInDegrees: Float): Circle {
         val x0 = x - focus.x
         val y0 = y - focus.y
-        val phi: Double = angleInDegrees * PI/180.0
+        val phi: Double = angleInDegrees.radians
         val cosPhi = cos(phi)
         val sinPhi = sin(phi)
         return copy(
@@ -272,7 +273,7 @@ data class Circle(
             // cmp. Offset.rotateBy & zoom and rotation are commutative
             val dx = newX - focusX
             val dy = newY - focusY
-            val phi: Double = rotationAngle * PI/180.0
+            val phi: Double = rotationAngle.radians
             val cosPhi = cos(phi)
             val sinPhi = sin(phi)
             newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
@@ -290,12 +291,14 @@ data class Circle(
 
     /** tangent line at [project]`(point)`, directed along the circle */
     override fun tangentAt(point: Point): Line {
-        val p2cx = x - point.x // center-to-point
-        val p2cy = y - point.y
-        val l = hypot(p2cx, p2cy)
+        val center2pointX = x - point.x
+        val center2pointY = y - point.y
+        val center2point = hypot(center2pointX, center2pointY)
+        if (center2point == 0.0)
+            return Line(0.0, 1.0, y + point.y)
         val sign = if (isCCW) +1 else -1 // if the circle is CCW, it is to the left of the tangent
-        val a = sign*p2cx/l // normal
-        val b = sign*p2cy/l
+        val a = sign*center2pointX/center2point // normal
+        val b = sign*center2pointY/center2point
         val (baseX, baseY) = project(point)
         val c = -a*baseX - b*baseY
         return Line(a, b, c)
@@ -360,7 +363,7 @@ data class Circle(
         val toCX = x - hereX // center = point C
         val toCY = y - hereY
         val pc = hypot(toCX, toCY) // distance from here to the circle center
-        if (pc == 0.0) // this should not happen too often
+        if (pc == 0.0) // this should not happen too often... (tho i witnessed it)
             return Line(0.0, 1.0, -radius - hereY) // y = hereY + R
         val weAreIn = radius > pc // <here> is inside the big circle
         val inSign = if (weAreIn) -1 else 1
@@ -389,8 +392,8 @@ data class Circle(
                 b12 = Circle(base1.x, base1.y, abs(base1.radius - this.radius))
             }
             is Line -> {
-                val dlx = this.radius*base1.a/base1.norm
-                val dly = this.radius*base1.b/base1.norm
+                val dlx = this.radius*base1.normalX
+                val dly = this.radius*base1.normalY
                 b11 = base1.translated(dlx, dly)
                 b12 = base1.translated(-dlx, -dly)
             }
@@ -405,8 +408,8 @@ data class Circle(
                 b22 = Circle(base2.x, base2.y, abs(base2.radius - this.radius))
             }
             is Line -> {
-                val dlx = this.radius*base2.a/base2.norm
-                val dly = this.radius*base2.b/base2.norm
+                val dlx = this.radius*base2.normalX
+                val dly = this.radius*base2.normalY
                 b21 = base2.translated(dlx, dly)
                 b22 = base2.translated(-dlx, -dly)
             }
@@ -595,40 +598,43 @@ data class Circle(
                 circle1 is Circle && circle2 is Circle -> {
                     val (x1,y1,r1) = circle1
                     val (x2,y2,r2) = circle2
-                    if (x1 == x2 && y1 == y2 && r1 == r2) {
+                    val dcx = x2 - x1
+                    val dcy = y2 - y1
+                    val d2 = dcx*dcx + dcy*dcy
+                    val d = sqrt(d2) // distance between centers
+                    val rDiff = abs(r1 - r2)
+                    if (d == 0.0 && rDiff < TANGENTIAL_TOUCH_EPSILON || // coinciding circles
+                        rDiff >= d + TANGENTIAL_TOUCH_EPSILON || // matryoshka
+                        d >= r1 + r2 + TANGENTIAL_TOUCH_EPSILON // side-by-side
+                    ) {
                         emptyList()
+                    } else if (
+                        abs(rDiff - d) < TANGENTIAL_TOUCH_EPSILON || // inner touch
+                        abs(d - r1 - r2) < TANGENTIAL_TOUCH_EPSILON // outer touch
+                    ) {
+                        val k = r1/d
+                        listOf(Point(x1 + dcx*k, y1 + dcy*k))
                     } else {
                         val r12 = circle1.r2
                         val r22 = circle2.r2
-                        val dcx = x2 - x1
-                        val dcy = y2 - y1
-                        val d2 = dcx*dcx + dcy*dcy
-                        val d = sqrt(d2) // distance between centers
-                        if (abs(r1 - r2) >= d + TANGENTIAL_TOUCH_EPSILON || d >= r1 + r2 + TANGENTIAL_TOUCH_EPSILON) {
-                            emptyList()
-                        } else if (
-                            abs(abs(r1 - r2) - d) < TANGENTIAL_TOUCH_EPSILON || // inner touch
-                            abs(d - r1 - r2) < TANGENTIAL_TOUCH_EPSILON // outer touch
-                        ) {
-                            listOf(Point(x1 + dcx / d * r1, y1 + dcy / d * r1))
-                        } else {
-                            val dr2 = r12 - r22
-                            // reference (0->1, 1->2):
-                            // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
-                            val a = (d2 + dr2)/(2 * d)
-                            val h = sqrt(r12 - a * a)
-                            val pcx = x1 + a * dcx / d
-                            val pcy = y1 + a * dcy / d
-                            val vx = h * dcx / d
-                            val vy = h * dcy / d
-                            val p = Point(pcx + vy, pcy - vx)
-                            val q = Point(pcx - vy, pcy + vx)
-                            val s = circle1.pointInBetween(p, q) // directed arc p->s->q
-                            if (circle2.hasInsideEpsilon(s))
-                                listOf(p, q)
-                            else
-                                listOf(q, p)
-                        }
+                        val dr2 = r12 - r22
+                        // reference (0->1, 1->2):
+                        // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
+                        val a = (d2 + dr2)/(2 * d)
+                        val h = sqrt(r12 - a * a)
+                        val dc0x = dcx/d
+                        val dc0y = dcy/d
+                        val pcx = x1 + a * dc0x
+                        val pcy = y1 + a * dc0y
+                        val vx = h * dc0x
+                        val vy = h * dc0y
+                        val p = Point(pcx + vy, pcy - vx)
+                        val q = Point(pcx - vy, pcy + vx)
+                        val s = circle1.pointInBetween(p, q) // directed arc p->s->q
+                        if (circle2.hasInsideEpsilon(s))
+                            listOf(p, q)
+                        else
+                            listOf(q, p)
                     }
                 }
                 else -> never()
@@ -655,34 +661,36 @@ data class Circle(
             val x2 = circle2.x.toFloat()
             val y2 = circle2.y.toFloat()
             val r2 = circle2.radius.toFloat()
-            if (x1 == x2 && y1 == y2 && r1 == r2) {
-                return emptyList()
-            }
-            val r12 = r1 * r1
-            val r22 = r2 * r2
             val dcx = x2 - x1
             val dcy = y2 - y1
             val d2 = dcx * dcx + dcy * dcy
             val d = sqrt(d2) // distance between centers
-            if (abs(r1 - r2) >= d + TANGENTIAL_TOUCH_EPSILON_F ||
-                d >= r1 + r2 + TANGENTIAL_TOUCH_EPSILON_F
+            val rDiff = abs(r1 - r2)
+            if (d == 0f && rDiff < TANGENTIAL_TOUCH_EPSILON_F || // coinciding
+                rDiff >= d + TANGENTIAL_TOUCH_EPSILON_F || // matryoshak
+                d >= r1 + r2 + TANGENTIAL_TOUCH_EPSILON_F // side-by-side
             ) {
                 return emptyList()
             } else if (
-                abs(abs(r1 - r2) - d) < TANGENTIAL_TOUCH_EPSILON_F || // inner touch
+                abs(rDiff - d) < TANGENTIAL_TOUCH_EPSILON_F || // inner touch
                 abs(d - r1 - r2) < TANGENTIAL_TOUCH_EPSILON_F // outer touch
             ) {
-                return listOf(x1 + dcx / d * r1, y1 + dcy / d * r1)
+                val k = r1/d
+                return listOf(x1 + dcx*k, y1 + dcy*k)
             } else {
+                val r12 = r1 * r1
+                val r22 = r2 * r2
                 val dr2 = r12 - r22
                 // reference (0->1, 1->2):
                 // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
                 val a = (d2 + dr2) / (2 * d)
                 val h = sqrt(r12 - a * a)
-                val pcx = x1 + a * dcx / d
-                val pcy = y1 + a * dcy / d
-                val vx = h * dcx / d
-                val vy = h * dcy / d
+                val dc0x = dcx/d
+                val dc0y = dcy/d
+                val pcx = x1 + a * dc0x
+                val pcy = y1 + a * dc0y
+                val vx = h * dc0x
+                val vy = h * dc0y
                 val px = pcx + vy
                 val py = pcy - vx
                 val qx = pcx - vy

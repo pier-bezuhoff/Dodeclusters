@@ -2,7 +2,7 @@ package data.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
-import data.geometry.Point.Companion.CONFORMAL_INFINITY
+import domain.radians
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
@@ -66,7 +66,7 @@ data class ImaginaryCircle(
             // cmp. Offset.rotateBy & zoom and rotation are commutative
             val dx = newX - focusX
             val dy = newY - focusY
-            val phi: Double = rotationAngle * PI/180.0
+            val phi: Double = rotationAngle.radians
             val cosPhi = cos(phi)
             val sinPhi = sin(phi)
             newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX

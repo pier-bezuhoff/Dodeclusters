@@ -2496,9 +2496,8 @@ class EditClusterViewModel : ViewModel() {
             ToolMode.ARC_PATH -> {}
             ViewMode.StereographicRotation -> {
                 // MAYBE: normalize line-only-output expressions (e.g. polar line)
-//                expressions.reEval()
-//                objectModel.syncObjects()
-//                objectModel.invalidate()
+                // fixes incident points for line->circle and circle->line transitions
+                expressions.adjustIncidentPointExpressions()
             }
             is ToolMode -> if (submode == null) {
                 val pArgList = partialArgList

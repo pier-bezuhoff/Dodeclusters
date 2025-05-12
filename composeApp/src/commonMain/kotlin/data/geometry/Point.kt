@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.isFinite
 import data.geometry.RegionPointLocation.BORDERING
 import data.geometry.RegionPointLocation.IN
 import data.geometry.RegionPointLocation.OUT
+import domain.radians
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
@@ -96,7 +97,7 @@ data class Point(
             val focusY = focus.y
             val x0 = x - focusX
             val y0 = y - focusY
-            val phi: Double = angleDeg * PI/180.0
+            val phi: Double = angleDeg.radians
             val cosPhi = cos(phi)
             val sinPhi = sin(phi)
             Point(
@@ -115,7 +116,7 @@ data class Point(
             // cmp. Offset.rotateBy & zoom and rotation are commutative
             val dx = newX - focusX
             val dy = newY - focusY
-            val phi: Double = rotationAngle * PI/180.0
+            val phi: Double = rotationAngle.radians
             val cosPhi = cos(phi)
             val sinPhi = sin(phi)
             newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
@@ -139,7 +140,7 @@ data class Point(
         // cmp. Offset.rotateBy & zoom and rotation are commutative
         val dx = newX - focusX
         val dy = newY - focusY
-        val phi: Double = rotationAngle * PI/180.0
+        val phi: Double = rotationAngle.radians
         val cosPhi = cos(phi)
         val sinPhi = sin(phi)
         newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX

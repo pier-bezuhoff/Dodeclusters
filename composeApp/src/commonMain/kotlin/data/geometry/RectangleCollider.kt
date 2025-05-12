@@ -13,6 +13,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+/** Unlike the default [Rect] constructor, works correctly for any configuration of corners */
 fun Rect.Companion.fromCorners(corner1: Offset, corner2: Offset): Rect {
     val topLeft = Offset(min(corner1.x, corner2.x), min(corner1.y, corner2.y))
     val bottomRight = Offset(max(corner1.x, corner2.x), max(corner1.y, corner2.y))
@@ -61,7 +62,7 @@ fun calculateRectangleCircleIntersectionContour(rect: Rect, circle: Circle): Lis
 
 // reference: https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection
 /** Simpler interior intersection test that ignores rect-inside-circle & circle-inside-rect cases */
-fun simpleCircleRectCollisionText(circle: Circle, rect: Rect): Boolean {
+fun simpleCircleRectCollisionTest(circle: Circle, rect: Rect): Boolean {
     val cx = circle.x.toFloat()
     val cy = circle.y.toFloat()
     // get rect's closest point to circle center by clamping
@@ -79,7 +80,7 @@ private inline fun circleRectCollisionTestEveryEdge(circle: Circle, rect: Rect):
     // we know there is no intersections at this point
     rect.contains(circle.center) && 2*circle.radius <= rect.minDimension
 
-// wrong farthest calc
+// wrong farthest calc (?)
 /** Only counts contour intersections OR if the [circle] is fully inside the [rect] */
 private fun circleRectCollisionTest(circle: Circle, rect: Rect): Boolean {
     val cx = circle.x.toFloat()
@@ -98,8 +99,8 @@ private fun circleRectCollisionTest(circle: Circle, rect: Rect): Boolean {
     // farthest >= r && (closest <= r || center in rect)
     return farthestRectPointIsFartherThanRadius && (
             closestRectPointIsCloserThanRadius ||
-                    cx in left..right && cy in top .. bottom // circle center is inside rect
-            )
+            cx in left..right && cy in top .. bottom // circle center is inside rect
+        )
 }
 
 private inline fun testHorizontalSegmentCircleIntersections(

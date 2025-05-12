@@ -12,6 +12,7 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.EPSILON2
 import data.geometry.Line
+import domain.PathCache
 import domain.cluster.ConcreteClosedArcPath
 import domain.cluster.ConcreteOpenArcPath
 import domain.cluster.LogicalRegion
@@ -28,9 +29,13 @@ const val VISIBLE_RECT_INDENT = 100f
 //  so we do custom approx starting from certain radii
 // MAYBE: separately pass visibleRect.center & maxDimension for optimization
 /** NOTE: ignores [circle]'s orientation at this point */
-inline fun circle2path(circle: Circle, visibleRect: Rect): Path =
+inline fun circle2path(
+    circle: Circle,
+    visibleRect: Rect,
+    path: Path = Path(),
+): Path =
     if (circle.radius < MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS) {
-        Path().apply {
+        path.apply {
             addOval(
                 Rect(
                     center = circle.center,
@@ -39,11 +44,11 @@ inline fun circle2path(circle: Circle, visibleRect: Rect): Path =
             )
         }
     } else if (circle.radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS) {
-        circle2cubicPath(circle, visibleRect, closed = true)
+        circle2cubicPath(circle, visibleRect, closed = true, path)
     } else {
         val line = circle.copy(isCCW = true)
             .approximateToLine(visibleRect.center)
-        halfPlanePath(line, visibleRect)
+        halfPlanePath(line, visibleRect, path)
     }
 
 /** NOTE: ignores [circle]'s orientation at this point */
@@ -114,7 +119,12 @@ private inline fun wrapOutOfScreenCircleAsRectangle(
 }
 
 // not sure why but it's garbo for region intersections & co
-fun circle2cubicPath(circle: Circle, visibleRect: Rect, closed: Boolean): Path {
+fun circle2cubicPath(
+    circle: Circle,
+    visibleRect: Rect,
+    closed: Boolean,
+    path: Path = Path(),
+): Path {
     val circle0 = circle.copy(isCCW = true) // i think we ignore its original orientation atp?
     val screenCenter = visibleRect.center
     // visible rect is contained in this circle
@@ -123,7 +133,6 @@ fun circle2cubicPath(circle: Circle, visibleRect: Rect, closed: Boolean): Path {
         visibleRect.maxDimension + VISIBLE_RECT_INDENT
     val outerCircle = Circle(screenCenter, outerRadius)
     val intersectionCoordinates = Circle.calculateIntersectionCoordinates(circle0, outerCircle)
-    val path = Path()
     if (intersectionCoordinates.size == 4) { // all 2 intersections present
         // normal case, CCW order of points (wrt $circle)
         val Ox = screenCenter.x
@@ -159,8 +168,12 @@ fun circle2cubicPath(circle: Circle, visibleRect: Rect, closed: Boolean): Path {
     return path
 }
 
-inline fun visibleHalfPlanePath(line: Line, visibleRect: Rect): Path {
-    val path = halfPlanePath(line, visibleRect)
+inline fun visibleHalfPlanePath(
+    line: Line,
+    visibleRect: Rect,
+    path: Path = Path()
+): Path {
+    halfPlanePath(line, visibleRect, path)
     val visiblePath = Path().apply {
         addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
     }
@@ -168,7 +181,11 @@ inline fun visibleHalfPlanePath(line: Line, visibleRect: Rect): Path {
     return path
 }
 
-inline fun halfPlanePath(line: Line, visibleRect: Rect): Path {
+inline fun halfPlanePath(
+    line: Line,
+    visibleRect: Rect,
+    path: Path = Path()
+): Path {
     val (a, b, c) = line
     val centerX = visibleRect.left + visibleRect.width/2f
     val centerY = visibleRect.top + visibleRect.height/2f
@@ -186,7 +203,6 @@ inline fun halfPlanePath(line: Line, visibleRect: Rect): Path {
     val farBackY: Float = pointClosestToScreenCenterY - directionY * maxDim
     val farInDirectionX: Float = far * line.normalX.toFloat()
     val farInDirectionY: Float = far * line.normalY.toFloat()
-    val path = Path()
     path.moveTo(farBackX, farBackY)
     path.relativeLineTo(forwardX, forwardY)
     path.relativeLineTo(farInDirectionX, farInDirectionY)
@@ -220,11 +236,13 @@ fun chessboardPath(
 /**
  * @param[circles] all delimiters, `null`s are to be interpreted as ∅ empty sets
  */
-fun region2path(
+fun region2pathWithCache(
     circles: List<CircleOrLine?>,
     region: LogicalRegion,
-    visibleRect: Rect
+    pathCache: PathCache,
+    visibleRect: Rect,
 ): Path {
+    TODO("cache &")
     val ins = region.insides.mapNotNull { circles[it] }
     if (ins.size < region.insides.size) { // null encountered
         return Path() // intersection with empty set
@@ -236,6 +254,66 @@ fun region2path(
     val circleOutsides =
         ins.filter { it is Circle && !it.isCCW } +
         outs.filter { it is Line || it is Circle && it.isCCW }
+    val insidePath: Path? = circleInsides
+        .map {
+            when (it) {
+                is Circle -> circle2path(it, visibleRect)
+                is Line -> halfPlanePath(it, visibleRect)
+            }
+        }
+        .reduceOrNull { acc: Path, anotherPath: Path ->
+            acc.op(acc, anotherPath, PathOperation.Intersect)
+            acc
+        }
+    return if (insidePath == null) {
+        val invertedPath = circleOutsides.map {
+            when (it) {
+                is Circle -> circle2path(it, visibleRect)
+                is Line -> halfPlanePath(it, visibleRect)
+            }
+        }.fold(Path()) { acc: Path, anotherPath: Path ->
+            acc.op(acc, anotherPath, PathOperation.Union)
+            acc
+        }
+        val path = Path()
+        // slightly bigger than the screen so that the borders are invisible
+        path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
+        path.op(path, invertedPath, PathOperation.Difference)
+        path
+    } else if (circleOutsides.isEmpty()) {
+        insidePath
+    } else {
+        circleOutsides.fold(insidePath) { acc: Path, circleOutside: CircleOrLine ->
+            val path = when (circleOutside) {
+                is Circle -> circle2path(circleOutside, visibleRect)
+                is Line -> halfPlanePath(circleOutside, visibleRect)
+            }
+            acc.op(acc, path, PathOperation.Difference)
+            acc
+        }
+    }
+}
+
+// TODO: benchmark & optimize
+/**
+ * @param[circles] all delimiters, `null`s are to be interpreted as ∅ empty sets
+ */
+fun region2path(
+    circles: List<CircleOrLine?>,
+    region: LogicalRegion,
+    visibleRect: Rect,
+): Path {
+    val ins = region.insides.mapNotNull { circles[it] }
+    if (ins.size < region.insides.size) { // null encountered
+        return Path() // intersection with empty set
+    }
+    val outs = region.outsides.mapNotNull { circles[it] }
+    val circleInsides =
+        ins.filter { it is Line || it is Circle && it.isCCW } +
+                outs.filter { it is Circle && !it.isCCW }
+    val circleOutsides =
+        ins.filter { it is Circle && !it.isCCW } +
+                outs.filter { it is Line || it is Circle && it.isCCW }
     val insidePath: Path? = circleInsides
         .map {
             when (it) {
