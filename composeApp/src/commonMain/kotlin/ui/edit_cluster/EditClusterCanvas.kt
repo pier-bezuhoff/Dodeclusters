@@ -93,6 +93,7 @@ import ui.circle2cubicPath
 import ui.circle2path
 import ui.halfPlanePath
 import ui.reactiveCanvas
+import ui.region2path
 import ui.region2pathWithCache
 import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
@@ -951,6 +952,9 @@ private fun DrawScope.drawRegions(
             objects.map { it as? CircleOrLine }, region,
             pathCache, visibleRect
         )
+//        val path = region2path(
+//            objects.map { it as? CircleOrLine }, region, visibleRect
+//        )
         if (showWireframes) {
             drawPath(path,
                 color = region.fillColor,

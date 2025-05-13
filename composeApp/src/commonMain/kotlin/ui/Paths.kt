@@ -12,6 +12,7 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.EPSILON2
 import data.geometry.Line
+import domain.Ix
 import domain.PathCache
 import domain.cluster.ConcreteClosedArcPath
 import domain.cluster.ConcreteOpenArcPath
@@ -232,7 +233,6 @@ fun chessboardPath(
     return path
 }
 
-// TODO: benchmark & optimize
 /**
  * @param[circles] all delimiters, `null`s are to be interpreted as ∅ empty sets
  */
@@ -242,56 +242,60 @@ fun region2pathWithCache(
     pathCache: PathCache,
     visibleRect: Rect,
 ): Path {
-    TODO("cache &")
-    val ins = region.insides.mapNotNull { circles[it] }
-    if (ins.size < region.insides.size) { // null encountered
-        return Path() // intersection with empty set
+    val path = Path()
+    if (region.insides.isEmpty() && region.outsides.isEmpty()) {
+        return path
     }
-    val outs = region.outsides.mapNotNull { circles[it] }
-    val circleInsides =
-        ins.filter { it is Line || it is Circle && it.isCCW } +
-        outs.filter { it is Circle && !it.isCCW }
-    val circleOutsides =
-        ins.filter { it is Circle && !it.isCCW } +
-        outs.filter { it is Line || it is Circle && it.isCCW }
-    val insidePath: Path? = circleInsides
-        .map {
-            when (it) {
-                is Circle -> circle2path(it, visibleRect)
-                is Line -> halfPlanePath(it, visibleRect)
+    path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
+    for (ix in region.insides) {
+        when (val circle = circles[ix]) {
+            is Circle -> {
+                var p: Path? = pathCache.cachedClosedObjectPaths[ix]
+                if (p == null || !pathCache.pathCacheValidity[ix]) {
+                    p = circle2path(circle, visibleRect, p ?: Path())
+                    pathCache.cacheClosedObjectPath(ix, p)
+                }
+                path.op(path, p,
+                    if (circle.isCCW) PathOperation.Intersect
+                    else PathOperation.Difference
+                )
             }
-        }
-        .reduceOrNull { acc: Path, anotherPath: Path ->
-            acc.op(acc, anotherPath, PathOperation.Intersect)
-            acc
-        }
-    return if (insidePath == null) {
-        val invertedPath = circleOutsides.map {
-            when (it) {
-                is Circle -> circle2path(it, visibleRect)
-                is Line -> halfPlanePath(it, visibleRect)
+            is Line -> {
+                var p: Path? = pathCache.cachedClosedObjectPaths[ix]
+                if (p == null || !pathCache.pathCacheValidity[ix]) {
+                    p = halfPlanePath(circle, visibleRect, p ?: Path())
+                    pathCache.cacheClosedObjectPath(ix, p)
+                }
+                path.op(path, p, PathOperation.Intersect)
             }
-        }.fold(Path()) { acc: Path, anotherPath: Path ->
-            acc.op(acc, anotherPath, PathOperation.Union)
-            acc
-        }
-        val path = Path()
-        // slightly bigger than the screen so that the borders are invisible
-        path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
-        path.op(path, invertedPath, PathOperation.Difference)
-        path
-    } else if (circleOutsides.isEmpty()) {
-        insidePath
-    } else {
-        circleOutsides.fold(insidePath) { acc: Path, circleOutside: CircleOrLine ->
-            val path = when (circleOutside) {
-                is Circle -> circle2path(circleOutside, visibleRect)
-                is Line -> halfPlanePath(circleOutside, visibleRect)
-            }
-            acc.op(acc, path, PathOperation.Difference)
-            acc
+            null -> {}
         }
     }
+    for (ix in region.outsides) {
+        when (val circle = circles[ix]) {
+            is Circle -> {
+                var p: Path? = pathCache.cachedClosedObjectPaths[ix]
+                if (p == null || !pathCache.pathCacheValidity[ix]) {
+                    p = circle2path(circle, visibleRect, p ?: Path())
+                    pathCache.cacheClosedObjectPath(ix, p)
+                }
+                path.op(path, p,
+                    if (circle.isCCW) PathOperation.Difference
+                    else PathOperation.Intersect
+                )
+            }
+            is Line -> {
+                var p: Path? = pathCache.cachedClosedObjectPaths[ix]
+                if (p == null || !pathCache.pathCacheValidity[ix]) {
+                    p = halfPlanePath(circle, visibleRect, p ?: Path())
+                    pathCache.cacheClosedObjectPath(ix, p)
+                }
+                path.op(path, p, PathOperation.Difference)
+            }
+            null -> {}
+        }
+    }
+    return path
 }
 
 // TODO: benchmark & optimize
