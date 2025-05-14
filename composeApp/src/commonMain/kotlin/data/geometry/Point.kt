@@ -9,7 +9,6 @@ import data.geometry.RegionPointLocation.OUT
 import domain.radians
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot

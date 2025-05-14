@@ -37,7 +37,8 @@ class ObjectModel {
     val phantomObjectIndices: MutableSet<Int> = mutableSetOf()
 
     val invalidationsState: MutableIntState = mutableIntStateOf(0)
-    inline val invalidations: Int get() = invalidationsState.value
+    inline val invalidations: Int get() =
+        invalidationsState.value
 
     val pathCache = PathCache()
 
@@ -50,13 +51,13 @@ class ObjectModel {
         invalidationsState.value += 1
     }
 
-    inline fun setObject(ix: Ix, newObject: GCircle?) {
+    fun setObject(ix: Ix, newObject: GCircle?) {
         objects[ix] = newObject
         downscaledObjects[ix] = newObject?.downscale()
         pathCache.invalidateObjectPathAt(ix)
     }
 
-    inline fun setDownscaledObject(ix: Ix, newDownscaledObject: GCircle?) {
+    fun setDownscaledObject(ix: Ix, newDownscaledObject: GCircle?) {
         objects[ix] = newDownscaledObject?.upscale()
         downscaledObjects[ix] = newDownscaledObject
         pathCache.invalidateObjectPathAt(ix)
@@ -116,14 +117,14 @@ class ObjectModel {
         pathCache.clear()
     }
 
-    inline fun syncObjects(indices: Iterable<Ix> = downscaledObjects.indices) {
+    fun syncObjects(indices: Iterable<Ix> = downscaledObjects.indices) {
         for (ix in indices) {
             objects[ix] = downscaledObjects[ix]?.upscale()
             pathCache.invalidateObjectPathAt(ix)
         }
     }
 
-    inline fun syncDownscaledObjects(indices: Iterable<Ix> = objects.indices) {
+    fun syncDownscaledObjects(indices: Iterable<Ix> = objects.indices) {
         for (ix in indices) {
             downscaledObjects[ix] = objects[ix]?.downscale()
             pathCache.invalidateObjectPathAt(ix)
@@ -136,7 +137,7 @@ class ObjectModel {
      * row-column order of [sourceIndex2NewTrajectory]`.flatten` starting from [startIndex]
      * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`
      */
-    inline fun copySourceColorsOntoTrajectories(
+    fun copySourceColorsOntoTrajectories(
         sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
         startIndex: Ix,
     ) {
@@ -159,7 +160,7 @@ class ObjectModel {
      * by [sourceIndex2TrajectoryOfIndices].
      * @param[sourceIndex2TrajectoryOfIndices] `[(original index ~ style source, [trajectory of indices of objects])]`,
      */
-    inline fun copySourceColorsOntoTrajectories(
+    fun copySourceColorsOntoTrajectories(
         sourceIndex2TrajectoryOfIndices: List<Pair<Ix, List<Ix>>>,
     ) {
         sourceIndex2TrajectoryOfIndices.forEach { (sourceIndex, trajectory) ->
@@ -181,7 +182,7 @@ class ObjectModel {
      *
      * NOTE: remember to record a command before
      */
-    inline fun transform(
+    fun transform(
         expressions: ExpressionForest,
         targets: List<Ix>,
         translation: Offset = Offset.Zero,

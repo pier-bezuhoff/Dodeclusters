@@ -691,8 +691,7 @@ class EditClusterViewModel : ViewModel() {
      * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
      * @return indices of copied regions within [regions]
      */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun copySourceRegionsOntoTrajectories(
+    private fun copySourceRegionsOntoTrajectories(
         sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
         startIndex: Ix,
         flipRegionsInAndOut: Boolean = false,
@@ -732,8 +731,7 @@ class EditClusterViewModel : ViewModel() {
      * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
      * @return indices of copied regions within [regions]
      */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun copySourceRegionsOntoTrajectories(
+    private fun copySourceRegionsOntoTrajectories(
         sourceIndex2TrajectoryOfIndices: List<Pair<Ix, List<Ix>>>,
         flipRegionsInAndOut: Boolean = false,
     ): List<Int> {
@@ -1242,8 +1240,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     /** @return [Rect] using absolute positions */
-    @Suppress("NOTHING_TO_INLINE")
-    inline fun getSelectionRect(): Rect? {
+    fun getSelectionRect(): Rect? {
         val selectedCircles = selection.mapNotNull { objects[it] as? Circle }
         if (selectedCircles.isEmpty() || selection.any { objects[it] is Line })
             return null
@@ -1254,8 +1251,7 @@ class EditClusterViewModel : ViewModel() {
         return Rect(left, top, right, bottom)
     }
 
-    @Suppress("NOTHING_TO_INLINE")
-    inline fun isFree(circleIndex: Ix): Boolean =
+    fun isFree(circleIndex: Ix): Boolean =
         expressions.expressions[circleIndex] == null
 
     fun isConstrained(index: Ix): Boolean =
@@ -2338,7 +2334,7 @@ class EditClusterViewModel : ViewModel() {
      * each circle choose its center, for each point -- itself, for each line -- screen center
      * projected onto it
      */
-    private inline fun transformWhatWeCan(
+    private fun transformWhatWeCan(
         command: Command,
         targets: List<Ix>,
         translation: Offset = Offset.Zero,

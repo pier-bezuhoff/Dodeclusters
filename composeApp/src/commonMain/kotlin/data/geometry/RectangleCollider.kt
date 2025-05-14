@@ -7,7 +7,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.util.fastCoerceIn
 import domain.filterIndices
 import domain.squareSum
-import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -72,7 +71,7 @@ fun simpleCircleRectCollisionTest(circle: Circle, rect: Rect): Boolean {
     return distance2 < circle.r2
 }
 
-private inline fun circleRectCollisionTestEveryEdge(circle: Circle, rect: Rect): Boolean =
+private fun circleRectCollisionTestEveryEdge(circle: Circle, rect: Rect): Boolean =
     testHorizontalSegmentCircleIntersections(rect.top, rect.left, rect.right, circle) ||
     testHorizontalSegmentCircleIntersections(rect.bottom, rect.left, rect.right, circle) ||
     testVerticalSegmentCircleIntersections(rect.left, rect.top, rect.bottom, circle) ||
@@ -103,7 +102,7 @@ private fun circleRectCollisionTest(circle: Circle, rect: Rect): Boolean {
         )
 }
 
-private inline fun testHorizontalSegmentCircleIntersections(
+private fun testHorizontalSegmentCircleIntersections(
     y: Float,
     startX: Float, endX: Float,
     circle: Circle
@@ -118,7 +117,7 @@ private inline fun testHorizontalSegmentCircleIntersections(
     return x1 in range || x2 in range
 }
 
-private inline fun testVerticalSegmentCircleIntersections(
+private fun testVerticalSegmentCircleIntersections(
     x: Float,
     startY: Float, endY: Float,
     circle: Circle
@@ -133,7 +132,7 @@ private inline fun testVerticalSegmentCircleIntersections(
     return y1 in range || y2 in range
 }
 
-private inline fun testHorizontalSegmentLineIntersection(
+private fun testHorizontalSegmentLineIntersection(
     y: Float,
     startX: Float, endX: Float,
     line: Line
@@ -148,7 +147,7 @@ private inline fun testHorizontalSegmentLineIntersection(
     return px in range
 }
 
-private inline fun testVerticalSegmentLineIntersection(
+private fun testVerticalSegmentLineIntersection(
     x: Float,
     startY: Float, endY: Float,
     line: Line

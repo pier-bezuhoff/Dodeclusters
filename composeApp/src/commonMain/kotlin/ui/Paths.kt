@@ -1,5 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE", "LocalVariableName")
-
 package ui
 
 import MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS
@@ -12,7 +10,6 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.EPSILON2
 import data.geometry.Line
-import domain.Ix
 import domain.PathCache
 import domain.cluster.ConcreteClosedArcPath
 import domain.cluster.ConcreteOpenArcPath
@@ -30,7 +27,7 @@ const val VISIBLE_RECT_INDENT = 100f
 //  so we do custom approx starting from certain radii
 // MAYBE: separately pass visibleRect.center & maxDimension for optimization
 /** NOTE: ignores [circle]'s orientation at this point */
-inline fun circle2path(
+fun circle2path(
     circle: Circle,
     visibleRect: Rect,
     path: Path = Path(),
@@ -53,7 +50,7 @@ inline fun circle2path(
     }
 
 /** NOTE: ignores [circle]'s orientation at this point */
-inline fun _circle2path(circle: Circle, visibleRect: Rect): Path =
+fun _circle2path(circle: Circle, visibleRect: Rect): Path =
     Path().apply {
         addOval(
             Rect(
@@ -65,7 +62,8 @@ inline fun _circle2path(circle: Circle, visibleRect: Rect): Path =
 
 /** Add P1->P2 cubic bezier, closely approximating circular arc of
  * circle ([Ax], [Ay], [R]) */
-private inline fun circle2cubicArcPath(
+@Suppress("LocalVariableName")
+private fun circle2cubicArcPath(
     path: Path,
     Ax: Float, Ay: Float, R: Float,
     P1x: Float, P1y: Float,
@@ -91,7 +89,8 @@ private inline fun circle2cubicArcPath(
     path.cubicTo(C1x, C1y, C2x, C2y, P2x, P2y)
 }
 
-private inline fun wrapOutOfScreenCircleAsRectangle(
+@Suppress("LocalVariableName")
+private fun wrapOutOfScreenCircleAsRectangle(
     path: Path,
     visibleRect: Rect,
     Ox: Float, Oy: Float,
@@ -120,6 +119,7 @@ private inline fun wrapOutOfScreenCircleAsRectangle(
 }
 
 // not sure why but it's garbo for region intersections & co
+@Suppress("LocalVariableName")
 fun circle2cubicPath(
     circle: Circle,
     visibleRect: Rect,
@@ -169,7 +169,7 @@ fun circle2cubicPath(
     return path
 }
 
-inline fun visibleHalfPlanePath(
+fun visibleHalfPlanePath(
     line: Line,
     visibleRect: Rect,
     path: Path = Path()
@@ -182,7 +182,7 @@ inline fun visibleHalfPlanePath(
     return path
 }
 
-inline fun halfPlanePath(
+fun halfPlanePath(
     line: Line,
     visibleRect: Rect,
     path: Path = Path()
@@ -298,11 +298,58 @@ fun region2pathWithCache(
     return path
 }
 
-// TODO: benchmark & optimize
 /**
  * @param[circles] all delimiters, `null`s are to be interpreted as ∅ empty sets
  */
 fun region2path(
+    circles: List<CircleOrLine?>,
+    region: LogicalRegion,
+    visibleRect: Rect,
+): Path {
+    val path = Path()
+    if (region.insides.isEmpty() && region.outsides.isEmpty()) {
+        return path
+    }
+    path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
+    for (ix in region.insides) {
+        when (val circle = circles[ix]) {
+            is Circle -> {
+                val p = circle2path(circle, visibleRect)
+                path.op(path, p,
+                    if (circle.isCCW) PathOperation.Intersect
+                    else PathOperation.Difference
+                )
+            }
+            is Line -> {
+                val p = halfPlanePath(circle, visibleRect)
+                path.op(path, p, PathOperation.Intersect)
+            }
+            null -> {}
+        }
+    }
+    for (ix in region.outsides) {
+        when (val circle = circles[ix]) {
+            is Circle -> {
+                val p = circle2path(circle, visibleRect)
+                path.op(path, p,
+                    if (circle.isCCW) PathOperation.Difference
+                    else PathOperation.Intersect
+                )
+            }
+            is Line -> {
+                val p = halfPlanePath(circle, visibleRect)
+                path.op(path, p, PathOperation.Difference)
+            }
+            null -> {}
+        }
+    }
+    return path
+}
+
+/**
+ * @param[circles] all delimiters, `null`s are to be interpreted as ∅ empty sets
+ */
+fun _region2path(
     circles: List<CircleOrLine?>,
     region: LogicalRegion,
     visibleRect: Rect,

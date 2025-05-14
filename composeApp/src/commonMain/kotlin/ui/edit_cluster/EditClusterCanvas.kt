@@ -1,5 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
 package ui.edit_cluster
 
 import MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS
@@ -466,7 +464,7 @@ private fun DrawScope.drawCircleOrLine(
     }
 }
 
-private inline fun DrawScope.drawCircleWithCache(
+private fun DrawScope.drawCircleWithCache(
     circle: Circle,
     ix: Ix,
     pathCache: PathCache,
@@ -525,7 +523,7 @@ private inline fun DrawScope.drawCircleWithCache(
     }
 }
 
-private inline fun DrawScope.drawCircle(
+private fun DrawScope.drawCircle(
     circle: Circle,
     visibleRect: Rect,
     color: Color,
@@ -564,7 +562,7 @@ private inline fun DrawScope.drawCircle(
     }
 }
 
-private inline fun DrawScope.drawLineWithCache(
+private fun DrawScope.drawLineWithCache(
     line: Line,
     ix: Ix,
     pathCache: PathCache,
@@ -591,7 +589,7 @@ private inline fun DrawScope.drawLineWithCache(
     }
 }
 
-private inline fun DrawScope.drawLine(
+private fun DrawScope.drawLine(
     line: Line,
     visibleRect: Rect,
     color: Color,
@@ -610,7 +608,7 @@ private inline fun DrawScope.drawLine(
     }
 }
 
-private inline fun DrawScope.drawVisibleLineSegment(
+private fun DrawScope.drawVisibleLineSegment(
     line: Line,
     visibleRect: Rect,
     color: Color,
@@ -948,10 +946,12 @@ private fun DrawScope.drawRegions(
         }
     }
     for (region in regions) {
+        // idk, on Android cache slows things down (eps stereographic rotation)
         val path = region2pathWithCache(
             objects.map { it as? CircleOrLine }, region,
             pathCache, visibleRect
         )
+        // the diff between cache/no-cache doesn't seem that big
 //        val path = region2path(
 //            objects.map { it as? CircleOrLine }, region, visibleRect
 //        )
@@ -1397,9 +1397,8 @@ data class OnScreenPositions(
     val rotationHandle0 = Offset(center.x + rotationHandleRadius, center.y)
         .rotateByAround(rotationHandle0Angle, center)
 
-    @Suppress("NOTHING_TO_INLINE")
     @Stable
-    inline fun rotationHandleOffset(rotationAngle: Float): Offset {
+    fun rotationHandleOffset(rotationAngle: Float): Offset {
         val offset = rotationHandle0
             .rotateByAround(rotationAngle, center)
         return offset

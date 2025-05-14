@@ -1,5 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
 package domain
 
 import androidx.compose.ui.graphics.Path
@@ -11,14 +9,14 @@ class PathCache {
     val cachedClosedObjectPaths: MutableList<Path?> = mutableListOf()
     var pathCacheValidity = BooleanArray(0)
 
-    inline fun addObject() {
+    fun addObject() {
         val previousSize = pathCacheValidity.size
         cachedObjectPaths.add(null)
         cachedClosedObjectPaths.add(null)
         pathCacheValidity = pathCacheValidity.copyOf(previousSize + 1)
     }
 
-    inline fun addObjects(sizeIncrement: Int) {
+    fun addObjects(sizeIncrement: Int) {
         val previousSize = pathCacheValidity.size
         for (index in 0 until sizeIncrement) {
             cachedObjectPaths.add(null)
@@ -27,32 +25,32 @@ class PathCache {
         pathCacheValidity = pathCacheValidity.copyOf(previousSize + sizeIncrement)
     }
 
-    inline fun invalidateObjectPathAt(ix: Ix) {
+    fun invalidateObjectPathAt(ix: Ix) {
         pathCacheValidity[ix] = false
         // TODO: test rewind vs reset performance
         // could be worse when circle<->cubic<->line change verb/point counts
-        cachedObjectPaths[ix]?.rewind()
-        cachedClosedObjectPaths[ix]?.rewind()
+        cachedObjectPaths[ix]?.reset()
+        cachedClosedObjectPaths[ix]?.reset()
     }
 
-    inline fun removeObjectAt(ix: Ix) {
+    fun removeObjectAt(ix: Ix) {
         cachedObjectPaths[ix] = null
         cachedClosedObjectPaths[ix] = null
         invalidateObjectPathAt(ix)
     }
 
-    inline fun clear() {
+    fun clear() {
         cachedObjectPaths.clear()
         cachedClosedObjectPaths.clear()
         pathCacheValidity = BooleanArray(0)
     }
 
-    inline fun cacheObjectPath(ix: Ix, path: Path) {
+    fun cacheObjectPath(ix: Ix, path: Path) {
         cachedObjectPaths[ix] = path
         pathCacheValidity[ix] = true
     }
 
-    inline fun cacheClosedObjectPath(ix: Ix, path: Path) {
+    fun cacheClosedObjectPath(ix: Ix, path: Path) {
         cachedClosedObjectPaths[ix] = path
         pathCacheValidity[ix] = true
     }

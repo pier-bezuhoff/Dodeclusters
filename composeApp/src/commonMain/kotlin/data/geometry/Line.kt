@@ -85,10 +85,9 @@ data class Line(
         return abs(crossProduct) < EPSILON
     }
 
-    /** Project [point] down onto this line */
     // reference: https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_an_equation
-    @Suppress("NOTHING_TO_INLINE")
-    inline fun project(point: Offset): Offset {
+    /** Project [point] down onto this line */
+    fun project(point: Offset): Offset {
         val t = b*point.x - a*point.y
         val n2 = a*a + b*b
         return Offset(
