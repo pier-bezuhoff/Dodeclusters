@@ -1,5 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
 package domain
 
 import androidx.compose.runtime.MutableIntState
@@ -46,7 +44,8 @@ class ObjectModel {
      * Triggers redraw.
      *
      * NOTE: Do not forget to manually call this after finishing state-altering.
-     * */
+     */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun invalidate() {
         invalidationsState.value += 1
     }
@@ -247,9 +246,9 @@ class ObjectModel {
         const val UPSCALING_FACTOR = 2_000.0
         const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
 
-        inline fun GCircle.downscale(): GCircle =
+        fun GCircle.downscale(): GCircle =
             scaled00(DOWNSCALING_FACTOR)
-        inline fun GCircle.upscale(
+        fun GCircle.upscale(
 //            screenCenter: Offset = Offset.Zero
         ): GCircle =
             when (this) {

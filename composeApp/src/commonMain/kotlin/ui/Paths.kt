@@ -250,10 +250,10 @@ fun region2pathWithCache(
     for (ix in region.insides) {
         when (val circle = circles[ix]) {
             is Circle -> {
-                var p: Path? = pathCache.cachedClosedObjectPaths[ix]
+                var p: Path? = pathCache.cachedObjectPaths[ix]
                 if (p == null || !pathCache.pathCacheValidity[ix]) {
                     p = circle2path(circle, visibleRect, p ?: Path())
-                    pathCache.cacheClosedObjectPath(ix, p)
+                    pathCache.cacheObjectPath(ix, p)
                 }
                 path.op(path, p,
                     if (circle.isCCW) PathOperation.Intersect
@@ -261,10 +261,10 @@ fun region2pathWithCache(
                 )
             }
             is Line -> {
-                var p: Path? = pathCache.cachedClosedObjectPaths[ix]
+                var p: Path? = pathCache.cachedObjectPaths[ix]
                 if (p == null || !pathCache.pathCacheValidity[ix]) {
                     p = halfPlanePath(circle, visibleRect, p ?: Path())
-                    pathCache.cacheClosedObjectPath(ix, p)
+                    pathCache.cacheObjectPath(ix, p)
                 }
                 path.op(path, p, PathOperation.Intersect)
             }
@@ -274,10 +274,10 @@ fun region2pathWithCache(
     for (ix in region.outsides) {
         when (val circle = circles[ix]) {
             is Circle -> {
-                var p: Path? = pathCache.cachedClosedObjectPaths[ix]
+                var p: Path? = pathCache.cachedObjectPaths[ix]
                 if (p == null || !pathCache.pathCacheValidity[ix]) {
                     p = circle2path(circle, visibleRect, p ?: Path())
-                    pathCache.cacheClosedObjectPath(ix, p)
+                    pathCache.cacheObjectPath(ix, p)
                 }
                 path.op(path, p,
                     if (circle.isCCW) PathOperation.Difference
@@ -285,10 +285,10 @@ fun region2pathWithCache(
                 )
             }
             is Line -> {
-                var p: Path? = pathCache.cachedClosedObjectPaths[ix]
+                var p: Path? = pathCache.cachedObjectPaths[ix]
                 if (p == null || !pathCache.pathCacheValidity[ix]) {
                     p = halfPlanePath(circle, visibleRect, p ?: Path())
-                    pathCache.cacheClosedObjectPath(ix, p)
+                    pathCache.cacheObjectPath(ix, p)
                 }
                 path.op(path, p, PathOperation.Difference)
             }

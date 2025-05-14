@@ -91,7 +91,6 @@ import ui.circle2cubicPath
 import ui.circle2path
 import ui.halfPlanePath
 import ui.reactiveCanvas
-import ui.region2path
 import ui.region2pathWithCache
 import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
@@ -200,7 +199,7 @@ fun BoxScope.EditClusterCanvas(
         translate(viewModel.translation.x, viewModel.translation.y) {
             val visibleRect = size.toRect().translate(-viewModel.translation)
             val hiddenObjectIndices = if (viewModel.showPhantomObjects) emptySet() else viewModel.phantoms
-            drawRegions(objects = viewModel.objects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = viewModel.objectModel.pathCache, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsOpacity = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
+            drawRegions(objects = viewModel.objects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = viewModel.objectModel.pathCache, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, visibleRect = visibleRect, regionsOpacity = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
             drawAnimation(animations = animations, visibleRect = visibleRect, strokeWidth = strokeWidth)
             if (viewModel.showCircles) {
                 val selectionIsActive = viewModel.showCircles && viewModel.mode.isSelectingCircles() && viewModel.selection.isNotEmpty()
@@ -376,7 +375,7 @@ fun ScreenshotableCanvas(
                 translate(viewModel.translation.x, viewModel.translation.y) {
                     val visibleRect = size.toRect().translate(-viewModel.translation)
                     val hiddenObjectIndices = if (viewModel.showPhantomObjects) emptySet() else viewModel.phantoms
-                    drawRegions(objects = viewModel.objects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = viewModel.objectModel.pathCache, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, showWireframes = viewModel.showWireframes, visibleRect = visibleRect, regionsOpacity = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
+                    drawRegions(objects = viewModel.objects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = viewModel.objectModel.pathCache, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, visibleRect = visibleRect, regionsOpacity = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
                     if (viewModel.showCircles) {
                         val selectionIsActive = viewModel.showCircles && viewModel.mode.isSelectingCircles() && viewModel.selection.isNotEmpty()
                         drawObjects(objects = viewModel.objects, hiddenObjectIndices = hiddenObjectIndices, objectColors = viewModel.objectModel.objectColors, selection = viewModel.selection, pathCache = viewModel.objectModel.pathCache, selectionIsActive = selectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
@@ -479,47 +478,23 @@ private fun DrawScope.drawCircleWithCache(
     // NOTE: internally circles/conics are chopped into quad spline by skia/android,
     //  but this looks BAD for large circles, so we approx them with singular cubic arc
     if (radius < MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS) {
-        drawCircle(
-            color = color,
-            radius = radius,
-            center = circle.center,
-            alpha = alpha,
-            style = style,
-            blendMode = blendMode,
-        )
-    } else if (radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS) {
-        if (style == Fill) {
-            val cachedPath = pathCache.cachedClosedObjectPaths[ix]
-            if (pathCache.pathCacheValidity[ix] && cachedPath != null) {
-                drawPath(cachedPath, color, alpha, style, blendMode = blendMode)
-            } else {
-                val wrappedPath = circle2cubicPath(circle, visibleRect, closed = true)
-                drawPath(wrappedPath, color, alpha, style, blendMode = blendMode)
-                pathCache.cacheClosedObjectPath(ix, wrappedPath)
-            }
-        } else {
-            val cachedPath = pathCache.cachedObjectPaths[ix]
-            if (pathCache.pathCacheValidity[ix] && cachedPath != null) {
-                drawPath(cachedPath, color, alpha, style, blendMode = blendMode)
-            } else {
-                val wrappedPath = circle2cubicPath(circle, visibleRect, closed = false)
-                drawPath(wrappedPath, color, alpha, style, blendMode = blendMode)
-                pathCache.cacheObjectPath(ix, wrappedPath)
-            }
+        if (style == Fill && !circle.isCCW) {
+            drawRect(color = color, topLeft = visibleRect.topLeft, size = visibleRect.size, alpha = alpha, style = style, blendMode = blendMode)
         }
+        drawCircle(color = color, radius = radius, center = circle.center, alpha = alpha, style = style, blendMode = blendMode)
+    } else if (radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS) {
+        if (style == Fill && !circle.isCCW) {
+            drawRect(color = color, topLeft = visibleRect.topLeft, size = visibleRect.size, alpha = alpha, style = style, blendMode = blendMode)
+        }
+        var path: Path? = pathCache.cachedObjectPaths[ix]
+        if (path == null || !pathCache.pathCacheValidity[ix]) {
+            path = circle2cubicPath(circle, visibleRect, closed = true, path ?: Path())
+            pathCache.cacheObjectPath(ix, path)
+        }
+        drawPath(path, color, alpha, style, blendMode = blendMode)
     } else {
         val line = circle.approximateToLine(visibleRect.center)
-        drawLineWithCache(
-            line = line,
-            ix = ix,
-            pathCache = pathCache,
-            visibleRect = visibleRect,
-            color = color,
-            alpha = alpha,
-            style = style,
-            blendMode = blendMode,
-            drawHalfPlanesForLines = drawHalfPlanesForLines,
-        )
+        drawLineWithCache(line = line, ix = ix, pathCache = pathCache, visibleRect = visibleRect, color = color, alpha = alpha, style = style, blendMode = blendMode, drawHalfPlanesForLines = drawHalfPlanesForLines)
     }
 }
 
@@ -536,29 +511,20 @@ private fun DrawScope.drawCircle(
     // NOTE: internally circles/conics are chopped into quad spline by skia/android,
     //  but this looks BAD for large circles, so we approx them with singular cubic arc
     if (radius < MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS) {
-        drawCircle(
-            color = color,
-            radius = radius,
-            center = circle.center,
-            alpha = alpha,
-            style = style,
-            blendMode = blendMode,
-        )
+        if (style == Fill && !circle.isCCW) {
+            drawRect(color = color, topLeft = visibleRect.topLeft, size = visibleRect.size, alpha = alpha, style = style, blendMode = blendMode)
+        }
+        drawCircle(color = color, radius = radius, center = circle.center, alpha = alpha, style = style, blendMode = blendMode)
     } else if (radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS) {
         val closed = style == Fill
-        val wrappedPath = circle2cubicPath(circle, visibleRect, closed = closed)
-        drawPath(wrappedPath, color, alpha, style, blendMode = blendMode)
+        if (closed && !circle.isCCW) {
+            drawRect(color = color, topLeft = visibleRect.topLeft, size = visibleRect.size, alpha = alpha, style = style, blendMode = blendMode)
+        }
+        val path = circle2cubicPath(circle, visibleRect, closed = closed)
+        drawPath(path, color, alpha, style, blendMode = blendMode)
     } else {
         val line = circle.approximateToLine(visibleRect.center)
-        drawLine(
-            line = line,
-            visibleRect = visibleRect,
-            color = color,
-            alpha = alpha,
-            style = style,
-            blendMode = blendMode,
-            drawHalfPlanesForLines = drawHalfPlanesForLines,
-        )
+        drawLine(line = line, visibleRect = visibleRect, color = color, alpha = alpha, style = style, blendMode = blendMode, drawHalfPlanesForLines = drawHalfPlanesForLines)
     }
 }
 
@@ -575,14 +541,12 @@ private fun DrawScope.drawLineWithCache(
 ) {
     when (style) {
         Fill -> if (drawHalfPlanesForLines) {
-            val cachedPath = pathCache.cachedClosedObjectPaths[ix]
-            if (pathCache.pathCacheValidity[ix] && cachedPath != null) {
-                drawPath(cachedPath, color, alpha, style, blendMode = blendMode)
-            } else {
-                val halfPlanePath = halfPlanePath(line, visibleRect)
-                drawPath(halfPlanePath, color, alpha, style, blendMode = blendMode)
-                pathCache.cacheClosedObjectPath(ix, halfPlanePath)
+            var path: Path? = pathCache.cachedObjectPaths[ix]
+            if (path == null || !pathCache.pathCacheValidity[ix]) {
+                path = halfPlanePath(line, visibleRect, path ?: Path())
+                pathCache.cacheObjectPath(ix, path)
             }
+            drawPath(path, color, alpha, style, blendMode = blendMode)
         }
         is Stroke ->
             drawVisibleLineSegment(line, visibleRect, color, alpha, style, blendMode)
@@ -600,8 +564,8 @@ private fun DrawScope.drawLine(
 ) {
     when (style) {
         Fill -> if (drawHalfPlanesForLines) {
-            val halfPlanePath = halfPlanePath(line, visibleRect)
-            drawPath(halfPlanePath, color, alpha, style, blendMode = blendMode)
+            val path = halfPlanePath(line, visibleRect)
+            drawPath(path, color, alpha, style, blendMode = blendMode)
         }
         is Stroke ->
             drawVisibleLineSegment(line, visibleRect, color, alpha, style, blendMode)
@@ -914,7 +878,6 @@ private fun DrawScope.drawRegions(
     pathCache: PathCache,
     chessboardPattern: ChessboardPattern,
     chessboardColor: Color,
-    showWireframes: Boolean,
     visibleRect: Rect,
     @FloatRange(from = 0.0, to = 1.0)
     regionsOpacity: Float,
@@ -923,25 +886,16 @@ private fun DrawScope.drawRegions(
 ) {
     // NOTE: buggy on extreme zoom-in
     if (chessboardPattern != ChessboardPattern.NONE) {
-        if (showWireframes) {
-            for (ix in objects.indices) {
-                val o = objects[ix]
-                if (ix !in hiddenObjectIndices && o is CircleOrLine)
-                    drawCircleOrLineWithCache(o, ix, pathCache, visibleRect, chessboardColor,
-                        style = circleStroke
-                    )
-            }
-        } else {
-            if (chessboardPattern == ChessboardPattern.STARTS_COLORED)
-                drawRect(chessboardColor, visibleRect.topLeft, visibleRect.size)
-            // FIX: flickering, eg when altering spirals
-            for (ix in objects.indices) { // it used to work poorly but is good now for some reason
-                val o = objects[ix]
-                if (ix !in hiddenObjectIndices && o is CircleOrLine)
-                    drawCircleOrLineWithCache(o, ix, pathCache, visibleRect, chessboardColor,
-                        blendMode = BlendMode.Xor,
-                        drawHalfPlanesForLines = true
-                    )
+        if (chessboardPattern == ChessboardPattern.STARTS_COLORED)
+            drawRect(chessboardColor, visibleRect.topLeft, visibleRect.size)
+        for (ix in objects.indices) { // it used to work poorly but is good now for some reason
+            val o = objects[ix]
+            if (ix !in hiddenObjectIndices && o is CircleOrLine) {
+                // FIX: CW circles are drawn as CCW
+                drawCircleOrLineWithCache(o, ix, pathCache, visibleRect, chessboardColor,
+                    blendMode = BlendMode.Xor,
+                    drawHalfPlanesForLines = true
+                )
             }
         }
     }
@@ -955,27 +909,19 @@ private fun DrawScope.drawRegions(
 //        val path = region2path(
 //            objects.map { it as? CircleOrLine }, region, visibleRect
 //        )
-        if (showWireframes) {
-            drawPath(path,
-                color = region.fillColor,
-                alpha = regionsOpacity,
-                style = circleStroke,
-                blendMode = regionsBlendMode
-            )
-        } else { // drawing stroke+fill to prevent seams
-            drawPath(path,
-                color = region.borderColor ?: region.fillColor,
-                alpha = regionsOpacity,
-                style = circleStroke,
-                blendMode = regionsBlendMode,
-            )
-            drawPath(path,
-                color = region.fillColor,
-                alpha = regionsOpacity,
-                style = Fill,
-                blendMode = regionsBlendMode,
-            )
-        }
+        // drawing stroke+fill to prevent seams
+        drawPath(path,
+            color = region.borderColor ?: region.fillColor,
+            alpha = regionsOpacity,
+            style = circleStroke,
+            blendMode = regionsBlendMode,
+        )
+        drawPath(path,
+            color = region.fillColor,
+            alpha = regionsOpacity,
+            style = Fill,
+            blendMode = regionsBlendMode,
+        )
     }
 }
 

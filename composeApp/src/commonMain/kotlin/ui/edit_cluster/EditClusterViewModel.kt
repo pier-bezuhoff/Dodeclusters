@@ -179,8 +179,6 @@ class EditClusterViewModel : ViewModel() {
     var showPhantomObjects: Boolean by mutableStateOf(false)
         private set
     /** which style to use when drawing regions: true = stroke, false = fill */
-    var showWireframes: Boolean by mutableStateOf(false)
-        private set
     var showDirectionArrows: Boolean by mutableStateOf(DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES)
         private set
     var regionManipulationStrategy: RegionManipulationStrategy by mutableStateOf(RegionManipulationStrategy.REPLACE)
@@ -3486,7 +3484,6 @@ class EditClusterViewModel : ViewModel() {
             Tool.BlendSettings -> openedDialog = DialogType.BLEND_SETTINGS
             Tool.ToggleObjects -> toggleShowCircles()
             Tool.TogglePhantoms -> togglePhantomObjects()
-            Tool.ToggleFilledOrOutline -> showWireframes = !showWireframes
             Tool.HideUI -> hideUIFor30s()
             Tool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
             // TODO: 2 options: solid color or external image
@@ -3512,6 +3509,7 @@ class EditClusterViewModel : ViewModel() {
             Tool.InBetween -> {} // unused, potentially updateParams(...)
             Tool.ReverseDirection -> {}
             Tool.BidirectionalSpiral -> {}
+            Tool.ToggleFilledOrOutline -> TODO()
         }
     }
 
@@ -3545,8 +3543,6 @@ class EditClusterViewModel : ViewModel() {
                 showCircles
             Tool.TogglePhantoms ->
                 showPhantomObjects
-            Tool.ToggleFilledOrOutline ->
-                !showWireframes
             Tool.ToggleDirectionArrows ->
                 showDirectionArrows
             Tool.MarkAsPhantoms -> {
