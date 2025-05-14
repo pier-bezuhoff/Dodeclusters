@@ -42,22 +42,11 @@ fun circle2path(
             )
         }
     } else if (circle.radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS) {
-        circle2cubicPath(circle, visibleRect, closed = true, path)
+        circle2cubicPath(circle.copy(isCCW = true), visibleRect, closed = true, path)
     } else {
         val line = circle.copy(isCCW = true)
             .approximateToLine(visibleRect.center)
         halfPlanePath(line, visibleRect, path)
-    }
-
-/** NOTE: ignores [circle]'s orientation at this point */
-fun _circle2path(circle: Circle, visibleRect: Rect): Path =
-    Path().apply {
-        addOval(
-            Rect(
-                center = circle.center,
-                radius = circle.radius.toFloat()
-            )
-        )
     }
 
 /** Add P1->P2 cubic bezier, closely approximating circular arc of
@@ -97,19 +86,23 @@ private fun wrapOutOfScreenCircleAsRectangle(
     Ax: Float, Ay: Float,
     P1x: Float, P1y: Float,
     P2x: Float, P2y: Float,
+    isCCW: Boolean,
 ) {
-    val maxDim = visibleRect.maxDimension
+    val maxDim =
+//        visibleRect.minDimension*0.5f
+        visibleRect.maxDimension
     val OAx = Ax - Ox
     val OAy = Ay - Oy
-    val OAk = 1f/hypot(OAx, OAy)
-    val inwardX = OAx*OAk*maxDim
-    val inwardY = OAy*OAk*maxDim
+    val orientationSign = if (isCCW) +1 else -1
+    val inwardK = orientationSign*maxDim/hypot(OAx, OAy)
+    val inwardX = OAx*inwardK
+    val inwardY = OAy*inwardK
     // NOTE: OA is perp to P1P2
     val P1P2x = P2x - P1x
     val P1P2y = P2y - P1y
-    val P1P2k = 1f/hypot(P1P2x, P1P2y)
-    val forwardX = P1P2x*P1P2k*maxDim
-    val forwardY = P1P2y*P1P2k*maxDim
+    val forwardK = maxDim/hypot(P1P2x, P1P2y)
+    val forwardX = P1P2x*forwardK
+    val forwardY = P1P2y*forwardK
     // assuming we done P1->P2 arc
     path.relativeLineTo(forwardX, forwardY)
     path.relativeLineTo(inwardX, inwardY)
@@ -118,7 +111,9 @@ private fun wrapOutOfScreenCircleAsRectangle(
     path.close()
 }
 
-// not sure why but it's garbo for region intersections & co
+/** Adds to [path] approximation of [circle] ∩ [visibleRect] by a cubic bezier arc inside
+ * of [visibleRect] and 3 additional lines to close the contour outside of [visibleRect].
+ * Orientation of the resulting contour is to agree with [circle]`.isCCW`. */
 @Suppress("LocalVariableName")
 fun circle2cubicPath(
     circle: Circle,
@@ -126,31 +121,31 @@ fun circle2cubicPath(
     closed: Boolean,
     path: Path = Path(),
 ): Path {
-    val circle0 = circle.copy(isCCW = true) // i think we ignore its original orientation atp?
     val screenCenter = visibleRect.center
     // visible rect is contained in this circle
     val outerRadius =
 //        visibleRect.minDimension*0.48f
         visibleRect.maxDimension + VISIBLE_RECT_INDENT
     val outerCircle = Circle(screenCenter, outerRadius)
-    val intersectionCoordinates = Circle.calculateIntersectionCoordinates(circle0, outerCircle)
+    val intersectionCoordinates = Circle.calculateIntersectionCoordinates(circle, outerCircle)
     if (intersectionCoordinates.size == 4) { // all 2 intersections present
         // normal case, CCW order of points (wrt $circle)
         val Ox = screenCenter.x
         val Oy = screenCenter.y
-        val Ax = circle0.x.toFloat()
-        val Ay = circle0.y.toFloat()
+        val Ax = circle.x.toFloat()
+        val Ay = circle.y.toFloat()
         val P1x = intersectionCoordinates[0]
         val P1y = intersectionCoordinates[1]
         val P2x = intersectionCoordinates[2]
         val P2y = intersectionCoordinates[3]
         circle2cubicArcPath(
             path = path,
-            Ax = Ax, Ay = Ay, R = circle0.radius.toFloat(),
+            Ax = Ax, Ay = Ay, R = circle.radius.toFloat(),
             P1x = P1x, P1y = P1y,
             P2x = P2x, P2y = P2y,
         )
         if (closed) {
+            // FIX: orientation
             wrapOutOfScreenCircleAsRectangle(
                 path = path,
                 visibleRect = visibleRect,
@@ -158,14 +153,13 @@ fun circle2cubicPath(
                 Ax = Ax, Ay = Ay,
                 P1x = P1x, P1y = P1y,
                 P2x = P2x, P2y = P2y,
+                isCCW = circle.isCCW,
             )
         }
-    } else if (closed && circle0.hasInside(screenCenter)) {
+    } else if (closed && circle.hasInside(screenCenter)) {
         // our circle includes all visible region
         path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
-    } else {
-        // empty path
-    }
+    } // else: empty path
     return path
 }
 

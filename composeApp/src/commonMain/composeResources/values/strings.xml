@@ -207,7 +207,7 @@
     <string name="dilation_placeholder">&lt;log-dilation&gt;</string>
     <!-- color picker dialog -->
     <string name="color_picker_title">Pick a color</string>
-    <string name="color_picker_used_and_saved_colors_label">Used colors | Saved colors</string>
+    <string name="color_picker_used_and_saved_colors_label">Colors in use + Saved colors</string>
     <string name="color_picker_default_palette_label">Default palette</string>
     <string name="color_picker_save_color_description">Save current color</string>
     <string name="color_picker_forget_color_description">Forget current color</string>

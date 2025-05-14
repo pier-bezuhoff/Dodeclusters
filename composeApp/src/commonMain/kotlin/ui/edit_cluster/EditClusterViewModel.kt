@@ -300,6 +300,8 @@ class EditClusterViewModel : ViewModel() {
         val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
         translation += (newCenter - prevCenter)
         canvasSize = newCanvasSize
+        objectModel.pathCache.invalidateAll()
+        objectModel.invalidate()
     }
 
     fun saveAsYaml(name: String = DdcV4.DEFAULT_NAME): String {

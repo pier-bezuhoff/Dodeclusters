@@ -203,7 +203,7 @@
     <string name="dilation_placeholder">&lt;логарифм раздутия/сжатия&gt;</string>
     <!-- color picker dialog -->
     <string name="color_picker_title">Выберите цвет</string>
-    <string name="color_picker_used_and_saved_colors_label">Использованные цвета | Сохранённые цвета</string>
+    <string name="color_picker_used_and_saved_colors_label">Использованные цвета + Сохранённые цвета</string>
     <string name="color_picker_default_palette_label">Палитра по умолчанию</string>
     <string name="color_picker_save_color_description">Сохранить текущий цвет</string>
     <string name="color_picker_forget_color_description">Забыть текущий цвет</string>
