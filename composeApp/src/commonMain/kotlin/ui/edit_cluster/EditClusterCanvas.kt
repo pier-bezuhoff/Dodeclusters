@@ -483,9 +483,9 @@ private fun DrawScope.drawCircleWithCache(
         }
         drawCircle(color = color, radius = radius, center = circle.center, alpha = alpha, style = style, blendMode = blendMode)
     } else if (radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS) {
-        if (style == Fill && !circle.isCCW) {
-            drawRect(color = color, topLeft = visibleRect.topLeft, size = visibleRect.size, alpha = alpha, style = style, blendMode = blendMode)
-        }
+//        if (style == Fill && !circle.isCCW) {
+//            drawRect(color = color, topLeft = visibleRect.topLeft, size = visibleRect.size, alpha = alpha, style = style, blendMode = blendMode)
+//        }
         var path: Path? = pathCache.cachedObjectPaths[ix]
         if (path == null || !pathCache.pathCacheValidity[ix]) {
             path = circle2cubicPath(circle, visibleRect, closed = true, path ?: Path())
@@ -891,7 +891,6 @@ private fun DrawScope.drawRegions(
         for (ix in objects.indices) { // it used to work poorly but is good now for some reason
             val o = objects[ix]
             if (ix !in hiddenObjectIndices && o is CircleOrLine) {
-                // FIX: CW circles are drawn as CCW
                 drawCircleOrLineWithCache(o, ix, pathCache, visibleRect, chessboardColor,
                     blendMode = BlendMode.Xor,
                     drawHalfPlanesForLines = true
