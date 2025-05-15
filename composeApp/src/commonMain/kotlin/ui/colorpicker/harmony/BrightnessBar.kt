@@ -1,8 +1,8 @@
 package ui.colorpicker.harmony
 
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Slider
-import androidx.compose.material.SliderDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import ui.colorpicker.HsvColor
@@ -20,8 +20,8 @@ internal fun BrightnessBar(
             onValueChange(it)
         },
         colors = SliderDefaults.colors(
-            activeTrackColor = MaterialTheme.colors.primary,
-            thumbColor = MaterialTheme.colors.primary
+            activeTrackColor = MaterialTheme.colorScheme.primary,
+            thumbColor = MaterialTheme.colorScheme.primary
         )
     )
 }

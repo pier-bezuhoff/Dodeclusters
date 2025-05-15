@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Surface
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -42,7 +42,8 @@ private fun MagnifierSelectionCircle(modifier: Modifier, color: HsvColor) {
     Surface(
         modifier,
         shape = CircleShape,
-        elevation = 4.dp,
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
         color = color.toColor(),
         border = BorderStroke(2.dp, SolidColor(Color.White)),
         content = {}

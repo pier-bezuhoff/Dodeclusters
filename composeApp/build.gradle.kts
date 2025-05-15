@@ -76,15 +76,15 @@ kotlin {
             // NOTE: compose.X translates into "org.jetbrains.compose.X:X" with compose-multiplatform version
             implementation(compose.runtime)
             implementation(compose.foundation)
-            implementation(compose.material) // used only for icons
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.components.uiToolingPreview)
-            implementation(libs.compose.ui.graphics)
             implementation(compose.components.resources)
+            implementation(libs.compose.ui.graphics)
             implementation(libs.compose.lifecycle.viewmodel)
-            implementation(libs.coroutines.core)
+            implementation(libs.compose.material.icons)
             implementation(libs.compose.material3.window.size.klass)
+            implementation(libs.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.colormath)
             implementation(libs.kaml)

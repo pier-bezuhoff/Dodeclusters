@@ -1101,7 +1101,7 @@ fun ToolButton(
                     )
                 }
             }
-            else -> never("$tool")
+//            else -> never("$tool")
         }
     }
 }

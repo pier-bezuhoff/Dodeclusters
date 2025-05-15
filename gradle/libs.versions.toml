@@ -1,5 +1,5 @@
 [versions]
-dodeclusters-version = "0.4.2"
+dodeclusters-version = "0.4.3"
 dodeclusters-android-versionCode = "8"
 dodeclusters-desktop-packageVersion = "1.0.4" # cannot start with 0 it seems
 # NOTE: Andorid 15 (api 35) is already out, but
@@ -9,26 +9,27 @@ android-compileSdk = "34"
 android-minSdk = "24" # = Android 7.0 Nougat
 android-targetSdk = "34"
 
-kotlin = "2.1.0"
+kotlin = "2.1.20"
 # latest compatible with this Android Studio version, but is far ahead of
 # the one that is officially supported by KMP 1.6.11 (agp 8.3.*)
 agp = "8.5.2"
-compose-multiplatform = "1.7.3"
+compose-multiplatform = "1.8.0"
 #noinspection GradleDependency
-jetpack-compose = "1.7.6" # check github compose-multiplatform/release for the one compatible
+jetpack-compose = "1.8.0" # check github compose-multiplatform/release for the one compatible
 # https://github.com/JetBrains/compose-multiplatform/releases/tag/v1.7.0
-kotlinx-serialization = "1.8.0"
-kotlinx-coroutines = "1.9.0"
-androidx-activityCompose = "1.9.3"
+kotlinx-serialization = "1.8.1"
+kotlinx-coroutines = "1.10.2"
+androidx-activityCompose = "1.10.1"
+material-icons = "1.7.3"
 #noinspection GradleDependency
 androidx-core-ktx = "1.13.1" # do not update, 1.15.0 requires api 35
-lifecycle-viewmodel = "2.8.3"
+lifecycle-viewmodel = "2.9.0-beta01"
 window-size-klass = "0.5.0"
 colormath = "3.6.1"
-kaml = "0.67.0"
+kaml = "0.78.0"
 kstore = "0.9.1"
 appdirs = "1.2.0"
-accompanist = "0.37.0"
+accompanist = "0.37.3"
 
 [libraries]
 compose-ui-graphics = { module = "org.jetbrains.compose.ui:ui-graphics", version.ref = "compose-multiplatform" }
@@ -39,6 +40,7 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
+compose-material-icons = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "material-icons" }
 # official window-size-class is still worse
 #compose-material3-window-size-klass = { module = "org.jetbrains.compose.material3:material3-window-size-class", version.ref = "material3" }
 compose-material3-window-size-klass = { module = "dev.chrisbanes.material3:material3-window-size-class-multiplatform", version.ref = "window-size-klass" }
