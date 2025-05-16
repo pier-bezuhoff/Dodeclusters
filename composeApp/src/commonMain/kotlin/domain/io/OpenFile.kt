@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import kotlinx.coroutines.flow.SharedFlow
 
 // MAYBE: make it less platform-specific
 @Immutable
@@ -33,5 +34,6 @@ expect fun OpenFileButton(
     contentDescription: String,
     lookupData: LookupData,
     modifier: Modifier = Modifier,
+    openRequests: SharedFlow<Unit>? = null,
     onOpen: (content: String?) -> Unit
 )

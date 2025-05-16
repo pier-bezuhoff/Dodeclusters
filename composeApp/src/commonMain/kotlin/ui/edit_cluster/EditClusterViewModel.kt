@@ -265,12 +265,19 @@ class EditClusterViewModel : ViewModel() {
     var defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters()
         private set
 
+    val openFileRequests: MutableSharedFlow<Unit> =
+        MutableSharedFlow(
+            replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+
     private val _animations: MutableSharedFlow<ObjectAnimation> = MutableSharedFlow()
     // i'll be real this stupid practice is annoying and ugly & a hack
     val animations: SharedFlow<ObjectAnimation> = _animations.asSharedFlow()
 
     val snackbarMessages: MutableSharedFlow<Pair<SnackbarMessage, String>> =
-        MutableSharedFlow(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+        MutableSharedFlow(
+            replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
 
     var openedDialog: DialogType? by mutableStateOf(null)
         private set
@@ -2695,7 +2702,8 @@ class EditClusterViewModel : ViewModel() {
                 KeyboardAction.PALETTE -> toolAction(Tool.Palette)
                 KeyboardAction.TRANSFORM -> switchToCategory(Category.Transform)
                 KeyboardAction.CREATE -> switchToCategory(Category.Create)
-                KeyboardAction.OPEN -> {}
+                KeyboardAction.OPEN -> openFileRequests.tryEmit(Unit)
+                KeyboardAction.SAVE -> toolAction(Tool.SaveCluster)
                 KeyboardAction.CONFIRM -> if (submode is SubMode.ExprAdjustment)
                     confirmAdjustedParameters()
                 KeyboardAction.NEW_DOCUMENT -> openNewBlankConstellation()

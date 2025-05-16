@@ -65,8 +65,10 @@ You can find the apk in the assets [attached to the latest release](https://gith
 - `Ctrl + Z`: undo ↶
 - `Ctrl + Y`: redo ↷
 - `Esc`: cancel any ongoing constructions
+- `O`: open existing file
+- `S`: save file
 - `M`: go to Drag mode (~ **M**ove)
-- `S`: go to Multi**S**elect mode (~ **S**election)
+- `L`: go to Mu**L**tiselect mode
 - `R`: go to **R**egions mode
 - `T`: open **T**ransform tools
 - `C`: open **C**reate tools

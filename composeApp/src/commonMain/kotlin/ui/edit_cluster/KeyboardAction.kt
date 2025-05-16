@@ -14,27 +14,25 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import kotlinx.serialization.Serializable
 
-// MAYBE: add shortcut help on ?
 @Immutable
 @Serializable
 enum class KeyboardAction {
     SELECT_ALL, // Ctrl-A
     DELETE,
     // + Ctrl-C: copy (what? we already have duplicate)
-    // + Enter: finish/confirm cluster creation & go to multi-cluster editor
     PASTE, // Ctrl-V
     ZOOM_IN, ZOOM_OUT,
-    UNDO, REDO,
-    // SAVE, OPEN,
+    UNDO, REDO, // Ctrl-Z, Ctrl-Y
     CONFIRM, // Enter
     /** Cancel ongoing action (partial constructions, etc) */
     CANCEL, // Esc
-    OPEN,
-    MOVE, SELECT, REGION, // M: drag, S: multiselect, R: region
+    MOVE, SELECT, REGION, // M: drag, L: multiselect, R: region
     PALETTE, // P
     TRANSFORM, CREATE, // T, C
-    HELP,
-    NEW_DOCUMENT, // Ctrl-N
+    HELP, // ? = Shift-/
+    OPEN, // O
+    SAVE, // S
+    NEW_DOCUMENT, // Ctrl-N (nothing in browser?)
     // TODO: `?` for shortcut cheatsheet / help
     // TODO: arrow keys for finer movement
 }
@@ -67,8 +65,9 @@ fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
                 Key.Enter -> KeyboardAction.CONFIRM
                 Key.Escape -> KeyboardAction.CANCEL
                 Key.O -> KeyboardAction.OPEN
+                Key.S -> KeyboardAction.SAVE
                 Key.M -> KeyboardAction.MOVE
-                Key.S -> KeyboardAction.SELECT
+                Key.L -> KeyboardAction.SELECT
                 Key.R -> KeyboardAction.REGION
                 Key.P -> KeyboardAction.PALETTE
                 Key.T -> KeyboardAction.TRANSFORM

@@ -81,7 +81,6 @@ import domain.PartialArgList
 import domain.io.DdcRepository
 import domain.io.LookupData
 import domain.io.OpenFileButton
-import domain.never
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
@@ -217,7 +216,8 @@ fun EditClusterScreen(
                         },
                         undo = viewModel::undo,
                         redo = viewModel::redo,
-                        modifier = Modifier.align(Alignment.TopEnd)
+                        modifier = Modifier.align(Alignment.TopEnd),
+                        openFileRequests = viewModel.openFileRequests,
                     )
                     if (isLandscape)
                         ToolbarLandscape(
@@ -398,6 +398,8 @@ fun EditClusterScreen(
     }
     LaunchedEffect(lifecycleEvents) {
         lifecycleEvents?.let {
+            // NOTE: technically it's better to call .flowWithLifecycle before .collect
+            //  specifically on Android
             lifecycleEvents.collect { action ->
                 when (action) {
                     LifecycleEvent.SaveUIState -> {
@@ -596,7 +598,8 @@ fun EditClusterTopBar(
     loadFromYaml: (content: String?) -> Unit,
     undo: () -> Unit,
     redo: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    openFileRequests: SharedFlow<Unit>? = null,
 ) {
     val iconModifier =
         if (compact) Modifier.padding(4.dp).size(30.dp)
@@ -637,6 +640,7 @@ fun EditClusterTopBar(
                     stringResource(Tool.OpenFile.name),
                     LookupData.YAML,
                     modifier = iconModifier,
+                    openRequests = openFileRequests,
                     onOpen = loadFromYaml,
                 )
             }

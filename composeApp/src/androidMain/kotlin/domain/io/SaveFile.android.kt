@@ -6,12 +6,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.flowWithLifecycle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileNotFoundException
@@ -26,6 +31,7 @@ actual fun SaveFileButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
+    saveRequests: SharedFlow<Unit>?,
     onSaved: (success: Boolean?, filename: String?) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -41,7 +47,10 @@ actual fun SaveFileButton(
                     context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                         val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                         cursor.moveToFirst()
-                        name = File(cursor.getString(nameIndex)).nameWithoutExtension
+                        val displayName = cursor.getString(nameIndex)
+                        //  reference: https://developer.android.com/privacy-and-security/risks/untrustworthy-contentprovider-provided-filename
+                        val filename = sanitizeFilename(displayName)
+                        name = File(filename).nameWithoutExtension
                     }
                     if (name == null) {
                         uri.lastPathSegment?.let { filename ->
@@ -80,4 +89,25 @@ actual fun SaveFileButton(
     ) {
         buttonContent()
     }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(saveRequests) {
+        saveRequests
+            ?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+            ?.collect {
+                coroutineScope.launch {
+                    launcher.launch(saveData.filename)
+                }
+            }
+    }
+}
+
+/** reference: https://developer.android.com/privacy-and-security/risks/untrustworthy-contentprovider-provided-filename */
+private fun sanitizeFilename(displayName: String): String {
+    val badCharacters = arrayOf("..", "/")
+    val segments = displayName.split("/")
+    var fileName = segments[segments.size - 1]
+    for (suspString in badCharacters) {
+        fileName = fileName.replace(suspString, "_")
+    }
+    return fileName
 }

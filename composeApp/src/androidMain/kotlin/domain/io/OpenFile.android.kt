@@ -7,9 +7,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.flowWithLifecycle
+import kotlinx.coroutines.flow.SharedFlow
 import java.io.FileNotFoundException
 
 @Composable
@@ -18,6 +23,7 @@ actual fun OpenFileButton(
     contentDescription: String,
     lookupData: LookupData,
     modifier: Modifier,
+    openRequests: SharedFlow<Unit>?,
     onOpen: (content: String?) -> Unit
 ) {
     val context = LocalContext.current
@@ -39,6 +45,14 @@ actual fun OpenFileButton(
         modifier = modifier
     ) {
         Icon(iconPainter, contentDescription, modifier)
+    }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(openRequests) {
+        openRequests
+            ?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+            ?.collect {
+                launcher.launch(lookupData.androidMimeType)
+            }
     }
 }
 

@@ -44,6 +44,7 @@ import dodeclusters.composeapp.generated.resources.name
 import dodeclusters.composeapp.generated.resources.ok_description
 import kotlinx.browser.document
 import kotlinx.browser.window
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -61,10 +62,11 @@ actual fun SaveFileButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
+    saveRequests: SharedFlow<Unit>?,
     onSaved: (success: Boolean?, filename: String?) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var openDialog by remember { mutableStateOf(false) }
+    var dialogIsOpen by remember { mutableStateOf(false) }
     var ddcName by remember { mutableStateOf(TextFieldValue(
         text = saveData.name,
         selection = TextRange(saveData.name.length) // important to insert cursor AT THE END
@@ -72,7 +74,7 @@ actual fun SaveFileButton(
     val textFieldFocusRequester = remember { FocusRequester() }
 
     fun onConfirm() {
-        openDialog = false
+        dialogIsOpen = false
         coroutineScope.launch {
             val data = saveData.copy(name = ddcName.text)
             try {
@@ -86,7 +88,7 @@ actual fun SaveFileButton(
 
     Button(
         onClick = {
-            openDialog = true
+            dialogIsOpen = true
         },
         modifier = modifier,
         shape = shape,
@@ -97,7 +99,7 @@ actual fun SaveFileButton(
     ) {
         buttonContent()
     }
-    if (openDialog) {
+    if (dialogIsOpen) {
         // NOTE: for some only-god-knows-why reason when i try to use
         //  non-hard-coded or maybe longer strings here, on Android/Chrome
         //  when the text field gains focus ALL texts in the app
@@ -107,7 +109,7 @@ actual fun SaveFileButton(
         //  as if there is a cap...
         // ALSO: try hiding root dialog, maybe it's because of double-dialog setup
         Dialog(
-            onDismissRequest = { openDialog = false },
+            onDismissRequest = { dialogIsOpen = false },
             properties = DialogProperties()
         ) {
             Surface(
@@ -151,8 +153,13 @@ actual fun SaveFileButton(
                 }
             }
         }
-        LaunchedEffect(openDialog) {
+        LaunchedEffect(dialogIsOpen) {
             textFieldFocusRequester.requestFocus()
+        }
+    }
+    LaunchedEffect(saveRequests) {
+        saveRequests?.collect {
+            dialogIsOpen = true
         }
     }
 }

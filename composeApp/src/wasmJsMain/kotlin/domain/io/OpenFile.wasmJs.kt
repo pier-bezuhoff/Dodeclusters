@@ -3,9 +3,11 @@ package domain.io
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import kotlinx.browser.document
+import kotlinx.coroutines.flow.SharedFlow
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.Event
 import org.w3c.files.File
@@ -18,24 +20,37 @@ actual fun OpenFileButton(
     contentDescription: String,
     lookupData: LookupData,
     modifier: Modifier,
+    openRequests: SharedFlow<Unit>?,
     onOpen: (content: String?) -> Unit
 ) {
     IconButton(
         onClick = {
-            queryFile(lookupData) { file ->
-                file?.let {
-                    val reader = FileReader()
-                    reader.onload = {
-                        val content = reader.result?.toString()
-                        onOpen(content)
-                    }
-                    reader.readAsText(file, "UTF-8")
-                } ?: onOpen(null)
-            }
+            onClick(lookupData, onOpen)
         },
         modifier = modifier
     ) {
         Icon(iconPainter, contentDescription, modifier)
+    }
+    LaunchedEffect(openRequests) {
+        openRequests?.collect {
+            onClick(lookupData, onOpen)
+        }
+    }
+}
+
+private fun onClick(
+    lookupData: LookupData,
+    onOpen: (content: String?) -> Unit
+) {
+    queryFile(lookupData) { file ->
+        file?.let {
+            val reader = FileReader()
+            reader.onload = {
+                val content = reader.result?.toString()
+                onOpen(content)
+            }
+            reader.readAsText(file, "UTF-8")
+        } ?: onOpen(null)
     }
 }
 

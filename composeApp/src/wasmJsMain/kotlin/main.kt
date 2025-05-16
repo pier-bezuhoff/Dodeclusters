@@ -82,23 +82,26 @@ private inline fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction
 //                "Minus" -> KeyboardAction.ZOOM_OUT
                 "KeyZ" -> KeyboardAction.UNDO
                 "KeyY" -> KeyboardAction.REDO
-                "KeyN" -> KeyboardAction.NEW_DOCUMENT
+                // Ctrl-S, Ctrl-O, Ctrl-N are not available in browser
                 else -> null
             }
-        } else
+
+        } else {
             when (event.code) {
                 "Delete", "Backspace" -> KeyboardAction.DELETE
                 "Enter" -> KeyboardAction.CONFIRM
                 "Escape" -> KeyboardAction.CANCEL
                 "KeyO" -> KeyboardAction.OPEN
+                "KeyS" -> KeyboardAction.SAVE
                 "KeyM" -> KeyboardAction.MOVE
-                "KeyS" -> KeyboardAction.SELECT
+                "KeyL" -> KeyboardAction.SELECT
                 "KeyR" -> KeyboardAction.REGION
                 "KeyU" -> KeyboardAction.PALETTE
                 "KeyT" -> KeyboardAction.TRANSFORM
                 "KeyC" -> KeyboardAction.CREATE
                 else -> null
             }
+        }
     } else if (event.code == "Slash" && event.shiftKey)
         KeyboardAction.HELP
     else null

@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.SharedFlow
 
 @Immutable
 data class SaveData<T>(
@@ -32,5 +33,6 @@ expect fun SaveFileButton(
     shape: Shape = RoundedCornerShape(4.dp),
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
+    saveRequests: SharedFlow<Unit>? = null,
     onSaved: (success: Boolean?, filename: String?) -> Unit = { _, _ -> }
 )

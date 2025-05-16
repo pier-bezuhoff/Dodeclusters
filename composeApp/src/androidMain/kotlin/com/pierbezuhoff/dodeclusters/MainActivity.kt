@@ -30,6 +30,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.flowWithLifecycle
 import domain.io.readDdcFromUri
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -141,11 +142,13 @@ class MainActivity : ComponentActivity() {
                 SideEffect {
                     val window = (view.context as Activity).window
                     window.statusBarColor = statusBarColor
-                    WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = isDarkTheme
+                    WindowCompat.getInsetsController(window, view)
+                        .isAppearanceLightStatusBars = isDarkTheme
                 }
             }
             App(
                 ddcContent = ddcContent,
+                // i think it's recommended to do some .flowWithLifecycle hopping but idc
                 lifecycleEvents = lifecycleEvents,
             )
         }
