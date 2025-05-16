@@ -52,6 +52,9 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -144,6 +147,13 @@ fun BoxScope.EditClusterCanvas(
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val stereographicGridColor = MaterialTheme.colorScheme.secondary
     val thiccSelectionCircleAlpha = 0.9f
+    val textMeasurer = rememberTextMeasurer()
+    val labelTextStyle = MaterialTheme.typography.headlineSmall
+    val objectLabelLayouts = remember(viewModel.objectLabels) {
+        viewModel.objectLabels.mapValues { (_, label) ->
+            textMeasurer.measure(label, labelTextStyle)
+        }
+    }
     val concretePositions = ConcreteOnScreenPositions(viewModel.canvasSize.toSize(), LocalDensity.current)
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableStateMapOf() }
@@ -194,7 +204,7 @@ fun BoxScope.EditClusterCanvas(
 //                renderEffect = BlurEffect(20f, 20f) // funi
             )
     ) {
-//        measureAndPrintPerformancePercentiles("draw") { // | MEASURE START |
+        measureAndPrintPerformancePercentiles("draw") { // | MEASURE START |
         hug(viewModel.objectModel.invalidations)
         translate(viewModel.translation.x, viewModel.translation.y) {
             val visibleRect = size.toRect().translate(-viewModel.translation)
@@ -209,6 +219,7 @@ fun BoxScope.EditClusterCanvas(
             drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke)
             drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             drawGrids(visibleRect = visibleRect, submode = viewModel.submode, stereographicGridColor = stereographicGridColor, stereographicGridStroke = circleStroke, southPointRadius = handleRadius)
+            drawLabels(objects = viewModel.objects, objectColors = viewModel.objectModel.objectColors, objectLabelLayouts = objectLabelLayouts, freePointColor = freePointColor)
 //                for (o in viewModel._debugObjects)
 //                    when (o) {
 //                        is CircleOrLine -> drawCircleOrLine(o, visibleRect, rotateIconColor, style = circleStroke)
@@ -219,7 +230,7 @@ fun BoxScope.EditClusterCanvas(
         if (viewModel.circleSelectionIsActive && viewModel.showUI) {
             drawRotationHandle(concretePositions.positions, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)
         }
-//        } // | MEASURE END | // not that long (2~4ms)
+        } // | MEASURE END | // not that long (2~4ms)
     }
     if (viewModel.showUI) { // HUD
         if (viewModel.circleSelectionIsActive) {
@@ -247,6 +258,9 @@ fun BoxScope.EditClusterCanvas(
             )
         } else if (viewModel.pointSelectionIsActive) {
             PointContextActions( // only points are selected
+                objectColor =
+                    viewModel.getMostCommonCircleColorInSelection() ?: freePointColor
+                ,
                 showAdjustExprButton = viewModel.showAdjustExprButton,
                 isLocked = viewModel.selectionIsLocked,
                 toolAction = viewModel::toolAction,
@@ -1244,6 +1258,22 @@ private fun DrawScope.drawGrids(
             }
         }
         else -> {}
+    }
+}
+
+private fun DrawScope.drawLabels(
+    objects: List<GCircle?>,
+    objectColors: Map<Ix, Color>,
+    objectLabelLayouts: Map<Ix, TextLayoutResult>,
+    freePointColor: Color,
+) {
+    objects.withIndex().forEach { (ix, o) ->
+        val layoutResult = objectLabelLayouts[ix]
+        if (layoutResult != null && o is Point) {
+            val color = objectColors[ix] ?: freePointColor
+            val topLeft = o.toOffset() + Offset(-layoutResult.size.width/2f, 0f)
+            drawText(layoutResult, color, topLeft)
+        }
     }
 }
 

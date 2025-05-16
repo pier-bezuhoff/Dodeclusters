@@ -1,6 +1,5 @@
 package ui.edit_cluster
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.draggable2D
 import androidx.compose.foundation.gestures.rememberDraggable2DState
@@ -89,7 +88,6 @@ import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.math.sinh
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BoxScope.SelectionContextActions(
     concretePositions: ConcreteOnScreenPositions,
@@ -271,7 +269,7 @@ fun BoxScope.SelectionContextActions(
 // only points
 @Composable
 fun BoxScope.PointContextActions(
-//    objectColor: Color?,
+    objectColor: Color,
     showAdjustExprButton: Boolean,
     isLocked: Boolean,
     toolAction: (Tool) -> Unit,
@@ -299,6 +297,17 @@ fun BoxScope.PointContextActions(
                     onClick = toolAction
                 )
             }
+            SimpleToolButtonWithTooltip(
+                Tool.PickCircleColor,
+                buttonModifier,
+                tint = objectColor,
+                onClick = toolAction
+            )
+            SimpleToolButtonWithTooltip(
+                Tool.SetLabel,
+                buttonModifier,
+                onClick = toolAction
+            )
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
                 painterResource(Tool.MarkAsPhantoms.disabledIcon),

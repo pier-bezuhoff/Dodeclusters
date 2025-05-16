@@ -154,6 +154,8 @@
     <string name="adjust_expr_description">Adjust expression parameters of selected objects</string>
     <string name="pick_circle_color_name">Border color</string>
     <string name="pick_circle_color_description">Pick border color</string>
+    <string name="set_label_name">Set label</string>
+    <string name="set_label_description">Set label</string>
     <string name="mark_as_phantoms_name">Phantom toggle</string>
     <string name="mark_as_phantoms_description">Mark as phantom: make invisible</string>
     <string name="mark_as_phantoms_disabled_description">Remove phantom marks: make visible</string>

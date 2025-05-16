@@ -34,6 +34,7 @@ enum class KeyboardAction {
     PALETTE, // P
     TRANSFORM, CREATE, // T, C
     HELP,
+    NEW_DOCUMENT, // Ctrl-N
     // TODO: `?` for shortcut cheatsheet / help
     // TODO: arrow keys for finer movement
 }
@@ -48,7 +49,7 @@ fun Modifier.handleKeyboardActions(
 // corresponds to keyboardEventTranslator from js/main.kt
 fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
     if (event.type == KeyEventType.KeyDown && !event.isAltPressed && !event.isMetaPressed) {
-        // Q: is Meta the Win key or macos's ctrl?
+        // Q: is Meta the Win key or macos's ctrl/command (or both as with js)?
         if (event.isCtrlPressed) {
             when (event.key) {
                 Key.V -> KeyboardAction.PASTE
@@ -57,6 +58,7 @@ fun keyEventTranslator(event: KeyEvent): KeyboardAction? =
                 Key.Minus -> KeyboardAction.ZOOM_OUT
                 Key.Z -> KeyboardAction.UNDO
                 Key.Y -> KeyboardAction.REDO
+                Key.N -> KeyboardAction.NEW_DOCUMENT
                 else -> null
             }
         } else {

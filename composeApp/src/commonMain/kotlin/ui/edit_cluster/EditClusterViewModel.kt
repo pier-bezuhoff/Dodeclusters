@@ -134,6 +134,14 @@ class EditClusterViewModel : ViewModel() {
         objects = objectModel.downscaledObjects,
     )
         private set
+    // alt name: ghost[ed] objects
+    val phantoms: Set<Ix> = objectModel.phantomObjectIndices
+    var objectLabels: Map<Ix, String> by mutableStateOf(mapOf(
+//        0 to "hi",
+//        1 to "low",
+//        2 to "bye",
+//        3 to "aye",
+    ))
 
 //    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
@@ -174,8 +182,6 @@ class EditClusterViewModel : ViewModel() {
     var backgroundColor: Color? by mutableStateOf(null)
     var showCircles: Boolean by mutableStateOf(true)
         private set
-    // alt name: ghost[ed] objects
-    val phantoms: Set<Ix> = objectModel.phantomObjectIndices
     var showPhantomObjects: Boolean by mutableStateOf(false)
         private set
     /** which style to use when drawing regions: true = stroke, false = fill */
@@ -411,6 +417,15 @@ class EditClusterViewModel : ViewModel() {
         )
     }
 
+    // TODO: prompt save
+    fun openNewBlankConstellation() {
+        loadNewConstellation(Constellation(
+            objects = emptyList(),
+            parts = emptyList(),
+            backgroundColor = backgroundColor,
+        ))
+    }
+
     // MAYBE: make a suspend function + add load spinner
     fun loadNewConstellation(constellation: Constellation) {
         showPromptToSetActiveSelectionAsToolArg = false
@@ -427,6 +442,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     private fun loadConstellation(constellation: Constellation) {
+        objectLabels = emptyMap()
         regions = emptyList() // important, since draws are async (otherwise can crash)
         selection = emptyList()
         objectModel.clearObjects()
@@ -1606,6 +1622,16 @@ class EditClusterViewModel : ViewModel() {
         selectionIsLockedTrigger = !selectionIsLockedTrigger
     }
 
+    // TODO: open dialog me thinks
+    private fun setLabel() {
+        val someText = "oh hi!"
+        val labels = objectLabels.toMutableMap()
+        for (ix in selection) {
+            labels[ix] = someText
+        }
+        objectLabels = labels.toMap()
+    }
+
     private fun markSelectedObjectsAsPhantoms() {
         objectModel.phantomObjectIndices.addAll(selection)
         // selection = emptyList() // being able to instantly undo is prob better ux
@@ -2672,6 +2698,7 @@ class EditClusterViewModel : ViewModel() {
                 KeyboardAction.OPEN -> {}
                 KeyboardAction.CONFIRM -> if (submode is SubMode.ExprAdjustment)
                     confirmAdjustedParameters()
+                KeyboardAction.NEW_DOCUMENT -> openNewBlankConstellation()
                 KeyboardAction.HELP -> { // temporarily hijacked for debugging
                     val selectedObjectsString = selection.joinToString { ix ->
                         "$ix: " + objects[ix].toString()
@@ -3400,14 +3427,16 @@ class EditClusterViewModel : ViewModel() {
                 .mapIndexed { j, circle ->
                     when (circle) {
                         is ArcPathCircle.Eq -> null
-                        is ArcPathCircle.Free -> when (val c = circle.circle) {
-                            is Circle -> c
-                            null -> Line.by2Points(
-                                pArcPath.previousVertex(j).point,
-                                pArcPath.vertices[j].point
-                            )
-                            else -> never()
-                        }
+                        is ArcPathCircle.Free ->
+                            @Suppress("REDUNDANT_ELSE_IN_WHEN")
+                            when (val c = circle.circle) {
+                                is Circle -> c
+                                null -> Line.by2Points(
+                                    pArcPath.previousVertex(j).point,
+                                    pArcPath.vertices[j].point
+                                )
+                                else -> never()
+                            }
 //                        else -> never()
                     }
                 }.filterNotNull()
@@ -3503,6 +3532,7 @@ class EditClusterViewModel : ViewModel() {
                 if (toolPredicate(tool)) markSelectedObjectsAsPhantoms() else unmarkSelectedObjectsAsPhantoms()
             Tool.Duplicate -> duplicateSelectedCircles()
             Tool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
+            Tool.SetLabel -> setLabel()
             Tool.Delete -> deleteSelectedPointsAndCircles()
             is Tool.AppliedColor -> setNewRegionColorToSelectedColorSplash(tool.color)
             is Tool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))

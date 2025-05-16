@@ -24,8 +24,8 @@ class PathCache {
 
     fun invalidateObjectPathAt(objectIndex: Ix) {
         pathCacheValidity[objectIndex] = false
-        // rewind seems to result in [more?] visual glitches
-        // could be when circle<->cubic<->line change verb/point counts
+        // rewind could be bad when circle<->cubic<->line change verb/point counts
+        // reset seems to be a bit faster than rewind (during stereographic rotation)
 //        cachedObjectPaths[objectIndex]?.rewind()
         cachedObjectPaths[objectIndex]?.reset()
     }

@@ -667,7 +667,7 @@ data class Circle(
             val d = sqrt(d2) // distance between centers
             val rDiff = abs(r1 - r2)
             if (d == 0f && rDiff < TANGENTIAL_TOUCH_EPSILON_F || // coinciding
-                rDiff >= d + TANGENTIAL_TOUCH_EPSILON_F || // matryoshak
+                rDiff >= d + TANGENTIAL_TOUCH_EPSILON_F || // matryoshka
                 d >= r1 + r2 + TANGENTIAL_TOUCH_EPSILON_F // side-by-side
             ) {
                 return emptyList()

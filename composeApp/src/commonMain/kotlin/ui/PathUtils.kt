@@ -163,19 +163,6 @@ fun circle2cubicPath(
     return path
 }
 
-fun visibleHalfPlanePath(
-    line: Line,
-    visibleRect: Rect,
-    path: Path = Path()
-): Path {
-    halfPlanePath(line, visibleRect, path)
-    val visiblePath = Path().apply {
-        addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
-    }
-    path.op(path, visiblePath, PathOperation.Intersect)
-    return path
-}
-
 fun halfPlanePath(
     line: Line,
     visibleRect: Rect,
@@ -215,7 +202,7 @@ fun halfPlanePath(
 }
 
 // BUG: random glitches on big clusters (e.g. D-bug-android)
-fun chessboardPath(
+fun _chessboardPath(
     circles: List<CircleOrLine>,
     visibleRect: Rect,
     inverted: Boolean = false
@@ -224,7 +211,7 @@ fun chessboardPath(
     circles.forEach {
         val p = when (it) {
             is Circle -> circle2path(it, visibleRect)
-            is Line -> visibleHalfPlanePath(it, visibleRect)
+            is Line -> halfPlanePath(it, visibleRect)
         }
         path.op(path, p, PathOperation.Xor)
     }

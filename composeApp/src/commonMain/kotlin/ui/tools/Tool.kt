@@ -153,6 +153,8 @@ import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
 import dodeclusters.composeapp.generated.resources.screenshot_pc
 import dodeclusters.composeapp.generated.resources.select_all
+import dodeclusters.composeapp.generated.resources.set_label_description
+import dodeclusters.composeapp.generated.resources.set_label_name
 import dodeclusters.composeapp.generated.resources.shark_fin_striped
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_description
@@ -164,6 +166,7 @@ import dodeclusters.composeapp.generated.resources.stereographic_rotation_name
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_description
 import dodeclusters.composeapp.generated.resources.swap_direction_name
+import dodeclusters.composeapp.generated.resources.text
 import dodeclusters.composeapp.generated.resources.three_sliders
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_description
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_disabled_description
@@ -528,6 +531,11 @@ sealed class Tool(
         Res.string.pick_circle_color_name,
         Res.string.pick_circle_color_description,
         Res.drawable.paint_splash
+    )
+    data object SetLabel: ContextAction(
+        Res.string.set_label_name,
+        Res.string.set_label_description,
+        Res.drawable.text
     )
     data object MarkAsPhantoms: ContextAction(
         Res.string.mark_as_phantoms_name,

@@ -154,6 +154,8 @@
     <string name="adjust_expr_description">Поменять параметры формулы выделенных объектов</string>
     <string name="pick_circle_color_name">Цвет окружности</string>
     <string name="pick_circle_color_description">Выбор цвета (границы) окружности</string>
+    <string name="set_label_name">Добавить подпись</string>
+    <string name="set_label_description">Добавить подпись</string>
     <string name="mark_as_phantoms_name">Фантомность</string>
     <string name="mark_as_phantoms_description">Пометить как фантомные: сделать невидимыми</string>
     <string name="mark_as_phantoms_disabled_description">Отключить фантомность: сделать видимыми</string>

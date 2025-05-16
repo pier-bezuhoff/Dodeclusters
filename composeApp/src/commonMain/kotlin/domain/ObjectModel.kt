@@ -15,26 +15,33 @@ import domain.expressions.ExpressionForest
 
 // MAYBE: additionally store GeneralizedCircle representations
 /**
- * Purports to encapsulate & manage [objects] and object-properties
- * @property[objects] All existing [GCircle]s; `null`s correspond either to unrealized outputs of
- * [Expr.OneToMany], or to forever deleted objects (they have `null` `VM.expressions`),
- * or (rarely) to mismatching type casts.
- *
- * NOTE: don't forget to sync changes to [objects] with [downscaledObjects]
- * @property[downscaledObjects] Same as [objects] but
- * additionally downscaled (optimal for calculations).
- *
- * NOTE: u are responsible for MANUALLY sync-ing them
- * @property[invalidations] Monotonically increasing sequence, each update is to trigger redraw.
- * Call [invalidate]`()` to trigger update at appropriate time.
+ * Purports to encapsulate & manage [objects] and object-related properties.
+ * Very mutable, track [invalidationsState]/[invalidations] for changes.
  */
 class ObjectModel {
+    /**
+     * All existing [GCircle]s; `null`s correspond either to unrealized outputs of
+     * [Expr.OneToMany], or to forever deleted objects (they have `null` `VM.expressions`),
+     * or (rarely) to mismatching type casts.
+     *
+     * NOTE: don't forget to sync changes to [objects] with [downscaledObjects]
+     */
     val objects: MutableList<GCircle?> = mutableListOf()
+    /**
+     * Same as [objects] but additionally downscaled (optimal for calculations).
+     *
+     * NOTE: u are responsible for MANUALLY sync-ing them
+     */
     val downscaledObjects: MutableList<GCircle?> = mutableListOf()
-    val objectColors: MutableMap<Int, Color> = mutableMapOf()
+    val objectColors: MutableMap<Ix, Color> = mutableMapOf()
+    // alt name: ghost[ed] objects
     val phantomObjectIndices: MutableSet<Int> = mutableSetOf()
 
     val invalidationsState: MutableIntState = mutableIntStateOf(0)
+    /**
+     * Monotonically increasing sequence, each update is to trigger redraw.
+     * Call [invalidate]`()` to trigger update at appropriate time.
+     */
     inline val invalidations: Int get() =
         invalidationsState.value
 
@@ -45,8 +52,7 @@ class ObjectModel {
      *
      * NOTE: Do not forget to manually call this after finishing state-altering.
      */
-    @Suppress("NOTHING_TO_INLINE")
-    inline fun invalidate() {
+    fun invalidate() {
         invalidationsState.value += 1
     }
 
@@ -93,18 +99,14 @@ class ObjectModel {
     fun removeObjectAt(ix: Ix) {
         objects[ix] = null
         downscaledObjects[ix] = null
-        objectColors -= ix
+        objectColors.remove(ix)
         phantomObjectIndices.remove(ix)
         pathCache.removeObjectAt(ix)
     }
 
     fun removeObjectsAt(ixs: List<Ix>) {
         for (ix in ixs) {
-            objects[ix] = null
-            downscaledObjects[ix] = null
-            objectColors.remove(ix)
-            phantomObjectIndices.remove(ix)
-            pathCache.removeObjectAt(ix)
+            removeObjectAt(ix)
         }
     }
 

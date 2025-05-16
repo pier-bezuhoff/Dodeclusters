@@ -64,11 +64,14 @@ fun main() {
     }
 }
 
+private val UNDER_MAC = WasmPlatform.underlyingPlatform == UnderlyingPlatform.MAC
+
 /** Mirrors [keyEventTranslator] from ui.edit_cluster.KeyboardAction.kt */
 @Suppress("NOTHING_TO_INLINE")
 private inline fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction? =
     if (!event.altKey && !event.shiftKey) {
-        if (event.ctrlKey || event.metaKey) { // meta key is apparently macos equiv of ctrl
+        // meta key is apparently macos equiv of ctrl, BUT is also Win on Windows/Linux
+        if (event.ctrlKey || UNDER_MAC && event.metaKey) {
             // using KeyEvent.code is language-invariant
             // reference: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
             when (event.code) {
@@ -79,6 +82,7 @@ private inline fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction
 //                "Minus" -> KeyboardAction.ZOOM_OUT
                 "KeyZ" -> KeyboardAction.UNDO
                 "KeyY" -> KeyboardAction.REDO
+                "KeyN" -> KeyboardAction.NEW_DOCUMENT
                 else -> null
             }
         } else
