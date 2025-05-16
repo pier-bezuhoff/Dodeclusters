@@ -2479,6 +2479,7 @@ class EditClusterViewModel : ViewModel() {
                     objectModel.transform(expressions, targets, focus = center, zoom = zoom, rotationAngle = rotationAngle)
                 }
                 translation += pan // navigate canvas
+                objectModel.pathCache.invalidateAll() // sadly have to do this cuz we use visibleRect in path construction
             }
         }
     }

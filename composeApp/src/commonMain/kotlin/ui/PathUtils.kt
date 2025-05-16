@@ -14,6 +14,7 @@ import domain.PathCache
 import domain.cluster.ConcreteClosedArcPath
 import domain.cluster.ConcreteOpenArcPath
 import domain.cluster.LogicalRegion
+import domain.squareSum
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow
@@ -90,7 +91,7 @@ private fun wrapOutOfScreenCircleAsRectangle(
 ) {
     val maxDim =
 //        visibleRect.minDimension*0.5f
-        visibleRect.maxDimension
+        2*visibleRect.maxDimension
     val OAx = Ax - Ox
     val OAy = Ay - Oy
     val orientationSign = if (isCCW) +1 else -1
@@ -145,7 +146,6 @@ fun circle2cubicPath(
             P2x = P2x, P2y = P2y,
         )
         if (closed) {
-            // FIX: orientation
             wrapOutOfScreenCircleAsRectangle(
                 path = path,
                 visibleRect = visibleRect,
@@ -185,13 +185,21 @@ fun halfPlanePath(
     val centerX = visibleRect.left + visibleRect.width/2f
     val centerY = visibleRect.top + visibleRect.height/2f
     val maxDim = visibleRect.maxDimension
-    val far = 2*maxDim
     val t = b*centerX - a*centerY
-    val n2 = a*a + b*b
+    val n2 = line.norm * line.norm
     val pointClosestToScreenCenterX = ((b*t - a*c)/n2).toFloat()
     val pointClosestToScreenCenterY = ((-a*t - b*c)/n2).toFloat()
+    val eq = a*centerX + b*centerY + c
+    val offScreenLine = abs(eq) > maxDim * line.norm
+    if (offScreenLine) {
+        if (eq > 0) { // to the west/inside of the line
+            path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
+        } // else: empty path
+        return path
+    }
     val directionX =  line.directionX.toFloat()
     val directionY =  line.directionY.toFloat()
+    val far = 2*maxDim
     val forwardX = far * directionX
     val forwardY = far * directionY
     val farBackX: Float = pointClosestToScreenCenterX - directionX * maxDim

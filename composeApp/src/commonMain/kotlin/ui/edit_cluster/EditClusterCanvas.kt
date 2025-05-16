@@ -477,15 +477,14 @@ private fun DrawScope.drawCircleWithCache(
     val radius = circle.radius.toFloat()
     // NOTE: internally circles/conics are chopped into quad spline by skia/android,
     //  but this looks BAD for large circles, so we approx them with singular cubic arc
+    //  or line for even larger radius
     if (radius < MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS) {
+        // fixes CW circles being displayed as CCW for chessboard, which brought blinking glitches
         if (style == Fill && !circle.isCCW) {
             drawRect(color = color, topLeft = visibleRect.topLeft, size = visibleRect.size, alpha = alpha, style = style, blendMode = blendMode)
         }
         drawCircle(color = color, radius = radius, center = circle.center, alpha = alpha, style = style, blendMode = blendMode)
     } else if (radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS) {
-//        if (style == Fill && !circle.isCCW) {
-//            drawRect(color = color, topLeft = visibleRect.topLeft, size = visibleRect.size, alpha = alpha, style = style, blendMode = blendMode)
-//        }
         var path: Path? = pathCache.cachedObjectPaths[ix]
         if (path == null || !pathCache.pathCacheValidity[ix]) {
             path = circle2cubicPath(circle, visibleRect, closed = true, path ?: Path())
