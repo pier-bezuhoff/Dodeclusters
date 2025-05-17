@@ -23,6 +23,7 @@ data class Constellation(
     // purely decorative, the "real" border color can be specified
     // using unfilled single-circle ClusterPart with borderColor
     val objectColors: Map<Ix, ColorAsCss> = emptyMap(),
+    val objectLabels: Map<Ix, String> = emptyMap(),
     val backgroundColor: ColorAsCss? = null,
     val phantoms: List<Ix> = emptyList(),
 ) {
@@ -43,6 +44,12 @@ data class Constellation(
         }) { "Invalid Constellation.parts of $this" }
         require(objectColors.keys.all { it in allObjectIndices }) {
             "Invalid Constellation.objectColors of $this"
+        }
+        require(objectLabels.keys.all { it in allObjectIndices }) {
+            "Invalid Constellation.objectLabels of $this"
+        }
+        require(phantoms.all { it in allObjectIndices }) {
+            "Invalid Constellation.phantoms of $this"
         }
     }
 

@@ -66,7 +66,8 @@ fun LabelInputDialog(
                         label = newLabel.trim()
                             .ifBlank { null }
                     },
-                    modifier = Modifier.padding(bottom = 24.dp)
+                    modifier = Modifier
+                        .padding(bottom = 24.dp)
                 )
                 CancelOkRow(
                     onDismissRequest = onCancel,

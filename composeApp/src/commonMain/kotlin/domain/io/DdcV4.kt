@@ -42,6 +42,7 @@ data class DdcV4(
     // using Map<Int, _> instead of list to force yaml to use numbered list
     val objects: Map<Ix, Token.Object>, // this disallows missing "objects" field, and produces exception on DdcV3
     val arcPaths: List<Token.ArcPath> = DEFAULT_ARC_PATHS,
+    // MAYBE: add isPhantom bool field to Token.Object instead
     val phantoms: List<Ix> = emptyList(),
 ) {
     @Immutable
@@ -51,6 +52,7 @@ data class DdcV4(
         @SerialName("ObjectToken")
         data class Object(
             val construct: ObjectConstruct,
+            val label: String? = null,
             val color: ColorAsCss? = null,
         ) : Token
         @Serializable
@@ -67,10 +69,16 @@ data class DdcV4(
         return Constellation(
             objects = objs.map { it.construct },
             parts = arcPaths.map { it.arcPath },
-            objectColors = objects.entries
+            objectColors = objects
                 .mapNotNull { (i, token) ->
                     if (token.color == null) null
                     else i to token.color
+                }.toMap()
+            ,
+            objectLabels = objects
+                .mapNotNull { (i, token) ->
+                    if (token.label == null) null
+                    else i to token.label
                 }.toMap()
             ,
             backgroundColor = backgroundColor,
@@ -84,6 +92,7 @@ data class DdcV4(
                 objects = constellation.objects.mapIndexed { ix, construct ->
                     ix to Token.Object(
                         construct = construct,
+                        label = constellation.objectLabels[ix],
                         color = constellation.objectColors[ix],
                     )
                 }.toMap(),

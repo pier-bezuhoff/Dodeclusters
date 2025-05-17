@@ -137,7 +137,7 @@ class EditClusterViewModel : ViewModel() {
         private set
     // alt name: ghost[ed] objects
     val phantoms: Set<Ix> = objectModel.phantomObjectIndices
-    // TODO: saving to constellation
+    // not in objectModel cuz i want it to be state-backed for nicer caching
     var objectLabels: Map<Ix, String> by mutableStateOf(mapOf())
 
 //    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
@@ -484,6 +484,7 @@ class EditClusterViewModel : ViewModel() {
             if (phantomIndex in objectIndices) {
                 objectModel.phantomObjectIndices.add(phantomIndex)
             }
+        objectLabels = constellation.objectLabels
         objectModel.invalidate()
     }
 
@@ -528,6 +529,9 @@ class EditClusterViewModel : ViewModel() {
             parts = logicalRegions,
             objectColors = objectModel.objectColors.mapNotNull { (ix, color) ->
                 reindexing[ix]?.let { it to color }
+            }.toMap(),
+            objectLabels = objectLabels.mapNotNull { (ix, label) ->
+                reindexing[ix]?.let { it to label }
             }.toMap(),
             backgroundColor = backgroundColor,
             // NOTE: we keep track of phantoms EVEN when they are shown
