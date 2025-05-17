@@ -220,12 +220,7 @@ fun BoxScope.EditClusterCanvas(
             drawHandles(objects = viewModel.objects, selection = viewModel.selection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.getSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             drawGrids(visibleRect = visibleRect, submode = viewModel.submode, stereographicGridColor = stereographicGridColor, stereographicGridStroke = circleStroke, southPointRadius = handleRadius)
             drawLabels(objects = viewModel.objects, objectColors = viewModel.objectModel.objectColors, objectLabelLayouts = objectLabelLayouts, freePointColor = freePointColor)
-//                for (o in viewModel._debugObjects)
-//                    when (o) {
-//                        is CircleOrLine -> drawCircleOrLine(o, visibleRect, rotateIconColor, style = circleStroke)
-//                        is ImaginaryCircle -> drawCircleOrLine(o.toRealCircle(), visibleRect, rotateIconColor, style = circleStroke)
-//                        is Point -> drawCircle(rotateIconColor, pointRadius, o.toOffset())
-//                    }
+//            drawDebugObjects(viewModel._debugObjects, visibleRect, circleStroke, pointRadius, rotateIconColor)
         }
         if (viewModel.circleSelectionIsActive && viewModel.showUI) {
             drawRotationHandle(concretePositions.positions, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)
@@ -1275,6 +1270,22 @@ private fun DrawScope.drawLabels(
             drawText(layoutResult, color, topLeft)
         }
     }
+}
+
+private fun DrawScope.drawDebugObjects(
+    debugObjects: List<GCircle?>,
+    visibleRect: Rect,
+    circleStroke: Stroke,
+    pointRadius: Float,
+    debugColor: Color,
+) {
+    for (o in debugObjects)
+        when (o) {
+            is CircleOrLine -> drawCircleOrLine(o, visibleRect, debugColor, style = circleStroke)
+            is ImaginaryCircle -> drawCircleOrLine(o.toRealCircle(), visibleRect, debugColor, style = circleStroke)
+            is Point -> drawCircle(debugColor, pointRadius, o.toOffset())
+            else -> {}
+        }
 }
 
 private const val MEDIUM_ARROW_TAIL_LENGTH = 5f

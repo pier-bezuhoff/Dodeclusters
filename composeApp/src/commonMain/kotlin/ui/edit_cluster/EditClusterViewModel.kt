@@ -137,12 +137,8 @@ class EditClusterViewModel : ViewModel() {
         private set
     // alt name: ghost[ed] objects
     val phantoms: Set<Ix> = objectModel.phantomObjectIndices
-    var objectLabels: Map<Ix, String> by mutableStateOf(mapOf(
-//        0 to "hi",
-//        1 to "low",
-//        2 to "bye",
-//        3 to "aye",
-    ))
+    // TODO: saving to constellation
+    var objectLabels: Map<Ix, String> by mutableStateOf(mapOf())
 
 //    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
