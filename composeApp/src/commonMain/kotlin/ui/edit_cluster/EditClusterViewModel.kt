@@ -111,6 +111,7 @@ import ui.edit_cluster.dialogs.DefaultExtrapolationParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
 import ui.edit_cluster.dialogs.DefaultRotationParameters
+import ui.edit_cluster.dialogs.DialogAction
 import ui.edit_cluster.dialogs.DialogType
 import ui.theme.DodeclustersColors
 import ui.tools.Category
@@ -1629,14 +1630,17 @@ class EditClusterViewModel : ViewModel() {
         selectionIsLockedTrigger = !selectionIsLockedTrigger
     }
 
-    // TODO: open dialog me thinks
-    private fun setLabel() {
-        val someText = "oh hi!"
+    fun setLabel(label: String?) {
         val labels = objectLabels.toMutableMap()
-        for (ix in selection) {
-            labels[ix] = someText
+        if (label == null) {
+            labels -= selection.toSet()
+        } else {
+            for (ix in selection) {
+                labels[ix] = label
+            }
         }
         objectLabels = labels.toMap()
+        openedDialog = null
     }
 
     private fun markSelectedObjectsAsPhantoms() {
@@ -3540,7 +3544,7 @@ class EditClusterViewModel : ViewModel() {
                 if (toolPredicate(tool)) markSelectedObjectsAsPhantoms() else unmarkSelectedObjectsAsPhantoms()
             Tool.Duplicate -> duplicateSelectedCircles()
             Tool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
-            Tool.SetLabel -> setLabel()
+            Tool.SetLabel -> openedDialog = DialogType.LABEL_INPUT
             Tool.Delete -> deleteSelectedPointsAndCircles()
             is Tool.AppliedColor -> setNewRegionColorToSelectedColorSplash(tool.color)
             is Tool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))

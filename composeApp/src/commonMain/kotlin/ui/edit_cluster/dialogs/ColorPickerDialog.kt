@@ -43,6 +43,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -125,7 +126,7 @@ data class ColorPickerParameters(
     ),
 )
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3WindowSizeClassApi::class)
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun ColorPickerDialog(
     parameters: ColorPickerParameters,
@@ -581,6 +582,7 @@ private fun HexInput(
         snapshotFlow { windowInfo.isWindowFocused }.collect { isWindowFocused ->
             if (isWindowFocused) { // runs once every time the dialog is opened
                 focusRequester.freeFocus()
+//                focusRequester.requestFocus(FocusDirection.Exit)
                 keyboard?.hide() // suppresses rare auto-showing keyboard bug
             }
         }

@@ -87,6 +87,9 @@ fun RotationDialog(
     var angle: Float by remember(defaults) { mutableStateOf(defaults.angle) }
     var nSteps by remember(defaults) { mutableStateOf(defaults.nSteps) }
     val isCompact = calculateWindowSizeClass().isCompact
+    val fontSize =
+        if (isCompact) 14.sp
+        else 24.sp
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = true)
@@ -96,9 +99,6 @@ fun RotationDialog(
             modifier = Modifier.padding(horizontal = 16.dp),
             shape = MaterialTheme.shapes.extraLarge,
         ) {
-            val fontSize =
-                if (isCompact) 14.sp
-                else 24.sp
             Column(
                 Modifier
                     .padding(horizontal = 8.dp)

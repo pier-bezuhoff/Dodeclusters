@@ -92,6 +92,10 @@ fun keyboardActionsHandler(
     val keyboardAction = keyEventTranslator(event)
     if (keyboardAction != null) {
         onAction(keyboardAction)
-        true
+        // NOTE: idk, presently stuff like Delete is caught top-level and is not passed down to
+        //  text fields (on Desktop), which is unacceptable [if we return `true`].
+        //  It used to work tho.
+        false
+//        true
     } else false
 }

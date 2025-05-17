@@ -259,7 +259,7 @@ sealed class Tool(
     }
     data object SvgExport: CustomAction(
         Res.string.svg_export_name,
-        icon = Res.drawable.upload // presently unused
+        icon = Res.drawable.upload
     ) {
         const val DEFAULT_NAME = DdcV4.DEFAULT_NAME
         const val EXTENSION = "svg"
@@ -267,7 +267,7 @@ sealed class Tool(
     }
     data object PngExport: CustomAction(
         Res.string.png_export_name,
-        icon = Res.drawable.screenshot_pc // presently unused
+        icon = Res.drawable.screenshot_pc
     ) {
         const val DEFAULT_NAME = "dodeclusters-screenshot"
         const val EXTENSION = "png"

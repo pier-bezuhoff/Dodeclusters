@@ -16,4 +16,5 @@ enum class DialogType {
     LOXODROMIC_MOTION,
     SAVE_OPTIONS,
     BLEND_SETTINGS,
+    LABEL_INPUT,
 }

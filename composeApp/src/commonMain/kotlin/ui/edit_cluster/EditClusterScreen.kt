@@ -103,6 +103,7 @@ import ui.edit_cluster.dialogs.CircleOrPointInterpolationDialog
 import ui.edit_cluster.dialogs.ColorPickerDialog
 import ui.edit_cluster.dialogs.DialogAction
 import ui.edit_cluster.dialogs.DialogType
+import ui.edit_cluster.dialogs.LabelInputDialog
 import ui.edit_cluster.dialogs.LoxodromicMotionDialog
 import ui.edit_cluster.dialogs.RotationDialog
 import ui.edit_cluster.dialogs.SaveOptionsDialog
@@ -376,6 +377,16 @@ fun EditClusterScreen(
                 dialogActions = dialogActions,
             )
         }
+        DialogType.LABEL_INPUT -> {
+            LabelInputDialog(
+                previousLabel = viewModel.selection
+                    .firstNotNullOfOrNull { viewModel.objectLabels[it] }
+                ,
+                onCancel = viewModel::closeDialog,
+                onConfirm = viewModel::setLabel,
+                dialogActions = dialogActions,
+            )
+        }
         null -> {}
     }
     LaunchedEffect(ddcContent, sampleName, ddcRepository) {
@@ -452,6 +463,8 @@ fun preloadIcons() {
                 Tool.DetailedAdjustment,
                 Tool.InBetween,
                 Tool.ReverseDirection,
+                Tool.PngExport,
+                Tool.SvgExport,
             )
         )
     for (tool in toolList) {

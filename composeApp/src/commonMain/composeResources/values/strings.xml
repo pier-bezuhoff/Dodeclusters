@@ -257,6 +257,8 @@
     <string name="blend_mode_overlay">Overlay</string>
     <string name="blend_mode_difference">Difference</string>
     <string name="blend_mode_plus">Addition</string>
+    <!-- label input dialog -->
+    <string name="label_input_title">Input point label</string>
     <!-- snackbar messages -->
     <string name="locked_objects_notice">These objects are pinned, detach them to move</string>
     <string name="locked_object_notice">This object is pinned, detach it to move</string>
