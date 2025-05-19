@@ -72,7 +72,7 @@ string|color_picker_default_palette_label|RGVmYXVsdCBwYWxldHRl
 string|color_picker_forget_color_description|Rm9yZ2V0IGN1cnJlbnQgY29sb3I=
 string|color_picker_save_color_description|U2F2ZSBjdXJyZW50IGNvbG9y
 string|color_picker_title|UGljayBhIGNvbG9y
-string|color_picker_used_and_saved_colors_label|VXNlZCBjb2xvcnMgfCBTYXZlZCBjb2xvcnM=
+string|color_picker_used_and_saved_colors_label|Q29sb3JzIGluIHVzZSArIFNhdmVkIGNvbG9ycw==
 string|colors_category_name|Q29sb3Jz
 string|complete_arc_path|Q29tcGxldGUgYXJjLXBhdGg=
 string|create_category_name|Q3JlYXRl
@@ -114,6 +114,7 @@ string|in_between_disabled_description|T3V0c2lkZQ==
 string|in_between_name|SW4gYmV0d2Vlbg==
 string|insert_centered_cross_description|SW5zZXJ0IGEgY2VudGVyZWQgY3Jvc3M=
 string|insert_centered_cross_name|SW5zZXJ0IGEgY2VudGVyZWQgY3Jvc3M=
+string|label_input_title|SW5wdXQgcG9pbnQgbGFiZWw=
 string|line_by_2_points_description|Q29uc3RydWN0IGEgbGluZSBieSAyIHBvaW50cyBvciBieSBvYmplY3RzIHBlcnBlbmRpY3VsYXIgdG8gaXQ=
 string|line_by_2_points_name|TGluZSBieSAyIHBvaW50cw==
 string|locked_object_notice|VGhpcyBvYmplY3QgaXMgcGlubmVkLCBkZXRhY2ggaXQgdG8gbW92ZQ==
@@ -173,6 +174,8 @@ string|rotation_title|Q29uZmlndXJlIHJvdGF0aW9uIHBhcmFtZXRlcnM=
 string|save_cluster_name|U2F2ZSBhcyBEb2RlY2x1c3RlcnMgZmlsZQ==
 string|save_cluster_title|U2F2ZSB0aGlzIGNsdXN0ZXI=
 string|save_name|U2F2ZQ==
+string|set_label_description|U2V0IGxhYmVs
+string|set_label_name|U2V0IGxhYmVs
 string|set_selection_as_tool_arg_prompt|VXNlIGFjdGl2ZSBzZWxlY3Rpb24gYXM=
 string|shrink_description|U2NhbGUgZG93biBieSAxMCU=
 string|shrink_name|U2hyaW5r
