@@ -65,6 +65,7 @@ import data.geometry.CircleOrLine
 import data.geometry.ImaginaryCircle
 import data.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.add_circle
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
@@ -479,6 +480,7 @@ fun preloadIcons() {
         // from dialogs
         Res.drawable.confirm, Res.drawable.cancel,
         Res.drawable.collapse_down, Res.drawable.collapse_left,
+        Res.drawable.add_circle, // color-picker:save=add
         // from canvas HUD
         Res.drawable.rotate_counterclockwise,
         Res.drawable.three_dots_in_angle_brackets,

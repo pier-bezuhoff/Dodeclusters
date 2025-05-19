@@ -695,6 +695,7 @@ data class Circle(
                 val py = pcy - vx
                 val qx = pcx - vy
                 val qy = pcy + vx
+                // now we know the pair of points {p,q}, but in which order?
                 val pOrder = circle1.point2order(px.toDouble(), py.toDouble())
                 val qOrder = circle1.point2order(qx.toDouble(), qy.toDouble())
                 // lets find s: a point between p & q on circle1

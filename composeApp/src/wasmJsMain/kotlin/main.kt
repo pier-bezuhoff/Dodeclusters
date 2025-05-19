@@ -5,7 +5,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import org.jetbrains.skia.RuntimeShaderBuilder
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.get
@@ -53,7 +52,6 @@ fun main() {
     loadingSpinner?.remove()
     document.querySelector("h2")?.setAttribute("style", "display: none;")
     document.querySelector("h1")?.setAttribute("style", "display: none;")
-    // MAYBE: also add spinning thingy with css animation
     CanvasBasedWindow(canvasElementId = "ComposeTarget") {
         App(
             sampleName = sampleName,
@@ -67,8 +65,7 @@ fun main() {
 private val UNDER_MAC = WasmPlatform.underlyingPlatform == UnderlyingPlatform.MAC
 
 /** Mirrors [keyEventTranslator] from ui.edit_cluster.KeyboardAction.kt */
-@Suppress("NOTHING_TO_INLINE")
-private inline fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction? =
+private fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction? =
     if (!event.altKey && !event.shiftKey) {
         // meta key is apparently macos equiv of ctrl, BUT is also Win on Windows/Linux
         if (event.ctrlKey || UNDER_MAC && event.metaKey) {
@@ -96,7 +93,7 @@ private inline fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction
                 "KeyM" -> KeyboardAction.MOVE
                 "KeyL" -> KeyboardAction.SELECT
                 "KeyR" -> KeyboardAction.REGION
-                "KeyU" -> KeyboardAction.PALETTE
+                "KeyP" -> KeyboardAction.PALETTE
                 "KeyT" -> KeyboardAction.TRANSFORM
                 "KeyC" -> KeyboardAction.CREATE
                 else -> null
@@ -106,7 +103,7 @@ private inline fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction
         KeyboardAction.HELP
     else null
 
-fun getCurrentURL(): URL =
+private fun getCurrentURL(): URL =
     js("new URL(window.location.href)")
 
 fun alert(message: String): Unit =
