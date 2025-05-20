@@ -94,6 +94,7 @@ import ui.DisableableButton
 import ui.LifecycleEvent
 import ui.OnOffButton
 import ui.SimpleButton
+import ui.SimpleToolButtonWithTooltip
 import ui.ThreeIconButton
 import ui.TwoIconButton
 import ui.WithTooltip
@@ -477,6 +478,7 @@ fun preloadIcons() {
         }
     }
     for (resource in listOf(
+        Tool.FillChessboardPattern.alternativeIcon,
         // from dialogs
         Res.drawable.confirm, Res.drawable.cancel,
         Res.drawable.collapse_down, Res.drawable.collapse_left,
@@ -622,6 +624,18 @@ fun EditClusterTopBar(
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
     val toolbarHeight = if (compact) 48.dp else 64.dp
+    // bad in portrait, fine in landscape
+//    SimpleToolButtonWithTooltip(
+//        Tool.ToggleMenu,
+//        Modifier
+//            .offset(y = 8.dp)
+//        ,
+//        iconModifier = iconModifier,
+//        contentColor = MaterialTheme.colorScheme.secondary,
+//        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f),
+//    ) {
+//        println("hi")
+//    }
     Row(modifier
         // NOTE: i might be hallucinating but ive seen this break tooltip positioning, now it works tho (?)
         .offset(x = 24.dp, y = -(24).dp) // leave only 1, bottom-left rounded corner
@@ -640,6 +654,7 @@ fun EditClusterTopBar(
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             Spacer(Modifier.width(16.dp))
             // TODO: button to create new [empty?] document
+            //  (maybe only on wide-width screens)
             WithTooltip(stringResource(Res.string.save_name)) {
                 SimpleButton(
                     painterResource(Tool.SaveCluster.icon),
@@ -1083,7 +1098,7 @@ fun ToolButton(
                     enabled = enabled,
                     alternative = alternative,
                     modifier = modifier,
-                    tint = tint,
+                    contentColor = tint,
                     onClick = callback
                 )
             }
@@ -1092,7 +1107,7 @@ fun ToolButton(
                     iconPainter = icon,
                     name = name,
                     modifier = modifier,
-                    tint = tint,
+                    contentColor = tint,
                     onClick = callback
                 )
             }
@@ -1115,7 +1130,7 @@ fun ToolButton(
                         enabled = enabled,
                         modifier = modifier,
                         iconModifier = modifier,
-                        tint = tint,
+                        contentColor = tint,
                         onClick = callback
                     )
                 }

@@ -7,13 +7,15 @@ android-minSdk = "24" # = Android 7.0 Nougat
 android-targetSdk = "35"
 
 kotlin = "2.1.21"
-# consult kmp-agp compatibility table: https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility
+# consult kmp-agp compatibility table:
+# https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility
 #noinspection AndroidGradlePluginVersion
 agp = "8.7.2"
 compose-multiplatform = "1.8.0"
+# check compose-multiplatform/release for version compatibility:
+# https://github.com/JetBrains/compose-multiplatform/releases/latest
 #noinspection GradleDependency
-jetpack-compose = "1.8.0" # check github compose-multiplatform/release for the one compatible
-# https://github.com/JetBrains/compose-multiplatform/releases/tag/v1.7.0
+jetpack-compose = "1.8.0"
 kotlinx-serialization = "1.8.1"
 kotlinx-coroutines = "1.10.2"
 androidx-activityCompose = "1.10.1"

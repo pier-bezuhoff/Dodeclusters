@@ -111,6 +111,7 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_name
 import dodeclusters.composeapp.generated.resources.mark_as_phantoms_description
 import dodeclusters.composeapp.generated.resources.mark_as_phantoms_disabled_description
 import dodeclusters.composeapp.generated.resources.mark_as_phantoms_name
+import dodeclusters.composeapp.generated.resources.menu
 import dodeclusters.composeapp.generated.resources.multiselect
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_name
@@ -163,6 +164,7 @@ import dodeclusters.composeapp.generated.resources.spinning_sphere
 import dodeclusters.composeapp.generated.resources.spiral
 import dodeclusters.composeapp.generated.resources.stereographic_rotation_description
 import dodeclusters.composeapp.generated.resources.stereographic_rotation_name
+import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_description
 import dodeclusters.composeapp.generated.resources.swap_direction_name
@@ -248,7 +250,11 @@ sealed class Tool(
 
 
     // top toolbar
-    data object SaveCluster: CustomAction(
+    data object ToggleMenu : CustomAction(
+        Res.string.stub,
+        icon = Res.drawable.menu,
+    )
+    data object SaveCluster : CustomAction(
         Res.string.save_cluster_name,
         icon = Res.drawable.save
     ) {
@@ -257,7 +263,7 @@ sealed class Tool(
         val otherDisplayedExtensions = setOf("yaml", "ddc", "ddu")
         const val MIME_TYPE = "application/yaml"
     }
-    data object SvgExport: CustomAction(
+    data object SvgExport : CustomAction(
         Res.string.svg_export_name,
         icon = Res.drawable.upload
     ) {
@@ -265,7 +271,7 @@ sealed class Tool(
         const val EXTENSION = "svg"
         const val MIME_TYPE = "image/svg+xml" // apparently this is highly contested (since svg can contain js)
     }
-    data object PngExport: CustomAction(
+    data object PngExport : CustomAction(
         Res.string.png_export_name,
         icon = Res.drawable.screenshot_pc
     ) {
@@ -273,41 +279,41 @@ sealed class Tool(
         const val EXTENSION = "png"
         const val MIME_TYPE = "image/png"
     }
-    data object OpenFile: CustomAction(
+    data object OpenFile : CustomAction(
         Res.string.open_file_name,
         icon = Res.drawable.open_file
     )
-    data object Undo: Action(
+    data object Undo : Action(
         Res.string.undo_name,
         icon = Res.drawable.undo
     )
-    data object Redo: Action(
+    data object Redo : Action(
         Res.string.redo_name,
         icon = Res.drawable.redo
     )
 
     // bottom/left toolbar
-    data object Drag: Switch(
+    data object Drag : Switch(
         Res.string.drag_name,
         Res.string.drag_description,
         Res.drawable.drag_mode_1_circle
     )
-    data object Multiselect: Switch(
+    data object Multiselect : Switch(
         Res.string.multiselect_name,
         Res.string.multiselect_description,
         Res.drawable.multiselect
     )
-    data object RectangularSelect: Switch(
+    data object RectangularSelect : Switch(
         Res.string.rectangular_select_name,
         Res.string.rectangular_select_description,
         Res.drawable.dotted_rectangle
     )
-    data object FlowSelect: Switch(
+    data object FlowSelect : Switch(
         Res.string.flow_multiselect_name,
         Res.string.flow_multiselect_description,
         Res.drawable.two_of_three_circles_connected
     )
-    data object ToggleSelectAll: Switch(
+    data object ToggleSelectAll : Switch(
         Res.string.toggle_select_all_name,
         Res.string.toggle_select_all_description,
         Res.drawable.select_all,
@@ -315,17 +321,17 @@ sealed class Tool(
         disabledDescription = Res.string.toggle_select_all_disabled_description
     )
 
-    data object Region: Switch(
+    data object Region : Switch(
         Res.string.region_name,
         Res.string.region_description,
         Res.drawable.fill_region
     )
-    data object FlowFill: Switch(
+    data object FlowFill : Switch(
         Res.string.flow_fill_name,
         Res.string.flow_fill_description,
         Res.drawable.fill_swiped_circles
     )
-    data object FillChessboardPattern: Tool(
+    data object FillChessboardPattern : Tool(
         Res.string.fill_chessboard_pattern_name,
         Res.string.fill_chessboard_pattern_description,
         Res.drawable.chessboard,
@@ -335,114 +341,114 @@ sealed class Tool(
         override val disabledIcon: DrawableResource = Res.drawable.chessboard_crossed
         override val disabledDescription: StringResource = Res.string.fill_chessboard_pattern_disabled_description
     }
-    data object RestrictRegionToSelection: Switch(
+    data object RestrictRegionToSelection : Switch(
         Res.string.restrict_region_to_selection_name,
         Res.string.restrict_region_to_selection_description,
         Res.drawable.circled_region,
         Res.drawable.open_region,
         disabledDescription = Res.string.restrict_region_to_selection_disabled_description
     )
-    data object DeleteAllParts: Action(
+    data object DeleteAllParts : Action(
         Res.string.delete_all_parts_name,
         Res.string.delete_all_parts_description,
         Res.drawable.hide_layers
     )
-    data object BlendSettings: Action(
+    data object BlendSettings : Action(
         Res.string.regions_blend_settings_name,
         Res.string.regions_blend_settings_description,
         Res.drawable.intersection_settings
     )
 
-    data object StereographicRotation: Switch(
+    data object StereographicRotation : Switch(
         Res.string.stereographic_rotation_name,
         Res.string.stereographic_rotation_description,
         Res.drawable.spinning_sphere,
     )
-    data object ToggleObjects: Switch(
+    data object ToggleObjects : Switch(
         Res.string.toggle_objects_name,
         Res.string.toggle_objects_description,
         Res.drawable.visible_circle,
         Res.drawable.crossed_circle,
         disabledDescription = Res.string.toggle_objects_disabled_description
     )
-    data object TogglePhantoms: Switch(
+    data object TogglePhantoms : Switch(
         Res.string.toggle_phantoms_name,
         Res.string.toggle_phantoms_description,
         Res.drawable.phantom,
         Res.drawable.phantom_crossed,
         disabledDescription = Res.string.toggle_phantoms_disabled_description
     )
-    data object ToggleFilledOrOutline: Switch( // presently unused
+    data object ToggleFilledOrOutline : Switch( // presently unused
         Res.string.toggle_filled_or_outline_name,
         Res.string.toggle_filled_or_outline_description,
         Res.drawable.filled_circle,
         Res.drawable.circle
     ) // TODO: instead adjust it for every part
-    data object HideUI: Action(
+    data object HideUI : Action(
         Res.string.hide_ui_name,
         Res.string.hide_ui_description,
         Res.drawable.fullscreen
     )
-    data object ToggleDirectionArrows: Switch(
+    data object ToggleDirectionArrows : Switch(
         Res.string.toggle_direction_arrows_name,
         Res.string.toggle_direction_arrows_description,
         Res.drawable.visible_haired_arrow,
         Res.drawable.hide_haired_arrow,
         disabledDescription = Res.string.toggle_direction_arrows_disabled_description
     )
-    data object AddBackgroundImage: Action(
+    data object AddBackgroundImage : Action(
         Res.string.change_background_name,
         Res.string.change_background_description,
         Res.drawable.add_image
     ) // NOTE: critical multiplatform image decoding is available now
 
-    data object Palette: Action(
+    data object Palette : Action(
         Res.string.palette_name,
         Res.string.palette_description,
         Res.drawable.palette
     )
-    data class AppliedColor(val color: Color): Action(
+    data class AppliedColor(val color: Color) : Action(
         Res.string.applied_color_name,
         Res.string.applied_color_description,
         Res.drawable.paint_splash, // tint=color should be applied
     )
 
-    data object CircleInversion: MultiArg(
+    data object CircleInversion : MultiArg(
         SIGNATURE_INDICES_AND_CIRCLE,
         Res.string.circle_inversion_name,
         Res.string.circle_inversion_description,
         Res.array.circle_inversion_arg_descriptions,
         Res.drawable.circle_inversion
     )
-    data object CircleOrPointInterpolation: MultiArg(
+    data object CircleOrPointInterpolation : MultiArg(
         SIGNATURE_2_GENERALIZED_CIRCLES,
         Res.string.circle_interpolation_name,
         Res.string.circle_interpolation_description,
         Res.array.circle_interpolation_arg_descriptions,
         Res.drawable.interpolate_lines
     )
-    data object Rotation: MultiArg(
+    data object Rotation : MultiArg(
         SIGNATURE_INDICES_AND_POINT,
         Res.string.rotation_name,
         Res.string.rotation_description,
         Res.array.rotation_arg_descriptions,
         Res.drawable.rotation_around_point
     )
-    data object BiInversion: MultiArg(
+    data object BiInversion : MultiArg(
         SIGNATURE_INDICES_AND_2_CIRCLES,
         Res.string.bi_inversion_name,
         Res.string.bi_inversion_description,
         Res.array.bi_inversion_arg_descriptions,
         Res.drawable.double_reflection
     )
-    data object LoxodromicMotion: MultiArg(
+    data object LoxodromicMotion : MultiArg(
         SIGNATURE_INDICES_AND_2_POINTS,
         Res.string.loxodromic_motion_name,
         Res.string.loxodromic_motion_description,
         Res.array.loxodromic_motion_arg_descriptions,
         Res.drawable.spiral
     )
-    data object CircleExtrapolation: MultiArg(
+    data object CircleExtrapolation : MultiArg(
         SIGNATURE_2_CIRCLES,
         Res.string.circle_extrapolation_name,
         Res.string.circle_extrapolation_description,
@@ -451,93 +457,93 @@ sealed class Tool(
     )
 
     // MAYBE: add partial argument icon(s)
-    data object ConstructCircleByCenterAndRadius: MultiArg(
+    data object ConstructCircleByCenterAndRadius : MultiArg(
         SIGNATURE_2_POINTS,
         Res.string.circle_by_center_and_radius_name,
         Res.string.circle_by_center_and_radius_description,
         Res.array.circle_by_center_and_radius_arg_descriptions,
         Res.drawable.circle_center_and_radius_point
     )
-    data object ConstructCircleBy3Points: MultiArg(
+    data object ConstructCircleBy3Points : MultiArg(
         SIGNATURE_3_GENERALIZED_CIRCLE,
         Res.string.circle_by_3_points_name,
         Res.string.circle_by_3_points_description,
         Res.array.circle_by_3_points_arg_descriptions,
         Res.drawable.circle_3_points
     )
-    data object ConstructLineBy2Points: MultiArg(
+    data object ConstructLineBy2Points : MultiArg(
         SIGNATURE_2_GENERALIZED_CIRCLES,
         Res.string.line_by_2_points_name,
         Res.string.line_by_2_points_description,
         Res.array.line_by_2_points_arg_descriptions,
         Res.drawable.line_2_points
     )
-    data object AddPoint: MultiArg(
+    data object AddPoint : MultiArg(
         SIGNATURE_1_POINT,
         Res.string.add_point_name,
         Res.string.add_point_description,
         Res.array.add_point_arg_descriptions,
         Res.drawable.flagged_point
     )
-    data object ConstructCircleByPencilAndPoint: MultiArg(
+    data object ConstructCircleByPencilAndPoint : MultiArg(
         SIGNATURE_3_GENERALIZED_CIRCLE,
         Res.string.circle_by_pencil_and_point_name,
         Res.string.circle_by_pencil_and_point_description,
         Res.array.circle_by_pencil_and_point_arg_descriptions,
         Res.drawable.propeller
     )
-    data object ConstructPolarityByCircleAndLineOrPoint: MultiArg(
+    data object ConstructPolarityByCircleAndLineOrPoint : MultiArg(
         SIGNATURE_REAL_CIRCLE_AND_LINE_OR_POINT,
         Res.string.polarity_by_circle_and_line_or_point_name,
         Res.string.polarity_by_circle_and_line_or_point_description,
         Res.array.polarity_by_circle_and_line_or_point_arg_descriptions,
         Res.drawable.circle_tangent
     )
-    data object InsertCenteredCross: Action(
+    data object InsertCenteredCross : Action(
         Res.string.insert_centered_cross_name,
         Res.string.insert_centered_cross_description,
         Res.drawable.inserted_cross
     )
-    data object ConstructArcPath: MultiArg(
+    data object ConstructArcPath : MultiArg(
         SIGNATURE_N_POINTS_PLACEHOLDER,
         Res.string.arc_path_name,
         Res.string.arc_path_description,
         Res.array.arc_path_arg_descriptions,
         Res.drawable.shark_fin_striped
     )
-    data object CompleteArcPath: ContextAction(
+    data object CompleteArcPath : ContextAction(
         Res.string.complete_arc_path,
         icon = Res.drawable.confirm
     )
     // insert rect/square
 
     // these are inlined into canvas HUD
-    data object Expand: ContextAction(
+    data object Expand : ContextAction(
         Res.string.expand_name,
         Res.string.expand_description,
         Res.drawable.expand
     )
-    data object Shrink: ContextAction(
+    data object Shrink : ContextAction(
         Res.string.shrink_name,
         Res.string.shrink_description,
         Res.drawable.shrink
     )
-    data object AdjustExpr: ContextAction(
+    data object AdjustExpr : ContextAction(
         Res.string.adjust_expr_name,
         Res.string.adjust_expr_description,
         Res.drawable.two_vertical_sliders
     )
-    data object PickCircleColor: ContextAction(
+    data object PickCircleColor : ContextAction(
         Res.string.pick_circle_color_name,
         Res.string.pick_circle_color_description,
         Res.drawable.paint_splash
     )
-    data object SetLabel: ContextAction(
+    data object SetLabel : ContextAction(
         Res.string.set_label_name,
         Res.string.set_label_description,
         Res.drawable.text
     )
-    data object MarkAsPhantoms: ContextAction(
+    data object MarkAsPhantoms : ContextAction(
         Res.string.mark_as_phantoms_name,
         Res.string.mark_as_phantoms_description,
         Res.drawable.visible,
@@ -545,17 +551,17 @@ sealed class Tool(
         override val disabledIcon = Res.drawable.phantom
         override val disabledDescription = Res.string.mark_as_phantoms_disabled_description
     }
-    data object SwapDirection: ContextAction(
+    data object SwapDirection : ContextAction(
         Res.string.swap_direction_name,
         Res.string.swap_direction_description,
         Res.drawable.right_left
     )
-    data object Detach: ContextAction(
+    data object Detach : ContextAction(
         Res.string.detach_name,
         Res.string.detach_description,
         Res.drawable.lock_open
     )
-    data object Duplicate: ContextAction(
+    data object Duplicate : ContextAction(
         Res.string.duplicate_name,
         Res.string.duplicate_description,
         Res.drawable.copy
@@ -563,19 +569,19 @@ sealed class Tool(
         override val tint = DodeclustersColors.skyBlue.copy(alpha = 0.9f)
     }
     // MAYBE: eraser-like mode
-    data object Delete: ContextAction(
+    data object Delete : ContextAction(
         Res.string.delete_name,
         Res.string.delete_description,
         Res.drawable.delete_forever
     ), ITool.Tinted {
         override val tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
     }
-    data object DetailedAdjustment: ContextAction(
+    data object DetailedAdjustment : ContextAction(
         Res.string.detailed_adjustment_name,
         Res.string.detailed_adjustment_description,
         Res.drawable.three_sliders
     )
-    data object InBetween: ContextAction(
+    data object InBetween : ContextAction(
         Res.string.in_between_name,
         Res.string.in_between_description,
         Res.drawable.road
@@ -583,12 +589,12 @@ sealed class Tool(
         override val disabledIcon = Res.drawable.road
         override val disabledDescription = Res.string.in_between_disabled_description
     }
-    data object ReverseDirection: ContextAction(
+    data object ReverseDirection : ContextAction(
         Res.string.reverse_direction_name,
         Res.string.reverse_direction_description,
         Res.drawable.right_left
     )
-    data object BidirectionalSpiral: ContextAction(
+    data object BidirectionalSpiral : ContextAction(
         Res.string.bidirectional_spiral_name,
         Res.string.bidirectional_spiral_description,
         Res.drawable.bidirectional_spiral

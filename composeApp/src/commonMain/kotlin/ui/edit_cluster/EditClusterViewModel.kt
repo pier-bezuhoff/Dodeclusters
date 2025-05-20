@@ -111,7 +111,6 @@ import ui.edit_cluster.dialogs.DefaultExtrapolationParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
 import ui.edit_cluster.dialogs.DefaultRotationParameters
-import ui.edit_cluster.dialogs.DialogAction
 import ui.edit_cluster.dialogs.DialogType
 import ui.theme.DodeclustersColors
 import ui.tools.Category

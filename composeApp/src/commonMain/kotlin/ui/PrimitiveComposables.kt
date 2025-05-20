@@ -70,7 +70,7 @@ fun SimpleButton(
     name: String,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
-    tint: Color = LocalContentColor.current,
+    contentColor: Color = LocalContentColor.current,
     containerColor: Color = Color.Unspecified,
     interactionSource: MutableInteractionSource? = null,
     onClick: () -> Unit
@@ -79,7 +79,7 @@ fun SimpleButton(
         onClick = onClick,
         colors = IconButtonDefaults.iconButtonColors(
             containerColor = containerColor,
-            contentColor = tint,
+            contentColor = contentColor,
         ),
         interactionSource = interactionSource,
         modifier = modifier,
@@ -97,7 +97,7 @@ inline fun <reified T> SimpleToolButton(
     tool: T,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
-    tint: Color =
+    contentColor: Color =
         if (tool is ITool.Tinted) tool.tint
         else LocalContentColor.current,
     crossinline onClick: (tool: T) -> Unit
@@ -106,7 +106,7 @@ inline fun <reified T> SimpleToolButton(
     name = stringResource(tool.name),
     modifier = modifier,
     iconModifier = iconModifier,
-    tint = tint,
+    contentColor = contentColor,
     onClick = { onClick(tool) },
 )
 
@@ -120,9 +120,10 @@ inline fun <reified T> SimpleToolButtonWithTooltip(
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
     positionModifier: Modifier = Modifier,
-    tint: Color =
+    contentColor: Color =
         if (tool is ITool.Tinted) tool.tint
         else LocalContentColor.current,
+    containerColor: Color = Color.Unspecified,
     crossinline onClick: (tool: T) -> Unit
 ) where T : ITool =
     Box(positionModifier) {
@@ -134,7 +135,8 @@ inline fun <reified T> SimpleToolButtonWithTooltip(
                 name = stringResource(tool.name),
                 modifier = modifier,
                 iconModifier = iconModifier,
-                tint = tint,
+                contentColor = contentColor,
+                containerColor = containerColor,
                 onClick = { onClick(tool) },
             )
         }
@@ -174,13 +176,13 @@ fun DisableableButton(
     name: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
-    tint: Color = LocalContentColor.current,
+    contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
     IconButton(
         onClick = onClick,
         modifier = modifier,
-        colors = IconButtonDefaults.iconButtonColors().copy(contentColor = tint),
+        colors = IconButtonDefaults.iconButtonColors().copy(contentColor = contentColor),
         enabled = enabled,
     ) {
         Icon(
@@ -201,7 +203,7 @@ fun TwoIconButton(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
-    tint: Color = LocalContentColor.current,
+    contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
     IconToggleButton(
@@ -209,9 +211,9 @@ fun TwoIconButton(
         onCheckedChange = { onClick() },
         modifier = modifier,
         colors = IconButtonDefaults.iconToggleButtonColors(
-            contentColor = tint,
-            disabledContentColor = tint,
-            checkedContentColor = tint, // no need for color variation since we have a diff icon
+            contentColor = contentColor,
+            disabledContentColor = contentColor,
+            checkedContentColor = contentColor, // no need for color variation since we have a diff icon
         )
     ) {
         Icon(
@@ -234,7 +236,7 @@ fun TwoIconButtonWithTooltip(
     modifier: Modifier = Modifier,
     positionModifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
-    tint: Color = LocalContentColor.current,
+    contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
     Box(positionModifier) {
@@ -248,7 +250,7 @@ fun TwoIconButtonWithTooltip(
                 enabled = enabled,
                 modifier = modifier,
                 iconModifier = iconModifier,
-                tint = tint,
+                contentColor = contentColor,
                 onClick = onClick
             )
         }
@@ -269,7 +271,7 @@ fun ThreeIconButton(
     enabled: Boolean,
     alternative: Boolean,
     modifier: Modifier = Modifier,
-    tint: Color = LocalContentColor.current,
+    contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
     IconToggleButton(
@@ -277,7 +279,7 @@ fun ThreeIconButton(
         onCheckedChange = { onClick() },
         modifier = modifier,
         colors = IconButtonDefaults.iconToggleButtonColors(
-            checkedContentColor = tint // no need for color variation since we have a diff icon
+            checkedContentColor = contentColor // no need for color variation since we have a diff icon
         )
     ) {
         Icon(
@@ -313,7 +315,7 @@ fun OnOffButton(
         modifier = modifier,
         colors = IconButtonDefaults.outlinedIconToggleButtonColors(
             containerColor = containerColor,
-            contentColor = contentColor,//MaterialTheme.colorScheme.onSurfaceVariant,
+            contentColor = contentColor,
             checkedContainerColor = checkedContainerColor,
             checkedContentColor = checkedContentColor,
             disabledContentColor = disabledContainerColor,

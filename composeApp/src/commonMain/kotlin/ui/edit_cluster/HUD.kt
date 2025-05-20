@@ -135,7 +135,7 @@ fun BoxScope.SelectionContextActions(
         ) {
             SimpleToolButtonWithTooltip(
                 Tool.Expand,
-                tint = MaterialTheme.colorScheme.secondary,
+                contentColor = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
             VerticalSlider(
@@ -155,7 +155,7 @@ fun BoxScope.SelectionContextActions(
             )
             SimpleToolButtonWithTooltip(
                 Tool.Shrink,
-                tint = MaterialTheme.colorScheme.secondary,
+                contentColor = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
         }
@@ -224,7 +224,7 @@ fun BoxScope.SelectionContextActions(
             SimpleToolButtonWithTooltip(
                 Tool.PickCircleColor,
                 buttonModifier,
-                tint = objectColor,
+                contentColor = objectColor,
                 onClick = toolAction
             )
             TwoIconButtonWithTooltip(
@@ -300,7 +300,7 @@ fun BoxScope.PointContextActions(
             SimpleToolButtonWithTooltip(
                 Tool.PickCircleColor,
                 buttonModifier,
-                tint = objectColor,
+                contentColor = objectColor,
                 onClick = toolAction
             )
             SimpleToolButtonWithTooltip(

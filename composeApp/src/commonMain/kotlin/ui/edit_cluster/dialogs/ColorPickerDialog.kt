@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -43,7 +42,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -280,7 +278,7 @@ fun ColorPickerDialog(
                                         "used color",
                                         swatchBgModifier.align(Alignment.CenterVertically),
                                         splashIconModifier,
-                                        tint = clr,
+                                        contentColor = clr,
                                     ) { setColor(clr) }
                                 }
                                 TwoIconButtonWithTooltip(
@@ -290,7 +288,7 @@ fun ColorPickerDialog(
                                     disabledDescription = stringResource(Res.string.color_picker_forget_color_description),
                                     enabled = newUnsavedColor,
                                     positionModifier = Modifier.align(Alignment.CenterVertically),
-                                    tint = MaterialTheme.colorScheme.secondary
+                                    contentColor = MaterialTheme.colorScheme.secondary
                                 ) {
                                     if (newUnsavedColor)
                                         savedColors += color
@@ -303,7 +301,7 @@ fun ColorPickerDialog(
                                         "saved color",
                                         swatchBgModifier.align(Alignment.CenterVertically),
                                         splashIconModifier,
-                                        tint = clr,
+                                        contentColor = clr,
                                     ) { setColor(clr) }
                                 }
                             }
@@ -326,7 +324,7 @@ fun ColorPickerDialog(
                                         "predefined color",
                                         swatchBgModifier,
                                         splashIconModifier,
-                                        tint = clr,
+                                        contentColor = clr,
                                     ) { setColor(clr) }
                                 }
                             }
@@ -396,7 +394,7 @@ fun ColorPickerDialog(
                                         "used color",
                                         swatchBgModifier.align(Alignment.CenterVertically),
                                         splashIconModifier,
-                                        tint = clr,
+                                        contentColor = clr,
                                     ) { setColor(clr) }
                                 }
                                 TwoIconButtonWithTooltip(
@@ -406,7 +404,7 @@ fun ColorPickerDialog(
                                     disabledDescription = stringResource(Res.string.color_picker_forget_color_description),
                                     enabled = newUnsavedColor,
                                     positionModifier = Modifier.align(Alignment.CenterVertically),
-                                    tint = MaterialTheme.colorScheme.secondary
+                                    contentColor = MaterialTheme.colorScheme.secondary
                                 ) {
                                     if (newUnsavedColor)
                                         savedColors += color
@@ -419,7 +417,7 @@ fun ColorPickerDialog(
                                         "saved color",
                                         swatchBgModifier.align(Alignment.CenterVertically),
                                         splashIconModifier,
-                                        tint = clr,
+                                        contentColor = clr,
                                     ) { setColor(clr) }
                                 }
                             }
@@ -442,7 +440,7 @@ fun ColorPickerDialog(
                                         "predefined color",
                                         swatchBgModifier,
                                         splashIconModifier,
-                                        tint = clr,
+                                        contentColor = clr,
                                     ) { setColor(clr) }
                                 }
                             }
