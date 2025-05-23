@@ -6,7 +6,6 @@ import data.geometry.EPSILON
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
 import data.geometry.Line
-import data.geometry.LineOrPoint
 import data.geometry.Point
 import data.geometry.RegionPointLocation
 import domain.squareSum

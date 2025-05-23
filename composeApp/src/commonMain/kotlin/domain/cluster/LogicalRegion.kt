@@ -2,6 +2,7 @@ package domain.cluster
 
 import androidx.compose.runtime.Immutable
 import domain.ColorAsCss
+import domain.Ix
 import domain.io.DdcV2
 import domain.io.DdcV4
 import kotlinx.serialization.Serializable
@@ -17,9 +18,9 @@ import kotlinx.serialization.Serializable
 @Immutable
 data class LogicalRegion(
     /** indices of interior circles */
-    val insides: Set<Int>,
+    val insides: Set<Ix>,
     /** indices of bounding complementary circles */
-    val outsides: Set<Int>,
+    val outsides: Set<Ix>,
     val fillColor: ColorAsCss = DdcV2.DEFAULT_CLUSTER_FILL_COLOR,
     // its use is debatable
     val borderColor: ColorAsCss? = DdcV2.DEFAULT_CLUSTER_BORDER_COLOR,
@@ -35,4 +36,12 @@ fillColor = $fillColor, borderColor = $borderColor)"""
         // the more intersections the smaller the delimited region is
         insides.containsAll(otherRegion.insides) &&
         outsides.containsAll(otherRegion.outsides)
+
+    inline fun reIndex(
+        crossinline reIndexer: (Ix) -> Ix
+    ): LogicalRegion =
+        copy(
+            insides = insides.map(reIndexer).toSet(),
+            outsides = outsides.map(reIndexer).toSet(),
+        )
 }

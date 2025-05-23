@@ -98,6 +98,7 @@ sealed interface Expr : ExprLike {
         val object3: Ix,
     ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2, object3))
 
+    // TODO: replace with CircleBy3
     @Serializable
     @SerialName("LineBy2PerpendicularObjects")
     data class LineBy2Points(

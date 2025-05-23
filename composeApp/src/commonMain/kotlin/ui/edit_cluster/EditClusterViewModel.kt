@@ -365,7 +365,7 @@ class EditClusterViewModel : ViewModel() {
             content = content,
             onDdc4 = { ddc4 ->
                 val constellation = ddc4.toConstellation()
-                loadNewConstellation(constellation)
+                loadNewConstellation(constellation.updated())
                 centerizeTo(ddc4.bestCenterX, ddc4.bestCenterY)
                 chessboardPattern =
                     if (!ddc4.chessboardPattern) ChessboardPattern.NONE
@@ -377,7 +377,7 @@ class EditClusterViewModel : ViewModel() {
             },
             onDdc3 = { ddc3 ->
                 val constellation = ddc3.toConstellation().toConstellation()
-                loadNewConstellation(constellation)
+                loadNewConstellation(constellation.updated())
                 centerizeTo(ddc3.bestCenterX, ddc3.bestCenterY)
                 chessboardPattern =
                     if (!ddc3.chessboardPattern) ChessboardPattern.NONE
@@ -389,7 +389,9 @@ class EditClusterViewModel : ViewModel() {
                     .filterIsInstance<DdcV2.Token.Cluster>()
                     .first()
                     .toCluster()
-                loadNewConstellation(cluster.toConstellation())
+                loadNewConstellation(
+                    cluster.toConstellation().updated()
+                )
                 centerizeTo(ddc2.bestCenterX, ddc2.bestCenterY)
                 chessboardPattern =
                     if (!ddc2.chessboardPattern) ChessboardPattern.NONE
@@ -401,11 +403,15 @@ class EditClusterViewModel : ViewModel() {
                     .filterIsInstance<DdcV1.Token.Cluster>()
                     .first()
                     .toCluster()
-                loadNewConstellation(cluster.toConstellation())
+                loadNewConstellation(
+                    cluster.toConstellation().updated()
+                )
                 centerizeTo(ddc1.bestCenterX, ddc1.bestCenterY)
             },
             onClusterV1 = { cluster1 ->
-                loadNewConstellation(cluster1.toCluster().toConstellation())
+                loadNewConstellation(
+                    cluster1.toCluster().toConstellation().updated()
+                )
             },
             onFail = {
                 queueSnackbarMessage(SnackbarMessage.FAILED_OPEN)
@@ -3029,6 +3035,7 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
+    // TODO: replace with CircleBy3 + infinity
     private fun completeLineBy2Points() {
         val argList = partialArgList!!
         val args = argList.args.map { it as Arg.CLIP }

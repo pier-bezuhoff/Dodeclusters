@@ -2,11 +2,14 @@ package domain.cluster
 
 import androidx.compose.runtime.Immutable
 import data.geometry.Circle
+import data.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
+import domain.expressions.Expr
 import domain.expressions.Expression
 import domain.expressions.ObjectConstruct
 import domain.expressions.reIndex
+import domain.filterIndices
 import kotlinx.serialization.Serializable
 
 // aka ClusterV3.2
@@ -61,6 +64,72 @@ data class Constellation(
                 else -> ix to null
             }
         }.toMap()
+
+    /**
+     * Replace deprecated [Expression]s with proper substitutes.
+     * So far it replaces:
+     * - [Expr.LineBy2Points] with [Expr.CircleBy3Points], adding [Point.CONFORMAL_INFINITY] at
+     * index `0` when necessary.
+     */
+    fun updated(): Constellation {
+        val hasLineBy2Points = objects.any { construct ->
+            construct is ObjectConstruct.Dynamic &&
+            construct.expression.expr is Expr.LineBy2Points
+        }
+        return if (hasLineBy2Points) {
+            val infinityIndex = objects.indexOfFirst {
+                it is ObjectConstruct.ConcretePoint &&
+                it.point == Point.CONFORMAL_INFINITY
+            }
+            if (infinityIndex == -1) {
+                // lets add infinity @index=0
+                // and shift all indexes by +1
+                val infinity = ObjectConstruct.ConcretePoint(Point.CONFORMAL_INFINITY)
+                val newObjects = objects.map { construct ->
+                    when (construct) {
+                        is ObjectConstruct.Dynamic -> construct.copy(
+                            expression = when (val expr = construct.expression.expr) {
+                                is Expr.LineBy2Points ->
+                                    Expression.Just(Expr.CircleBy3Points(
+                                        expr.object1 + 1,
+                                        expr.object2 + 1,
+                                        0, // infinity index
+                                    ))
+                                else -> construct.expression.reIndex { it + 1 }
+                            }
+                        )
+                        else -> construct
+                    }
+                }
+                copy(
+                    objects = listOf(infinity) + newObjects,
+                    parts = parts.map { part -> part.reIndex { it + 1 } },
+                    objectColors = objectColors.mapKeys { (ix, _) -> ix + 1 },
+                    objectLabels = objectLabels.mapKeys { (ix, _) -> ix + 1 },
+                    backgroundColor = backgroundColor,
+                    phantoms = phantoms.map { it + 1 },
+                )
+            } else {
+                copy(
+                    objects = objects.map { construct ->
+                        when (construct) {
+                            is ObjectConstruct.Dynamic ->
+                                ObjectConstruct.Dynamic(
+                                    when (val expr = construct.expression.expr) {
+                                        is Expr.LineBy2Points ->
+                                            Expression.Just(Expr.CircleBy3Points(
+                                                expr.object1, expr.object2, infinityIndex,
+                                            ))
+                                        else -> construct.expression
+                                    }
+                                )
+                            else -> construct
+                        }
+                    }
+                )
+            }
+        } else this
+    }
 
     companion object {
         const val FIRST_INDEX: Int = 0

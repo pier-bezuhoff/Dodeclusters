@@ -94,7 +94,6 @@ import ui.DisableableButton
 import ui.LifecycleEvent
 import ui.OnOffButton
 import ui.SimpleButton
-import ui.SimpleToolButtonWithTooltip
 import ui.ThreeIconButton
 import ui.TwoIconButton
 import ui.WithTooltip
@@ -638,7 +637,7 @@ fun EditClusterTopBar(
 //    }
     Row(modifier
         // NOTE: i might be hallucinating but ive seen this break tooltip positioning, now it works tho (?)
-        .offset(x = 24.dp, y = -(24).dp) // leave only 1, bottom-left rounded corner
+        .offset(x = 24.dp, y = -24.dp) // leave only 1, bottom-left rounded corner
         .background(
             Brush.verticalGradient(
                 0.3f to backgroundColor.copy(alpha = 1.0f),
@@ -929,7 +928,7 @@ private fun HorizontalPanel(
     // mb wrap in a surface
     Row(modifier = modifier
         .horizontalScroll(scrollState)
-        .offset(x = (-24).dp) // hide round corners to the left
+        .offset(x = -24.dp) // hide round corners to the left
         .background(
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
             MaterialTheme.shapes.extraLarge,
@@ -1016,7 +1015,7 @@ private fun VerticalPanel(
                 onClick = selectTool
             )
         }
-        if (activeCategory is Category.Region) { // || category is EditClusterCategory.Colors) {
+        if (activeCategory is Category.Region) {
             HorizontalDivider(Modifier
                 .width(40.dp)
                 .padding(vertical = 8.dp)
@@ -1039,9 +1038,11 @@ private fun VerticalPanel(
     }
 }
 
-// all-included multiplexer
 /**
+ * All-included [tool]-type multiplexer
  * @param[regionColor] only used for Palette color
+ * @param[alternative] only used for [ITool.TernaryToggle] in [ThreeIconButton], e.g.
+ * the chessboard toggle
  */
 @Composable
 fun ToolButton(
