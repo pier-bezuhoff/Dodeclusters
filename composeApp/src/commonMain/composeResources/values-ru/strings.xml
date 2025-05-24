@@ -256,8 +256,8 @@
     <string name="blend_mode_difference">Разность</string>
     <string name="blend_mode_plus">Сложение</string>
     <!-- snackbar messages -->
-    <string name="locked_objects_notice">Объекты закрплены, открепите их чтобы перемещать</string>
-    <string name="locked_object_notice">Объект закрплён, открепите его чтобы перемещать</string>
+    <string name="locked_objects_notice">Объекты закреплены, открепите их чтобы перемещать</string>
+    <string name="locked_object_notice">Объект закреплён, открепите его чтобы перемещать</string>
     <string name="imaginary_circle_notice">Результат построения содержит мнимые окружности (не отрисованы)</string>
 <!--    <string name="successful_open_notice">Загружен новый файл</string>-->
     <string name="successful_restore_notice">Восстановлен из автосохранения</string>
