@@ -2,11 +2,9 @@ package domain.io
 
 import dodeclusters.composeapp.generated.resources.Res
 import getPlatform
-import org.jetbrains.compose.resources.ExperimentalResourceApi
 
 object DdcRepository {
 
-    @OptIn(ExperimentalResourceApi::class)
     suspend fun loadSampleClusterYaml(
         sampleName: String,
     ): String? {
@@ -28,6 +26,7 @@ object DdcRepository {
         return when {
             s == "m" || s.toIntOrNull() == 0 -> SamplePath.M
             s == "apollonius" || s.toIntOrNull() == 1 -> SamplePath.APOLLONIUS
+            s == "chessboard" || s.toIntOrNull() == 2 -> SamplePath.CHESSBOARD
             else -> null
         }
     }
@@ -36,4 +35,5 @@ object DdcRepository {
 enum class SamplePath(val path: String) {
     M("m-portrait.yml"),
     APOLLONIUS("apollonius.yml"),
+    CHESSBOARD("chessboard.yml"),
 }

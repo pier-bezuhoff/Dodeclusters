@@ -14,6 +14,8 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
+// NOTE: JSON doesn't support Infinity, add `allowSpecialFloatingPointValues = true` to
+//  Json { ... } serializers
 // NOTE: do NOT forget CONFORMAL_INFINITY checks
 @Immutable
 @Serializable

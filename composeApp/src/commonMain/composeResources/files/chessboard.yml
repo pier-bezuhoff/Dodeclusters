@@ -1,0 +1,286 @@
+name: "chessboard"
+backgroundColor: "#121212"
+bestCenterX: 960.0
+bestCenterY: 500.5
+chessboardPattern: true
+chessboardPatternStartsColored: false
+chessboardColor: "#5f2564"
+objects:
+  0:
+    construct:
+      type: "ConcreteLine"
+      line:
+        a: 0.0
+        b: -1.0
+        c: 500.5
+  1:
+    construct:
+      type: "ConcreteLine"
+      line:
+        a: 1.0
+        b: -0.0
+        c: -960.0
+  2:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "IncidentPoint"
+          parameters:
+            order: -0.095
+          carrier: 1
+  3:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "BiInversion"
+          parameters:
+            speed: 0.5
+            nSteps: 3
+            reverseSecondEngine: false
+          engine1: 1
+          engine2: 0
+          target: 2
+        outputIndex: 0
+  4:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "BiInversion"
+          parameters:
+            speed: 0.5
+            nSteps: 3
+            reverseSecondEngine: false
+          engine1: 1
+          engine2: 0
+          target: 2
+        outputIndex: 1
+  5:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "BiInversion"
+          parameters:
+            speed: 0.5
+            nSteps: 3
+            reverseSecondEngine: false
+          engine1: 1
+          engine2: 0
+          target: 2
+        outputIndex: 2
+  6:
+    construct:
+      type: "ConcretePoint"
+      point:
+        x: Infinity
+        y: Infinity
+  7:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "CircleBy3PerpendicularObjects"
+          object1: 3
+          object2: 0
+          object3: 6
+  8:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "CircleBy3PerpendicularObjects"
+          object1: 5
+          object2: 0
+          object3: 6
+  9:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "CircleBy3PerpendicularObjects"
+          object1: 2
+          object2: 1
+          object3: 6
+  10:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "Just"
+        expr:
+          type: "CircleBy3PerpendicularObjects"
+          object1: 1
+          object2: 4
+          object3: 6
+  11:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+          startCircle: 7
+          endCircle: 1
+        outputIndex: 0
+  12:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+          startCircle: 7
+          endCircle: 1
+        outputIndex: 1
+  13:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+          startCircle: 7
+          endCircle: 1
+        outputIndex: 2
+  14:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+          startCircle: 1
+          endCircle: 8
+        outputIndex: 0
+  15:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+          startCircle: 1
+          endCircle: 8
+        outputIndex: 1
+  16:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+          startCircle: 1
+          endCircle: 8
+        outputIndex: 2
+  17:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+            complementary: false
+          startCircle: 9
+          endCircle: 0
+        outputIndex: 0
+  18:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+            complementary: false
+          startCircle: 9
+          endCircle: 0
+        outputIndex: 1
+  19:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+            complementary: false
+          startCircle: 9
+          endCircle: 0
+        outputIndex: 2
+  20:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+          startCircle: 0
+          endCircle: 10
+        outputIndex: 0
+  21:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+          startCircle: 0
+          endCircle: 10
+        outputIndex: 1
+  22:
+    construct:
+      type: "DynamicExpression"
+      expression:
+        type: "OneOf"
+        expr:
+          type: "CircleInterpolation"
+          parameters:
+            nInterjacents: 3
+            inBetween: true
+          startCircle: 0
+          endCircle: 10
+        outputIndex: 2
+phantoms:
+- 3
+- 5
+- 4

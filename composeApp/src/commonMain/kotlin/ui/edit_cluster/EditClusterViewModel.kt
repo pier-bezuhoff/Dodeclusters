@@ -1,5 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
 package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
@@ -365,7 +363,7 @@ class EditClusterViewModel : ViewModel() {
             content = content,
             onDdc4 = { ddc4 ->
                 val constellation = ddc4.toConstellation()
-                loadNewConstellation(constellation.updated())
+                loadNewConstellation(constellation)
                 centerizeTo(ddc4.bestCenterX, ddc4.bestCenterY)
                 chessboardPattern =
                     if (!ddc4.chessboardPattern) ChessboardPattern.NONE
@@ -377,7 +375,7 @@ class EditClusterViewModel : ViewModel() {
             },
             onDdc3 = { ddc3 ->
                 val constellation = ddc3.toConstellation().toConstellation()
-                loadNewConstellation(constellation.updated())
+                loadNewConstellation(constellation)
                 centerizeTo(ddc3.bestCenterX, ddc3.bestCenterY)
                 chessboardPattern =
                     if (!ddc3.chessboardPattern) ChessboardPattern.NONE
@@ -390,7 +388,7 @@ class EditClusterViewModel : ViewModel() {
                     .first()
                     .toCluster()
                 loadNewConstellation(
-                    cluster.toConstellation().updated()
+                    cluster.toConstellation()
                 )
                 centerizeTo(ddc2.bestCenterX, ddc2.bestCenterY)
                 chessboardPattern =
@@ -404,13 +402,13 @@ class EditClusterViewModel : ViewModel() {
                     .first()
                     .toCluster()
                 loadNewConstellation(
-                    cluster.toConstellation().updated()
+                    cluster.toConstellation()
                 )
                 centerizeTo(ddc1.bestCenterX, ddc1.bestCenterY)
             },
             onClusterV1 = { cluster1 ->
                 loadNewConstellation(
-                    cluster1.toCluster().toConstellation().updated()
+                    cluster1.toCluster().toConstellation()
                 )
             },
             onFail = {
@@ -435,12 +433,36 @@ class EditClusterViewModel : ViewModel() {
         ))
     }
 
+    fun showDebugInfo() {
+        val selectedObjectsString = selection.joinToString { ix ->
+            "$ix: " + objects[ix].toString()
+        }
+        val selectedExpressionsString = selection.joinToString { ix ->
+            "$ix: " + expressions.expressions[ix].toString()
+        }
+        println("mode = $mode, submode = $submode")
+        println("selection = $selection")
+        println("selected objects = $selectedObjectsString")
+        println("selected objects downscaled = " + selection.joinToString { ix ->
+            "$ix: " + objectModel.downscaledObjects[ix].toString()
+        })
+        println("selected objects expressions = $selectedExpressionsString")
+        println("regions bounded by some of selected objects = " + regions.filter {
+            it.insides.any { ix -> ix in selection } ||
+            it.outsides.any { ix -> ix in selection }
+        }.joinToString { it.toString() }
+        )
+        println("invalidation #${objectModel.invalidations}")
+        queueSnackbarMessage(SnackbarMessage.STUB, " | $selectedObjectsString;\n$selectedExpressionsString")
+    }
+
     // MAYBE: make a suspend function + add load spinner
     fun loadNewConstellation(constellation: Constellation) {
+        val updatedConstellation = constellation.updated()
         showPromptToSetActiveSelectionAsToolArg = false
         chessboardPattern = ChessboardPattern.NONE
         translation = Offset.Zero
-        loadConstellation(constellation)
+        loadConstellation(updatedConstellation)
         // reset history on load
         history.clear()
         resetTransients()
@@ -2717,26 +2739,7 @@ class EditClusterViewModel : ViewModel() {
                     confirmAdjustedParameters()
                 KeyboardAction.NEW_DOCUMENT -> openNewBlankConstellation()
                 KeyboardAction.HELP -> { // temporarily hijacked for debugging
-                    val selectedObjectsString = selection.joinToString { ix ->
-                        "$ix: " + objects[ix].toString()
-                    }
-                    val selectedExpressionsString = selection.joinToString { ix ->
-                        "$ix: " + expressions.expressions[ix].toString()
-                    }
-                    println("mode = $mode, submode = $submode")
-                    println("selection = $selection")
-                    println("selected objects = $selectedObjectsString")
-                    println("selected objects downscaled = " + selection.joinToString { ix ->
-                        "$ix: " + objectModel.downscaledObjects[ix].toString()
-                    })
-                    println("selected objects expressions = $selectedExpressionsString")
-                    println("regions bounded by some of selected objects = " + regions.filter {
-                        it.insides.any { ix -> ix in selection } ||
-                        it.outsides.any { ix -> ix in selection }
-                    }.joinToString { it.toString() }
-                    )
-                    println("invalidation #${objectModel.invalidations}")
-                    queueSnackbarMessage(SnackbarMessage.STUB, " | $selectedObjectsString;\n$selectedExpressionsString")
+                    showDebugInfo()
                 }
             }
         }
@@ -3035,7 +3038,6 @@ class EditClusterViewModel : ViewModel() {
         partialArgList = PartialArgList(argList.signature)
     }
 
-    // TODO: replace with CircleBy3 + infinity
     private fun completeLineBy2Points() {
         val argList = partialArgList!!
         val args = argList.args.map { it as Arg.CLIP }
@@ -3055,10 +3057,13 @@ class EditClusterViewModel : ViewModel() {
                         createNewFreePoint(it.toPoint(), triggerRecording = false)
                 }
             }
+            val infinityIndex = objectModel.getInfinityIndex() ?:
+                createNewFreePoint(Point.CONFORMAL_INFINITY, triggerRecording = false)
             val newGCircle = expressions.addSoloExpr(
-                Expr.LineBy2Points(
+                Expr.CircleBy3Points(
                     object1 = realized[0],
                     object2 = realized[1],
+                    object3 = infinityIndex,
                 ),
             )
             createNewGCircle(newGCircle?.upscale())
@@ -3614,12 +3619,12 @@ class EditClusterViewModel : ViewModel() {
         }
 
     // NOTE: downscaling each arg for eval is an extreme performance bottleneck (4 - 15 times)
-    private inline fun GCircle.downscale(): GCircle = scaled00(DOWNSCALING_FACTOR)
-    private inline fun GCircle.upscale(): GCircle = scaled00(UPSCALING_FACTOR)
-    private inline fun CircleOrLine.downscale(): CircleOrLine = scaled00(DOWNSCALING_FACTOR)
-    private inline fun CircleOrLine.upscale(): CircleOrLine = scaled00(UPSCALING_FACTOR)
-    private inline fun Point.downscale(): Point = scaled00(DOWNSCALING_FACTOR)
-    private inline fun Point.upscale(): Point = scaled00(UPSCALING_FACTOR)
+    private fun GCircle.downscale(): GCircle = scaled00(DOWNSCALING_FACTOR)
+    private fun GCircle.upscale(): GCircle = scaled00(UPSCALING_FACTOR)
+    private fun CircleOrLine.downscale(): CircleOrLine = scaled00(DOWNSCALING_FACTOR)
+    private fun CircleOrLine.upscale(): CircleOrLine = scaled00(UPSCALING_FACTOR)
+    private fun Point.downscale(): Point = scaled00(DOWNSCALING_FACTOR)
+    private fun Point.upscale(): Point = scaled00(UPSCALING_FACTOR)
 
     fun saveState(): State {
         val center = computeAbsoluteCenter() ?: Offset.Zero
@@ -3746,6 +3751,9 @@ class EditClusterViewModel : ViewModel() {
             val JSON_FORMAT = Json {
                 ignoreUnknownKeys = true
                 encodeDefaults = true
+                // did you know that JSON doesn't support +Infinity, -Infinity or NaN?
+                // yep, gotta thank brilliant JS devs for their gift to humanity
+                allowSpecialFloatingPointValues = true
             }
         }
     }

@@ -4,8 +4,6 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.GeneralizedCircle
-import data.geometry.ImaginaryCircle
-import data.geometry.Line
 import data.geometry.Point
 import data.geometry.Rotor
 import domain.never

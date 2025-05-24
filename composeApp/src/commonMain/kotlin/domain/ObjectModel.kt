@@ -132,6 +132,13 @@ class ObjectModel {
         }
     }
 
+    fun getInfinityIndex(): Ix? {
+        val infinityIndex = objects.indexOfFirst { it == Point.CONFORMAL_INFINITY }
+        return if (infinityIndex == -1) {
+            null
+        } else infinityIndex
+    }
+
     /**
      * Copy [objectColors] from source indices onto trajectories specified
      * by [sourceIndex2NewTrajectory]. Trajectory objects are assumed to be laid out in
