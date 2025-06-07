@@ -72,6 +72,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Arg
+import domain.ArgType
 import domain.ChessboardPattern
 import domain.Ix
 import domain.PartialArgList
@@ -312,6 +313,11 @@ fun BoxScope.EditClusterCanvas(
             RegionManipulationStrategySelector(
                 currentStrategy = viewModel.regionManipulationStrategy,
                 setStrategy = viewModel::setRegionsManipulationStrategy
+            )
+        }
+        if (viewModel.showInfinitePointInput) {
+            InfinitePointInput(
+                toolAction = viewModel::toolAction,
             )
         }
     }

@@ -1,6 +1,7 @@
 package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
+import domain.NonEqualityCondition
 import domain.Signature
 import kotlinx.serialization.Serializable
 import ui.tools.Tool
@@ -60,6 +61,7 @@ enum class ToolMode(
     ;
 
     val signature: Signature = tool.signature
+    val nonEqualityConditions: List<NonEqualityCondition> = tool.nonEqualityConditions
 
     companion object {
         fun correspondingTo(tool: Tool.MultiArg): ToolMode =

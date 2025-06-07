@@ -178,6 +178,8 @@
     <string name="bidirectional_spiral_name">Bidirectional</string>
     <string name="bidirectional_spiral_description">Make unidirectional</string>
     <string name="bidirectional_spiral_disabled_description">Make bidirectional</string>
+    <string name="infinite_point_name">Infinite point</string>
+    <string name="infinite_point_description">Use infinite point</string>
     <string name="steps_slider_name">N steps</string>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->

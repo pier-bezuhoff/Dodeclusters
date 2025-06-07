@@ -178,6 +178,8 @@
     <string name="bidirectional_spiral_name">Двусторонняя</string>
     <string name="bidirectional_spiral_description">Сделать одно-направленной</string>
     <string name="bidirectional_spiral_disabled_description">Сделать дву-направленной</string>
+    <string name="infinite_point_name">Бесконечно удалённая точка</string>
+    <string name="infinite_point_description">Использовать бесконечно удалённую точку</string>
     <string name="steps_slider_name">N шагов</string>
 
     <!-- categories -->

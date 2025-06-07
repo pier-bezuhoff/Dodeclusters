@@ -100,6 +100,7 @@ inline fun <reified T> SimpleToolButton(
     contentColor: Color =
         if (tool is ITool.Tinted) tool.tint
         else LocalContentColor.current,
+    containerColor: Color = Color.Unspecified,
     crossinline onClick: (tool: T) -> Unit
 ) where T : ITool = SimpleButton(
     iconPainter = painterResource(tool.icon),
@@ -107,6 +108,7 @@ inline fun <reified T> SimpleToolButton(
     modifier = modifier,
     iconModifier = iconModifier,
     contentColor = contentColor,
+    containerColor = containerColor,
     onClick = { onClick(tool) },
 )
 

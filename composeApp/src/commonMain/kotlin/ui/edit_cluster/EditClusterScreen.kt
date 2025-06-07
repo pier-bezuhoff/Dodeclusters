@@ -57,6 +57,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -165,10 +166,10 @@ fun EditClusterScreen(
                         viewModel.switchToCategory(category, togglePanel = true)
                     },
                     modifier =
-                    if (compactHeight) Modifier
-                        .size(48.dp)
-                        .offset(x = 8.dp, y = 16.dp)
-                    else Modifier,
+                        if (compactHeight) Modifier
+                            .size(48.dp)
+                            .offset(x = 8.dp, y = 16.dp)
+                        else Modifier,
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     shape = CircleShape,
@@ -211,6 +212,7 @@ fun EditClusterScreen(
                         undoIsEnabled = viewModel.undoIsEnabled,
                         redoIsEnabled = viewModel.redoIsEnabled,
                         showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
+                        openNewBlank = viewModel::openNewBlankConstellation,
                         loadFromYaml = { content ->
                             content?.let {
                                 viewModel.loadDdc(content)
@@ -610,6 +612,7 @@ fun EditClusterTopBar(
 //    saveAsYaml: (name: String) -> String,
 //    exportAsSvg: (name: String) -> String,
 //    exportAsPng: suspend () -> Result<ImageBitmap>,
+    openNewBlank: () -> Unit,
     showSaveOptionsDialog: () -> Unit,
     loadFromYaml: (content: String?) -> Unit,
     undo: () -> Unit,
@@ -652,8 +655,16 @@ fun EditClusterTopBar(
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             Spacer(Modifier.width(16.dp))
-            // TODO: button to create new [empty?] document
+            // MAYBE: button to create new [empty?] document
             //  (maybe only on wide-width screens)
+            WithTooltip("New blank file") {
+                SimpleButton(
+                    //painterResource(Res.drawable.add_circle),
+                    rememberVectorPainter(Icons.Filled.Add),
+                    "new blank",
+                    onClick = openNewBlank,
+                )
+            }
             WithTooltip(stringResource(Res.string.save_name)) {
                 SimpleButton(
                     painterResource(Tool.SaveCluster.icon),

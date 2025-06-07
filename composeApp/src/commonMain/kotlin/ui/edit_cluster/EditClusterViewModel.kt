@@ -569,7 +569,8 @@ class EditClusterViewModel : ViewModel() {
     fun undo() {
         val m = mode
         if (m is ToolMode && partialArgList?.args?.isNotEmpty() == true) {
-            partialArgList = PartialArgList(m.signature) // MAYBE: just pop the last arg
+            // MAYBE: just pop the last arg
+            partialArgList = PartialArgList(m.signature, m.nonEqualityConditions)
             if (submode is SubMode.ExprAdjustment) {
                 // NOTE: this leaves one useless history entry
                 cancelExprAdjustment()
@@ -995,7 +996,7 @@ class EditClusterViewModel : ViewModel() {
                 partialArgList = null
             } else {
                 showCircles = true
-                partialArgList = PartialArgList(newMode.signature)
+                partialArgList = PartialArgList(newMode.signature, newMode.nonEqualityConditions)
             }
         } else {
             partialArgList = null
@@ -1608,8 +1609,9 @@ class EditClusterViewModel : ViewModel() {
             confirmThisArg = true
         )
         cancelSelectionAsToolArgPrompt()
-        if (partialArgList!!.isFull)
+        if (partialArgList!!.isFull) {
             completeToolMode()
+        }
     }
 
     fun insertCenteredCross() {
@@ -1708,13 +1710,29 @@ class EditClusterViewModel : ViewModel() {
         val sel = selection
         return sel.isNotEmpty() && (expressions.expressions[sel[0]]?.expr?.let { expr0 ->
             (expr0 is Expr.CircleInterpolation ||
-            expr0 is Expr.PointInterpolation ||
-            expr0 is Expr.Rotation ||
-            expr0 is Expr.BiInversion ||
-            expr0 is Expr.LoxodromicMotion) &&
+                expr0 is Expr.PointInterpolation ||
+                expr0 is Expr.Rotation ||
+                expr0 is Expr.BiInversion ||
+                expr0 is Expr.LoxodromicMotion) &&
             sel.all { expressions.expressions[it]?.expr == expr0 }
-        } ?: false)
+        } == true)
     }
+
+    val showInfinitePointInput: Boolean get() =
+        partialArgList?.let { argList ->
+            argList.nextArgType?.let { nextArgType ->
+                val acceptsInfinitePoint = Arg.InfinitePoint in nextArgType.possibleTypes
+                val acceptsIndices = Arg.Indices in nextArgType.possibleTypes
+                (acceptsInfinitePoint || acceptsIndices) &&
+                    objectModel.getInfinityIndex()?.let { ix ->
+                        val potentialNewArg = if (acceptsIndices)
+                            Arg.Indices(listOf(ix))
+                        else
+                            Arg.PointIndex(ix)
+                        argList.validateNewArg(potentialNewArg)
+                    } != false
+            } == true
+        } == true
 
     fun adjustExpr() {
         val expr = expressions.expressions[selection[0]]?.expr
@@ -1747,6 +1765,7 @@ class EditClusterViewModel : ViewModel() {
                 is Expr.CircleInterpolation ->
                     PartialArgList(
                         tool.signature,
+                        tool.nonEqualityConditions,
                         args = listOf(
                             Arg.IndexOf(expr.startCircle, objects[expr.startCircle]!!),
                             Arg.IndexOf(expr.endCircle, objects[expr.endCircle]!!)
@@ -1755,6 +1774,7 @@ class EditClusterViewModel : ViewModel() {
                 is Expr.PointInterpolation ->
                     PartialArgList(
                         tool.signature,
+                        tool.nonEqualityConditions,
                         args = listOf(
                             Arg.PointIndex(expr.startPoint),
                             Arg.PointIndex(expr.endPoint)
@@ -1763,6 +1783,7 @@ class EditClusterViewModel : ViewModel() {
                 is Expr.Rotation ->
                     PartialArgList(
                         tool.signature,
+                        tool.nonEqualityConditions,
                         args = listOf(
                             Arg.Indices(listOf(expr.target)),
                             Arg.PointIndex(expr.pivot),
@@ -1771,6 +1792,7 @@ class EditClusterViewModel : ViewModel() {
                 is Expr.BiInversion ->
                     PartialArgList(
                         tool.signature,
+                        tool.nonEqualityConditions,
                         args = listOf(
                             Arg.Indices(listOf(expr.target)),
                             Arg.IndexOf(expr.engine1, objects[expr.engine1]!!),
@@ -1780,6 +1802,7 @@ class EditClusterViewModel : ViewModel() {
                 is Expr.LoxodromicMotion ->
                     PartialArgList(
                         tool.signature,
+                        tool.nonEqualityConditions,
                         args = listOf(
                             Arg.Indices(listOf(expr.target)),
                             Arg.PointIndex(expr.divergencePoint),
@@ -1898,161 +1921,9 @@ class EditClusterViewModel : ViewModel() {
                         reselectRegionAt(visiblePosition)
                     }
                 } else if (mode is ToolMode && partialArgList?.isFull != true) {
-                    val pArgList = partialArgList
-                    val nextType = pArgList?.nextArgType
-                    if (nextType != null) {
-                        val inInterpolationMode = mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION
-                        val inFastCenteredCircle = FAST_CENTERED_CIRCLE && mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS
-                        /** flags whether we already selected/found an object and there's no
-                         * more need to proceed further */
-                        var found = false
-                        var pointSnap: PointSnapResult? = null
-                        if (Arg.PointIndex in nextType.possibleTypes) {
-                            pointSnap = snapped(absolute(visiblePosition))
-                            when (pointSnap) {
-                                is PointSnapResult.Eq -> {
-                                    val newArg = Arg.PointIndex(pointSnap.pointIndex)
-                                    if (inFastCenteredCircle && pArgList.currentArg == null) {
-                                        val newArg2 = Arg.PointXY(pointSnap.result)
-                                        partialArgList = pArgList
-                                            .addArg(newArg, confirmThisArg = true)
-                                            .addArg(newArg2, confirmThisArg = false)
-                                            .copy(lastSnap = pointSnap)
-                                        found = true
-                                    } else {
-                                        val sameArgsForInterpolation =
-                                            inInterpolationMode entails
-                                            (pArgList.args.isEmpty() || pArgList.currentArg is Arg.Point)
-                                        if (pArgList.currentArg != newArg && sameArgsForInterpolation) {
-                                            partialArgList = pArgList
-                                                .addArg(newArg, confirmThisArg = false)
-                                                .copy(lastSnap = pointSnap)
-                                            found = true
-                                        }
-                                    }
-                                }
-                                else -> {}
-                            }
-                        }
-                        if (
-                            !found &&
-                            (inInterpolationMode entails
-                                (pArgList.currentArg?.type !is Arg.Type.Point))
-                        ) {
-                            val acceptsCircle = Arg.CircleIndex in nextType.possibleTypes
-                            val acceptsLine = Arg.LineIndex in nextType.possibleTypes
-                            val acceptsImaginaryCircle = Arg.ImaginaryCircleIndex in nextType.possibleTypes
-                            val acceptsCLI = acceptsCircle || acceptsLine || acceptsImaginaryCircle
-                            if (acceptsCLI) {
-                                val selectableObjects = objects.map { o ->
-                                    when (o) {
-                                        is Circle -> if (acceptsCircle) o else null
-                                        is Line -> if (acceptsLine) o else null
-                                        is ImaginaryCircle ->
-                                            if (acceptsImaginaryCircle) o.toRealCircle() else null
-                                        else -> null
-                                    }
-                                }
-                                selectCircle(selectableObjects, visiblePosition)?.let { ix ->
-                                    val newArg = Arg.IndexOf(ix, objects[ix]!!)
-                                    val previous = pArgList.currentArg
-                                    val allowRepeatingArg =
-                                        // we allow target == engine1, but NOT engine1 == engine2
-                                        mode == ToolMode.BI_INVERSION && pArgList.args.size == 1
-                                    val repeatingArg =
-                                        previous == newArg ||
-                                        previous is Arg.Index && previous.index == ix ||
-                                        previous is Arg.Indices && previous.indices == listOf(ix)
-                                    // we ignore identical args (tho there can be a reason not to)
-                                    if (allowRepeatingArg || !repeatingArg) {
-                                        val confirm = !inInterpolationMode
-                                        partialArgList = pArgList.addArg(newArg, confirmThisArg = confirm)
-                                        found = true
-                                    }
-                                }
-                            }
-                        }
-                        if (!found && Arg.PointXY in nextType.possibleTypes) {
-                            val snap = pointSnap ?: snapped(absolute(visiblePosition))
-                            if (inFastCenteredCircle && pArgList.currentArg == null) {
-                                // we have to realize the first point here so we don't forget its
-                                // snap after panning
-                                val newArg = realizePointCircleSnap(snap).toArgPoint()
-                                val newArg2 = Arg.PointXY(snap.result)
-                                partialArgList = pArgList
-                                    .addArg(newArg, confirmThisArg = true)
-                                    .addArg(newArg2, confirmThisArg = false)
-                                    .copy(lastSnap = pointSnap)
-                                found = true
-                            } else if (
-                                // first point-interpolation arg cannot be XY ig
-                                inInterpolationMode entails (pArgList.currentArg is Arg.Point)
-                            ) {
-                                val newArg = Arg.PointXY(snap.result)
-                                partialArgList = pArgList
-                                    .addArg(newArg, confirmThisArg = false)
-                                    .copy(lastSnap = snap)
-                                found = true
-                            }
-                        }
-                        if (!found && Arg.Indices in nextType.possibleTypes) {
-                            val points = objects.map { it as? Point }
-                            val selectedPointIndex = selectPoint(points, visiblePosition)
-                            if (selectedPointIndex == null) {
-                                val circles = objects.map { o ->
-                                    when (o) {
-                                        is Circle -> o
-                                        is Line -> o
-                                        is ImaginaryCircle -> o.toRealCircle()
-                                        else -> null
-                                    }
-                                }
-                                val selectedCircleIndex = selectCircle(circles, visiblePosition)
-                                if (selectedCircleIndex != null) {
-                                    val newArg = Arg.Indices(listOf(selectedCircleIndex))
-                                    if (pArgList.currentArg != newArg) {
-                                        partialArgList = pArgList.addArg(newArg, confirmThisArg = true)
-                                        found = true
-                                    }
-                                }
-                            } else {
-                                val newArg = Arg.Indices(listOf(selectedPointIndex))
-                                if (pArgList.currentArg != newArg) {
-                                    partialArgList = pArgList.addArg(newArg, confirmThisArg = true)
-                                    found = true
-                                }
-                            }
-                        }
-                    } else if (mode == ToolMode.ARC_PATH) {
-                        val absolutePoint = snapped(absolute(visiblePosition)).result
-                        val arcPath = partialArcPath
-                        partialArcPath = if (arcPath == null) {
-                            PartialArcPath(
-                                startVertex = ArcPathPoint.Free(absolutePoint),
-                                focus = PartialArcPath.Focus.StartPoint
-                            )
-                        } else {
-                            if (isCloseEnoughToSelect(arcPath.startVertex.point.toOffset(), visiblePosition)) {
-                                arcPath.copy(focus = PartialArcPath.Focus.StartPoint)
-                            } else {
-                                val pointIx = arcPath.vertices.indexOfFirst {
-                                    isCloseEnoughToSelect(it.point.toOffset(), visiblePosition)
-                                }
-                                if (pointIx != -1) {
-                                    arcPath.copy(focus = PartialArcPath.Focus.Point(pointIx))
-                                } else {
-                                    val midpointIx = arcPath.midpoints.indexOfFirst {
-                                        isCloseEnoughToSelect(it.toOffset(), visiblePosition)
-                                    }
-                                    if (midpointIx != -1) {
-                                        arcPath.copy(focus = PartialArcPath.Focus.MidPoint(midpointIx))
-                                    } else {
-                                        arcPath.addNewVertex(ArcPathPoint.Free(absolutePoint))
-                                            .copy(focus = PartialArcPath.Focus.Point(arcPath.vertices.size))
-                                    }
-                                }
-                            }
-                        }
+                    when (mode) {
+                        ToolMode.ARC_PATH -> downArcPathPoint(visiblePosition)
+                        else -> downToolArg(visiblePosition)
                     }
                 }
             }
@@ -2064,6 +1935,189 @@ class EditClusterViewModel : ViewModel() {
                     grabbedTarget = absolute(visiblePosition),
                 )
             else -> {}
+        }
+    }
+
+    private fun downToolArg(visiblePosition: Offset) {
+        val argList = partialArgList
+        val nextType = argList?.nextArgType
+        if (nextType != null) {
+            val inInterpolationMode = mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION
+            val inFastCenteredCircle =
+                FAST_CENTERED_CIRCLE && mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS
+            /** flags whether we already selected/found an object and there's no
+             * more need to proceed further */
+            var found = false
+            var pointSnap: PointSnapResult? = null
+            // try selecting an existing (indexed) point
+            if (Arg.PointIndex in nextType.possibleTypes) {
+                pointSnap = snapped(absolute(visiblePosition))
+                when (pointSnap) {
+                    is PointSnapResult.Eq -> {
+                        val newArg = Arg.PointIndex(pointSnap.pointIndex)
+                        if (inFastCenteredCircle && argList.currentArg == null) {
+                            val newArg2 = Arg.PointXY(pointSnap.result)
+                            partialArgList = argList
+                                .addArg(newArg, confirmThisArg = true)
+                                .addArg(newArg2, confirmThisArg = false)
+                                .copy(lastSnap = pointSnap)
+                            found = true
+                        } else {
+                            val sameArgsForInterpolation =
+                                inInterpolationMode entails
+                                    (argList.args.isEmpty() || argList.currentArg is Arg.Point)
+                            if (argList.validateNewArg(newArg) && sameArgsForInterpolation) {
+                                partialArgList = argList
+                                    .addArg(newArg, confirmThisArg = false)
+                                    .copy(lastSnap = pointSnap)
+                            }
+                            found = true
+                        }
+                    }
+                    else -> {}
+                }
+            }
+            // try selecting an existing (indexed) object
+            if (!found &&
+                (inInterpolationMode entails
+                    (argList.currentArg?.type !is Arg.Type.Point))
+            ) {
+                val acceptsCircle = Arg.CircleIndex in nextType.possibleTypes
+                val acceptsLine = Arg.LineIndex in nextType.possibleTypes
+                val acceptsImaginaryCircle = Arg.ImaginaryCircleIndex in nextType.possibleTypes
+                val acceptsCLI = acceptsCircle || acceptsLine || acceptsImaginaryCircle
+                if (acceptsCLI) {
+                    val selectableObjects = objects.map { o ->
+                        when (o) {
+                            is Circle -> if (acceptsCircle) o else null
+                            is Line -> if (acceptsLine) o else null
+                            is ImaginaryCircle ->
+                                if (acceptsImaginaryCircle) o.toRealCircle() else null
+                            else -> null
+                        }
+                    }
+                    selectCircle(selectableObjects, visiblePosition)?.let { ix ->
+                        val newArg = Arg.IndexOf(ix, objects[ix]!!)
+                        // test non-equality conditions
+                        if (argList.validateNewArg(newArg)) {
+                            val confirm = !inInterpolationMode
+                            partialArgList = argList.addArg(newArg, confirmThisArg = confirm)
+                        }
+                        found = true
+                    }
+                }
+            }
+            // try selecting a new point
+            if (!found && Arg.PointXY in nextType.possibleTypes) {
+                val snap = pointSnap ?: snapped(absolute(visiblePosition))
+                if (inFastCenteredCircle && argList.currentArg == null) {
+                    // we have to realize the first point here so we don't forget its
+                    // snap after panning
+                    val newArg = realizePointCircleSnap(snap).toArgPoint()
+                    val newArg2 = Arg.PointXY(snap.result)
+                    partialArgList = argList
+                        .addArg(newArg, confirmThisArg = true)
+                        .addArg(newArg2, confirmThisArg = false)
+                        .copy(lastSnap = pointSnap)
+                    found = true
+                } else if (
+                // first point-interpolation arg cannot be XY ig
+                    inInterpolationMode entails (argList.currentArg is Arg.Point)
+                ) {
+                    val newArg = Arg.PointXY(snap.result)
+                    if (argList.validateNewArg(newArg)) {
+                        partialArgList = argList
+                            .addArg(newArg, confirmThisArg = false)
+                            .copy(lastSnap = snap)
+                    }
+                    found = true
+                }
+            }
+            // try selecting an existing object (singular as a group)
+            if (!found && Arg.Indices in nextType.possibleTypes) {
+                val points = objects.map { it as? Point }
+                val selectedPointIndex = selectPoint(points, visiblePosition)
+                if (selectedPointIndex == null) {
+                    val circles = objects.map { o ->
+                        when (o) {
+                            is Circle -> o
+                            is Line -> o
+                            is ImaginaryCircle -> o.toRealCircle()
+                            else -> null
+                        }
+                    }
+                    val selectedCircleIndex = selectCircle(circles, visiblePosition)
+                    if (selectedCircleIndex != null) {
+                        val newArg = Arg.Indices(listOf(selectedCircleIndex))
+                        if (argList.validateNewArg(newArg)) {
+                            partialArgList = argList.addArg(newArg, confirmThisArg = true)
+                        }
+                        found = true
+                    }
+                } else {
+                    val newArg = Arg.Indices(listOf(selectedPointIndex))
+                    if (argList.validateNewArg(newArg)) {
+                        partialArgList = argList.addArg(newArg, confirmThisArg = true)
+                    }
+                    found = true
+                }
+            }
+        }
+    }
+
+    private fun addInfinitePointArg() {
+        val argList = partialArgList
+        require(
+            argList != null && !argList.isFull &&
+            argList.nextArgType?.let { nextArgType ->
+                Arg.InfinitePoint in nextArgType.possibleTypes ||
+                Arg.Indices in nextArgType.possibleTypes
+            } == true
+        )
+        val infinityIndex = objectModel.getInfinityIndex() ?:
+            createNewFreePoint(Point.CONFORMAL_INFINITY, triggerRecording = false)
+        val newArg =
+            if (argList.nextArgType.let { Arg.Indices in it.possibleTypes } == true)
+                Arg.Indices(listOf(infinityIndex))
+            else
+                Arg.PointIndex(infinityIndex)
+        if (argList.validateNewArg(newArg)) {
+            partialArgList = argList.addArg(newArg, confirmThisArg = true)
+            if (partialArgList?.isFull == true) {
+                completeToolMode()
+            }
+        }
+    }
+
+    private fun downArcPathPoint(visiblePosition: Offset) {
+        val absolutePoint = snapped(absolute(visiblePosition)).result
+        val arcPath = partialArcPath
+        partialArcPath = if (arcPath == null) {
+            PartialArcPath(
+                startVertex = ArcPathPoint.Free(absolutePoint),
+                focus = PartialArcPath.Focus.StartPoint
+            )
+        } else {
+            if (isCloseEnoughToSelect(arcPath.startVertex.point.toOffset(), visiblePosition)) {
+                arcPath.copy(focus = PartialArcPath.Focus.StartPoint)
+            } else {
+                val pointIx = arcPath.vertices.indexOfFirst {
+                    isCloseEnoughToSelect(it.point.toOffset(), visiblePosition)
+                }
+                if (pointIx != -1) {
+                    arcPath.copy(focus = PartialArcPath.Focus.Point(pointIx))
+                } else {
+                    val midpointIx = arcPath.midpoints.indexOfFirst {
+                        isCloseEnoughToSelect(it.toOffset(), visiblePosition)
+                    }
+                    if (midpointIx != -1) {
+                        arcPath.copy(focus = PartialArcPath.Focus.MidPoint(midpointIx))
+                    } else {
+                        arcPath.addNewVertex(ArcPathPoint.Free(absolutePoint))
+                            .copy(focus = PartialArcPath.Focus.Point(arcPath.vertices.size))
+                    }
+                }
+            }
         }
     }
 
@@ -2515,9 +2569,9 @@ class EditClusterViewModel : ViewModel() {
         } else {
             val result = snapped(c)
             val absolutePoint = result.result
-            val pArgList = partialArgList
-            val currentArg = pArgList?.currentArg
-            val currentArgType = pArgList?.currentArgType
+            val argList = partialArgList
+            val currentArg = argList?.currentArg
+            val currentArgType = argList?.currentArgType
             if (mode == ToolMode.ARC_PATH) {
                 // TODO: if last with n>=3, snap to start
                 partialArcPath = partialArcPath?.moveFocused(absolutePoint)
@@ -2531,9 +2585,11 @@ class EditClusterViewModel : ViewModel() {
                     is PointSnapResult.Eq -> Arg.PointIndex(result.pointIndex)
                     else -> Arg.PointXY(absolutePoint)
                 }
-                partialArgList = pArgList
-                    .updateCurrentArg(newArg, confirmThisArg = false)
-                    .copy(lastSnap = result)
+                if (argList.validateUpdatedArg(newArg)) {
+                    partialArgList = argList
+                        .updateCurrentArg(newArg, confirmThisArg = false)
+                        .copy(lastSnap = result)
+                }
             } else {
 //                recordCommand(Command.CHANGE_POV)
                 if (zoom != 1.0f || rotationAngle != 0.0f) {
@@ -2561,16 +2617,19 @@ class EditClusterViewModel : ViewModel() {
                 expressions.adjustIncidentPointExpressions()
             }
             is ToolMode -> if (submode == null) {
-                val pArgList = partialArgList
+                val argList = partialArgList
                 // we only confirm args in onUp, they are created in onDown etc.
-                val newArg = when (pArgList?.currentArg) {
+                val newArg = when (argList?.currentArg) {
                     is Arg.Point -> visiblePosition?.let {
-                        val args = pArgList.args
+                        val args = argList.args
                         val snap = snapped(absolute(visiblePosition))
                         // we cant realize it here since for fast circles the first point already has been
                         // realized in onDown and we don't know yet if we moved far enough from it to
                         // create the second point
-                        if (mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS && FAST_CENTERED_CIRCLE && args.size == 2) {
+                        if (mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS &&
+                            FAST_CENTERED_CIRCLE &&
+                            args.size == 2
+                        ) {
                             val firstPoint: Point =
                                 when (val first = args.first() as Arg.Point) {
                                     is Arg.PointIndex -> objects[first.index] as Point
@@ -2578,7 +2637,7 @@ class EditClusterViewModel : ViewModel() {
                                 }
                             val pointsAreTooClose = firstPoint.distanceFrom(snap.result) < 1e-3
                             if (pointsAreTooClose) { // haxxz
-                                partialArgList = pArgList.copy(
+                                partialArgList = argList.copy(
                                     args = args.dropLast(1),
                                     lastArgIsConfirmed = true,
                                     lastSnap = null
@@ -2589,14 +2648,18 @@ class EditClusterViewModel : ViewModel() {
                             }
                         } else {
                             realizePointCircleSnap(snap).toArgPoint()
+                            // realized, but might be invalid (nonEqualityConditions)
                         }
                     }
                     else -> null
                 }
-                partialArgList = if (newArg == null)
-                    partialArgList?.copy(lastArgIsConfirmed = true)
+                partialArgList = if (
+                    newArg == null ||
+                    argList?.validateUpdatedArg(newArg) != true
+                )
+                    argList?.copy(lastArgIsConfirmed = true)
                 else
-                    partialArgList?.updateCurrentArg(newArg, confirmThisArg = true)
+                    argList?.updateCurrentArg(newArg, confirmThisArg = true)
             }
             else -> {}
         }
@@ -2883,9 +2946,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     fun confirmAdjustedParameters() {
-        partialArgList?.let {
-            partialArgList = PartialArgList(it.signature)
-        }
+        partialArgList = partialArgList?.copyEmpty()
         when (val sm = submode) {
             is SubMode.ExprAdjustment -> {
                 when (val parameters = sm.parameters) {
@@ -2913,7 +2974,7 @@ class EditClusterViewModel : ViewModel() {
                 if (submode is SubMode.ExprAdjustment) {
                     cancelExprAdjustment()
                 }
-                partialArgList = partialArgList?.let { PartialArgList(it.signature) }
+                partialArgList = partialArgList?.copyEmpty()
                 partialArcPath = null
                 submode = null
             }
@@ -2970,7 +3031,7 @@ class EditClusterViewModel : ViewModel() {
             ) as? CircleOrLine
             createNewGCircle(newCircle?.upscale())
         }
-        partialArgList = PartialArgList(argList.signature)
+        partialArgList = argList.copyEmpty()
     }
 
     private fun completeCircleBy3Points() {
@@ -3002,7 +3063,7 @@ class EditClusterViewModel : ViewModel() {
             if (newGCircle is ImaginaryCircle)
                 queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
-        partialArgList = PartialArgList(argList.signature)
+        partialArgList = argList.copyEmpty()
     }
 
     private fun completeCircleByPencilAndPoint() {
@@ -3035,7 +3096,7 @@ class EditClusterViewModel : ViewModel() {
             if (newGCircle is ImaginaryCircle)
                 queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
-        partialArgList = PartialArgList(argList.signature)
+        partialArgList = argList.copyEmpty()
     }
 
     private fun completeLineBy2Points() {
@@ -3068,7 +3129,7 @@ class EditClusterViewModel : ViewModel() {
             )
             createNewGCircle(newGCircle?.upscale())
         }
-        partialArgList = PartialArgList(argList.signature)
+        partialArgList = argList.copyEmpty()
     }
 
     private fun completePolarityByCircleAndLineOrPoint() {
@@ -3097,7 +3158,7 @@ class EditClusterViewModel : ViewModel() {
         }
         val newGCircle = expressions.addSoloExpr(newExpr)
         createNewGCircle(newGCircle?.upscale())
-        partialArgList = PartialArgList(argList.signature)
+        partialArgList = argList.copyEmpty()
     }
 
     private fun completeCircleInversion() {
@@ -3113,7 +3174,7 @@ class EditClusterViewModel : ViewModel() {
         copyRegionsAndStyles(newIndexedGCircles, flipRegionsInAndOut = true) {
             CircleAnimation.Entrance(it)
         }
-        partialArgList = PartialArgList(argList.signature)
+        partialArgList = argList.copyEmpty()
         objectModel.invalidate()
     }
 
@@ -3181,13 +3242,16 @@ class EditClusterViewModel : ViewModel() {
             Expr.CircleExtrapolation(params, startCircleIx, endCircleIx),
         ).map { it?.upscale() }
         createNewGCircles(newGCircles)
-        partialArgList = PartialArgList(argList.signature)
+        partialArgList = argList.copyEmpty()
         defaultExtrapolationParameters = DefaultExtrapolationParameters(params)
     }
 
     fun resetCircleExtrapolation() {
         openedDialog = null
-        partialArgList = PartialArgList(Tool.CircleExtrapolation.signature)
+        partialArgList = PartialArgList(
+            Tool.CircleExtrapolation.signature,
+            Tool.CircleExtrapolation.nonEqualityConditions
+        )
     }
 
     // Q: witnessed abnormal index skipping whe rotating lines, observing closely...
@@ -3476,7 +3540,7 @@ class EditClusterViewModel : ViewModel() {
             val newPoint = arg0.toPoint()
             createNewFreePoint(newPoint)
         } // it could have already done it with realized PSR.Eq, which results in Arg.Point.Index
-        partialArgList = PartialArgList(argList.signature)
+        partialArgList = argList.copyEmpty()
     }
 
     fun confirmDialogSelectedParameters(
@@ -3552,7 +3616,9 @@ class EditClusterViewModel : ViewModel() {
             Tool.Detach -> detachEverySelectedObject()
             Tool.SwapDirection -> swapDirectionsOfSelectedCircles()
             Tool.MarkAsPhantoms ->
-                if (toolPredicate(tool)) markSelectedObjectsAsPhantoms() else unmarkSelectedObjectsAsPhantoms()
+                if (toolPredicate(tool))
+                    markSelectedObjectsAsPhantoms()
+                else unmarkSelectedObjectsAsPhantoms()
             Tool.Duplicate -> duplicateSelectedCircles()
             Tool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
             Tool.SetLabel -> openedDialog = DialogType.LABEL_INPUT
@@ -3565,7 +3631,8 @@ class EditClusterViewModel : ViewModel() {
             Tool.InBetween -> {} // unused, potentially updateParams(...)
             Tool.ReverseDirection -> {}
             Tool.BidirectionalSpiral -> {}
-            Tool.ToggleFilledOrOutline -> TODO()
+            Tool.ToggleFilledOrOutline -> TODO("presently unused")
+            Tool.InfinitePoint -> addInfinitePointArg()
         }
     }
 

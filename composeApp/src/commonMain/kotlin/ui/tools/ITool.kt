@@ -1,6 +1,7 @@
 package ui.tools
 
 import androidx.compose.ui.graphics.Color
+import domain.NonEqualityCondition
 import domain.Signature
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
@@ -43,9 +44,10 @@ sealed interface ITool { // pls. i dont know how to name it.. (semantically)
     /** Tool that prompts selecting several items, described by MultiArgN<...> dependent types, to perform an action */
     sealed interface MultiArg : ITool {
         val signature: Signature
+        val nonEqualityConditions: List<NonEqualityCondition>
         val argDescriptions: StringArrayResource
-        val nArgs: Int
-            get() = signature.argTypes.size
+        val nArgs: Int get() =
+            signature.argTypes.size
     }
 
     sealed interface Tinted : ITool {

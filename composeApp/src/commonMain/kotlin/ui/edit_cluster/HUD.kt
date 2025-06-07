@@ -72,6 +72,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.OnOffButton
 import ui.SimpleFilledButton
+import ui.SimpleToolButton
 import ui.SimpleToolButtonWithTooltip
 import ui.TwoIconButtonWithTooltip
 import ui.VerticalSlider
@@ -898,3 +899,17 @@ fun BoxScope.RegionManipulationStrategySelector(
     }
 }
 
+@Composable
+fun BoxScope.InfinitePointInput(
+    toolAction: (Tool.InfinitePoint) -> Unit,
+) {
+    // round button top center
+    SimpleToolButtonWithTooltip(
+        tool = Tool.InfinitePoint,
+        positionModifier = Modifier
+            .align(Alignment.TopCenter)
+        ,
+        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) { toolAction(Tool.InfinitePoint) }
+}

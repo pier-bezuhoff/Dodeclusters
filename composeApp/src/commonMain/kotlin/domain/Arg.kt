@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import data.geometry.GCircle
 import data.geometry.Point
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * A bit contrived, basically the value of [Arg] type X has an associated
@@ -89,6 +90,7 @@ sealed interface Arg {
     }
 
     // value - type puning, InfinitePoint is both a type and a singular value of this type
+    /** Prefer using [PointIndex] as a value instead */
     @Serializable
     object InfinitePoint : FixedPoint, Type.Point {
         override val type: Type.Point = InfinitePoint
@@ -107,12 +109,30 @@ sealed interface Arg {
         type in argType.possibleTypes
 
     companion object {
+        @Suppress("FunctionName")
         fun IndexOf(index: Ix, obj: GCircle): Arg.Index =
             when (obj) {
                 is data.geometry.Circle -> CircleIndex(index)
                 is data.geometry.Line -> LineIndex(index)
                 is data.geometry.ImaginaryCircle -> ImaginaryCircleIndex(index)
                 is data.geometry.Point -> PointIndex(index)
+            }
+
+        fun testInequality(arg1: Arg, arg2: Arg): Boolean =
+            when {
+                arg1 is Indices && arg2 is Indices -> {
+                    val set1 = arg1.indices.toSet()
+                    val set2 = arg2.indices.toSet()
+                    !set1.containsAll(set2) && !set2.containsAll(set1)
+                }
+                arg1 is Indices && arg2 is Index ->
+                    arg1.indices != listOf(arg2.index)
+//                    arg2.index !in arg1.indices
+                arg2 is Indices && arg1 is Index ->
+//                    arg1.index !in arg2.indices
+                    arg2.indices != listOf(arg1.index)
+                else ->
+                    arg1 != arg2
             }
     }
 }
@@ -133,11 +153,18 @@ data class ArgType(
 
     companion object {
         val CIRCLE = ArgType(Arg.CircleIndex)
-        val POINT = ArgType(Arg.PointIndex, Arg.PointXY)
-        val POINT_OR_INFINITY = ArgType(Arg.PointIndex, Arg.InfinitePoint, Arg.PointXY)
+        val FINITE_POINT = ArgType(Arg.PointIndex, Arg.PointXY)
+        val POINT = ArgType(Arg.PointIndex, Arg.InfinitePoint, Arg.PointXY)
         val INDICES = ArgType(Arg.Indices)
         /** Circle, Line, Imaginary circle or Point */
         val CLIP = ArgType(
+            Arg.PointIndex,
+            Arg.CircleIndex, Arg.LineIndex, Arg.ImaginaryCircleIndex,
+            Arg.InfinitePoint,
+            Arg.PointXY,
+        )
+        /** Circle, Line, Imaginary circle or Finite Point */
+        val CLIFP = ArgType(
             Arg.PointIndex,
             Arg.CircleIndex, Arg.LineIndex, Arg.ImaginaryCircleIndex,
             Arg.PointXY,
@@ -146,8 +173,8 @@ data class ArgType(
         val CLI = ArgType(
             Arg.CircleIndex, Arg.LineIndex, Arg.ImaginaryCircleIndex,
         )
-        /** Line or Point */
-        val LP = ArgType(
+        /** Line or Finite Point */
+        val LFP = ArgType(
             Arg.PointIndex,
             Arg.LineIndex,
             Arg.PointXY,
@@ -161,16 +188,34 @@ data class ArgType(
 @Serializable
 data class Signature(val argTypes: List<ArgType>) {
     constructor(vararg argTypes: ArgType) : this(argTypes.toList())
+
+    @Transient
+    val size: Int = argTypes.size
 }
 
-val SIGNATURE_1_POINT = Signature(ArgType.POINT)
-val SIGNATURE_2_POINTS = Signature(ArgType.POINT, ArgType.POINT)
+val SIGNATURE_1_FINITE_POINT = Signature(ArgType.FINITE_POINT)
+val SIGNATURE_2_FINITE_POINTS = Signature(ArgType.FINITE_POINT, ArgType.FINITE_POINT)
 val SIGNATURE_2_CIRCLES = Signature(ArgType.CLI, ArgType.CLI)
+val SIGNATURE_2_GENERALIZED_FINITE_CIRCLES = Signature(ArgType.CLIFP, ArgType.CLIFP)
 val SIGNATURE_2_GENERALIZED_CIRCLES = Signature(ArgType.CLIP, ArgType.CLIP)
 val SIGNATURE_3_GENERALIZED_CIRCLE = Signature(ArgType.CLIP, ArgType.CLIP, ArgType.CLIP)
-val SIGNATURE_REAL_CIRCLE_AND_LINE_OR_POINT = Signature(ArgType.CIRCLE, ArgType.LP)
+val SIGNATURE_REAL_CIRCLE_AND_LINE_OR_FINITE_POINT = Signature(ArgType.CIRCLE, ArgType.LFP)
 val SIGNATURE_INDICES_AND_CIRCLE = Signature(ArgType.INDICES, ArgType.CLI)
-val SIGNATURE_INDICES_AND_POINT = Signature(ArgType.INDICES, ArgType.POINT)
+val SIGNATURE_INDICES_AND_FINITE_POINT = Signature(ArgType.INDICES, ArgType.FINITE_POINT)
 val SIGNATURE_INDICES_AND_2_CIRCLES = Signature(ArgType.INDICES, ArgType.CLI, ArgType.CLI)
 val SIGNATURE_INDICES_AND_2_POINTS = Signature(ArgType.INDICES, ArgType.POINT, ArgType.POINT)
 val SIGNATURE_N_POINTS_PLACEHOLDER = Signature(ArgType.NOTHING)
+
+@Immutable
+@Serializable
+data class NonEqualityCondition(
+    val index1: Int,
+    val index2: Int,
+) {
+    init {
+        require(index1 >= 0 && index2 >= 0 && index1 != index2)
+    }
+}
+
+fun nonEqualityConditionsOf(vararg indexPairs: Pair<Int, Int>): List<NonEqualityCondition> =
+    indexPairs.map { (index1, index2) -> NonEqualityCondition(index1, index2) }
