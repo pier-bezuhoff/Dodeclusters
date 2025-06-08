@@ -904,6 +904,7 @@ fun BoxScope.InfinitePointInput(
     toolAction: (Tool.InfinitePoint) -> Unit,
 ) {
     // round button top center
+    // FIX: bad location on mobile/portrait
     SimpleToolButtonWithTooltip(
         tool = Tool.InfinitePoint,
         positionModifier = Modifier

@@ -468,6 +468,7 @@ fun preloadIcons() {
                 Tool.ReverseDirection,
                 Tool.PngExport,
                 Tool.SvgExport,
+                Tool.InfinitePoint,
             )
         )
     for (tool in toolList) {
