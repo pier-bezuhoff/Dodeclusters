@@ -2617,7 +2617,7 @@ class EditClusterViewModel : ViewModel() {
                 expressions.adjustIncidentPointExpressions()
             }
             is ToolMode -> if (submode == null) {
-                val argList = partialArgList
+                var argList = partialArgList
                 // we only confirm args in onUp, they are created in onDown etc.
                 val newArg = when (argList?.currentArg) {
                     is Arg.Point -> visiblePosition?.let {
@@ -2637,8 +2637,8 @@ class EditClusterViewModel : ViewModel() {
                                 }
                             val pointsAreTooClose = firstPoint.distanceFrom(snap.result) < 1e-3
                             if (pointsAreTooClose) { // haxxz
-                                partialArgList = argList.copy(
-                                    args = args.dropLast(1),
+                                argList = argList.copy(
+                                    args = args.take(1),
                                     lastArgIsConfirmed = true,
                                     lastSnap = null
                                 )
