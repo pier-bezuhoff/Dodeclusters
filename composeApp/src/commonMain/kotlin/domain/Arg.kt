@@ -8,8 +8,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
 /**
- * A bit contrived, basically the value of [Arg] type X has an associated
- * [type] X.Companion (plus weird sum types magic)
+ * A bit contrived, basically the value of [Arg] type `X` has an associated
+ * [Arg.type] `X.Companion` : [Arg.Type] (plus weird sum types magic)
  */
 @Immutable
 sealed interface Arg {

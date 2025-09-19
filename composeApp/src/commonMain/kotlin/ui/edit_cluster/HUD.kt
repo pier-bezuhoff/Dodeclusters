@@ -228,6 +228,12 @@ fun BoxScope.SelectionContextActions(
                 contentColor = objectColor,
                 onClick = toolAction
             )
+            // TMP
+//            SimpleToolButtonWithTooltip(
+//                Tool.SetLabel,
+//                buttonModifier,
+//                onClick = toolAction
+//            )
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
                 painterResource(Tool.MarkAsPhantoms.disabledIcon),

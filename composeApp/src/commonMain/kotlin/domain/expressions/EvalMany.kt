@@ -130,7 +130,7 @@ fun computeRotation(
     pivot: Point,
     target: GCircle,
 ): List<GCircle> {
-    // Q: why minus?
+    // Q: why minus? cuz left-handed xOy?
     val dAngle = -params.angle.radians
     return (1 .. params.nSteps)
         .map { i ->
@@ -139,6 +139,7 @@ fun computeRotation(
 }
 
 // NOTE: without downscaling it visibly diverges (even at 1/500 downscaling)
+/** Always returns ([params]`.nSteps` + 1) x [GCircle]`?`'s */
 fun computeLoxodromicMotion(
     params: LoxodromicMotionParameters,
     divergencePoint: Point, convergencePoint: Point,

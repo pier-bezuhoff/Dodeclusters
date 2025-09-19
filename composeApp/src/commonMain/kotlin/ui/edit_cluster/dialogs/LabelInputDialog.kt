@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,8 @@ import ui.hideSystemBars
 @Composable
 fun LabelInputDialog(
     previousLabel: String?,
+    /** debug */
+    details: String? = null,
     onCancel: () -> Unit,
     onConfirm: (newLabel: String?) -> Unit,
     dialogActions: SharedFlow<DialogAction>? = null,
@@ -69,6 +72,13 @@ fun LabelInputDialog(
                     modifier = Modifier
                         .padding(bottom = 24.dp)
                 )
+                if (details != null) {
+                    Text(
+                        text = details,
+                        modifier = Modifier.padding(8.dp),
+                        color = Color(93, 163, 233)
+                    )
+                }
                 CancelOkRow(
                     onDismissRequest = onCancel,
                     onConfirm = { onConfirm(label) },

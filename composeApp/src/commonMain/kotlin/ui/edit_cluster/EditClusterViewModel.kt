@@ -2971,12 +2971,17 @@ class EditClusterViewModel : ViewModel() {
     fun cancelOngoingActions() {
         when (mode) { // reset mode
             is ToolMode -> {
-                if (submode is SubMode.ExprAdjustment) {
-                    cancelExprAdjustment()
+                // double escape to go to Drag
+                if (submode == null && partialArgList?.args?.isNotEmpty() != true && partialArcPath == null) {
+                    switchToCategory(Category.Drag)
+                } else {
+                    if (submode is SubMode.ExprAdjustment) {
+                        cancelExprAdjustment()
+                    }
+                    partialArgList = partialArgList?.copyEmpty()
+                    partialArcPath = null
+                    submode = null
                 }
-                partialArgList = partialArgList?.copyEmpty()
-                partialArcPath = null
-                submode = null
             }
             ViewMode.StereographicRotation ->
                 switchToCategory(Category.Drag)
@@ -3362,22 +3367,39 @@ class EditClusterViewModel : ViewModel() {
         val oldSize = objects.size
         var outputIndex = oldSize
         if (bidirectional) {
-            val source2trajectory1 = targetIndices.map { targetIndex ->
-                val expr = Expr.LoxodromicMotion(params0, divergencePointIndex, convergencePointIndex, targetIndex)
+            val spiralSize = params0.nTotalSteps
+            val firstHalfStart = outputIndex
+            val secondHalfStart = firstHalfStart + targetIndices.size * spiralSize
+            val source2trajectory1 = targetIndices.mapIndexed { i, targetIndex ->
+                val expr = Expr.LoxodromicMotion(
+                    parameters = params0,
+                    divergencePoint = divergencePointIndex,
+                    convergencePoint = convergencePointIndex,
+                    target = targetIndex,
+                    // NOTE: complementary half indices rely on contiguous layout of trajectories
+                    otherHalf = secondHalfStart + i * spiralSize,
+                )
                 val result = expressions
                     .addMultiExpr(expr)
                     .map { it?.upscale() } // multi expression creates a whole trajectory at a time
+                // result.size == spiralSize
                 val outputRange = (outputIndex until (outputIndex + result.size)).toList()
                 adjustables.add(
                     AdjustableExpr(expr, outputRange, outputRange)
                 )
                 outputIndex += result.size
-                return@map targetIndex to result
+                return@mapIndexed targetIndex to result
             }
             val interimSize = outputIndex
             // reversing convergence-divergence for 2nd trajectory
-            val source2trajectory2 = targetIndices.map { targetIndex ->
-                val expr = Expr.LoxodromicMotion(params0, convergencePointIndex, divergencePointIndex, targetIndex)
+            val source2trajectory2 = targetIndices.mapIndexed { i, targetIndex ->
+                val expr = Expr.LoxodromicMotion(
+                    parameters = params0,
+                    divergencePoint = convergencePointIndex,
+                    convergencePoint = divergencePointIndex,
+                    target = targetIndex,
+                    otherHalf = firstHalfStart + i * spiralSize,
+                )
                 val result = expressions
                     .addMultiExpr(expr)
                     .map { it?.upscale() } // multi expression creates a whole trajectory at a time
@@ -3386,7 +3408,7 @@ class EditClusterViewModel : ViewModel() {
                     AdjustableExpr(expr, outputRange, outputRange)
                 )
                 outputIndex += result.size
-                return@map targetIndex to result
+                return@mapIndexed targetIndex to result
             }
             val source2trajectory = source2trajectory1 + source2trajectory2
             val newObjects = source2trajectory.flatMap { it.second }

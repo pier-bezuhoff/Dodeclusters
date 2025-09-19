@@ -5,28 +5,25 @@ import data.geometry.Circle
 import data.geometry.CircleOrLine
 import data.geometry.GCircle
 import data.geometry.Line
-import data.geometry.LineOrPoint
 import data.geometry.Point
-import domain.Arg
 import domain.Ix
+import domain.expressions.Expr.BiInversion
 import domain.expressions.Expr.CircleBy2PointsAndSagittaRatio
 import domain.expressions.Expr.CircleBy3Points
 import domain.expressions.Expr.CircleByCenterAndRadius
 import domain.expressions.Expr.CircleByPencilAndPoint
-import domain.expressions.Expr.PolarLineByCircleAndPoint
-import domain.expressions.Expr.PoleByCircleAndLine
 import domain.expressions.Expr.CircleExtrapolation
 import domain.expressions.Expr.CircleInterpolation
-import domain.expressions.Expr.PointInterpolation
 import domain.expressions.Expr.CircleInversion
 import domain.expressions.Expr.Incidence
 import domain.expressions.Expr.Intersection
 import domain.expressions.Expr.LineBy2Points
-import domain.expressions.Expr.BiInversion
 import domain.expressions.Expr.LoxodromicMotion
-import domain.expressions.Expr.Rotation
-import domain.expressions.Expr.OneToMany
 import domain.expressions.Expr.OneToOne
+import domain.expressions.Expr.PointInterpolation
+import domain.expressions.Expr.PolarLineByCircleAndPoint
+import domain.expressions.Expr.PoleByCircleAndLine
+import domain.expressions.Expr.Rotation
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -207,6 +204,12 @@ sealed interface Expr : ExprLike {
         override val nSteps: Int = parameters.nSteps
     }
 
+    /**
+     * @param[otherHalf] Index (if any) of the complementary spiral trajectory start,
+     * the one going backwards (with reversed convergence-divergence points).
+     * Stored to alter their parameters simultaneously for better UX.
+     * Can get stale.
+     */
     @Serializable
     @SerialName("LoxodromicMotion")
     data class LoxodromicMotion( // MAYBE: add backwards steps
@@ -214,6 +217,7 @@ sealed interface Expr : ExprLike {
         val divergencePoint: Ix,
         val convergencePoint: Ix,
         override val target: Ix,
+        val otherHalf: Ix? = null,
     ) : OneToMany
     , ExprLike by E(parameters, listOf(divergencePoint, convergencePoint, target))
     , TransformLike {

@@ -385,6 +385,12 @@ fun EditClusterScreen(
                 previousLabel = viewModel.selection
                     .firstNotNullOfOrNull { viewModel.objectLabels[it] }
                 ,
+                // for debug
+//                details = "expr[${viewModel.selection.firstOrNull()}] = ${
+//                    viewModel.selection.firstOrNull()?.let {
+//                        viewModel.expressions.expressions[it]
+//                    }
+//                }",
                 onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::setLabel,
                 dialogActions = dialogActions,
@@ -658,6 +664,7 @@ fun EditClusterTopBar(
             Spacer(Modifier.width(16.dp))
             // MAYBE: button to create new [empty?] document
             //  (maybe only on wide-width screens)
+            // TODO: move it to context slidesheet
             WithTooltip("New blank file") {
                 SimpleButton(
                     //painterResource(Res.drawable.add_circle),
