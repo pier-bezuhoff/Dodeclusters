@@ -917,14 +917,12 @@ fun BoxScope.InfinitePointInput(
         positionModifier = Modifier
             .align(Alignment.TopCenter)
         ,
+        // the idea is that it would be colored the same as a normal point
         containerColor =
-            MaterialTheme.extendedColorScheme.highAccentColor.copy(alpha = 0.8f)
-//            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f)
+            MaterialTheme.extendedColorScheme.highAccentColor
         ,
         contentColor =
-            Color.Black
-//            MaterialTheme.colorScheme.surface
-//            MaterialTheme.extendedColorScheme.highAccentColor
+            MaterialTheme.colorScheme.surface
         ,
     ) { toolAction(Tool.InfinitePoint) }
 }

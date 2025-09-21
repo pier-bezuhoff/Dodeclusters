@@ -44,7 +44,7 @@ object DodeclustersColors {
     val surfaceContainerHighestLight = // Color(0xFFEADFE6)
         Color(0xFFCCCCCC) // haxz
     val accentLight = Color(0xFF_d09a3f)
-    val highAccentLight = Color(0xFF805610)
+    val highAccentLight = Color(0xFF805610) // FIX: looks like sh*t on white
 
     val primaryDark = Color(0xFFEBB5ED)
     val onPrimaryDark = Color(0xFF48204E)
