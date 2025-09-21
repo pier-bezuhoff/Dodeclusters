@@ -916,6 +916,7 @@ fun BoxScope.InfinitePointInput(
         tool = Tool.InfinitePoint,
         positionModifier = Modifier
             .align(Alignment.TopCenter)
+            .offset(y = 60.dp)
         ,
         // the idea is that it would be colored the same as a normal point
         containerColor =
