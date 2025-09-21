@@ -80,6 +80,7 @@ import domain.PathCache
 import domain.angleDeg
 import domain.cluster.LogicalRegion
 import domain.expressions.BiInversionParameters
+import domain.expressions.Expr
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters

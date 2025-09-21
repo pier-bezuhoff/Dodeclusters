@@ -1753,10 +1753,8 @@ class EditClusterViewModel : ViewModel() {
             is BiInversionParameters ->
                 defaultBiInversionParameters = DefaultBiInversionParameters(params)
             is LoxodromicMotionParameters ->
+                // bidirectionality might be overridden further down
                 defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params, bidirectional = false)
-            // NOTE: we disable bidirectional when coming from existing spiral,
-            //  because spiral branches are desync and can only be adjusted separately
-            //  otherwise you'd need to delete existing desync branch to avoid duplication
             else -> {}
         }
         if (tool != null && expr != null) {
@@ -1811,9 +1809,23 @@ class EditClusterViewModel : ViewModel() {
                     )
                 else -> null
             }
-            submode = SubMode.ExprAdjustment(
-                listOf(AdjustableExpr(expr, outputIndices, outputIndices)),
-            )
+            val adjustables = listOf(AdjustableExpr(expr, outputIndices, outputIndices))
+            val allAdjustables: List<AdjustableExpr> =
+                if (
+                    expr is Expr.LoxodromicMotion &&
+                    expr.otherHalfStart != null &&
+                    expressions.expressions[expr.otherHalfStart] != null
+                ) {
+                    val otherExpr = expressions.expressions[expr.otherHalfStart]!!.expr
+                    val otherOutputIndices = expressions.findExpr(otherExpr)
+                    val otherAdjustables = listOf(AdjustableExpr(otherExpr, otherOutputIndices, otherOutputIndices))
+                    defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
+                        expr.parameters,
+                        bidirectional = true
+                    )
+                    adjustables + otherAdjustables
+                } else adjustables
+            submode = SubMode.ExprAdjustment(allAdjustables)
             selection = emptyList() // clear selection to hide selection HUD
         }
     }
@@ -2903,11 +2915,16 @@ class EditClusterViewModel : ViewModel() {
                         )
                     }
                     val regions: List<Int>
-                    if (sm.parameters is LoxodromicMotionParameters && defaultLoxodromicMotionParameters.bidirectional) {
+                    if (sm.parameters is LoxodromicMotionParameters &&
+                        defaultLoxodromicMotionParameters.bidirectional &&
+                        source2trajectory.size >= 2
+                    ) {
+                        // NOTE: assumption: bidirectional spiral adjustables must be laid out as {t^i}; {t^-i}
                         // s2t structure is
                         // t1^+1 .. t1^+n; t2^+1 .. t2^+n; ... tm^+1 .. tm^+n;
                         // t1^-1 .. t1^-n; t2^-1 .. t2^-n; ... tm^-1 .. tm^-n;
                         val size = source2trajectory.size.div(2)
+                        // Q: is it an optimization, or a necessary step
                         val foldedSource2trajectory = source2trajectory
                             .take(size)
                             .mapIndexed { i, (sourceIndex, forwardTrajectory) ->
@@ -3338,7 +3355,6 @@ class EditClusterViewModel : ViewModel() {
         objectModel.invalidate()
     }
 
-    // TODO: inf point input
     fun startLoxodromicMotionParameterAdjustment() {
         recordCreateCommand()
         setupLoxodromicSpiral(defaultLoxodromicMotionParameters.bidirectional)
@@ -3377,7 +3393,7 @@ class EditClusterViewModel : ViewModel() {
                     convergencePoint = convergencePointIndex,
                     target = targetIndex,
                     // NOTE: complementary half indices rely on contiguous layout of trajectories
-                    otherHalf = secondHalfStart + i * spiralSize,
+                    otherHalfStart = secondHalfStart + i * spiralSize,
                 )
                 val result = expressions
                     .addMultiExpr(expr)
@@ -3398,7 +3414,7 @@ class EditClusterViewModel : ViewModel() {
                     divergencePoint = convergencePointIndex,
                     convergencePoint = divergencePointIndex,
                     target = targetIndex,
-                    otherHalf = firstHalfStart + i * spiralSize,
+                    otherHalfStart = firstHalfStart + i * spiralSize,
                 )
                 val result = expressions
                     .addMultiExpr(expr)
@@ -3424,6 +3440,7 @@ class EditClusterViewModel : ViewModel() {
                 startIndex = interimSize,
                 flipRegionsInAndOut = false
             )
+            // 2 * nTargets adjustables
             submode = SubMode.ExprAdjustment(adjustables, regions)
         } else {
             val source2trajectory = targetIndices.map { targetIndex ->

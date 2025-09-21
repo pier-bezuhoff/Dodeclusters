@@ -205,10 +205,11 @@ sealed interface Expr : ExprLike {
     }
 
     /**
-     * @param[otherHalf] Index (if any) of the complementary spiral trajectory start,
+     * @param[otherHalfStart] Index (if any) of the complementary spiral trajectory start,
      * the one going backwards (with reversed convergence-divergence points).
      * Stored to alter their parameters simultaneously for better UX.
-     * Can get stale.
+     * It is expected to point to an object with the complementary [Expr].
+     * Can get stale (eg deleted or null-ed).
      */
     @Serializable
     @SerialName("LoxodromicMotion")
@@ -217,7 +218,7 @@ sealed interface Expr : ExprLike {
         val divergencePoint: Ix,
         val convergencePoint: Ix,
         override val target: Ix,
-        val otherHalf: Ix? = null,
+        val otherHalfStart: Ix? = null,
     ) : OneToMany
     , ExprLike by E(parameters, listOf(divergencePoint, convergencePoint, target))
     , TransformLike {

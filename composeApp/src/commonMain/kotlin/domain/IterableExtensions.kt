@@ -123,7 +123,7 @@ inline fun <reified A, reified B, reified C, reified R> Iterable<A>.zip3(
     val second = other.iterator()
     val third = another.iterator()
     val list = ArrayList<R>(minOf(
-        collectionSizeOrDefault(10),
+        collectionSizeOrDefault(10), // why 10?
         other.collectionSizeOrDefault(10),
         another.collectionSizeOrDefault(10),
     ))
