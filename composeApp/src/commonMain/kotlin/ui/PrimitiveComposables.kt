@@ -54,12 +54,10 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dodeclusters.composeapp.generated.resources.Res
-import dodeclusters.composeapp.generated.resources.apply_name
+import dodeclusters.composeapp.generated.resources.apply
 import dodeclusters.composeapp.generated.resources.cancel
-import dodeclusters.composeapp.generated.resources.cancel_name
 import dodeclusters.composeapp.generated.resources.confirm
-import dodeclusters.composeapp.generated.resources.ok_description
-import dodeclusters.composeapp.generated.resources.ok_name
+import dodeclusters.composeapp.generated.resources.ok
 import domain.formatDecimals
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
@@ -389,9 +387,9 @@ fun OkButton(
         shape = CircleShape,
     ) {
         if (noText) {
-            Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
+            Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok))
         } else {
-            Text(stringResource(Res.string.ok_name), fontSize = fontSize)
+            Text(stringResource(Res.string.ok), fontSize = fontSize)
         }
     }
 }
@@ -409,7 +407,7 @@ fun ApplyButton(
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
         shape = CircleShape,
     ) {
-        Text(stringResource(Res.string.apply_name), fontSize = fontSize)
+        Text(stringResource(Res.string.apply), fontSize = fontSize)
     }
 }
 
@@ -432,9 +430,9 @@ fun CancelButton(
         shape = CircleShape,
     ) {
         if (noText) {
-            Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel_name))
+            Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel))
         } else {
-            Text(stringResource(Res.string.cancel_name), fontSize = fontSize)
+            Text(stringResource(Res.string.cancel), fontSize = fontSize)
         }
     }
 }

@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.dp
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.expand
-import dodeclusters.composeapp.generated.resources.ok_name
+import dodeclusters.composeapp.generated.resources.ok
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
@@ -81,6 +81,7 @@ import ui.edit_cluster.dialogs.DefaultBiInversionParameters
 import ui.edit_cluster.dialogs.DefaultInterpolationParameters
 import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
 import ui.edit_cluster.dialogs.DefaultRotationParameters
+import ui.theme.extendedColorScheme
 import ui.tools.Tool
 import kotlin.math.abs
 import kotlin.math.acosh
@@ -430,7 +431,7 @@ fun InterpolationInterface(
             )
             SimpleFilledButton(
                 painterResource(Res.drawable.confirm),
-                stringResource(Res.string.ok_name),
+                stringResource(Res.string.ok),
                 bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
                 containerColor = MaterialTheme.colorScheme.secondary,
@@ -531,7 +532,7 @@ fun RotationInterface(
             )
             SimpleFilledButton(
                 painterResource(Res.drawable.confirm),
-                stringResource(Res.string.ok_name),
+                stringResource(Res.string.ok),
                 bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
                 containerColor = MaterialTheme.colorScheme.secondary,
@@ -637,7 +638,7 @@ fun BiInversionInterface(
             )
             SimpleFilledButton(
                 painterResource(Res.drawable.confirm),
-                stringResource(Res.string.ok_name),
+                stringResource(Res.string.ok),
                 bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
                 containerColor = MaterialTheme.colorScheme.secondary,
@@ -775,7 +776,7 @@ fun LoxodromicMotionInterface(
             )
             SimpleFilledButton(
                 painterResource(Res.drawable.confirm),
-                stringResource(Res.string.ok_name),
+                stringResource(Res.string.ok),
                 bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
                 containerColor = MaterialTheme.colorScheme.secondary,
@@ -910,13 +911,20 @@ fun BoxScope.InfinitePointInput(
     toolAction: (Tool.InfinitePoint) -> Unit,
 ) {
     // round button top center
-    // FIX: bad location on mobile/portrait
+    // FIX: bad location on mobile/portrait, collides with long description
     SimpleToolButtonWithTooltip(
         tool = Tool.InfinitePoint,
         positionModifier = Modifier
             .align(Alignment.TopCenter)
         ,
-        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        containerColor =
+            MaterialTheme.extendedColorScheme.highAccentColor.copy(alpha = 0.8f)
+//            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f)
+        ,
+        contentColor =
+            Color.Black
+//            MaterialTheme.colorScheme.surface
+//            MaterialTheme.extendedColorScheme.highAccentColor
+        ,
     ) { toolAction(Tool.InfinitePoint) }
 }

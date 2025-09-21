@@ -72,7 +72,7 @@ import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.confirm
-import dodeclusters.composeapp.generated.resources.ok_name
+import dodeclusters.composeapp.generated.resources.ok
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
@@ -593,7 +593,7 @@ fun ToolDescription(
                         )
                         Icon(
                             painterResource(Res.drawable.confirm),
-                            stringResource(Res.string.ok_name),
+                            stringResource(Res.string.ok),
                             Modifier.padding(start = 8.dp)
                         )
                     }

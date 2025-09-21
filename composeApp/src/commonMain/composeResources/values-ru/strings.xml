@@ -196,11 +196,11 @@
     <string name="region_manipulation_strategy_erase">Стирание</string>
 
     <!-- dialog commons -->
-    <string name="hex_name">hex #</string>
-    <string name="cancel_name">Отмена</string>
-    <string name="ok_name">OK</string>
-    <string name="ok_description">Подтвердить</string>
-    <string name="apply_name">Применить</string>
+    <string name="hex_hash">hex #</string>
+    <string name="cancel">Отмена</string>
+    <string name="ok">OK</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="apply">Применить</string>
     <string name="n_steps_prompt">Число шагов</string>
     <string name="n_steps_placeholder">&lt;число шагов&gt;</string>
     <string name="angle_in_degrees_placeholder">&lt;угол в градусах&gt;</string>

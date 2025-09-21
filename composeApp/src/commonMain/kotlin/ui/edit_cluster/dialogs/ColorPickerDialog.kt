@@ -70,7 +70,7 @@ import dodeclusters.composeapp.generated.resources.color_picker_save_color_descr
 import dodeclusters.composeapp.generated.resources.color_picker_title
 import dodeclusters.composeapp.generated.resources.color_picker_used_and_saved_colors_label
 import dodeclusters.composeapp.generated.resources.delete_forever
-import dodeclusters.composeapp.generated.resources.hex_name
+import dodeclusters.composeapp.generated.resources.hex_hash
 import dodeclusters.composeapp.generated.resources.paint_splash
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.painterResource
@@ -546,7 +546,7 @@ private fun HexInput(
             }
         },
 //                    textStyle = TextStyle(fontSize = 16.sp),
-        label = { Text(stringResource(Res.string.hex_name)) },
+        label = { Text(stringResource(Res.string.hex_hash)) },
         placeholder = { Text("RRGGBB", color = LocalContentColor.current.copy(alpha = 0.5f)) },
         isError = isError,
         keyboardOptions = KeyboardOptions( // smart ass enter capturing
