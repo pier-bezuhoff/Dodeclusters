@@ -3590,13 +3590,6 @@ class EditClusterViewModel : ViewModel() {
         confirmAdjustedParameters()
     }
 
-    fun applyDialogSelectedParameters(
-        parameters: Parameters
-    ) {
-        openedDialog = null
-        updateParameters(parameters)
-    }
-
     fun closeDialog() {
         openedDialog = null
     }

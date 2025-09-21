@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -401,9 +402,10 @@ fun ApplyButton(
     modifier: Modifier = Modifier,
     onConfirm: () -> Unit,
 ) {
-    Button(
+    OutlinedButton(
         onClick = { onConfirm() },
         modifier = modifier.padding(4.dp),
+        colors = ButtonDefaults.outlinedButtonColors(),
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
         shape = CircleShape,
     ) {
@@ -421,7 +423,12 @@ fun CancelButton(
     OutlinedButton(
         onClick = { onDismissRequest() },
         modifier = modifier.padding(4.dp),
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+        colors = ButtonDefaults.outlinedButtonColors()
+            .copy(
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            )
+        ,
+        border = BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface),
         shape = CircleShape,
     ) {
         if (noText) {
@@ -461,6 +468,7 @@ fun CancelApplyOkRow(
         horizontalArrangement = Arrangement.SpaceAround
     ) {
         CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
+        Spacer(Modifier.width(4.dp))
         ApplyButton(fontSize = fontSize, onConfirm = onApply)
         OkButton(fontSize = fontSize, onConfirm = onConfirm)
     }

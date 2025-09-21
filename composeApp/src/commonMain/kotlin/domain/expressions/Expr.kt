@@ -494,6 +494,7 @@ inline fun Expr.reIndex(
             divergencePoint = reIndexer(divergencePoint),
             convergencePoint = reIndexer(convergencePoint),
             target = reIndexer(target),
+            otherHalfStart = otherHalfStart?.let { reIndexer(it) },
         )
     }
 

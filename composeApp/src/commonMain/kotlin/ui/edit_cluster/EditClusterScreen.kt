@@ -345,7 +345,6 @@ fun EditClusterScreen(
                     LoxodromicMotionDialog(
                         onCancel = viewModel::closeDialog,
                         onConfirm = viewModel::confirmDialogSelectedParameters,
-                        onApply = viewModel::applyDialogSelectedParameters,
                         defaults = viewModel.defaultLoxodromicMotionParameters,
                         dialogActions = dialogActions,
                     )

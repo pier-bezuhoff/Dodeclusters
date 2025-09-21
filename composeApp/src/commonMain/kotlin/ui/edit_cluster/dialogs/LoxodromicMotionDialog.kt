@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import org.jetbrains.compose.resources.stringResource
+import ui.CancelApplyOkRow
 import ui.CancelOkRow
 import ui.DialogTitle
 import ui.DoubleTextField
@@ -103,7 +104,7 @@ data class DefaultLoxodromicMotionParameters(
 @Composable
 fun LoxodromicMotionDialog(
     onConfirm: (LoxodromicMotionParameters) -> Unit,
-    onApply: (LoxodromicMotionParameters) -> Unit,
+//    onApply: (LoxodromicMotionParameters) -> Unit,
     onCancel: () -> Unit,
     defaults: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
     dialogActions: SharedFlow<DialogAction>? = null,
@@ -117,6 +118,14 @@ fun LoxodromicMotionDialog(
     val windowSizeClass = calculateWindowSizeClass()
     val compactWidth = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
+
+    fun buildParameters() =
+        LoxodromicMotionParameters.fromDifferential(
+            if (angleDirection) angle else -angle,
+            dilation,
+            nSteps
+        )
+
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = !compactHeight)
@@ -175,13 +184,7 @@ fun LoxodromicMotionDialog(
                 CancelOkRow(
                     onDismissRequest = onCancel,
                     onConfirm = {
-                        onConfirm(
-                            LoxodromicMotionParameters.fromDifferential(
-                                if (angleDirection) angle else -angle,
-                                dilation,
-                                nSteps
-                            )
-                        )
+                        onConfirm(buildParameters())
                     },
                     fontSize = fontSize
                 )
@@ -192,13 +195,7 @@ fun LoxodromicMotionDialog(
         dialogActions?.collect { dialogAction ->
             when (dialogAction) {
                 DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm(
-                    LoxodromicMotionParameters.fromDifferential(
-                        if (angleDirection) angle else -angle,
-                        dilation,
-                        nSteps
-                    )
-                )
+                DialogAction.CONFIRM -> onConfirm(buildParameters())
             }
         }
     }
