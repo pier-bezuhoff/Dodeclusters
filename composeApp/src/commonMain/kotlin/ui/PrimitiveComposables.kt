@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.apply_name
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.cancel_name
 import dodeclusters.composeapp.generated.resources.confirm
@@ -376,6 +377,7 @@ fun WithTooltip(
 @Composable
 fun OkButton(
     fontSize: TextUnit = 24.sp,
+    noText: Boolean = false,
     modifier: Modifier = Modifier,
     onConfirm: () -> Unit,
 ) {
@@ -385,9 +387,27 @@ fun OkButton(
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
         shape = CircleShape,
     ) {
-        Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
-        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-        Text(stringResource(Res.string.ok_name), fontSize = fontSize)
+        if (noText) {
+            Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
+        } else {
+            Text(stringResource(Res.string.ok_name), fontSize = fontSize)
+        }
+    }
+}
+
+@Composable
+fun ApplyButton(
+    fontSize: TextUnit = 24.sp,
+    modifier: Modifier = Modifier,
+    onConfirm: () -> Unit,
+) {
+    Button(
+        onClick = { onConfirm() },
+        modifier = modifier.padding(4.dp),
+        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+        shape = CircleShape,
+    ) {
+        Text(stringResource(Res.string.apply_name), fontSize = fontSize)
     }
 }
 
@@ -404,9 +424,9 @@ fun CancelButton(
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
         shape = CircleShape,
     ) {
-        Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel_name))
-        if (!noText) {
-            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+        if (noText) {
+            Icon(painterResource(Res.drawable.cancel), stringResource(Res.string.cancel_name))
+        } else {
             Text(stringResource(Res.string.cancel_name), fontSize = fontSize)
         }
     }
@@ -424,6 +444,24 @@ fun CancelOkRow(
         horizontalArrangement = Arrangement.SpaceAround
     ) {
         CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
+        OkButton(fontSize = fontSize, onConfirm = onConfirm)
+    }
+}
+
+@Composable
+fun CancelApplyOkRow(
+    onDismissRequest: () -> Unit,
+    onApply: () -> Unit,
+    onConfirm: () -> Unit,
+    fontSize: TextUnit = 24.sp,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier.fillMaxWidth().padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
+        ApplyButton(fontSize = fontSize, onConfirm = onApply)
         OkButton(fontSize = fontSize, onConfirm = onConfirm)
     }
 }

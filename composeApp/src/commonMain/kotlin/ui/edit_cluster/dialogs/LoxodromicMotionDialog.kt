@@ -99,11 +99,11 @@ data class DefaultLoxodromicMotionParameters(
     )
 }
 
-// TODO: 'apply' action that would go back to the updated HUD interface
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun LoxodromicMotionDialog(
     onConfirm: (LoxodromicMotionParameters) -> Unit,
+    onApply: (LoxodromicMotionParameters) -> Unit,
     onCancel: () -> Unit,
     defaults: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
     dialogActions: SharedFlow<DialogAction>? = null,

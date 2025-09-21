@@ -200,6 +200,7 @@
     <string name="cancel_name">Отмена</string>
     <string name="ok_name">OK</string>
     <string name="ok_description">Подтвердить</string>
+    <string name="apply_name">Применить</string>
     <string name="n_steps_prompt">Число шагов</string>
     <string name="n_steps_placeholder">&lt;число шагов&gt;</string>
     <string name="angle_in_degrees_placeholder">&lt;угол в градусах&gt;</string>

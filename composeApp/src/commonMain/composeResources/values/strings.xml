@@ -204,6 +204,7 @@
     <string name="cancel_name">Cancel</string>
     <string name="ok_name">OK</string>
     <string name="ok_description">Confirm</string>
+    <string name="apply_name">Apply</string>
     <string name="n_steps_prompt">Number of steps</string>
     <string name="n_steps_placeholder">&lt;number of steps&gt;</string>
     <string name="angle_in_degrees_placeholder">&lt;angle in degrees&gt;</string>
