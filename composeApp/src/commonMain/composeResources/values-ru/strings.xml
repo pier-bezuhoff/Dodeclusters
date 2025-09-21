@@ -1,6 +1,7 @@
 <resources>
     <!-- top toolbar -->
     <string name="edit_cluster_title">Редактирование кластера</string>
+    <string name="new_blank_name">Новый пустой файл</string>
     <string name="save_name">Сохранить</string>
     <string name="save_cluster_name">Сохранить как файл Dodeclusters</string>
     <string name="png_export_name">Сохранить скриншот как PNG</string>

@@ -72,6 +72,8 @@ import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.confirm
+import dodeclusters.composeapp.generated.resources.new_blank_name
+import dodeclusters.composeapp.generated.resources.new_document
 import dodeclusters.composeapp.generated.resources.ok
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save_name
@@ -665,11 +667,10 @@ fun EditClusterTopBar(
             // MAYBE: button to create new [empty?] document
             //  (maybe only on wide-width screens)
             // TODO: move it to context slidesheet
-            WithTooltip("New blank file") {
+            WithTooltip(stringResource(Res.string.new_blank_name)) {
                 SimpleButton(
-                    //painterResource(Res.drawable.add_circle),
-                    rememberVectorPainter(Icons.Filled.Add),
-                    "new blank",
+                    painterResource(Res.drawable.new_document),
+                    stringResource(Res.string.new_blank_name),
                     onClick = openNewBlank,
                 )
             }
