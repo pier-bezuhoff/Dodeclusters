@@ -173,19 +173,13 @@ fun ColorPickerDialog(
             else if (isExpanded) 40.dp
             else 32.dp
         )
-    // TODO: convert to buildParameters
-    val onConfirm0 = remember(parameters) { {
-        onConfirm(
-            parameters.copy(
-                // important that we capture states in the closure
-                // otherwise changing values would invalidate this lambda
-                // and the lambda captured by LaunchedEffect would be outdated one
-                // that uses outdated values (i think)
-                currentColor = colorState.value.toColor(),
-                savedColors = savedColorsState.value,
-            )
+
+    fun buildParameters(): ColorPickerParameters =
+        parameters.copy(
+            currentColor = colorState.value.toColor(),
+            savedColors = savedColorsState.value,
         )
-    } }
+
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -216,10 +210,10 @@ fun ColorPickerDialog(
                                 HexInput(
                                     color,
                                     setColor = { colorState.value = HsvColor.from(it) },
-                                    onConfirm = onConfirm0
+                                    onConfirm = { onConfirm(buildParameters()) }
                                 )
                                 CancelButton(onClick = onCancel)
-                                OkButton(onClick = onConfirm0)
+                                OkButton(onClick = { onConfirm(buildParameters()) })
                             }
                         }
                         Column(
@@ -447,10 +441,10 @@ fun ColorPickerDialog(
                         HexInput(
                             color,
                             setColor = { colorState.value = HsvColor.from(it) },
-                            onConfirm = onConfirm0,
+                            onConfirm = { onConfirm(buildParameters()) },
                         )
                         CancelButton(noText = isCompact, onClick = onCancel)
-                        OkButton(onClick = onConfirm0)
+                        OkButton(noText = isCompact, onClick = { onConfirm(buildParameters()) })
                     }
                 }
             }
@@ -460,7 +454,7 @@ fun ColorPickerDialog(
         dialogActions?.collect { dialogAction ->
             when (dialogAction) {
                 DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm0()
+                DialogAction.CONFIRM -> onConfirm(buildParameters())
             }
         }
     }

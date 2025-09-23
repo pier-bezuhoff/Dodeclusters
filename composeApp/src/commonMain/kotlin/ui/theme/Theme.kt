@@ -37,7 +37,8 @@ fun DodeclustersTheme(
             if (isCompact)
                 18.sp
             else
-                24.sp,
+                24.sp
+        ,
         title =
             if (isCompact)
                 MaterialTheme.typography.titleMedium

@@ -910,13 +910,10 @@ fun BoxScope.RegionManipulationStrategySelector(
 fun BoxScope.InfinitePointInput(
     toolAction: (Tool.InfinitePoint) -> Unit,
 ) {
-    // round button top center
-    // FIX: bad location on mobile/portrait, collides with long description
     SimpleToolButtonWithTooltip(
         tool = Tool.InfinitePoint,
         positionModifier = Modifier
-            .align(Alignment.TopCenter)
-            .offset(y = 60.dp)
+            .align(Alignment.CenterEnd)
         ,
         // the idea is that it would be colored the same as a normal point
         containerColor =
