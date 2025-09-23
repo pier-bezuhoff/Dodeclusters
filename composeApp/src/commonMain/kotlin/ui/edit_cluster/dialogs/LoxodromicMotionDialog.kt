@@ -10,7 +10,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -47,14 +46,13 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import org.jetbrains.compose.resources.stringResource
-import ui.CancelApplyOkRow
 import ui.CancelOkRow
 import ui.DialogTitle
 import ui.DoubleTextField
 import ui.FloatTextField
 import ui.IntTextField
 import ui.PreTextFieldLabel
-import ui.hideSystemBars
+import ui.theme.adaptiveTypography
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -116,7 +114,6 @@ fun LoxodromicMotionDialog(
     var dilation by remember(defaults) { mutableStateOf(defaults.dilationPerStep) }
     var nSteps by remember(defaults) { mutableStateOf(defaults.nTotalSteps) }
     val windowSizeClass = calculateWindowSizeClass()
-    val compactWidth = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
 
     fun buildParameters() =
@@ -130,21 +127,17 @@ fun LoxodromicMotionDialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = !compactHeight)
     ) {
-        hideSystemBars()
         Surface(
             modifier = Modifier.padding(horizontal = 16.dp),
             shape = MaterialTheme.shapes.extraLarge,
         ) {
-            val fontSize =
-                if (compactWidth) 14.sp
-                else 24.sp
             Column(
                 Modifier.padding(horizontal = 8.dp),
                 horizontalAlignment = Alignment.Start
             ) {
-                DialogTitle(Res.string.loxodromic_motion_title, smallerFont = compactWidth)
+                DialogTitle(Res.string.loxodromic_motion_title)
                 Row {
-                    PreTextFieldLabel(Res.string.loxodromic_motion_angle_prompt, smallerFont = compactWidth)
+                    PreTextFieldLabel(Res.string.loxodromic_motion_angle_prompt)
                     FloatTextField(
                         value = angle,
                         onNewValue = { angle = it },
@@ -156,9 +149,9 @@ fun LoxodromicMotionDialog(
                 Slider(angle, { angle = it },
                     valueRange = defaults.angleRange
                 )
-                RotationDirectionToggle(angleDirection, { angleDirection = it }, smallerFont = compactWidth)
+                RotationDirectionToggle(angleDirection, { angleDirection = it })
                 Row {
-                    PreTextFieldLabel(Res.string.loxodromic_motion_hyperbolic_prompt, smallerFont = compactWidth)
+                    PreTextFieldLabel(Res.string.loxodromic_motion_hyperbolic_prompt)
                     DoubleTextField(
                         value = dilation,
                         onNewValue = { dilation = it },
@@ -170,7 +163,7 @@ fun LoxodromicMotionDialog(
                     valueRange = defaults.dilationRange
                 )
                 Row {
-                    PreTextFieldLabel(Res.string.n_steps_prompt, smallerFont = compactWidth)
+                    PreTextFieldLabel(Res.string.n_steps_prompt)
                     IntTextField(
                         value = nSteps,
                         onNewValue = { nSteps = it },
@@ -182,11 +175,10 @@ fun LoxodromicMotionDialog(
                     steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
                 )
                 CancelOkRow(
-                    onDismissRequest = onCancel,
-                    onConfirm = {
+                    onCancel = onCancel,
+                    onOk = {
                         onConfirm(buildParameters())
                     },
-                    fontSize = fontSize
                 )
             }
         }
@@ -206,7 +198,6 @@ private fun RotationDirectionToggle(
     /** true = CCW, false = CW */
     direction: Boolean,
     setDirection: (Boolean) -> Unit,
-    smallerFont: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -238,9 +229,7 @@ private fun RotationDirectionToggle(
                 append(stringResource(Res.string.loxodromic_motion_angle_direction_prompt2))
             },
             modifier = Modifier.padding(8.dp),
-            style =
-                if (smallerFont) MaterialTheme.typography.labelMedium
-                else MaterialTheme.typography.labelLarge
+            style = MaterialTheme.adaptiveTypography.label
         )
     }
 }

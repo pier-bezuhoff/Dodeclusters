@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -16,7 +15,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -41,8 +39,8 @@ import dodeclusters.composeapp.generated.resources.circle_extrapolation_title
 import domain.expressions.ExtrapolationParameters
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
-import ui.hideSystemBars
 import ui.isLandscape
+import ui.theme.adaptiveTypography
 import kotlin.math.roundToInt
 
 @Immutable
@@ -60,7 +58,7 @@ data class DefaultExtrapolationParameters(
     )
 }
 
-// deprecated, superseded by bi-inversion
+// NOTE: deprecated, superseded by bi-inversion
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun CircleExtrapolationDialog(
@@ -85,13 +83,11 @@ fun CircleExtrapolationDialog(
         valueRange = minCount.toFloat()..maxCount.toFloat()
     ) }
     val windowSizeClass = calculateWindowSizeClass()
-    val compactWidth = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = !compactHeight)
     ) {
-        hideSystemBars()
         Surface(
             modifier = Modifier.padding(16.dp),
             shape = MaterialTheme.shapes.extraLarge,
@@ -102,7 +98,7 @@ fun CircleExtrapolationDialog(
                 else
                     CircleExtrapolationHorizontal(leftSliderState, rightSliderState, onDismissRequest, onConfirm)
             } else {
-                CircleExtrapolationVertical(leftSliderState, rightSliderState, onDismissRequest, onConfirm, compactWidth)
+                CircleExtrapolationVertical(leftSliderState, rightSliderState, onDismissRequest, onConfirm)
             }
         }
     }
@@ -121,7 +117,7 @@ private fun CircleExtrapolationHorizontalCompact(
         modifier.padding(8.dp),
         horizontalAlignment = Alignment.Start
     ) {
-        Title(smallerFont = true, Modifier.align(Alignment.CenterHorizontally))
+        Title(Modifier.align(Alignment.CenterHorizontally))
         Row(Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.Top
@@ -135,9 +131,9 @@ private fun CircleExtrapolationHorizontalCompact(
                 Slider(rightSliderState)
             }
         }
-        ui.CancelOkRow(
-            onDismissRequest = onDismissRequest,
-            onConfirm = {
+        CancelOkRow(
+            onCancel = onDismissRequest,
+            onOk = {
                 onConfirm(
                     ExtrapolationParameters(
                         leftSliderState.value.roundToInt(),
@@ -167,9 +163,9 @@ private fun CircleExtrapolationHorizontal(
         Slider(leftSliderState)
         RightSliderText(rightSliderState)
         Slider(rightSliderState)
-        ui.CancelOkRow(
-            onDismissRequest = onDismissRequest,
-            onConfirm = {
+        CancelOkRow(
+            onCancel = onDismissRequest,
+            onOk = {
                 onConfirm(
                     ExtrapolationParameters(
                         leftSliderState.value.roundToInt(),
@@ -188,13 +184,8 @@ private fun CircleExtrapolationVertical(
     rightSliderState: SliderState,
     onDismissRequest: () -> Unit,
     onConfirm: (ExtrapolationParameters) -> Unit,
-    compactWidth: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val fontSize =
-        if (compactWidth)
-            14.sp
-        else 24.sp
     Column(
         modifier.padding(8.dp),
         horizontalAlignment = Alignment.Start
@@ -205,8 +196,8 @@ private fun CircleExtrapolationVertical(
         RightSliderText(rightSliderState)
         Slider(rightSliderState)
         CancelOkRow(
-            onDismissRequest = onDismissRequest,
-            onConfirm = {
+            onCancel = onDismissRequest,
+            onOk = {
                 onConfirm(
                     ExtrapolationParameters(
                         leftSliderState.value.roundToInt(),
@@ -214,19 +205,16 @@ private fun CircleExtrapolationVertical(
                     )
                 )
             },
-            fontSize = fontSize
         )
     }
 }
 
 @Composable
-private fun Title(smallerFont: Boolean = false, modifier: Modifier = Modifier) {
+private fun Title(modifier: Modifier = Modifier) {
     Text(
         text = stringResource(Res.string.circle_extrapolation_title),
         modifier = modifier.padding(16.dp),
-        style =
-            if (smallerFont) MaterialTheme.typography.titleMedium
-            else MaterialTheme.typography.titleLarge,
+        style = MaterialTheme.adaptiveTypography.title
     )
 }
 
@@ -259,7 +247,7 @@ private fun LeftSliderText(
             }
         },
         modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-        style = MaterialTheme.typography.bodyLarge
+        style = MaterialTheme.adaptiveTypography.body
     )
 }
 
@@ -292,6 +280,6 @@ private fun RightSliderText(
             }
         },
         modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-        style = MaterialTheme.typography.bodyLarge
+        style = MaterialTheme.adaptiveTypography.body
     )
 }

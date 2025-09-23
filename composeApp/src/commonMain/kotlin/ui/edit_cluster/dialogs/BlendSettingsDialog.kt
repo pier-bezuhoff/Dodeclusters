@@ -19,8 +19,6 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
@@ -45,9 +42,7 @@ import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
 import ui.LabelColonBigValue
-import ui.component1
-import ui.component2
-import ui.hideSystemBars
+import ui.theme.adaptiveTypography
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -63,16 +58,10 @@ fun BlendSettingsDialog(
         valueRange = 0f .. 1f,
     ) }
     var blendModeType by remember { mutableStateOf(currentBlendModeType) }
-    val (widthClass, heightClass) = calculateWindowSizeClass()
-    val okFontSize =
-        if (widthClass == WindowWidthSizeClass.Compact)
-            18.sp
-        else 24.sp
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = true),
     ) {
-        hideSystemBars()
         Surface(
             modifier = Modifier
                 .padding(16.dp)
@@ -84,7 +73,7 @@ fun BlendSettingsDialog(
                 ,
                 horizontalAlignment = Alignment.Start
             ) {
-                DialogTitle(Res.string.blend_settings_title, smallerFont = false, Modifier.align(Alignment.CenterHorizontally))
+                DialogTitle(Res.string.blend_settings_title, modifier = Modifier.align(Alignment.CenterHorizontally))
                 LabelColonBigValue(
                     value = sliderState.value.formatDecimals(3, showTrailingZeroes = false),
                     labelResource = Res.string.blend_settings_opacity_prompt
@@ -115,15 +104,14 @@ fun BlendSettingsDialog(
                                     if (blendModeType == blendModeTypeVariant)
                                         MaterialTheme.colorScheme.primary
                                     else Color.Unspecified,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.adaptiveTypography.body,
                             )
                         }
                     }
                 }
                 CancelOkRow(
-                    onDismissRequest = onCancel,
-                    onConfirm = { onConfirm(sliderState.value, blendModeType) },
-                    fontSize = okFontSize
+                    onCancel = onCancel,
+                    onOk = { onConfirm(sliderState.value, blendModeType) },
                 )
             }
         }

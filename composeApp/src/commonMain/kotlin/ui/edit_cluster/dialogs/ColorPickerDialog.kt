@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextRange
@@ -57,7 +58,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.github.ajalt.colormath.RenderCondition
@@ -82,7 +82,6 @@ import ui.SimpleButton
 import ui.TwoIconButtonWithTooltip
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
-import ui.hideSystemBars
 import ui.isCompact
 import ui.isExpanded
 import ui.isLandscape
@@ -157,9 +156,6 @@ fun ColorPickerDialog(
     val isLandscape = windowSizeClass.isLandscape
     val maxColorsPerRowLandscape = 11
     val maxColorsPerRowPortrait = if (isMedium) 8 else 6
-    val fontSize =
-        if (isCompact) 14.sp
-        else 24.sp
     val paletteModifier = Modifier
         .padding(4.dp)
         .border(2.dp, MaterialTheme.colorScheme.secondary, MaterialTheme.shapes.medium)
@@ -177,6 +173,7 @@ fun ColorPickerDialog(
             else if (isExpanded) 40.dp
             else 32.dp
         )
+    // TODO: convert to buildParameters
     val onConfirm0 = remember(parameters) { {
         onConfirm(
             parameters.copy(
@@ -193,7 +190,6 @@ fun ColorPickerDialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        hideSystemBars()
         Surface(
             modifier = Modifier.padding(16.dp),
             shape = MaterialTheme.shapes.extraLarge,
@@ -202,8 +198,7 @@ fun ColorPickerDialog(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     DialogTitle(
                         Res.string.color_picker_title,
-                        smallerFont = isCompact,
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        Modifier.align(Alignment.CenterHorizontally),
                     )
                     Row() {
                         Column(horizontalAlignment = Alignment.End) {
@@ -223,8 +218,8 @@ fun ColorPickerDialog(
                                     setColor = { colorState.value = HsvColor.from(it) },
                                     onConfirm = onConfirm0
                                 )
-                                CancelButton(fontSize, onDismissRequest = onCancel)
-                                OkButton(fontSize, onConfirm = onConfirm0)
+                                CancelButton(onClick = onCancel)
+                                OkButton(onClick = onConfirm0)
                             }
                         }
                         Column(
@@ -340,8 +335,7 @@ fun ColorPickerDialog(
                 ) {
                     DialogTitle(
                         Res.string.color_picker_title,
-                        smallerFont = isCompact,
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        Modifier.align(Alignment.CenterHorizontally),
                     )
                     ColorPickerDisplay(
                         colorState,
@@ -455,8 +449,8 @@ fun ColorPickerDialog(
                             setColor = { colorState.value = HsvColor.from(it) },
                             onConfirm = onConfirm0,
                         )
-                        CancelButton(fontSize, noText = isCompact, onDismissRequest = onCancel)
-                        OkButton(fontSize, onConfirm = onConfirm0)
+                        CancelButton(noText = isCompact, onClick = onCancel)
+                        OkButton(onClick = onConfirm0)
                     }
                 }
             }
@@ -520,6 +514,7 @@ private fun HexInput(
     }
     val windowInfo = LocalWindowInfo.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     var isError by remember(color) { mutableStateOf(false) }
     OutlinedTextField(
@@ -580,7 +575,7 @@ private fun HexInput(
         snapshotFlow { windowInfo.isWindowFocused }.collect { isWindowFocused ->
             if (isWindowFocused) { // runs once every time the dialog is opened
                 focusRequester.freeFocus()
-//                focusRequester.requestFocus(FocusDirection.Exit)
+                focusManager.clearFocus()
                 keyboard?.hide() // suppresses rare auto-showing keyboard bug
             }
         }

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
@@ -45,6 +44,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -62,6 +62,7 @@ import domain.formatDecimals
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import ui.theme.adaptiveTypography
 import ui.tools.ITool
 
 @Composable
@@ -375,13 +376,13 @@ fun WithTooltip(
 
 @Composable
 fun OkButton(
-    fontSize: TextUnit = 24.sp,
-    noText: Boolean = false,
     modifier: Modifier = Modifier,
-    onConfirm: () -> Unit,
+    noText: Boolean = false,
+    fontSize: TextUnit = MaterialTheme.adaptiveTypography.actionButtonFontSize,
+    onClick: () -> Unit,
 ) {
     Button(
-        onClick = { onConfirm() },
+        onClick = onClick,
         modifier = modifier.padding(4.dp),
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
         shape = CircleShape,
@@ -396,12 +397,12 @@ fun OkButton(
 
 @Composable
 fun ApplyButton(
-    fontSize: TextUnit = 24.sp,
     modifier: Modifier = Modifier,
-    onConfirm: () -> Unit,
+    fontSize: TextUnit = MaterialTheme.adaptiveTypography.actionButtonFontSize,
+    onClick: () -> Unit,
 ) {
     OutlinedButton(
-        onClick = { onConfirm() },
+        onClick = onClick,
         modifier = modifier.padding(4.dp),
         colors = ButtonDefaults.outlinedButtonColors(),
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
@@ -413,20 +414,21 @@ fun ApplyButton(
 
 @Composable
 fun CancelButton(
-    fontSize: TextUnit = 24.sp,
-    noText: Boolean = false,
     modifier: Modifier = Modifier,
-    onDismissRequest: () -> Unit,
+    noText: Boolean = false,
+    fontSize: TextUnit = MaterialTheme.adaptiveTypography.actionButtonFontSize,
+    onClick: () -> Unit,
 ) {
+    val color = MaterialTheme.colorScheme.onSurface
     OutlinedButton(
-        onClick = { onDismissRequest() },
+        onClick = onClick,
         modifier = modifier.padding(4.dp),
         colors = ButtonDefaults.outlinedButtonColors()
             .copy(
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                contentColor = color,
             )
         ,
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface),
+        border = BorderStroke(2.dp, color),
         shape = CircleShape,
     ) {
         if (noText) {
@@ -439,59 +441,57 @@ fun CancelButton(
 
 @Composable
 fun CancelOkRow(
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
-    fontSize: TextUnit = 24.sp,
-    modifier: Modifier = Modifier
+    onCancel: () -> Unit,
+    onOk: () -> Unit,
+    modifier: Modifier = Modifier,
+    fontSize: TextUnit = MaterialTheme.adaptiveTypography.actionButtonFontSize,
 ) {
     Row(
         modifier.fillMaxWidth().padding(vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceAround
     ) {
-        CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
-        OkButton(fontSize = fontSize, onConfirm = onConfirm)
+        CancelButton(fontSize = fontSize, onClick = onCancel)
+        OkButton(fontSize = fontSize, onClick = onOk)
     }
 }
 
 @Composable
 fun CancelApplyOkRow(
-    onDismissRequest: () -> Unit,
+    onCancel: () -> Unit,
     onApply: () -> Unit,
-    onConfirm: () -> Unit,
-    fontSize: TextUnit = 24.sp,
-    modifier: Modifier = Modifier
+    onOk: () -> Unit,
+    modifier: Modifier = Modifier,
+    fontSize: TextUnit = MaterialTheme.adaptiveTypography.actionButtonFontSize,
 ) {
     Row(
         modifier.fillMaxWidth().padding(vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceAround
     ) {
-        CancelButton(fontSize = fontSize, onDismissRequest = onDismissRequest)
+        CancelButton(fontSize = fontSize, onClick = onCancel)
         Spacer(Modifier.width(4.dp))
-        ApplyButton(fontSize = fontSize, onConfirm = onApply)
-        OkButton(fontSize = fontSize, onConfirm = onConfirm)
+        ApplyButton(fontSize = fontSize, onClick = onApply)
+        OkButton(fontSize = fontSize, onClick = onOk)
     }
 }
 
 @Composable
 fun DialogTitle(
     titleStringResource: StringResource,
-    smallerFont: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.adaptiveTypography.title,
 ) {
     Text(
         text = stringResource(titleStringResource),
         modifier = modifier.padding(16.dp),
-        style =
-        if (smallerFont) MaterialTheme.typography.titleMedium
-        else MaterialTheme.typography.titleLarge,
+        style = textStyle,
     )
 }
 
 @Composable
 fun PreTextFieldLabel(
     stringResource: StringResource,
-    smallerFont: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textyStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
     Text(
         buildAnnotatedString {
@@ -499,9 +499,7 @@ fun PreTextFieldLabel(
             append(":  ")
         },
         modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-        style =
-            if (smallerFont) MaterialTheme.typography.bodyMedium
-            else MaterialTheme.typography.bodyLarge
+        style = textyStyle,
     )
 }
 
@@ -509,7 +507,8 @@ fun PreTextFieldLabel(
 fun LabelColonBigValue(
     value: String,
     labelResource: StringResource,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
     Text(
         buildAnnotatedString {
@@ -527,7 +526,7 @@ fun LabelColonBigValue(
         }
         ,
         modifier.padding(16.dp),
-        style = MaterialTheme.typography.bodyLarge
+        style = textStyle
     )
 }
 
@@ -538,7 +537,8 @@ fun FloatTextField(
     placeholderStringResource: StringResource? = null,
     suffixStringResource: StringResource? = null,
     nFractionalDigits: Int = 2,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
     val s = value.formatDecimals(nFractionalDigits, showTrailingZeroes = false)
     var textFieldValue by remember(value) {
@@ -554,7 +554,7 @@ fun FloatTextField(
             }
         },
         modifier = modifier,
-        textStyle = MaterialTheme.typography.bodyLarge,
+        textStyle = textStyle,
         placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
         suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
         isError = textFieldValue.text.toFloatOrNull()?.let { false } ?: true,
@@ -569,7 +569,8 @@ fun DoubleTextField(
     placeholderStringResource: StringResource? = null,
     suffixStringResource: StringResource? = null,
     nFractionalDigits: Int = 2,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
     val s = value.formatDecimals(nFractionalDigits, showTrailingZeroes = false)
     var textFieldValue by remember(value) {
@@ -585,7 +586,7 @@ fun DoubleTextField(
             }
         },
         modifier = modifier,
-        textStyle = MaterialTheme.typography.bodyLarge,
+        textStyle = textStyle,
         placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
         suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
         isError = textFieldValue.text.toDoubleOrNull()?.let { false } ?: true,
@@ -600,7 +601,8 @@ fun IntTextField(
     placeholderStringResource: StringResource? = null,
     suffixStringResource: StringResource? = null,
     valueValidator: (value: Int) -> Boolean = { it >= 0 },
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
     val s = value.toString()
     var textFieldValue by remember(value) {
@@ -616,7 +618,7 @@ fun IntTextField(
             }
         },
         modifier = modifier,
-        textStyle = MaterialTheme.typography.bodyLarge,
+        textStyle = textStyle,
         placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
         suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
         isError = textFieldValue.text.toIntOrNull()?.let { !valueValidator(it) } ?: true,

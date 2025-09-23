@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.edit_cluster.EditClusterViewModel
-import ui.hideSystemBars
 import ui.tools.Tool
 
 @Composable
@@ -41,7 +40,6 @@ fun SaveOptionsDialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = true)
     ) {
-        hideSystemBars()
         Surface(
             modifier = Modifier,
             shape = MaterialTheme.shapes.large,

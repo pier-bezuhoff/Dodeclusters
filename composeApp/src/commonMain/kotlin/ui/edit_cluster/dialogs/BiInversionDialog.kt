@@ -9,7 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,7 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import data.geometry.CirclePencilType
@@ -45,8 +43,6 @@ import ui.DialogTitle
 import ui.FloatTextField
 import ui.IntTextField
 import ui.PreTextFieldLabel
-import ui.hideSystemBars
-import ui.isCompact
 import kotlin.math.roundToInt
 
 @Immutable
@@ -102,19 +98,18 @@ fun BiInversionDialog(
     var nSteps by remember(defaults) { mutableStateOf(defaults.nSteps) }
     var speed: Double by remember(defaults) { mutableStateOf(defaults.speed) }
     val dAngle: Float = (speed * inversiveAngle).degrees
-    val isCompact = calculateWindowSizeClass().isCompact
+
+    fun buildParameters(): BiInversionParameters =
+        BiInversionParameters(speed, nSteps, reverseSecondEngine)
+
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = true)
     ) {
-        hideSystemBars()
         Surface(
             modifier = Modifier.padding(horizontal = 16.dp),
             shape = MaterialTheme.shapes.extraLarge,
         ) {
-            val fontSize =
-                if (isCompact) 14.sp
-                else 24.sp
             Column(
                 Modifier
                     .padding(horizontal = 8.dp)
@@ -122,9 +117,9 @@ fun BiInversionDialog(
                 ,
                 horizontalAlignment = Alignment.Start
             ) {
-                DialogTitle(Res.string.bi_inversion_title, smallerFont = isCompact)
+                DialogTitle(Res.string.bi_inversion_title)
                 Row {
-                    PreTextFieldLabel(Res.string.bi_inversion_speed_prompt, smallerFont = isCompact)
+                    PreTextFieldLabel(Res.string.bi_inversion_speed_prompt)
                     FloatTextField(
                         value = speed.toFloat(),
                         onNewValue = { speed = it.toDouble() },
@@ -139,7 +134,7 @@ fun BiInversionDialog(
                 )
                 if (showAngleSlider) {
                     Row {
-                        PreTextFieldLabel(Res.string.bi_inversion_angle_prompt, smallerFont = isCompact)
+                        PreTextFieldLabel(Res.string.bi_inversion_angle_prompt)
                         FloatTextField(
                             value = dAngle,
                             onNewValue = { speed = it.radians / inversiveAngle },
@@ -156,7 +151,7 @@ fun BiInversionDialog(
                     )
                 }
                 Row {
-                    PreTextFieldLabel(Res.string.n_steps_prompt, smallerFont = isCompact)
+                    PreTextFieldLabel(Res.string.n_steps_prompt)
                     IntTextField(
                         value = nSteps,
                         onNewValue = { nSteps = it },
@@ -170,9 +165,8 @@ fun BiInversionDialog(
                     steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
                 )
                 CancelOkRow(
-                    onDismissRequest = onCancel,
-                    onConfirm = { onConfirm(BiInversionParameters(speed, nSteps, reverseSecondEngine)) },
-                    fontSize = fontSize
+                    onCancel = onCancel,
+                    onOk = { onConfirm(buildParameters()) },
                 )
             }
         }
@@ -181,7 +175,7 @@ fun BiInversionDialog(
         dialogActions?.collect { dialogAction ->
             when (dialogAction) {
                 DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm(BiInversionParameters(speed, nSteps, reverseSecondEngine))
+                DialogAction.CONFIRM -> onConfirm(buildParameters())
             }
         }
     }

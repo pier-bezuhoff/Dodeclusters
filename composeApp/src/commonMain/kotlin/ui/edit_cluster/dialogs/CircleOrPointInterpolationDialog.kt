@@ -52,8 +52,7 @@ import ui.CancelOkRow
 import ui.DialogTitle
 import ui.IntTextField
 import ui.PreTextFieldLabel
-import ui.hideSystemBars
-import ui.isCompact
+import ui.theme.adaptiveTypography
 import kotlin.math.roundToInt
 
 @Immutable
@@ -95,12 +94,8 @@ fun CircleOrPointInterpolationDialog(
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
     val windowSizeClass = calculateWindowSizeClass()
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
-    val isCompact = windowSizeClass.isCompact
-    val okFontSize =
-        if (isCompact)
-            18.sp
-        else 24.sp
-    val onConfirm0 = { onConfirm(
+
+    fun buildParameters(): InterpolationParameters =
         InterpolationParameters(
             nInterjacents = nInterjacents,
             inBetween = interpolateInBetween,
@@ -110,12 +105,10 @@ fun CircleOrPointInterpolationDialog(
                 else -> interpolateInBetween
             }
         )
-    ) }
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = !compactHeight),
     ) {
-        hideSystemBars()
         Surface(
             modifier = Modifier
                 .padding(16.dp)
@@ -126,14 +119,14 @@ fun CircleOrPointInterpolationDialog(
                 Column(
                     horizontalAlignment = Alignment.Start
                 ) {
-                    DialogTitle(Res.string.circle_interpolation_title,
-                        smallerFont = true,
+                    DialogTitle(
+                        Res.string.circle_interpolation_title,
                         Modifier.align(Alignment.CenterHorizontally)
                     )
                     Row(Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth(0.5f)) {
                             Row {
-                                PreTextFieldLabel(Res.string.circle_interpolation_prompt, smallerFont = true)
+                                PreTextFieldLabel(Res.string.circle_interpolation_prompt)
                                 IntTextField(
                                     value = nInterjacents,
                                     onNewValue = { nInterjacents = it },
@@ -158,18 +151,21 @@ fun CircleOrPointInterpolationDialog(
                             }
                         }
                     }
-                    CancelOkRow(onCancel, onConfirm0, fontSize = 18.sp)
+                    CancelOkRow(
+                        onCancel = onCancel,
+                        onOk = { onConfirm(buildParameters()) },
+                    )
                 }
             } else {
                 Column(
                     horizontalAlignment = Alignment.Start
                 ) {
-                    DialogTitle(Res.string.circle_interpolation_title,
-                        smallerFont = isCompact,
+                    DialogTitle(
+                        Res.string.circle_interpolation_title,
                         Modifier.align(Alignment.CenterHorizontally)
                     )
                     Row {
-                        PreTextFieldLabel(Res.string.circle_interpolation_prompt, smallerFont = isCompact)
+                        PreTextFieldLabel(Res.string.circle_interpolation_prompt)
                         IntTextField(
                             value = nInterjacents,
                             onNewValue = { nInterjacents = it },
@@ -191,9 +187,8 @@ fun CircleOrPointInterpolationDialog(
                         )
                     }
                     CancelOkRow(
-                        onDismissRequest = onCancel,
-                        onConfirm = onConfirm0,
-                        fontSize = okFontSize
+                        onCancel = onCancel,
+                        onOk = { onConfirm(buildParameters()) },
                     )
                 }
             }
@@ -203,7 +198,7 @@ fun CircleOrPointInterpolationDialog(
         dialogActions?.collect { dialogAction ->
             when (dialogAction) {
                 DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm0()
+                DialogAction.CONFIRM -> onConfirm(buildParameters())
             }
         }
     }
@@ -243,7 +238,7 @@ private fun InsideOutsideToggle(
                 append(stringResource(Res.string.circle_interpolation_in_between_prompt3))
             },
             modifier = Modifier.padding(8.dp),
-            style = MaterialTheme.typography.labelLarge
+            style = MaterialTheme.adaptiveTypography.label
         )
     }
 }

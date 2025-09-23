@@ -41,7 +41,7 @@ import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.name
-import dodeclusters.composeapp.generated.resources.ok_description
+import dodeclusters.composeapp.generated.resources.ok
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.flow.SharedFlow
@@ -143,10 +143,10 @@ actual fun SaveFileButton(
                         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
                     ) {
-                        Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok_description))
+                        Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok))
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                         Text(
-                            "OK",//stringResource(Res.string.ok_description),
+                            stringResource(Res.string.ok),
                             fontSize = 16.sp,
                         )
                     }

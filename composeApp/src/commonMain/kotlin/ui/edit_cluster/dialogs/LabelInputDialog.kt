@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
@@ -34,7 +33,7 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
-import ui.hideSystemBars
+import ui.theme.adaptiveTypography
 
 @Composable
 fun LabelInputDialog(
@@ -50,7 +49,6 @@ fun LabelInputDialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = true)
     ) {
-        hideSystemBars()
         Surface(
             modifier = Modifier,
             shape = MaterialTheme.shapes.large,
@@ -80,9 +78,8 @@ fun LabelInputDialog(
                     )
                 }
                 CancelOkRow(
-                    onDismissRequest = onCancel,
-                    onConfirm = { onConfirm(label) },
-                    fontSize = 18.sp,
+                    onCancel = onCancel,
+                    onOk = { onConfirm(label) },
                 )
             }
         }
@@ -121,7 +118,7 @@ private fun LabelTextField(
         modifier = modifier
             .focusRequester(focusRequester)
         ,
-        textStyle = MaterialTheme.typography.bodyLarge,
+        textStyle = MaterialTheme.adaptiveTypography.body,
         placeholder = placeholderStringResource?.let {
             { Text(stringResource(placeholderStringResource)) }
         },

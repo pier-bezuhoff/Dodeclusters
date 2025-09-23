@@ -3,13 +3,18 @@ package ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import ui.isCompact
 
 val DEFAULT_COLOR_THEME = ColorTheme.DARK
 
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun DodeclustersTheme(
     colorTheme: ColorTheme = DEFAULT_COLOR_THEME,
@@ -26,8 +31,36 @@ fun DodeclustersTheme(
     val extendedScheme =
         if (isLight) DodeclustersColors.extendedLightScheme
         else DodeclustersColors.extendedDarkScheme
-    MaterialTheme.shapes.small
-    CompositionLocalProvider(LocalExtendedColors provides extendedScheme) {
+    val isCompact = calculateWindowSizeClass().isCompact
+    val adaptiveTypography = AdaptiveTypography(
+        actionButtonFontSize =
+            if (isCompact)
+                18.sp
+            else
+                24.sp,
+        title =
+            if (isCompact)
+                MaterialTheme.typography.titleMedium
+            else
+                MaterialTheme.typography.titleLarge
+        ,
+        body =
+            if (isCompact)
+                MaterialTheme.typography.bodyMedium
+            else
+                MaterialTheme.typography.bodyLarge
+        ,
+        label =
+            if (isCompact)
+                MaterialTheme.typography.labelMedium
+            else
+                MaterialTheme.typography.labelLarge
+        ,
+    )
+    CompositionLocalProvider(
+        LocalExtendedColors provides extendedScheme,
+        LocalAdaptiveTypography provides adaptiveTypography,
+    ) {
         MaterialTheme(
             colorScheme = scheme,
             shapes = MaterialTheme.shapes.copy(
