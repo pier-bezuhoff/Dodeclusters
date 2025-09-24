@@ -1,8 +1,8 @@
 package domain.cluster
 
 import androidx.compose.runtime.Immutable
-import data.geometry.Circle
-import data.geometry.Line
+import core.geometry.Circle
+import core.geometry.Line
 import domain.ColorAsCss
 import domain.Ix
 import domain.expressions.ObjectConstruct

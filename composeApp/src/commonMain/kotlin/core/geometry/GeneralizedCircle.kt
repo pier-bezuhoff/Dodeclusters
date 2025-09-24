@@ -1,6 +1,6 @@
 @file:Suppress("NOTHING_TO_INLINE")
 
-package data.geometry
+package core.geometry
 
 import androidx.compose.runtime.Immutable
 import domain.never

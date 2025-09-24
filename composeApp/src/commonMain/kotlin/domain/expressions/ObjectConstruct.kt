@@ -1,9 +1,9 @@
 package domain.expressions
 
 import androidx.compose.runtime.Immutable
-import data.geometry.Circle
-import data.geometry.Line
-import data.geometry.Point
+import core.geometry.Circle
+import core.geometry.Line
+import core.geometry.Point
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

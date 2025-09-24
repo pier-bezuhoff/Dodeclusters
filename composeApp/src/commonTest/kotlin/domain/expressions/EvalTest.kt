@@ -1,12 +1,12 @@
 package domain.expressions
 
-import data.geometry.Circle
-import data.geometry.CircleOrLine
-import data.geometry.EPSILON
-import data.geometry.Point
-import data.geometry.assertAlmostEquals
-import data.geometry.randomCircle
-import data.geometry.randomPoint
+import core.geometry.Circle
+import core.geometry.CircleOrLine
+import core.geometry.EPSILON
+import core.geometry.Point
+import core.geometry.assertAlmostEquals
+import core.geometry.randomCircle
+import core.geometry.randomPoint
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

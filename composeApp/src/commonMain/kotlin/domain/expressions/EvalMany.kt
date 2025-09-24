@@ -1,11 +1,11 @@
 package domain.expressions
 
-import data.geometry.Circle
-import data.geometry.CircleOrLine
-import data.geometry.GCircle
-import data.geometry.GeneralizedCircle
-import data.geometry.Point
-import data.geometry.Rotor
+import core.geometry.Circle
+import core.geometry.CircleOrLine
+import core.geometry.GCircle
+import core.geometry.GeneralizedCircle
+import core.geometry.Point
+import core.geometry.Rotor
 import domain.never
 import domain.radians
 import kotlin.math.PI

@@ -2,15 +2,14 @@ package domain.io
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
-import data.geometry.Circle
-import data.geometry.CircleOrLine
-import data.geometry.Line
+import core.geometry.Circle
+import core.geometry.CircleOrLine
+import core.geometry.Line
 import domain.ColorCssSerializer
 import domain.cluster.Cluster
 import domain.cluster.LogicalRegion
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ui.theme.DodeclustersColors
 
@@ -88,7 +87,7 @@ data class DdcV2(
             /** circle indices used shall be Ddc-global circle indices, the one consistent with cluster.indices and circle.index */
             val rule: List<Int> = DEFAULT_CIRCLE_RULE,
         ) : Token() {
-            fun toCircle(): data.geometry.Circle =
+            fun toCircle(): core.geometry.Circle =
                 Circle(x, y, radius, isCCW)
         }
         @SerialName("Line")
@@ -105,7 +104,7 @@ data class DdcV2(
              * the one consistent with cluster.indices and circle.index */
             val rule: List<Int> = DEFAULT_CIRCLE_RULE,
         ) : Token() {
-            fun toLine(): data.geometry.Line =
+            fun toLine(): core.geometry.Line =
                 Line(a, b, c)
         }
     }

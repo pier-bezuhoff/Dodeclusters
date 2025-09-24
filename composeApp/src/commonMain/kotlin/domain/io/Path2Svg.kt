@@ -3,8 +3,8 @@ package domain.io
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathIterator
 import androidx.compose.ui.graphics.PathSegment
-import data.geometry.Point
-import data.geometry.calculateAngle
+import core.geometry.Point
+import core.geometry.calculateAngle
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.tan

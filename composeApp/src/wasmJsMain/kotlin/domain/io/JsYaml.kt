@@ -1,4 +1,5 @@
 @file:JsModule("js-yaml")
+@file:OptIn(ExperimentalWasmJsInterop::class)
 
 package domain.io
 

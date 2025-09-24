@@ -1,11 +1,11 @@
 package domain.expressions
 
 import androidx.compose.ui.geometry.Offset
-import data.geometry.Circle
-import data.geometry.assertAlmostEquals
-import data.geometry.randomCircle
-import data.geometry.randomLine
-import data.geometry.randomPoint
+import core.geometry.Circle
+import core.geometry.assertAlmostEquals
+import core.geometry.randomCircle
+import core.geometry.randomLine
+import core.geometry.randomPoint
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

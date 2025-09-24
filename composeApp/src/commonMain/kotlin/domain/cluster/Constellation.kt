@@ -1,15 +1,14 @@
 package domain.cluster
 
 import androidx.compose.runtime.Immutable
-import data.geometry.Circle
-import data.geometry.Point
+import core.geometry.Circle
+import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
 import domain.expressions.Expr
 import domain.expressions.Expression
 import domain.expressions.ObjectConstruct
 import domain.expressions.reIndex
-import domain.filterIndices
 import kotlinx.serialization.Serializable
 
 // aka ClusterV3.2

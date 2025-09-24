@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalWasmJsInterop::class)
+
 package domain.io
 
 import androidx.compose.foundation.BorderStroke

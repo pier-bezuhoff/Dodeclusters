@@ -2,7 +2,7 @@ package domain.cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
-import data.geometry.Circle
+import core.geometry.Circle
 import domain.ColorCssSerializer
 import domain.io.DdcV2
 import kotlinx.serialization.Serializable

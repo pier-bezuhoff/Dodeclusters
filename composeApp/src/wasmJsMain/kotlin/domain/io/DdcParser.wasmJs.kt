@@ -1,8 +1,10 @@
+@file:OptIn(ExperimentalWasmJsInterop::class)
+
 package domain.io
 
 import androidx.compose.ui.graphics.Color
-import data.geometry.Circle
-import data.geometry.Line
+import core.geometry.Circle
+import core.geometry.Line
 import domain.ColorCssSerializer
 import domain.ColorULongSerializer
 import domain.cluster.LogicalRegion

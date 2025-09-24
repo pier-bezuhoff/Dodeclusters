@@ -1,11 +1,9 @@
 package domain.expressions
 
-import data.geometry.Circle
-import data.geometry.GCircle
-import data.geometry.Point
+import core.geometry.Circle
+import core.geometry.GCircle
+import core.geometry.Point
 import domain.cluster.Constellation
-import kotlin.math.exp
-import kotlin.math.pow
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

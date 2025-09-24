@@ -1,6 +1,9 @@
+@file:OptIn(ExperimentalWasmJsInterop::class)
+
 import domain.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.storage.storeOf
+import kotlinx.browser.window
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -62,12 +65,9 @@ enum class UnderlyingPlatform {
     MAC,
 }
 
-private fun getAppVersion(): String =
-    js("navigator.appVersion")
-
 // reference: https://stackoverflow.com/a/35246221/7143065
 private fun detectUnderlyingPlatform(): UnderlyingPlatform {
-    val appVersion = getAppVersion()
+    val appVersion = window.navigator.appVersion
     return when {
         appVersion.contains("Win", ignoreCase = true) ->
             UnderlyingPlatform.WINDOWS

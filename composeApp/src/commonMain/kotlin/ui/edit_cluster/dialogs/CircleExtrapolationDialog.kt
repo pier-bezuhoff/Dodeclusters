@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import data.geometry.CircleOrLine
+import core.geometry.CircleOrLine
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_left_prompt1
 import dodeclusters.composeapp.generated.resources.circle_extrapolation_left_prompt2

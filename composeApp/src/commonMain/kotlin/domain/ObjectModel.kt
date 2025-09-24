@@ -4,12 +4,12 @@ import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import data.geometry.Circle
-import data.geometry.GCircle
-import data.geometry.ImaginaryCircle
-import data.geometry.Line
-import data.geometry.Point
-import data.geometry.scaled00
+import core.geometry.Circle
+import core.geometry.GCircle
+import core.geometry.ImaginaryCircle
+import core.geometry.Line
+import core.geometry.Point
+import core.geometry.scaled00
 import domain.expressions.Expr
 import domain.expressions.ExpressionForest
 

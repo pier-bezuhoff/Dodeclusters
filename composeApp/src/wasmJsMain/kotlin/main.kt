@@ -1,7 +1,9 @@
+@file:OptIn(ExperimentalWasmJsInterop::class)
+
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.CanvasBasedWindow
-import androidx.compose.ui.window.ComposeViewport
 import kotlinx.browser.document
+import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -21,7 +23,7 @@ import ui.theme.DEFAULT_COLOR_THEME
 fun main() {
     // example:
     // https://pier-bezuhoff.github.io/Dodeclusters?theme=dark&sample=apollonius
-    val url = getCurrentURL()
+    val url = URL(window.location.href)
     val sampleName: String? = url.searchParams.get("sample")
     val colorTheme: ColorTheme = when (url.searchParams.get("theme")?.lowercase()) {
         "light" -> ColorTheme.LIGHT
@@ -104,9 +106,6 @@ private fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction? =
     } else if (event.code == "Slash" && event.shiftKey)
         KeyboardAction.HELP
     else null
-
-private fun getCurrentURL(): URL =
-    js("new URL(window.location.href)")
 
 fun alert(message: String): Unit =
     js("alert(message)")

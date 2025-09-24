@@ -57,14 +57,13 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import data.geometry.CircleOrLine
-import data.geometry.ImaginaryCircle
-import data.geometry.Point
+import core.geometry.CircleOrLine
+import core.geometry.ImaginaryCircle
+import core.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.add_circle
 import dodeclusters.composeapp.generated.resources.cancel

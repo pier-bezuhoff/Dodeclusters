@@ -1,4 +1,4 @@
-package data.geometry
+package core.geometry
 
 import androidx.compose.ui.geometry.Offset
 import kotlin.test.Test

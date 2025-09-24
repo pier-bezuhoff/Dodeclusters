@@ -1,7 +1,7 @@
 package domain.expressions.deprecated
 
 import androidx.compose.runtime.Immutable
-import data.geometry.CircleOrLine
+import core.geometry.CircleOrLine
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

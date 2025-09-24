@@ -1,4 +1,4 @@
-package data.geometry
+package core.geometry
 
 import kotlin.math.abs
 

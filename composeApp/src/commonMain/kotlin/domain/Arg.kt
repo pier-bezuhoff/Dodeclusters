@@ -2,8 +2,8 @@ package domain
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
-import data.geometry.GCircle
-import data.geometry.Point
+import core.geometry.GCircle
+import core.geometry.Point
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -43,7 +43,7 @@ sealed interface Arg {
     sealed interface Point : LP
     /** non-indexed [Point] with fixed coordinates (XY or infinity) */
     sealed interface FixedPoint : Point {
-        fun toPoint(): data.geometry.Point
+        fun toPoint(): core.geometry.Point
     }
 
     data class CircleIndex(override val index: Ix) : Circle, Index {
@@ -76,13 +76,13 @@ sealed interface Arg {
     ) : FixedPoint {
         override val type: Type.Point = Companion
 
-        constructor(point: data.geometry.Point) :
+        constructor(point: core.geometry.Point) :
             this(point.x, point.y)
 
         fun toOffset(): Offset =
             Offset(x.toFloat(), y.toFloat())
 
-        override fun toPoint(): data.geometry.Point =
+        override fun toPoint(): core.geometry.Point =
             Point(x, y)
 
         @Serializable
@@ -95,8 +95,8 @@ sealed interface Arg {
     object InfinitePoint : FixedPoint, Type.Point {
         override val type: Type.Point = InfinitePoint
 
-        override fun toPoint(): data.geometry.Point =
-            data.geometry.Point.CONFORMAL_INFINITY
+        override fun toPoint(): core.geometry.Point =
+            core.geometry.Point.CONFORMAL_INFINITY
     }
 
     data class Indices(val indices: List<Ix>) : Arg {
@@ -112,10 +112,10 @@ sealed interface Arg {
         @Suppress("FunctionName")
         fun IndexOf(index: Ix, obj: GCircle): Arg.Index =
             when (obj) {
-                is data.geometry.Circle -> CircleIndex(index)
-                is data.geometry.Line -> LineIndex(index)
-                is data.geometry.ImaginaryCircle -> ImaginaryCircleIndex(index)
-                is data.geometry.Point -> PointIndex(index)
+                is core.geometry.Circle -> CircleIndex(index)
+                is core.geometry.Line -> LineIndex(index)
+                is core.geometry.ImaginaryCircle -> ImaginaryCircleIndex(index)
+                is core.geometry.Point -> PointIndex(index)
             }
 
         fun testInequality(arg1: Arg, arg2: Arg): Boolean =

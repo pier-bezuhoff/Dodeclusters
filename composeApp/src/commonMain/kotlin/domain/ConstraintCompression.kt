@@ -1,12 +1,11 @@
 package domain
 
-import data.geometry.Circle
-import data.geometry.CircleOrLine
-import data.geometry.EPSILON
-import data.geometry.Line
-import data.geometry.Point
-import data.geometry.RegionPointLocation
-import domain.cluster.ArcPath
+import core.geometry.Circle
+import core.geometry.CircleOrLine
+import core.geometry.EPSILON
+import core.geometry.Line
+import core.geometry.Point
+import core.geometry.RegionPointLocation
 import domain.cluster.ClosedArcPath
 
 /** [ins] and [outs] delimiters must not contain `null` circles */

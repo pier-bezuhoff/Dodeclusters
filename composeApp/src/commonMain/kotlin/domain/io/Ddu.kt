@@ -37,8 +37,8 @@ class Ddu(
     ) {
         val offset: Offset
             get() = Offset(x.toFloat(), y.toFloat())
-        fun toCircle(): data.geometry.Circle =
-            data.geometry.Circle(x, y, radius)
+        fun toCircle(): core.geometry.Circle =
+            core.geometry.Circle(x, y, radius)
     }
 
     val autoCenter: Offset

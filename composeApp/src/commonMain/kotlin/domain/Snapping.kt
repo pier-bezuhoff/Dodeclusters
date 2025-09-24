@@ -2,15 +2,15 @@ package domain
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Rect
-import data.geometry.Circle
-import data.geometry.CircleOrLine
-import data.geometry.CircleOrLineOrPoint
-import data.geometry.EPSILON
-import data.geometry.Line
-import data.geometry.Point
-import data.geometry.closestPerpendicularPoint
-import data.geometry.perpendicularDistance
-import data.geometry.translatedUntilTangency
+import core.geometry.Circle
+import core.geometry.CircleOrLine
+import core.geometry.CircleOrLineOrPoint
+import core.geometry.EPSILON
+import core.geometry.Line
+import core.geometry.Point
+import core.geometry.closestPerpendicularPoint
+import core.geometry.perpendicularDistance
+import core.geometry.translatedUntilTangency
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max

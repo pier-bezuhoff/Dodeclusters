@@ -1,11 +1,11 @@
 package domain
 
 import androidx.compose.ui.geometry.Offset
-import data.geometry.Circle
-import data.geometry.GCircle
-import data.geometry.ImaginaryCircle
-import data.geometry.Line
-import data.geometry.Point
+import core.geometry.Circle
+import core.geometry.GCircle
+import core.geometry.ImaginaryCircle
+import core.geometry.Line
+import core.geometry.Point
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update

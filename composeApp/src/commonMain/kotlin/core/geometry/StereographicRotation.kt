@@ -1,4 +1,4 @@
-package data.geometry
+package core.geometry
 
 import domain.radians
 import domain.squareSum

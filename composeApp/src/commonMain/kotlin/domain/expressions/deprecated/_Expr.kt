@@ -1,9 +1,9 @@
 package domain.expressions.deprecated
 
 import androidx.compose.runtime.Immutable
-import data.geometry.CircleOrLine
-import data.geometry.GCircle
-import data.geometry.Point
+import core.geometry.CircleOrLine
+import core.geometry.GCircle
+import core.geometry.Point
 import domain.expressions.ExtrapolationParameters
 import domain.expressions.IncidenceParameters
 import domain.expressions.InterpolationParameters
@@ -19,8 +19,6 @@ import domain.expressions.computeIncidence
 import domain.expressions.computeIntersection
 import domain.expressions.computeLineBy2Points
 import domain.expressions.computeLoxodromicMotion
-import domain.expressions.deprecated._Expr.OneToMany
-import domain.expressions.deprecated._Expr.OneToOne
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

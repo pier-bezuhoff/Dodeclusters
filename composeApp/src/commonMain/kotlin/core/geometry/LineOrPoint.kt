@@ -1,3 +1,3 @@
-package data.geometry
+package core.geometry
 
 sealed interface LineOrPoint : CircleOrLineOrPoint

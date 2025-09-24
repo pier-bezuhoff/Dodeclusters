@@ -1,9 +1,9 @@
 package domain.cluster
 
 import androidx.compose.runtime.Immutable
-import data.geometry.Circle
-import data.geometry.CircleOrLine
-import data.geometry.Line
+import core.geometry.Circle
+import core.geometry.CircleOrLine
+import core.geometry.Line
 import domain.expressions.ObjectConstruct
 import kotlinx.serialization.Serializable
 

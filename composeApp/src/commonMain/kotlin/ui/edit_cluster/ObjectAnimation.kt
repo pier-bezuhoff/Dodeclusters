@@ -2,8 +2,8 @@ package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
-import data.geometry.CircleOrLine
-import data.geometry.GCircle
+import core.geometry.CircleOrLine
+import core.geometry.GCircle
 import domain.ColorAsCss
 import kotlinx.serialization.Serializable
 import ui.theme.DodeclustersColors

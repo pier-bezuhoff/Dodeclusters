@@ -1,4 +1,4 @@
-package data.geometry
+package core.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset

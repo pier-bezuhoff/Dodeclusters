@@ -32,10 +32,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import data.geometry.GCircle
-import data.geometry.GeneralizedCircle
-import data.geometry.Line
-import data.geometry.Point
+import core.geometry.GCircle
+import core.geometry.GeneralizedCircle
+import core.geometry.Line
+import core.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt1
 import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt2_variant1

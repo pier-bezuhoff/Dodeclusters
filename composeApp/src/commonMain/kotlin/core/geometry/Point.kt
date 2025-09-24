@@ -1,11 +1,11 @@
-package data.geometry
+package core.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isFinite
-import data.geometry.RegionPointLocation.BORDERING
-import data.geometry.RegionPointLocation.IN
-import data.geometry.RegionPointLocation.OUT
+import core.geometry.RegionPointLocation.BORDERING
+import core.geometry.RegionPointLocation.IN
+import core.geometry.RegionPointLocation.OUT
 import domain.radians
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

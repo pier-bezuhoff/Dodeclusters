@@ -1,4 +1,4 @@
-package data.geometry
+package core.geometry
 
 import kotlin.test.Test
 import kotlin.test.assertFalse

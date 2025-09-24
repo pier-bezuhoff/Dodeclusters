@@ -1,12 +1,12 @@
 @file:Suppress("NOTHING_TO_INLINE")
 
-package data.geometry
+package core.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
-import data.kmath_complex.ComplexField
-import data.kmath_complex.r
-import data.kmath_complex.r2
+import core.kmath_complex.ComplexField
+import core.kmath_complex.r
+import core.kmath_complex.r2
 import domain.TAU
 import domain.degrees
 import domain.never

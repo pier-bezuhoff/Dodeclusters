@@ -2,8 +2,8 @@ package ui.edit_cluster
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
-import data.geometry.CircleOrLine
-import data.geometry.Point
+import core.geometry.CircleOrLine
+import core.geometry.Point
 import domain.Ix
 import domain.cluster.LogicalRegion
 import domain.expressions.Expr

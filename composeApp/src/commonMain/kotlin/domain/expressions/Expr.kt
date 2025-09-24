@@ -1,11 +1,11 @@
 package domain.expressions
 
 import androidx.compose.runtime.Immutable
-import data.geometry.Circle
-import data.geometry.CircleOrLine
-import data.geometry.GCircle
-import data.geometry.Line
-import data.geometry.Point
+import core.geometry.Circle
+import core.geometry.CircleOrLine
+import core.geometry.GCircle
+import core.geometry.Line
+import core.geometry.Point
 import domain.Ix
 import domain.expressions.Expr.BiInversion
 import domain.expressions.Expr.CircleBy2PointsAndSagittaRatio
