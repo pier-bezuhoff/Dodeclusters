@@ -10,8 +10,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.awt.AwtWindow
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.window.AwtWindow
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.open_file
 import kotlinx.coroutines.Dispatchers

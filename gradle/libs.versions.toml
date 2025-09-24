@@ -1,34 +1,37 @@
 [versions]
-dodeclusters-version = "0.4.3"
-dodeclusters-android-versionCode = "8"
-dodeclusters-desktop-packageVersion = "1.0.4" # cannot start with 0 it seems
-android-compileSdk = "35"
+dodeclusters-version = "0.4.4"
+dodeclusters-android-versionCode = "9"
+dodeclusters-desktop-packageVersion = "1.0.5" # cannot start with 0 it seems
+android-compileSdk = "36"
 android-minSdk = "24" # = Android 7.0 Nougat
-android-targetSdk = "35"
+android-targetSdk = "36"
 
-kotlin = "2.1.21"
+kotlin = "2.2.20"
 # consult kmp-agp compatibility table:
 # https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility
 #noinspection AndroidGradlePluginVersion
-agp = "8.7.2"
-compose-multiplatform = "1.8.0"
+agp = "8.10.1"
+compose-multiplatform = "1.9.0"
 # check compose-multiplatform/release for version compatibility:
 # https://github.com/JetBrains/compose-multiplatform/releases/latest
 #noinspection GradleDependency
-jetpack-compose = "1.8.0"
-kotlinx-serialization = "1.8.1"
+jetpack-compose = "1.9.0"
+# m3 versioning is (temporarily) decoupled from compose
+# https://github.com/JetBrains/compose-multiplatform/releases/tag/v1.9.0
+material3 = "1.9.0-beta06"
+lifecycle-viewmodel = "2.9.4"
+kotlinx-serialization = "1.9.0"
 kotlinx-coroutines = "1.10.2"
-androidx-activityCompose = "1.10.1"
+androidx-activityCompose = "1.11.0"
 material-icons = "1.7.3"
-androidx-core-ktx = "1.16.0"
-lifecycle-viewmodel = "2.9.0-beta01"
+androidx-core-ktx = "1.17.0"
 window-size-klass = "0.5.0"
 colormath = "3.6.1"
-kaml = "0.78.0"
-kstore = "0.9.1"
-appdirs = "1.2.0"
+kaml = "0.96.0"
+kstore = "1.0.0"
+appdirs = "2.0.0"
 accompanist = "0.37.3"
-collection = "1.5.0"
+#collection = "1.5.0"
 
 [libraries]
 compose-ui-graphics = { module = "org.jetbrains.compose.ui:ui-graphics", version.ref = "compose-multiplatform" }
@@ -39,6 +42,7 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 compose-material-icons = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "material-icons" }
 # official window-size-class is still worse
 #compose-material3-window-size-klass = { module = "org.jetbrains.compose.material3:material3-window-size-class", version.ref = "material3" }
@@ -52,12 +56,12 @@ kstore-file = { module = "io.github.xxfast:kstore-file", version.ref = "kstore" 
 kstore-storage = { module = "io.github.xxfast:kstore-storage", version.ref = "kstore" }
 appdirs = { module = "ca.gosyer:kotlin-multiplatform-appdirs", version.ref = "appdirs" }
 accompanist = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist" }
-collection = { module = "androidx.collection:collection", version.ref = "collection" }
+#collection = { module = "androidx.collection:collection", version.ref = "collection" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

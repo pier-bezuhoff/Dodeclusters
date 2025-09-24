@@ -1,5 +1,6 @@
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.CanvasBasedWindow
+import androidx.compose.ui.window.ComposeViewport
 import kotlinx.browser.document
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +53,10 @@ fun main() {
     loadingSpinner?.remove()
     document.querySelector("h2")?.setAttribute("style", "display: none;")
     document.querySelector("h1")?.setAttribute("style", "display: none;")
-    CanvasBasedWindow(canvasElementId = "ComposeTarget") {
+    ComposeViewport(
+        viewportContainerId = "ComposeTarget",
+    ) {
+//    CanvasBasedWindow(canvasElementId = "ComposeTarget") {
         App(
             sampleName = sampleName,
             colorTheme = colorTheme,

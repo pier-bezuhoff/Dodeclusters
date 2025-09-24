@@ -337,9 +337,6 @@ fun OnOffButton(
     }
 }
 
-// BUG: on Android this triggers exit from the immersive mode
-//  because of popup realization, more here:
-// https://androidx.tech/artifacts/compose.material3/material3-android/1.3.0-source/androidMain/androidx/compose/material3/internal/BasicTooltip.android.kt.html
 /**
  * NOTE: if you use `Modifier.offset(...)` on the [content], instead wrap [WithTooltip] in
  *  a [Box] with that offset for proper tooltip positioning
@@ -357,10 +354,12 @@ fun WithTooltip(
     // NOTE: ironically tooltips work much better on desktop/in browser than
     //  on android (since it requires hover vs long-press there)
     TooltipBox(
+//        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+//            positioning = TooltipAnchorPosition.Above,
+//        ),
         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(
             spacingBetweenTooltipAndAnchor = 8.dp
-        )
-        ,
+        ),
         tooltip = {
             PlainTooltip(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
