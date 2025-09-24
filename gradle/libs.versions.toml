@@ -4,22 +4,19 @@ dodeclusters-android-versionCode = "9"
 dodeclusters-desktop-packageVersion = "1.0.5" # cannot start with 0 it seems
 android-compileSdk = "36"
 android-minSdk = "24" # = Android 7.0 Nougat
-android-targetSdk = "36"
+android-targetSdk = "36" # = Android 16
 
 kotlin = "2.2.20"
 # consult kmp-agp compatibility table:
 # https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility
 #noinspection AndroidGradlePluginVersion
 agp = "8.10.1"
-compose-multiplatform = "1.9.0"
+compose-multiplatform = "1.8.2"
 # check compose-multiplatform/release for version compatibility:
 # https://github.com/JetBrains/compose-multiplatform/releases/latest
 #noinspection GradleDependency
-jetpack-compose = "1.9.0"
-# m3 versioning is (temporarily) decoupled from compose
-# https://github.com/JetBrains/compose-multiplatform/releases/tag/v1.9.0
-material3 = "1.9.0-beta06"
-lifecycle-viewmodel = "2.9.4"
+jetpack-compose = "1.8.2"
+lifecycle-viewmodel = "2.9.1"
 kotlinx-serialization = "1.9.0"
 kotlinx-coroutines = "1.10.2"
 androidx-activityCompose = "1.11.0"
@@ -42,7 +39,7 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
-compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
+#compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 compose-material-icons = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "material-icons" }
 # official window-size-class is still worse
 #compose-material3-window-size-klass = { module = "org.jetbrains.compose.material3:material3-window-size-class", version.ref = "material3" }

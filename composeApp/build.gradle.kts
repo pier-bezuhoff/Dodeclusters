@@ -78,7 +78,6 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
-//            implementation(libs.compose.material3)
             implementation(compose.ui)
             implementation(compose.components.uiToolingPreview)
             implementation(compose.components.resources)
@@ -91,7 +90,6 @@ kotlin {
             implementation(libs.colormath)
             implementation(libs.kaml)
             implementation(libs.kstore)
-//            implementation(libs.collection)
         }
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)

@@ -53,10 +53,8 @@ fun main() {
     loadingSpinner?.remove()
     document.querySelector("h2")?.setAttribute("style", "display: none;")
     document.querySelector("h1")?.setAttribute("style", "display: none;")
-    ComposeViewport(
-        viewportContainerId = "ComposeTarget",
-    ) {
-//    CanvasBasedWindow(canvasElementId = "ComposeTarget") {
+//    ComposeViewport(viewportContainerId = "ComposeTarget") {
+    CanvasBasedWindow(canvasElementId = "ComposeTarget") {
         App(
             sampleName = sampleName,
             colorTheme = colorTheme,
