@@ -1,5 +1,6 @@
 package domain
 
+// TODO: recent history (~10 commands) should not collapse
 // MAYBE: additionally collapse same-tag different-targets when history buffer overflows
 // TODO: create tests
 // MAYBE: reset lastCommandTag every VM.onUp

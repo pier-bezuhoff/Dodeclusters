@@ -264,9 +264,7 @@ class EditClusterViewModel : ViewModel() {
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
 
-    private val _animations: MutableSharedFlow<ObjectAnimation> = MutableSharedFlow()
-    // i'll be real this stupid practice is annoying and ugly & a hack
-    val animations: SharedFlow<ObjectAnimation> = _animations.asSharedFlow()
+    val animations: MutableSharedFlow<ObjectAnimation> = MutableSharedFlow()
 
     val snackbarMessages: MutableSharedFlow<Pair<SnackbarMessage, String>> =
         MutableSharedFlow(
@@ -676,7 +674,7 @@ class EditClusterViewModel : ViewModel() {
             objectModel.addObjects(normalizedGCircles)
             selection = (prevSize until objects.size).filter { objects[it] != null }
             viewModelScope.launch {
-                _animations.emit(
+                animations.emit(
                     CircleAnimation.Entrance(validNewGCircles.filterIsInstance<CircleOrLine>())
                 )
             }
@@ -729,7 +727,7 @@ class EditClusterViewModel : ViewModel() {
         objectModel.invalidate()
         circleAnimationInit(newObjects.filterIsInstance<CircleOrLine>())?.let { circleAnimation ->
             viewModelScope.launch {
-                _animations.emit(circleAnimation)
+                animations.emit(circleAnimation)
             }
         }
     }
@@ -854,7 +852,7 @@ class EditClusterViewModel : ViewModel() {
         }
         circleAnimationInit(ix2circle.map { it.second })?.let { circleAnimation ->
             viewModelScope.launch {
-                _animations.emit(circleAnimation)
+                animations.emit(circleAnimation)
             }
         }
     }
@@ -962,7 +960,7 @@ class EditClusterViewModel : ViewModel() {
             val deletedCircles = deletedCircleIndices.mapNotNull { objects[it] as? CircleOrLine }
             circleAnimationInit(deletedCircles)?.let { circleAnimation ->
                 viewModelScope.launch {
-                    _animations.emit(circleAnimation)
+                    animations.emit(circleAnimation)
                 }
             }
         }
@@ -2748,7 +2746,7 @@ class EditClusterViewModel : ViewModel() {
         }.distinct().mapNotNull { objects[it] }
         if (allParents.isNotEmpty()) {
             viewModelScope.launch {
-                _animations.emit(HighlightAnimation(allParents))
+                animations.emit(HighlightAnimation(allParents))
             }
         }
     }
