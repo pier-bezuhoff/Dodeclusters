@@ -3,6 +3,7 @@ package domain
 import androidx.compose.ui.graphics.Color
 import core.geometry.GCircle
 import domain.Change.Transformation
+import domain.cluster.LogicalRegion
 
 /** User-produced changes to the Ddc state */
 sealed interface Change {
@@ -37,6 +38,9 @@ sealed interface LocalChange : Change {
     data class Expression(val index: Ix, val expression: domain.expressions.Expression?) : LocalChange, Diff
     data class Color(val index: Ix, val color: androidx.compose.ui.graphics.Color?) : LocalChange, Diff
     data class Label(val index: Ix, val label: String?) : LocalChange, Diff
+
+    data class CreateRegion(val region: LogicalRegion) : LocalChange, Diff
+    data class DeleteRegion(val index: Ix) : LocalChange, Diff
 }
 
 sealed interface GlobalChange : Change, Diff {

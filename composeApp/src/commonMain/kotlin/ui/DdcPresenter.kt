@@ -12,6 +12,7 @@ import domain.cluster.LogicalRegion
 import domain.io.DdcV2
 import kotlin.math.exp
 
+// NOTE: unused
 // naked top-level circle = cluster with 1 part = [this circle]
 // Analogue to Dodeca Meditation's CircleGroup
 // TODO: use projective circle representation that would also

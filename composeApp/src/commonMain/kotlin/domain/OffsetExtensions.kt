@@ -19,9 +19,11 @@ import kotlin.math.sin
 @Suppress("NOTHING_TO_INLINE")
 inline fun Offset.rotateBy(angle: Float): Offset {
     val angleInRadians = angle * PI / 180
+    val cosine = cos(angleInRadians)
+    val sine = sin(angleInRadians)
     return Offset(
-        (x * cos(angleInRadians) - y * sin(angleInRadians)).toFloat(),
-        (x * sin(angleInRadians) + y * cos(angleInRadians)).toFloat()
+        (x * cosine - y * sine).toFloat(),
+        (x * sine + y * cosine).toFloat()
     )
 }
 
@@ -34,13 +36,6 @@ inline fun Offset.rotateBy(angle: Float): Offset {
 @Suppress("NOTHING_TO_INLINE")
 inline fun Offset.rotateByAround(angle: Float, pivot: Offset): Offset =
     (this - pivot).rotateBy(angle) + pivot
-
-fun Offset.rotateBy(angleCos: Double, angleSin: Double): Offset {
-    return Offset(
-        (x * angleCos - y * angleSin).toFloat(),
-        (x * angleSin + y * angleCos).toFloat()
-    )
-}
 
 fun Offset.angleDeg(other: Offset): Float =
     (atan2(
