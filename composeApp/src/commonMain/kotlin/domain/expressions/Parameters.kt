@@ -2,7 +2,6 @@ package domain.expressions
 
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 // numeric values used, from the dialog or somewhere else
 @Immutable

@@ -1,4 +1,4 @@
-package domain
+package domain.settings
 
 enum class InversionOfControl {
     /** All non-free, non-constrained objects are locked */

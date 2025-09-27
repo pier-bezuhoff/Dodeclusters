@@ -35,7 +35,7 @@ import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.blend_settings_opacity_prompt
 import dodeclusters.composeapp.generated.resources.blend_settings_title
-import domain.BlendModeType
+import domain.settings.BlendModeType
 import domain.formatDecimals
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource

@@ -1,6 +1,7 @@
-package domain
+package domain.settings
 
 import androidx.compose.runtime.Immutable
+import domain.ColorAsCss
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import ui.edit_cluster.ToolbarState

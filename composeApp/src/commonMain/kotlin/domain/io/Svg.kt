@@ -7,7 +7,7 @@ import core.geometry.CircleOrLine
 import core.geometry.GCircle
 import core.geometry.Line
 import core.geometry.Point
-import domain.ChessboardPattern
+import domain.settings.ChessboardPattern
 import domain.ColorCssSerializer
 import domain.Ix
 import domain.cluster.Constellation

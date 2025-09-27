@@ -1,4 +1,4 @@
-import domain.Settings
+import domain.settings.Settings
 import domain.io.getAppDataDir
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf

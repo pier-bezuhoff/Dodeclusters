@@ -1,4 +1,4 @@
-import domain.Settings
+import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import ui.edit_cluster.EditClusterViewModel
 

@@ -1,5 +1,5 @@
 import android.os.Build
-import domain.Settings
+import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
 import kotlinx.coroutines.DelicateCoroutinesApi

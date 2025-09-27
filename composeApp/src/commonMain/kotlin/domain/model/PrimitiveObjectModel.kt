@@ -1,4 +1,4 @@
-package domain
+package domain.model
 
 import androidx.compose.ui.geometry.Offset
 import core.geometry.Circle
@@ -6,9 +6,11 @@ import core.geometry.GCircle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
 import core.geometry.Point
+import domain.Ix
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.collections.iterator
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -23,6 +25,8 @@ import kotlin.math.sin
 // y: Double = normal y | b
 // z: Double = (x^2 + y^2 - r^2)/2 | c
 
+// This is definitely NOT premature optimization... right?
+
 private const val NULL_TYPE: Byte = 0
 private const val CIRCLE_CCW_TYPE: Byte = 1
 private const val CIRCLE_CW_TYPE: Byte = 2
@@ -30,7 +34,6 @@ private const val LINE_TYPE: Byte = 3
 private const val POINT_TYPE: Byte = 4
 private const val IMAGINARY_CIRCLE_TYPE: Byte = 5
 
-// This is definitely NOT premature optimization... right?
 /**
  * @property[size] size of [objectTypes]
  * @property[objectTypes] types of 3-element batches in [objectParameters]
@@ -115,8 +118,8 @@ class PrimitiveObjectModel {
 
     fun transformObjects(
         indices: List<Ix>,
-        translation: Offset = Offset.Zero,
-        focus: Offset = Offset.Unspecified,
+        translation: Offset = Offset.Companion.Zero,
+        focus: Offset = Offset.Companion.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
     ) {
@@ -127,7 +130,7 @@ class PrimitiveObjectModel {
         // unpacking Unspecified should result in 2 NaN's
         val (focusX, focusY) = focus
         val zoomD = zoom.toDouble()
-        val phi: Double = rotationAngle * PI/180.0
+        val phi: Double = rotationAngle * PI /180.0
         val cosPhi = cos(phi)
         val sinPhi = sin(phi)
         for (ix in indices) {
@@ -135,7 +138,7 @@ class PrimitiveObjectModel {
                 CIRCLE_CCW_TYPE, CIRCLE_CW_TYPE -> {
                     var x: Double = objectParameters[PARAMETERS_PER_OBJECT*ix] + dx
                     var y: Double = objectParameters[PARAMETERS_PER_OBJECT*ix + 1] + dy
-                    if (focus != Offset.Unspecified) {
+                    if (focus != Offset.Companion.Unspecified) {
                         // cmp. Offset.rotateBy & zoom and rotation are commutative
                         x -= focusX
                         y -= focusY
@@ -154,7 +157,7 @@ class PrimitiveObjectModel {
                     c = zoom*(a*focusX + b*focusY + c) // - a*focusX - b*focusY // added back when rotating
                     val a1 = a * cosPhi - b * sinPhi
                     val b1 = a * sinPhi + b * cosPhi
-                    c = (hypot(a1, b1)/hypot(a, b)) * c - a1*focusX - b1*focusY
+                    c = (hypot(a1, b1) / hypot(a, b)) * c - a1*focusX - b1*focusY
                     objectParameters[PARAMETERS_PER_OBJECT*ix] = a1
                     objectParameters[PARAMETERS_PER_OBJECT*ix + 1] = b1
                     objectParameters[PARAMETERS_PER_OBJECT*ix + 2] = c
@@ -162,7 +165,7 @@ class PrimitiveObjectModel {
                 POINT_TYPE -> {
                     var x: Double = objectParameters[PARAMETERS_PER_OBJECT*ix] + dx
                     var y: Double = objectParameters[PARAMETERS_PER_OBJECT*ix + 1] + dy
-                    if (focus != Offset.Unspecified) {
+                    if (focus != Offset.Companion.Unspecified) {
                         // cmp. Offset.rotateBy & zoom and rotation are commutative
                         x -= focusX
                         y -= focusY

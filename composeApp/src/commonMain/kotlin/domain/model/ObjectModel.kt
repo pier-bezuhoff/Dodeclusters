@@ -1,4 +1,4 @@
-package domain
+package domain.model
 
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.mutableIntStateOf
@@ -10,7 +10,8 @@ import core.geometry.ImaginaryCircle
 import core.geometry.Line
 import core.geometry.Point
 import core.geometry.scaled00
-import domain.expressions.Expr
+import domain.Ix
+import domain.PathCache
 import domain.expressions.ExpressionForest
 
 // MAYBE: additionally store GeneralizedCircle representations
@@ -20,8 +21,8 @@ import domain.expressions.ExpressionForest
  */
 class ObjectModel {
     /**
-     * All existing [GCircle]s; `null`s correspond either to unrealized outputs of
-     * [Expr.OneToMany], or to forever deleted objects (they have `null` `VM.expressions`),
+     * All existing [core.geometry.GCircle]s; `null`s correspond either to unrealized outputs of
+     * [domain.expressions.Expr.OneToMany], or to forever deleted objects (they have `null` `VM.expressions`),
      * or (rarely) to mismatching type casts.
      *
      * NOTE: don't forget to sync changes to [objects] with [downscaledObjects]
@@ -133,7 +134,7 @@ class ObjectModel {
     }
 
     fun getInfinityIndex(): Ix? {
-        val infinityIndex = objects.indexOfFirst { it == Point.CONFORMAL_INFINITY }
+        val infinityIndex = objects.indexOfFirst { it == Point.Companion.CONFORMAL_INFINITY }
         return if (infinityIndex == -1) {
             null
         } else infinityIndex
@@ -193,8 +194,8 @@ class ObjectModel {
     fun transform(
         expressions: ExpressionForest,
         targets: List<Ix>,
-        translation: Offset = Offset.Zero,
-        focus: Offset = Offset.Unspecified,
+        translation: Offset = Offset.Companion.Zero,
+        focus: Offset = Offset.Companion.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
     ) {
@@ -276,4 +277,3 @@ class ObjectModel {
             }
     }
 }
-

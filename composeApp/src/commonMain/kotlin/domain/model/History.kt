@@ -1,6 +1,7 @@
-package domain
+package domain.model
 
 // TODO: recent history (~10 commands) should not collapse
+//  BUT mark and immediately fuse continuous transformations (interrupt by onUp)
 // MAYBE: additionally collapse same-tag different-targets when history buffer overflows
 // TODO: create tests
 // MAYBE: reset lastCommandTag every VM.onUp

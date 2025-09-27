@@ -79,7 +79,7 @@ sealed interface SubMode {
     ) : SubMode { // allow it in Drag mode
 
         @Transient
-        val parameters = adjustables[0].expr.parameters
+        val parameters = (adjustables[0].expr as? Expr.HasParameters)?.parameters
 
         init {
             require(

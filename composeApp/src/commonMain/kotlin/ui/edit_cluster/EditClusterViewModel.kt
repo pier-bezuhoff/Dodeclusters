@@ -40,17 +40,17 @@ import core.geometry.selectWithRectangle
 import core.geometry.translationDelta
 import domain.Arg
 import domain.ArgType
-import domain.BlendModeType
-import domain.ChessboardPattern
+import domain.settings.BlendModeType
+import domain.settings.ChessboardPattern
 import domain.ColorAsCss
-import domain.Command
-import domain.History
-import domain.InversionOfControl
+import domain.model.Command
+import domain.model.History
+import domain.settings.InversionOfControl
 import domain.Ix
-import domain.ObjectModel
+import domain.model.ObjectModel
 import domain.PartialArgList
 import domain.PointSnapResult
-import domain.Settings
+import domain.settings.Settings
 import domain.angleDeg
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
@@ -97,8 +97,6 @@ import getPlatform
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -1734,6 +1732,9 @@ class EditClusterViewModel : ViewModel() {
 
     fun adjustExpr() {
         val expr = expressions.expressions[selection[0]]?.expr
+        if (expr !is Expr.HasParameters) {
+            return
+        }
         val outputIndices = expressions.findExpr(expr)
         val tool = when (expr) {
             is Expr.CircleInterpolation -> Tool.CircleOrPointInterpolation
@@ -1743,7 +1744,7 @@ class EditClusterViewModel : ViewModel() {
             is Expr.LoxodromicMotion -> Tool.LoxodromicMotion
             else -> null
         }
-        when (val params = expr?.parameters) {
+        when (val params = expr.parameters) {
             is InterpolationParameters ->
                 defaultInterpolationParameters = DefaultInterpolationParameters(params)
             is RotationParameters ->
@@ -1755,7 +1756,7 @@ class EditClusterViewModel : ViewModel() {
                 defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(params, bidirectional = false)
             else -> {}
         }
-        if (tool != null && expr != null) {
+        if (tool != null) {
             recordCreateCommand() // create savepoint to go back to on cancel
             partialArgList = when (expr) {
                 is Expr.CircleInterpolation ->

@@ -1,4 +1,4 @@
-package domain
+package domain.settings
 
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
@@ -10,4 +10,3 @@ enum class ChessboardPattern {
     STARTS_COLORED,
     STARTS_TRANSPARENT
 }
-

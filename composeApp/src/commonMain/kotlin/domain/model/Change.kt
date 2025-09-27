@@ -1,8 +1,10 @@
-package domain
+package domain.model
 
 import androidx.compose.ui.graphics.Color
 import core.geometry.GCircle
-import domain.Change.Transformation
+import domain.settings.ChessboardPattern
+import domain.Ix
+import domain.model.Change.Transformation
 import domain.cluster.LogicalRegion
 
 /** User-produced changes to the Ddc state */

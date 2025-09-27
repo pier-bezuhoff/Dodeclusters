@@ -1,6 +1,7 @@
-package domain
+package domain.model
 
 import androidx.compose.runtime.Immutable
+import domain.Ix
 
 /** used for grouping VM.UiState changes into batches for history keeping */
 @Immutable

@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
-import domain.Settings
+import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.storage.storeOf
 import kotlinx.browser.window

@@ -72,7 +72,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Arg
-import domain.ChessboardPattern
+import domain.settings.ChessboardPattern
 import domain.Ix
 import domain.PartialArgList
 import domain.PathCache

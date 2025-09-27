@@ -3,6 +3,7 @@ package domain.expressions
 import androidx.compose.runtime.Immutable
 import core.geometry.Circle
 import core.geometry.CircleOrLine
+import core.geometry.CirclePencilType
 import core.geometry.GCircle
 import core.geometry.Line
 import core.geometry.Point
@@ -30,22 +31,6 @@ import kotlinx.serialization.Transient
 
 typealias ExprResult = List<GCircle?>
 
-interface ExprLike {
-    val parameters: Parameters
-    // each arg can in turn be computed as an expression, making up Forest-like data structure
-    val args: List<Ix>
-}
-
-// workaround for kotlinx.serialization bug https://github.com/Kotlin/kotlinx.serialization/issues/2785
-private data class E(
-    override val parameters: Parameters,
-    override val args: List<Ix>
-) : ExprLike
-
-// thinking about it, interface delegation might introduce some performance bloat
-// MAYBE: accept the boilerplate and specify parameters and args as separate extension vals
-//  e.g. Expr.parameters: Parameters = when (this) { ... }
-//  and Expr.args: List<Ix> = when (this) { ... }
 /**
  * Raw expression that can have one or several outputs:
  * either [OneToOne] or [OneToMany]
@@ -55,12 +40,16 @@ private data class E(
  */
 @Immutable
 @Serializable
-sealed interface Expr : ExprLike {
+sealed interface Expr {
 
     @Serializable
     sealed interface OneToOne : Expr
     @Serializable
     sealed interface OneToMany : Expr
+    @Serializable
+    sealed interface HasParameters : Expr {
+        val parameters: Parameters
+    }
 
     /**
      * [Expr] that applies transformation to [target] object [nSteps] times
@@ -78,14 +67,14 @@ sealed interface Expr : ExprLike {
     data class Intersection(
         val circle1: Ix,
         val circle2: Ix,
-    ) : OneToMany, ExprLike by E(Parameters.None, listOf(circle1, circle2))
+    ) : OneToMany
 
     @Serializable
     @SerialName("CircleByCenterAndRadius")
     data class CircleByCenterAndRadius(
         val center: Ix,
         val radiusPoint: Ix
-    ) : OneToOne, ExprLike by E(Parameters.None, listOf(center, radiusPoint))
+    ) : OneToOne
 
     @Serializable
     @SerialName("CircleBy3PerpendicularObjects")
@@ -93,7 +82,7 @@ sealed interface Expr : ExprLike {
         val object1: Ix,
         val object2: Ix,
         val object3: Ix,
-    ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2, object3))
+    ) : OneToOne
 
     // TODO: replace with CircleBy3
     @Serializable
@@ -101,14 +90,14 @@ sealed interface Expr : ExprLike {
     data class LineBy2Points(
         val object1: Ix,
         val object2: Ix,
-    ) : OneToOne, ExprLike by E(Parameters.None, listOf(object1, object2))
+    ) : OneToOne
 
     @Serializable
     @SerialName("IncidentPoint")
     data class Incidence(
-        override val parameters: IncidenceParameters,
+        val parameters: IncidenceParameters,
         val carrier: Ix,
-    ) : OneToOne, ExprLike by E(parameters, listOf(carrier))
+    ) : OneToOne
 
     @Serializable
     @SerialName("CircleBy2ObjectsFromItsPencilAndPerpendicularObject")
@@ -116,30 +105,28 @@ sealed interface Expr : ExprLike {
         val pencilObject1: Ix,
         val pencilObject2: Ix,
         val perpendicularObject: Ix,
-    ) : OneToOne, ExprLike by E(Parameters.None, listOf(pencilObject1, pencilObject2, perpendicularObject))
+    ) : OneToOne
 
     @Serializable
     @SerialName("PolarLineByCircleAndPoint")
     data class PolarLineByCircleAndPoint(
         val circle: Ix,
         val point: Ix,
-    ) : OneToOne, ExprLike by E(Parameters.None, listOf(circle, point))
+    ) : OneToOne
 
     @Serializable
     @SerialName("PoleByCircleAndLine")
     data class PoleByCircleAndLine(
         val circle: Ix,
         val line: Ix,
-    ) : OneToOne, ExprLike by E(Parameters.None, listOf(circle, line))
+    ) : OneToOne
 
     @Serializable
     @SerialName("CircleInversion")
     data class CircleInversion(
         override val target: Ix,
         val engine: Ix,
-    ) : OneToOne
-    , ExprLike by E(Parameters.None, listOf(target, engine))
-    , TransformLike {
+    ) : OneToOne, TransformLike {
         @Transient
         override val nSteps: Int = 1
     }
@@ -150,7 +137,7 @@ sealed interface Expr : ExprLike {
         override val parameters: SagittaRatioParameters,
         val chordStartPoint: Ix,
         val chordEndPoint: Ix,
-    ) : OneToOne, ExprLike by E(parameters, listOf(chordStartPoint, chordEndPoint))
+    ) : OneToOne, HasParameters
 
     @Serializable
     @SerialName("CircleInterpolation")
@@ -158,7 +145,7 @@ sealed interface Expr : ExprLike {
         override val parameters: InterpolationParameters,
         val startCircle: Ix,
         val endCircle: Ix,
-    ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
+    ) : OneToMany, HasParameters
 
     @Serializable
     @SerialName("PointInterpolation")
@@ -166,7 +153,7 @@ sealed interface Expr : ExprLike {
         override val parameters: InterpolationParameters,
         val startPoint: Ix,
         val endPoint: Ix,
-    ) : OneToMany, ExprLike by E(parameters, listOf(startPoint, endPoint))
+    ) : OneToMany, HasParameters
 
     // NOTE: deprecated, since BiInversion is more general
     @Serializable
@@ -175,7 +162,7 @@ sealed interface Expr : ExprLike {
         override val parameters: ExtrapolationParameters,
         val startCircle: Ix,
         val endCircle: Ix,
-    ) : OneToMany, ExprLike by E(parameters, listOf(startCircle, endCircle))
+    ) : OneToMany, HasParameters
 
     @Serializable
     @SerialName("Rotation")
@@ -183,9 +170,7 @@ sealed interface Expr : ExprLike {
         override val parameters: RotationParameters,
         val pivot: Ix,
         override val target: Ix,
-    ) : OneToMany
-        , ExprLike by E(parameters, listOf(pivot, target))
-        , TransformLike {
+    ) : OneToMany, HasParameters, TransformLike {
         @Transient
         override val nSteps: Int = parameters.nSteps
     }
@@ -197,9 +182,7 @@ sealed interface Expr : ExprLike {
         val engine1: Ix,
         val engine2: Ix,
         override val target: Ix,
-    ) : OneToMany
-    , ExprLike by E(parameters, listOf(engine1, engine2, target))
-    , TransformLike {
+    ) : OneToMany, HasParameters, TransformLike {
         @Transient
         override val nSteps: Int = parameters.nSteps
     }
@@ -219,12 +202,31 @@ sealed interface Expr : ExprLike {
         val convergencePoint: Ix,
         override val target: Ix,
         val otherHalfStart: Ix? = null,
-    ) : OneToMany
-    , ExprLike by E(parameters, listOf(divergencePoint, convergencePoint, target))
-    , TransformLike {
+    ) : OneToMany, HasParameters, TransformLike {
         @Transient
         override val nSteps: Int = parameters.nSteps
     }
+
+    // each arg can in turn be computed as an expression, making up Forest-like data structure
+    val args: List<Ix> get() =
+        when (this) {
+            is Intersection -> listOf(circle1, circle2)
+            is CircleByCenterAndRadius -> listOf(center, radiusPoint)
+            is CircleBy3Points -> listOf(object1, object2, object3)
+            is LineBy2Points -> listOf(object1, object2)
+            is Incidence -> listOf(carrier)
+            is CircleByPencilAndPoint -> listOf(pencilObject1, pencilObject2, perpendicularObject)
+            is PolarLineByCircleAndPoint -> listOf(circle, point)
+            is PoleByCircleAndLine -> listOf(circle, line)
+            is CircleInversion -> listOf(target, engine)
+            is CircleBy2PointsAndSagittaRatio -> listOf(chordStartPoint, chordEndPoint)
+            is CircleInterpolation -> listOf(startCircle, endCircle)
+            is PointInterpolation -> listOf(startPoint, endPoint)
+            is CircleExtrapolation -> listOf(startCircle, endCircle)
+            is Rotation -> listOf(pivot, target)
+            is BiInversion -> listOf(engine1, engine2, target)
+            is LoxodromicMotion -> listOf(divergencePoint, convergencePoint, target)
+        }
 }
 
 // performance-wise variations between:
