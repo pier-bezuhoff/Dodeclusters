@@ -2,7 +2,6 @@
     <string name="app_name">Dodeclusters</string>
     <string name="stub">TBD</string>
     <!-- top toolbar -->
-    <string name="edit_cluster_title">Cluster editing</string>
     <string name="new_blank_name">New blank file</string>
     <string name="save_name">Save</string>
     <string name="save_cluster_name">Save as Dodeclusters file</string>

@@ -1,4 +1,4 @@
-package ui.edit_cluster
+package ui.editor
 
 import MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS
 import MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS
@@ -103,8 +103,8 @@ private val dottedPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
 // TODO: make colors dependent on light/dark scheme
 // NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
 @Composable
-fun BoxScope.EditClusterCanvas(
-    viewModel: EditClusterViewModel,
+fun BoxScope.EditorCanvas(
+    viewModel: EditorViewModel,
     modifier: Modifier = Modifier
 ) {
     // MAYBE: im supposed to remember { } all of these things (thatd be insane)
@@ -324,7 +324,7 @@ fun BoxScope.EditClusterCanvas(
 
 /**
  * Used to make a screenshot of the current state of [viewModel].
- * Recreates the content of [EditClusterCanvas] on screen, saving operations into a
+ * Recreates the content of [EditorCanvas] on screen, saving operations into a
  * graphics layer, and then queues async graphics-layer-to-bitmap conversion with
  * result to be emitted into [bitmapFlow].
  *
@@ -333,7 +333,7 @@ fun BoxScope.EditClusterCanvas(
  */
 @Composable
 fun ScreenshotableCanvas(
-    viewModel: EditClusterViewModel,
+    viewModel: EditorViewModel,
     bitmapFlow: MutableSharedFlow<ImageBitmap>,
     modifier: Modifier = Modifier
 ) {
@@ -792,7 +792,7 @@ private inline fun DrawScope.drawObjects(
     imaginaryCircleColor: Color,
     imaginaryCircleStroke: Stroke,
 ) {
-    val showImaginaryCircles = EditClusterViewModel.SHOW_IMAGINARY_CIRCLES
+    val showImaginaryCircles = EditorViewModel.SHOW_IMAGINARY_CIRCLES
     for (ix in objects.indices) {
         if (ix !in hiddenObjectIndices && (!selectionIsActive || ix !in selection)) {
             val objectColor = objectColors[ix]
@@ -845,7 +845,7 @@ private fun DrawScope.drawSelectedObjects(
 ) {
     val showPoints = selectionIsActive
     val showCircles = selectionIsActive || mode == SelectionMode.Region && restrictRegionsToSelection
-    val showImaginaryCircles = EditClusterViewModel.SHOW_IMAGINARY_CIRCLES
+    val showImaginaryCircles = EditorViewModel.SHOW_IMAGINARY_CIRCLES
     for (ix in selection) {
         val objectColor = objectColors[ix]
         when (val o = objects[ix]) {

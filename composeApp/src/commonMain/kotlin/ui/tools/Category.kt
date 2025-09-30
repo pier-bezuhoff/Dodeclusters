@@ -45,7 +45,7 @@ sealed class Category(
             Tool.RestrictRegionToSelection,
             Tool.DeleteAllParts,
             Tool.BlendSettings,
-            // EditClusterTool.AppliedColor's are auto-added
+            // Tool.AppliedColor's are auto-added
         ),
         defaultables = listOf(0, 1)
     ) // ~mode-like
@@ -55,7 +55,7 @@ sealed class Category(
             Tool.StereographicRotation,
             Tool.ToggleObjects,
             Tool.TogglePhantoms,
-//            EditClusterTool.ToggleFilledOrOutline,
+//            Tool.ToggleFilledOrOutline,
             Tool.ToggleDirectionArrows,
             Tool.HideUI,
             Tool.AddBackgroundImage,

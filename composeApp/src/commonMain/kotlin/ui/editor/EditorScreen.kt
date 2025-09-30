@@ -1,4 +1,4 @@
-package ui.edit_cluster
+package ui.editor
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -99,17 +99,17 @@ import ui.SimpleButton
 import ui.ThreeIconButton
 import ui.TwoIconButton
 import ui.WithTooltip
-import ui.edit_cluster.dialogs.BiInversionDialog
-import ui.edit_cluster.dialogs.BlendSettingsDialog
-import ui.edit_cluster.dialogs.CircleExtrapolationDialog
-import ui.edit_cluster.dialogs.CircleOrPointInterpolationDialog
-import ui.edit_cluster.dialogs.ColorPickerDialog
-import ui.edit_cluster.dialogs.DialogAction
-import ui.edit_cluster.dialogs.DialogType
-import ui.edit_cluster.dialogs.LabelInputDialog
-import ui.edit_cluster.dialogs.LoxodromicMotionDialog
-import ui.edit_cluster.dialogs.RotationDialog
-import ui.edit_cluster.dialogs.SaveOptionsDialog
+import ui.editor.dialogs.BiInversionDialog
+import ui.editor.dialogs.BlendSettingsDialog
+import ui.editor.dialogs.CircleExtrapolationDialog
+import ui.editor.dialogs.CircleOrPointInterpolationDialog
+import ui.editor.dialogs.ColorPickerDialog
+import ui.editor.dialogs.DialogAction
+import ui.editor.dialogs.DialogType
+import ui.editor.dialogs.LabelInputDialog
+import ui.editor.dialogs.LoxodromicMotionDialog
+import ui.editor.dialogs.RotationDialog
+import ui.editor.dialogs.SaveOptionsDialog
 import ui.isCompact
 import ui.isLandscape
 import ui.theme.DodeclustersColors
@@ -122,7 +122,7 @@ import kotlin.math.min
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-fun EditClusterScreen(
+fun EditorScreen(
     sampleName: String? = null,
     ddcContent: String? = null,
     keyboardActions: SharedFlow<KeyboardAction>? = null,
@@ -141,8 +141,8 @@ fun EditClusterScreen(
             else -> null
         }
     }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
-    val viewModel: EditClusterViewModel = viewModel(
-        factory = EditClusterViewModel.Factory
+    val viewModel: EditorViewModel = viewModel(
+        factory = EditorViewModel.Factory
     )
     val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
     viewModel.setEpsilon(LocalDensity.current)
@@ -196,7 +196,7 @@ fun EditClusterScreen(
                     }
                 }
             ) {
-                EditClusterCanvas(viewModel)
+                EditorCanvas(viewModel)
                 if (viewModel.showUI) {
                     ToolDescription(
                         tool = viewModel.toolbarState.activeTool,
@@ -208,7 +208,7 @@ fun EditClusterScreen(
                         setSelectionAsArg = viewModel::setActiveSelectionAsToolArg,
                         modifier = Modifier.align(Alignment.TopStart)
                     )
-                    EditClusterTopBar(
+                    EditorTopBar(
                         compact = compact,
                         undoIsEnabled = viewModel.undoIsEnabled,
                         redoIsEnabled = viewModel.redoIsEnabled,
@@ -613,7 +613,7 @@ fun ToolDescription(
 }
 
 @Composable
-fun EditClusterTopBar(
+fun EditorTopBar(
     compact: Boolean,
     undoIsEnabled: Boolean,
     redoIsEnabled: Boolean,
@@ -715,7 +715,7 @@ fun EditClusterTopBar(
 }
 
 @Composable
-private fun ToolbarPortrait(viewModel: EditClusterViewModel, compact: Boolean, modifier: Modifier = Modifier) {
+private fun ToolbarPortrait(viewModel: EditorViewModel, compact: Boolean, modifier: Modifier = Modifier) {
     Column(
         modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.Bottom,
@@ -746,7 +746,7 @@ private fun ToolbarPortrait(viewModel: EditClusterViewModel, compact: Boolean, m
 }
 
 @Composable
-private fun ToolbarLandscape(viewModel: EditClusterViewModel, compact: Boolean, modifier: Modifier = Modifier) {
+private fun ToolbarLandscape(viewModel: EditorViewModel, compact: Boolean, modifier: Modifier = Modifier) {
     Row(modifier,
         horizontalArrangement = Arrangement.Start
     ) {
@@ -780,7 +780,7 @@ private fun ToolbarLandscape(viewModel: EditClusterViewModel, compact: Boolean, 
 
 @Composable
 private fun BottomToolbar(
-    viewModel: EditClusterViewModel,
+    viewModel: EditorViewModel,
     compact: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -821,7 +821,7 @@ private fun BottomToolbar(
 
 @Composable
 private fun LeftToolbar(
-    viewModel: EditClusterViewModel,
+    viewModel: EditorViewModel,
     compact: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -879,7 +879,7 @@ private fun LeftToolbar(
 
 @Composable
 fun CategoryButton(
-    viewModel: EditClusterViewModel,
+    viewModel: EditorViewModel,
     category: Category,
     compact: Boolean = false,
     modifier: Modifier = Modifier,
@@ -965,7 +965,7 @@ private fun HorizontalPanel(
                 onClick = selectTool
             )
         }
-        if (activeCategory is Category.Region) { // || category is EditClusterCategory.Colors) {
+        if (activeCategory is Category.Region) { // || category is Category.Colors) {
             VerticalDivider(Modifier
                 .height(40.dp)
                 .padding(horizontal = 8.dp)

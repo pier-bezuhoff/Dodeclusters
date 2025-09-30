@@ -1,4 +1,4 @@
-package ui.edit_cluster
+package ui.editor
 
 import androidx.compose.runtime.Immutable
 import dodeclusters.composeapp.generated.resources.Res

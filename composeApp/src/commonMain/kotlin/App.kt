@@ -1,8 +1,8 @@
 import androidx.compose.runtime.Composable
 import kotlinx.coroutines.flow.SharedFlow
 import ui.LifecycleEvent
-import ui.edit_cluster.EditClusterScreen
-import ui.edit_cluster.KeyboardAction
+import ui.editor.EditorScreen
+import ui.editor.KeyboardAction
 import ui.theme.ColorTheme
 import ui.theme.DEFAULT_COLOR_THEME
 import ui.theme.DodeclustersTheme
@@ -16,7 +16,7 @@ fun App(
     lifecycleEvents: SharedFlow<LifecycleEvent>? = null,
 ) {
     DodeclustersTheme(colorTheme) {
-        EditClusterScreen(
+        EditorScreen(
             sampleName = sampleName,
             ddcContent = ddcContent,
             keyboardActions = keyboardActions,

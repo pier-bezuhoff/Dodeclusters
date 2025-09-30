@@ -21,8 +21,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import ui.edit_cluster.EditClusterViewModel
-import ui.edit_cluster.ScreenshotableCanvas
+import ui.editor.EditorViewModel
+import ui.editor.ScreenshotableCanvas
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
@@ -30,7 +30,7 @@ import javax.imageio.ImageIO
 
 @Composable
 actual fun SaveBitmapAsPngButton(
-    viewModel: EditClusterViewModel,
+    viewModel: EditorViewModel,
     saveData: SaveData<Unit>,
     buttonContent: @Composable () -> Unit,
     modifier: Modifier,

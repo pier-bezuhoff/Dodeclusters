@@ -1,4 +1,4 @@
-package ui.edit_cluster
+package ui.editor
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.draggable2D
@@ -72,15 +72,14 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.OnOffButton
 import ui.SimpleFilledButton
-import ui.SimpleToolButton
 import ui.SimpleToolButtonWithTooltip
 import ui.TwoIconButtonWithTooltip
 import ui.VerticalSlider
 import ui.WithTooltip
-import ui.edit_cluster.dialogs.DefaultBiInversionParameters
-import ui.edit_cluster.dialogs.DefaultInterpolationParameters
-import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
-import ui.edit_cluster.dialogs.DefaultRotationParameters
+import ui.editor.dialogs.DefaultBiInversionParameters
+import ui.editor.dialogs.DefaultInterpolationParameters
+import ui.editor.dialogs.DefaultLoxodromicMotionParameters
+import ui.editor.dialogs.DefaultRotationParameters
 import ui.theme.extendedColorScheme
 import ui.tools.Tool
 import kotlin.math.abs

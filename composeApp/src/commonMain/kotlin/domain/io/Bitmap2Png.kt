@@ -7,12 +7,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
-import ui.edit_cluster.EditClusterViewModel
+import ui.editor.EditorViewModel
 
 @Composable
 expect fun SaveBitmapAsPngButton(
     // not a good practice to pass VM around like this, but this is the simplest way
-    viewModel: EditClusterViewModel,
+    viewModel: EditorViewModel,
     saveData: SaveData<Unit>,
     buttonContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,

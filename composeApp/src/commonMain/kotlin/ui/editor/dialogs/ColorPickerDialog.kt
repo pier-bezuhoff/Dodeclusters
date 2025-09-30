@@ -1,4 +1,4 @@
-package ui.edit_cluster.dialogs
+package ui.editor.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

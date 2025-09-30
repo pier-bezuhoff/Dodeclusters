@@ -25,7 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import ui.edit_cluster.EditClusterViewModel
+import ui.editor.EditorViewModel
 import java.io.File
 import java.io.FileOutputStream
 
@@ -34,7 +34,7 @@ import java.io.FileOutputStream
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 actual fun SaveBitmapAsPngButton(
-    viewModel: EditClusterViewModel,
+    viewModel: EditorViewModel,
     saveData: SaveData<Unit>,
     buttonContent: @Composable () -> Unit,
     modifier: Modifier,

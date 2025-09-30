@@ -1,4 +1,4 @@
-package ui.edit_cluster
+package ui.editor
 
 import androidx.compose.material3.SnackbarDuration
 import dodeclusters.composeapp.generated.resources.Res

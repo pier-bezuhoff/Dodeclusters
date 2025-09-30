@@ -62,13 +62,13 @@ import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLAnchorElement
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.url.URL
-import ui.edit_cluster.EditClusterViewModel
-import ui.edit_cluster.ScreenshotableCanvas
+import ui.editor.EditorViewModel
+import ui.editor.ScreenshotableCanvas
 import kotlin.math.roundToInt
 
 @Composable
 actual fun SaveBitmapAsPngButton(
-    viewModel: EditClusterViewModel,
+    viewModel: EditorViewModel,
     saveData: SaveData<Unit>,
     buttonContent: @Composable () -> Unit,
     modifier: Modifier,

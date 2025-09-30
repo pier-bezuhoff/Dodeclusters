@@ -4,11 +4,11 @@ import androidx.compose.runtime.Immutable
 import domain.ColorAsCss
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import ui.edit_cluster.ToolbarState
-import ui.edit_cluster.dialogs.DefaultBiInversionParameters
-import ui.edit_cluster.dialogs.DefaultInterpolationParameters
-import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
-import ui.edit_cluster.dialogs.DefaultRotationParameters
+import ui.editor.ToolbarState
+import ui.editor.dialogs.DefaultBiInversionParameters
+import ui.editor.dialogs.DefaultInterpolationParameters
+import ui.editor.dialogs.DefaultLoxodromicMotionParameters
+import ui.editor.dialogs.DefaultRotationParameters
 
 /**
  * [savedColors] user-defined & saved in the color picker as part of [ColorPickerParameters]

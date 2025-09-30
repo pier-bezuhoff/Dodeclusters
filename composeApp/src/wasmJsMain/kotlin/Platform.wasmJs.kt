@@ -8,7 +8,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import ui.edit_cluster.EditClusterViewModel
+import ui.editor.EditorViewModel
 import kotlin.math.pow
 
 object WasmPlatform: Platform {
@@ -22,10 +22,10 @@ object WasmPlatform: Platform {
     override val tapRadius: Float = 10f
     override val minCircleToCubicApproximationRadius: Float = 10_000f
     override val minCircleToLineApproximationRadius: Float = 100_000f
-    override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
+    override val lastStateStore: KStore<EditorViewModel.State> by lazy {
         storeOf(
             key = Platform.LAST_STATE_STORE_FILE_NAME,
-            format = EditClusterViewModel.State.JSON_FORMAT,
+            format = EditorViewModel.State.JSON_FORMAT,
         )
     }
     override val settingsStore: KStore<Settings> by lazy {
@@ -36,7 +36,7 @@ object WasmPlatform: Platform {
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    override fun saveLastState(state: EditClusterViewModel.State) {
+    override fun saveLastState(state: EditorViewModel.State) {
         GlobalScope.launch(Dispatchers.Default) { // MAYBE: another dispatcher is better
             lastStateStore.set(state)
         }

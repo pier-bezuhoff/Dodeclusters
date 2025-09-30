@@ -1,6 +1,6 @@
 import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
-import ui.edit_cluster.EditClusterViewModel
+import ui.editor.EditorViewModel
 
 val MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS: Float =
     getPlatform().minCircleToCubicApproximationRadius
@@ -31,9 +31,9 @@ interface Platform {
      * [minCircleToCubicApproximationRadius] <= [minCircleToLineApproximationRadius]
      */
     val minCircleToLineApproximationRadius: Float
-    val lastStateStore: KStore<EditClusterViewModel.State>
+    val lastStateStore: KStore<EditorViewModel.State>
     val settingsStore: KStore<Settings>
-    fun saveLastState(state: EditClusterViewModel.State)
+    fun saveLastState(state: EditorViewModel.State)
     fun saveSettings(settings: Settings)
     // MAYBE: also save history (to a separate store) for UX
     //  tho be aware that LocalStorage allows 5 MB max

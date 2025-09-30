@@ -93,7 +93,7 @@ fun constellation2svg(
         appendLine("""<path d="$pathData" fill="$fillColorString"/>""")
     }
     if (encodeCirclesAndPoints) {
-        // colors mimic EditClusterCanvas setup
+        // colors mimic EditorCanvas setup
         val circleColor = Color(0xFF_D4BE51).copy(alpha = 0.6f) // accentColorDark
         val freeCircleColor = Color(0xFF_F5BD6F) // highAccentColorDark
         val pointColor = Color(0xFF_D4BE51).copy(alpha = 0.7f) // accentColorDark

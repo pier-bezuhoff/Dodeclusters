@@ -1,4 +1,4 @@
-package ui.edit_cluster
+package ui.editor
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
@@ -101,13 +101,13 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import ui.edit_cluster.dialogs.ColorPickerParameters
-import ui.edit_cluster.dialogs.DefaultBiInversionParameters
-import ui.edit_cluster.dialogs.DefaultExtrapolationParameters
-import ui.edit_cluster.dialogs.DefaultInterpolationParameters
-import ui.edit_cluster.dialogs.DefaultLoxodromicMotionParameters
-import ui.edit_cluster.dialogs.DefaultRotationParameters
-import ui.edit_cluster.dialogs.DialogType
+import ui.editor.dialogs.ColorPickerParameters
+import ui.editor.dialogs.DefaultBiInversionParameters
+import ui.editor.dialogs.DefaultExtrapolationParameters
+import ui.editor.dialogs.DefaultInterpolationParameters
+import ui.editor.dialogs.DefaultLoxodromicMotionParameters
+import ui.editor.dialogs.DefaultRotationParameters
+import ui.editor.dialogs.DialogType
 import ui.theme.DodeclustersColors
 import ui.tools.Category
 import ui.tools.Tool
@@ -120,7 +120,7 @@ import kotlin.time.Duration.Companion.seconds
 // TODO: decouple navigation & tools/categories
 // MAYBE: timed autosave (cron-like), e.g. every 10min
 @Suppress("MemberVisibilityCanBePrivate")
-class EditClusterViewModel : ViewModel() {
+class EditorViewModel : ViewModel() {
     val objectModel = ObjectModel()
     val objects: List<GCircle?> = objectModel.objects
     /** Filled regions delimited by some objects from [objects] */
@@ -3861,7 +3861,7 @@ class EditClusterViewModel : ViewModel() {
     }
 
     /**
-     * Save-able state of [EditClusterViewModel], used for [history].
+     * Save-able state of [EditorViewModel], used for [history].
      * Be careful to pass _only_ strictly immutable args by __copying__
      */
     @Immutable
@@ -3890,8 +3890,8 @@ class EditClusterViewModel : ViewModel() {
     companion object {
         // reference: https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-factories
         val Factory: ViewModelProvider.Factory = viewModelFactory {
-            addInitializer(EditClusterViewModel::class) {
-                EditClusterViewModel()
+            addInitializer(EditorViewModel::class) {
+                EditorViewModel()
             }
         }
         val YamlEncoding = Yaml(

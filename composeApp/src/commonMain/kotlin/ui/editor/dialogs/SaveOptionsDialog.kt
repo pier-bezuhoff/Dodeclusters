@@ -1,4 +1,4 @@
-package ui.edit_cluster.dialogs
+package ui.editor.dialogs
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -23,12 +23,12 @@ import domain.io.SaveFileButton
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import ui.edit_cluster.EditClusterViewModel
+import ui.editor.EditorViewModel
 import ui.tools.Tool
 
 @Composable
 fun SaveOptionsDialog(
-    viewModel: EditClusterViewModel,
+    viewModel: EditorViewModel,
     saveAsYaml: (name: String) -> String,
     exportAsSvg: (name: String) -> String,
     onCancel: () -> Unit,

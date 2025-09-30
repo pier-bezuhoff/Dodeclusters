@@ -1,4 +1,4 @@
-package ui.edit_cluster.dialogs
+package ui.editor.dialogs
 
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable

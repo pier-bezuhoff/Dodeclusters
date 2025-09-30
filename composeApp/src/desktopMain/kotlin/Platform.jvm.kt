@@ -8,7 +8,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.io.IOException
 import kotlinx.io.files.Path
-import ui.edit_cluster.EditClusterViewModel
+import ui.editor.EditorViewModel
 import java.io.File
 import kotlin.math.pow
 
@@ -20,10 +20,10 @@ object JVMPlatform: Platform {
     override val minCircleToCubicApproximationRadius: Float = 10_000f
     override val minCircleToLineApproximationRadius: Float = 100_000f
     private val dataDir: Path by lazy { getAppDataDir() }
-    override val lastStateStore: KStore<EditClusterViewModel.State> by lazy {
+    override val lastStateStore: KStore<EditorViewModel.State> by lazy {
         storeOf(
             file = Path(dataDir, Platform.LAST_STATE_STORE_FILE_NAME + ".json"),
-            json = EditClusterViewModel.State.JSON_FORMAT,
+            json = EditorViewModel.State.JSON_FORMAT,
         )
     }
     override val settingsStore: KStore<Settings> by lazy {
@@ -35,7 +35,7 @@ object JVMPlatform: Platform {
 
     // reference: https://stackoverflow.com/a/75734381/7143065
     @OptIn(DelicateCoroutinesApi::class)
-    override fun saveLastState(state: EditClusterViewModel.State) {
+    override fun saveLastState(state: EditorViewModel.State) {
         GlobalScope.launch(Dispatchers.IO) {
             try {
                 lastStateStore.set(state)

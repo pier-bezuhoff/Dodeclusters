@@ -13,7 +13,7 @@ import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.get
 import org.w3c.dom.url.URL
 import ui.LifecycleEvent
-import ui.edit_cluster.KeyboardAction
+import ui.editor.KeyboardAction
 import ui.theme.ColorTheme
 import ui.theme.DEFAULT_COLOR_THEME
 
@@ -68,7 +68,7 @@ fun main() {
 
 private val UNDER_MAC = WasmPlatform.underlyingPlatform == UnderlyingPlatform.MAC
 
-/** Mirrors [keyEventTranslator] from ui.edit_cluster.KeyboardAction.kt */
+/** Mirrors [keyEventTranslator] from ui.editor.KeyboardAction.kt */
 private fun keyboardEventTranslator(event: KeyboardEvent): KeyboardAction? =
     if (!event.altKey && !event.shiftKey) {
         // meta key is apparently macos equiv of ctrl, BUT is also Win on Windows/Linux

@@ -11,8 +11,8 @@ import dodeclusters.composeapp.generated.resources.icon_256
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-import ui.edit_cluster.KeyboardAction
-import ui.edit_cluster.keyboardActionsHandler
+import ui.editor.KeyboardAction
+import ui.editor.keyboardActionsHandler
 
 fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
