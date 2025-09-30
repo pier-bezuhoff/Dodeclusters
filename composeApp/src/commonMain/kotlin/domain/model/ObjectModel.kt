@@ -12,12 +12,14 @@ import core.geometry.Point
 import core.geometry.scaled00
 import domain.Ix
 import domain.PathCache
+import domain.expressions.Expr
 import domain.expressions.ExpressionForest
 
 // MAYBE: additionally store GeneralizedCircle representations
+// MAYBE: add ExpressionForest in
 /**
  * Purports to encapsulate & manage [objects] and object-related properties.
- * Very mutable, track [invalidationsState]/[invalidations] for changes.
+ * Very mutable, track [invalidationsState]/[invalidations] for changes and use with care.
  */
 class ObjectModel {
     /**
@@ -57,7 +59,7 @@ class ObjectModel {
         invalidationsState.value += 1
     }
 
-    fun setObject(ix: Ix, newObject: GCircle?) {
+    private fun setObject(ix: Ix, newObject: GCircle?) {
         objects[ix] = newObject
         downscaledObjects[ix] = newObject?.downscale()
         pathCache.invalidateObjectPathAt(ix)
@@ -180,6 +182,30 @@ class ObjectModel {
                 }
             }
         }
+    }
+
+    fun changeExpr(expressions: ExpressionForest, ix: Ix, newExpr: Expr.OneToOne) {
+        val newObject = expressions.changeExpression(ix, newExpr)
+        setDownscaledObject(ix, newObject)
+        val toBeUpdated = expressions.update(listOf(ix))
+        syncObjects(toBeUpdated)
+        invalidate()
+    }
+
+    fun setObjectsWithConsequences(expressions: ExpressionForest, changes: Map<Ix, GCircle?>) {
+        for ((ix, newObject) in changes) {
+            setObject(ix, newObject)
+        }
+        val updatedIndices = expressions.update(changes.keys.toList())
+        syncObjects(updatedIndices)
+        invalidate()
+    }
+
+    fun setObjectWithConsequences(expressions: ExpressionForest, ix: Ix, newObject: GCircle?) {
+        setObject(ix, newObject)
+        val updatedIndices = expressions.update(listOf(ix))
+        syncObjects(updatedIndices)
+        invalidate()
     }
 
     // NOTE: idk, handling of incident points is messy

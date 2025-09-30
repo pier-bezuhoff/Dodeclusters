@@ -143,7 +143,7 @@ data class Line(
     }
 
     override fun order2point(order: Double): Point {
-        if (order == Double.NEGATIVE_INFINITY)
+        if (order.isInfinite())
             Point.CONFORMAL_INFINITY
         val p0 = project(Point(0.0, 0.0))
         return Point(

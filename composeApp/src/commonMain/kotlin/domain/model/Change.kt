@@ -68,5 +68,6 @@ sealed interface GlobalChange : Change, Diff {
  * [LocalChange.Color]`(<new color>)` -> undo diff [LocalChange.Color]`(<old color>)`).
  */
 sealed interface Diff {
-    data class Transform(val changes: List<Pair<Ix, GCircle?>>) : Diff
+    // VM. { objectModel.transform; record new positions at indices here }
+    data class Transform(val changes: Map<Ix, GCircle?>) : Diff
 }

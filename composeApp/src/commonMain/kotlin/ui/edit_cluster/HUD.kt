@@ -326,6 +326,13 @@ fun BoxScope.PointContextActions(
                 modifier = buttonModifier,
                 onClick = { toolAction(Tool.MarkAsPhantoms) }
             )
+            if (toolPredicate(Tool.MovePointToInfinity)) {
+                SimpleToolButtonWithTooltip(
+                    Tool.MovePointToInfinity,
+                    buttonModifier,
+                    onClick = toolAction
+                )
+            }
             if (isLocked) {
                 SimpleToolButtonWithTooltip(
                     Tool.Detach,

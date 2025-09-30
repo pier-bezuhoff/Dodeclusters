@@ -181,6 +181,8 @@
     <string name="bidirectional_spiral_disabled_description">Сделать дву-направленной</string>
     <string name="infinite_point_name">Бесконечно удалённая точка</string>
     <string name="infinite_point_description">Использовать бесконечно удалённую точку</string>
+    <string name="move_point_to_infinity_name">Переместить на бесконечность</string>
+    <string name="move_point_to_infinity_description">Переместить выделенную точку на бесконечность</string>
     <string name="steps_slider_name">N шагов</string>
 
     <!-- categories -->

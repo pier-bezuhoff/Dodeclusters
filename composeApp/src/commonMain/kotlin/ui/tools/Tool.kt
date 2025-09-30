@@ -115,6 +115,8 @@ import dodeclusters.composeapp.generated.resources.mark_as_phantoms_description
 import dodeclusters.composeapp.generated.resources.mark_as_phantoms_disabled_description
 import dodeclusters.composeapp.generated.resources.mark_as_phantoms_name
 import dodeclusters.composeapp.generated.resources.menu
+import dodeclusters.composeapp.generated.resources.move_point_to_infinity_description
+import dodeclusters.composeapp.generated.resources.move_point_to_infinity_name
 import dodeclusters.composeapp.generated.resources.multiselect
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_name
@@ -173,6 +175,7 @@ import dodeclusters.composeapp.generated.resources.swap_direction_description
 import dodeclusters.composeapp.generated.resources.swap_direction_name
 import dodeclusters.composeapp.generated.resources.text
 import dodeclusters.composeapp.generated.resources.three_sliders
+import dodeclusters.composeapp.generated.resources.to_infinity
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_description
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_disabled_description
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_name
@@ -628,5 +631,10 @@ sealed class Tool(
         name = Res.string.infinite_point_name,
         description = Res.string.infinite_point_description,
         icon = Res.drawable.infinity,
+    )
+    data object MovePointToInfinity : ContextAction(
+        name = Res.string.move_point_to_infinity_name,
+        description = Res.string.move_point_to_infinity_description,
+        icon = Res.drawable.to_infinity,
     )
 }

@@ -225,9 +225,9 @@ class EditClusterViewModel : ViewModel() {
     /** when changing [expressions], flip this to forcibly recalculate [selectionIsLocked] */
     private var selectionIsLockedTrigger: Boolean by mutableStateOf(false)
     // MAYBE: show quick prompt/popup instead of button
-    val selectionIsLocked: Boolean get() = run {
+    val selectionIsLocked: Boolean get() {
         hug(selectionIsLockedTrigger, objectModel.invalidations)
-        selection.all { objects[it] == null || !isFree(it) }
+        return selection.all { objects[it] == null || !isFree(it) }
     }
 
     // NOTE: history doesn't survive background app kill
@@ -1691,14 +1691,13 @@ class EditClusterViewModel : ViewModel() {
                 queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
             recordCommand(Command.ROTATE, targets = targets) // hijacking rotation
-            for (ix in targets) {
-                val obj0 = objects[ix] as CircleOrLine
-                val obj = obj0.reversed()
-                objectModel.setObject(ix, obj)
-            }
-            val toBeUpdated = expressions.update(selection)
-            objectModel.syncObjects(toBeUpdated)
-            objectModel.invalidate()
+            objectModel.setObjectsWithConsequences(
+                expressions,
+                targets.associateWith { ix ->
+                    val obj0 = objects[ix] as CircleOrLine
+                    obj0.reversed()
+                }
+            )
         }
     }
 
@@ -2100,6 +2099,25 @@ class EditClusterViewModel : ViewModel() {
         }
     }
 
+    private fun movePointToInfinity() {
+        selection.singleOrNull()?.let { ix ->
+            val expr = expressions.expressions[ix]?.expr
+            if (expr == null) {
+                recordCommand(Command.MOVE, target = ix)
+                objectModel.setObjectWithConsequences(expressions, ix, Point.CONFORMAL_INFINITY)
+            } else if (expr is Expr.Incidence && objects[expr.carrier] is Line) {
+                recordCommand(Command.MOVE, target = ix)
+                objectModel.changeExpr(
+                    expressions,
+                    ix,
+                    expr.copy(parameters =
+                        expr.parameters.copy(order = Double.POSITIVE_INFINITY)
+                    )
+                )
+            }
+        }
+    }
+
     private fun downArcPathPoint(visiblePosition: Offset) {
         val absolutePoint = snapped(absolute(visiblePosition)).result
         val arcPath = partialArcPath
@@ -2378,11 +2396,7 @@ class EditClusterViewModel : ViewModel() {
         val newPoint = carrier.project(pointer)
         val order = carrier.point2order(newPoint)
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
-        objectModel.setDownscaledObject(pointIndex, newPoint)
-        expressions.changeExpression(pointIndex, newExpr)
-        val toBeUpdated = expressions.update(listOf(pointIndex))
-        objectModel.syncObjects(toBeUpdated)
-        objectModel.invalidate()
+        objectModel.changeExpr(expressions, pointIndex, newExpr)
     }
 
     private fun dragCirclesOrPoints(
@@ -3671,6 +3685,7 @@ class EditClusterViewModel : ViewModel() {
             Tool.BidirectionalSpiral -> {}
             Tool.ToggleFilledOrOutline -> TODO("presently unused")
             Tool.InfinitePoint -> addInfinitePointArg()
+            Tool.MovePointToInfinity -> movePointToInfinity()
         }
     }
 
@@ -3709,6 +3724,15 @@ class EditClusterViewModel : ViewModel() {
             Tool.MarkAsPhantoms -> {
                 hug(objectModel.invalidations)
                 selection.none { it in phantoms }
+            }
+            Tool.MovePointToInfinity -> {
+                hug(objectModel.invalidations)
+                selection.singleOrNull()?.let { ix ->
+                    val o = objects[ix]
+                    val expr = expressions.expressions[ix]?.expr
+                    o is Point && o != Point.CONFORMAL_INFINITY &&
+                        (expr == null || expr is Expr.Incidence && objects[expr.carrier] is Line)
+                } == true
             }
             is Tool.MultiArg ->
                 mode == ToolMode.correspondingTo(tool)

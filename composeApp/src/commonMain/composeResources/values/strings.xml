@@ -181,6 +181,8 @@
     <string name="bidirectional_spiral_disabled_description">Make bidirectional</string>
     <string name="infinite_point_name">Infinite point</string>
     <string name="infinite_point_description">Use infinite point</string>
+    <string name="move_point_to_infinity_name">Move to infinity</string>
+    <string name="move_point_to_infinity_description">Move selected point to infinity</string>
     <string name="steps_slider_name">N steps</string>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
