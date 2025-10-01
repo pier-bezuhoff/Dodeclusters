@@ -21,8 +21,9 @@ sealed interface ArcPathPoint {
     /** The vertex is the 1st intersection of [carrier1Index] and [carrier2Index].
      * Before using this check if such point already exists and use [Eq] in if it does */
     data class Intersection(override val point: Point, val carrier1Index: Ix, val carrier2Index: Ix) : Vertex
-    /** Midpoints should not be constrained, always free */
-//    data class Midpoint(override val point: Point) : ArcPathPoint
+    /** Midpoints should not be constrained, other than to circles incident to both arc-start and
+     * arc-end points, in which case set [carrierIndex] */
+    data class Midpoint(override val point: Point, val carrierIndex: Ix? = null) : ArcPathPoint
 }
 
 sealed interface ArcPathCircle {
@@ -47,6 +48,8 @@ data class PartialArcPath(
     val isClosed: Boolean = false,
     /** Grabbed node: any vertex or midpoint */
     val focus: Focus? = null,
+    // moving vertex should invalidate its snappables
+    val vertexIndex2snappableCircles: Map<Ix, Set<Ix>> = emptyMap(),
 ) {
     val lastVertex: ArcPathPoint.Vertex get() =
         vertices.lastOrNull() ?: startVertex

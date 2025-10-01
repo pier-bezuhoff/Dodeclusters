@@ -13,10 +13,6 @@ plugins {
 }
 
 kotlin {
-    compilerOptions {
-        jvmToolchain(11)
-    }
-
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
 //        moduleName = "composeApp"
