@@ -47,24 +47,24 @@ class ExpressionForestTest {
 
     @Test
     fun `performance of getAllParents`() {
-        val size = 1000
+        val size = 100
         val forest = ExpressionForest(
             makeForest(size),
             MutableList(size) { null }
         )
         println()
         compareScenarios(
-            "tailrec", {
+            "while + sets", {
 //                forest.getAllParents(
 //                    listOf(Random.nextInt(size))
 //                )
             },
-            "while + stack", { // ~1.5 times faster
+            "while + stack", {
 //                forest._getAllParents(
 //                    listOf(Random.nextInt(size))
 //                )
             },
-            nRuns = 10_000
+            nRuns = 100_000
         )
         println("______________________________________________________")
         repeat(1000) {

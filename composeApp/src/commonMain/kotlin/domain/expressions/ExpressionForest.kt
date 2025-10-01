@@ -519,21 +519,21 @@ class ExpressionForest(
         expressions[childIx]?.expr?.args.orEmpty()
 
     fun getAllParents(childs: List<Ix>): Set<Ix> {
-        val visitedParents = mutableSetOf<Ix>()
-        val parents = mutableSetOf<Ix>()
+        val directParents = mutableSetOf<Ix>()
         for (child in childs) {
-            parents += getImmediateParents(child)
+            directParents += getImmediateParents(child)
         }
-        while (parents.isNotEmpty()) {
-            visitedParents += parents
-            val prevParents = parents.toSet()
-            parents.clear()
-            for (child in prevParents) {
-                // no need to filter already visited cuz there cant be parent->...->parent loops
-                parents += getImmediateParents(child)
+        val stack = ArrayDeque<Ix>(directParents)
+        val visited = mutableSetOf<Ix>()
+        while (stack.isNotEmpty()) {
+            val ix = stack.removeLast()
+            val unexplored = visited.add(ix)
+            if (unexplored) {
+                // removing filter slows it down, idk why
+                getImmediateParents(ix).filterTo(stack) { it !in visited }
             }
         }
-        return visitedParents
+        return visited
     }
 
     fun findExistingIntersectionIndices(circleIndex1: Ix, circleIndex2: Ix): List<Ix> {
