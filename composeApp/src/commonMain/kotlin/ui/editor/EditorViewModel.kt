@@ -276,7 +276,6 @@ class EditorViewModel : ViewModel() {
         private set
 //    var arcPaths: List<ArcPath> by mutableStateOf(emptyList())
 //        private set
-//    val pathCache: MutableMap<Ix, Path?> = mutableMapOf()
 
     var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
         private set
@@ -332,10 +331,7 @@ class EditorViewModel : ViewModel() {
                     o?.translated(translation) // back to top-left = (0,0) system
                 }
             ,
-            freeObjectIndices = objects.indices.filter {
-                expressions.expressions[it] == null
-            }.toSet()
-            ,
+            freeObjectIndices = objects.indices.filter { isFree(it) }.toSet(),
             width = canvasSize.width.toFloat(),
             height = canvasSize.height.toFloat(),
             encodeCirclesAndPoints = showCircles,
@@ -514,7 +510,7 @@ class EditorViewModel : ViewModel() {
     fun toConstellation(): Constellation {
         // pruning nulls
         val deleted = objects.indices.filter { ix ->
-            objects[ix] == null && expressions.expressions[ix] == null
+            objects[ix] == null && isFree(ix)
         }.toSet()
         // reindexing because of pruning
         val reindexing = reindexingMap(
@@ -1041,7 +1037,7 @@ class EditorViewModel : ViewModel() {
         val points = objects.map { it as? Point }
         val nearPointIndex = selectPoint(points, visiblePosition,
             priorityTargets = points.indices
-                .filter { expressions.expressions[it] == null }
+                .filter { isFree(it) }
                 .toSet()
         )
         return nearPointIndex
@@ -1089,7 +1085,7 @@ class EditorViewModel : ViewModel() {
         }
         val nearCircleIndex = selectCircle(circles, visiblePosition,
             priorityTargets = circles.indices
-                .filter { expressions.expressions[it] == null }
+                .filter { isFree(it) }
                 .toSet()
         )
         return nearCircleIndex
@@ -1114,9 +1110,9 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun findSiblingsAndParents(ix: Ix): List<Ix> {
-        val e = expressions.expressions[ix] ?: return emptyList()
-        val parents = e.expr.args
-        val siblings = expressions.findExpr(e.expr)
+        val expr = exprOf(ix) ?: return emptyList()
+        val parents = expr.args
+        val siblings = expressions.findExpr(expr)
         return siblings + parents
     }
 
@@ -1299,8 +1295,11 @@ class EditorViewModel : ViewModel() {
         return Rect(left, top, right, bottom)
     }
 
-    fun isFree(circleIndex: Ix): Boolean =
-        expressions.expressions[circleIndex] == null
+    fun exprOf(index: Ix): Expr? =
+        expressions.expressions[index]?.expr
+
+    fun isFree(index: Ix): Boolean =
+        expressions.expressions[index] == null
 
     fun isConstrained(index: Ix): Boolean =
         expressions.expressions[index]?.expr is Expr.Incidence
@@ -1703,13 +1702,13 @@ class EditorViewModel : ViewModel() {
 
     inline val showAdjustExprButton: Boolean get() {
         val sel = selection
-        return sel.isNotEmpty() && (expressions.expressions[sel[0]]?.expr?.let { expr0 ->
+        return sel.isNotEmpty() && (exprOf(sel[0])?.let { expr0 ->
             (expr0 is Expr.CircleInterpolation ||
                 expr0 is Expr.PointInterpolation ||
                 expr0 is Expr.Rotation ||
                 expr0 is Expr.BiInversion ||
                 expr0 is Expr.LoxodromicMotion) &&
-            sel.all { expressions.expressions[it]?.expr == expr0 }
+            sel.all { exprOf(it) == expr0 }
         } == true)
     }
 
@@ -1730,7 +1729,7 @@ class EditorViewModel : ViewModel() {
         } == true
 
     fun adjustExpr() {
-        val expr = expressions.expressions[selection[0]]?.expr
+        val expr = exprOf(selection[0])
         if (expr !is Expr.HasParameters) {
             return
         }
@@ -1811,17 +1810,17 @@ class EditorViewModel : ViewModel() {
             val allAdjustables: List<AdjustableExpr> =
                 if (
                     expr is Expr.LoxodromicMotion &&
-                    expr.otherHalfStart != null &&
-                    expressions.expressions[expr.otherHalfStart] != null
+                    expr.otherHalfStart != null
                 ) {
-                    val otherExpr = expressions.expressions[expr.otherHalfStart]!!.expr
-                    val otherOutputIndices = expressions.findExpr(otherExpr)
-                    val otherAdjustables = listOf(AdjustableExpr(otherExpr, otherOutputIndices, otherOutputIndices))
-                    defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
-                        expr.parameters,
-                        bidirectional = true
-                    )
-                    adjustables + otherAdjustables
+                    exprOf(expr.otherHalfStart)?.let { otherExpr ->
+                        val otherOutputIndices = expressions.findExpr(otherExpr)
+                        val otherAdjustables = listOf(AdjustableExpr(otherExpr, otherOutputIndices, otherOutputIndices))
+                        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
+                            expr.parameters,
+                            bidirectional = true
+                        )
+                        adjustables + otherAdjustables
+                    } ?: adjustables
                 } else adjustables
             submode = SubMode.ExprAdjustment(allAdjustables)
             selection = emptyList() // clear selection to hide selection HUD
@@ -1846,7 +1845,7 @@ class EditorViewModel : ViewModel() {
     private fun expandSelectionToAllSiblings() {
         if (mode.isSelectingCircles()) {
             val siblings = selection
-                .map { expressions.expressions[it]?.expr }
+                .map { exprOf(it) }
                 .distinct()
                 .flatMap { expr ->
                     expressions.findExpr(expr)
@@ -2101,7 +2100,7 @@ class EditorViewModel : ViewModel() {
 
     private fun movePointToInfinity() {
         selection.singleOrNull()?.let { ix ->
-            val expr = expressions.expressions[ix]?.expr
+            val expr = exprOf(ix)
             if (expr == null) {
                 recordCommand(Command.MOVE, target = ix)
                 objectModel.setObjectWithConsequences(expressions, ix, Point.CONFORMAL_INFINITY)
@@ -2364,7 +2363,7 @@ class EditorViewModel : ViewModel() {
 
     private fun dragPoint(absolutePointerPosition: Offset) {
         val ix = selection.first()
-        val expr = expressions.expressions[ix]?.expr
+        val expr = exprOf(ix)
         if (expr is Expr.Incidence) {
             slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, absolutePointerPosition = absolutePointerPosition)
         } else {
@@ -3729,7 +3728,7 @@ class EditorViewModel : ViewModel() {
                 hug(objectModel.invalidations)
                 selection.singleOrNull()?.let { ix ->
                     val o = objects[ix]
-                    val expr = expressions.expressions[ix]?.expr
+                    val expr = exprOf(ix)
                     o is Point && o != Point.CONFORMAL_INFINITY &&
                         (expr == null || expr is Expr.Incidence && objects[expr.carrier] is Line)
                 } == true
@@ -3757,8 +3756,8 @@ class EditorViewModel : ViewModel() {
 
     fun saveState(): State {
         val center = computeAbsoluteCenter() ?: Offset.Zero
-        val deleted = objects.indices.filter { i ->
-            objects[i] == null && expressions.expressions[i] == null
+        val deleted = objects.indices.filter { ix ->
+            objects[ix] == null && isFree(ix)
         }.toSet()
         val reindexing = reindexingMap(
             originalIndices = objects.indices,

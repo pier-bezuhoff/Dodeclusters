@@ -26,8 +26,8 @@ private const val ABANDONED_TIER: Tier = -2
 
 // MAYBE: cache carrier->incident points lookup (since it's called on every VM.transform)
 /**
- * Class for managing expressions (AST controller)
- * @param[objects] reference to shared, downscaled mutable mirror-list of VM.objects
+ * Class for managing expressions (~ AST controller)
+ * @param[objects] reference to shared, *downscaled* mutable mirror-list of VM.objects
  */
 class ExpressionForest(
     initialExpressions: Map<Ix, Expression?>, // pls include all possible indices
@@ -35,9 +35,14 @@ class ExpressionForest(
 ) {
     // for the VM.objects list nulls correspond to unrealized outputs of multi-functions
     // here nulls correspond to free objects
+    /**
+     * object index -> its expression, `null` meaning "free" object
+     * `expressions.keys` == `objects.indices`
+     */
     val expressions: MutableMap<Ix, Expression?> = initialExpressions.toMutableMap()
 
-    /** parent index -> set of all its children with *direct* dependency */
+    /** parent index -> set of all its children with *direct* dependency,
+     * inversion of [Expr.args] */
     val children: MutableMap<Ix, Set<Ix>> = expressions
         .keys
         .associateWith { emptySet<Ix>() }
@@ -52,6 +57,9 @@ class ExpressionForest(
     private val tier2ixs: MutableList<Set<Ix>>
 
     init {
+        require(objects.indices.toSet() == initialExpressions.keys) {
+            "initialExpressions keys must coincide with objects.indices"
+        }
         computeTiers() // computes ix2tier
         tier2ixs = ix2tier
             .entries
@@ -93,6 +101,7 @@ class ExpressionForest(
     private fun calculateNextIndex(): Ix =
         expressions.keys.maxOfOrNull { it + 1 } ?: 0
 
+    /** append an empty expression and return its index */
     fun addFree(): Ix {
         val ix = calculateNextIndex()
         expressions[ix] = null
@@ -120,8 +129,8 @@ class ExpressionForest(
             tier2ixs.add(setOf(ix))
         }
         val result = expr.eval(objects)
+//        println("$ix -> $expr -> $result")
         return result.firstOrNull()
-            .also { println("$ix -> $expr -> $result") }
     }
 
     /** don't forget to upscale the result afterwards! */
@@ -140,7 +149,7 @@ class ExpressionForest(
         } else { // no hopping over tiers, we good
             tier2ixs.add(setOf(ix))
         }
-        println("$ix -> $expression -> $result")
+//        println("$ix -> $expression -> $result")
         return result
     }
 
@@ -167,7 +176,7 @@ class ExpressionForest(
                 tier2ixs.add(setOf(ix))
             }
         }
-        println("$ix0:${ix0+result.size} -> $expr -> $result")
+//        println("$ix0:${ix0+result.size} -> $expr -> $result")
         return result
     }
 
@@ -197,7 +206,7 @@ class ExpressionForest(
     }
 
     /** The new node still inherits its previous children */
-    fun changeExpression(ix: Ix, newExpr: Expr.OneToOne): GCircle? {
+    fun changeExpr(ix: Ix, newExpr: Expr.OneToOne): GCircle? {
         expressions[ix]?.let { previousExpr ->
             previousExpr.expr.args.forEach { parentIx ->
                 children[parentIx] = (children[parentIx] ?: emptySet()) - ix
@@ -219,10 +228,8 @@ class ExpressionForest(
         }
         recomputeChildrenTiers(ix)
         val result = newExpr.eval(objects)
+//        println("change $ix -> $newExpr -> $result")
         return result.firstOrNull()
-//            .also {
-//                println("change $ix -> $newExpr -> $result")
-//            }
     }
 
     /**
@@ -394,8 +401,8 @@ class ExpressionForest(
     }
 
     /**
-     * note: either supply [expr0] or set `expressions[ix]` BEFORE calling this
-     * */
+     * You must either supply [expr0] or set `expressions[ix]` BEFORE calling this
+     */
     private fun computeTier(ix: Ix, expr0: Expr? = null): Tier {
         val expr: Expr? = expr0 ?: expressions[ix]?.expr
         return if (expr == null) {
@@ -420,14 +427,29 @@ class ExpressionForest(
         }
     }
 
-    // MAYBE: transform into tailrec
     fun getAllChildren(parentIx: Ix): Set<Ix> {
-        val childs = children[parentIx] ?: emptySet()
-        val allChilds = childs.toMutableSet()
-        for (child in childs) {
-            allChilds += getAllChildren(child)
+        val directChildren = children[parentIx] ?: emptySet()
+        val allChildren = directChildren.toMutableSet()
+        for (child in directChildren) {
+            allChildren += getAllChildren(child)
         }
-        return allChilds
+        return allChildren
+    }
+
+    fun _getAllChildren(parentIx: Ix): Set<Ix> {
+        val directChildren = children[parentIx] ?: emptySet()
+        val stack = ArrayDeque<Ix>(directChildren)
+        val visited = mutableSetOf<Ix>()
+        while (stack.isNotEmpty()) {
+            val ix = stack.removeLast()
+            val unexplored = visited.add(ix)
+            if (unexplored) {
+                children[ix]?.let { nextChildren ->
+                    nextChildren.filterTo(stack) { it !in visited }
+                }
+            }
+        }
+        return visited
     }
 
     /**
@@ -501,7 +523,8 @@ class ExpressionForest(
         return changedIxs
     }
 
-    fun getImmediateParents(childIx: Ix): List<Ix> =
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun getImmediateParents(childIx: Ix): List<Ix> =
         expressions[childIx]?.expr?.args.orEmpty()
 
     tailrec fun getAllParents(childs: List<Ix>, _result: Set<Ix> = emptySet()): Set<Ix> {

@@ -185,7 +185,7 @@ class ObjectModel {
     }
 
     fun changeExpr(expressions: ExpressionForest, ix: Ix, newExpr: Expr.OneToOne) {
-        val newObject = expressions.changeExpression(ix, newExpr)
+        val newObject = expressions.changeExpr(ix, newExpr)
         setDownscaledObject(ix, newObject)
         val toBeUpdated = expressions.update(listOf(ix))
         syncObjects(toBeUpdated)
