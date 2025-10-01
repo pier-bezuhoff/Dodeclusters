@@ -55,21 +55,21 @@ class ExpressionForestTest {
         println()
         compareScenarios(
             "tailrec", {
-                forest.getAllParents(
-                    listOf(Random.nextInt(size))
-                )
+//                forest.getAllParents(
+//                    listOf(Random.nextInt(size))
+//                )
             },
             "while + stack", { // ~1.5 times faster
-                forest._getAllParents(
-                    listOf(Random.nextInt(size))
-                )
+//                forest._getAllParents(
+//                    listOf(Random.nextInt(size))
+//                )
             },
             nRuns = 10_000
         )
         println("______________________________________________________")
         repeat(1000) {
             val l = listOf(Random.nextInt(size))
-            assertEquals(forest.getAllParents(l), forest._getAllParents(l))
+//            assertEquals(forest.getAllParents(l), forest._getAllParents(l))
         }
     }
 
@@ -83,21 +83,21 @@ class ExpressionForestTest {
         println()
         compareScenarios(
             "rec", {
-                forest.getAllChildren(
-                    Random.nextInt(size)
-                )
+//                forest.getAllChildren(
+//                    Random.nextInt(size)
+//                )
             },
             "while + stack", { // ~3 times faster
-                forest._getAllChildren(
-                    Random.nextInt(size)
-                )
+//                forest._getAllChildren(
+//                    Random.nextInt(size)
+//                )
             },
             nRuns = 10_000
         )
         println("______________________________________________________")
         repeat(1000) {
             val i = Random.nextInt(size)
-            assertEquals(forest.getAllChildren(i), forest._getAllChildren(i))
+//            assertEquals(forest.getAllChildren(i), forest._getAllChildren(i))
         }
     }
 }

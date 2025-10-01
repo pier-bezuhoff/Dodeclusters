@@ -429,15 +429,6 @@ class ExpressionForest(
 
     fun getAllChildren(parentIx: Ix): Set<Ix> {
         val directChildren = children[parentIx] ?: emptySet()
-        val allChildren = directChildren.toMutableSet()
-        for (child in directChildren) {
-            allChildren += getAllChildren(child)
-        }
-        return allChildren
-    }
-
-    fun _getAllChildren(parentIx: Ix): Set<Ix> {
-        val directChildren = children[parentIx] ?: emptySet()
         val stack = ArrayDeque<Ix>(directChildren)
         val visited = mutableSetOf<Ix>()
         while (stack.isNotEmpty()) {
@@ -527,17 +518,7 @@ class ExpressionForest(
     inline fun getImmediateParents(childIx: Ix): List<Ix> =
         expressions[childIx]?.expr?.args.orEmpty()
 
-    tailrec fun getAllParents(childs: List<Ix>, _result: Set<Ix> = emptySet()): Set<Ix> {
-        val immediateParents = childs.flatMap { getImmediateParents(it) }
-        if (immediateParents.isEmpty())
-            return _result
-        return getAllParents(
-            immediateParents.minus(childs.toSet()),
-            _result + immediateParents.toSet()
-        )
-    }
-
-    fun _getAllParents(childs: List<Ix>): Set<Ix> {
+    fun getAllParents(childs: List<Ix>): Set<Ix> {
         val visitedParents = mutableSetOf<Ix>()
         val parents = mutableSetOf<Ix>()
         for (child in childs) {
