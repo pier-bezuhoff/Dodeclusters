@@ -62,7 +62,7 @@ data class PartialArcPath(
     /** Grabbed node: any vertex or midpoint */
     val focus: Focus? = null,
     // moving a vertex should invalidate its snappables
-    val vertexIndex2snappableCircles: Map<Ix, Set<Ix>> = emptyMap(),
+    val vertexNumber2snappableCircles: Map<Ix, Set<Ix>> = emptyMap(),
 ) {
     val lastVertex: ArcPathPoint.Vertex get() =
         vertices.lastOrNull() ?: startVertex
@@ -88,9 +88,15 @@ data class PartialArcPath(
             startVertex
         else vertices[vertexIndex - 1]
 
+    fun nextVertex(vertexIndex: Int): ArcPathPoint.Vertex =
+        if (vertexIndex == vertices.size - 1)
+            startVertex
+        else vertices[vertexIndex + 1]
+
     fun addNewVertex(newVertex: ArcPathPoint.Vertex): PartialArcPath = copy(
         startVertex = startVertex,
-        vertices = vertices + newVertex, midpoints = midpoints + lastVertex.point.middle(newVertex.point),
+        vertices = vertices + newVertex,
+        midpoints = midpoints + lastVertex.point.middle(newVertex.point),
         circles = circles + ArcPathCircle.Free(null),
         startAngles = startAngles + 0.0, sweepAngles = sweepAngles + 0.0
     )
@@ -105,8 +111,10 @@ data class PartialArcPath(
             } else { // only forward arc
                 val point = startVertex.point
                 val nextPoint = vertices[0].point
-                val newMidpoint = updateMidpointFromMovingEnd(point, nextPoint, midpoints[0], newPoint)
-                val newNextCircle = computeCircleBy3Points(newPoint, newMidpoint, nextPoint) as? Circle
+                val newMidpoint =
+                    updateMidpointFromMovingEnd(point, nextPoint, midpoints[0], newPoint)
+                val newNextCircle =
+                    computeCircleBy3Points(newPoint, newMidpoint, nextPoint) as? Circle
                 val newNextStartAngle =
                     if (newNextCircle != null)
                         calculateStartAngle(newPoint, newNextCircle)
@@ -125,8 +133,10 @@ data class PartialArcPath(
             val vertexIndex = vertexNumber - 1
             val point = vertices[vertexIndex].point
             val previousPoint = previousVertex(vertexIndex).point
-            val newMidpoint = updateMidpointFromMovingEnd(point, previousPoint, midpoints[vertexIndex], newPoint)
-            val newPreviousCircle = computeCircleBy3Points(previousPoint, newMidpoint, newPoint) as? Circle
+            val newMidpoint =
+                updateMidpointFromMovingEnd(point, previousPoint, midpoints[vertexIndex], newPoint)
+            val newPreviousCircle =
+                computeCircleBy3Points(previousPoint, newMidpoint, newPoint) as? Circle
             val newPreviousStartAngle =
                 if (newPreviousCircle is Circle)
                     calculateStartAngle(previousPoint, newPreviousCircle)
@@ -140,37 +150,43 @@ data class PartialArcPath(
             )
         } else { // backward + forward
             val newPoint = newVertex.point
-            val j = vertexNumber - 1
-            val point = vertices[j].point
-            val previousPoint = previousVertex(j).point
-            val nextPoint = vertices[j + 1].point
-            val newPreviousMidpoint = updateMidpointFromMovingEnd(point, previousPoint, midpoints[j], newPoint)
-            val newPreviousCircle = GeneralizedCircle.perp3(
-                GeneralizedCircle.fromGCircle(previousPoint),
-                GeneralizedCircle.fromGCircle(newPreviousMidpoint),
-                GeneralizedCircle.fromGCircle(newPoint),
-            )?.toGCircle() as? Circle
+            val nextVertexIndex = vertexNumber
+            val vertexIndex = vertexNumber - 1
+            val point = vertices[vertexIndex].point
+            val previousPoint = previousVertex(vertexIndex).point
+            val nextPoint = vertices[vertexIndex + 1].point
+            val newPreviousMidpoint = updateMidpointFromMovingEnd(
+                point, previousPoint, midpoints[vertexIndex], newPoint
+            )
+            val newPreviousCircle =
+                computeCircleBy3Points(previousPoint, newPreviousMidpoint, newPoint) as? Circle
             val newPreviousStartAngle =
                 if (newPreviousCircle != null)
                     calculateStartAngle(previousPoint, newPreviousCircle)
                 else 0.0
-            val newNextMidpoint = updateMidpointFromMovingEnd(point, nextPoint, midpoints[vertexNumber], newPoint)
-            val newNextCircle = GeneralizedCircle.perp3(
-                GeneralizedCircle.fromGCircle(newPoint),
-                GeneralizedCircle.fromGCircle(newNextMidpoint),
-                GeneralizedCircle.fromGCircle(nextPoint),
-            )?.toGCircle() as? Circle
+            val newNextMidpoint =
+                updateMidpointFromMovingEnd(point, nextPoint, midpoints[nextVertexIndex], newPoint)
+            val newNextCircle =
+                computeCircleBy3Points(newPoint, newNextMidpoint, nextPoint) as? Circle
             val newNextStartAngle =
                 if (newNextCircle is Circle)
                     calculateStartAngle(newPoint, newNextCircle)
                 else 0.0
             copy(
-                startVertex = startVertex, vertices = vertices.updated(j, newVertex),
-                midpoints = midpoints.updated(j, newPreviousMidpoint).updated(vertexNumber, newNextMidpoint),
-                circles = circles
-                    .updated(j, ArcPathCircle.Free(newPreviousCircle))
-                    .updated(vertexNumber, ArcPathCircle.Free(newNextCircle)),
-                startAngles = startAngles.updated(j, newPreviousStartAngle).updated(vertexNumber, newNextStartAngle),
+                startVertex = startVertex,
+                vertices = vertices.updated(vertexIndex, newVertex),
+                midpoints = midpoints.updated(
+                    vertexIndex to newPreviousMidpoint,
+                    nextVertexIndex to newNextMidpoint
+                ),
+                circles = circles.updated(
+                    vertexIndex to ArcPathCircle.Free(newPreviousCircle),
+                    nextVertexIndex to ArcPathCircle.Free(newNextCircle)
+                ),
+                startAngles = startAngles.updated(
+                    vertexIndex to newPreviousStartAngle,
+                    nextVertexIndex to newNextStartAngle
+                ),
                 sweepAngles = sweepAngles // sweep angle stays the same
             )
         }
@@ -178,11 +194,8 @@ data class PartialArcPath(
     fun updateMidpoint(midpointIndex: Int, newMidpoint: Point): PartialArcPath {
         val start = previousVertex(midpointIndex).point
         val end = vertices[midpointIndex].point
-        val newCircle = GeneralizedCircle.perp3(
-            GeneralizedCircle.fromGCircle(start),
-            GeneralizedCircle.fromGCircle(newMidpoint),
-            GeneralizedCircle.fromGCircle(end),
-        )?.toGCircle() as? Circle
+        val newCircle =
+            computeCircleBy3Points(start, newMidpoint, end) as? Circle
         val newStartAngle =
             if (newCircle == null) 0.0
             else calculateStartAngle(start, newCircle)
@@ -207,6 +220,12 @@ data class PartialArcPath(
             is Focus.MidPoint -> updateMidpoint(focus.midpointIndex, newPoint)
             null -> this
         }
+
+    fun updateSnappables(vertexNumber: VertexNumber, snappables: Set<Ix>): PartialArcPath =
+        copy(
+            vertexNumber2snappableCircles =
+                vertexNumber2snappableCircles + (vertexNumber to snappables)
+        )
 
     fun closeLoop(): PartialArcPath =
         addNewVertex(startVertex).copy(isClosed = true)

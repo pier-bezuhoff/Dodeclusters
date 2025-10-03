@@ -150,7 +150,7 @@ data class Point(
     }
 
     /** = `(this + point)/2` */
-    fun middle(point: Point): Point =
+    infix fun middle(point: Point): Point =
         if (this == CONFORMAL_INFINITY || point == CONFORMAL_INFINITY)
             CONFORMAL_INFINITY
         else Point((x + point.x)/2, (y + point.y)/2)
