@@ -3928,7 +3928,7 @@ class EditorViewModel : ViewModel() {
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
         const val ENABLE_TANGENT_SNAPPING = false
-        const val RESTORE_LAST_SAVE_ON_LOAD = !true // TMP
+        const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         const val SHOW_IMAGINARY_CIRCLES = true
