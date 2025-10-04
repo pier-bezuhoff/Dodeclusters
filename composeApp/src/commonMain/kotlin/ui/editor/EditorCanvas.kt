@@ -1120,9 +1120,26 @@ private inline fun DrawScope.drawPartialConstructs(
                     center = point
                 )
                 drawCircle(
-                    color = creationPrototypeColor,
+                    color = creationPrototypeColor.copy(alpha = 0.4f),
                     radius = creationPointRadius,
                     center = arcPath.midpoints[i].toOffset()
+                )
+            }
+            if (arcPath.isClosed) {
+                val point = arcPath.startVertex.point.toOffset()
+                when (val circle = arcPath.circles.last().circle) {
+                    is Circle -> path.arcToRad(
+                        Rect(circle.center, circle.radius.toFloat()),
+                        arcPath.startAngles.last().toFloat(),
+                        arcPath.sweepAngles.last().toFloat(),
+                        forceMoveTo = true
+                    )
+                    null -> path.lineTo(point.x, point.y)
+                }
+                drawCircle(
+                    color = creationPrototypeColor.copy(alpha = 0.4f),
+                    radius = creationPointRadius,
+                    center = arcPath.midpoints.last().toOffset()
                 )
             }
             drawPath(path, creationPrototypeColor, style = circleStroke)

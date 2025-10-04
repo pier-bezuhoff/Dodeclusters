@@ -2,7 +2,9 @@ package domain
 
 import androidx.compose.runtime.Immutable
 import core.geometry.Circle
+import core.geometry.CircleOrLine
 import core.geometry.EPSILON
+import core.geometry.Line
 import core.geometry.Point
 import core.geometry.calculateAngle
 import domain.expressions.computeCircleBy3Points
@@ -89,19 +91,19 @@ data class PartialArcPath(
         else
             vertices.size
 
-    init {
-        require(
-            midpoints.size == nArcs && circles.size == nArcs &&
-            startAngles.size == nArcs && sweepAngles.size == nArcs
-        )
-    }
-
     /** A type of the grabbed node */
     @Immutable
     sealed interface Focus {
         data object StartPoint : Focus
         data class Point(val vertexIndex: Int) : Focus
         data class MidPoint(val arcIndex: Int) : Focus
+    }
+
+    init {
+        require(
+            midpoints.size == nArcs && circles.size == nArcs &&
+            startAngles.size == nArcs && sweepAngles.size == nArcs
+        )
     }
 
     inline fun vertexAt(vertexNumber: VertexNumber): ArcPathPoint.Vertex =
@@ -122,12 +124,29 @@ data class PartialArcPath(
             startVertex
         else vertices[vertexNumber]
 
-    fun addNewVertex(newVertex: ArcPathPoint.Vertex): PartialArcPath = copy(
+    inline fun arcIndex2startVertexNumber(arcIndex: Int): VertexNumber =
+        arcIndex
+
+    inline fun arcIndex2endVertexNumber(arcIndex: Int): VertexNumber =
+        (arcIndex + 1).mod(vertices.size + 1)
+
+    fun arcIndex2CircleOrLine(arcIndex: Int): CircleOrLine =
+        when (val c = circles[arcIndex].circle) {
+            is Circle -> c
+            null -> Line.by2Points(
+                vertexAt(arcIndex2startVertexNumber(arcIndex)).point,
+                vertexAt(arcIndex2endVertexNumber(arcIndex)).point
+            )
+//            else -> never()
+        }
+
+    fun addNewVertexAndGrabIt(newVertex: ArcPathPoint.Vertex): PartialArcPath = copy(
         startVertex = startVertex,
         vertices = vertices + newVertex,
         midpoints = midpoints + lastVertex.point.middle(newVertex.point),
         circles = circles + ArcPathCircle.Free(null),
         startAngles = startAngles + 0.0, sweepAngles = sweepAngles + 0.0,
+        focus = Focus.Point(vertices.size),
     )
 
     // TODO: vertex-vertex snapping
@@ -243,8 +262,8 @@ data class PartialArcPath(
         }
 
     fun updateMidpoint(arcIndex: Int, newMidpoint: Point): PartialArcPath {
-        val startVertexNumber = arcIndex
-        val endVertexNumber = (arcIndex + 1).mod(vertices.size + 1)
+        val startVertexNumber = arcIndex2startVertexNumber(arcIndex)
+        val endVertexNumber = arcIndex2endVertexNumber(arcIndex)
         val start = vertexAt(startVertexNumber).point
         val end = vertexAt(endVertexNumber).point
         val newCircle =
@@ -277,14 +296,15 @@ data class PartialArcPath(
     fun unFocus(): PartialArcPath = copy(
         midpoints =
             if (focus is Focus.MidPoint) {
-                val startVertexNumber = focus.arcIndex
-                val endVertexNumber = (focus.arcIndex + 1).mod(vertices.size + 1)
-                val circle = circles[focus.arcIndex].circle
+                val arcIndex = focus.arcIndex
+                val startVertexNumber = arcIndex2startVertexNumber(arcIndex)
+                val endVertexNumber = arcIndex2endVertexNumber(arcIndex)
+                val circle = circles[arcIndex].circle
                 val start = vertexAt(startVertexNumber).point
                 val end = vertexAt(endVertexNumber).point
                 val correctedMidpoint =
                     circle?.pointInBetween(start, end) ?: start.middle(end)
-                midpoints.updated(focus.arcIndex, correctedMidpoint)
+                midpoints.updated(arcIndex, correctedMidpoint)
             } else midpoints
         ,
         focus = null,

@@ -2128,8 +2128,7 @@ class EditorViewModel : ViewModel() {
                     if (midpointIx != -1) {
                         arcPath.copy(focus = PartialArcPath.Focus.MidPoint(midpointIx))
                     } else {
-                        arcPath.addNewVertex(ArcPathPoint.Free(absolutePoint))
-                            .copy(focus = PartialArcPath.Focus.Point(arcPath.vertices.size))
+                        arcPath.addNewVertexAndGrabIt(ArcPathPoint.Free(absolutePoint))
                     }
                 }
             }
@@ -2810,8 +2809,11 @@ class EditorViewModel : ViewModel() {
                 KeyboardAction.CREATE -> switchToCategory(Category.Create)
                 KeyboardAction.OPEN -> openFileRequests.tryEmit(Unit)
                 KeyboardAction.SAVE -> toolAction(Tool.SaveCluster)
-                KeyboardAction.CONFIRM -> if (submode is SubMode.ExprAdjustment)
-                    confirmAdjustedParameters()
+                KeyboardAction.CONFIRM ->
+                    if (submode is SubMode.ExprAdjustment)
+                        confirmAdjustedParameters()
+                    else if (mode == ToolMode.ARC_PATH)
+                        completeArcPath()
                 KeyboardAction.NEW_DOCUMENT -> openNewBlankConstellation()
                 KeyboardAction.HELP -> { // temporarily hijacked for debugging
                     showDebugInfo()
@@ -3554,19 +3556,10 @@ class EditorViewModel : ViewModel() {
 //            }
             // and create [abstract] arc path
             val newCircles: List<CircleOrLine> = pArcPath.circles
-                .mapIndexed { j, circle ->
+                .mapIndexed { arcIndex, circle ->
                     when (circle) {
                         is ArcPathCircle.Eq -> null
-                        is ArcPathCircle.Free ->
-                            @Suppress("REDUNDANT_ELSE_IN_WHEN")
-                            when (val c = circle.circle) {
-                                is Circle -> c
-                                null -> Line.by2Points(
-                                    pArcPath.previousVertex(j).point,
-                                    pArcPath.vertices[j].point
-                                )
-                                else -> never()
-                            }
+                        is ArcPathCircle.Free -> pArcPath.arcIndex2CircleOrLine(arcIndex)
 //                        else -> never()
                     }
                 }.filterNotNull()
