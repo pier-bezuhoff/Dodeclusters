@@ -19,9 +19,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import com.github.ajalt.colormath.model.RGB
-import core.geometry.ArcPathCircle
-import core.geometry.ArcPathPoint
+import domain.ArcPathCircle
+import domain.ArcPathPoint
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrImaginaryCircle
@@ -30,7 +29,7 @@ import core.geometry.GCircle
 import core.geometry.GeneralizedCircle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
-import core.geometry.PartialArcPath
+import domain.PartialArcPath
 import core.geometry.Point
 import core.geometry.Rotor
 import core.geometry.calculateStereographicRotationBiEngine
@@ -2621,7 +2620,9 @@ class EditorViewModel : ViewModel() {
             SelectionMode.Drag -> {
                 // MAYBE: try to re-attach free points
             }
-            ToolMode.ARC_PATH -> {}
+            ToolMode.ARC_PATH -> {
+                partialArcPath = partialArcPath?.unFocus()
+            }
             ViewMode.StereographicRotation -> {
                 // MAYBE: normalize line-only-output expressions (e.g. polar line)
                 // fixes incident points for line->circle and circle->line transitions

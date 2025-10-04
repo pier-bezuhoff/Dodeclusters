@@ -65,7 +65,7 @@ import core.geometry.GCircle
 import core.geometry.GeneralizedCircle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
-import core.geometry.PartialArcPath
+import domain.PartialArcPath
 import core.geometry.Point
 import core.geometry.fromCorners
 import dodeclusters.composeapp.generated.resources.Res
