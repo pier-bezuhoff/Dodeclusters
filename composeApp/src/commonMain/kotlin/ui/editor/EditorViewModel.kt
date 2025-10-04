@@ -19,6 +19,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
+import com.github.ajalt.colormath.model.RGB
 import core.geometry.ArcPathCircle
 import core.geometry.ArcPathPoint
 import core.geometry.Circle
@@ -3786,16 +3787,18 @@ class EditorViewModel : ViewModel() {
         viewModelScope.launch {
             val platform = getPlatform()
             if (!RESTORE_LAST_SAVE_ON_LOAD) {
-                loadNewConstellation(Constellation.SAMPLE)
-                centerizeTo(0f, 0f)
+                restoreFromState(State.SAMPLE)
+//                loadNewConstellation(Constellation.SAMPLE)
+//                centerizeTo(0f, 0f)
             } else {
                 val result = runCatching { // NOTE: can fail crash when underlying VM.State format changes
                     platform.lastStateStore.get()
                 }
                 val state = result.getOrNull()
                 if (state == null) {
-                    loadNewConstellation(Constellation.SAMPLE)
-                    centerizeTo(0f, 0f)
+                    restoreFromState(State.SAMPLE)
+//                    loadNewConstellation(Constellation.SAMPLE)
+//                    centerizeTo(0f, 0f)
                 } else {
                     restoreFromState(state)
 //                    queueSnackbarMessage(SnackbarMessage.SUCCESSFUL_RESTORE)
@@ -3889,6 +3892,16 @@ class EditorViewModel : ViewModel() {
                 // yep, gotta thank brilliant JS devs for their gift to humanity
                 allowSpecialFloatingPointValues = true
             }
+
+            // nice spiral
+            val SAMPLE = State(
+                constellation = Constellation.SAMPLE,
+                selection = listOf(),
+                centerX = 0f, centerY = 0f,
+                regionColor = null,
+                chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT,
+                chessboardColor = Color(56, 136, 116),
+            )
         }
     }
 
@@ -3915,7 +3928,7 @@ class EditorViewModel : ViewModel() {
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
         const val ENABLE_TANGENT_SNAPPING = false
-        const val RESTORE_LAST_SAVE_ON_LOAD = !true
+        const val RESTORE_LAST_SAVE_ON_LOAD = !true // TMP
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         const val SHOW_IMAGINARY_CIRCLES = true
