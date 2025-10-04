@@ -7,6 +7,7 @@ import domain.ColorAsCss
 import domain.Ix
 import domain.expressions.Expr
 import domain.expressions.Expression
+import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.ObjectConstruct
 import domain.expressions.reIndex
 import kotlinx.serialization.Serializable
@@ -133,7 +134,36 @@ data class Constellation(
 
     companion object {
         const val FIRST_INDEX: Int = 0
+        // nice symmetrical spiral
         val SAMPLE = Constellation(
+            objects =
+                listOf(
+                    Circle(0.0, 0.0, 100.0),
+                ).map { circle -> ObjectConstruct.ConcreteCircle(circle) } +
+                listOf(
+                    Point(-282.0, 0.0),
+                    Point(+282.0, 0.0),
+                ).map { point -> ObjectConstruct.ConcretePoint(point) } +
+                Expr.LoxodromicMotion(
+                    LoxodromicMotionParameters(-200f, 2.0, 9),
+                    1, 2, 0, 13
+                ).let { expr ->
+                    (0 .. 9).map { outputIndex ->
+                        ObjectConstruct.Dynamic(Expression.OneOf(expr, outputIndex))
+                    }
+                } +
+                Expr.LoxodromicMotion(
+                    LoxodromicMotionParameters(-200f, 2.0, 9),
+                    2, 1, 0, 3
+                ).let { expr ->
+                    (0 .. 9).map { outputIndex ->
+                        ObjectConstruct.Dynamic(Expression.OneOf(expr, outputIndex))
+                    }
+                }
+            ,
+            parts = emptyList()
+        )
+        val SAMPLE_CIRCLE = Constellation(
             objects = listOf(
                 Circle(0.0, 0.0, 200.0),
             ).map { ObjectConstruct.ConcreteCircle(it) },

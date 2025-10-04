@@ -72,8 +72,8 @@ sealed class Category(
     data object Transform : Category(
         Res.string.transform_category_name,
         listOf(
-            Tool.CircleInversion,
             Tool.LoxodromicMotion,
+            Tool.CircleInversion,
             Tool.CircleOrPointInterpolation,
             Tool.Rotation,
             Tool.BiInversion,

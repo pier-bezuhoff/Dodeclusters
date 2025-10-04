@@ -137,14 +137,14 @@ data class Line(
     // conf_inf < projection along line direction; order 0 = project(0,0)
     override fun point2order(point: Point): Double {
         return if (point == Point.CONFORMAL_INFINITY)
-            Double.NEGATIVE_INFINITY
+            ORDER_OF_CONFORMAL_INFINITY
         else
             point.x*directionX + point.y*directionY
     }
 
     override fun order2point(order: Double): Point {
         if (order.isInfinite())
-            Point.CONFORMAL_INFINITY
+            return Point.CONFORMAL_INFINITY
         val p0 = project(Point(0.0, 0.0))
         return Point(
             p0.x + directionX*order,
@@ -152,19 +152,26 @@ data class Line(
         )
     }
 
-    override fun orderInBetween(order1: Double, order2: Double): Double =
-        if (order1 == Double.NEGATIVE_INFINITY && order2 == Double.NEGATIVE_INFINITY)
-            0.0
-        else if (order1 == Double.NEGATIVE_INFINITY)
+    override fun orderInBetween(order1: Double, order2: Double): Double {
+        val order1IsFinite = order1.isFinite()
+        val order2IsFinite = order2.isFinite()
+        return if (order1IsFinite) {
+            if (order2IsFinite) {
+                if (order2 > order1)
+                    order1 + (order2 - order1) / 2.0
+                else if (order2 == order1)
+                    order1 + 50.0 // idk, w/e
+                else // order2 < order1
+                    order1 - (order1 - order2) / 2.0
+            } else { // finite & infinite
+                order1 + 50.0
+            }
+        } else if (order2IsFinite) { // infinite & finite
             order2 - 50.0
-        else if (order2 == Double.NEGATIVE_INFINITY)
-            order1 + 50.0
-        else if (order2 > order1)
-            order1 + (order2 - order1)/2.0
-        else if (order2 == order1)
-            order1 + 50.0 // idk, w/e
-        else // order2 < order1
-            order1 - (order1 - order2)/2.0
+        } else { // infinite & infinite
+            0.0
+        }
+    }
 
     override fun orderIsInBetween(startOrder: Double, order: Double, endOrder: Double): Boolean {
         return if (startOrder <= endOrder)
@@ -264,6 +271,9 @@ data class Line(
         this
 
     companion object {
+        /** `Line.point2order(Point.CONFORMAL_INFINITY)` */
+        const val ORDER_OF_CONFORMAL_INFINITY = Double.NEGATIVE_INFINITY
+
         fun by2Points(p1: Offset, p2: Offset): Line {
             val dy = p2.y.toDouble() - p1.y
             val dx = p2.x.toDouble() - p1.x

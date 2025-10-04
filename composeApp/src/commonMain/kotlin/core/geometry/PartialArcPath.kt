@@ -124,7 +124,9 @@ data class PartialArcPath(
                     midpoints = midpoints.updated(0, newMidpoint),
                     circles = circles.updated(0, ArcPathCircle.Free(newNextCircle)),
                     startAngles = startAngles.updated(0, newNextStartAngle),
-                    sweepAngles = sweepAngles // sweep angle stays the same
+                    sweepAngles = sweepAngles, // sweep angle stays the same
+                    vertexNumber2snappableCircles =
+                        vertexNumber2snappableCircles + (vertexNumber to emptySet()),
                 )
             }
         } else if (vertexNumber == vertices.size && !isClosed) { // move detached end case
@@ -146,7 +148,9 @@ data class PartialArcPath(
                 midpoints = midpoints.updated(vertexIndex, newMidpoint),
                 circles = circles.updated(vertexIndex, ArcPathCircle.Free(newPreviousCircle)),
                 startAngles = startAngles.updated(vertexIndex, newPreviousStartAngle),
-                sweepAngles = sweepAngles // sweep angle stays the same
+                sweepAngles = sweepAngles, // sweep angle stays the same
+                vertexNumber2snappableCircles =
+                    vertexNumber2snappableCircles + (vertexNumber to emptySet()),
             )
         } else { // backward + forward
             val newPoint = newVertex.point
@@ -187,7 +191,9 @@ data class PartialArcPath(
                     vertexIndex to newPreviousStartAngle,
                     nextVertexIndex to newNextStartAngle
                 ),
-                sweepAngles = sweepAngles // sweep angle stays the same
+                sweepAngles = sweepAngles, // sweep angle stays the same
+                vertexNumber2snappableCircles =
+                    vertexNumber2snappableCircles + (vertexNumber to emptySet()),
             )
         }
 
@@ -221,6 +227,7 @@ data class PartialArcPath(
             null -> this
         }
 
+    // call in VM.onUp when Vertex is in focus
     fun updateSnappables(vertexNumber: VertexNumber, snappables: Set<Ix>): PartialArcPath =
         copy(
             vertexNumber2snappableCircles =

@@ -433,17 +433,20 @@ class EditorViewModel : ViewModel() {
             "$ix: " + expressions.expressions[ix].toString()
         }
         println("mode = $mode, submode = $submode")
+        println("partialArgList = $partialArgList")
         println("selection = $selection")
         println("selected objects = $selectedObjectsString")
         println("selected objects downscaled = " + selection.joinToString { ix ->
             "$ix: " + objectModel.downscaledObjects[ix].toString()
         })
         println("selected objects expressions = $selectedExpressionsString")
-        println("regions bounded by some of selected objects = " + regions.filter {
-            it.insides.any { ix -> ix in selection } ||
-            it.outsides.any { ix -> ix in selection }
-        }.joinToString { it.toString() }
+        println(
+            "regions bounded by some of selected objects = " + regions.filter {
+                it.insides.any { ix -> ix in selection } ||
+                it.outsides.any { ix -> ix in selection }
+            }.joinToString { it.toString() }
         )
+        println("partialArcPath = $partialArcPath")
         println("invalidation #${objectModel.invalidations}")
         queueSnackbarMessage(SnackbarMessage.STUB, " | $selectedObjectsString;\n$selectedExpressionsString")
     }
@@ -1712,22 +1715,6 @@ class EditorViewModel : ViewModel() {
         } == true)
     }
 
-    val showInfinitePointInput: Boolean get() =
-        partialArgList?.let { argList ->
-            argList.nextArgType?.let { nextArgType ->
-                val acceptsInfinitePoint = Arg.InfinitePoint in nextArgType.possibleTypes
-                val acceptsIndices = Arg.Indices in nextArgType.possibleTypes
-                (acceptsInfinitePoint || acceptsIndices) &&
-                    objectModel.getInfinityIndex()?.let { ix ->
-                        val potentialNewArg = if (acceptsIndices)
-                            Arg.Indices(listOf(ix))
-                        else
-                            Arg.PointIndex(ix)
-                        argList.validateNewArg(potentialNewArg)
-                    } != false
-            } == true
-        } == true
-
     fun adjustExpr() {
         val expr = exprOf(selection[0])
         if (expr !is Expr.HasParameters) {
@@ -2110,7 +2097,7 @@ class EditorViewModel : ViewModel() {
                     expressions,
                     ix,
                     expr.copy(parameters =
-                        expr.parameters.copy(order = Double.POSITIVE_INFINITY)
+                        expr.parameters.copy(order = Line.ORDER_OF_CONFORMAL_INFINITY)
                     )
                 )
             }
@@ -2327,7 +2314,6 @@ class EditorViewModel : ViewModel() {
         translation: Offset, zoom: Float, rotationAngle: Float
     ) {
         val selectedIndex = selection.single()
-        // tangential snap
         if (ENABLE_TANGENT_SNAPPING) {
             val circle = objects[selectedIndex] as CircleOrLine
             val result0 = circle.transformed(translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
@@ -2975,7 +2961,11 @@ class EditorViewModel : ViewModel() {
     }
 
     fun confirmAdjustedParameters() {
-        partialArgList = partialArgList?.copyEmpty()
+        partialArgList = if (mode is ToolMode) {
+            partialArgList?.copyEmpty()
+        } else { // when adjusting in drag/multiselect
+            null
+        }
         when (val sm = submode) {
             is SubMode.ExprAdjustment -> {
                 when (val parameters = sm.parameters) {
@@ -3724,6 +3714,22 @@ class EditorViewModel : ViewModel() {
                 hug(objectModel.invalidations)
                 selection.none { it in phantoms }
             }
+            Tool.InfinitePoint -> {
+                partialArgList?.let { argList ->
+                    argList.nextArgType?.let { nextArgType ->
+                        val acceptsInfinitePoint = Arg.InfinitePoint in nextArgType.possibleTypes
+                        val acceptsIndices = Arg.Indices in nextArgType.possibleTypes
+                        (acceptsInfinitePoint || acceptsIndices) &&
+                                objectModel.getInfinityIndex()?.let { ix ->
+                                    val potentialNewArg = if (acceptsIndices)
+                                        Arg.Indices(listOf(ix))
+                                    else
+                                        Arg.PointIndex(ix)
+                                    argList.validateNewArg(potentialNewArg)
+                                } != false
+                    } == true
+                } == true
+            }
             Tool.MovePointToInfinity -> {
                 hug(objectModel.invalidations)
                 selection.singleOrNull()?.let { ix ->
@@ -3909,7 +3915,7 @@ class EditorViewModel : ViewModel() {
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = true
         const val ENABLE_TANGENT_SNAPPING = false
-        const val RESTORE_LAST_SAVE_ON_LOAD = true
+        const val RESTORE_LAST_SAVE_ON_LOAD = !true
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         const val SHOW_IMAGINARY_CIRCLES = true

@@ -64,7 +64,8 @@ sealed interface SubMode {
     }
 
     // generic type E doesn't actually enforce anything...
-    /** Sub-mode accompanying [ToolMode], that allows live adjustment of expression parameters.
+    /** Sub-mode accompanying [ToolMode] (or sometimes [SelectionMode.Drag] or [SelectionMode.Multiselect]),
+     * that allows live adjustment of expression parameters.
      * Can affect many [adjustables] = [Expr]s of same type, by varying parameters of each of them.
      * All expressions must be of the same type.
      * @property[adjustables] non-empty list of [Expr]s together with occupied and

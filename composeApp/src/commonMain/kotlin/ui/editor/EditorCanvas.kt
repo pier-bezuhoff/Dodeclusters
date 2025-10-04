@@ -96,6 +96,7 @@ import ui.reactiveCanvas
 import ui.region2pathWithCache
 import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
+import ui.tools.Tool
 import kotlin.math.min
 
 private val dottedPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
@@ -314,7 +315,7 @@ fun BoxScope.EditorCanvas(
                 setStrategy = viewModel::setRegionsManipulationStrategy
             )
         }
-        if (viewModel.showInfinitePointInput) {
+        if (viewModel.toolPredicate(Tool.InfinitePoint)) {
             InfinitePointInput(
                 toolAction = viewModel::toolAction,
             )
