@@ -19,7 +19,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import domain.ArcPathCircle
+import domain.ArcPathArc
 import domain.ArcPathPoint
 import core.geometry.Circle
 import core.geometry.CircleOrLine
@@ -52,8 +52,11 @@ import domain.PartialArgList
 import domain.PointSnapResult
 import domain.settings.Settings
 import domain.angleDeg
+import domain.cluster.ClosedArcPath
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
+import domain.cluster.OpenArcPath
+import domain.cluster.SignedDirectedArcIndex
 import domain.compressConstraints
 import domain.entails
 import domain.expressions.BiInversionParameters
@@ -67,11 +70,13 @@ import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.ObjectConstruct
 import domain.expressions.Parameters
 import domain.expressions.RotationParameters
+import domain.expressions.SagittaRatioParameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeIntersection
 import domain.expressions.computeLineBy2Points
+import domain.expressions.computeSagittaRatio
 import domain.expressions.copyWithNewParameters
 import domain.expressions.reIndex
 import domain.filterIndices
@@ -81,7 +86,6 @@ import domain.io.DdcV2
 import domain.io.DdcV4
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
-import domain.never
 import domain.reindexingMap
 import domain.snapAngle
 import domain.snapCircleToCircles
@@ -659,16 +663,11 @@ class EditorViewModel : ViewModel() {
     fun createNewGCircles(
         newGCircles: List<GCircle?>,
     ) {
-        val normalizedGCircles = newGCircles.map {
-            if (it is Circle && it.radius <= 0) // Q: idk why are we doing it, does it ever happen?
-                null
-            else it
-        }
-        val validNewGCircles = normalizedGCircles.filterNotNull()
+        val validNewGCircles = newGCircles.filterNotNull()
         if (validNewGCircles.isNotEmpty()) {
             showCircles = true
             val prevSize = objects.size
-            objectModel.addObjects(normalizedGCircles)
+            objectModel.addObjects(newGCircles)
             selection = (prevSize until objects.size).filter { objects[it] != null }
             viewModelScope.launch {
                 animations.emit(
@@ -676,7 +675,7 @@ class EditorViewModel : ViewModel() {
                 )
             }
         } else { // all nulls
-            objectModel.addObjects(normalizedGCircles)
+            objectModel.addObjects(newGCircles)
             selection = emptyList()
         }
         objectModel.invalidate()
@@ -3496,74 +3495,93 @@ class EditorViewModel : ViewModel() {
     }
 
     fun completeArcPath() {
-        require(partialArcPath != null) { "Cannot complete non-existent arc path during completeArcPath()" }
         partialArcPath?.let { pArcPath ->
             recordCreateCommand()
-//            val vertices =
-//                if (pArcPath.isClosed)
-//                    listOf(pArcPath.startVertex) + pArcPath.vertices.dropLast(1)
-//                else listOf(pArcPath.startVertex) + pArcPath.vertices
-//            val vertexIndices: List<Ix> = vertices.map { vertex ->
-//                when (vertex) {
-//                    is ArcPathPoint.Eq -> vertex.index
-//                    is ArcPathPoint.Free -> {
-//                        expressions.addFree()
-//                        addObject(vertex.point)
-//                    }
-//                    is ArcPathPoint.Incident -> {
-//                        val carrier = objects[vertex.carrierIndex] as CircleOrLine
-//                        val order = carrier.downscale().point2order(vertex.point.downscale())
-//                        val point = expressions.addSoloExpression(
-//                            Expr.Incidence(IncidenceParameters(order), vertex.carrierIndex)
-//                        ) as Point
-//                        addObject(point)
-//                    }
-//                    is ArcPathPoint.Intersection -> {
-//                        val expression = Expression.OneOf(
-//                            Expr.Intersection(vertex.carrier1Index, vertex.carrier2Index),
-//                            outputIndex = 0
-//                        )
-//                        val point = expressions.addMultiExpression(expression) as Point
-//                        addObject(point)
-//                    }
-//                }
-//            }
-//            val circleIndices = mutableSetOf<Ix>()
-//            for (j in pArcPath.circles.indices) {
-//                when (val c = pArcPath.circles[j]) {
-//                    is ArcPathCircle.Eq -> {
-//                        circleIndices.add(c.index)
-//                    }
-//                    is ArcPathCircle.Free -> {
-//                        val previous = vertexIndices[j]
-//                        val next = vertexIndices[(j + 1) % vertexIndices.size]
-//                        val circle = c.circle
-//                        if (circle == null) {
-//                            val expr = Expr.LineBy2Points(previous, next)
-//                            val line = expressions.addSoloExpression(expr) as Line
-//                            TODO("line by 2 points")
-//                        } else {
-//                            val sagittaRatio = computeSagittaRatio(circle, objects[previous] as Point, objects[next] as Point)
-//                            val expr = Expr.CircleBy2PointsAndSagittaRatio(
-//                                SagittaRatioParameters(sagittaRatio),
-//                                previous, next
-//                            )
-//                            val circle1 = expressions.addSoloExpression(expr) as CircleOrLine
-//                            TODO("sagitta")
-//                        }
-//                    }
-//                }
-//            }
-            // and create [abstract] arc path
-            val newCircles: List<CircleOrLine> = pArcPath.circles
-                .mapIndexed { arcIndex, circle ->
-                    when (circle) {
-                        is ArcPathCircle.Eq -> null
-                        is ArcPathCircle.Free -> pArcPath.arcIndex2CircleOrLine(arcIndex)
-//                        else -> never()
+            val vertices = listOf(pArcPath.startVertex) + pArcPath.vertices
+            val vertexIndices: List<Ix> = vertices.map { vertex ->
+                when (vertex) {
+                    is ArcPathPoint.Eq -> vertex.index
+                    is ArcPathPoint.Free -> {
+                        createNewFreePoint(vertex.point, triggerRecording = false)
                     }
-                }.filterNotNull()
-            createNewGCircles(newCircles)
+                    is ArcPathPoint.Incident -> {
+                        val carrier = objects[vertex.carrierIndex] as CircleOrLine
+                        val order = carrier.downscale().point2order(vertex.point.downscale())
+                        val point = expressions.addSoloExpr(
+                            Expr.Incidence(IncidenceParameters(order), vertex.carrierIndex)
+                        ) as Point
+                        objectModel.addDownscaledObject(point)
+                    }
+                    is ArcPathPoint.Intersection -> {
+                        val expression = Expression.OneOf(
+                            Expr.Intersection(vertex.carrier1Index, vertex.carrier2Index),
+                            outputIndex = 0
+                        )
+                        val point = expressions.addMultiExpression(expression) as Point
+                        objectModel.addDownscaledObject(point)
+                    }
+                }
+            }
+            val signedDirectedArcIndices: List<SignedDirectedArcIndex> =
+                pArcPath.arcs.mapIndexed { arcIndex, arc ->
+                    when (val arc = pArcPath.arcs[arcIndex]) {
+                        is ArcPathArc.Eq -> {
+                            if (arc.sameDirection) {
+                                1 + arc.index
+                            } else {
+                                -1 - arc.index
+                            }
+                        }
+                        is ArcPathArc.Free -> {
+                            // vertexIndices: vertexNumber -> index within VM.objects
+                            val previousVertexIndex: Ix = vertexIndices[arcIndex]
+                            val nextVertexIndex: Ix = vertexIndices[(arcIndex + 1) % vertexIndices.size]
+                            val circle = arc.circle
+                            if (circle == null) {
+                                val expr = Expr.LineBy2Points(previousVertexIndex, nextVertexIndex)
+                                val line = expressions.addSoloExpr(expr) as Line
+                                1 + objectModel.addDownscaledObject(line)
+                            } else {
+                                val sagittaRatio = computeSagittaRatio(
+                                    circle,
+                                    objects[previousVertexIndex] as Point,
+                                    objects[nextVertexIndex] as Point,
+                                )
+                                val expr = Expr.CircleBy2PointsAndSagittaRatio(
+                                    SagittaRatioParameters(sagittaRatio),
+                                    previousVertexIndex, nextVertexIndex
+                                )
+                                val circle1 = expressions.addSoloExpr(expr) as CircleOrLine
+                                1 + objectModel.addDownscaledObject(circle1)
+                            }
+                        }
+                    }
+                }
+//            val newCircles: List<CircleOrLine> = pArcPath.arcs
+//                .mapIndexed { arcIndex, circle ->
+//                    when (circle) {
+//                        is ArcPathArc.Eq -> null
+//                        is ArcPathArc.Free -> pArcPath.arcIndex2CircleOrLine(arcIndex)
+////                        else -> never()
+//                    }
+//                }.filterNotNull()
+//            createNewGCircles(newCircles)
+            // MAYBE: add auxiliary constructs into phantoms
+            val newArcPath = if (pArcPath.isClosed) {
+                ClosedArcPath(
+                    vertices = vertexIndices,
+                    arcs = signedDirectedArcIndices,
+                    fillColor = regionColor,
+                    borderColor = regionColor,
+                )
+            } else {
+                OpenArcPath(
+                    vertices = vertexIndices,
+                    arcs = signedDirectedArcIndices,
+                    borderColor = regionColor,
+                )
+            }
+            objectModel.invalidate()
         }
         partialArcPath = null
     }

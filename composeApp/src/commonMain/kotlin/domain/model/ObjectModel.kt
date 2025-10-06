@@ -71,16 +71,18 @@ class ObjectModel {
         pathCache.invalidateObjectPathAt(ix)
     }
 
-    fun addObject(newObject: GCircle?) {
+    fun addObject(newObject: GCircle?): Ix {
         objects.add(newObject)
         downscaledObjects.add(newObject?.downscale())
         pathCache.addObject()
+        return objects.size - 1
     }
 
-    fun addDownscaledObject(newDownscaledObject: GCircle?) {
+    fun addDownscaledObject(newDownscaledObject: GCircle?): Ix {
         objects.add(newDownscaledObject?.upscale())
         downscaledObjects.add(newDownscaledObject)
         pathCache.addObject()
+        return objects.size - 1
     }
 
     fun addObjects(newObjects: List<GCircle?>) {

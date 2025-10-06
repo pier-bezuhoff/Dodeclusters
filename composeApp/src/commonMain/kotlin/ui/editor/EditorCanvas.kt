@@ -1105,7 +1105,7 @@ private inline fun DrawScope.drawPartialConstructs(
             path.moveTo(arcPath.startVertex.point.x.toFloat(), arcPath.startVertex.point.y.toFloat())
             for (i in arcPath.vertices.indices) {
                 val point = arcPath.vertices[i].point.toOffset()
-                when (val circle = arcPath.circles[i].circle) {
+                when (val circle = arcPath.arcs[i].circle) {
                     is Circle -> path.arcToRad(
                         Rect(circle.center, circle.radius.toFloat()),
                         arcPath.startAngles[i].toFloat(),
@@ -1127,7 +1127,7 @@ private inline fun DrawScope.drawPartialConstructs(
             }
             if (arcPath.isClosed) {
                 val point = arcPath.startVertex.point.toOffset()
-                when (val circle = arcPath.circles.last().circle) {
+                when (val circle = arcPath.arcs.last().circle) {
                     is Circle -> path.arcToRad(
                         Rect(circle.center, circle.radius.toFloat()),
                         arcPath.startAngles.last().toFloat(),

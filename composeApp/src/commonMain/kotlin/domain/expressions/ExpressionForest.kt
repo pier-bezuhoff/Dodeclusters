@@ -129,7 +129,7 @@ class ExpressionForest(
             tier2ixs.add(setOf(ix))
         }
         val result = expr.eval(objects)
-//        println("$ix -> $expr -> $result")
+        println("$ix -> $expr -> $result")
         return result.firstOrNull()
     }
 
@@ -149,7 +149,7 @@ class ExpressionForest(
         } else { // no hopping over tiers, we good
             tier2ixs.add(setOf(ix))
         }
-//        println("$ix -> $expression -> $result")
+        println("$ix -> $expression -> $result")
         return result
     }
 
@@ -176,7 +176,7 @@ class ExpressionForest(
                 tier2ixs.add(setOf(ix))
             }
         }
-//        println("$ix0:${ix0+result.size} -> $expr -> $result")
+        println("$ix0:${ix0+result.size} -> $expr -> $result")
         return result
     }
 
