@@ -1,11 +1,13 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import org.w3c.dom.events.Event
@@ -16,6 +18,7 @@ import ui.LifecycleEvent
 import ui.editor.KeyboardAction
 import ui.theme.ColorTheme
 import ui.theme.DEFAULT_COLOR_THEME
+import kotlin.time.Duration.Companion.seconds
 
 // NOTE: because Github Pages serves .wasm files with wrong mime type https://stackoverflow.com/a/54320709/7143065
 //  to open in mobile/firefox use netlify version
@@ -55,13 +58,34 @@ fun main() {
     loadingSpinner?.remove()
     document.querySelector("h2")?.setAttribute("style", "display: none;")
     document.querySelector("h1")?.setAttribute("style", "display: none;")
-    ComposeViewport(viewportContainerId = "compose-root") {
+    // BUG: after pressing Tab or Delete the canvas gets focused
+    //  with a distracting white outline
+    //  and i cannot style it normally
+    //  canvas:focus { outline: 0px solid transparent; }
+    //  It can be focused bc of the canvas 'tabindex' property
+    ComposeViewport(
+        viewportContainerId = "compose-root",
+        configure = {
+            isA11YEnabled = false
+        }
+    ) {
         App(
             sampleName = sampleName,
             colorTheme = colorTheme,
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,
         )
+        LaunchedEffect(1) { // hack
+            delay(5.seconds)
+            document.getElementById("compose-root")
+                ?.shadowRoot
+                ?.querySelector("canvas")
+                ?.let { canvasElement ->
+                    val style = canvasElement.getAttribute("style")
+                    canvasElement.setAttribute("style", "$style outline: 0px none transparent;")
+                }
+                ?.also { println("good") } ?: println("bad")
+        }
     }
 }
 

@@ -14,7 +14,6 @@ plugins {
 kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
-//        moduleName = "composeApp"
         outputModuleName = "composeApp"
         browser {
             commonWebpackConfig {
