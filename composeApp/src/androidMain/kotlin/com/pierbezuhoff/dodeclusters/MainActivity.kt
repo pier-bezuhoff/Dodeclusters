@@ -141,7 +141,9 @@ class MainActivity : ComponentActivity() {
             if (!view.isInEditMode) {
                 SideEffect {
                     val window = (view.context as Activity).window
-                    window.statusBarColor = statusBarColor
+                    if (Build.VERSION.SDK_INT < 35) {
+                        window.statusBarColor = statusBarColor
+                    }
                     WindowCompat.getInsetsController(window, view)
                         .isAppearanceLightStatusBars = isDarkTheme
                 }

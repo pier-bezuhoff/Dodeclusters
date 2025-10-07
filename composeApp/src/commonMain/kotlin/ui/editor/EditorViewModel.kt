@@ -3522,6 +3522,7 @@ class EditorViewModel : ViewModel() {
                     }
                 }
             }
+            val auxillaryIndices = mutableListOf<Ix>()
             val signedDirectedArcIndices: List<SignedDirectedArcIndex> =
                 pArcPath.arcs.mapIndexed { arcIndex, arc ->
                     when (val arc = pArcPath.arcs[arcIndex]) {
@@ -3540,7 +3541,9 @@ class EditorViewModel : ViewModel() {
                             if (circle == null) {
                                 val expr = Expr.LineBy2Points(previousVertexIndex, nextVertexIndex)
                                 val line = expressions.addSoloExpr(expr) as Line
-                                1 + objectModel.addDownscaledObject(line)
+                                val ix = objectModel.addDownscaledObject(line)
+                                auxillaryIndices.add(ix)
+                                1 + ix
                             } else {
                                 val sagittaRatio = computeSagittaRatio(
                                     circle,
@@ -3552,7 +3555,9 @@ class EditorViewModel : ViewModel() {
                                     previousVertexIndex, nextVertexIndex
                                 )
                                 val circle1 = expressions.addSoloExpr(expr) as CircleOrLine
-                                1 + objectModel.addDownscaledObject(circle1)
+                                val ix = objectModel.addDownscaledObject(circle1)
+                                auxillaryIndices.add(ix)
+                                1 + ix
                             }
                         }
                     }
@@ -3566,7 +3571,7 @@ class EditorViewModel : ViewModel() {
 //                    }
 //                }.filterNotNull()
 //            createNewGCircles(newCircles)
-            // MAYBE: add auxiliary constructs into phantoms
+            objectModel.phantomObjectIndices += auxillaryIndices
             val newArcPath = if (pArcPath.isClosed) {
                 ClosedArcPath(
                     vertices = vertexIndices,

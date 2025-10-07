@@ -140,5 +140,5 @@ private fun shareBitmap(context: Context, uri: Uri) {
         putExtra(Intent.EXTRA_STREAM, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    startActivity(context, createChooser(intent, "Share your image"), null)
+    context.startActivity(createChooser(intent, "Share your image"), null)
 }

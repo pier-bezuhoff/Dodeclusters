@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.get
@@ -58,11 +59,6 @@ fun main() {
     loadingSpinner?.remove()
     document.querySelector("h2")?.setAttribute("style", "display: none;")
     document.querySelector("h1")?.setAttribute("style", "display: none;")
-    // BUG: after pressing Tab or Delete the canvas gets focused
-    //  with a distracting white outline
-    //  and i cannot style it normally
-    //  canvas:focus { outline: 0px solid transparent; }
-    //  It can be focused bc of the canvas 'tabindex' property
     ComposeViewport(
         viewportContainerId = "compose-root",
         configure = {
@@ -75,16 +71,19 @@ fun main() {
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,
         )
-        LaunchedEffect(1) { // hack
-            delay(5.seconds)
-            document.getElementById("compose-root")
+        // BUG: after pressing Tab or Delete the canvas gets focused
+        //  with a distracting white outline
+        //  and i cannot style it normally as it's in shadow dom
+        //  canvas:focus { outline: 0px solid transparent; }
+        //  It can be focused bc of the canvas 'tabindex' property
+        //  Ticket: https://youtrack.jetbrains.com/issue/CMP-9040
+        LaunchedEffect(Unit) { // hack to fix ^^^
+            (document.getElementById("compose-root")
                 ?.shadowRoot
-                ?.querySelector("canvas")
+                ?.querySelector("canvas") as? HTMLCanvasElement)
                 ?.let { canvasElement ->
-                    val style = canvasElement.getAttribute("style")
-                    canvasElement.setAttribute("style", "$style outline: 0px none transparent;")
+                    canvasElement.style.outline = "0px none transparent"
                 }
-                ?.also { println("good") } ?: println("bad")
         }
     }
 }
