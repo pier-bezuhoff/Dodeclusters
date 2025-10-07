@@ -1,7 +1,7 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.window.CanvasBasedWindow
+import androidx.compose.ui.window.ComposeViewport
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
@@ -55,8 +55,7 @@ fun main() {
     loadingSpinner?.remove()
     document.querySelector("h2")?.setAttribute("style", "display: none;")
     document.querySelector("h1")?.setAttribute("style", "display: none;")
-//    ComposeViewport(viewportContainerId = "ComposeTarget") {
-    CanvasBasedWindow(canvasElementId = "ComposeTarget") {
+    ComposeViewport(viewportContainerId = "compose-root") {
         App(
             sampleName = sampleName,
             colorTheme = colorTheme,

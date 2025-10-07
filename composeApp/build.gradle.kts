@@ -1,15 +1,14 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
-    alias(libs.plugins.jetbrainsCompose)
+    alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.androidApplication)
 }
 
 kotlin {
@@ -20,16 +19,16 @@ kotlin {
         browser {
             commonWebpackConfig {
                 outputFileName = "composeApp.js"
-                // source maps for wasm are WIP: https://kotlinlang.org/docs/wasm-debugging.html
-                devtool = "source-map" // not working aside from live localhost testing
-                sourceMaps = true
-                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
-                    static = (static ?: mutableListOf()).apply {
-                        // Serve sources to debug inside browser
-                        add(project.rootDir.path)
-                        add(project.projectDir.path)
-                    }
-                }
+//                // source maps for wasm are WIP: https://kotlinlang.org/docs/wasm-debugging.html
+//                devtool = "source-map" // not working aside from live localhost testing
+//                sourceMaps = true
+//                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
+//                    static = (static ?: mutableListOf()).apply {
+//                        // Serve sources to debug inside browser
+//                        add(project.rootDir.path)
+//                        add(project.projectDir.path)
+//                    }
+//                }
             }
             testTask {
                 useKarma {
@@ -77,11 +76,13 @@ kotlin {
             // NOTE: compose.X translates into "org.jetbrains.compose.X:X" with compose-multiplatform version
             implementation(compose.runtime)
             implementation(compose.foundation)
-            implementation(compose.material3)
+//            implementation(compose.material3)
+            implementation(libs.compose.material3)
             implementation(compose.ui)
             implementation(compose.components.uiToolingPreview)
             implementation(compose.components.resources)
             implementation(libs.compose.ui.graphics)
+            implementation(libs.compose.lifecycle.runtime)
             implementation(libs.compose.lifecycle.viewmodel)
             implementation(libs.compose.material.icons)
             implementation(libs.compose.material3.window.size.klass)
@@ -92,7 +93,7 @@ kotlin {
             implementation(libs.kstore)
         }
         androidMain.dependencies {
-            implementation(libs.androidx.activity.compose)
+            implementation(libs.compose.activity)
             implementation(libs.androidx.core.ktx)
             implementation(libs.coroutines.android)
             implementation(libs.kstore.file)

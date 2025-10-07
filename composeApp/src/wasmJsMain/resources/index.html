@@ -44,7 +44,7 @@
       "applicationSuite": "Dodeca",
       "downloadUrl": "https://github.com/pier-bezuhoff/Dodeclusters/releases",
       "operatingSystem": ["Web", "Android", "Windows", "Linux"],
-      "softwareVersion": "0.4.1",
+      "softwareVersion": "0.4.4",
       "inLanguage": ["en", "ru"],
       "offers": {
         "@type": "Offer",
@@ -84,6 +84,14 @@
     <script type="application/javascript" src="composeApp.js"></script>
     <meta name="google-site-verification" content="yKOpXb8Zc0SJds3eFMCCXDqQp52QWU2oVZR0exhXWxU" />
     <style>
+      html, body, #compose-root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
       h1, h2 {
         text-align: center;
       }
@@ -144,6 +152,6 @@
        </g>
      </g>
    </svg>
-   <canvas id="ComposeTarget" role="application" aria-label="Canvas-based application"></canvas>
+   <div id="compose-root"></div>
   </body>
 </html>
