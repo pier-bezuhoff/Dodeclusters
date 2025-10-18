@@ -14,7 +14,7 @@
     <meta name="color-scheme" content="dark" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://pier-bezuhoff.github.io/Dodeclusters/" />
-    <meta property="og:title" content="Dodeclusters Web App" />
+    <meta property="og:title" content="Dodeclusters" />
     <meta property="og:site_name" content="Dodeclusters" />
     <meta property="og:description" content="Circle-based vector graphics editor" />
     <meta property="og:locale" content="en_US" />
@@ -24,6 +24,12 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Dodeclusters: From zero to Infinity written over tangential circles with alternating orange and black colors" />
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://pier-bezuhoff.github.io/Dodeclusters/">
+    <meta name="twitter:title" content="Dodeclusters">
+    <meta name="twitter:description" content="Circle-based vector graphics editor">
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/pier-bezuhoff/Dodeclusters/master/docs/02inf-art.png">
+    <meta name="twitter:image:alt" content="Dodeclusters: From zero to Infinity written over tangential circles with alternating orange and black colors" />
     <title>Dodeclusters &#1421;</title>
     <script type="application/ld+json">
     {
@@ -38,7 +44,7 @@
       "applicationSuite": "Dodeca",
       "downloadUrl": "https://github.com/pier-bezuhoff/Dodeclusters/releases",
       "operatingSystem": ["Web", "Android", "Windows", "Linux"],
-      "softwareVersion": "0.4.1",
+      "softwareVersion": "0.4.4",
       "inLanguage": ["en", "ru"],
       "offers": {
         "@type": "Offer",
@@ -78,6 +84,18 @@
     <script type="application/javascript" src="composeApp.js"></script>
     <meta name="google-site-verification" content="yKOpXb8Zc0SJds3eFMCCXDqQp52QWU2oVZR0exhXWxU" />
     <style>
+      html, body, #compose-root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      canvas {
+          outline: 0px solid transparent;
+      }
+
       h1, h2 {
         text-align: center;
       }
@@ -138,6 +156,6 @@
        </g>
      </g>
    </svg>
-   <canvas id="ComposeTarget" role="application" aria-label="Canvas-based application"></canvas>
+   <div id="compose-root"></div>
   </body>
 </html>

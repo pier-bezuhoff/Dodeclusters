@@ -21,6 +21,7 @@ string|angle_in_degrees_placeholder|PGFuZ2xlIGluIGRlZ3JlZXM+
 string|app_name|RG9kZWNsdXN0ZXJz
 string|applied_color_description|U3dpdGNoIHRvIHRoaXMgcmVjZW50bHkgdXNlZCBjb2xvcg==
 string|applied_color_name|QXBwbGllZCBjb2xvcg==
+string|apply|QXBwbHk=
 string|arc_path_description|Q29uc3RydWN0IGFuIGFyYy1wYXRo
 string|arc_path_name|QXJjLXBhdGg=
 string|attributes_category_name|RGVsZXRlL0R1cGxpY2F0ZQ==
@@ -40,7 +41,7 @@ string|blend_mode_screen|U2NyZWVu
 string|blend_mode_src_over|Tm9ybWFs
 string|blend_settings_opacity_prompt|T3BhY2l0eSBvZiBmaWxsZWQgcmVnaW9ucw==
 string|blend_settings_title|QmxlbmQgc2V0dGluZ3M=
-string|cancel_name|Q2FuY2Vs
+string|cancel|Q2FuY2Vs
 string|change_background_description|Q2hhbmdlIGJhY2tncm91bmQgY29sb3I=
 string|change_background_name|Q2hhbmdlIGJhY2tncm91bmQ=
 string|choose_name|Q2hvb3NlIGEgbmFtZQ==
@@ -75,6 +76,7 @@ string|color_picker_title|UGljayBhIGNvbG9y
 string|color_picker_used_and_saved_colors_label|Q29sb3JzIGluIHVzZSArIFNhdmVkIGNvbG9ycw==
 string|colors_category_name|Q29sb3Jz
 string|complete_arc_path|Q29tcGxldGUgYXJjLXBhdGg=
+string|confirm|Q29uZmlybQ==
 string|create_category_name|Q3JlYXRl
 string|degrees_suffix|wrA=
 string|delete_all_parts_description|Q2xlYXIgYWxsIGZpbGxlZCByZWdpb25z
@@ -91,7 +93,6 @@ string|drag_description|RHJhZyAmIGRyb3Agb2JqZWN0cyBvbmUgYnkgb25l
 string|drag_name|RHJhZw==
 string|duplicate_description|RHVwbGljYXRlIHNlbGVjdGVkIG9iamVjdHM=
 string|duplicate_name|RHVwbGljYXRl
-string|edit_cluster_title|Q2x1c3RlciBlZGl0aW5n
 string|expand_description|U2NhbGUgdXAgYnkgMTAl
 string|expand_name|RXhwYW5k
 string|failed_open_notice|RmFpbGVkIHRvIGxvYWQ=
@@ -105,13 +106,15 @@ string|flow_fill_name|Rmxvdy1maWxs
 string|flow_multiselect_description|U2VsZWN0IGNpcmNsZXMgYnkgc3dpcGluZyB0aHJvdWdoIHRoZW0=
 string|flow_multiselect_name|Rmxvdy1tdWx0aXNlbGVjdA==
 string|hello|8J+YiiBIZWxsbyB3b3JsZCE=
-string|hex_name|aGV4ICM=
+string|hex_hash|aGV4ICM=
 string|hide_ui_description|SGlkZSBVSSBmb3IgMzBz
 string|hide_ui_name|SGlkZSBVSQ==
 string|imaginary_circle_notice|Q29uc3RydWN0aW9uIHJlc3VsdGVkIGluIGFuIGltYWdpbmFyeSBjaXJjbGU=
 string|in_between_description|SW5zaWRl
 string|in_between_disabled_description|T3V0c2lkZQ==
 string|in_between_name|SW4gYmV0d2Vlbg==
+string|infinite_point_description|VXNlIGluZmluaXRlIHBvaW50
+string|infinite_point_name|SW5maW5pdGUgcG9pbnQ=
 string|insert_centered_cross_description|SW5zZXJ0IGEgY2VudGVyZWQgY3Jvc3M=
 string|insert_centered_cross_name|SW5zZXJ0IGEgY2VudGVyZWQgY3Jvc3M=
 string|label_input_title|SW5wdXQgcG9pbnQgbGFiZWw=
@@ -132,6 +135,8 @@ string|loxodromic_motion_title|Q29uZmlndXJlIGxveG9kcm9taWMgc3BpcmFsIG1vdGlvbg==
 string|mark_as_phantoms_description|TWFyayBhcyBwaGFudG9tOiBtYWtlIGludmlzaWJsZQ==
 string|mark_as_phantoms_disabled_description|UmVtb3ZlIHBoYW50b20gbWFya3M6IG1ha2UgdmlzaWJsZQ==
 string|mark_as_phantoms_name|UGhhbnRvbSB0b2dnbGU=
+string|move_point_to_infinity_description|TW92ZSBzZWxlY3RlZCBwb2ludCB0byBpbmZpbml0eQ==
+string|move_point_to_infinity_name|TW92ZSB0byBpbmZpbml0eQ==
 string|multi_line|TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsCiAgICAgICAgY29uc2VjdGV0dXIgYWRpcGlzY2luZyBlbGl0LgogICAgICAgIERvbmVjIGVnZXQgdHVycGlzIGFjIHNlbSB1bHRyaWNpZXMgY29uc2VxdWF0Lg==
 string|multiselect_category_name|TXVsdGlzZWxlY3Q=
 string|multiselect_description|U2VsZWN0ICYgdHJhbnNmb3JtIGdyb3VwcyBvZiBvYmplY3Rz
@@ -139,8 +144,8 @@ string|multiselect_name|TXVsdGlzZWxlY3Q=
 string|n_steps_placeholder|PG51bWJlciBvZiBzdGVwcz4=
 string|n_steps_prompt|TnVtYmVyIG9mIHN0ZXBz
 string|name|TmFtZQ==
-string|ok_description|Q29uZmlybQ==
-string|ok_name|T0s=
+string|new_blank_name|TmV3IGJsYW5rIGZpbGU=
+string|ok|T0s=
 string|open_file_name|T3BlbiBEb2RlY2x1c3RlcnMgZmlsZQ==
 string|open_file|T3BlbiBmaWxl
 string|palette_description|UGljayBjb2xvcnM=
