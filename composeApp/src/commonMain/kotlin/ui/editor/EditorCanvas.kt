@@ -82,6 +82,9 @@ import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
+import domain.expressions.computeCircleBy3Points
+import domain.expressions.computeCircleByPencilAndPoint
+import domain.expressions.computeLineBy2Points
 import domain.hug
 import domain.rotateBy
 import domain.rotateByAround
@@ -1038,57 +1041,41 @@ private inline fun DrawScope.drawPartialConstructs(
         ToolMode.CIRCLE_BY_3_POINTS -> partialArgList!!.args.let { args ->
             val gCircles = args.map { getArg(it)!! }
             if (args.size == 2) {
-                val line = GeneralizedCircle.perp3(
-                    GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
-                    GeneralizedCircle.fromGCircle(gCircles[0]),
-                    GeneralizedCircle.fromGCircle(gCircles[1]),
-                )?.toGCircle() as? Line
-                if (line != null)
+                val line = computeLineBy2Points(gCircles[0], gCircles[1])
+                if (line != null) {
                     drawCircleOrLine(line, visibleRect, creationPrototypeColor,
                         style = circleStroke
                     )
+                }
             } else if (args.size == 3) {
-                val circle = GeneralizedCircle.perp3(
-                    GeneralizedCircle.fromGCircle(gCircles[0]),
-                    GeneralizedCircle.fromGCircle(gCircles[1]),
-                    GeneralizedCircle.fromGCircle(gCircles[2]),
-                )?.toGCircle() as? CircleOrLine
-                if (circle != null)
+                val circle = computeCircleBy3Points(gCircles[0], gCircles[1], gCircles[2]) as? CircleOrLine
+                if (circle != null) {
                     drawCircleOrLine(circle, visibleRect, creationPrototypeColor,
                         style = circleStroke
                     )
+                }
             }
         }
         ToolMode.CIRCLE_BY_PENCIL_AND_POINT -> partialArgList!!.args.let { args ->
             val gCircles = args.map { getArg(it)!! }
             if (args.size == 2) {
-                val line = GeneralizedCircle.parallel2perp1(
-                    GeneralizedCircle.fromGCircle(gCircles[0]),
-                    GeneralizedCircle.fromGCircle(gCircles[1]),
-                    GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
-                )?.toGCircle() as? Line
-                if (line != null)
+                val line = computeCircleByPencilAndPoint(gCircles[0], gCircles[1], Point.CONFORMAL_INFINITY) as? Line
+                if (line != null) {
                     drawCircleOrLine(line, visibleRect, creationPrototypeColor, style = circleStroke)
+                }
             } else if (args.size == 3) {
-                val circle = GeneralizedCircle.parallel2perp1(
-                    GeneralizedCircle.fromGCircle(gCircles[0]),
-                    GeneralizedCircle.fromGCircle(gCircles[1]),
-                    GeneralizedCircle.fromGCircle(gCircles[2]),
-                )?.toGCircle() as? CircleOrLine
-                if (circle != null)
+                val circle = computeCircleByPencilAndPoint(gCircles[0], gCircles[1], gCircles[2]) as? CircleOrLine
+                if (circle != null) {
                     drawCircleOrLine(circle, visibleRect, creationPrototypeColor,
                         style = circleStroke
                     )
+                }
             }
         }
         ToolMode.LINE_BY_2_POINTS -> partialArgList!!.args.let { args ->
             if (args.size == 2) {
                 val gCircles = args.map { getArg(it)!! }
-                val line = GeneralizedCircle.perp3(
-                    GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
-                    GeneralizedCircle.fromGCircle(gCircles[0]),
-                    GeneralizedCircle.fromGCircle(gCircles[1]),
-                )?.toGCircle() as? Line
+                val line = computeLineBy2Points(gCircles[0], gCircles[1])
                 if (line != null)
                     drawCircleOrLine(line, visibleRect, creationPrototypeColor,
                         style = circleStroke

@@ -88,9 +88,7 @@ private fun wrapOutOfScreenCircleAsRectangle(
     P2x: Float, P2y: Float,
     isCCW: Boolean,
 ) {
-    val maxDim =
-//        visibleRect.minDimension*0.5f
-        2*visibleRect.maxDimension
+    val maxDim = 2*visibleRect.maxDimension
     val OAx = Ax - Ox
     val OAy = Ay - Oy
     val orientationSign = if (isCCW) +1 else -1
@@ -123,9 +121,7 @@ fun circle2cubicPath(
 ): Path {
     val screenCenter = visibleRect.center
     // visible rect is contained in this circle
-    val outerRadius =
-//        visibleRect.minDimension*0.48f
-        visibleRect.maxDimension + VISIBLE_RECT_INDENT
+    val outerRadius = visibleRect.maxDimension + VISIBLE_RECT_INDENT
     val outerCircle = Circle(screenCenter, outerRadius)
     val intersectionCoordinates = Circle.calculateIntersectionCoordinates(circle, outerCircle)
     if (intersectionCoordinates.size == 4) { // all 2 intersections present

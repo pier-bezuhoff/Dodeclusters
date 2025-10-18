@@ -52,10 +52,8 @@ import domain.PartialArgList
 import domain.PointSnapResult
 import domain.settings.Settings
 import domain.angleDeg
-import domain.cluster.ClosedArcPath
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
-import domain.cluster.OpenArcPath
 import domain.cluster.SignedDirectedArcIndex
 import domain.compressConstraints
 import domain.entails
@@ -3522,7 +3520,7 @@ class EditorViewModel : ViewModel() {
                     }
                 }
             }
-            val auxillaryIndices = mutableListOf<Ix>()
+            val auxiliaryIndices = mutableListOf<Ix>()
             val signedDirectedArcIndices: List<SignedDirectedArcIndex> =
                 pArcPath.arcs.mapIndexed { arcIndex, arc ->
                     when (val arc = pArcPath.arcs[arcIndex]) {
@@ -3542,7 +3540,7 @@ class EditorViewModel : ViewModel() {
                                 val expr = Expr.LineBy2Points(previousVertexIndex, nextVertexIndex)
                                 val line = expressions.addSoloExpr(expr) as Line
                                 val ix = objectModel.addDownscaledObject(line)
-                                auxillaryIndices.add(ix)
+                                auxiliaryIndices.add(ix)
                                 1 + ix
                             } else {
                                 val sagittaRatio = computeSagittaRatio(
@@ -3556,22 +3554,14 @@ class EditorViewModel : ViewModel() {
                                 )
                                 val circle1 = expressions.addSoloExpr(expr) as CircleOrLine
                                 val ix = objectModel.addDownscaledObject(circle1)
-                                auxillaryIndices.add(ix)
+                                auxiliaryIndices.add(ix)
                                 1 + ix
                             }
                         }
                     }
                 }
-//            val newCircles: List<CircleOrLine> = pArcPath.arcs
-//                .mapIndexed { arcIndex, circle ->
-//                    when (circle) {
-//                        is ArcPathArc.Eq -> null
-//                        is ArcPathArc.Free -> pArcPath.arcIndex2CircleOrLine(arcIndex)
-////                        else -> never()
-//                    }
-//                }.filterNotNull()
-//            createNewGCircles(newCircles)
-            objectModel.phantomObjectIndices += auxillaryIndices
+            /*
+            objectModel.phantomObjectIndices += auxiliaryIndices
             val newArcPath = if (pArcPath.isClosed) {
                 ClosedArcPath(
                     vertices = vertexIndices,
@@ -3586,6 +3576,18 @@ class EditorViewModel : ViewModel() {
                     borderColor = regionColor,
                 )
             }
+            */
+            // only static circles
+//            val newCircles: List<CircleOrLine> = pArcPath.arcs
+//                .mapIndexed { arcIndex, circle ->
+//                    when (circle) {
+//                        is ArcPathArc.Eq -> null
+//                        is ArcPathArc.Free -> pArcPath.arcIndex2CircleOrLine(arcIndex)
+////                        else -> never()
+//                    }
+//                }.filterNotNull()
+//            createNewGCircles(newCircles)
+
             objectModel.invalidate()
         }
         partialArcPath = null

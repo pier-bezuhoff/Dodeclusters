@@ -357,7 +357,7 @@ data class ConcreteClosedArcPath(
             RegionPointLocation.IN
     }
 
-    fun findPointInside(): Point { // a bit monstrous...
+    fun findAPointInside(): Point { // a bit monstrous...
         for (ix in indices) {
             val previousIx = (ix - 1) % size
             val previousPoint = intersectionPoints[previousIx]

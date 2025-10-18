@@ -8,6 +8,11 @@ class PathCache {
     val cachedObjectPaths: MutableList<Path?> = mutableListOf()
     var pathCacheValidity = BooleanArray(0)
 
+    // object index => index of composite paths that depend on it
+//    val object2dependents: MutableMap<Ix, Ix> = mutableMapOf()
+    // composite paths that depend on several objects
+//    var compositePathCacheValidity = BooleanArray(0)
+
     fun addObject() {
         val previousSize = pathCacheValidity.size
         cachedObjectPaths.add(null)
