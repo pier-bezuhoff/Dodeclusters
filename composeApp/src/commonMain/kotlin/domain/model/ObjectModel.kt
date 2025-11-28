@@ -43,34 +43,60 @@ class ObjectModel {
     val invalidationsState: MutableIntState = mutableIntStateOf(0)
     /**
      * Monotonically increasing sequence, each update is to trigger redraw.
-     * Call [invalidate]`()` to trigger update at appropriate time.
+     * Call [invalidate] or [invalidatePositions] to trigger update at appropriate time.
+     * Includes both potentially continuous position changes and discrete property changes.
      */
     inline val invalidations: Int get() =
         invalidationsState.value
 
+    val propertyInvalidationsState: MutableIntState = mutableIntStateOf(0)
+    /**
+     * Monotonically increasing sequence, slower than [invalidations].
+     * Call [invalidate] to trigger update at appropriate time.
+     * Tracks more fewer invalidations, only for discrete properties:
+     * color/label/phantom status.
+     *
+     * Does NOT track expression changes at present (those can be continuous).
+     */
+    inline val propertyInvalidations: Int get() =
+        propertyInvalidationsState.value
+
     val pathCache = PathCache()
 
     /**
-     * Triggers redraw.
+     * Invalidates the position-state (objects or expressions). Triggers redraw.
      *
-     * NOTE: Do not forget to manually call this after finishing state-altering.
+     * NOTE: Do not forget to manually call this AFTER finishing changing the position-state.
      */
-    fun invalidate() {
+    fun invalidatePositions() {
         invalidationsState.value += 1
     }
 
+    /**
+     * Invalidates both the position-state AND the property-state. Triggers redraw.
+     *
+     * NOTE: Do not forget to manually call this AFTER finishing changing the state.
+     */
+    fun invalidate() {
+        invalidationsState.value += 1
+        propertyInvalidationsState.value += 1
+    }
+
+    /** Don't forget to [invalidatePositions] post factum */
     private fun setObject(ix: Ix, newObject: GCircle?) {
         objects[ix] = newObject
         downscaledObjects[ix] = newObject?.downscale()
         pathCache.invalidateObjectPathAt(ix)
     }
 
+    /** Don't forget to [invalidatePositions] post factum */
     fun setDownscaledObject(ix: Ix, newDownscaledObject: GCircle?) {
         objects[ix] = newDownscaledObject?.upscale()
         downscaledObjects[ix] = newDownscaledObject
         pathCache.invalidateObjectPathAt(ix)
     }
 
+    /** Don't forget to [invalidate] post factum */
     fun addObject(newObject: GCircle?): Ix {
         objects.add(newObject)
         downscaledObjects.add(newObject?.downscale())
@@ -78,6 +104,7 @@ class ObjectModel {
         return objects.size - 1
     }
 
+    /** Don't forget to [invalidate] post factum */
     fun addDownscaledObject(newDownscaledObject: GCircle?): Ix {
         objects.add(newDownscaledObject?.upscale())
         downscaledObjects.add(newDownscaledObject)
@@ -85,6 +112,7 @@ class ObjectModel {
         return objects.size - 1
     }
 
+    /** Don't forget to [invalidate] post factum */
     fun addObjects(newObjects: List<GCircle?>) {
         objects.addAll(newObjects)
         for (o in newObjects) {
@@ -93,6 +121,7 @@ class ObjectModel {
         pathCache.addObjects(newObjects.size)
     }
 
+    /** Don't forget to [invalidate] post factum */
     fun addDownscaledObjects(newObjects: List<GCircle?>) {
         for (o in newObjects) {
             objects.add(o?.upscale())
@@ -101,6 +130,7 @@ class ObjectModel {
         pathCache.addObjects(newObjects.size)
     }
 
+    /** Don't forget to [invalidate] post factum */
     fun removeObjectAt(ix: Ix) {
         objects[ix] = null
         downscaledObjects[ix] = null
@@ -109,12 +139,14 @@ class ObjectModel {
         pathCache.removeObjectAt(ix)
     }
 
+    /** Don't forget to [invalidate] post factum */
     fun removeObjectsAt(ixs: List<Ix>) {
         for (ix in ixs) {
             removeObjectAt(ix)
         }
     }
 
+    /** Don't forget to [invalidate] post factum */
     fun clearObjects() {
         objects.clear()
         downscaledObjects.clear()
@@ -123,6 +155,7 @@ class ObjectModel {
         pathCache.clear()
     }
 
+    /** Don't forget to [invalidatePositions] post factum */
     fun syncObjects(indices: Iterable<Ix> = downscaledObjects.indices) {
         for (ix in indices) {
             objects[ix] = downscaledObjects[ix]?.upscale()
@@ -130,6 +163,7 @@ class ObjectModel {
         }
     }
 
+    /** Don't forget to [invalidatePositions] post factum */
     fun syncDownscaledObjects(indices: Iterable<Ix> = objects.indices) {
         for (ix in indices) {
             downscaledObjects[ix] = objects[ix]?.downscale()
@@ -149,6 +183,8 @@ class ObjectModel {
      * by [sourceIndex2NewTrajectory]. Trajectory objects are assumed to be laid out in
      * row-column order of [sourceIndex2NewTrajectory]`.flatten` starting from [startIndex]
      * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`
+     *
+     * Don't forget to [invalidate] post factum
      */
     fun copySourceColorsOntoTrajectories(
         sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
@@ -172,6 +208,8 @@ class ObjectModel {
      * Copy [objectColors] from source indices onto trajectories specified
      * by [sourceIndex2TrajectoryOfIndices].
      * @param[sourceIndex2TrajectoryOfIndices] `[(original index ~ style source, [trajectory of indices of objects])]`,
+     *
+     * Don't forget to [invalidate] post factum
      */
     fun copySourceColorsOntoTrajectories(
         sourceIndex2TrajectoryOfIndices: List<Pair<Ix, List<Ix>>>,
@@ -186,28 +224,31 @@ class ObjectModel {
         }
     }
 
+    /** Already includes [invalidatePositions] */
     fun changeExpr(expressions: ExpressionForest, ix: Ix, newExpr: Expr.OneToOne) {
         val newObject = expressions.changeExpr(ix, newExpr)
         setDownscaledObject(ix, newObject)
         val toBeUpdated = expressions.update(listOf(ix))
         syncObjects(toBeUpdated)
-        invalidate()
+        invalidatePositions()
     }
 
+    /** Already includes [invalidatePositions] */
     fun setObjectsWithConsequences(expressions: ExpressionForest, changes: Map<Ix, GCircle?>) {
         for ((ix, newObject) in changes) {
             setObject(ix, newObject)
         }
         val updatedIndices = expressions.update(changes.keys.toList())
         syncObjects(updatedIndices)
-        invalidate()
+        invalidatePositions()
     }
 
+    /** Already includes [invalidatePositions] */
     fun setObjectWithConsequences(expressions: ExpressionForest, ix: Ix, newObject: GCircle?) {
         setObject(ix, newObject)
         val updatedIndices = expressions.update(listOf(ix))
         syncObjects(updatedIndices)
-        invalidate()
+        invalidatePositions()
     }
 
     // NOTE: idk, handling of incident points is messy
@@ -217,7 +258,9 @@ class ObjectModel {
      * Scaling and rotation are w.r.t. fixed [focus] by the factor of
      * [zoom] and by [rotationAngle] degrees.
      *
-     * NOTE: remember to record a command before
+     * Already includes [invalidatePositions]
+     *
+     * NOTE: remember to record a command before [transform]
      */
     fun transform(
         expressions: ExpressionForest,
@@ -276,9 +319,8 @@ class ObjectModel {
         expressions.adjustIncidentPointExpressions(allIncidentPoints)
         val updatedIndices = expressions.update(targets)
         syncObjects(updatedIndices)
-        invalidate()
+        invalidatePositions()
     }
-
 
     companion object {
         const val UPSCALING_FACTOR = 2_000.0

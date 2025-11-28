@@ -6,13 +6,14 @@ import kotlin.math.PI
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.roundToInt
-import kotlin.time.Duration
-import kotlin.time.measureTime
 
 // we unironically need Prelude for kotlin...
 
 /** 2*[PI], 360°, 1 whole turn */
 const val TAU: Double = 2*PI
+
+const val PI_DIVIDED_BY_180: Double = PI/180.0
+const val I80_DIVIDED_BY_PI: Double = 180.0/PI
 
 /** Index of an array */
 typealias Ix = Int
@@ -53,11 +54,11 @@ fun Double.divideWithRemainder(divisor: Double): Double =
 
 /** radian-to-degree conversion */
 inline val Double.degrees: Float get() =
-    (this*180/PI).toFloat()
+    (this*I80_DIVIDED_BY_PI).toFloat()
 
 /** degree-to-radian conversion */
 inline val Float.radians: Double get() =
-    this*PI/180.0
+    this*PI_DIVIDED_BY_180
 
 inline fun Double.pow2(): Double =
     this*this
@@ -80,10 +81,11 @@ inline fun <reified A, reified R> foldNullable(
     a: A?,
     crossinline whenNotNull: (A) -> R,
     crossinline whenNull: () -> R,
-): R  where A: Any? = if (a != null)
-    whenNotNull(a)
-else
-    whenNull()
+): R  where A: Any? =
+    if (a != null)
+        whenNotNull(a)
+    else
+        whenNull()
 
 // sum types doko
 inline fun <reified A, reified B> tryCatch2(
@@ -109,6 +111,8 @@ inline fun <reified A, reified B> tryCatch2(
 inline fun never(info: String = ""): Nothing =
     throw IllegalStateException(if (info.isBlank()) "Never" else "Never ($info)")
 
-fun hug(something: Any) {}
-fun hug(something: Any, somethingElse: Any) {}
+/** Does nothing. Forcefully introduce dependency on [something]'s state */
+fun hug(something: Any?) {}
+/** Does nothing. Forcefully introduce dependency on [something]'s and [somethingElse]'s states */
+fun hug(something: Any?, somethingElse: Any?) {}
 

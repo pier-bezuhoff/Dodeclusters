@@ -19,8 +19,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import domain.ArcPathArc
-import domain.ArcPathPoint
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrImaginaryCircle
@@ -29,7 +27,6 @@ import core.geometry.GCircle
 import core.geometry.GeneralizedCircle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
-import domain.PartialArcPath
 import core.geometry.Point
 import core.geometry.Rotor
 import core.geometry.calculateStereographicRotationBiEngine
@@ -38,19 +35,15 @@ import core.geometry.generateSphereGrid
 import core.geometry.scaled00
 import core.geometry.selectWithRectangle
 import core.geometry.translationDelta
+import domain.ArcPathArc
+import domain.ArcPathPoint
 import domain.Arg
 import domain.ArgType
-import domain.settings.BlendModeType
-import domain.settings.ChessboardPattern
 import domain.ColorAsCss
-import domain.model.Command
-import domain.model.History
-import domain.settings.InversionOfControl
 import domain.Ix
-import domain.model.ObjectModel
+import domain.PartialArcPath
 import domain.PartialArgList
 import domain.PointSnapResult
-import domain.settings.Settings
 import domain.angleDeg
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
@@ -84,7 +77,14 @@ import domain.io.DdcV2
 import domain.io.DdcV4
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
+import domain.model.Command
+import domain.model.History
+import domain.model.ObjectModel
 import domain.reindexingMap
+import domain.settings.BlendModeType
+import domain.settings.ChessboardPattern
+import domain.settings.InversionOfControl
+import domain.settings.Settings
 import domain.snapAngle
 import domain.snapCircleToCircles
 import domain.snapPointToCircles
@@ -92,8 +92,6 @@ import domain.snapPointToPoints
 import domain.sortedByFrequency
 import domain.toArgPoint
 import domain.transpose
-import domain.updated
-import domain.withoutElementAt
 import domain.withoutElementsAt
 import getPlatform
 import kotlinx.coroutines.channels.BufferOverflow
@@ -103,6 +101,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import ui.editor.EditorViewModel.Companion.INVERSION_OF_CONTROL
 import ui.editor.dialogs.ColorPickerParameters
 import ui.editor.dialogs.DefaultBiInversionParameters
 import ui.editor.dialogs.DefaultExtrapolationParameters
@@ -226,9 +225,10 @@ class EditorViewModel : ViewModel() {
         }
     /** when changing [expressions], flip this to forcibly recalculate [selectionIsLocked] */
     private var selectionIsLockedTrigger: Boolean by mutableStateOf(false)
-    // MAYBE: show quick prompt/popup instead of button
+    // MAYBE: show quick prompt/popup instead of a button
     val selectionIsLocked: Boolean get() {
         hug(selectionIsLockedTrigger, objectModel.invalidations)
+        // NOTE: isFree depends on expressions, so propertyInvalidations is not enough
         return selection.all { objects[it] == null || !isFree(it) }
     }
 
@@ -293,6 +293,7 @@ class EditorViewModel : ViewModel() {
         launchRestore()
     }
 
+    /** sets [tapRadius] based on [density] */
     fun setEpsilon(density: Density) {
         with (density) {
             tapRadius = getPlatform().tapRadius.dp.toPx()
@@ -305,7 +306,7 @@ class EditorViewModel : ViewModel() {
         translation += (newCenter - prevCenter)
         canvasSize = newCanvasSize
         objectModel.pathCache.invalidateAll()
-        objectModel.invalidate()
+        objectModel.invalidatePositions()
     }
 
     fun saveAsYaml(name: String = DdcV4.DEFAULT_NAME): String {
@@ -693,7 +694,7 @@ class EditorViewModel : ViewModel() {
     }
 
     /** Add objects from [sourceIndex2NewTrajectory] to [objects], while
-     * copying regions (for [CircleOrLine]s) and [objectColors] from original
+     * copying regions (for [CircleOrLine]s) and `objectColors` from original
      * indices specified in [sourceIndex2NewTrajectory].
      * We assume that appropriate expressions were/will be created and
      * that those expressions follow the order of [sourceIndex2NewTrajectory]`.flatten()`, but
@@ -802,7 +803,7 @@ class EditorViewModel : ViewModel() {
     }
 
     /** Add objects from [sourceIndex2NewObject] to [objects], while
-     * copying regions (for [CircleOrLine]s) and [objectColors] from original
+     * copying regions (for [CircleOrLine]s) and `objectColors` from original
      * indices specified in [sourceIndex2NewObject].
      * We assume that appropriate expressions were/will be created separately and
      * that those expressions follow the order of [sourceIndex2NewObject], but
@@ -1150,148 +1151,29 @@ class EditorViewModel : ViewModel() {
         setSelectionToRegionBounds: Boolean = false
     ) {
         val shouldUpdateSelection = setSelectionToRegionBounds && !restrictRegionsToSelection
-        val (region, region0) = selectRegionAt(visiblePosition, boundingCircles)
-        val outerRegionsIndices = regions.filterIndices { region isObviouslyInside it || region0 isObviouslyInside it  }
-        val outerRegions = outerRegionsIndices.map { regions[it] }
-        val sameBoundsRegionsIndices = outerRegionsIndices.filter {
-            regions[it].insides == region.insides && regions[it].outsides == region.outsides
-        }
-        val sameBoundsRegions = sameBoundsRegionsIndices.map { regions[it] }
-        when (regionManipulationStrategy) {
-            RegionManipulationStrategy.REPLACE -> {
-                if (outerRegions.isEmpty()) {
-                    recordCommand(Command.FILL_REGION, target = regions.size)
-                    regions += region
-                    if (shouldUpdateSelection) {
-                        selection = (region.insides + region.outsides).toList()
-                    }
-                    println("added $region")
-                } else if (outerRegions.size == 1) {
-                    val i = outerRegionsIndices.single()
-                    val outer = outerRegions.single()
-                    if (region.fillColor == outer.fillColor) {
-                        recordCommand(Command.FILL_REGION, unique = true)
-                        regions = regions.withoutElementAt(i)
-                        println("removed singular same-color outer $outer")
-                    } else { // we are trying to change the color im guessing
-                        recordCommand(Command.FILL_REGION, target = i)
-                        regions = regions.updated(i, outer.copy(fillColor = region.fillColor))
-                        if (shouldUpdateSelection) {
-                            selection = (region.insides + region.outsides).toList()
-                        }
-                        println("recolored singular $outer")
-                    }
-                } else if (sameBoundsRegionsIndices.isNotEmpty()) {
-                    val sameBoundsSameColorRegionsIndices = sameBoundsRegionsIndices.filter {
-                        regions[it].fillColor == region.fillColor
-                    }
-                    if (sameBoundsSameColorRegionsIndices.isNotEmpty()) {
-                        recordCommand(Command.FILL_REGION, unique = true)
-                        val sameRegions = sameBoundsSameColorRegionsIndices.map { regions[it] }
-                        regions -= sameRegions
-                        println("removed all same-bounds same-color $sameBoundsSameColorRegionsIndices ~ $region")
-                    } else { // we are trying to change the color im guessing
-                        val i = sameBoundsRegionsIndices.last()
-                        if (sameBoundsRegionsIndices.size == 1)
-                            recordCommand(Command.FILL_REGION, target = i)
-                        else // cleanup can shift region index
-                            recordCommand(Command.FILL_REGION, unique = true)
-                        val _regions = regions.toMutableList()
-                        _regions[i] = region
-                        sameBoundsRegions
-                            .dropLast(1)
-                            .forEach {
-                                _regions.remove(it) // cleanup
-                            }
-                        regions = _regions
-                        if (shouldUpdateSelection) {
-                            selection = (region.insides + region.outsides).toList()
-                        }
-                        println("recolored $i (same bounds ~ $region)")
-                    }
-                } else {
-                    // NOTE: click on overlapping region: contested behaviour
-                    val outerRegionsOfTheSameColor = outerRegions.filter { it.fillColor == region.fillColor }
-                    if (outerRegionsOfTheSameColor.isNotEmpty()) {
-                        recordCommand(Command.FILL_REGION, unique = true)
-                        // NOTE: this removes regions of the same color that lie under
-                        //  others (potentially invisible), which can be counter-intuitive
-                        regions = regions.filter { it !in outerRegionsOfTheSameColor }
-                        println("removed same color regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
-                    } else { // there are several outer regions, but none of the color of region.fillColor
-                        recordCommand(Command.FILL_REGION, target = regions.size)
-                        regions += region
-                        if (shouldUpdateSelection) {
-                            selection = (region.insides + region.outsides).toList()
-                        }
-                        println("added $region")
-                    }
-                }
-            }
-            RegionManipulationStrategy.ADD -> {
-                if (sameBoundsRegionsIndices.isEmpty()) {
-                    recordCommand(Command.FILL_REGION, target = regions.size)
-                    regions += region
-                    if (shouldUpdateSelection) {
-                        selection = (region.insides + region.outsides).toList()
-                    }
-                    println("added $region")
-                } else if (sameBoundsRegions.last().fillColor == region.fillColor) {
-                    // im gonna cleanup same bounds until only 1 is left
-                    // cleanup & skip
-                    val _regions = regions.toMutableList()
-                    sameBoundsRegions
-                        .dropLast(1)
-                        .forEach {
-                            _regions.remove(it) // cannot use removeAll cuz it could remove the last one too
-                        }
-                    regions = _regions
-                } else { // same bounds, different color
-                    // replace & cleanup
-                    val i = sameBoundsRegionsIndices.last()
-                    if (sameBoundsRegionsIndices.size == 1)
-                        recordCommand(Command.FILL_REGION, target = i)
-                    else
-                        recordCommand(Command.FILL_REGION, unique = true)
-                    val _regions = regions.toMutableList()
-                    _regions[i] = region
-                    if (shouldUpdateSelection) {
-                        selection = (region.insides + region.outsides).toList()
-                    }
-                    sameBoundsRegions
-                        .dropLast(1)
-                        .forEach {
-                            _regions.remove(it) // cannot use removeAll cuz it could remove the last one too
-                        }
-                    regions = _regions
-                    println("recolored $i (same bounds ~ $region)")
-                }
-            }
-            RegionManipulationStrategy.ERASE -> {
-                if (sameBoundsRegions.isNotEmpty()) {
-                    recordCommand(Command.FILL_REGION, unique = true)
-                    regions = regions.filter { it !in sameBoundsRegions }
-                    println("removed [${sameBoundsRegionsIndices.joinToString(prefix = "\n", separator = ";\n")}] (same bounds ~ $region)")
-                } else if (outerRegions.isNotEmpty()) {
-                    // maybe find minimal and erase it OR remove last outer
-                    // tho it would stop working like eraser then
-                    recordCommand(Command.FILL_REGION, unique = true)
-                    regions = regions.filter { it !in outerRegions }
-                    println("removed outer [${outerRegions.joinToString(prefix = "\n", separator = ";\n")}]")
-                } // when clicking on nowhere nothing happens
-            }
-        }
+        val (compressedRegion, uncompressedRegion) = selectRegionAt(visiblePosition, boundingCircles)
+        regions = RegionManipulationStrategy.updateRegionsAfterReselection(
+            compressedRegion = compressedRegion,
+            uncompressedRegion = uncompressedRegion,
+            allRegions = regions,
+            regionManipulationStrategy = regionManipulationStrategy,
+            shouldUpdateSelection = shouldUpdateSelection,
+            setSelection = { selection = it },
+            recordRegionChangeAt = { target -> recordCommand(Command.FILL_REGION, target = target) },
+            recordUniqueRegionChange = { recordCommand(Command.FILL_REGION, unique = true) }
+        )
     }
 
     /** @return [Rect] using absolute positions */
-    fun getSelectionRect(): Rect? {
+    fun calculateSelectionRect(): Rect? {
         val selectedCircles = selection.mapNotNull { objects[it] as? Circle }
-        if (selectedCircles.isEmpty() || selection.any { objects[it] is Line })
+        if (selectedCircles.isEmpty() || selection.any { objects[it] is Line }) {
             return null
-        val left = selectedCircles.minOf { (it.x - it.radius).toFloat() }
-        val right = selectedCircles.maxOf { (it.x + it.radius).toFloat() }
-        val top = selectedCircles.minOf { (it.y - it.radius) }.toFloat()
-        val bottom = selectedCircles.maxOf { (it.y + it.radius) }.toFloat()
+        }
+        val left = selectedCircles.minOf { it.x - it.radius }.toFloat()
+        val right = selectedCircles.maxOf { it.x + it.radius }.toFloat()
+        val top = selectedCircles.minOf { it.y - it.radius }.toFloat()
+        val bottom = selectedCircles.maxOf { it.y + it.radius }.toFloat()
         return Rect(left, top, right, bottom)
     }
 
@@ -1304,7 +1186,9 @@ class EditorViewModel : ViewModel() {
     fun isConstrained(index: Ix): Boolean =
         expressions.expressions[index]?.expr is Expr.Incidence
 
-    // MAYBE: wrap into state that depends only on [regions] for caching
+    // MAYBE: wrap into state that depends only on
+    //  [regions, objectColors, chessboardPattern, chessboardColor] for caching
+    //  tho from tests this function behaves the same way
     // MAYBE: also add backgroundColor (tho it is MT.surface by default and thus 0-contrast)
     fun getColorsByMostUsed(): List<Color> =
         regions
@@ -1555,8 +1439,9 @@ class EditorViewModel : ViewModel() {
         toolbarState = toolbarState.copy(activeTool = tool)
     }
 
+    // NOTE: recalculates very often, every objectModel.invalidation
     fun getMostCommonCircleColorInSelection(): Color? {
-        hug(objectModel.invalidations)
+        hug(objectModel.propertyInvalidations)
         return selection
             .mapNotNull { objectModel.objectColors[it] }
             .groupingBy { it }
@@ -1630,7 +1515,7 @@ class EditorViewModel : ViewModel() {
 
     fun scaleSelection(zoom: Float) {
         if (showCircles && mode.isSelectingCircles() && selection.isNotEmpty()) {
-            val rect = getSelectionRect()
+            val rect = calculateSelectionRect()
             val focus =
                 if (rect == null || rect.minDimension >= 5_000)
                     computeAbsoluteCenter() ?: Offset.Zero
@@ -1857,7 +1742,7 @@ class EditorViewModel : ViewModel() {
                     }
                 }
                 is HandleConfig.SeveralCircles -> {
-                    getSelectionRect()?.let { rect ->
+                    calculateSelectionRect()?.let { rect ->
                         val scaleHandlePosition = rect.topRight
                         val rotateHandlePosition = rect.bottomRight
                         when {
@@ -2244,7 +2129,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun scaleSeveralCircles(pan: Offset, targets: List<Ix>) {
-        getSelectionRect()?.let { rect ->
+        calculateSelectionRect()?.let { rect ->
             val scaleHandlePosition = rect.topRight
             val center = rect.center
             val centerToHandle = scaleHandlePosition - center
@@ -2443,7 +2328,7 @@ class EditorViewModel : ViewModel() {
                 south = newSouth ?: sm.south,
                 grid = newGrid,
             )
-            objectModel.invalidate()
+            objectModel.invalidatePositions()
         }
     }
 
@@ -3731,7 +3616,7 @@ class EditorViewModel : ViewModel() {
             Tool.ToggleDirectionArrows ->
                 showDirectionArrows
             Tool.MarkAsPhantoms -> {
-                hug(objectModel.invalidations)
+                hug(objectModel.propertyInvalidations)
                 selection.none { it in phantoms }
             }
             Tool.InfinitePoint -> {

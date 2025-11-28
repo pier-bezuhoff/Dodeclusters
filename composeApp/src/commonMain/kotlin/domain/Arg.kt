@@ -193,6 +193,7 @@ data class Signature(val argTypes: List<ArgType>) {
     val size: Int = argTypes.size
 }
 
+// cannot scope to Signature.Companion cuz many start with a number
 val SIGNATURE_1_FINITE_POINT = Signature(ArgType.FINITE_POINT)
 val SIGNATURE_2_FINITE_POINTS = Signature(ArgType.FINITE_POINT, ArgType.FINITE_POINT)
 val SIGNATURE_2_CIRCLES = Signature(ArgType.CLI, ArgType.CLI)
