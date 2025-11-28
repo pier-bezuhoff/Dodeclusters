@@ -45,6 +45,8 @@ class ObjectModel {
      * Monotonically increasing sequence, each update is to trigger redraw.
      * Call [invalidate] or [invalidatePositions] to trigger update at appropriate time.
      * Includes both potentially continuous position changes and discrete property changes.
+     *
+     * See [propertyInvalidations] for properties-only changes.
      */
     inline val invalidations: Int get() =
         invalidationsState.value
@@ -53,8 +55,8 @@ class ObjectModel {
     /**
      * Monotonically increasing sequence, slower than [invalidations].
      * Call [invalidate] to trigger update at appropriate time.
-     * Tracks more fewer invalidations, only for discrete properties:
-     * color/label/phantom status.
+     *
+     * Tracks only discrete properties: color/label/phantom status.
      *
      * Does NOT track expression changes at present (those can be continuous).
      */
@@ -64,7 +66,8 @@ class ObjectModel {
     val pathCache = PathCache()
 
     /**
-     * Invalidates the position-state (objects or expressions). Triggers redraw.
+     * Invalidates the position-state (objects or expressions), use for continuous changes.
+     * Triggers redraw.
      *
      * NOTE: Do not forget to manually call this AFTER finishing changing the position-state.
      */

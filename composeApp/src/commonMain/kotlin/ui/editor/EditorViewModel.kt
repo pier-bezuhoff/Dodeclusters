@@ -1443,7 +1443,7 @@ class EditorViewModel : ViewModel() {
     fun getMostCommonCircleColorInSelection(): Color? {
         hug(objectModel.propertyInvalidations)
         return selection
-            .mapNotNull { objectModel.objectColors[it] }
+            .map { objectModel.objectColors[it] }
             .groupingBy { it }
             .eachCount()
             .maxByOrNull { (_, k) -> k }
@@ -3619,7 +3619,7 @@ class EditorViewModel : ViewModel() {
                 hug(objectModel.propertyInvalidations)
                 selection.none { it in phantoms }
             }
-            Tool.InfinitePoint -> {
+            Tool.InfinitePoint -> { // whether to prompt infinite-point input
                 partialArgList?.let { argList ->
                     argList.nextArgType?.let { nextArgType ->
                         val acceptsInfinitePoint = Arg.InfinitePoint in nextArgType.possibleTypes
