@@ -22,6 +22,7 @@ sealed interface Change {
             val focusX: Double, val focusY: Double,
             val zoom: Double,
         ) : Transformation
+        // TRS 4x4 matrix for fusion?
     }
 }
 

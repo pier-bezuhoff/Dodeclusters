@@ -907,9 +907,10 @@ class EditorViewModel : ViewModel() {
     }
 
     fun deleteSelectedPointsAndCircles() {
-        if (showCircles && selection.isNotEmpty() && mode.isSelectingCircles()) {
-            deleteObjectsWithDependenciesColorsAndRegions(selection)
+        val toBeDeleted = selection
+        if (showCircles && toBeDeleted.isNotEmpty() && mode.isSelectingCircles()) {
             selection = emptyList()
+            deleteObjectsWithDependenciesColorsAndRegions(toBeDeleted)
         }
     }
 
@@ -1439,7 +1440,6 @@ class EditorViewModel : ViewModel() {
         toolbarState = toolbarState.copy(activeTool = tool)
     }
 
-    // NOTE: recalculates very often, every objectModel.invalidation
     fun getMostCommonCircleColorInSelection(): Color? {
         hug(objectModel.propertyInvalidations)
         return selection
@@ -3596,7 +3596,11 @@ class EditorViewModel : ViewModel() {
             Tool.FlowSelect ->
                 mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
             Tool.ToggleSelectAll -> {
-                hug(objectModel.invalidations)
+                // idt we realistically ever need to track all invalidations.
+                // you'd have to move free objects in such a way that all others would
+                // become imaginary/null
+//                hug(objectModel.invalidations)
+                hug(objectModel.propertyInvalidations)
                 selection.containsAll(objects.filterIndices { it is CircleOrLineOrPoint })
             }
             Tool.Region ->
@@ -3636,6 +3640,8 @@ class EditorViewModel : ViewModel() {
                 } == true
             }
             Tool.MovePointToInfinity -> {
+                // NOTE: without changing selection, the only way to change the predicate is
+                //  after applying move-to-infinity or on detachment.
                 hug(objectModel.invalidations)
                 selection.singleOrNull()?.let { ix ->
                     val o = objects[ix]
