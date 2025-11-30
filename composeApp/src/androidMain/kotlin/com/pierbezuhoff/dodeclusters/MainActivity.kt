@@ -142,6 +142,7 @@ class MainActivity : ComponentActivity() {
                 SideEffect {
                     val window = (view.context as Activity).window
                     if (Build.VERSION.SDK_INT < 35) {
+                        @Suppress("DEPRECATION")
                         window.statusBarColor = statusBarColor
                     }
                     WindowCompat.getInsetsController(window, view)
@@ -156,11 +157,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        // MAYBE: it's better to use suspend emit
+    override fun onPause() {
         lifecycleEvents.tryEmit(LifecycleEvent.SaveUIState)
-        super.onSaveInstanceState(outState)
+        super.onPause()
     }
+
+//    override fun onSaveInstanceState(outState: Bundle) {
+//        // MAYBE: it's better to use suspend emit
+//        lifecycleEvents.tryEmit(LifecycleEvent.SaveUIState)
+//        super.onSaveInstanceState(outState)
+//    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

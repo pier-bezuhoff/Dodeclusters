@@ -1,31 +1,34 @@
 package domain.model
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import core.geometry.GCircle
-import domain.settings.ChessboardPattern
 import domain.Ix
-import domain.model.Change.Transformation
+import domain.OffsetSerializer
 import domain.cluster.LogicalRegion
+import domain.expressions.ExpressionForest
+import domain.model.Change.Transformation
+import domain.settings.ChessboardPattern
+import kotlinx.serialization.Serializable
 
-/** User-produced changes to the Ddc state */
+/** User-produced changes to the Ddc state, aka Commands */
 sealed interface Change {
-    sealed interface Transformation {
-        data class Translation(
-            val dx: Double, val dy: Double
-        ) : Transformation
-        /** @param[angle] CCW, in degrees */
-        data class Rotation(
-            val pivotX: Double, val pivotY: Double,
-            val angle: Float,
-        ) : Transformation
-        data class Scaling(
-            val focusX: Double, val focusY: Double,
-            val zoom: Double,
-        ) : Transformation
-        // TRS 4x4 matrix for fusion?
-    }
+    /**
+     * Translation;Scaling;Rotation order.
+     * @param[rotationAngle] CCW, in degrees
+     */
+    @Serializable
+    data class Transformation(
+        @Serializable(OffsetSerializer::class)
+        val translation: Offset,
+        @Serializable(OffsetSerializer::class)
+        val focus: Offset,
+        val zoom: Float,
+        val rotationAngle: Float,
+    )
 }
 
+// ':=' style
 sealed interface LocalChange : Change {
     data class CreateObject(
         val index: Ix,
@@ -71,4 +74,40 @@ sealed interface GlobalChange : Change, Diff {
 sealed interface Diff {
     // VM. { objectModel.transform; record new positions at indices here }
     data class Transform(val changes: Map<Ix, GCircle?>) : Diff
+
+    companion object {
+        fun revert(
+            diff: Diff,
+            objectModel: ObjectModel,
+            expressionForest: ExpressionForest,
+        ): Diff {
+            // undo route:
+            // ('=:' diff; now) -> (past; ':=' diff)
+            // redo route:
+            // (past; ':=' diff) -> ('=:' diff; now)
+            return when (diff) {
+                is Diff.Transform -> TODO()
+                is LocalChange.Color ->
+                    LocalChange.Color(diff.index, objectModel.objectColors[diff.index])
+                is LocalChange.CreateObject ->
+                    LocalChange.DeleteObject(diff.index)
+                is LocalChange.CreateRegion ->
+                    LocalChange.DeleteRegion()
+                is LocalChange.DeleteObject -> TODO()
+                is LocalChange.DeleteRegion -> TODO()
+                is LocalChange.Expression ->
+                    LocalChange.Expression(diff.index, expressionForest.expressions[diff.index])
+                is LocalChange.Label ->
+                    LocalChange.Label(diff.index,)
+                is GlobalChange.ChangeBackgroundColor -> TODO()
+                is GlobalChange.ChangeCenter -> TODO()
+                is GlobalChange.ChangeChessboardColor -> TODO()
+                is GlobalChange.ChangeChessboardPattern -> TODO()
+                is GlobalChange.ChangeCurrentRegionColor -> TODO()
+                is GlobalChange.ChangePhantoms -> TODO()
+                is GlobalChange.ChangeSelection -> TODO()
+            }
+        }
+
+    }
 }

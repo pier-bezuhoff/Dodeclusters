@@ -8,7 +8,6 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 
-// NOTE: panning doesnt work on mobile browsers https://github.com/JetBrains/compose-multiplatform/issues/3491
 inline fun Modifier.reactiveCanvas(
     vararg keys: Any?,
     crossinline onVerticalScroll: (yDelta: Float) -> Unit = { },

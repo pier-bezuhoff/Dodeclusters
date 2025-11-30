@@ -1,16 +1,13 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.get
@@ -19,7 +16,6 @@ import ui.LifecycleEvent
 import ui.editor.KeyboardAction
 import ui.theme.ColorTheme
 import ui.theme.DEFAULT_COLOR_THEME
-import kotlin.time.Duration.Companion.seconds
 
 // NOTE: because Github Pages serves .wasm files with wrong mime type https://stackoverflow.com/a/54320709/7143065
 //  to open in mobile/firefox use netlify version
@@ -71,20 +67,6 @@ fun main() {
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,
         )
-        // BUG: after pressing Tab or Delete the canvas gets focused
-        //  with a distracting white outline
-        //  and i cannot style it normally as it's in shadow dom
-        //  canvas:focus { outline: 0px solid transparent; }
-        //  It can be focused bc of the canvas 'tabindex' property
-        //  Ticket: https://youtrack.jetbrains.com/issue/CMP-9040
-        LaunchedEffect(Unit) { // hack to fix ^^^
-            (document.getElementById("compose-root")
-                ?.shadowRoot
-                ?.querySelector("canvas") as? HTMLCanvasElement)
-                ?.let { canvasElement ->
-                    canvasElement.style.outline = "0px none transparent"
-                }
-        }
     }
 }
 

@@ -29,6 +29,7 @@ import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.runtime.Composable
@@ -354,11 +355,9 @@ fun WithTooltip(
     // NOTE: ironically tooltips work much better on desktop/in browser than
     //  on android (since it requires hover vs long-press there)
     TooltipBox(
-//        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-//            positioning = TooltipAnchorPosition.Above,
-//        ),
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(
-            spacingBetweenTooltipAndAnchor = 8.dp
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            positioning = TooltipAnchorPosition.Above,
+            spacingBetweenTooltipAndAnchor = 8.dp,
         ),
         tooltip = {
             PlainTooltip(

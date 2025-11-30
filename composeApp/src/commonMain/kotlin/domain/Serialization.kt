@@ -50,6 +50,9 @@ object ColorULongSerializer : KSerializer<Color> {
     }
 }
 
+/** use as a type param `Json.encodeToString<SerializableOffset>(offset)` */
+typealias SerializableOffset = @Serializable(OffsetSerializer::class) Offset
+
 /** Serialize using [packFloats] into a [Long], idk why it's not by default */
 object OffsetSerializer : KSerializer<Offset> {
     override val descriptor = Long.serializer().descriptor

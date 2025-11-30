@@ -44,6 +44,7 @@ import domain.Ix
 import domain.PartialArcPath
 import domain.PartialArgList
 import domain.PointSnapResult
+import domain.ProgressState
 import domain.angleDeg
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
@@ -97,6 +98,8 @@ import getPlatform
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -124,20 +127,32 @@ import kotlin.time.Duration.Companion.seconds
 class EditorViewModel : ViewModel() {
     val objectModel = ObjectModel()
     val objects: List<GCircle?> = objectModel.objects
-    /** Filled regions delimited by some objects from [objects] */
-    var regions: List<LogicalRegion> by mutableStateOf(listOf())
+    // alt name: ghost[ed] objects
+    val phantoms: Set<Ix> = objectModel.phantomObjectIndices
+    // not in objectModel cuz i want it to be state-backed for nicer caching
+    var objectLabels: Map<Ix, String> by mutableStateOf(mapOf())
     var expressions: ExpressionForest = ExpressionForest( // stub
         initialExpressions = emptyMap(),
         objects = objectModel.downscaledObjects,
     )
         private set
-    // alt name: ghost[ed] objects
-    val phantoms: Set<Ix> = objectModel.phantomObjectIndices
-    // not in objectModel cuz i want it to be state-backed for nicer caching
-    var objectLabels: Map<Ix, String> by mutableStateOf(mapOf())
+    /** Filled regions delimited by some objects from [objects] */
+    var regions: List<LogicalRegion> by mutableStateOf(listOf())
+//    var arcPaths: List<ArcPath> by mutableStateOf(emptyList())
+//        private set
 
+    var backgroundColor: Color? by mutableStateOf(null)
+        private set
+    var chessboardColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
+        private set
+    var chessboardPattern: ChessboardPattern by mutableStateOf(ChessboardPattern.NONE)
+        private set
 //    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
+    // MAYBE: when circles are hidden select regions instead
+    /** indices of selected circles/lines/points */
+    var selection: List<Ix> by mutableStateOf(emptyList())
+        private set
     var mode: Mode by mutableStateOf(SelectionMode.Drag)
         private set
     var submode: SubMode? by mutableStateOf(null)
@@ -145,24 +160,22 @@ class EditorViewModel : ViewModel() {
     // NOTE: Arg.XYPoint & co use absolute positioning
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
-
-    // MAYBE: when circles are hidden select regions instead
-    /** indices of selected circles/lines/points */
-    var selection: List<Ix> by mutableStateOf(emptyList())
+    var partialArcPath: PartialArcPath? by mutableStateOf(null)
         private set
 
-    /** encapsulates all category- and tool-related info */
-    var toolbarState: ToolbarState by mutableStateOf(ToolbarState())
+    // ahh.. to be set during startCircleOrPointInterpolationParameterAdjustment()
+    var interpolateCircles: Boolean by mutableStateOf(true)
         private set
-    var showPanel: Boolean by mutableStateOf(toolbarState.panelNeedsToBeShown)
-        private set
-    var showPromptToSetActiveSelectionAsToolArg: Boolean by mutableStateOf(false) // to be updated manually
-        private set
-    var showUI: Boolean by mutableStateOf(true)
+    var circlesAreCoDirected: Boolean by mutableStateOf(true)
         private set
 
     /** currently selected color */
     var regionColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
+        private set
+
+    var translation: Offset by mutableStateOf(Offset.Zero)
+        private set
+    var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
         private set
 
     /** `[0; 1]` transparency of non-chessboard [regions] */
@@ -170,9 +183,6 @@ class EditorViewModel : ViewModel() {
         private set
     var regionsBlendModeType: BlendModeType by mutableStateOf(BlendModeType.SRC_OVER)
         private set
-    /** custom colors for circle/line borders or points */
-//    val objectColors: SnapshotStateMap<Ix, Color> = mutableStateMapOf()
-    var backgroundColor: Color? by mutableStateOf(null)
     var showCircles: Boolean by mutableStateOf(true)
         private set
     var showPhantomObjects: Boolean by mutableStateOf(false)
@@ -186,9 +196,18 @@ class EditorViewModel : ViewModel() {
      * only use circles present in the [selection] to determine which regions to fill */
     var restrictRegionsToSelection: Boolean by mutableStateOf(false)
         private set
-    var chessboardPattern: ChessboardPattern by mutableStateOf(ChessboardPattern.NONE)
+
+    /** encapsulates all category- and tool-related info */
+    var toolbarState: ToolbarState by mutableStateOf(ToolbarState())
         private set
-    var chessboardColor: Color by mutableStateOf(regionColor)
+    var showPanel: Boolean by mutableStateOf(toolbarState.panelNeedsToBeShown)
+        private set
+    var showPromptToSetActiveSelectionAsToolArg: Boolean by mutableStateOf(false) // to be updated manually
+        private set
+    var showUI: Boolean by mutableStateOf(true)
+        private set
+
+    var openedDialog: DialogType? by mutableStateOf(null)
         private set
 
     // these 2 are NG
@@ -242,10 +261,6 @@ class EditorViewModel : ViewModel() {
     var redoIsEnabled: Boolean by mutableStateOf(false) // = redoHistory is not empty
         private set
 
-    // ahh.. to be set during startCircleOrPointInterpolationParameterAdjustment()
-    var interpolateCircles: Boolean by mutableStateOf(true)
-    var circlesAreCoDirected: Boolean by mutableStateOf(true)
-
     var colorPickerParameters = ColorPickerParameters(Color.Unspecified, emptyList())
     // so.. why aren't these States?
     var defaultInterpolationParameters = DefaultInterpolationParameters()
@@ -271,27 +286,15 @@ class EditorViewModel : ViewModel() {
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
 
-    var openedDialog: DialogType? by mutableStateOf(null)
-        private set
-
-    var partialArcPath: PartialArcPath? by mutableStateOf(null)
-        private set
-//    var arcPaths: List<ArcPath> by mutableStateOf(emptyList())
-//        private set
-
-    var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
-        private set
-    var translation: Offset by mutableStateOf(Offset.Zero)
-        private set
+    private val restoration: MutableStateFlow<ProgressState> =
+        MutableStateFlow(ProgressState.NOT_STARTED)
+    private val cachingInProgress: MutableStateFlow<Boolean> =
+        MutableStateFlow(false)
 
     /** min tap/grab distance to select an object */
     private var tapRadius = getPlatform().tapRadius
 
     private var movementAfterDown = false
-
-    init {
-        launchRestore()
-    }
 
     /** sets [tapRadius] based on [density] */
     fun setEpsilon(density: Density) {
@@ -3693,25 +3696,21 @@ class EditorViewModel : ViewModel() {
         )
     }
 
-    private fun launchRestore() {
-        viewModelScope.launch {
+    suspend fun launchRestore() {
+        if (restoration.value == ProgressState.NOT_STARTED) {
+            restoration.update { ProgressState.IN_PROGRESS }
             val platform = getPlatform()
             if (!RESTORE_LAST_SAVE_ON_LOAD) {
                 restoreFromState(State.SAMPLE)
-//                loadNewConstellation(Constellation.SAMPLE)
-//                centerizeTo(0f, 0f)
             } else {
-                val result = runCatching { // NOTE: can fail crash when underlying VM.State format changes
+                val result = runCatching { // NOTE: can crash when underlying VM.State format changes
                     platform.lastStateStore.get()
                 }
                 val state = result.getOrNull()
                 if (state == null) {
                     restoreFromState(State.SAMPLE)
-//                    loadNewConstellation(Constellation.SAMPLE)
-//                    centerizeTo(0f, 0f)
                 } else {
                     restoreFromState(state)
-//                    queueSnackbarMessage(SnackbarMessage.SUCCESSFUL_RESTORE)
                 }
             }
             runCatching {
@@ -3719,6 +3718,7 @@ class EditorViewModel : ViewModel() {
             }.getOrNull()?.let { settings ->
                 loadSettings(settings)
             }
+            restoration.update { ProgressState.COMPLETED }
         }
     }
 
@@ -3751,12 +3751,16 @@ class EditorViewModel : ViewModel() {
 
     /** caches latest [State] using platform-specific local storage */
     fun cacheState() {
-        println("caching VM state...")
-        val state = saveState()
-        val platform = getPlatform()
-        platform.saveLastState(state)
-        platform.saveSettings(getCurrentSettings())
-        println("cached.")
+        if (!cachingInProgress.value) {
+            cachingInProgress.update { true }
+            println("caching VM state...")
+            val state = saveState()
+            val platform = getPlatform()
+            platform.saveLastState(state)
+            platform.saveSettings(getCurrentSettings())
+            cachingInProgress.update { false }
+            println("cached.")
+        }
     }
 
     private fun getCurrentSettings(): Settings =
@@ -3774,6 +3778,7 @@ class EditorViewModel : ViewModel() {
     // NOTE: i never seen this proc on Android or Wasm tbh
     //  so i had to create Flow<LifecycleEvent> to manually trigger caching
     override fun onCleared() {
+        println("VM.onCleared")
         cacheState()
         super.onCleared()
     }

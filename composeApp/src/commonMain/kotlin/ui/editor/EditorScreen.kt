@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import core.geometry.CircleOrLine
 import core.geometry.ImaginaryCircle
@@ -89,6 +90,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -400,13 +402,16 @@ fun EditorScreen(
         null -> {}
     }
     LaunchedEffect(ddcContent, sampleName, ddcRepository) {
-        if (ddcContent != null) {
-            println("loading external ddc...")
-            viewModel.loadDdc(ddcContent)
-        } else if (sampleName != null) {
-            val content = ddcRepository.loadSampleClusterYaml(sampleName)
-            if (content != null) {
-                viewModel.loadDdc(content)
+        viewModel.viewModelScope.launch {
+            viewModel.launchRestore()
+            if (ddcContent != null) {
+                println("loading external ddc...")
+                viewModel.loadDdc(ddcContent)
+            } else if (sampleName != null) {
+                val content = ddcRepository.loadSampleClusterYaml(sampleName)
+                if (content != null) {
+                    viewModel.loadDdc(content)
+                }
             }
         }
     }
