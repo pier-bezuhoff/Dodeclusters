@@ -346,7 +346,8 @@ class ObjectModel {
                 }
                 is Line -> copy(c = UPSCALING_FACTOR * c)
                 is Point -> copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y)
-                is ImaginaryCircle -> copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
+                is ImaginaryCircle ->
+                    copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
             }
     }
 }

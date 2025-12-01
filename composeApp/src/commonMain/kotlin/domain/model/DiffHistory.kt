@@ -1,112 +1,79 @@
 package domain.model
 
-typealias DiffGroup = List<Diff>
+import kotlinx.serialization.Serializable
 
-// MAYBE: add very distant past where all same-targets diffs would be fused
+/** [Diff] group for a singular undo/redo step */
+typealias RedoGroup = List<Diff>
 
 class DiffHistory(
-    private val originalState: Unit
+    pastHistory: List<RedoGroup>,
+    futureHistory: List<RedoGroup>,
 ) {
-    private val distantPast = ArrayDeque<DiffGroup>(DISTANT_HISTORY_SIZE)
-    private val recentPast = ArrayDeque<DiffGroup>(RECENT_HISTORY_SIZE)
-    private val recentFuture = ArrayDeque<DiffGroup>(RECENT_HISTORY_SIZE)
-    private val distantFuture = ArrayDeque<DiffGroup>(DISTANT_HISTORY_SIZE)
+    private val past: ArrayDeque<RedoGroup> = ArrayDeque(HISTORY_SIZE)
+    private val future: ArrayDeque<RedoGroup> = ArrayDeque(HISTORY_SIZE)
 
     private var continuousChange: Boolean = false
 
     val undoIsPossible: Boolean get() =
-        recentPast.isNotEmpty()
+        past.isNotEmpty()
     val redoIsPossible: Boolean get() =
-        recentFuture.isNotEmpty()
+        past.isNotEmpty()
 
-    private fun fuseContinuousChange(diff1: DiffGroup, diff2: DiffGroup): DiffGroup {
-        val prev = diff1.singleOrNull()
-        val next = diff2.singleOrNull()
-        if (prev is Diff.Transform && next is Diff.Transform) {
-            val changes = prev.changes.toMutableMap()
-            val nextChanges = next.changes
-            changes.putAll(nextChanges)
-            return listOf(Diff.Transform(changes))
-        } else {
-            return diff1 + diff2
-        }
+    init {
+        past.addAll(pastHistory)
+        future.addAll(futureHistory)
     }
 
-    private fun fuseContinuousChange(diffs: DiffGroup): DiffGroup {
-        if (diffs.size < 2) {
-            return diffs
-        }
-        val allDiffs = mutableListOf<Diff>()
-        var i = 0
-        while (i < diffs.size - 1) {
-            val prev = diffs[i]
-            val next = diffs[i + 1]
-            when {
-                prev is Diff.Transform && next is Diff.Transform -> {
-                    val changes = prev.changes.toMutableMap()
-                    val nextChanges = next.changes
-                    changes.putAll(nextChanges)
-                    allDiffs.add(
-                        Diff.Transform(changes)
-                    )
-                    i += 2
-                }
-                else -> {
-                    allDiffs.add(prev)
-                    i += 1
-                }
-            }
-        }
-        if (i == diffs.size - 1) {
-            allDiffs.add(diffs.last())
-        }
-        return allDiffs
-    }
-
-    private fun fuseSameTagSameTargets(diffs1: DiffGroup, diffs2: DiffGroup?): DiffGroup? {
-        TODO()
-    }
-
-    fun recordDiff(diffs: DiffGroup, continuous: Boolean = false) {
+    fun recordDiff(diff: Diff, continuous: Boolean = false) {
         continuousChange = continuous
-        if (diffs.isNotEmpty()) {
-            TODO()
-        }
+        TODO()
     }
 
     fun undo() {
         require(undoIsPossible)
-        val diffs = recentPast.removeLast()
-        if (distantPast.isNotEmpty()) {
-            recentPast.addFirst(
-                distantPast.removeLast()
-            )
-        }
+        val diff = past.removeLast()
         // TODO: transform past diff into future diff
         //  using current state
-        val futureDiffs = diffs
-        if (recentFuture.size == RECENT_HISTORY_SIZE) {
-            val lastRecentFuture = recentFuture.removeLast()
-            val firstDistantFuture = distantFuture.firstOrNull()
-            val fused = fuseSameTagSameTargets(lastRecentFuture, firstDistantFuture)
-            if (fused != null) {
-                distantFuture.removeFirst()
-                distantFuture.addFirst(fused)
-            } else {
-                if (distantFuture.size == DISTANT_HISTORY_SIZE) {
-                    // theoretically this should never happen i think
-                    distantFuture.removeLast()
-                }
-                distantFuture.addFirst(lastRecentFuture)
-            }
+        val futureDiff = diff
+        if (future.size == HISTORY_SIZE) {
+            future.removeLast()
         }
-        recentFuture.addFirst(futureDiffs)
+        future.addFirst(futureDiff)
     }
 
-    fun redo() {}
+    fun redo() {
+        require(redoIsPossible)
+        val diff = future.removeFirst()
+        // TODO: transform future diff into past diff
+        //  using current state
+        val pastDiff = diff
+        if (past.size == HISTORY_SIZE) {
+            past.removeFirst()
+        }
+        past.addLast(pastDiff)
+    }
+
+    fun save(): State =
+        State(
+            past = past.toList(),
+            future = future.toList(),
+        )
 
     companion object {
-        private const val RECENT_HISTORY_SIZE = 10
-        private const val DISTANT_HISTORY_SIZE = 200
+        @Serializable
+        data class State(
+            @Serializable
+            val past: List<RedoGroup>,
+            @Serializable
+            val future: List<RedoGroup>,
+        )
+
+        fun load(state: State): DiffHistory =
+            DiffHistory(
+                pastHistory = state.past,
+                futureHistory = state.future,
+            )
+
+        private const val HISTORY_SIZE = 1_000
     }
 }

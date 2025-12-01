@@ -72,7 +72,6 @@ data class Constellation(
      * index `0` when necessary.
      */
     fun updated(): Constellation {
-//        return this
         val hasLineBy2Points = objects.any { construct ->
             construct is ObjectConstruct.Dynamic &&
             construct.expression.expr is Expr.LineBy2Points

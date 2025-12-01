@@ -142,7 +142,6 @@ class EditorViewModel : ViewModel() {
 //        private set
 
     var backgroundColor: Color? by mutableStateOf(null)
-        private set
     var chessboardColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
         private set
     var chessboardPattern: ChessboardPattern by mutableStateOf(ChessboardPattern.NONE)

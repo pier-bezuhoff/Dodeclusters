@@ -374,9 +374,9 @@ fun InterpolationInterface(
         nInterjacents = sliderState.value.roundToInt(),
         inBetween = interpolateInBetween,
         complementary =
-        if (interpolateCircles) {
-            if (circlesAreCoDirected) !interpolateInBetween else interpolateInBetween
-        } else interpolateInBetween
+            if (interpolateCircles) {
+                if (circlesAreCoDirected) !interpolateInBetween else interpolateInBetween
+            } else interpolateInBetween
     )
     val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
@@ -446,6 +446,7 @@ fun InterpolationInterface(
         }
     }
     val coroutineScope = rememberCoroutineScope()
+    // TODO: use snapshotFlow instead
     key(params) { // this feels hacky, `key(params)` serves only a semantic purpose btw
         coroutineScope.launch {
             updateParameters(params)
