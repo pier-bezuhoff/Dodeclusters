@@ -1,12 +1,10 @@
 package domain.model
 
-import androidx.compose.ui.graphics.Color
 import core.geometry.GCircle
 import domain.ColorAsCss
 import domain.Ix
 import domain.cluster.LogicalRegion
 import domain.expressions.Expression
-import domain.settings.ChessboardPattern
 import kotlinx.serialization.Serializable
 
 // ':=' style
@@ -64,20 +62,7 @@ sealed interface Diff {
     companion object {
         fun revert(
             diff: Diff,
-            // present state
-            objects: List<GCircle?>,
-            objectColors: Map<Ix, Color>,
-            objectLabels: Map<Ix, String>,
-            expressions: Map<Ix, Expression?>,
-            regions: List<LogicalRegion>,
-            backgroundColor: Color?,
-            chessboardPattern: ChessboardPattern,
-            chessboardColor: Color?,
-            phantoms: Set<Ix>,
-            selection: List<Ix>,
-            centerX: Float,
-            centerY: Float,
-            regionColor: Color?,
+            state: SaveState,
         ): Diff {
             // undo route:
             // ('=:' diff; now) -> (past; ':=' diff)
@@ -90,37 +75,37 @@ sealed interface Diff {
                     CreateObjects(
                         diff.indices.associateWith { ix ->
                             FullObject(
-                                obj = objects[ix],
-                                expression = expressions[ix],
-                                color = objectColors[ix],
-                                label = objectLabels[ix],
+                                obj = state.objects[ix],
+                                expression = state.expressions[ix],
+                                color = state.objectColors[ix],
+                                label = state.objectLabels[ix],
                             )
                         }
                     )
                 is Reposition ->
-                    Reposition(diff.objects.mapValues { (ix, _) -> objects[ix] })
+                    Reposition(diff.objects.mapValues { (ix, _) -> state.objects[ix] })
                 is Expressions ->
-                    Expressions(diff.expressions.mapValues { (ix, _) -> expressions[ix] })
+                    Expressions(diff.expressions.mapValues { (ix, _) -> state.expressions[ix] })
                 is ObjectColors ->
-                    ObjectColors(diff.colors.mapValues { (ix, _) -> objectColors[ix] })
+                    ObjectColors(diff.colors.mapValues { (ix, _) -> state.objectColors[ix] })
                 is ObjectLabels ->
-                    ObjectLabels(diff.labels.mapValues { (ix, _) -> objectLabels[ix] })
+                    ObjectLabels(diff.labels.mapValues { (ix, _) -> state.objectLabels[ix] })
                 is Regions ->
-                    Regions(regions)
+                    Regions(state.regions)
                 is BackgroundColor ->
-                    BackgroundColor(backgroundColor)
+                    BackgroundColor(state.backgroundColor)
                 is Center ->
-                    Center(centerX, centerY)
+                    Center(state.centerX, state.centerY)
                 is ChessboardColor ->
-                    ChessboardColor(chessboardColor)
+                    ChessboardColor(state.chessboardColor)
                 is ChessboardPattern ->
-                    ChessboardPattern(chessboardPattern)
+                    ChessboardPattern(state.chessboardPattern)
                 is CurrentRegionColor ->
-                    CurrentRegionColor(regionColor)
+                    CurrentRegionColor(state.regionColor)
                 is Phantoms ->
-                    Phantoms(phantoms)
+                    Phantoms(state.phantoms)
                 is Selection ->
-                    Selection(selection)
+                    Selection(state.selection)
             }
         }
     }
