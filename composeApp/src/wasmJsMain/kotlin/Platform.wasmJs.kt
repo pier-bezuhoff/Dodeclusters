@@ -1,5 +1,6 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
+import domain.model.ChangeHistory
 import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.storage.storeOf
@@ -8,6 +9,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import ui.editor.EditorViewModel
 import kotlin.math.pow
 
@@ -22,6 +24,7 @@ object WasmPlatform: Platform {
     override val tapRadius: Float = 10f
     override val minCircleToCubicApproximationRadius: Float = 10_000f
     override val minCircleToLineApproximationRadius: Float = 100_000f
+
     override val lastStateStore: KStore<EditorViewModel.State> by lazy {
         storeOf(
             key = Platform.LAST_STATE_STORE_FILE_NAME,
@@ -34,19 +37,33 @@ object WasmPlatform: Platform {
             format = Settings.JSON_FORMAT,
         )
     }
+    override val historyStore: KStore<ChangeHistory.State> by lazy {
+        storeOf(
+            key = Platform.HISTORY_STORE_FILE_NAME,
+            format = ChangeHistory.State.JSON_FORMAT,
+        )
+    }
 
     @OptIn(DelicateCoroutinesApi::class)
-    override fun saveLastState(state: EditorViewModel.State) {
+    private inline fun <reified T : @Serializable Any> KStore<T>.save(value: T) {
         GlobalScope.launch(Dispatchers.Default) { // MAYBE: another dispatcher is better
-            lastStateStore.set(state)
+            this@save.set(value)
         }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
+    override fun saveLastState(state: EditorViewModel.State) {
+        lastStateStore.save(state)
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
     override fun saveSettings(settings: Settings) {
-        GlobalScope.launch(Dispatchers.Default) {
-            settingsStore.set(settings)
-        }
+        settingsStore.save(settings)
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun saveHistory(historyState: ChangeHistory.State) {
+        historyStore.save(historyState)
     }
 
     override fun scrollToZoom(yDelta: Float): Float {

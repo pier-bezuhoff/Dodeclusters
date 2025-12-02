@@ -1,4 +1,5 @@
 import android.os.Build
+import domain.model.ChangeHistory
 import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
@@ -8,6 +9,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.io.IOException
 import kotlinx.io.files.Path
+import kotlinx.serialization.Serializable
 import ui.editor.EditorViewModel
 import java.io.File
 import kotlin.math.pow
@@ -20,7 +22,9 @@ object AndroidPlatform : Platform {
     // NOTE: cubic approx is performing remarkably bad on Android [my old tablet]
     override val minCircleToCubicApproximationRadius: Float = 7_000f
     override val minCircleToLineApproximationRadius: Float = 7_000f
+
     lateinit var filesDir: Path
+
     override val lastStateStore: KStore<EditorViewModel.State> by lazy {
         storeOf(
             file = Path(filesDir, Platform.LAST_STATE_STORE_FILE_NAME + ".json"),
@@ -33,13 +37,19 @@ object AndroidPlatform : Platform {
             json = Settings.JSON_FORMAT,
         )
     }
+    override val historyStore: KStore<ChangeHistory.State> by lazy {
+        storeOf(
+            file = Path(filesDir, Platform.HISTORY_STORE_FILE_NAME + ".json"),
+            json = ChangeHistory.State.JSON_FORMAT,
+        )
+    }
 
     // reference: https://stackoverflow.com/a/75734381/7143065
     @OptIn(DelicateCoroutinesApi::class)
-    override fun saveLastState(state: EditorViewModel.State) {
+    private inline fun <reified T : @Serializable Any> KStore<T>.save(value: T) {
         GlobalScope.launch(Dispatchers.IO) {
             try {
-                lastStateStore.set(state)
+                this@save.set(value)
             } catch (e: IOException) {
                 e.printStackTrace()
             }
@@ -47,14 +57,18 @@ object AndroidPlatform : Platform {
     }
 
     @OptIn(DelicateCoroutinesApi::class)
+    override fun saveLastState(state: EditorViewModel.State) {
+        lastStateStore.save(state)
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
     override fun saveSettings(settings: Settings) {
-        GlobalScope.launch(Dispatchers.IO) {
-            try {
-                settingsStore.set(settings)
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }
+        settingsStore.save(settings)
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun saveHistory(historyState: ChangeHistory.State) {
+        historyStore.save(historyState)
     }
 
     // since this is triggered by mouse scroll, it is irrelevant to android
