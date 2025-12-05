@@ -254,7 +254,7 @@ class EditorViewModel : ViewModel() {
         return selection.all { objects[it] == null || !isFree(it) }
     }
 
-    lateinit var _history: ChangeHistory
+    private lateinit var history: ChangeHistory
     val undoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
     val redoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
 
@@ -462,7 +462,7 @@ class EditorViewModel : ViewModel() {
         translation = Offset.Zero
         loadConstellation(updatedConstellation)
         // reset history on load
-        _history = ChangeHistory(
+        history = ChangeHistory(
             initialState = _saveState(),
             undoIsEnabled = undoIsEnabled,
             redoIsEnabled = redoIsEnabled,
@@ -569,7 +569,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun pinStateForHistory() {
-        _history.pinState(_saveState())
+        history.pinState(_saveState())
     }
 
     fun undo() {
@@ -588,7 +588,7 @@ class EditorViewModel : ViewModel() {
             }
             selection = emptyList()
             val state = _saveState()
-            val newState = _history.undo(state)
+            val newState = history.undo(state)
             loadState(newState)
             selection = currentSelection.filter { it in objects.indices }
             resetTransients()
@@ -600,7 +600,7 @@ class EditorViewModel : ViewModel() {
         val currentSelection = selection.toList()
         switchToMode(mode)
         val state = _saveState()
-        val newState = _history.redo(state)
+        val newState = history.redo(state)
         loadState(newState)
         selection = currentSelection.filter { it in objects.indices }
         resetTransients()
@@ -644,14 +644,6 @@ class EditorViewModel : ViewModel() {
         submode = null
     }
 
-    private fun __recordCommand(command: Command, targets: List<Ix>? = null, target: Ix? = null, unique: Boolean = false) {
-        if (command != Command.ROTATE) { // erm
-            if (submode is SubMode.Rotate) {
-                submode = null
-            }
-        }
-    }
-
     fun createNewGCircle(newGCircle: GCircle?) =
         createNewGCircles(listOf(newGCircle))
 
@@ -677,7 +669,7 @@ class EditorViewModel : ViewModel() {
             objectModel.invalidate()
         }
         val indices = newIndices.toSet()
-        _history.accumulateChangedLocations(
+        history.accumulateChangedLocations(
             objectIndices = indices,
             expressionIndices = indices,
             selection = true,
@@ -689,7 +681,7 @@ class EditorViewModel : ViewModel() {
         val newIx = expressions.addFree()
         objectModel.invalidate()
         require(newIx == objects.size - 1) { "Incorrect index retrieved from expression.addFree() during createNewFreePoint()" }
-        _history.accumulateNewObjects(
+        history.accumulateNewObjects(
             objectsSize = objects.size,
             count = 1,
         )
@@ -869,14 +861,14 @@ class EditorViewModel : ViewModel() {
                 expressions.copyExpressionsWithDependencies(toBeCopied)
                 objectModel.invalidate()
                 val indices = (objects.size until (objects.size + toBeCopied.size)).toSet()
-                _history.accumulateChangedLocations(
+                history.accumulateChangedLocations(
                     objectIndices = indices,
                     objectColorIndices = indices,
                     expressionIndices = indices,
                     regions = true,
                     selection = true,
                 )
-                _history.recordAccumulatedChanges()
+                history.recordAccumulatedChanges()
             }
         }
     }
@@ -975,14 +967,14 @@ class EditorViewModel : ViewModel() {
         val indices = toBeDeleted.toList()
         objectModel.removeObjectsAt(indices)
         objectModel.invalidate()
-        _history.accumulateChangedLocations(
+        history.accumulateChangedLocations(
             objectIndices = toBeDeleted,
             objectColorIndices = toBeDeleted,
             objectLabelIndices = toBeDeleted,
             expressionIndices = toBeDeleted,
         )
         if (triggerRecording) {
-            _history.recordAccumulatedChanges()
+            history.recordAccumulatedChanges()
         }
     }
 
@@ -1184,7 +1176,7 @@ class EditorViewModel : ViewModel() {
             shouldUpdateSelection = shouldUpdateSelection,
             setSelection = { selection = it },
         )
-        _history.accumulateChangedLocations(regions = true)
+        history.accumulateChangedLocations(regions = true)
     }
 
     /** @return [Rect] using absolute positions */
@@ -1282,11 +1274,11 @@ class EditorViewModel : ViewModel() {
                 val newIx = objects.size
                 objectModel.addObjects(listOf(newPoint))
                 objectModel.invalidate()
-                _history.accumulateNewObjects(
+                history.accumulateNewObjects(
                     objectsSize = objects.size,
                     count = 1,
                 )
-                _history.recordAccumulatedChanges()
+                history.recordAccumulatedChanges()
                 PointSnapResult.Eq(newPoint, newIx)
             }
             is PointSnapResult.Intersection -> {
@@ -1320,22 +1312,22 @@ class EditorViewModel : ViewModel() {
                             as Point
                         objectModel.addDownscaledObject(p)
                         objectModel.invalidate()
-                        _history.accumulateNewObjects(
+                        history.accumulateNewObjects(
                             objectsSize = objects.size,
                             count = 1,
                         )
-                        _history.recordAccumulatedChanges()
+                        history.recordAccumulatedChanges()
                         PointSnapResult.Eq(snapResult.result, oldSize)
                     } else {
                         val ps = expressions.addMultiExpr(expr)
                             .map { it as? Point }
                         objectModel.addDownscaledObjects(ps)
                         objectModel.invalidate()
-                        _history.accumulateNewObjects(
+                        history.accumulateNewObjects(
                             objectsSize = objects.size,
                             count = 2,
                         )
-                        _history.recordAccumulatedChanges()
+                        history.recordAccumulatedChanges()
                         PointSnapResult.Eq(snapResult.result, oldSize + intersectionOutputIndex)
                     }
                 }
@@ -1377,7 +1369,7 @@ class EditorViewModel : ViewModel() {
         } else { // maybe select Imaginary's and nulls too
             allCLPIndices
         }
-        _history.accumulateChangedLocations(selection = true)
+        history.accumulateChangedLocations(selection = true)
     }
 
     fun toggleShowCircles() {
@@ -1385,7 +1377,7 @@ class EditorViewModel : ViewModel() {
         if (!showCircles && mode is ToolMode)
             switchToMode(SelectionMode.Drag)
         selection = emptyList()
-        _history.accumulateChangedLocations(selection = true)
+        history.accumulateChangedLocations(selection = true)
     }
 
     fun togglePhantomObjects() {
@@ -1447,11 +1439,11 @@ class EditorViewModel : ViewModel() {
         if (chessboardPattern != ChessboardPattern.NONE) {
             chessboardColor = regionColor
         }
-        _history.accumulateChangedLocations(
+        history.accumulateChangedLocations(
             chessboardPattern = true,
             chessboardColor = true,
         )
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     fun concludeRegionColorPicker(colorPickerParameters: ColorPickerParameters) {
@@ -1459,7 +1451,7 @@ class EditorViewModel : ViewModel() {
         regionColor = colorPickerParameters.currentColor
         this.colorPickerParameters = colorPickerParameters
         switchToCategory(Category.Region)
-        _history.accumulateChangedLocations(regionColor = true)
+        history.accumulateChangedLocations(regionColor = true)
     }
 
     fun concludeCircleColorPicker(colorPickerParameters: ColorPickerParameters) {
@@ -1470,10 +1462,10 @@ class EditorViewModel : ViewModel() {
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
         objectModel.invalidate()
-        _history.accumulateChangedLocations(
+        history.accumulateChangedLocations(
             objectColorIndices = selection.toSet(),
         )
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     fun concludeBackgroundColorPicker(colorPickerParameters: ColorPickerParameters) {
@@ -1481,17 +1473,17 @@ class EditorViewModel : ViewModel() {
         backgroundColor = colorPickerParameters.currentColor
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
-        _history.accumulateChangedLocations(
+        history.accumulateChangedLocations(
             backgroundColor = true,
         )
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     fun setNewRegionColorToSelectedColorSplash(color: Color) {
         openedDialog = null
         regionColor = color
         switchToCategory(Category.Region)
-        _history.accumulateChangedLocations(regionColor = true)
+        history.accumulateChangedLocations(regionColor = true)
     }
 
     fun dismissRegionColorPicker() {
@@ -1527,11 +1519,11 @@ class EditorViewModel : ViewModel() {
         pinStateForHistory()
         chessboardPattern = ChessboardPattern.NONE
         regions = emptyList()
-        _history.accumulateChangedLocations(
+        history.accumulateChangedLocations(
             regions = true,
             chessboardPattern = true,
         )
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     fun setRegionsManipulationStrategy(newStrategy: RegionManipulationStrategy) {
@@ -1542,7 +1534,7 @@ class EditorViewModel : ViewModel() {
         if (showPromptToSetActiveSelectionAsToolArg) {
             showPromptToSetActiveSelectionAsToolArg = false
             selection = emptyList()
-            _history.accumulateChangedLocations(selection = true)
+            history.accumulateChangedLocations(selection = true)
         }
     }
 
@@ -1582,12 +1574,12 @@ class EditorViewModel : ViewModel() {
         switchToMode(SelectionMode.Multiselect)
         val indices = listOf(objects.size - 2, objects.size - 1)
         selection = indices
-        _history.accumulateChangedLocations(
+        history.accumulateChangedLocations(
             objectIndices = indices.toSet(),
             expressionIndices = indices.toSet(),
             selection = true,
         )
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     fun scaleSelection(zoom: Float) {
@@ -1597,7 +1589,7 @@ class EditorViewModel : ViewModel() {
                 if (rect == null || rect.minDimension >= 5_000)
                     computeAbsoluteCenter() ?: Offset.Zero
                 else rect.center
-            if (_history.newContinuousChange(ContinuousChangeType.ZOOM)) {
+            if (history.newContinuousChange(ContinuousChangeType.ZOOM)) {
                 pinStateForHistory()
             }
             transformWhatWeCan(selection, focus = focus, zoom = zoom)
@@ -1606,11 +1598,11 @@ class EditorViewModel : ViewModel() {
         } else {
             val targets = objects.indices.toList()
             val center = computeAbsoluteCenter() ?: Offset.Zero
-            if (_history.newContinuousChange(ContinuousChangeType.ZOOM)) {
+            if (history.newContinuousChange(ContinuousChangeType.ZOOM)) {
                 pinStateForHistory()
             }
             objectModel.transform(expressions, targets, focus = center, zoom = zoom)
-            _history.accumulateChangedLocations(objectIndices = targets.toSet())
+            history.accumulateChangedLocations(objectIndices = targets.toSet())
         }
     }
 
@@ -1620,8 +1612,8 @@ class EditorViewModel : ViewModel() {
             expressions.changeToFree(ix)
         }
         selectionIsLockedTrigger = !selectionIsLockedTrigger
-        _history.accumulateChangedLocations(expressionIndices = selection.toSet())
-        _history.recordAccumulatedChanges()
+        history.accumulateChangedLocations(expressionIndices = selection.toSet())
+        history.recordAccumulatedChanges()
     }
 
     fun setLabel(label: String?) {
@@ -1636,8 +1628,8 @@ class EditorViewModel : ViewModel() {
         }
         objectLabels = labels.toMap()
         openedDialog = null
-        _history.accumulateChangedLocations(objectLabelIndices = selection.toSet())
-        _history.recordAccumulatedChanges()
+        history.accumulateChangedLocations(objectLabelIndices = selection.toSet())
+        history.recordAccumulatedChanges()
     }
 
     private fun markSelectedObjectsAsPhantoms() {
@@ -1645,13 +1637,13 @@ class EditorViewModel : ViewModel() {
         // selection = emptyList() // being able to instantly undo is prob better ux
         // showPhantomObjects = false // i think this behavior is confuzzling
         objectModel.invalidate()
-        _history.accumulateChangedLocations(phantoms = true)
+        history.accumulateChangedLocations(phantoms = true)
     }
 
     private fun unmarkSelectedObjectsAsPhantoms() {
         objectModel.phantomObjectIndices.removeAll(selection.toSet())
         objectModel.invalidate()
-        _history.accumulateChangedLocations(phantoms = true)
+        history.accumulateChangedLocations(phantoms = true)
     }
 
     private fun swapDirectionsOfSelectedCircles() {
@@ -1672,8 +1664,8 @@ class EditorViewModel : ViewModel() {
                     obj0.reversed()
                 }
             )
-            _history.accumulateChangedLocations(objectIndices = targets.toSet())
-            _history.recordAccumulatedChanges()
+            history.accumulateChangedLocations(objectIndices = targets.toSet())
+            history.recordAccumulatedChanges()
         }
     }
 
@@ -1785,7 +1777,7 @@ class EditorViewModel : ViewModel() {
                 } else adjustables
             submode = SubMode.ExprAdjustment(allAdjustables)
             selection = emptyList() // clear selection to hide selection HUD
-            _history.accumulateChangedLocations(selection = true)
+            history.accumulateChangedLocations(selection = true)
         }
     }
 
@@ -1800,7 +1792,7 @@ class EditorViewModel : ViewModel() {
                 switchToMode(SelectionMode.Multiselect)
             }
             selection = familyMembers
-            _history.accumulateChangedLocations(selection = true)
+            history.accumulateChangedLocations(selection = true)
         }
     }
 
@@ -1817,12 +1809,12 @@ class EditorViewModel : ViewModel() {
                 switchToMode(SelectionMode.Multiselect)
             }
             selection = siblings
-            _history.accumulateChangedLocations(selection = true)
+            history.accumulateChangedLocations(selection = true)
         }
     }
 
     fun onDown(visiblePosition: Offset) {
-        _history.recordAccumulatedContinuousChanges()
+        history.recordAccumulatedContinuousChanges()
         movementAfterDown = false
         // reset grabbed thingies
         if (showCircles) {
@@ -1884,7 +1876,7 @@ class EditorViewModel : ViewModel() {
                         listOfNotNull(selectedCircleIndex)
                     }
                 }
-                _history.accumulateChangedLocations(selection = true)
+                history.accumulateChangedLocations(selection = true)
             } else {
                 if (mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect) {
                     val (corner1, corner2) = submode as SubMode.RectangularSelect
@@ -2082,7 +2074,7 @@ class EditorViewModel : ViewModel() {
             if (expr == null) {
                 val changedIndices =
                     objectModel.setObjectWithConsequences(expressions, ix, Point.CONFORMAL_INFINITY)
-                _history.accumulateChangedLocations(objectIndices = changedIndices.toSet())
+                history.accumulateChangedLocations(objectIndices = changedIndices.toSet())
             } else if (expr is Expr.Incidence && objects[expr.carrier] is Line) {
                 objectModel.changeExpr(
                     expressions,
@@ -2091,12 +2083,12 @@ class EditorViewModel : ViewModel() {
                         expr.parameters.copy(order = Line.ORDER_OF_CONFORMAL_INFINITY)
                     )
                 )
-                _history.accumulateChangedLocations(
+                history.accumulateChangedLocations(
                     objectIndices = setOf(ix),
                     expressionIndices = setOf(ix),
                 )
             }
-            _history.recordAccumulatedChanges()
+            history.recordAccumulatedChanges()
         }
     }
 
@@ -2150,7 +2142,7 @@ class EditorViewModel : ViewModel() {
                         selection = listOfNotNull(selectedIndex)
                         highlightSelectionParents()
                     }
-                    _history.accumulateChangedLocations(selection = true)
+                    history.accumulateChangedLocations(selection = true)
                 }
                 SelectionMode.Multiselect -> {
                     // (re)-select region
@@ -2190,7 +2182,7 @@ class EditorViewModel : ViewModel() {
                     } else if (selectedCircleIndex in selection) {
                         highlightSelectionParents()
                     }
-                    _history.accumulateChangedLocations(selection = true)
+                    history.accumulateChangedLocations(selection = true)
                 }
                 SelectionMode.Region -> {
                     if (submode !is SubMode.FlowFill) {
@@ -2201,7 +2193,7 @@ class EditorViewModel : ViewModel() {
                         } else {
                             reselectRegionAt(position)
                         }
-                        _history.recordAccumulatedChanges()
+                        history.recordAccumulatedChanges()
                     }
                 }
                 ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> {}
@@ -2376,7 +2368,7 @@ class EditorViewModel : ViewModel() {
         val order = carrier.point2order(newPoint)
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
         objectModel.changeExpr(expressions, pointIndex, newExpr)
-        _history.accumulateChangedLocations(
+        history.accumulateChangedLocations(
             objectIndices = setOf(pointIndex),
             expressionIndices = setOf(pointIndex),
         )
@@ -2446,7 +2438,7 @@ class EditorViewModel : ViewModel() {
             )
             objectModel.invalidatePositions()
             val indices = objects.indices.toSet()
-            _history.accumulateChangedLocations(
+            history.accumulateChangedLocations(
                 objectIndices = indices,
                 expressionIndices = indices,
             )
@@ -2499,7 +2491,7 @@ class EditorViewModel : ViewModel() {
         } else {
             val incidentPointIndices =
                 objectModel.transform(expressions, actualTargets, translation, focus, zoom, rotationAngle)
-            _history.accumulateChangedLocations(
+            history.accumulateChangedLocations(
                 objectIndices = actualTargets.toSet(),
                 expressionIndices = incidentPointIndices.toSet(),
             )
@@ -2543,7 +2535,7 @@ class EditorViewModel : ViewModel() {
                 }
                 selection = selectWithRectangle(selectables, rect)
                 submode = SubMode.RectangularSelect(corner1, c)
-                _history.accumulateChangedLocations(selection = true)
+                history.accumulateChangedLocations(selection = true)
             } else if (mode == SelectionMode.Multiselect && sm is SubMode.FlowSelect) {
                 val qualifiedRegion = sm.lastQualifiedRegion
                 val (_, newQualifiedRegion) = selectRegionAt(centroid)
@@ -2556,7 +2548,7 @@ class EditorViewModel : ViewModel() {
                         (qualifiedRegion.outsides - newQualifiedRegion.outsides) union
                         (newQualifiedRegion.outsides - qualifiedRegion.outsides)
                     selection += diff.filter { it !in selection && (showPhantomObjects || it !in phantoms) }
-                    _history.accumulateChangedLocations(selection = true)
+                    history.accumulateChangedLocations(selection = true)
                 }
             } else if (mode == SelectionMode.Region && sm is SubMode.FlowFill) {
                 val qualifiedRegion = sm.lastQualifiedRegion
@@ -2613,7 +2605,7 @@ class EditorViewModel : ViewModel() {
                     val center = computeAbsoluteCenter() ?: Offset.Zero
                     val incidentPointIndices =
                         objectModel.transform(expressions, targets, focus = center, zoom = zoom, rotationAngle = rotationAngle)
-                    _history.accumulateChangedLocations(
+                    history.accumulateChangedLocations(
                         objectIndices = targets.toSet(),
                         expressionIndices = incidentPointIndices.toSet(),
                         center = true
@@ -2639,7 +2631,7 @@ class EditorViewModel : ViewModel() {
                 // MAYBE: normalize line-only-output expressions (e.g. polar line)
                 // fixes incident points for line->circle and circle->line transitions
                 expressions.adjustIncidentPointExpressions()
-                _history.accumulateChangedLocations(
+                history.accumulateChangedLocations(
                     expressionIndices = objects.indices.toSet(),
                 )
                 // history is recorded further down
@@ -2714,7 +2706,7 @@ class EditorViewModel : ViewModel() {
                         println("rectangle selection -> $it")
                     }
                 submode = SubMode.RectangularSelect(corner1, corner2)
-                _history.accumulateChangedLocations(selection = true)
+                history.accumulateChangedLocations(selection = true)
             }
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) { // haxx
@@ -2727,10 +2719,10 @@ class EditorViewModel : ViewModel() {
             is SubMode.Rotate,
             is SubMode.Scale,
             is SubMode.ScaleViaSlider ->
-                _history.recordAccumulatedChanges()
+                history.recordAccumulatedChanges()
             null -> when (mode) {
                 SelectionMode.Drag, SelectionMode.Multiselect ->
-                    _history.recordAccumulatedChanges()
+                    history.recordAccumulatedChanges()
                 else -> {}
             }
             else -> {}
@@ -3009,7 +3001,7 @@ class EditorViewModel : ViewModel() {
                     else -> {}
                 }
                 val indices = sm.adjustables.flatMap { it.reservedIndices }.toSet()
-                _history.accumulateChangedLocations(
+                history.accumulateChangedLocations(
                     objectIndices = indices,
                     objectColorIndices = indices,
                     objectLabelIndices = indices,
@@ -3020,7 +3012,7 @@ class EditorViewModel : ViewModel() {
             else -> {}
         }
         submode = null
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     fun cancelOngoingActions() {
@@ -3032,7 +3024,7 @@ class EditorViewModel : ViewModel() {
                 } else {
                     if (submode is SubMode.ExprAdjustment) {
                         cancelExprAdjustment()
-                        _history.recordAccumulatedChanges()
+                        history.recordAccumulatedChanges()
                     }
                     partialArgList = partialArgList?.copyEmpty()
                     partialArcPath = null
@@ -3047,14 +3039,14 @@ class EditorViewModel : ViewModel() {
                 when (val sm = submode) {
                     is SubMode.ExprAdjustment -> {
                         val indices = sm.adjustables.flatMap { it.reservedIndices }.toSet()
-                        _history.accumulateChangedLocations(
+                        history.accumulateChangedLocations(
                             objectIndices = indices,
                             objectColorIndices = indices,
                             objectLabelIndices = indices,
                             expressionIndices = indices,
                             regions = true,
                         )
-                        _history.recordAccumulatedChanges()
+                        history.recordAccumulatedChanges()
                         undo() // contrived way to go to the before-adj savepoint
                     }
                     else -> {}
@@ -3108,7 +3100,7 @@ class EditorViewModel : ViewModel() {
             createNewGCircle(newCircle?.upscale())
         }
         partialArgList = argList.copyEmpty()
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     private fun completeCircleBy3Points() {
@@ -3142,7 +3134,7 @@ class EditorViewModel : ViewModel() {
             }
         }
         partialArgList = argList.copyEmpty()
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     private fun completeCircleByPencilAndPoint() {
@@ -3176,7 +3168,7 @@ class EditorViewModel : ViewModel() {
             }
         }
         partialArgList = argList.copyEmpty()
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     private fun completeLineBy2Points() {
@@ -3208,7 +3200,7 @@ class EditorViewModel : ViewModel() {
             createNewGCircle(newGCircle?.upscale())
         }
         partialArgList = argList.copyEmpty()
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     private fun completePolarityByCircleAndLineOrPoint() {
@@ -3237,7 +3229,7 @@ class EditorViewModel : ViewModel() {
         val newGCircle = expressions.addSoloExpr(newExpr)
         createNewGCircle(newGCircle?.upscale())
         partialArgList = argList.copyEmpty()
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     private fun completeCircleInversion() {
@@ -3256,14 +3248,14 @@ class EditorViewModel : ViewModel() {
         partialArgList = argList.copyEmpty()
         objectModel.invalidate()
         val indices = newIndexedGCircles.map { it.first }.toSet()
-        _history.accumulateChangedLocations(
+        history.accumulateChangedLocations(
             objectIndices = indices,
             objectColorIndices = indices,
             expressionIndices = indices,
             regions = true,
             selection = true,
         )
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     private fun startCircleOrPointInterpolationParameterAdjustment() {
@@ -3331,7 +3323,7 @@ class EditorViewModel : ViewModel() {
         createNewGCircles(newGCircles)
         partialArgList = argList.copyEmpty()
         defaultExtrapolationParameters = DefaultExtrapolationParameters(params)
-        _history.recordAccumulatedChanges()
+        history.recordAccumulatedChanges()
     }
 
     fun resetCircleExtrapolation() {
@@ -3622,12 +3614,12 @@ class EditorViewModel : ViewModel() {
                     }
                 }
             val indices = (vertexIndices + signedDirectedArcIndices.map { abs(it) - 1 }).toSet()
-            _history.accumulateChangedLocations(
+            history.accumulateChangedLocations(
                 objectIndices = indices,
                 expressionIndices = indices,
                 // arcPaths
             )
-            _history.recordAccumulatedChanges()
+            history.recordAccumulatedChanges()
             /*
             objectModel.phantomObjectIndices += auxiliaryIndices
             val newArcPath = if (pArcPath.isClosed) {
@@ -3669,7 +3661,7 @@ class EditorViewModel : ViewModel() {
             val newPoint = arg0.toPoint()
             pinStateForHistory()
             createNewFreePoint(newPoint)
-            _history.recordAccumulatedChanges()
+            history.recordAccumulatedChanges()
         } // it could have already done it with realized PSR.Eq, which results in Arg.Point.Index
         partialArgList = argList.copyEmpty()
     }
@@ -3928,7 +3920,7 @@ class EditorViewModel : ViewModel() {
             runCatching {
                 platform.historyStore.get()
             }.getOrNull()?.let { historyState ->
-                _history = historyState.load()
+                history = historyState.load()
             }
             restoration.update { ProgressState.COMPLETED }
         }
@@ -3970,7 +3962,7 @@ class EditorViewModel : ViewModel() {
             val platform = getPlatform()
             platform.saveLastState(state)
             platform.saveSettings(getCurrentSettings())
-            platform.saveHistory(_history.save())
+            platform.saveHistory(history.save())
             cachingInProgress.update { false }
             println("cached.")
         }
@@ -3998,7 +3990,7 @@ class EditorViewModel : ViewModel() {
 
     // TODO: migrate to SaveState eventually
     /**
-     * Save-able state of [EditorViewModel], used for [history].
+     * Save-able state of [EditorViewModel], used for autosave.
      * Be careful to pass _only_ strictly immutable args by __copying__
      */
     @Immutable
