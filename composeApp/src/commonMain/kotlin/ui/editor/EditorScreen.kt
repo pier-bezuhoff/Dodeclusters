@@ -212,8 +212,8 @@ fun EditorScreen(
                     )
                     EditorTopBar(
                         compact = compact,
-                        undoIsEnabled = viewModel.undoIsEnabled,
-                        redoIsEnabled = viewModel.redoIsEnabled,
+                        undoIsEnabled = viewModel.undoIsEnabled.value,
+                        redoIsEnabled = viewModel.redoIsEnabled.value,
                         showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
                         openNewBlank = viewModel::openNewBlankConstellation,
                         loadFromYaml = { content ->

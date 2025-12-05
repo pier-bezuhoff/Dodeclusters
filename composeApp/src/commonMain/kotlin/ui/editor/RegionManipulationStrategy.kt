@@ -33,8 +33,6 @@ enum class RegionManipulationStrategy(
             regionManipulationStrategy: RegionManipulationStrategy,
             shouldUpdateSelection: Boolean,
             crossinline setSelection: (List<Ix>) -> Unit,
-            crossinline recordRegionChangeAt: (changedRegionIndex: Int) -> Unit,
-            crossinline recordUniqueRegionChange: () -> Unit,
         ): List<LogicalRegion> {
             var resultingRegions = allRegions
             val outerRegionsIndices = allRegions.filterIndices { compressedRegion isObviouslyInside it || uncompressedRegion isObviouslyInside it  }
@@ -46,7 +44,6 @@ enum class RegionManipulationStrategy(
             when (regionManipulationStrategy) {
                 RegionManipulationStrategy.REPLACE -> {
                     if (outerRegions.isEmpty()) {
-                        recordRegionChangeAt(allRegions.size)
                         resultingRegions += compressedRegion
                         if (shouldUpdateSelection) {
                             setSelection((compressedRegion.insides + compressedRegion.outsides).toList())
@@ -56,11 +53,9 @@ enum class RegionManipulationStrategy(
                         val i = outerRegionsIndices.single()
                         val outer = outerRegions.single()
                         if (compressedRegion.fillColor == outer.fillColor) {
-                            recordUniqueRegionChange()
                             resultingRegions = allRegions.withoutElementAt(i)
                             println("removed singular same-color outer $outer")
                         } else { // we are trying to change the color im guessing
-                            recordRegionChangeAt(i)
                             resultingRegions = allRegions.updated(i, outer.copy(fillColor = compressedRegion.fillColor))
                             if (shouldUpdateSelection) {
                                 setSelection((compressedRegion.insides + compressedRegion.outsides).toList())
@@ -72,18 +67,11 @@ enum class RegionManipulationStrategy(
                             allRegions[it].fillColor == compressedRegion.fillColor
                         }
                         if (sameBoundsSameColorRegionsIndices.isNotEmpty()) {
-                            recordUniqueRegionChange()
                             val sameRegions = sameBoundsSameColorRegionsIndices.map { allRegions[it] }
                             resultingRegions = allRegions.filter { it !in sameRegions }
                             println("removed all same-bounds same-color $sameBoundsSameColorRegionsIndices ~ $compressedRegion")
                         } else { // we are trying to change the color im guessing
                             val i = sameBoundsRegionsIndices.last()
-                            if (sameBoundsRegionsIndices.size == 1) {
-                                recordRegionChangeAt(i)
-                            } else {
-                                // cleanup can shift region index
-                                recordUniqueRegionChange()
-                            }
                             val _regions = allRegions.toMutableList()
                             _regions[i] = compressedRegion
                             sameBoundsRegions
@@ -101,13 +89,11 @@ enum class RegionManipulationStrategy(
                         // NOTE: click on overlapping region: contested behaviour
                         val outerRegionsOfTheSameColor = outerRegions.filter { it.fillColor == compressedRegion.fillColor }
                         if (outerRegionsOfTheSameColor.isNotEmpty()) {
-                            recordUniqueRegionChange()
                             // NOTE: this removes regions of the same color that lie under
                             //  others (potentially invisible), which can be counter-intuitive
                             resultingRegions = allRegions.filter { it !in outerRegionsOfTheSameColor }
                             println("removed same color regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
                         } else { // there are several outer regions, but none of the color of region.fillColor
-                            recordRegionChangeAt(allRegions.size)
                             resultingRegions += compressedRegion
                             if (shouldUpdateSelection) {
                                 setSelection((compressedRegion.insides + compressedRegion.outsides).toList())
@@ -118,7 +104,6 @@ enum class RegionManipulationStrategy(
                 }
                 RegionManipulationStrategy.ADD -> {
                     if (sameBoundsRegionsIndices.isEmpty()) {
-                        recordRegionChangeAt(allRegions.size)
                         resultingRegions += compressedRegion
                         if (shouldUpdateSelection) {
                             setSelection((compressedRegion.insides + compressedRegion.outsides).toList())
@@ -137,11 +122,6 @@ enum class RegionManipulationStrategy(
                     } else { // same bounds, different color
                         // replace & cleanup
                         val i = sameBoundsRegionsIndices.last()
-                        if (sameBoundsRegionsIndices.size == 1) {
-                            recordRegionChangeAt(i)
-                        } else {
-                            recordUniqueRegionChange()
-                        }
                         val _regions = allRegions.toMutableList()
                         _regions[i] = compressedRegion
                         if (shouldUpdateSelection) {
@@ -158,13 +138,11 @@ enum class RegionManipulationStrategy(
                 }
                 RegionManipulationStrategy.ERASE -> {
                     if (sameBoundsRegions.isNotEmpty()) {
-                        recordUniqueRegionChange()
                         resultingRegions = allRegions.filter { it !in sameBoundsRegions }
                         println("removed [${sameBoundsRegionsIndices.joinToString(prefix = "\n", separator = ";\n")}] (same bounds ~ $compressedRegion)")
                     } else if (outerRegions.isNotEmpty()) {
                         // maybe find minimal and erase it OR remove last outer
                         // tho it would stop working like eraser then
-                        recordUniqueRegionChange()
                         resultingRegions = allRegions.filter { it !in outerRegions }
                         println("removed outer [${outerRegions.joinToString(prefix = "\n", separator = ";\n")}]")
                     } // when clicking on nowhere nothing happens

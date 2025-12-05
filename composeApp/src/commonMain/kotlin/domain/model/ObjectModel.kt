@@ -246,12 +246,14 @@ class ObjectModel {
         invalidatePositions()
     }
 
-    /** Already includes [invalidatePositions] */
-    fun setObjectWithConsequences(expressions: ExpressionForest, ix: Ix, newObject: GCircle?) {
+    /** Already includes [invalidatePositions]
+     * @return all indices of changed objects (including [ix]) */
+    fun setObjectWithConsequences(expressions: ExpressionForest, ix: Ix, newObject: GCircle?): List<Ix> {
         setObject(ix, newObject)
         val updatedIndices = expressions.update(listOf(ix))
         syncObjects(updatedIndices)
         invalidatePositions()
+        return updatedIndices + ix
     }
 
     // NOTE: idk, handling of incident points is messy
@@ -263,7 +265,7 @@ class ObjectModel {
      *
      * Already includes [invalidatePositions]
      *
-     * NOTE: remember to record a command before [transform]
+     * @return indices of adjusted incident points
      */
     fun transform(
         expressions: ExpressionForest,
@@ -272,9 +274,9 @@ class ObjectModel {
         focus: Offset = Offset.Companion.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-    ) {
+    ): List<Ix> {
         if (targets.isEmpty()) {
-            return
+            return targets
         }
         val targetsSet = targets.toSet()
         val requiresZoom = zoom != 1f
@@ -323,6 +325,7 @@ class ObjectModel {
         val updatedIndices = expressions.update(targets)
         syncObjects(updatedIndices)
         invalidatePositions()
+        return allIncidentPoints
     }
 
     companion object {
