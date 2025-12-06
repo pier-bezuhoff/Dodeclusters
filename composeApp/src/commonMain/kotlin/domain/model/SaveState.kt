@@ -11,6 +11,7 @@ import domain.expressions.Expression
 import domain.settings.ChessboardPattern
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.math.exp
 
 /** EditorViewModel's save-state for history.
  * [objects].indices must span all of [objectColors].keys and [objectLabels].keys.
@@ -79,19 +80,41 @@ data class SaveState(
             val center: Boolean = false,
             val regionColor: Boolean = false,
         ) {
+            inline val objectsLocation: Location.Objects? get() =
+                if (objectIndices.isEmpty()) null else Location.Objects(objectIndices)
+            inline val objectColorsLocation: Location.ObjectColors? get() =
+                if (objectColorIndices.isEmpty()) null else Location.ObjectColors(objectColorIndices)
+            inline val objectLabelsLocation: Location.ObjectLabels? get() =
+                if (objectLabelIndices.isEmpty()) null else Location.ObjectLabels(objectLabelIndices)
+            inline val expressionsLocation: Location.Expressions? get() =
+                if (expressionIndices.isEmpty()) null else Location.Expressions(expressionIndices)
+            inline val regionsLocation: Location.Regions? get() =
+                if (regions) Location.Regions else null
+            inline val backgroundColorLocation: Location.BackgroundColor? get() =
+                if (backgroundColor) Location.BackgroundColor else null
+            inline val chessboardPatternLocation: Location.ChessboardPattern? get() =
+                if (chessboardPattern) Location.ChessboardPattern else null
+            inline val chessboardColorLocation: Location.ChessboardColor? get() =
+                if (chessboardColor) Location.ChessboardColor else null
+            inline val phantomsLocation: Location.Phantoms? get() =
+                if (phantoms) Location.Phantoms else null
+            inline val selectionLocation: Location.Selection? get() =
+                if (selection) Location.Selection else null
+            inline val centerLocation: Location.Center? get() =
+                if (center) Location.Center else null
+            inline val regionColorLocation: Location.RegionColor? get() =
+                if (regionColor) Location.RegionColor else null
+
             val changed: List<Location> = listOfNotNull(
-                if (objectIndices.isEmpty()) null else Location.Objects(objectIndices),
-                if (objectColorIndices.isEmpty()) null else Location.ObjectColors(objectColorIndices),
-                if (objectLabelIndices.isEmpty()) null else Location.ObjectLabels(objectLabelIndices),
-                if (expressionIndices.isEmpty()) null else Location.Expressions(expressionIndices),
-                if (regions) Location.Regions else null,
-                if (backgroundColor) Location.BackgroundColor else null,
-                if (chessboardPattern) Location.ChessboardPattern else null,
-                if (chessboardColor) Location.ChessboardColor else null,
-                if (phantoms) Location.Phantoms else null,
-                if (selection) Location.Selection else null,
-                if (center) Location.Center else null,
-                if (regionColor) Location.RegionColor else null,
+                objectsLocation, objectColorsLocation, objectLabelsLocation,
+                expressionsLocation,
+                regionsLocation,
+                backgroundColorLocation,
+                chessboardPatternLocation, chessboardColorLocation,
+                phantomsLocation,
+                selectionLocation,
+                centerLocation,
+                regionColorLocation,
             )
 
             fun accumulate(locations: Locations): Locations =
@@ -157,6 +180,54 @@ data class SaveState(
         data class RegionColor(val color: ColorAsCss?) : Replacement
     }
 
+    @Serializable
+    data class Changes(
+        val objects: Change.Objects? = null,
+        val objectColors: Change.ObjectColors? = null,
+        val objectLabels: Change.ObjectLabels? = null,
+        val expressions: Change.Expressions? = null,
+        val regions: Change.Regions? = null,
+        val backgroundColor: Change.BackgroundColor? = null,
+        val chessboardPattern: Change.ChessboardPattern? = null,
+        val chessboardColor: Change.ChessboardColor? = null,
+        val phantoms: Change.Phantoms? = null,
+        val selection: Change.Selection? = null,
+        val center: Change.Center? = null,
+        val regionColor: Change.RegionColor? = null,
+    ) {
+        val changes: List<Change> = listOfNotNull(
+            objects, objectColors, objectLabels, expressions, regions, backgroundColor, chessboardPattern, chessboardColor, phantoms, selection, center, regionColor,
+        )
+
+        fun fuseLater(changes: Changes): Changes =
+            Changes(
+                objects = combineNullables(objects, changes.objects) { a, b ->
+                    Change.Objects(a.objects + b.objects)
+                },
+                objectColors = combineNullables(objectColors, changes.objectColors) { a, b ->
+                    Change.ObjectColors(a.colors + b.colors)
+                },
+                objectLabels = combineNullables(objectLabels, changes.objectLabels) { a, b ->
+                    Change.ObjectLabels(a.labels + b.labels)
+                },
+                expressions = combineNullables(expressions, changes.expressions) { a, b ->
+                    Change.Expressions(a.expressions + b.expressions)
+                },
+                regions = changes.regions ?: regions,
+                backgroundColor = changes.backgroundColor ?: backgroundColor,
+                chessboardPattern = changes.chessboardPattern ?: chessboardPattern,
+                chessboardColor = changes.chessboardColor ?: chessboardColor,
+                phantoms = changes.phantoms ?: phantoms,
+                selection = changes.selection ?: selection,
+                center = changes.center ?: center,
+                regionColor = changes.regionColor ?: regionColor,
+            )
+
+        companion object {
+            val EMPTY = Changes()
+        }
+    }
+
     fun revert(changeLocation: Change.Location): Change =
         when (changeLocation) {
             is Change.Location.Objects ->
@@ -184,6 +255,62 @@ data class SaveState(
             is Change.Location.RegionColor ->
                 Change.RegionColor(regionColor)
         }
+
+    fun revert(locations: Change.Locations): Changes =
+        Changes(
+            objects = locations.objectsLocation?.let { changeLocation ->
+                Change.Objects(changeLocation.indices.associateWith { ix -> objects.getOrNull(ix) })
+            },
+            objectColors = locations.objectColorsLocation?.let { changeLocation ->
+                Change.ObjectColors(changeLocation.indices.associateWith { ix -> objectColors[ix] })
+            },
+            objectLabels = locations.objectLabelsLocation?.let { changeLocation ->
+                Change.ObjectLabels(changeLocation.indices.associateWith { ix -> objectLabels[ix] })
+            },
+            expressions = locations.expressionsLocation?.let { changeLocation ->
+                Change.Expressions(changeLocation.indices.associateWith { ix -> expressions[ix] })
+            },
+            regions =
+                if (locations.regions)
+                    Change.Regions(regions)
+                else null
+            ,
+            backgroundColor =
+                if (locations.backgroundColor)
+                    Change.BackgroundColor(backgroundColor)
+                else null
+            ,
+            chessboardPattern =
+                if (locations.chessboardPattern)
+                    Change.ChessboardPattern(chessboardPattern)
+                else null
+            ,
+            chessboardColor =
+                if (locations.chessboardColor)
+                    Change.ChessboardColor(chessboardColor)
+                else null
+            ,
+            phantoms =
+                if (locations.phantoms)
+                    Change.Phantoms(phantoms)
+                else null
+            ,
+            selection =
+                if (locations.selection)
+                    Change.Selection(selection)
+                else null
+            ,
+            center =
+                if (locations.center)
+                    Change.Center(center)
+                else null
+            ,
+            regionColor =
+                if (locations.regionColor)
+                    Change.RegionColor(regionColor)
+                else null
+            ,
+        )
 
     fun revert(change: Change): Change =
         when (change) {
@@ -216,7 +343,7 @@ data class SaveState(
     /**
      * @param[changes] are applied in order
      */
-    fun applyChanges(changes: List<SaveState.Change>): SaveState {
+    fun applyChanges(changes: List<Change>): SaveState {
         val objects: MutableList<GCircle?> = this.objects.toMutableList()
         val objectColors: MutableMap<Ix, ColorAsCss> = this.objectColors.toMutableMap()
         val objectLabels: MutableMap<Ix, String> = this.objectLabels.toMutableMap()
@@ -291,3 +418,15 @@ data class SaveState(
     }
 }
 
+// not liftA2 actually
+/** [combinator]`(a, b)` or [a] or [b] */
+private inline fun <reified T: Any> combineNullables(
+    a: T?, b: T?,
+    crossinline combinator: (T, T) -> T,
+): T? =
+    if (a == null)
+        b
+    else if (b == null)
+        a
+    else
+        combinator(a, b)

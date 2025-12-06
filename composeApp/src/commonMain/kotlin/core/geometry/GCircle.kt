@@ -2,8 +2,10 @@ package core.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import kotlinx.serialization.Serializable
 
 /** A circle, line, imaginary circle or point (aka CLIP) */
+@Serializable
 @Immutable
 sealed interface GCircle {
     fun translated(vector: Offset): GCircle

@@ -248,10 +248,10 @@ fun BoxScope.EditorCanvas(
                 toolAction = viewModel::toolAction,
                 toolPredicate = viewModel::toolPredicate,
                 onScale = viewModel::scaleViaSlider,
-                onScaleFinished = viewModel::concludeSubmode,
+                onScaleFinished = viewModel::concludeScaleOrRotateHudSubmode,
                 onRotate = viewModel::rotateViaHandle,
                 onRotateStarted = { viewModel.startHandleRotation() },
-                onRotateFinished = viewModel::concludeSubmode
+                onRotateFinished = viewModel::concludeScaleOrRotateHudSubmode
             )
         } else if (viewModel.pointSelectionIsActive) {
             PointContextActions( // only points are selected

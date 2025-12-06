@@ -80,7 +80,6 @@ import domain.io.DdcV4
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
 import domain.model.ChangeHistory
-import domain.model.Command
 import domain.model.ContinuousChangeType
 import domain.model.ObjectModel
 import domain.model.SaveState
@@ -913,21 +912,19 @@ class EditorViewModel : ViewModel() {
     fun deleteSelectedPointsAndCircles() {
         val toBeDeleted = selection
         if (showCircles && toBeDeleted.isNotEmpty() && mode.isSelectingCircles()) {
+            pinStateForHistory()
             selection = emptyList()
             deleteObjectsWithDependenciesColorsAndRegions(toBeDeleted)
+            history.recordAccumulatedChanges()
         }
     }
 
     private inline fun deleteObjectsWithDependenciesColorsAndRegions(
         indicesToDelete: List<Ix>,
-        triggerRecording: Boolean = true,
         crossinline circleAnimationInit: (List<CircleOrLine>) -> CircleAnimation? = { deletedCircles ->
             CircleAnimation.Exit(deletedCircles)
         },
     ) {
-        if (triggerRecording) {
-            pinStateForHistory()
-        }
         val toBeDeleted = expressions.deleteNodes(indicesToDelete)
         val deletedCircleIndices = toBeDeleted
             .filter { objects[it] is CircleOrLine }
@@ -972,10 +969,8 @@ class EditorViewModel : ViewModel() {
             objectColorIndices = toBeDeleted,
             objectLabelIndices = toBeDeleted,
             expressionIndices = toBeDeleted,
+            selection = true,
         )
-        if (triggerRecording) {
-            history.recordAccumulatedChanges()
-        }
     }
 
     fun getArg(arg: Arg): GCircle? =
@@ -1084,7 +1079,7 @@ class EditorViewModel : ViewModel() {
             ?.let { (ix, _) -> ix }
             ?.also {
                 // NOTE: this is printed twice when tapping on a circle in
-                //  drag mode, since both onDown & onTap trigger it once
+                //  drag mode, since both 0nDown & 0nTap trigger it once
                 println("select circle #$it: ${objects[it]} <- expr: ${expressions.expressions[it]}")
             }
     }
@@ -1850,8 +1845,11 @@ class EditorViewModel : ViewModel() {
                 is SubMode.RotateStereographicSphere, ->
                     pinStateForHistory()
                 null -> when (mode) {
-                    SelectionMode.Drag, SelectionMode.Multiselect ->
-                        pinStateForHistory()
+                    SelectionMode.Drag, SelectionMode.Multiselect -> {
+                        if (selection.isNotEmpty()) {
+                            pinStateForHistory()
+                        }
+                    }
                     else -> {}
                 }
                 else -> {}
@@ -2124,8 +2122,8 @@ class EditorViewModel : ViewModel() {
     }
 
     // pointer input callbacks
-    // onDown -> onUp -> onTap OR
-    // onDown -> onUp -> onDown! -> onTap -> onUp (i.e. double tap)
+    // Down -> Up -> Tap OR
+    // Down -> Up -> Down! -> Tap -> Up (i.e. double tap)
     fun onTap(position: Offset, pointerCount: Int) {
         // 2-finger tap for undo (works only on Android afaik)
         if (TWO_FINGER_TAP_FOR_UNDO && pointerCount == 2) {
@@ -2262,11 +2260,13 @@ class EditorViewModel : ViewModel() {
         submode = sm.copy(sliderPercentage = newSliderPercentage)
     }
 
-    fun concludeSubmode() {
+    fun concludeScaleOrRotateHudSubmode() {
         submode = null
+        history.recordAccumulatedChanges()
     }
 
     fun startHandleRotation() {
+        pinStateForHistory()
         submode = SubMode.Rotate(computeAbsoluteCenter() ?: Offset.Zero)
     }
 
@@ -2390,7 +2390,6 @@ class EditorViewModel : ViewModel() {
     // NOTE: polar lines and line-by-2 transform weirdly:
     //  it becomes circle during st-rot, but afterwards when
     //  its carrier is moved it becomes line again
-    /** history recording is called in [onUp] */
     private fun stereographicallyRotateEverything(
         sm: SubMode.RotateStereographicSphere,
         absolutePointerPosition: Offset,
@@ -2638,13 +2637,13 @@ class EditorViewModel : ViewModel() {
             }
             is ToolMode -> if (submode == null) {
                 var argList = partialArgList
-                // we only confirm args in onUp, they are created in onDown etc.
+                // we only confirm args in 0nUp, they are created in 0nDown etc.
                 val newArg = when (argList?.currentArg) {
                     is Arg.Point -> visiblePosition?.let {
                         val args = argList.args
                         val snap = snapped(absolute(visiblePosition))
                         // we cant realize it here since for fast circles the first point already has been
-                        // realized in onDown and we don't know yet if we moved far enough from it to
+                        // realized in 0nDown and we don't know yet if we moved far enough from it to
                         // create the second point
                         if (mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS &&
                             FAST_CENTERED_CIRCLE &&
@@ -2721,8 +2720,11 @@ class EditorViewModel : ViewModel() {
             is SubMode.ScaleViaSlider ->
                 history.recordAccumulatedChanges()
             null -> when (mode) {
-                SelectionMode.Drag, SelectionMode.Multiselect ->
-                    history.recordAccumulatedChanges()
+                SelectionMode.Drag, SelectionMode.Multiselect -> {
+                    if (selection.isNotEmpty() && movementAfterDown) {
+                        history.recordAccumulatedChanges()
+                    }
+                }
                 else -> {}
             }
             else -> {}
@@ -3064,7 +3066,6 @@ class EditorViewModel : ViewModel() {
                 deleteObjectsWithDependenciesColorsAndRegions(
                     outputs,
                     circleAnimationInit = { null },
-                    triggerRecording = false,
                 )
                 selection = emptyList()
             }
@@ -3537,7 +3538,6 @@ class EditorViewModel : ViewModel() {
                     regions = regions.withoutElementsAt(sm.regions)
                     deleteObjectsWithDependenciesColorsAndRegions(
                         indicesToDelete = sm.adjustables.flatMap { it.outputIndices },
-                        triggerRecording = false,
                         circleAnimationInit = { null },
                     )
                     setupLoxodromicSpiral(bidirectional)
@@ -3980,7 +3980,7 @@ class EditorViewModel : ViewModel() {
             categoryDefaultIndices = toolbarState.categoryDefaultIndices,
         )
 
-    // NOTE: i never seen this proc on Android or Wasm tbh
+    // NOTE: i never seen this proc on Android or Wasm tbh, only on Desktop
     //  so i had to create Flow<LifecycleEvent> to manually trigger caching
     override fun onCleared() {
         println("VM.onCleared")

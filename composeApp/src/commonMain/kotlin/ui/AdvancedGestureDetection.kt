@@ -105,7 +105,7 @@ suspend fun PointerInputScope.detectTransformGestures(
  * Patched detectTapGestures to additionally count max pressed pointers for onTap, and
  * to simplify [onDown]/[onUp] handling
  *
- * note: onTap/pointerCount with 2+ pointers works only on Android, BUT Xiaomi steals 3+ pointer events
+ * NOTE: onTap/pointerCount with 2+ pointers works only on Android, BUT Xiaomi steals 3+ pointer events
  *
  * Possible callback sequences (excluding up-cancellations):
  *
@@ -116,8 +116,9 @@ suspend fun PointerInputScope.detectTransformGestures(
  * [onDown] -> [onUp] -> [onDown] -> [onUp] -> [onDoubleTap] .
  *
  * [onDown] -> [onUp] -> [onDown] -> [onTap] -> [onLongPress] -> [onUp] .
+ *
  * Note how in the last sequence the 1st [onTap] only happens after the 2nd [onDown]
- * */
+ */
 suspend fun PointerInputScope.detectTapGesturesCountingPointers(
     onDown: ((position: Offset) -> Unit)? = null,
     onLongPress: ((position: Offset) -> Unit)? = null,
@@ -138,7 +139,7 @@ suspend fun PointerInputScope.detectTapGesturesCountingPointers(
             upOrCancel = withTimeout(longPressTimeout) {
                 val (change, count) = waitForUpOrCancellationCountingPointers() // throws on long press
                 maxPressedPointerCount = count
-                change
+                return@withTimeout change
             }
             if (upOrCancel != null) {
                 // first tap was successful, but we shall check for double-tap before invoking it
@@ -203,9 +204,8 @@ suspend fun AwaitPointerEventScope.waitForUpOrCancellationCountingPointers(
         if (event.changes.fastAll { it.changedToUp() }) { // All pointers are up
             return event.changes[0] to maxPressedPointerCount
         }
-        if (event.changes.fastAny {
-                it.isConsumed || it.isOutOfBounds(size, extendedTouchPadding)
-            }
+        if (event.changes
+            .fastAny { it.isConsumed || it.isOutOfBounds(size, extendedTouchPadding) }
         ) {
             return null to maxPressedPointerCount // Canceled
         }
@@ -250,6 +250,6 @@ private suspend fun AwaitPointerEventScope.awaitSecondDown(
     do {
         change = awaitFirstDown()
     } while (change.uptimeMillis < minUptime)
-    change
+    return@withTimeoutOrNull change
 }
 

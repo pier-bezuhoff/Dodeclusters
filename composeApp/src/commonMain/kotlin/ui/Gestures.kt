@@ -45,15 +45,15 @@ inline fun Modifier.reactiveCanvas(
         .pointerInput(*keys) {
             detectTapGesturesCountingPointers(
                 onDown = { position ->
-//                    println("onDown")
+//                    println("Down")
                     onDown(position)
                 },
                 onUp = { position ->
-//                    println("onUp")
+//                    println("Up")
                     onUp(position)
                 },
                 onTap = { position, pointerCount ->
-//                    println("onTap(n=$pointerCount)")
+//                    println("Tap(n=$pointerCount)")
                     onTap(position, pointerCount)
                 },
                 // NOTE: enabling long-press blocks long-press+panning which can be annoying
