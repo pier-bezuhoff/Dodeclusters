@@ -58,7 +58,8 @@ class ExpressionForest(
 
     init {
         require(objects.indices.toSet() == initialExpressions.keys) {
-            "initialExpressions keys must coincide with objects.indices"
+            "initialExpressions keys must coincide with objects.indices: " +
+                    "${initialExpressions.keys} == ${objects.indices}"
         }
         computeTiers() // computes ix2tier
         tier2ixs = ix2tier

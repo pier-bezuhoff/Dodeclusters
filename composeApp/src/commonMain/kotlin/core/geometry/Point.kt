@@ -14,9 +14,14 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-// NOTE: JSON doesn't support Infinity, add `allowSpecialFloatingPointValues = true` to
-//  Json { ... } serializers
-// NOTE: do NOT forget CONFORMAL_INFINITY checks
+/**
+ * 2D Point
+ *
+ * NOTE: JSON doesn't support Infinity, add `allowSpecialFloatingPointValues = true` to
+ *  `Json { ... }` serializers
+ *
+ * NOTE: do NOT forget [Point.CONFORMAL_INFINITY] checks
+ */
 @Immutable
 @Serializable
 @SerialName("point")

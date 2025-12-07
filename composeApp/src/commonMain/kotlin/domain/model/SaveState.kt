@@ -416,6 +416,23 @@ data class SaveState(
             regionColor = regionColor
         )
     }
+
+    // TODO: minimize changes
+    fun diff(earlierState: SaveState): Changes =
+        Changes(
+            objects = Change.Objects(objects.withIndex().associate { (ix, o) -> ix to o }),
+            objectColors = Change.ObjectColors(objectColors),
+            objectLabels = Change.ObjectLabels(objectLabels),
+            expressions = Change.Expressions(expressions),
+            regions = Change.Regions(regions),
+            backgroundColor = Change.BackgroundColor(backgroundColor),
+            chessboardPattern = Change.ChessboardPattern(chessboardPattern),
+            chessboardColor = Change.ChessboardColor(chessboardColor),
+            phantoms = Change.Phantoms(phantoms),
+            selection = Change.Selection(selection),
+            center = Change.Center(center),
+            regionColor = Change.RegionColor(regionColor),
+        )
 }
 
 // not liftA2 actually

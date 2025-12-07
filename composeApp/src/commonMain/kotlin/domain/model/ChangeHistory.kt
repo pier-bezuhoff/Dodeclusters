@@ -10,7 +10,6 @@ import kotlinx.serialization.json.Json
  * It is assumed that all grouped changes are 'perpendicular' */
 typealias RedoGroup = List<SaveState.Change>
 
-// Q: should we actually separate Selection changes as a distinct redo group
 /**
  * `initialState <1:1< <1:2< <2:1< <3:1< NOW >4:1> >4:2> >4:3> >5:1>`
  *
@@ -37,7 +36,6 @@ class ChangeHistory(
         val past: List<RedoGroup>,
         @Serializable
         val future: List<RedoGroup>,
-        // undoIsEnabled: MutableState<Boolean>
     ) {
         fun load(
             undoIsEnabled: MutableState<Boolean>? = null,
@@ -55,7 +53,9 @@ class ChangeHistory(
         companion object {
             val JSON_FORMAT = Json {
                 ignoreUnknownKeys = true
-                encodeDefaults = true
+                encodeDefaults = false
+                // SaveState <- GCircle <- Point <-- can contain infinity
+                allowSpecialFloatingPointValues = true
             }
         }
     }
@@ -77,8 +77,12 @@ class ChangeHistory(
     init {
         past.addAll(pastHistory)
         future.addAll(futureHistory)
-        undoIsEnabled?.value = undoIsPossible
-        redoIsEnabled?.value = redoIsPossible
+        refreshUndoRedoStates()
+    }
+
+    private fun refreshUndoRedoStates() {
+        undoIsEnabled?.value = past.isNotEmpty()
+        redoIsEnabled?.value = future.isNotEmpty()
     }
 
     /** @return if the continuous change is the first of this [type] */
@@ -88,20 +92,14 @@ class ChangeHistory(
         return isFirstChange
     }
 
-    fun recordAccumulatedContinuousChanges() {
-        if (newContinuousChange(null)) {
-            recordAccumulatedChanges()
-        }
-    }
-
     /** Save the present [state] as [pinnedState] to be used in later [record]s */
     fun pinState(state: SaveState) {
-        println("pinState")
         accumulatedChanges = pinnedState.revert(accumulatedChangedLocations)
             .fuseLater(accumulatedChanges) // later <-> earlier cuz we reverse for undo
             .also { println("accumulated pre-pin changes: " + it.changes.joinToString()) }
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         pinnedState = state
+        println("pinState $state")
     }
 
     fun accumulateChangedLocations(
@@ -133,7 +131,7 @@ class ChangeHistory(
                 center = center,
                 regionColor = regionColor,
             )
-                .also { println("accumulateChanged: " + it.changed.joinToString(", ")) }
+                .also { println("accumulateChanged: new locations = " + it.changed.joinToString(", ")) }
         )
     }
 
@@ -158,7 +156,7 @@ class ChangeHistory(
      * 4. Commit them via [recordAccumulatedChanges]
      */
     fun recordAccumulatedChanges() {
-        record(accumulatedChangedLocations)
+        record(accumulatedChangedLocations, pinnedState)
     }
 
     // subsequent continuous (same-target) actions don't change the history
@@ -167,12 +165,13 @@ class ChangeHistory(
      * @param[locations] locations of the actions have been performed on the [state]
      */
     private fun record(locations: SaveState.Change.Locations, state: SaveState = pinnedState) {
+        // pinnedState > accumulatedChanged > laterChanges
         val laterChanges = state.revert(locations)
         val undoStep = laterChanges
             .fuseLater(accumulatedChanges) // later <-> earlier cuz we reverse for undo
             .changes
             .reversed()
-        println("record: " + undoStep.joinToString(", "))
+        println("record: undoStep = " + undoStep.joinToString(", "))
         if (undoStep.isEmpty()) {
             println("W: attempting to record empty changes")
             return
@@ -184,10 +183,9 @@ class ChangeHistory(
         future.clear()
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         accumulatedChanges = SaveState.Changes.EMPTY
-        undoIsEnabled?.value = undoIsPossible
-        redoIsEnabled?.value = redoIsPossible
+        refreshUndoRedoStates()
         println(
-            "past = " + past.joinToString(";\n", prefix = "{ ", postfix = " }") { group ->
+            "past = " + past.joinToString(";\n", prefix = "[\n", postfix = "\n]") { group ->
                 group.joinToString(", ")
             }
         )
@@ -196,24 +194,26 @@ class ChangeHistory(
     fun undo(state: SaveState): SaveState {
         require(undoIsPossible)
         val undoStep = past.removeLast()
-        val redoStep = undoStep
-            .reversed()
-            .map { state.revert(it) }
+        val newState: SaveState
+        val redoStep: RedoGroup
+        if (past.isEmpty()) {
+            redoStep = state.diff(initialState).changes
+            newState = initialState
+        } else {
+            redoStep = undoStep
+                .reversed()
+                .map { state.revert(it) }
+            newState = state.applyChanges(undoStep)
+        }
         if (future.size == HISTORY_SIZE) {
             future.removeLast()
         }
         future.addFirst(redoStep)
-        val newState = state.applyChanges(undoStep)
-        if (past.isEmpty()) {
-            val a: Int????????????????????????????????????????????????????????????????????????????
-            // use initialState instead
-            // and update redoStep so it accounts for (initialState - newState) diff
-        }
         pinnedState = newState
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         accumulatedChanges = SaveState.Changes.EMPTY
-        undoIsEnabled?.value = undoIsPossible
-        redoIsEnabled?.value = redoIsPossible
+        refreshUndoRedoStates()
+        println("undo: undoStep = $undoStep")
         return newState
     }
 
@@ -231,8 +231,8 @@ class ChangeHistory(
         pinnedState = newState
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         accumulatedChanges = SaveState.Changes.EMPTY
-        undoIsEnabled?.value = undoIsPossible
-        redoIsEnabled?.value = redoIsPossible
+        refreshUndoRedoStates()
+        println("redo: redoStep = $redoStep")
         return newState
     }
 
@@ -250,5 +250,5 @@ class ChangeHistory(
 }
 
 enum class ContinuousChangeType {
-    ZOOM,
+    ZOOM, SCALE_SLIDER,
 }

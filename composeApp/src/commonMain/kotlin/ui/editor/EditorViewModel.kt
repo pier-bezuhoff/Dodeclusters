@@ -1578,26 +1578,29 @@ class EditorViewModel : ViewModel() {
     }
 
     fun scaleSelection(zoom: Float) {
-        if (showCircles && mode.isSelectingCircles() && selection.isNotEmpty()) {
-            val rect = calculateSelectionRect()
-            val focus =
-                if (rect == null || rect.minDimension >= 5_000)
-                    computeAbsoluteCenter() ?: Offset.Zero
-                else rect.center
-            if (history.newContinuousChange(ContinuousChangeType.ZOOM)) {
-                pinStateForHistory()
-            }
-            transformWhatWeCan(selection, focus = focus, zoom = zoom)
-        } else if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
+        if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
 //            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
         } else {
-            val targets = objects.indices.toList()
-            val center = computeAbsoluteCenter() ?: Offset.Zero
-            if (history.newContinuousChange(ContinuousChangeType.ZOOM)) {
+            val firstZoom = history.newContinuousChange(ContinuousChangeType.ZOOM)
+            if (firstZoom) {
                 pinStateForHistory()
             }
-            objectModel.transform(expressions, targets, focus = center, zoom = zoom)
-            history.accumulateChangedLocations(objectIndices = targets.toSet())
+            if (showCircles && mode.isSelectingCircles() && selection.isNotEmpty()) {
+                val rect = calculateSelectionRect()
+                val focus =
+                    if (rect == null || rect.minDimension >= 5_000)
+                        computeAbsoluteCenter() ?: Offset.Zero
+                    else rect.center
+                transformWhatWeCan(selection, focus = focus, zoom = zoom)
+            } else {
+                val targets = objects.indices.toList()
+                val center = computeAbsoluteCenter() ?: Offset.Zero
+                objectModel.transform(expressions, targets, focus = center, zoom = zoom)
+                history.accumulateChangedLocations(objectIndices = targets.toSet())
+            }
+            if (firstZoom) {
+                history.recordAccumulatedChanges()
+            }
         }
     }
 
@@ -1809,7 +1812,9 @@ class EditorViewModel : ViewModel() {
     }
 
     fun onDown(visiblePosition: Offset) {
-        history.recordAccumulatedContinuousChanges()
+        if (history.newContinuousChange(null)) {
+            history.recordAccumulatedChanges()
+        }
         movementAfterDown = false
         // reset grabbed thingies
         if (showCircles) {
@@ -2248,6 +2253,9 @@ class EditorViewModel : ViewModel() {
     }
 
     fun scaleViaSlider(newSliderPercentage: Float) {
+        if (history.newContinuousChange(ContinuousChangeType.SCALE_SLIDER)) {
+            pinStateForHistory()
+        }
         val sm = when (val sm0 = submode) {
             is SubMode.ScaleViaSlider -> sm0
             else -> {
@@ -2260,14 +2268,20 @@ class EditorViewModel : ViewModel() {
         submode = sm.copy(sliderPercentage = newSliderPercentage)
     }
 
-    fun concludeScaleOrRotateHudSubmode() {
+    fun finishScalingViaSlider() {
         submode = null
+        history.newContinuousChange(null)
         history.recordAccumulatedChanges()
     }
 
-    fun startHandleRotation() {
+    fun startHandleRotation(center: Offset) {
         pinStateForHistory()
         submode = SubMode.Rotate(computeAbsoluteCenter() ?: Offset.Zero)
+    }
+
+    fun finishHandleRotation() {
+        submode = null
+        history.recordAccumulatedChanges()
     }
 
     fun rotateViaHandle(newRotationAngle: Float) {
@@ -3857,16 +3871,17 @@ class EditorViewModel : ViewModel() {
 
     private fun _saveState(): SaveState {
         val center = computeAbsoluteCenter() ?: Offset.Zero
+        // it's important to copy mutable collections
         return SaveState(
-            objects = objectModel.objects,
-            objectColors = objectModel.objectColors,
-            objectLabels = objectLabels,
-            expressions = expressions.expressions,
+            objects = objectModel.objects.toList(),
+            objectColors = objectModel.objectColors.toMap(),
+            objectLabels = objectLabels.toMap(),
+            expressions = expressions.expressions.toMap(),
             regions = regions,
             backgroundColor = backgroundColor,
             chessboardPattern = chessboardPattern,
             chessboardColor = chessboardColor,
-            phantoms = objectModel.phantomObjectIndices,
+            phantoms = objectModel.phantomObjectIndices.toSet(),
             selection = selection,
             center = center,
             regionColor = regionColor,
@@ -3920,7 +3935,7 @@ class EditorViewModel : ViewModel() {
             runCatching {
                 platform.historyStore.get()
             }.getOrNull()?.let { historyState ->
-                history = historyState.load()
+//                history = historyState.load()
             }
             restoration.update { ProgressState.COMPLETED }
         }
