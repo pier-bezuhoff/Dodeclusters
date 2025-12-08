@@ -14,6 +14,7 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
 
 /** use as a type param `Json.encodeToString<ColorAsCss>(color)` */
 typealias ColorAsCss = @Serializable(ColorCssSerializer::class) Color
@@ -68,3 +69,5 @@ object OffsetSerializer : KSerializer<Offset> {
     }
 }
 
+fun Color.toCssString(): String =
+    Json.encodeToString(ColorCssSerializer, this)

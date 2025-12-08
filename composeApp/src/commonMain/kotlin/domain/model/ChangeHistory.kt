@@ -67,7 +67,7 @@ class ChangeHistory(
         SaveState.Change.Locations.EMPTY
     /** already reverted with previous [pinnedState]; oldest to newest */
     private var accumulatedChanges: SaveState.Changes = SaveState.Changes.EMPTY
-    private var continuousChange: ContinuousChangeType? = null
+    private var continuousChange: ContinuousChange? = null
 
     private val undoIsPossible: Boolean get() =
         past.isNotEmpty()
@@ -85,10 +85,10 @@ class ChangeHistory(
         redoIsEnabled?.value = future.isNotEmpty()
     }
 
-    /** @return if the continuous change is the first of this [type] */
-    fun newContinuousChange(type: ContinuousChangeType?): Boolean {
-        val isFirstChange = continuousChange != type
-        continuousChange = type
+    /** @return if the continuous change is the first of this type [newContinuousChange] */
+    fun newContinuousChange(newContinuousChange: ContinuousChange?): Boolean {
+        val isFirstChange = continuousChange != newContinuousChange
+        continuousChange = newContinuousChange
         return isFirstChange
     }
 
@@ -96,10 +96,10 @@ class ChangeHistory(
     fun pinState(state: SaveState) {
         accumulatedChanges = pinnedState.revert(accumulatedChangedLocations)
             .fuseLater(accumulatedChanges) // later <-> earlier cuz we reverse for undo
-            .also { println("accumulated pre-pin changes: " + it.changes.joinToString()) }
+//            .also { println("accumulated pre-pin changes: " + it.changes.joinToString()) }
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         pinnedState = state
-        println("pinState $state")
+//        println("pinState $state")
     }
 
     fun accumulateChangedLocations(
@@ -115,6 +115,8 @@ class ChangeHistory(
         selection: Boolean = false,
         center: Boolean = false,
         regionColor: Boolean = false,
+        //
+        continuousChange: ContinuousChange? = null,
     ) {
         accumulatedChangedLocations = accumulatedChangedLocations.accumulate(
             SaveState.Change.Locations(
@@ -131,8 +133,9 @@ class ChangeHistory(
                 center = center,
                 regionColor = regionColor,
             )
-                .also { println("accumulateChanged: new locations = " + it.changed.joinToString(", ")) }
+//                .also { println("accumulateChanged: new locations = " + it.changed.joinToString(", ")) }
         )
+        this.continuousChange = continuousChange
     }
 
     /**
@@ -165,15 +168,26 @@ class ChangeHistory(
      * @param[locations] locations of the actions have been performed on the [state]
      */
     private fun record(locations: SaveState.Change.Locations, state: SaveState = pinnedState) {
+        if (locations == SaveState.Change.Locations.EMPTY) {
+//            println("record: skipped recording: no changed locations")
+//            println("accumulated skipped changes: " + accumulatedChanges.changes.joinToString())
+            // accumulatedChanges remain as-is
+            return
+        }
         // pinnedState > accumulatedChanged > laterChanges
         val laterChanges = state.revert(locations)
-        val undoStep = laterChanges
+        val undoChanges = laterChanges
             .fuseLater(accumulatedChanges) // later <-> earlier cuz we reverse for undo
-            .changes
-            .reversed()
-        println("record: undoStep = " + undoStep.joinToString(", "))
+        if (areChangesWorthRecording(undoChanges)) {
+            accumulatedChanges = undoChanges
+            accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
+//            println("record: skipped recording: no changes worth recording")
+//            println("accumulated skipped changes: " + accumulatedChanges.changes.joinToString())
+        }
+        val undoStep = undoChanges.changes.reversed()
+//        println("record: undoStep = " + undoStep.joinToString(", "))
         if (undoStep.isEmpty()) {
-            println("W: attempting to record empty changes")
+//            println("W: attempting to record empty changes")
             return
         }
         if (past.size == HISTORY_SIZE) {
@@ -184,12 +198,19 @@ class ChangeHistory(
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         accumulatedChanges = SaveState.Changes.EMPTY
         refreshUndoRedoStates()
-        println(
-            "past = " + past.joinToString(";\n", prefix = "[\n", postfix = "\n]") { group ->
-                group.joinToString(", ")
-            }
-        )
+//        println(
+//            "past = " + past.joinToString(";\n", prefix = "[\n", postfix = "\n]") { group ->
+//                group.joinToString(", ")
+//            }
+//        )
     }
+
+    private fun areChangesWorthRecording(changes: SaveState.Changes): Boolean =
+        changes != SaveState.Changes.EMPTY.copy(
+            selection = changes.selection,
+            center = changes.center,
+            regionColor = changes.regionColor,
+        )
 
     fun undo(state: SaveState): SaveState {
         require(undoIsPossible)
@@ -213,7 +234,7 @@ class ChangeHistory(
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         accumulatedChanges = SaveState.Changes.EMPTY
         refreshUndoRedoStates()
-        println("undo: undoStep = $undoStep")
+//        println("undo: undoStep = $undoStep")
         return newState
     }
 
@@ -232,7 +253,7 @@ class ChangeHistory(
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         accumulatedChanges = SaveState.Changes.EMPTY
         refreshUndoRedoStates()
-        println("redo: redoStep = $redoStep")
+//        println("redo: redoStep = $redoStep")
         return newState
     }
 
@@ -249,6 +270,9 @@ class ChangeHistory(
     }
 }
 
-enum class ContinuousChangeType {
-    ZOOM, SCALE_SLIDER,
+/** The type of continuous change */
+enum class ContinuousChange {
+    DRAG,
+    ZOOM,
+    SCALE_SLIDER,
 }

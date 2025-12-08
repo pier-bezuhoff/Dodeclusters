@@ -4,7 +4,8 @@ import androidx.compose.runtime.Immutable
 import domain.ColorAsCss
 import domain.Ix
 import domain.io.DdcV2
-import domain.io.DdcV4
+import domain.io.toColorInt
+import domain.toCssString
 import kotlinx.serialization.Serializable
 
 // MAYBE: we can alternatively use 1 BooleanArray[circles.size] to specify region bounds
@@ -26,10 +27,7 @@ data class LogicalRegion(
     val borderColor: ColorAsCss? = DdcV2.DEFAULT_CLUSTER_BORDER_COLOR,
 ) {
     override fun toString(): String =
-        """LogicalRegion(
-in = [${insides.joinToString()}],
-out = [${outsides.joinToString()}],
-fillColor = $fillColor, borderColor = $borderColor)"""
+        """LogicalRegion(in = [${insides.joinToString()}], out = [${outsides.joinToString()}], fillColor = ${fillColor.toCssString()}, borderColor = ${borderColor?.toCssString()})"""
 
     /** ruff semiorder ⊆ on delimited regions; only goes off indices */
     infix fun isObviouslyInside(otherRegion: LogicalRegion): Boolean =

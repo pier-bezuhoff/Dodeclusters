@@ -80,7 +80,7 @@ import domain.io.DdcV4
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
 import domain.model.ChangeHistory
-import domain.model.ContinuousChangeType
+import domain.model.ContinuousChange
 import domain.model.ObjectModel
 import domain.model.SaveState
 import domain.reindexingMap
@@ -572,6 +572,8 @@ class EditorViewModel : ViewModel() {
     }
 
     fun undo() {
+        if (!undoIsEnabled.value)
+            return
         val m = mode
         if (m is ToolMode && partialArgList?.args?.isNotEmpty() == true) {
             // MAYBE: just pop the last arg
@@ -596,6 +598,8 @@ class EditorViewModel : ViewModel() {
     }
 
     fun redo() {
+        if (!redoIsEnabled.value)
+            return
         val currentSelection = selection.toList()
         switchToMode(mode)
         val state = _saveState()
@@ -1581,7 +1585,8 @@ class EditorViewModel : ViewModel() {
         if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
 //            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
         } else {
-            val firstZoom = history.newContinuousChange(ContinuousChangeType.ZOOM)
+            // weird history shenanigans...
+            val firstZoom = history.newContinuousChange(ContinuousChange.ZOOM)
             if (firstZoom) {
                 pinStateForHistory()
             }
@@ -1591,16 +1596,28 @@ class EditorViewModel : ViewModel() {
                     if (rect == null || rect.minDimension >= 5_000)
                         computeAbsoluteCenter() ?: Offset.Zero
                     else rect.center
-                transformWhatWeCan(selection, focus = focus, zoom = zoom)
+                transformWhatWeCan(selection,
+                    focus = focus, zoom = zoom,
+                    continuousChange = ContinuousChange.ZOOM
+                )
             } else {
                 val targets = objects.indices.toList()
                 val center = computeAbsoluteCenter() ?: Offset.Zero
-                objectModel.transform(expressions, targets, focus = center, zoom = zoom)
-                history.accumulateChangedLocations(objectIndices = targets.toSet())
+                val changedIndices = objectModel.transform(expressions, targets, focus = center, zoom = zoom)
+                history.accumulateChangedLocations(
+                    objectIndices = changedIndices,
+                    // theoretically total zoom only can affect incident points to lines
+                    expressionIndices = changedIndices,
+                    continuousChange = ContinuousChange.ZOOM
+                )
             }
             if (firstZoom) {
                 history.recordAccumulatedChanges()
             }
+            // NOTE: with this continuous change flipping setup, the first zoom triggers proper
+            //  recording, but subsequent ones only accumulate pointless locations that
+            //  in turn would be prepended as a duplicating change to the later recording
+            //  (which is probably okay, but kinda ugly)
         }
     }
 
@@ -2253,7 +2270,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun scaleViaSlider(newSliderPercentage: Float) {
-        if (history.newContinuousChange(ContinuousChangeType.SCALE_SLIDER)) {
+        if (history.newContinuousChange(ContinuousChange.SCALE_SLIDER)) {
             pinStateForHistory()
         }
         val sm = when (val sm0 = submode) {
@@ -2475,6 +2492,7 @@ class EditorViewModel : ViewModel() {
         focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
+        continuousChange: ContinuousChange? = null,
     ) {
         val actualTargets: List<Ix> =
             when (INVERSION_OF_CONTROL) {
@@ -2502,11 +2520,12 @@ class EditorViewModel : ViewModel() {
             else
                 queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
-            val incidentPointIndices =
+            val changedIndices =
                 objectModel.transform(expressions, actualTargets, translation, focus, zoom, rotationAngle)
             history.accumulateChangedLocations(
-                objectIndices = actualTargets.toSet(),
-                expressionIndices = incidentPointIndices.toSet(),
+                objectIndices = changedIndices,
+                expressionIndices = changedIndices,
+                continuousChange = continuousChange,
             )
         }
     }
@@ -2616,12 +2635,12 @@ class EditorViewModel : ViewModel() {
                 if (zoom != 1.0f || rotationAngle != 0.0f) {
                     val targets = objects.indices.toList()
                     val center = computeAbsoluteCenter() ?: Offset.Zero
-                    val incidentPointIndices =
+                    val changedIndices =
                         objectModel.transform(expressions, targets, focus = center, zoom = zoom, rotationAngle = rotationAngle)
                     history.accumulateChangedLocations(
-                        objectIndices = targets.toSet(),
-                        expressionIndices = incidentPointIndices.toSet(),
-                        center = true
+                        objectIndices = changedIndices,
+                        expressionIndices = changedIndices,
+                        center = true,
                     )
                 }
                 translation += pan // navigate canvas

@@ -265,7 +265,7 @@ class ObjectModel {
      *
      * Already includes [invalidatePositions]
      *
-     * @return indices of adjusted incident points
+     * @return indices of all changed objects/expressions
      */
     fun transform(
         expressions: ExpressionForest,
@@ -274,9 +274,9 @@ class ObjectModel {
         focus: Offset = Offset.Companion.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-    ): List<Ix> {
+    ): Set<Ix> {
         if (targets.isEmpty()) {
-            return targets
+            return emptySet()
         }
         val targetsSet = targets.toSet()
         val requiresZoom = zoom != 1f
@@ -314,18 +314,18 @@ class ObjectModel {
                 }
             }
         }
-        allIncidentPoints -= targetsSet
-        for (j in allIncidentPoints) {
+        val allUnmovedIncidentPoints = allIncidentPoints - targetsSet
+        for (j in allUnmovedIncidentPoints) {
             val p0 = objects[j] as? Point
             val p = p0?.transformed(translation, focus, zoom, rotationAngle)
             downscaledObjects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
         }
         syncDownscaledObjects(targets)
-        expressions.adjustIncidentPointExpressions(allIncidentPoints)
+        expressions.adjustIncidentPointExpressions(allUnmovedIncidentPoints)
         val updatedIndices = expressions.update(targets)
         syncObjects(updatedIndices)
         invalidatePositions()
-        return allIncidentPoints
+        return (targets + updatedIndices + allUnmovedIncidentPoints).toSet()
     }
 
     companion object {

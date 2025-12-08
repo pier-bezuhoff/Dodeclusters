@@ -17,8 +17,8 @@ import kotlin.math.sin
 /**
  * 2D Point
  *
- * NOTE: JSON doesn't support Infinity, add `allowSpecialFloatingPointValues = true` to
- *  `Json { ... }` serializers
+ * NOTE: JSON doesn't support [Double.POSITIVE_INFINITY] by default, remember to add
+ *  `Json { allowSpecialFloatingPointValues = true }` to serializers
  *
  * NOTE: do NOT forget [Point.CONFORMAL_INFINITY] checks
  */
