@@ -409,6 +409,7 @@ class EditorViewModel : ViewModel() {
                 queueSnackbarMessage(SnackbarMessage.FAILED_OPEN)
             },
         )
+        resetHistory()
     }
 
     fun centerizeTo(centerX: Float?, centerY: Float?) {
@@ -425,6 +426,7 @@ class EditorViewModel : ViewModel() {
             parts = emptyList(),
             backgroundColor = backgroundColor,
         ))
+        resetHistory()
     }
 
     fun showDebugInfo() {
@@ -460,12 +462,6 @@ class EditorViewModel : ViewModel() {
         chessboardPattern = ChessboardPattern.NONE
         translation = Offset.Zero
         loadConstellation(updatedConstellation)
-        // reset history on load
-        history = ChangeHistory(
-            initialState = _saveState(),
-            undoIsEnabled = undoIsEnabled,
-            redoIsEnabled = redoIsEnabled,
-        )
         resetTransients()
         println("loaded new constellation")
         if (!mode.isSelectingCircles()) {
@@ -568,7 +564,15 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun pinStateForHistory() {
-        history.pinState(_saveState())
+        history.pinState(saveState())
+    }
+
+    private fun resetHistory() {
+        history = ChangeHistory(
+            initialState = saveState(),
+            undoIsEnabled = undoIsEnabled,
+            redoIsEnabled = redoIsEnabled,
+        )
     }
 
     fun undo() {
@@ -588,7 +592,7 @@ class EditorViewModel : ViewModel() {
                 else -> switchToMode(mode) // clears up stuff
             }
             selection = emptyList()
-            val state = _saveState()
+            val state = saveState()
             val newState = history.undo(state)
             loadState(newState)
             selection = currentSelection.filter { it in objects.indices }
@@ -602,7 +606,7 @@ class EditorViewModel : ViewModel() {
             return
         val currentSelection = selection.toList()
         switchToMode(mode)
-        val state = _saveState()
+        val state = saveState()
         val newState = history.redo(state)
         loadState(newState)
         selection = currentSelection.filter { it in objects.indices }
@@ -635,11 +639,16 @@ class EditorViewModel : ViewModel() {
         )
         objectLabels = state.objectLabels
         objectModel.invalidate()
-        selection = state.selection.filter { it in objects.indices } // just in case
+        val validSelection = state.selection.filter { it in objects.indices } // just in case
+        val switchToMultiselect = selection.size <= 1 && validSelection.size > 1
+        selection = validSelection
         centerizeTo(state.center.x, state.center.y)
         chessboardPattern = state.chessboardPattern
         regionColor = state.regionColor ?: regionColor
         chessboardColor = state.chessboardColor ?: regionColor
+        if (switchToMultiselect) {
+            switchToMode(SelectionMode.Multiselect)
+        }
     }
 
     private fun resetTransients() {
@@ -3888,7 +3897,7 @@ class EditorViewModel : ViewModel() {
     private fun Point.downscale(): Point = scaled00(DOWNSCALING_FACTOR)
     private fun Point.upscale(): Point = scaled00(UPSCALING_FACTOR)
 
-    private fun _saveState(): SaveState {
+    private fun saveState(): SaveState {
         val center = computeAbsoluteCenter() ?: Offset.Zero
         // it's important to copy mutable collections
         return SaveState(
@@ -3907,7 +3916,8 @@ class EditorViewModel : ViewModel() {
         )
     }
 
-    private fun saveState(): State {
+    // TODO: migrate to SaveState
+    private fun saveVMState(): State {
         val center = computeAbsoluteCenter() ?: Offset.Zero
         val deleted = objects.indices.filter { ix ->
             objects[ix] == null && isFree(ix)
@@ -3936,7 +3946,8 @@ class EditorViewModel : ViewModel() {
             if (!RESTORE_LAST_SAVE_ON_LOAD) {
                 restoreFromState(State.SAMPLE)
             } else {
-                val result = runCatching { // NOTE: can crash when underlying VM.State format changes
+                // NOTE: can crash when underlying VM.State format changes
+                val result = runCatching {
                     platform.lastStateStore.get()
                 }
                 val state = result.getOrNull()
@@ -3969,21 +3980,27 @@ class EditorViewModel : ViewModel() {
         defaultBiInversionParameters = settings.defaultBiInversionParameters
         defaultLoxodromicMotionParameters = settings.defaultLoxodromicMotionParameters
         toolbarState = toolbarState.copy(categoryDefaultIndices = settings.categoryDefaultIndices)
+        switchToCategory(toolbarState.activeCategory)
     }
 
+    // TODO: migrate to SaveState
     private fun restoreFromState(state: State) {
         loadNewConstellation(state.constellation)
-        if (state.selection.size > 1) {
-            mode = SelectionMode.Multiselect
-        }
-        selection = state.selection
         centerizeTo(state.centerX, state.centerY)
+        val switchToMultiselect = state.selection.size > 1 && selection.size <= 1
+        selection = state.selection
         state.regionColor?.let {
             regionColor = it
         }
         chessboardPattern = state.chessboardPattern
         state.chessboardColor?.let {
             chessboardColor = it
+        }
+        resetHistory()
+        if (switchToMultiselect) {
+            switchToMode(
+                SelectionMode.Multiselect
+            )
         }
     }
 
@@ -3992,7 +4009,7 @@ class EditorViewModel : ViewModel() {
         if (!cachingInProgress.value) {
             cachingInProgress.update { true }
             println("caching VM state...")
-            val state = saveState()
+            val state = saveVMState()
             val platform = getPlatform()
             platform.saveLastState(state)
             platform.saveSettings(getCurrentSettings())
