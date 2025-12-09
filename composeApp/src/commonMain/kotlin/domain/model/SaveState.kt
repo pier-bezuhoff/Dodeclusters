@@ -11,7 +11,8 @@ import domain.expressions.Expression
 import domain.settings.ChessboardPattern
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlin.math.exp
+import kotlin.math.max
+import kotlin.math.min
 
 /** EditorViewModel's save-state for history.
  * [objects].indices must span all of [objectColors].keys and [objectLabels].keys.
@@ -417,21 +418,87 @@ data class SaveState(
         )
     }
 
-    // TODO: minimize changes
     fun diff(earlierState: SaveState): Changes =
         Changes(
-            objects = Change.Objects(objects.withIndex().associate { (ix, o) -> ix to o }),
-            objectColors = Change.ObjectColors(objectColors),
-            objectLabels = Change.ObjectLabels(objectLabels),
-            expressions = Change.Expressions(expressions),
-            regions = Change.Regions(regions),
-            backgroundColor = Change.BackgroundColor(backgroundColor),
-            chessboardPattern = Change.ChessboardPattern(chessboardPattern),
-            chessboardColor = Change.ChessboardColor(chessboardColor),
-            phantoms = Change.Phantoms(phantoms),
-            selection = Change.Selection(selection),
-            center = Change.Center(center),
-            regionColor = Change.RegionColor(regionColor),
+            objects =
+                if (objects == earlierState.objects) null
+                else {
+                    val objectChanges = mutableMapOf<Ix, GCircle?>()
+                    val minSize = min(objects.size, earlierState.objects.size)
+                    for (ix in 0 until minSize) {
+                        val newObj = objects[ix]
+                        if (newObj != earlierState.objects[ix])
+                            objectChanges[ix] = newObj
+                    }
+                    if (objects.size >= earlierState.objects.size) {
+                        for (ix in minSize until objects.size) {
+                            objectChanges[ix] = objects[ix]
+                        }
+                    } else {
+                        for (ix in minSize until earlierState.objects.size) {
+                            objectChanges[ix] = null
+                        }
+                    }
+                    if (objectChanges.isEmpty())
+                        null
+                    else
+                        Change.Objects(objectChanges)
+                }
+            ,
+            objectColors =
+                if (objectColors == earlierState.objectColors) null
+                else {
+                    val indices: Set<Ix> = objectColors.keys + earlierState.objectColors.keys
+                    val changedIndices = indices.filter { objectColors[it] != earlierState.objectColors[it] }
+                    if (changedIndices.isEmpty())
+                        null
+                    else
+                        Change.ObjectColors(changedIndices.associateWith { objectColors[it] })
+                },
+            objectLabels =
+                if (objectLabels == earlierState.objectLabels) null
+                else {
+                    val indices: Set<Ix> = objectLabels.keys + earlierState.objectLabels.keys
+                    val changedIndices = indices.filter { objectLabels[it] != earlierState.objectLabels[it] }
+                    if (changedIndices.isEmpty())
+                        null
+                    else
+                        Change.ObjectLabels(changedIndices.associateWith { objectLabels[it] })
+                },
+            expressions =
+                if (expressions == earlierState.expressions) null
+                else {
+                    val changedIndices = (0 until max(expressions.size, earlierState.expressions.size))
+                        .filter { expressions[it] != earlierState.expressions[it] }
+                    if (changedIndices.isEmpty())
+                        null
+                    else
+                        Change.Expressions(changedIndices.associateWith { expressions[it] })
+                },
+            regions =
+                if (regions == earlierState.regions) null
+                else Change.Regions(regions),
+            backgroundColor =
+                if (backgroundColor == earlierState.backgroundColor) null
+                else Change.BackgroundColor(backgroundColor),
+            chessboardPattern =
+                if (chessboardPattern == earlierState.chessboardPattern) null
+                else Change.ChessboardPattern(chessboardPattern),
+            chessboardColor =
+                if (chessboardColor == earlierState.chessboardColor) null
+                else Change.ChessboardColor(chessboardColor),
+            phantoms =
+                if (phantoms == earlierState.phantoms) null
+                else Change.Phantoms(phantoms),
+            selection =
+                if (selection == earlierState.selection) null
+                else Change.Selection(selection),
+            center =
+                if (center == earlierState.center) null
+                else Change.Center(center),
+            regionColor =
+                if (regionColor == earlierState.regionColor) null
+                else Change.RegionColor(regionColor),
         )
 }
 

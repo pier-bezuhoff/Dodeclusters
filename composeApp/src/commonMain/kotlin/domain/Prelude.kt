@@ -76,17 +76,6 @@ inline fun squareSum(dx: Double, dy: Double): Double =
 inline infix fun Boolean.entails(result: Boolean): Boolean =
     !this or result
 
-// idk, it cant be an extension fun otherwise it interferes with autocomplete
-inline fun <reified A, reified R> foldNullable(
-    a: A?,
-    crossinline whenNotNull: (A) -> R,
-    crossinline whenNull: () -> R,
-): R  where A: Any? =
-    if (a != null)
-        whenNotNull(a)
-    else
-        whenNull()
-
 // sum types doko
 inline fun <reified A, reified B> tryCatch2(
     crossinline tryBlock: () -> Unit,
