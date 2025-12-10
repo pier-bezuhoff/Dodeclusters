@@ -3962,11 +3962,12 @@ class EditorViewModel : ViewModel() {
             }.getOrNull()?.let { settings ->
                 loadSettings(settings)
             }
-            runCatching {
-                platform.historyStore.get()
-            }.getOrNull()?.let { historyState ->
-//                history = historyState.load()
-            }
+//            runCatching {
+//                platform.historyStore.get()
+//            }.getOrNull()?.let { historyState ->
+//                // FIX: object duplication because of reindexing deleted when saving VM.State
+//                history = historyState.load(undoIsEnabled, redoIsEnabled)
+//            }
             restoration.update { ProgressState.COMPLETED }
         }
     }
@@ -3998,9 +3999,7 @@ class EditorViewModel : ViewModel() {
         }
         resetHistory()
         if (switchToMultiselect) {
-            switchToMode(
-                SelectionMode.Multiselect
-            )
+            switchToMode(SelectionMode.Multiselect)
         }
     }
 
@@ -4013,7 +4012,8 @@ class EditorViewModel : ViewModel() {
             val platform = getPlatform()
             platform.saveLastState(state)
             platform.saveSettings(getCurrentSettings())
-            platform.saveHistory(history.save())
+            // reindex history ig? or mb don't reindex state on save
+//            platform.saveHistory(history.save())
             cachingInProgress.update { false }
             println("cached.")
         }
