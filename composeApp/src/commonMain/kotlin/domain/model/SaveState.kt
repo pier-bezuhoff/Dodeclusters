@@ -495,7 +495,10 @@ data class SaveState(
                 else Change.RegionColor(regionColor),
         )
 
-    /** Shift indices to fill-in empty positions of previously deleted objects */
+    /**
+     * Shift indices to fill-in empty positions of previously deleted objects.
+     * Note that freeing indices would break compatibility with [ChangeHistory]
+     */
     fun compressFreeIndices(): SaveState {
         val indices = objects.indices
         val deleted = indices.filter { ix ->

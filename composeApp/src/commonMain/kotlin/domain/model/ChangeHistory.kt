@@ -212,6 +212,8 @@ class ChangeHistory(
             regionColor = changes.regionColor,
         )
 
+    /** @return the previous state, the one before applying the most recent [RedoGroup]
+     * @param[state] the present state */
     fun undo(state: SaveState): SaveState {
         require(undoIsPossible)
         val undoStep = past.removeLast()
@@ -242,6 +244,8 @@ class ChangeHistory(
         return newState
     }
 
+    /** @return the 'next' state in the undo/redo dequeue, the one we undone from
+     * @param[state] the present state */
     fun redo(state: SaveState): SaveState {
         require(redoIsPossible)
         val redoStep = future.removeFirst()

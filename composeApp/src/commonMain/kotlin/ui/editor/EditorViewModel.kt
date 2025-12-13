@@ -586,7 +586,6 @@ class EditorViewModel : ViewModel() {
                 cancelExprAdjustment()
             }
         } else {
-            val currentSelection = selection.toList()
             when (submode) {
                 is SubMode.RotateStereographicSphere -> switchToCategory(Category.Drag)
                 else -> switchToMode(mode) // clears up stuff
@@ -595,7 +594,6 @@ class EditorViewModel : ViewModel() {
             val state = saveState()
             val newState = history.undo(state)
             loadState(newState)
-            selection = currentSelection.filter { it in objects.indices }
             resetTransients()
         }
         objectModel.invalidate()
@@ -604,12 +602,10 @@ class EditorViewModel : ViewModel() {
     fun redo() {
         if (!redoIsEnabled.value)
             return
-        val currentSelection = selection.toList()
         switchToMode(mode)
         val state = saveState()
         val newState = history.redo(state)
         loadState(newState)
-        selection = currentSelection.filter { it in objects.indices }
         resetTransients()
         objectModel.invalidate()
     }
@@ -3939,35 +3935,40 @@ class EditorViewModel : ViewModel() {
         )
     }
 
-    suspend fun launchRestore() {
+    suspend fun restoreFromDisk() {
         if (restoration.value == ProgressState.NOT_STARTED) {
             restoration.update { ProgressState.IN_PROGRESS }
             val platform = getPlatform()
-            if (!RESTORE_LAST_SAVE_ON_LOAD) {
-                restoreFromState(State.SAMPLE)
-            } else {
-                // NOTE: can crash when underlying VM.State format changes
-                val result = runCatching {
-                    platform.lastStateStore.get()
-                }
-                val state = result.getOrNull()
-                if (state == null) {
-                    restoreFromState(State.SAMPLE)
+            if (RESTORE_LAST_SAVE_ON_LOAD) {
+                val saveState = runCatching {
+                    // NOTE: can crash when the underlying format changes
+                    platform.autosaveStore.get()
+                }.getOrNull()
+                if (saveState != null) {
+                    restoreFromState(saveState)
                 } else {
-                    restoreFromState(state)
+                    val vmState = runCatching {
+                        platform.lastStateStore.get()
+                    }.getOrNull()
+                    if (vmState == null) {
+                        restoreFromVMState(State.SAMPLE)
+                    } else {
+                        restoreFromVMState(vmState)
+                    }
                 }
+            } else {
+                restoreFromVMState(State.SAMPLE)
             }
             runCatching {
                 platform.settingsStore.get()
             }.getOrNull()?.let { settings ->
                 loadSettings(settings)
             }
-//            runCatching {
-//                platform.historyStore.get()
-//            }.getOrNull()?.let { historyState ->
-//                // FIX: object duplication because of reindexing deleted when saving VM.State
-//                history = historyState.load(undoIsEnabled, redoIsEnabled)
-//            }
+            runCatching {
+                platform.historyStore.get()
+            }.getOrNull()?.let { historyState ->
+                history = historyState.load(undoIsEnabled, redoIsEnabled)
+            }
             restoration.update { ProgressState.COMPLETED }
         }
     }
@@ -3984,8 +3985,16 @@ class EditorViewModel : ViewModel() {
         switchToCategory(toolbarState.activeCategory)
     }
 
+    private fun restoreFromState(state: SaveState) {
+        if (!mode.isSelectingCircles()) {
+            switchToMode(SelectionMode.Drag)
+        }
+        loadState(state)
+        resetHistory()
+    }
+
     // TODO: migrate to SaveState
-    private fun restoreFromState(state: State) {
+    private fun restoreFromVMState(state: State) {
         loadNewConstellation(state.constellation)
         centerizeTo(state.centerX, state.centerY)
         val switchToMultiselect = state.selection.size > 1 && selection.size <= 1
@@ -4008,13 +4017,11 @@ class EditorViewModel : ViewModel() {
         if (!cachingInProgress.value) {
             cachingInProgress.update { true }
             println("caching VM state...")
-            val state = saveVMState()
             val platform = getPlatform()
-//            platform.saveState(saveState())
-            platform.saveLastState(state)
+//            platform.saveLastState(saveVMState())
+            platform.saveState(saveState())
             platform.saveSettings(getCurrentSettings())
-            // reindex history ig? or mb don't reindex state on save
-//            platform.saveHistory(history.save())
+            platform.saveHistory(history.save())
             cachingInProgress.update { false }
             println("cached.")
         }

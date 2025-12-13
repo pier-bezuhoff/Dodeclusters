@@ -403,7 +403,7 @@ fun EditorScreen(
     }
     LaunchedEffect(ddcContent, sampleName, ddcRepository) {
         viewModel.viewModelScope.launch {
-            viewModel.launchRestore()
+            viewModel.restoreFromDisk()
             if (ddcContent != null) {
                 println("loading external ddc...")
                 viewModel.loadDdc(ddcContent)
