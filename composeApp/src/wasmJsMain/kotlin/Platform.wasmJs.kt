@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
 import domain.model.ChangeHistory
+import domain.model.SaveState
 import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.storage.storeOf
@@ -25,6 +26,7 @@ object WasmPlatform: Platform {
     override val minCircleToCubicApproximationRadius: Float = 10_000f
     override val minCircleToLineApproximationRadius: Float = 100_000f
 
+    @Deprecated("Migrate to SaveState")
     override val lastStateStore: KStore<EditorViewModel.State> by lazy {
         storeOf(
             key = Platform.LAST_STATE_STORE_FILE_NAME,
@@ -35,6 +37,12 @@ object WasmPlatform: Platform {
         storeOf(
             key = Platform.SETTINGS_STORE_FILE_NAME,
             format = Settings.JSON_FORMAT,
+        )
+    }
+    override val autosaveStore: KStore<SaveState> by lazy {
+        storeOf(
+            key = Platform.AUTOSAVE_STORE_FILE_NAME,
+            format = SaveState.JSON_FORMAT,
         )
     }
     override val historyStore: KStore<ChangeHistory.State> by lazy {
@@ -51,20 +59,22 @@ object WasmPlatform: Platform {
         }
     }
 
+    @Deprecated("Migrate to SaveState")
     @OptIn(DelicateCoroutinesApi::class)
-    override fun saveLastState(state: EditorViewModel.State) {
+    override fun saveLastState(state: EditorViewModel.State) =
         lastStateStore.save(state)
-    }
 
     @OptIn(DelicateCoroutinesApi::class)
-    override fun saveSettings(settings: Settings) {
+    override fun saveSettings(settings: Settings) =
         settingsStore.save(settings)
-    }
 
     @OptIn(DelicateCoroutinesApi::class)
-    override fun saveHistory(historyState: ChangeHistory.State) {
+    override fun saveState(state: SaveState) =
+        autosaveStore.save(state)
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun saveHistory(historyState: ChangeHistory.State) =
         historyStore.save(historyState)
-    }
 
     override fun scrollToZoom(yDelta: Float): Float {
         val percent = 0.1f

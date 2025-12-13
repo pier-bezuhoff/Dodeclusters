@@ -215,15 +215,19 @@ class ChangeHistory(
     fun undo(state: SaveState): SaveState {
         require(undoIsPossible)
         val undoStep = past.removeLast()
+        val unrecordedChangesRedo = state.revert(accumulatedChanges.locations)
+            .fuseLater(state.revert(accumulatedChangedLocations))
         val newState: SaveState
         val redoStep: RedoGroup
         if (past.isEmpty()) {
             redoStep = state.diff(initialState).changes
+            // since we diff with the present state, no need to count unrecordedChanges
             newState = initialState
         } else {
             redoStep = undoStep
                 .reversed()
                 .map { state.revert(it) }
+                .plus(unrecordedChangesRedo.changes)
             newState = state.applyChanges(undoStep)
         }
         if (future.size == HISTORY_SIZE) {
@@ -248,7 +252,9 @@ class ChangeHistory(
             past.removeFirst()
         }
         past.addLast(undoStep)
-        val newState = state.applyChanges(redoStep)
+        val unrecordedChangesUndo = pinnedState.revert(accumulatedChangedLocations)
+            .fuseLater(accumulatedChanges)
+        val newState = state.applyChanges(unrecordedChangesUndo.changes + redoStep)
         pinnedState = newState
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         accumulatedChanges = SaveState.Changes.EMPTY

@@ -8,9 +8,12 @@ import domain.Ix
 import domain.SerializableOffset
 import domain.cluster.LogicalRegion
 import domain.expressions.Expression
+import domain.reindexingMap
 import domain.settings.ChessboardPattern
+import kotlinx.coroutines.selects.select
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlin.math.max
 import kotlin.math.min
 
@@ -173,6 +176,7 @@ data class SaveState(
         @Serializable
         @SerialName("Selection")
         data class Selection(val selection: List<Ix>) : Replacement
+        // MAYBE: global zoom
         @Serializable
         @SerialName("Center")
         data class Center(val center: SerializableOffset) : Replacement
@@ -196,8 +200,22 @@ data class SaveState(
         val center: Change.Center? = null,
         val regionColor: Change.RegionColor? = null,
     ) {
-        val changes: List<Change> = listOfNotNull(
+        val changes: List<Change> get() = listOfNotNull(
             objects, objectColors, objectLabels, expressions, regions, backgroundColor, chessboardPattern, chessboardColor, phantoms, selection, center, regionColor,
+        )
+        val locations: Change.Locations get() = Change.Locations(
+            objectIndices = objects?.objects?.keys ?: emptySet(),
+            objectColorIndices = objectColors?.colors?.keys ?: emptySet(),
+            objectLabelIndices = objectLabels?.labels?.keys ?: emptySet(),
+            expressionIndices = expressions?.expressions?.keys ?: emptySet(),
+            regions = regions != null,
+            backgroundColor = backgroundColor != null,
+            chessboardPattern = chessboardPattern != null,
+            chessboardColor = chessboardColor != null,
+            phantoms = phantoms != null,
+            selection = selection != null,
+            center = center != null,
+            regionColor = regionColor != null,
         )
 
         fun fuseLater(changes: Changes): Changes =
@@ -272,45 +290,21 @@ data class SaveState(
                 Change.Expressions(changeLocation.indices.associateWith { ix -> expressions[ix] })
             },
             regions =
-                if (locations.regions)
-                    Change.Regions(regions)
-                else null
-            ,
+                if (locations.regions) Change.Regions(regions) else null,
             backgroundColor =
-                if (locations.backgroundColor)
-                    Change.BackgroundColor(backgroundColor)
-                else null
-            ,
+                if (locations.backgroundColor) Change.BackgroundColor(backgroundColor) else null,
             chessboardPattern =
-                if (locations.chessboardPattern)
-                    Change.ChessboardPattern(chessboardPattern)
-                else null
-            ,
+                if (locations.chessboardPattern) Change.ChessboardPattern(chessboardPattern) else null,
             chessboardColor =
-                if (locations.chessboardColor)
-                    Change.ChessboardColor(chessboardColor)
-                else null
-            ,
+                if (locations.chessboardColor) Change.ChessboardColor(chessboardColor) else null,
             phantoms =
-                if (locations.phantoms)
-                    Change.Phantoms(phantoms)
-                else null
-            ,
+                if (locations.phantoms) Change.Phantoms(phantoms) else null,
             selection =
-                if (locations.selection)
-                    Change.Selection(selection)
-                else null
-            ,
+                if (locations.selection) Change.Selection(selection) else null,
             center =
-                if (locations.center)
-                    Change.Center(center)
-                else null
-            ,
+                if (locations.center) Change.Center(center) else null,
             regionColor =
-                if (locations.regionColor)
-                    Change.RegionColor(regionColor)
-                else null
-            ,
+                if (locations.regionColor) Change.RegionColor(regionColor) else null,
         )
 
     fun revert(change: Change): Change =
@@ -500,6 +494,54 @@ data class SaveState(
                 if (regionColor == earlierState.regionColor) null
                 else Change.RegionColor(regionColor),
         )
+
+    /** Shift indices to fill-in empty positions of previously deleted objects */
+    fun compressFreeIndices(): SaveState {
+        val indices = objects.indices
+        val deleted = indices.filter { ix ->
+            objects[ix] == null && expressions[ix] == null
+        }.toSet()
+        val reindexing = reindexingMap(
+            originalIndices = indices,
+            deletedIndices = deleted,
+        )
+        return copy(
+            objects = objects.filterIndexed { ix, _ -> ix !in deleted },
+            objectColors = objectColors
+                .mapNotNull { (ix, color) ->
+                    reindexing[ix]?.let { ix to color }
+                }.toMap(),
+            objectLabels = objectLabels
+                .mapNotNull { (ix, label) ->
+                    reindexing[ix]?.let { ix to label }
+                }.toMap(),
+            expressions = expressions
+                .mapNotNull { (ix, expression) ->
+                    reindexing[ix]?.let { ix to expression }
+                }.toMap(),
+            regions = regions
+                .mapNotNull { region ->
+                    val insides = region.insides.mapNotNull { reindexing[it] }.toSet()
+                    val outsides = region.outsides.mapNotNull { reindexing[it] }.toSet()
+                    if (insides.isEmpty() && outsides.isEmpty())
+                        null
+                    else
+                        region.copy(insides = insides, outsides = outsides)
+                }
+            ,
+            phantoms = phantoms.mapNotNull { reindexing[it] }.toSet(),
+            selection = selection.mapNotNull { reindexing[it] },
+        )
+    }
+
+    companion object {
+        val JSON_FORMAT = Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+            // support Infinity for Points
+            allowSpecialFloatingPointValues = true
+        }
+    }
 }
 
 // not liftA2 actually

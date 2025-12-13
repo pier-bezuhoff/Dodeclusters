@@ -1,4 +1,5 @@
 import domain.model.ChangeHistory
+import domain.model.SaveState
 import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import ui.editor.EditorViewModel
@@ -34,19 +35,26 @@ interface Platform {
     val minCircleToLineApproximationRadius: Float
 
     // NOTE: LocalStorage allows 5 MB max
+    @Deprecated("Migrate to SaveState")
     val lastStateStore: KStore<EditorViewModel.State>
     val settingsStore: KStore<Settings>
+    val autosaveStore: KStore<SaveState>
     val historyStore: KStore<ChangeHistory.State>
 
+    @Deprecated("Migrate to SaveState")
     fun saveLastState(state: EditorViewModel.State)
     fun saveSettings(settings: Settings)
+    /** Use for autosave */
+    fun saveState(state: SaveState)
     fun saveHistory(historyState: ChangeHistory.State)
 
     fun scrollToZoom(yDelta: Float): Float
 
     companion object {
+        @Deprecated("Migrate to SaveState")
         const val LAST_STATE_STORE_FILE_NAME = "last-save"
         const val SETTINGS_STORE_FILE_NAME = "settings"
+        const val AUTOSAVE_STORE_FILE_NAME = "autosave"
         const val HISTORY_STORE_FILE_NAME = "history"
     }
 }

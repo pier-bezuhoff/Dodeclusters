@@ -4010,6 +4010,7 @@ class EditorViewModel : ViewModel() {
             println("caching VM state...")
             val state = saveVMState()
             val platform = getPlatform()
+//            platform.saveState(saveState())
             platform.saveLastState(state)
             platform.saveSettings(getCurrentSettings())
             // reindex history ig? or mb don't reindex state on save

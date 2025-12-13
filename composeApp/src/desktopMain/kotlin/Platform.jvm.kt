@@ -1,6 +1,7 @@
 import domain.settings.Settings
 import domain.io.getAppDataDir
 import domain.model.ChangeHistory
+import domain.model.SaveState
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -24,6 +25,7 @@ object JVMPlatform: Platform {
 
     private val dataDir: Path by lazy { getAppDataDir() }
 
+    @Deprecated("Migrate to SaveState")
     override val lastStateStore: KStore<EditorViewModel.State> by lazy {
         storeOf(
             file = Path(dataDir, Platform.LAST_STATE_STORE_FILE_NAME + ".json"),
@@ -34,6 +36,12 @@ object JVMPlatform: Platform {
         storeOf(
             file = Path(dataDir, Platform.SETTINGS_STORE_FILE_NAME + ".json"),
             json = Settings.JSON_FORMAT,
+        )
+    }
+    override val autosaveStore: KStore<SaveState> by lazy {
+        storeOf(
+            file = Path(dataDir, Platform.AUTOSAVE_STORE_FILE_NAME + ".json"),
+            json = SaveState.JSON_FORMAT,
         )
     }
     override val historyStore: KStore<ChangeHistory.State> by lazy {
@@ -55,20 +63,22 @@ object JVMPlatform: Platform {
         }
     }
 
+    @Deprecated("Migrate to SaveState")
     @OptIn(DelicateCoroutinesApi::class)
-    override fun saveLastState(state: EditorViewModel.State) {
+    override fun saveLastState(state: EditorViewModel.State) =
         lastStateStore.save(state)
-    }
 
     @OptIn(DelicateCoroutinesApi::class)
-    override fun saveSettings(settings: Settings) {
+    override fun saveSettings(settings: Settings) =
         settingsStore.save(settings)
-    }
 
     @OptIn(DelicateCoroutinesApi::class)
-    override fun saveHistory(historyState: ChangeHistory.State) {
+    override fun saveState(state: SaveState) =
+        autosaveStore.save(state)
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun saveHistory(historyState: ChangeHistory.State) =
         historyStore.save(historyState)
-    }
 
     override fun scrollToZoom(yDelta: Float): Float {
         val percent = 2.5f
