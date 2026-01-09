@@ -28,7 +28,7 @@ import kotlin.math.sqrt
  * In this notation `a ^ b` (outer product) corresponds to intersection/__meet__ and
  * `a v b` (regressive product) to __join__. Being normalized implies that its [norm2] is
  * either -1, +1 or 0. And if it's 0, the first non-zero coefficient of (w,x,y,z) is ±1.
- * When working with scaled versions, be careful, cuz most methods expect the normalized version.
+ * When working with scaled versions, be careful, cuz most methods expect the __normalized__ version.
  */
 @Immutable
 @Serializable
@@ -560,10 +560,12 @@ data class GeneralizedCircle(
         }
 
         // there was an attempt..
+        @Suppress("NOTHING_TO_INLINE")
         private inline fun isNear0000(w: Double, x: Double, y: Double, z: Double): Boolean =
             // NOTE: ehh, kinda risky
             abs(w) < EPSILON2 && abs(x) < EPSILON2 && abs(y) < EPSILON2 && abs(z) < EPSILON2
 
+        @Suppress("NOTHING_TO_INLINE")
         inline fun isValidHomogenousCoordinates(w: Double, x: Double, y: Double, z: Double): Boolean =
             w.isFinite() && x.isFinite() && y.isFinite() && z.isFinite() &&
             (w != 0.0 || x != 0.0 || y != 0.0 || z != 0.0) // (0,0,0,0) is invalid in homogenous

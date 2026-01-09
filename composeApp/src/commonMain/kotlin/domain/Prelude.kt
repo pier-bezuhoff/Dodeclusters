@@ -72,6 +72,12 @@ inline fun squareSum(dx: Float, dy: Float): Float =
 inline fun squareSum(dx: Double, dy: Double): Double =
     dx*dx + dy*dy
 
+inline fun squareDiff(dx: Float, dy: Float): Float =
+    dx*dx - dy*dy
+
+inline fun squareDiff(dx: Double, dy: Double): Double =
+    dx*dx - dy*dy
+
 /** `this` => [result] */
 inline infix fun Boolean.entails(result: Boolean): Boolean =
     !this or result
