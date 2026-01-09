@@ -1,6 +1,8 @@
-package core.geometry
+package core.geometry.conformal
 
 import androidx.compose.runtime.Immutable
+import core.geometry.EPSILON
+import core.geometry.EPSILON2
 import domain.never
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
@@ -43,7 +45,7 @@ data class Rotor(
     fun normalized(): Rotor {
         val n2 = norm2
         return if (abs(n2) > EPSILON2) {
-            this*(1.0/sqrt(abs(n2)))
+            this*(1.0/ sqrt(abs(n2)))
         } else {
             this
         }
@@ -90,7 +92,7 @@ data class Rotor(
 //            (this * Double.POSITIVE_INFINITY)
                 .copy(s = Double.POSITIVE_INFINITY) // flags near-infinite stretch
         } else { // n2 > 0, hyperbolic motion
-            (this * (sinh(n)/n))
+            (this * (sinh(n) /n))
                 .copy(s = cosh(n))
         }
     }
@@ -110,7 +112,7 @@ data class Rotor(
             -(minus - plus),
             -x1,
             -y1,
-            -(plus + minus)/2
+            -(plus + minus) / 2
         ).normalizedPreservingDirection()
     }
 

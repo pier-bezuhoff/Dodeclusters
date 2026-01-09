@@ -282,7 +282,7 @@ class ObjectModel {
         val requiresZoom = zoom != 1f
         val requiresRotation = rotationAngle != 0f
         val allIncidentPoints = mutableListOf<Ix>()
-        if (!requiresZoom && !requiresRotation) {
+        if (!requiresZoom && !requiresRotation) { // translation only
             // we assume the transformation is not Id
             for (ix in targets) {
                 val o = objects[ix]

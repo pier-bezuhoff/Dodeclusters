@@ -468,6 +468,7 @@ class ExpressionForest(
         (children[parentIx] ?: emptySet())
             .filter { expressions[it]?.expr is Expr.Incidence }
 
+    // MAYBE: cache cuz we use it very often
     @Suppress("NOTHING_TO_INLINE")
     inline fun getIncidentPointsTo(parentIx: Ix, destination: MutableCollection<in Ix>) {
         (children[parentIx] ?: emptySet())

@@ -4,7 +4,7 @@ import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.EPSILON
 import core.geometry.GCircle
-import core.geometry.GeneralizedCircle
+import core.geometry.conformal.GeneralizedCircle
 import core.geometry.Line
 import core.geometry.Point
 import core.geometry.RegionPointLocation

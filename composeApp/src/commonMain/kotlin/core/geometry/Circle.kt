@@ -4,6 +4,7 @@ package core.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import core.geometry.conformal.GeneralizedCircle
 import core.kmath_complex.ComplexField
 import core.kmath_complex.r
 import core.kmath_complex.r2

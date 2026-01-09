@@ -13,7 +13,7 @@ import kotlin.math.hypot
 import kotlin.math.sign
 import kotlin.math.sin
 
-// NOTE: ggbra lines are defined by 2 points, maybe its better for incidence?
+// MAYBE: 2-point constructor instead of a,b,c for smoother incident point transformation
 /** [a]*x + [b]*y + [c] = 0
  *
  * Normal vector = ([a], [b]), so it depends on the sign
@@ -26,7 +26,7 @@ import kotlin.math.sin
 data class Line(
     val a: Double,
     val b: Double,
-    val c: Double
+    val c: Double,
 ) : CircleOrLine, LineOrPoint {
 
     init {

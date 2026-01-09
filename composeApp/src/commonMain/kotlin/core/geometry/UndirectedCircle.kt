@@ -3,7 +3,7 @@ package core.geometry
 import androidx.compose.runtime.Immutable
 
 // ideally [directed] Circle should not inherit from UndirectedCircle, but it should be
-// separate data class
+// a separate data class
 @Immutable
 sealed interface UndirectedCircle : CircleOrLine {
     val x: Double

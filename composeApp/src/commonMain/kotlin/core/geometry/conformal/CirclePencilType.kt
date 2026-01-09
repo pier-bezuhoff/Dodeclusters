@@ -1,4 +1,4 @@
-package core.geometry
+package core.geometry.conformal
 
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable

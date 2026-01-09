@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import core.geometry.GCircle
-import core.geometry.GeneralizedCircle
+import core.geometry.conformal.GeneralizedCircle
 import core.geometry.Line
 import core.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res

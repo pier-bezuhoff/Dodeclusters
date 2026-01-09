@@ -1,16 +1,23 @@
-package core.geometry
+package core.geometry.conformal
 
+import core.geometry.Circle
+import core.geometry.CircleOrLine
+import core.geometry.EPSILON2
+import core.geometry.GCircle
+import core.geometry.Line
+import core.geometry.Point
 import domain.radians
 import domain.squareSum
 import kotlin.math.cos
 import kotlin.math.sin
 
 /** Sphere (0,0,0; 1) antipodes projected stereographicly */
-private inline val Point.antipodal: Point get() {
+private inline val Point.antipodal: Point
+    get() {
     val l2 = squareSum(x, y)
     return if (l2 < EPSILON2)
-        Point.CONFORMAL_INFINITY
-    else Point(-x/l2, -y/l2)
+        Point.Companion.CONFORMAL_INFINITY
+    else Point(-x / l2, -y / l2)
 }
 
 /**
@@ -45,8 +52,14 @@ fun calculateStereographicRotationBiEngine(
     when (val greatCircle = greatCircleGC?.toGCircle()) {
         is Circle -> {
             // this simple formula only works for antipodes of Great circles
-            antipode1 = Point(greatCircle.x/(1 + greatCircle.radius), greatCircle.y/(1 + greatCircle.radius))
-            antipode2 = Point(greatCircle.x/(1 - greatCircle.radius), greatCircle.y/(1 - greatCircle.radius))
+            antipode1 = Point(
+                greatCircle.x / (1 + greatCircle.radius),
+                greatCircle.y / (1 + greatCircle.radius)
+            )
+            antipode2 = Point(
+                greatCircle.x / (1 - greatCircle.radius),
+                greatCircle.y / (1 - greatCircle.radius)
+            )
         }
         is Line -> {
             antipode1 = Point(greatCircle.normalX, greatCircle.normalY)

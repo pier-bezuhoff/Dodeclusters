@@ -1,5 +1,6 @@
 package core.geometry
 
+import core.geometry.conformal.GeneralizedCircle
 import domain.never
 import kotlin.math.abs
 import kotlin.random.Random

@@ -1,5 +1,6 @@
 package core.geometry
 
+import core.geometry.conformal.GeneralizedCircle
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.random.nextInt

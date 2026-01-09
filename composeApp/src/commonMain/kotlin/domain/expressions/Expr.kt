@@ -3,7 +3,7 @@ package domain.expressions
 import androidx.compose.runtime.Immutable
 import core.geometry.Circle
 import core.geometry.CircleOrLine
-import core.geometry.CirclePencilType
+import core.geometry.conformal.CirclePencilType
 import core.geometry.GCircle
 import core.geometry.Line
 import core.geometry.Point

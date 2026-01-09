@@ -21,9 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import core.geometry.CirclePencilType
+import core.geometry.conformal.CirclePencilType
 import core.geometry.GCircle
-import core.geometry.GeneralizedCircle
+import core.geometry.conformal.GeneralizedCircle
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.angle_in_degrees_placeholder
 import dodeclusters.composeapp.generated.resources.bi_inversion_angle_prompt

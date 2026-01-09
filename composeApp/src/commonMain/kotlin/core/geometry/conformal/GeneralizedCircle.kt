@@ -1,8 +1,14 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
-package core.geometry
+package core.geometry.conformal
 
 import androidx.compose.runtime.Immutable
+import core.geometry.Circle
+import core.geometry.CircleOrLine
+import core.geometry.EPSILON
+import core.geometry.EPSILON2
+import core.geometry.GCircle
+import core.geometry.ImaginaryCircle
+import core.geometry.Line
+import core.geometry.Point
 import domain.never
 import domain.signNonZero
 import kotlinx.serialization.Serializable
@@ -60,7 +66,7 @@ data class GeneralizedCircle(
 //        this scalarProduct this
     // NOTE: norm=0 for points, norm=w*radius for circles
     inline val norm: Double get() =
-        sqrt(abs(norm2))
+    sqrt(abs(norm2))
 
     /** Assumes normalization. Radius squared */
     inline val r2: Double get() =
@@ -146,12 +152,12 @@ data class GeneralizedCircle(
     fun normalized(): GeneralizedCircle {
         val n = norm
         if (abs(n) < EPSILON) {
-            return if (n == 0.0 && abs(w) < EPSILON || n != 0.0 && abs(w/n) < EPSILON) // is conformal infinity?
+            return if (n == 0.0 && abs(w) < EPSILON || n != 0.0 && abs(w / n) < EPSILON) // is conformal infinity?
                 this * (1/z)
             else
                 this * (1/w)
         }
-        val a = if (abs(w/n) < EPSILON) {
+        val a = if (abs(w / n) < EPSILON) {
             this.copy(w = 0.0) * (1/n)
         } else {
             this * (1/n)
@@ -183,7 +189,7 @@ data class GeneralizedCircle(
                 this * (1 / abs(w))
 //        } else if (absN > 1e10) {
 //            CONFORMAL_INFINITY // more clutches stashed here
-        } else if (abs(w/n) < EPSILON) {
+        } else if (abs(w / n) < EPSILON) {
             this.copy(w = 0.0) * (1/n)
         } else {
             this * (1/n)
@@ -195,10 +201,10 @@ data class GeneralizedCircle(
     fun homogenousEquals(other: GeneralizedCircle, epsilon: Double = EPSILON): Boolean {
         val (w1,x1,y1,z1) = this
         val (w2,x2,y2,z2) = other
-        return (w2 == 0.0 && abs(w1) < epsilon || w2 != 0.0 && abs(w1/w2 - 1.0) < epsilon) &&
-                (x2 == 0.0 && abs(x1) < epsilon || x2 != 0.0 && abs(x1/x2 - 1.0) < epsilon) &&
-                (y2 == 0.0 && abs(y1) < epsilon || y2 != 0.0 && abs(y1/y2 - 1.0) < epsilon) &&
-                (z2 == 0.0 && abs(z1) < epsilon || z2 != 0.0 && abs(z1/z2 - 1.0) < epsilon)
+        return (w2 == 0.0 && abs(w1) < epsilon || w2 != 0.0 && abs(w1 / w2 - 1.0) < epsilon) &&
+                (x2 == 0.0 && abs(x1) < epsilon || x2 != 0.0 && abs(x1 / x2 - 1.0) < epsilon) &&
+                (y2 == 0.0 && abs(y1) < epsilon || y2 != 0.0 && abs(y1 / y2 - 1.0) < epsilon) &&
+                (z2 == 0.0 && abs(z1) < epsilon || z2 != 0.0 && abs(z1 / z2 - 1.0) < epsilon)
     }
 
     // NOTE: Let C:= 0.5 * A.normalized + 0.5 * B.normalized;
@@ -330,6 +336,7 @@ data class GeneralizedCircle(
      *  Not to be confused with "inversive angle", that is `acos(inversiveDistance)` and
      *  in case of intersecting circles is simply the oriented angle between them
      */
+    @Suppress("NOTHING_TO_INLINE")
     inline fun inversiveDistance(other: GeneralizedCircle): Double =
         this scalarProduct other
 
@@ -410,7 +417,7 @@ data class GeneralizedCircle(
      *
      * [Point] => [Point],
      *
-     * [CircleOrLine] => [CircleOrLine],
+     * [core.geometry.CircleOrLine] => [core.geometry.CircleOrLine],
      *
      * [ImaginaryCircle] => [ImaginaryCircle]
      *
@@ -562,4 +569,3 @@ data class GeneralizedCircle(
             (w != 0.0 || x != 0.0 || y != 0.0 || z != 0.0) // (0,0,0,0) is invalid in homogenous
     }
 }
-
