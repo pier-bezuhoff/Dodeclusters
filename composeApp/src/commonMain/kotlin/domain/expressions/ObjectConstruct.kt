@@ -29,6 +29,6 @@ sealed interface ObjectConstruct {
     @Serializable
     @SerialName("DynamicExpression")
     data class Dynamic(
-        val expression: ExprOutput
+        val expression: ConformalExprOutput
     ) : ObjectConstruct
 }

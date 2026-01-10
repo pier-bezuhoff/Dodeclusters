@@ -5,6 +5,7 @@ import core.geometry.Circle
 import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
+import domain.expressions.ConformalExprOutput
 import domain.expressions.Expr
 import domain.expressions.ExprOutput
 import domain.expressions.LoxodromicMotionParameters
@@ -56,7 +57,7 @@ data class Constellation(
         }
     }
 
-    fun toExpressionMap(): Map<Ix, ExprOutput?> =
+    fun toExpressionMap(): Map<Ix, ConformalExprOutput?> =
         objects.mapIndexed { ix0, o ->
             val ix = ix0 - FIRST_INDEX
             when (o) {

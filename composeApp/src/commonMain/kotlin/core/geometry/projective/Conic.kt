@@ -68,6 +68,7 @@ data class Conic(
             c = x*y,
             cd = 0.0
         )
+        @Suppress("NOTHING_TO_INLINE")
         private inline fun fromGeneric(
             alpha: Double, beta: Double,
             x: Double = 0.0, y: Double = 0.0,

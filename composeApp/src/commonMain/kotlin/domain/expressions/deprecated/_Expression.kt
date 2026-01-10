@@ -2,6 +2,7 @@ package domain.expressions.deprecated
 
 import androidx.compose.runtime.Immutable
 import domain.Ix
+import domain.expressions.ConformalExprOutput
 import domain.expressions.Expr
 import domain.expressions.ExprOutput
 import kotlinx.serialization.SerialName
@@ -25,7 +26,7 @@ sealed interface _Expression {
 
     fun toExpression(
         foldIndexed: (_Indexed) -> Ix,
-    ): ExprOutput =
+    ): ConformalExprOutput =
         when (val e = this) {
             is Just -> ExprOutput.Just(when (val expr = e.expr) {
                 is _Expr.CircleBy3Points -> Expr.CircleBy3Points(foldIndexed(expr.object1), foldIndexed(expr.object2), foldIndexed(expr.object3))

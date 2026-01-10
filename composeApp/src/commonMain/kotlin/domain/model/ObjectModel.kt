@@ -15,6 +15,7 @@ import domain.PathCache
 import domain.expressions.Expr
 import domain.expressions.ExpressionForest
 
+// TODO: Projective variant
 // MAYBE: additionally store GeneralizedCircle representations
 // MAYBE: add ExpressionForest in
 /**
@@ -228,7 +229,7 @@ class ObjectModel {
     }
 
     /** Already includes [invalidatePositions] */
-    fun changeExpr(expressions: ExpressionForest, ix: Ix, newExpr: Expr.OneToOne) {
+    fun changeExpr(expressions: ExpressionForest, ix: Ix, newExpr: Expr.Conformal.OneToOne) {
         val newObject = expressions.changeExpr(ix, newExpr)
         setDownscaledObject(ix, newObject)
         val toBeUpdated = expressions.update(listOf(ix))

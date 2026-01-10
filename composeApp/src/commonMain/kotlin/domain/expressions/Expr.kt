@@ -47,14 +47,21 @@ typealias ExprResult = List<GCircle?>
 sealed interface Expr {
 
     @Serializable
-    sealed interface Conformal : Expr
-    @Serializable
-    sealed interface Projective : Expr
-
-    @Serializable
     sealed interface OneToOne : Expr
     @Serializable
     sealed interface OneToMany : Expr
+
+    @Serializable
+    sealed interface Conformal : Expr {
+        // hand-made intersection types
+        sealed interface OneToOne : Conformal, Expr.OneToOne
+        sealed interface OneToMany : Conformal, Expr. OneToMany
+    }
+    @Serializable
+    sealed interface Projective : Expr {
+        sealed interface OneToOne : Projective, Expr.OneToOne
+        sealed interface OneToMany : Projective, Expr. OneToMany
+    }
 
     @Serializable
     sealed interface HasParameters : Expr {
@@ -80,14 +87,14 @@ sealed interface Expr {
     data class Intersection(
         val circle1: Ix,
         val circle2: Ix,
-    ) : OneToMany, Conformal
+    ) : Conformal.OneToMany
 
     @Serializable
     @SerialName("CircleByCenterAndRadius")
     data class CircleByCenterAndRadius(
         val center: Ix,
         val radiusPoint: Ix
-    ) : OneToOne, Conformal
+    ) : Conformal.OneToOne
 
     @Serializable
     @SerialName("CircleBy3PerpendicularObjects")
@@ -95,7 +102,7 @@ sealed interface Expr {
         val object1: Ix,
         val object2: Ix,
         val object3: Ix,
-    ) : OneToOne, Conformal
+    ) : Conformal.OneToOne
 
     // TODO: replace with CircleBy3
     @Serializable
@@ -103,14 +110,14 @@ sealed interface Expr {
     data class LineBy2Points(
         val object1: Ix,
         val object2: Ix,
-    ) : OneToOne, Conformal
+    ) : Conformal.OneToOne
 
     @Serializable
     @SerialName("IncidentPoint")
     data class Incidence(
         val parameters: IncidenceParameters,
         val carrier: Ix,
-    ) : OneToOne, Conformal, Projective
+    ) : Conformal.OneToOne, Projective.OneToOne
 
     @Serializable
     @SerialName("CircleBy2ObjectsFromItsPencilAndPerpendicularObject")
@@ -118,7 +125,7 @@ sealed interface Expr {
         val pencilObject1: Ix,
         val pencilObject2: Ix,
         val perpendicularObject: Ix,
-    ) : OneToOne, Conformal
+    ) : Conformal.OneToOne
 
     // TODO: replace with PolarLine
     @Serializable
@@ -126,7 +133,7 @@ sealed interface Expr {
     data class PolarLineByCircleAndPoint( // these 2 are eh
         val circle: Ix,
         val point: Ix,
-    ) : OneToOne, Conformal
+    ) : Conformal.OneToOne
 
     // TODO: replace with Pole
     @Serializable
@@ -134,14 +141,14 @@ sealed interface Expr {
     data class PoleByCircleAndLine(
         val circle: Ix,
         val line: Ix,
-    ) : OneToOne, Conformal
+    ) : Conformal.OneToOne
 
     @Serializable
     @SerialName("CircleInversion")
     data class CircleInversion(
         override val target: Ix,
         val engine: Ix,
-    ) : OneToOne, TransformLike, Conformal {
+    ) : Conformal.OneToOne, TransformLike {
         @Transient
         override val nSteps: Int = 1
     }
@@ -152,7 +159,7 @@ sealed interface Expr {
         override val parameters: SagittaRatioParameters,
         val chordStartPoint: Ix,
         val chordEndPoint: Ix,
-    ) : OneToOne, HasParameters, Conformal
+    ) : Conformal.OneToOne, HasParameters
 
     @Serializable
     @SerialName("CircleInterpolation")
@@ -160,7 +167,7 @@ sealed interface Expr {
         override val parameters: InterpolationParameters,
         val startCircle: Ix,
         val endCircle: Ix,
-    ) : OneToMany, HasParameters, Conformal
+    ) : Conformal.OneToMany, HasParameters
 
     @Serializable
     @SerialName("PointInterpolation")
@@ -168,7 +175,7 @@ sealed interface Expr {
         override val parameters: InterpolationParameters,
         val startPoint: Ix,
         val endPoint: Ix,
-    ) : OneToMany, HasParameters, Conformal, Projective
+    ) : Conformal.OneToMany, Projective.OneToMany, HasParameters
 
     // NOTE: deprecated, since BiInversion is more general
     @Serializable
@@ -177,7 +184,7 @@ sealed interface Expr {
         override val parameters: ExtrapolationParameters,
         val startCircle: Ix,
         val endCircle: Ix,
-    ) : OneToMany, HasParameters, Conformal
+    ) : Conformal.OneToMany, HasParameters
 
     @Serializable
     @SerialName("Rotation")
@@ -185,19 +192,19 @@ sealed interface Expr {
         override val parameters: RotationParameters,
         val pivot: Ix,
         override val target: Ix,
-    ) : OneToMany, HasParameters, TransformLike, Conformal, Projective {
+    ) : Conformal.OneToMany, Projective.OneToMany, HasParameters, TransformLike {
         @Transient
         override val nSteps: Int = parameters.nSteps
     }
 
     @Serializable
     @SerialName("BiInversion")
-    data class BiInversion(
+    data class BiInversion( // theoretically could generalize to consecutive polarity of 2 conics
         override val parameters: BiInversionParameters,
         val engine1: Ix,
         val engine2: Ix,
         override val target: Ix,
-    ) : OneToMany, HasParameters, TransformLike, Conformal {
+    ) : Conformal.OneToMany, HasParameters, TransformLike {
         @Transient
         override val nSteps: Int = parameters.nSteps
     }
@@ -217,7 +224,7 @@ sealed interface Expr {
         val convergencePoint: Ix,
         override val target: Ix,
         val otherHalfStart: Ix? = null,
-    ) : OneToMany, HasParameters, TransformLike, Conformal {
+    ) : Conformal.OneToMany, HasParameters, TransformLike {
         @Transient
         override val nSteps: Int = parameters.nSteps
     }
@@ -229,7 +236,7 @@ sealed interface Expr {
     data class ConicIntersection( // unlike conformal intersection, this can have up to 4 points
         val conic1: Ix,
         val conic2: Ix,
-    ) : OneToMany, Projective
+    ) : Projective.OneToMany
 
     @Serializable
     @SerialName("ConicBy5")
@@ -239,21 +246,21 @@ sealed interface Expr {
         val conic3: Ix,
         val conic4: Ix,
         val conic5: Ix,
-    ) : OneToOne, Projective
+    ) : Projective.OneToOne
 
     @Serializable
     @SerialName("PolarLine")
     data class PolarLine(
         val conic: Ix,
         val pole: Ix,
-    ) : OneToOne, Projective, Conformal
+    ) : Projective.OneToOne, Conformal.OneToOne
 
     @Serializable
     @SerialName("Pole")
     data class Pole(
         val conic: Ix,
         val polarLine: Ix,
-    ) : OneToOne, Projective, Conformal
+    ) : Projective.OneToOne, Conformal.OneToOne
 
     // each arg can in turn be computed as an expression, making up Forest-like data structure
     val args: List<Ix> get() =
@@ -484,9 +491,9 @@ fun Expr.Conformal.eval(objects: List<GCircle?>): ExprResult {
     }
 }
 
-inline fun Expr.reIndex(
+inline fun <reified E : Expr> E.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
-): Expr =
+): E =
     when (this) {
         is Incidence -> copy(
             carrier = reIndexer(carrier)
@@ -575,12 +582,12 @@ inline fun Expr.reIndex(
             conic = reIndexer(conic),
             polarLine = reIndexer(polarLine),
         )
-    }
+    } as E
 
 /** Copies case-by-case by hard-__casting__ [newParameters] as an appropriate type for `this` */
-fun Expr.copyWithNewParameters(
+inline fun <reified E : Expr> E.copyWithNewParameters(
     newParameters: Parameters
-): Expr =
+): E =
     when (this) {
         is Incidence -> copy(
             parameters = newParameters as IncidenceParameters
@@ -618,4 +625,4 @@ fun Expr.copyWithNewParameters(
         is ConicIntersection -> this
         is PolarLine -> this
         is Pole -> this
-    }
+    } as E

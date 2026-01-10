@@ -7,8 +7,8 @@ import kotlin.test.Test
 
 class ExpressionForestTest {
 
-    private fun makeForest(size: Int): Map<Ix, ExprOutput?> {
-        val forest = mutableMapOf<Ix, ExprOutput?>()
+    private fun makeForest(size: Int): Map<Ix, ConformalExprOutput?> {
+        val forest = mutableMapOf<Ix, ConformalExprOutput?>()
         val nFree = maxOf(size.div(50), 3)
         forest += (0 until nFree).map { ix -> ix to null }
         repeat(size - nFree) {

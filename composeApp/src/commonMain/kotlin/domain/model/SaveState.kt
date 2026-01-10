@@ -7,7 +7,7 @@ import domain.ColorAsCss
 import domain.Ix
 import domain.SerializableOffset
 import domain.cluster.LogicalRegion
-import domain.expressions.ExprOutput
+import domain.expressions.ConformalExprOutput
 import domain.reindexingMap
 import domain.settings.ChessboardPattern
 import kotlinx.serialization.SerialName
@@ -25,7 +25,7 @@ data class SaveState(
     val objects: List<GCircle?>,
     val objectColors: Map<Ix, ColorAsCss>,
     val objectLabels: Map<Ix, String>,
-    val expressions: Map<Ix, ExprOutput?>,
+    val expressions: Map<Ix, ConformalExprOutput?>,
     val regions: List<LogicalRegion>,
     val backgroundColor: ColorAsCss?,
     val chessboardPattern: ChessboardPattern,
@@ -156,7 +156,7 @@ data class SaveState(
         data class ObjectLabels(val labels: Map<Ix, String?>) : Update
         @Serializable
         @SerialName("Expressions")
-        data class Expressions(val expressions: Map<Ix, ExprOutput?>) : Update
+        data class Expressions(val expressions: Map<Ix, ConformalExprOutput?>) : Update
         @Serializable
         @SerialName("Regions")
         data class Regions(val regions: List<LogicalRegion>) : Replacement
@@ -341,7 +341,7 @@ data class SaveState(
         val objects: MutableList<GCircle?> = this.objects.toMutableList()
         val objectColors: MutableMap<Ix, ColorAsCss> = this.objectColors.toMutableMap()
         val objectLabels: MutableMap<Ix, String> = this.objectLabels.toMutableMap()
-        val expressions: MutableMap<Ix, ExprOutput?> = this.expressions.toMutableMap()
+        val expressions: MutableMap<Ix, ConformalExprOutput?> = this.expressions.toMutableMap()
         var regions: List<LogicalRegion> = this.regions
         var backgroundColor: Color? = this.backgroundColor
         var chessboardPattern: ChessboardPattern = this.chessboardPattern

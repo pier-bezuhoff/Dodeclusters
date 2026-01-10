@@ -5,31 +5,35 @@ import domain.Ix
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Single-output expression from [expr] */
+typealias ConformalExprOutput = ExprOutput<Expr.Conformal>
+
+/** Single-value expression result of [expr]. ([Expr] in general has multi-value results) */
 @Serializable
 @Immutable
-sealed interface ExprOutput {
-    val expr: Expr
+sealed interface ExprOutput<out E> where E : Expr {
+    val expr: E
 
     @Serializable
     @SerialName("Just")
-    data class Just(override val expr: Expr.OneToOne) : ExprOutput
+    data class Just<out E>(override val expr: E) : ExprOutput<E> where E : Expr.OneToOne
+
     @Serializable
     @SerialName("OneOf")
-    data class OneOf(
-        override val expr: Expr.OneToMany,
+    data class OneOf<out E>(
+        override val expr: E,
         val outputIndex: Ix
-    ) : ExprOutput
+    ) : ExprOutput<E> where E : Expr.OneToMany
 }
 
-inline fun ExprOutput.reIndex(
+@Suppress("UNCHECKED_CAST")
+inline fun <reified E : Expr> ExprOutput<E>.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
-): ExprOutput =
+): ExprOutput<E> =
     when (this) {
         is ExprOutput.Just -> copy(
-            expr.reIndex { reIndexer(it) } as Expr.OneToOne
+            expr.reIndex { reIndexer(it) } as E
         )
         is ExprOutput.OneOf -> copy(
-            expr.reIndex { reIndexer(it) } as Expr.OneToMany
+            expr.reIndex { reIndexer(it) } as E
         )
     }

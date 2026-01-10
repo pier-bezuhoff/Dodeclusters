@@ -1196,7 +1196,7 @@ class EditorViewModel : ViewModel() {
         return Rect(left, top, right, bottom)
     }
 
-    fun exprOf(index: Ix): Expr? =
+    fun exprOf(index: Ix): Expr.Conformal? =
         expressions.expressions[index]?.expr
 
     fun isFree(index: Ix): Boolean =
@@ -2909,7 +2909,7 @@ class EditorViewModel : ViewModel() {
             submode = when (sm.parameters) {
                 is InterpolationParameters -> { // single adjustable expr case
                     val (expr, outputIndices, reservedIndices) = sm.adjustables[0]
-                    val newExpr = expr.copyWithNewParameters(parameters) as Expr.OneToMany
+                    val newExpr = expr.copyWithNewParameters(parameters) as Expr.Conformal.OneToMany
                     val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
                         newExpr = newExpr,
                         targetIndices = outputIndices,
@@ -2939,7 +2939,7 @@ class EditorViewModel : ViewModel() {
                     val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
                     for ((expr, outputIndices, reservedIndices) in sm.adjustables) {
                         val sourceIndex = (expr as Expr.TransformLike).target
-                        val newExpr = expr.copyWithNewParameters(parameters) as Expr.OneToMany
+                        val newExpr = expr.copyWithNewParameters(parameters) as Expr.Conformal.OneToMany
                         val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
                             newExpr = newExpr,
                             targetIndices = outputIndices,

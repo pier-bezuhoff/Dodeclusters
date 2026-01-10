@@ -9,11 +9,11 @@ import kotlinx.serialization.Serializable
 data class PPoint(
     val x: Double,
     val y: Double,
-    val w: Double,
+    val isFinite: Boolean = true,
 ) {
     init {
         require(
-            x.isFinite() && y.isFinite() && w.isFinite()
-        ) { "Invalid Point($x, $y, $w)" }
+            x.isFinite() && y.isFinite()
+        ) { "Invalid Point($x, $y, isFinite = $isFinite)" }
     }
 }
