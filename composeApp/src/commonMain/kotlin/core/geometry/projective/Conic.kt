@@ -205,7 +205,7 @@ data class Conic(
         fun wedge(c1: Conic, c2: Conic, c3: Conic, c4: Conic, c5: Conic): Conic =
             TODO("wedge -> outer product repr -> *e_pd*e_md*e_cd*e_x*e_y*e_p")
         fun wedge(c1: Conic, c2: Conic, c3: Conic, c4: Conic): Quadruplet =
-            TODO("dual quadruplet")
+            TODO("pencil quadruplet")
         fun wedge(c1: Conic, c2: Conic): Quadruplet =
             TODO("intersection quadruplet")
     }

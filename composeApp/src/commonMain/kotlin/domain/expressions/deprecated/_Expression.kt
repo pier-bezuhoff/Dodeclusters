@@ -3,7 +3,7 @@ package domain.expressions.deprecated
 import androidx.compose.runtime.Immutable
 import domain.Ix
 import domain.expressions.Expr
-import domain.expressions.Expression
+import domain.expressions.ExprOutput
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -25,9 +25,9 @@ sealed interface _Expression {
 
     fun toExpression(
         foldIndexed: (_Indexed) -> Ix,
-    ): Expression =
+    ): ExprOutput =
         when (val e = this) {
-            is Just -> Expression.Just(when (val expr = e.expr) {
+            is Just -> ExprOutput.Just(when (val expr = e.expr) {
                 is _Expr.CircleBy3Points -> Expr.CircleBy3Points(foldIndexed(expr.object1), foldIndexed(expr.object2), foldIndexed(expr.object3))
                 is _Expr.CircleByCenterAndRadius -> Expr.CircleByCenterAndRadius(foldIndexed(expr.center), foldIndexed(expr.radiusPoint))
                 is _Expr.CircleByPencilAndPoint -> Expr.CircleByPencilAndPoint(foldIndexed(expr.pencilObject1), foldIndexed(expr.pencilObject2), foldIndexed(expr.perpendicularObject))
@@ -36,7 +36,7 @@ sealed interface _Expression {
                 is _Expr.LineBy2Points -> Expr.LineBy2Points(foldIndexed(expr.object1), foldIndexed(expr.object2))
             }
             )
-            is OneOf -> Expression.OneOf(when (val expr = e.expr) {
+            is OneOf -> ExprOutput.OneOf(when (val expr = e.expr) {
                 is _Expr.CircleExtrapolation -> Expr.CircleExtrapolation(expr.parameters, foldIndexed(expr.startCircle), foldIndexed(expr.endCircle))
                 is _Expr.CircleInterpolation -> Expr.CircleInterpolation(expr.parameters, foldIndexed(expr.startCircle), foldIndexed(expr.endCircle))
                 is _Expr.Intersection -> Expr.Intersection(foldIndexed(expr.circle1), foldIndexed(expr.circle2))

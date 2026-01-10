@@ -4,12 +4,11 @@ import compareScenarios
 import domain.Ix
 import kotlin.random.Random
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class ExpressionForestTest {
 
-    private fun makeForest(size: Int): Map<Ix, Expression?> {
-        val forest = mutableMapOf<Ix, Expression?>()
+    private fun makeForest(size: Int): Map<Ix, ExprOutput?> {
+        val forest = mutableMapOf<Ix, ExprOutput?>()
         val nFree = maxOf(size.div(50), 3)
         forest += (0 until nFree).map { ix -> ix to null }
         repeat(size - nFree) {
@@ -18,14 +17,14 @@ class ExpressionForestTest {
             when {
                 r % 3 == 0 -> {
                     val parent = Random.nextInt(forest.size)
-                    forest[i] = Expression.Just(
+                    forest[i] = ExprOutput.Just(
                         Expr.Incidence(IncidenceParameters(0.0), parent)
                     )
                 }
                 r % 2 == 0 -> {
                     val parent1 = Random.nextInt(forest.size)
                     val parent2 = Random.nextInt(forest.size)
-                    forest[i] = Expression.Just(
+                    forest[i] = ExprOutput.Just(
                         Expr.LineBy2Points(parent1, parent2)
                     )
                 }
@@ -33,7 +32,7 @@ class ExpressionForestTest {
                     val parent1 = Random.nextInt(forest.size)
                     val parent2 = Random.nextInt(forest.size)
                     val parent3 = Random.nextInt(forest.size)
-                    forest[i] = Expression.OneOf(
+                    forest[i] = ExprOutput.OneOf(
                         Expr.LoxodromicMotion(
                             LoxodromicMotionParameters(0f, 0.0, 1),
                             parent1, parent2, parent3

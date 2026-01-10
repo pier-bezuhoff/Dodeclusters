@@ -54,7 +54,7 @@ import domain.compressConstraints
 import domain.entails
 import domain.expressions.BiInversionParameters
 import domain.expressions.Expr
-import domain.expressions.Expression
+import domain.expressions.ExprOutput
 import domain.expressions.ExpressionForest
 import domain.expressions.ExtrapolationParameters
 import domain.expressions.IncidenceParameters
@@ -1312,7 +1312,7 @@ class EditorViewModel : ViewModel() {
                         p?.let { point.distanceFrom(p) } ?: Double.POSITIVE_INFINITY
                     }.index
                     if (closestIndex != null) { // far intersection already exists
-                        val p = expressions.addMultiExpression(Expression.OneOf(expr, intersectionOutputIndex))
+                        val p = expressions.addMultiExpression(ExprOutput.OneOf(expr, intersectionOutputIndex))
                             as Point
                         objectModel.addDownscaledObject(p)
                         objectModel.invalidate()
@@ -3602,11 +3602,11 @@ class EditorViewModel : ViewModel() {
                         objectModel.addDownscaledObject(point)
                     }
                     is ArcPathPoint.Intersection -> {
-                        val expression = Expression.OneOf(
+                        val exprOutput = ExprOutput.OneOf(
                             Expr.Intersection(vertex.carrier1Index, vertex.carrier2Index),
                             outputIndex = 0
                         )
-                        val point = expressions.addMultiExpression(expression) as Point
+                        val point = expressions.addMultiExpression(exprOutput) as Point
                         objectModel.addDownscaledObject(point)
                     }
                 }

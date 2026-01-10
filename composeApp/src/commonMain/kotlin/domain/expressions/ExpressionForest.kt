@@ -30,7 +30,7 @@ private const val ABANDONED_TIER: Tier = -2
  * @param[objects] reference to shared, *downscaled* mutable mirror-list of VM.objects
  */
 class ExpressionForest(
-    initialExpressions: Map<Ix, Expression?>, // pls include all possible indices
+    initialExpressions: Map<Ix, ExprOutput?>, // pls include all possible indices
     private val objects: MutableList<GCircle?>,
 ) {
     // for the VM.objects list nulls correspond to unrealized outputs of multi-functions
@@ -39,7 +39,7 @@ class ExpressionForest(
      * object index -> its expression, `null` meaning "free" object
      * `expressions.keys` == `objects.indices`
      */
-    val expressions: MutableMap<Ix, Expression?> = initialExpressions.toMutableMap()
+    val expressions: MutableMap<Ix, ExprOutput?> = initialExpressions.toMutableMap()
 
     /** parent index -> set of all its children with *direct* dependency,
      * inversion of [Expr.args] */
@@ -85,13 +85,13 @@ class ExpressionForest(
      * @param[multiExpressionCache] cache used to store multi-output [ExprResult]
      * of [Expr.OneToMany]
      */
-    private fun Expression.eval(
+    private fun ExprOutput.eval(
         multiExpressionCache: MutableMap<Expr.OneToMany, ExprResult>
     ): GCircle? =
         when (this) {
-            is Expression.Just ->
+            is ExprOutput.Just ->
                 expr.eval(objects).firstOrNull()
-            is Expression.OneOf -> {
+            is ExprOutput.OneOf -> {
                 val results = multiExpressionCache.getOrPut(expr) {
                     expr.eval(objects)
                 }
@@ -118,7 +118,7 @@ class ExpressionForest(
     /** don't forget to upscale the result afterwards! */
     fun addSoloExpr(expr: Expr.OneToOne): GCircle? {
         val ix = calculateNextIndex()
-        expressions[ix] = Expression.Just(expr)
+        expressions[ix] = ExprOutput.Just(expr)
         expr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
         }
@@ -135,12 +135,12 @@ class ExpressionForest(
     }
 
     /** don't forget to upscale the result afterwards! */
-    fun addMultiExpression(expression: Expression.OneOf): GCircle? {
-        val expr = expression.expr
-        val result = expr.eval(objects)[expression.outputIndex]
+    fun addMultiExpression(exprOutput: ExprOutput.OneOf): GCircle? {
+        val expr = exprOutput.expr
+        val result = expr.eval(objects)[exprOutput.outputIndex]
         val ix = calculateNextIndex()
         val tier = computeTier(ix, expr)
-        expressions[ix] = expression
+        expressions[ix] = exprOutput
         expr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
         }
@@ -150,7 +150,7 @@ class ExpressionForest(
         } else { // no hopping over tiers, we good
             tier2ixs.add(setOf(ix))
         }
-        println("$ix -> $expression -> $result")
+        println("$ix -> $exprOutput -> $result")
         return result
     }
 
@@ -166,7 +166,7 @@ class ExpressionForest(
             else result.size
         repeat(resultSize) { outputIndex ->
             val ix = ix0 + outputIndex
-            expressions[ix] = Expression.OneOf(expr, outputIndex)
+            expressions[ix] = ExprOutput.OneOf(expr, outputIndex)
             expr.args.forEach { parentIx ->
                 children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
             }
@@ -216,7 +216,7 @@ class ExpressionForest(
         val previousTier = ix2tier[ix]!!
         tier2ixs[previousTier] = tier2ixs[previousTier] - ix
         ix2tier[ix] = UNCALCULATED_TIER
-        expressions[ix] = Expression.Just(newExpr)
+        expressions[ix] = ExprOutput.Just(newExpr)
         newExpr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
         }
@@ -319,14 +319,14 @@ class ExpressionForest(
             if (e != null && e.expr.args.all { it in sources }) {
                 val newExpr = e.expr.reIndex { oldIx -> source2new[oldIx]!! }
                 when (e) {
-                    is Expression.Just -> {
+                    is ExprOutput.Just -> {
                         addSoloExpr(
                             newExpr as Expr.OneToOne
                         )
                     }
-                    is Expression.OneOf -> {
+                    is ExprOutput.OneOf -> {
                         addMultiExpression(
-                            Expression.OneOf(newExpr as Expr.OneToMany, e.outputIndex)
+                            ExprOutput.OneOf(newExpr as Expr.OneToMany, e.outputIndex)
                         )
                     }
                 }
@@ -339,7 +339,7 @@ class ExpressionForest(
     /**
      * Change [Parameters] of all outputs of a given [Expr.OneToMany] to the one in [newExpr].
      * Assumption: old expr and [newExpr] are of the same type.
-     * @param[targetIndices] indices of all [Expression.OneOf] of the given expression
+     * @param[targetIndices] indices of all [ExprOutput.OneOf] of the given expression
      * @param[reservedIndices] all indices that were ever used to hold results of the expr. They
      * must start with [targetIndices], and then potentially contain `null`-ed indices.
      * @return updated ([targetIndices], [reservedIndices], updated objects at new target indices (to be set))
@@ -382,7 +382,7 @@ class ExpressionForest(
         }
         for (i in result.indices) {
             val ix = newTargetIndices[i]
-            expressions[ix] = Expression.OneOf(newExpr, outputIndex = i)
+            expressions[ix] = ExprOutput.OneOf(newExpr, outputIndex = i)
         }
         return Triple(newTargetIndices, newMaxRange, result)
     }
@@ -484,7 +484,7 @@ class ExpressionForest(
             if (expr is Expr.Incidence && o is Point) {
                 val parent = objects[expr.carrier]
                 if (parent is CircleOrLine) {
-                    expressions[ix] = Expression.Just(expr.copy(
+                    expressions[ix] = ExprOutput.Just(expr.copy(
                         parameters = IncidenceParameters(order = parent.point2order(o))
                     ))
                 }
@@ -505,7 +505,7 @@ class ExpressionForest(
         for ((ix, e) in expressions) {
             val expr = e?.expr
             if (expr is Expr.Incidence && objects[expr.carrier] is Line) {
-                expressions[ix] = Expression.Just(
+                expressions[ix] = ExprOutput.Just(
                     expr.copy(IncidenceParameters(
                         order = zoom * expr.parameters.order
                     ))
@@ -564,7 +564,7 @@ class ExpressionForest(
             is Expr.LineBy2Points -> carrierExpr.object1 == pointIndex || carrierExpr.object2 == pointIndex
             // recursive transform check
             is Expr.TransformLike -> if (pointExpr is Expr.TransformLike) {
-                val sameOutputIndex = (expressions[carrierIndex] as? Expression.OneOf)?.outputIndex == (expressions[pointIndex] as? Expression.OneOf)?.outputIndex
+                val sameOutputIndex = (expressions[carrierIndex] as? ExprOutput.OneOf)?.outputIndex == (expressions[pointIndex] as? ExprOutput.OneOf)?.outputIndex
                 val sameExpr = when (pointExpr) {
                     is Expr.CircleInversion -> pointExpr.copy(target = carrierIndex) == carrierExpr
                     is Expr.Rotation -> pointExpr.copy(target = carrierIndex) == carrierExpr

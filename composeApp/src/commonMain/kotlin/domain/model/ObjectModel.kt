@@ -175,7 +175,7 @@ class ObjectModel {
     }
 
     fun getInfinityIndex(): Ix? {
-        val infinityIndex = objects.indexOfFirst { it == Point.Companion.CONFORMAL_INFINITY }
+        val infinityIndex = objects.indexOfFirst { it == Point.CONFORMAL_INFINITY }
         return if (infinityIndex == -1) {
             null
         } else infinityIndex

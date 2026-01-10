@@ -6,7 +6,7 @@ import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
 import domain.expressions.Expr
-import domain.expressions.Expression
+import domain.expressions.ExprOutput
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.ObjectConstruct
 import domain.expressions.reIndex
@@ -56,7 +56,7 @@ data class Constellation(
         }
     }
 
-    fun toExpressionMap(): Map<Ix, Expression?> =
+    fun toExpressionMap(): Map<Ix, ExprOutput?> =
         objects.mapIndexed { ix0, o ->
             val ix = ix0 - FIRST_INDEX
             when (o) {
@@ -66,7 +66,7 @@ data class Constellation(
         }.toMap()
 
     /**
-     * Replace deprecated [Expression]s with proper substitutes.
+     * Replace deprecated [ExprOutput]s with proper substitutes.
      * So far it replaces:
      * - [Expr.LineBy2Points] with [Expr.CircleBy3Points], adding [Point.CONFORMAL_INFINITY] at
      * index `0` when necessary.
@@ -90,7 +90,7 @@ data class Constellation(
                         is ObjectConstruct.Dynamic -> construct.copy(
                             expression = when (val expr = construct.expression.expr) {
                                 is Expr.LineBy2Points ->
-                                    Expression.Just(Expr.CircleBy3Points(
+                                    ExprOutput.Just(Expr.CircleBy3Points(
                                         expr.object1 + 1,
                                         expr.object2 + 1,
                                         0, // infinity index
@@ -117,7 +117,7 @@ data class Constellation(
                                 ObjectConstruct.Dynamic(
                                     when (val expr = construct.expression.expr) {
                                         is Expr.LineBy2Points ->
-                                            Expression.Just(Expr.CircleBy3Points(
+                                            ExprOutput.Just(Expr.CircleBy3Points(
                                                 expr.object1, expr.object2, infinityIndex,
                                             ))
                                         else -> construct.expression
@@ -148,7 +148,7 @@ data class Constellation(
                     1, 2, 0, 13
                 ).let { expr ->
                     (0 .. 9).map { outputIndex ->
-                        ObjectConstruct.Dynamic(Expression.OneOf(expr, outputIndex))
+                        ObjectConstruct.Dynamic(ExprOutput.OneOf(expr, outputIndex))
                     }
                 } +
                 Expr.LoxodromicMotion(
@@ -156,7 +156,7 @@ data class Constellation(
                     2, 1, 0, 3
                 ).let { expr ->
                     (0 .. 9).map { outputIndex ->
-                        ObjectConstruct.Dynamic(Expression.OneOf(expr, outputIndex))
+                        ObjectConstruct.Dynamic(ExprOutput.OneOf(expr, outputIndex))
                     }
                 }
             ,

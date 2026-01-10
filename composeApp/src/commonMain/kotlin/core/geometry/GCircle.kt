@@ -4,7 +4,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
 
-/** A circle, line, imaginary circle or point (in short: CLIP) */
+/** Conformal geometry generalization of a circle.
+ * Unifies circles, lines, imaginary circles and points (CLIP for short) */
 @Immutable
 @Serializable
 sealed interface GCircle {

@@ -17,13 +17,13 @@ class ExpressionTest {
             ObjectConstruct.ConcretePoint(Point(0.0, 200.0)),
             ObjectConstruct.ConcretePoint(Point(120.0, 90.0)),
             ObjectConstruct.ConcretePoint(Point(200.0, 0.0)),
-            ObjectConstruct.Dynamic(Expression.Just(Expr.CircleBy3Points(0, 1, 2))),
+            ObjectConstruct.Dynamic(ExprOutput.Just(Expr.CircleBy3Points(0, 1, 2))),
             ObjectConstruct.ConcreteCircle(Circle(100.0, 100.0, 50.0)),
-            ObjectConstruct.Dynamic(Expression.OneOf(Expr.Intersection(3, 4), 0)), // 5
-            ObjectConstruct.Dynamic(Expression.OneOf(Expr.Intersection(3, 4), 1)), // 6
+            ObjectConstruct.Dynamic(ExprOutput.OneOf(Expr.Intersection(3, 4), 0)), // 5
+            ObjectConstruct.Dynamic(ExprOutput.OneOf(Expr.Intersection(3, 4), 1)), // 6
             ObjectConstruct.ConcreteCircle(Circle(300.0, 300.0, 20.0)), // 7
         ) + (0..19).map { k ->
-            ObjectConstruct.Dynamic(Expression.OneOf(Expr.LoxodromicMotion(LoxodromicMotionParameters(360f, 4.0, 20), 5, 6, 7), k))
+            ObjectConstruct.Dynamic(ExprOutput.OneOf(Expr.LoxodromicMotion(LoxodromicMotionParameters(360f, 4.0, 20), 5, 6, 7), k))
         } // 8 .. 28
         ,
         emptyList()

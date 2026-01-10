@@ -7,6 +7,7 @@ import core.geometry.Point
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// for conformal geometry
 @Serializable
 @Immutable
 sealed interface ObjectConstruct {
@@ -28,6 +29,6 @@ sealed interface ObjectConstruct {
     @Serializable
     @SerialName("DynamicExpression")
     data class Dynamic(
-        val expression: Expression
+        val expression: ExprOutput
     ) : ObjectConstruct
 }
