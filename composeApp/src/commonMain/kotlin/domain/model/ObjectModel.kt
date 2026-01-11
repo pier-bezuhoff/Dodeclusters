@@ -13,7 +13,7 @@ import core.geometry.scaled00
 import domain.Ix
 import domain.PathCache
 import domain.expressions.Expr
-import domain.expressions.ExpressionForest
+import domain.expressions.ConformalExpressions
 
 // TODO: Projective variant
 // MAYBE: additionally store GeneralizedCircle representations
@@ -229,7 +229,7 @@ class ObjectModel {
     }
 
     /** Already includes [invalidatePositions] */
-    fun changeExpr(expressions: ExpressionForest, ix: Ix, newExpr: Expr.Conformal.OneToOne) {
+    fun changeExpr(expressions: ConformalExpressions, ix: Ix, newExpr: Expr.Conformal.OneToOne) {
         val newObject = expressions.changeExpr(ix, newExpr)
         setDownscaledObject(ix, newObject)
         val toBeUpdated = expressions.update(listOf(ix))
@@ -238,7 +238,7 @@ class ObjectModel {
     }
 
     /** Already includes [invalidatePositions] */
-    fun setObjectsWithConsequences(expressions: ExpressionForest, changes: Map<Ix, GCircle?>) {
+    fun setObjectsWithConsequences(expressions: ConformalExpressions, changes: Map<Ix, GCircle?>) {
         for ((ix, newObject) in changes) {
             setObject(ix, newObject)
         }
@@ -249,7 +249,7 @@ class ObjectModel {
 
     /** Already includes [invalidatePositions]
      * @return all indices of changed objects (including [ix]) */
-    fun setObjectWithConsequences(expressions: ExpressionForest, ix: Ix, newObject: GCircle?): List<Ix> {
+    fun setObjectWithConsequences(expressions: ConformalExpressions, ix: Ix, newObject: GCircle?): List<Ix> {
         setObject(ix, newObject)
         val updatedIndices = expressions.update(listOf(ix))
         syncObjects(updatedIndices)
@@ -269,7 +269,7 @@ class ObjectModel {
      * @return indices of all changed objects/expressions
      */
     fun transform(
-        expressions: ExpressionForest,
+        expressions: ConformalExpressions,
         targets: List<Ix>,
         translation: Offset = Offset.Companion.Zero,
         focus: Offset = Offset.Companion.Unspecified,
@@ -282,14 +282,14 @@ class ObjectModel {
         val targetsSet = targets.toSet()
         val requiresZoom = zoom != 1f
         val requiresRotation = rotationAngle != 0f
-        val allIncidentPoints = mutableListOf<Ix>()
+        val allIncidentPoints = mutableSetOf<Ix>()
         if (!requiresZoom && !requiresRotation) { // translation only
             // we assume the transformation is not Id
             for (ix in targets) {
                 val o = objects[ix]
                 objects[ix] = o?.translated(translation)
                 if (o is Line) {
-                    expressions.getIncidentPointsTo(ix, allIncidentPoints)
+                    expressions.incidentChildren[ix]?.let { allIncidentPoints += it }
                 }
             }
         } else {
@@ -298,12 +298,12 @@ class ObjectModel {
                     is Circle -> {
                         objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
                         if (requiresRotation) {
-                            expressions.getIncidentPointsTo(ix, allIncidentPoints)
+                            expressions.incidentChildren[ix]?.let { allIncidentPoints += it }
                         }
                     }
                     is Line -> {
                         objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                        expressions.getIncidentPointsTo(ix, allIncidentPoints)
+                        expressions.incidentChildren[ix]?.let { allIncidentPoints += it }
                     }
                     is Point -> {
                         objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
@@ -326,7 +326,7 @@ class ObjectModel {
         val updatedIndices = expressions.update(targets)
         syncObjects(updatedIndices)
         invalidatePositions()
-        return (targets + updatedIndices + allUnmovedIncidentPoints).toSet()
+        return targetsSet + updatedIndices + allUnmovedIncidentPoints
     }
 
     companion object {

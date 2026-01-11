@@ -47,7 +47,7 @@ class ExpressionForestTest {
     @Test
     fun `performance of getAllParents`() {
         val size = 100
-        val forest = ExpressionForest(
+        val forest = ConformalExpressions(
             makeForest(size),
             MutableList(size) { null }
         )
@@ -75,7 +75,7 @@ class ExpressionForestTest {
     @Test
     fun `performance of getAllChildren`() {
         val size = 1000
-        val forest = ExpressionForest(
+        val forest = ConformalExpressions(
             makeForest(size),
             MutableList(size) { null }
         )

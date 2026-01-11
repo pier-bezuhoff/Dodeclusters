@@ -101,6 +101,13 @@ inline fun <reified A, reified B> tryCatch2(
     }
 }
 
+inline fun <K, V : Any> MutableMap<K, V>.setOrRemove(key: K, value: V?) {
+    if (value == null)
+        remove(key)
+    else
+        set(key, value)
+}
+
 /** To be used in `when` pattern matching in cases that should NEVER be reached */
 @Throws(IllegalStateException::class)
 inline fun never(info: String = ""): Nothing =

@@ -1,7 +1,11 @@
+@file:Suppress("LocalVariableName")
+
 package core.geometry.projective
 
 import androidx.compose.runtime.Immutable
+import core.geometry.EPSILON
 import kotlinx.serialization.Serializable
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -19,7 +23,7 @@ import kotlin.math.sin
  *
  * dual basis vectors square to -1, all others to +1
  *
- * Equivalent matrix representation:
+ * Equivalent matrix representation (times -1):
  * ```
  *   pd + md      cd        -x
  *      cd     pd - md      -y
@@ -43,13 +47,53 @@ data class Conic(
     enum class Type {
         ELLIPSE, HYPERBOLA,
         PARABOLA,
-        DOUBLE_LINE, TWO_LINES,
+        // over the complex plane degenerates are either 2 intersecting lines or double line
+        TWO_INTERSECTING_LINES, TWO_PARALLEL_LINE, DOUBLE_LINE,
         POINT, // aka 2 imaginary lines
         EMPTY,
     }
 
-    val type: Type = TODO()
-    val isDegenerate: Boolean = TODO()
+    // ellipse, parabola, hyperbola discriminator
+    val m2det: Double = run {
+        val A = pd + md
+        val B = cd
+        val C = pd - md
+        A*C - B*B
+    }
+    // degenerate conic discriminator
+    val m3det: Double = run {
+        val A = pd + md
+        val B = cd
+        val C = pd - md
+        val D = -x
+        val E = -y
+        val F = 2*p
+        A*(C*F - E*E) - B*(B*F - E*D) + D*(B*E - C*D)
+    }
+    val isDegenerate: Boolean = abs(m3det) < EPSILON
+    val type: Type = when {
+        isDegenerate -> when {
+            abs(m2det) < EPSILON -> {
+                val s = x*x + y*y - 4*pd*p // D*D + E*E - (A + C)*F
+                when {
+                    abs(s) < EPSILON ->
+                        if (x == 0.0 && y == 0.0)
+                            Type.EMPTY
+                        else
+                            Type.DOUBLE_LINE
+                    s > 0.0 -> Type.TWO_PARALLEL_LINE
+                    else -> Type.EMPTY
+                }
+            }
+            m2det > 0.0 -> Type.POINT // degenerate ellipse
+            else -> Type.TWO_INTERSECTING_LINES // degenerate hyperbola
+        }
+        else -> when {
+            abs(m2det) < EPSILON -> Type.PARABOLA
+            m2det > 0.0 -> Type.ELLIPSE
+            else -> Type.HYPERBOLA
+        }
+    }
 
     inline fun <reified R> fold(
         crossinline onPoint: (PPoint) -> R,

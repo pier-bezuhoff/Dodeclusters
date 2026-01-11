@@ -33,7 +33,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
-typealias ExprResult = List<GCircle?>
+typealias ConformalExprResult = List<GCircle?>
 
 /**
  * Raw expression that can have one or several outputs:
@@ -298,7 +298,7 @@ sealed interface Expr {
 // MAYBE: keep VM.objects downscaled and only upscale them for draw
 inline fun Expr.Conformal.eval(
     crossinline get: (Ix) -> GCircle?,
-): ExprResult {
+): ConformalExprResult {
     val g = { ix: Ix ->
         get(ix) ?: throw NullPointerException() // i miss MonadError
     }
@@ -402,7 +402,7 @@ inline fun Expr.Conformal.eval(
 
 // this eval is 4 times to 15 times faster (but lacks downscale)
 // BUT adding downscale completely cancels speed improvement
-fun Expr.Conformal.eval(objects: List<GCircle?>): ExprResult {
+fun Expr.Conformal.eval(objects: List<GCircle?>): ConformalExprResult {
     return when (this) {
         // idt it's worth to polymorphism eval
         is OneToOne -> {
@@ -491,9 +491,11 @@ fun Expr.Conformal.eval(objects: List<GCircle?>): ExprResult {
     }
 }
 
-inline fun <reified E : Expr> E.reIndex(
+// cant reify EXPR cuz its generic in Expressions
+@Suppress("UNCHECKED_CAST")
+inline fun <EXPR : Expr> EXPR.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
-): E =
+): EXPR =
     when (this) {
         is Incidence -> copy(
             carrier = reIndexer(carrier)
@@ -582,12 +584,12 @@ inline fun <reified E : Expr> E.reIndex(
             conic = reIndexer(conic),
             polarLine = reIndexer(polarLine),
         )
-    } as E
+    } as EXPR
 
 /** Copies case-by-case by hard-__casting__ [newParameters] as an appropriate type for `this` */
-inline fun <reified E : Expr> E.copyWithNewParameters(
+inline fun <reified EXPR : Expr> EXPR.copyWithNewParameters(
     newParameters: Parameters
-): E =
+): EXPR =
     when (this) {
         is Incidence -> copy(
             parameters = newParameters as IncidenceParameters
@@ -625,4 +627,4 @@ inline fun <reified E : Expr> E.copyWithNewParameters(
         is ConicIntersection -> this
         is PolarLine -> this
         is Pole -> this
-    } as E
+    } as EXPR

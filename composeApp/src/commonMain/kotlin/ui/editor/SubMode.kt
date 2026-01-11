@@ -76,8 +76,8 @@ sealed interface SubMode {
      * number is generally divisible by the n-steps parameter
      * @property[parameters] should be the same for all [adjustables]
      */
-    data class ExprAdjustment(
-        val adjustables: List<AdjustableExpr>, // non-empty
+    data class ExprAdjustment<EXPR : Expr>(
+        val adjustables: List<AdjustableExpr<EXPR>>, // non-empty
         val regions: List<Ix> = emptyList(),
     ) : SubMode { // allow it in Drag mode
 
@@ -102,8 +102,8 @@ sealed interface SubMode {
  * were previously allocated for this multi [expr]
  */
 @Immutable
-data class AdjustableExpr(
-    val expr: Expr,
+data class AdjustableExpr<out EXPR : Expr>(
+    val expr: EXPR,
     val outputIndices: List<Ix>,
     val reservedIndices: List<Ix>,
 )

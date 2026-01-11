@@ -1,11 +1,7 @@
 package domain.expressions
 
-import core.geometry.CircleOrLine
-import core.geometry.GCircle
-import core.geometry.Line
-import core.geometry.Point
 import domain.Ix
-import kotlin.math.abs
+import domain.setOrRemove
 
 /**
  * tier = 0: free object,
@@ -18,44 +14,60 @@ import kotlin.math.abs
  */
 typealias Tier = Int
 /** object with no dependencies */
-private const val FREE_TIER: Tier = 0
+internal const val FREE_TIER: Tier = 0
 /** stub for yet-to-be-computed tier */
-private const val UNCALCULATED_TIER: Tier = -1
+internal const val UNCALCULATED_TIER: Tier = -1
 /** stub tier for forever-deleted object index */
-private const val ABANDONED_TIER: Tier = -2
+internal const val ABANDONED_TIER: Tier = -2
 
-// TODO: separate generic and Conformal-specific parts
-// MAYBE: cache carrier->incident points lookup (since it's called on every VM.transform)
+// kotlin disallows E1 : E & F where E is generic
+// hence this type mess
+// see https://discuss.kotlinlang.org/t/current-intersection-type-options-in-kotlin/20903
 /**
  * Class for managing expressions (~ AST controller)
  * @param[objects] reference to shared, *downscaled* mutable mirror-list of VM.objects
+ * @param[EXPR] [Expr] subtype (eg [Expr.Conformal])
+ * @param[EXPR_ONE_TO_ONE] [EXPR_ONE_TO_ONE] : [Expr.OneToOne], [EXPR_ONE_TO_ONE] : [EXPR] (eg [Expr.Conformal.OneToOne])
+ * @param[EXPR_ONE_TO_MANY] [EXPR_ONE_TO_MANY] : [Expr.OneToMany], [EXPR_ONE_TO_MANY] : [EXPR] (eg [Expr.Conformal.OneToMany])
+ * @param[R] object type & expression result type (eg [core.geometry.GCircle])
  */
-class ExpressionForest(
-    initialExpressions: Map<Ix, ConformalExprOutput?>, // pls include all possible indices
-    private val objects: MutableList<GCircle?>,
+@Suppress("UNCHECKED_CAST")
+sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_TO_MANY : Expr.OneToMany, R : Any>(
+    initialExpressions: Map<Ix, ExprOutput<EXPR>?>, // pls include all possible indices
+    protected val objects: MutableList<R?>,
 ) {
+//    typealias ExprResult = List<R?>
+
     // for the VM.objects list nulls correspond to unrealized outputs of multi-functions
     // here nulls correspond to free objects
     /**
      * object index -> its expression, `null` meaning "free" object
      * `expressions.keys` == `objects.indices`
      */
-    val expressions: MutableMap<Ix, ConformalExprOutput?> = initialExpressions.toMutableMap()
-
-    /** parent index -> set of all its children with *direct* dependency,
-     * inversion of [Expr.args] */
+    val expressions: MutableMap<Ix, ExprOutput<EXPR>?> = initialExpressions.toMutableMap()
+    /**
+     * parent index -> set of all its children with *direct* dependency, inversion of [Expr.args]
+     *
+     * NOTE: [incidentChildren] has to be manually synced each time we alter [children]
+     */
     val children: MutableMap<Ix, Set<Ix>> = expressions
         .keys
         .associateWith { emptySet<Ix>() }
         .toMutableMap()
-
+    /** NOTE: have to be updated in sync with [children] */
+    val incidentChildren: MutableMap<Ix, Set<Ix>> = children.mapValues { (_, childs) ->
+        childs
+            .filter { expressions[it]?.expr is Expr.Incidence }
+            .toSet()
+    }.filterValues { it.isNotEmpty() }
+    .toMutableMap()
     /** index -> tier */
-    private val ix2tier: MutableMap<Ix, Tier> = initialExpressions
+    protected val ix2tier: MutableMap<Ix, Tier> = initialExpressions
         .keys
         .associateWith { UNCALCULATED_TIER } // stub
         .toMutableMap()
     /** tier -> indices */
-    private val tier2ixs: MutableList<Set<Ix>>
+    protected val tier2ixs: MutableList<Set<Ix>>
 
     init {
         require(objects.indices.toSet() == initialExpressions.keys) {
@@ -80,27 +92,33 @@ class ExpressionForest(
                     }
                 }
             }
+        for (parentIx in children.keys) {
+            incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
+        }
     }
 
+    protected abstract fun EXPR.evaluate(
+        objects: List<R?>
+    ): List<R?>
+
     /**
-     * @param[multiExpressionCache] cache used to store multi-output [ExprResult]
+     * @param[multiExpressionCache] cache used to store multi-output `List<R?>`
      * of [Expr.OneToMany]
      */
-    private fun ConformalExprOutput.eval(
-        multiExpressionCache: MutableMap<Expr.Conformal.OneToMany, ExprResult>
-    ): GCircle? =
-        when (this) {
-            is ExprOutput.Just ->
-                expr.eval(objects).firstOrNull()
-            is ExprOutput.OneOf -> {
-                val results = multiExpressionCache.getOrPut(expr as Expr.Conformal.OneToMany) {
-                    expr.eval(objects)
-                }
-                results.getOrNull(outputIndex)
+    protected fun ExprOutput<EXPR>.evaluateWithCache(
+        multiExpressionCache: MutableMap<EXPR_ONE_TO_MANY, List<R?>>
+    ): R? = when (this) {
+        is ExprOutput.Just ->
+            expr.evaluate(objects).firstOrNull()
+        is ExprOutput.OneOf -> {
+            val results = multiExpressionCache.getOrPut(expr as EXPR_ONE_TO_MANY) {
+                expr.evaluate(objects)
             }
+            results.getOrNull(outputIndex)
         }
+    }
 
-    private fun calculateNextIndex(): Ix =
+    protected fun calculateNextIndex(): Ix =
         expressions.keys.maxOfOrNull { it + 1 } ?: 0
 
     /** append an empty expression and return its index */
@@ -117,33 +135,35 @@ class ExpressionForest(
     }
 
     /** don't forget to upscale the result afterwards! */
-    fun addSoloExpr(expr: Expr.Conformal.OneToOne): GCircle? {
+    fun addSoloExpr(expr: EXPR_ONE_TO_ONE): R? {
         val ix = calculateNextIndex()
-        expressions[ix] = ExprOutput.Just(expr)
+        expressions[ix] = ExprOutput.Just(expr as Expr.OneToOne) as ExprOutput<EXPR>
         expr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
+            incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
         }
-        val tier = computeTier(ix, expr)
+        val tier = computeTier(ix, expr as EXPR)
         ix2tier[ix] = tier
         if (tier < tier2ixs.size) {
             tier2ixs[tier] = tier2ixs[tier] + ix
         } else { // no hopping over tiers, we good
             tier2ixs.add(setOf(ix))
         }
-        val result = expr.eval(objects)
+        val result = (expr as EXPR).evaluate(objects)
         println("$ix -> $expr -> $result")
         return result.firstOrNull()
     }
 
     /** don't forget to upscale the result afterwards! */
-    fun addMultiExpression(exprOutput: ExprOutput.OneOf<Expr.Conformal.OneToMany>): GCircle? {
+    fun addMultiExpression(exprOutput: ExprOutput.OneOf<EXPR_ONE_TO_MANY>): R? {
         val expr = exprOutput.expr
-        val result = expr.eval(objects)[exprOutput.outputIndex]
+        val result = (expr as EXPR).evaluate(objects)[exprOutput.outputIndex]
         val ix = calculateNextIndex()
         val tier = computeTier(ix, expr)
-        expressions[ix] = exprOutput
+        expressions[ix] = exprOutput as ExprOutput<EXPR>
         expr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
+            incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
         }
         ix2tier[ix] = tier
         if (tier < tier2ixs.size) {
@@ -156,20 +176,19 @@ class ExpressionForest(
     }
 
     /** don't forget to upscale the result afterwards! */
-    fun addMultiExpr(expr: Expr.Conformal.OneToMany): ExprResult {
-        val periodicRotation =
-            expr is Expr.LoxodromicMotion && expr.parameters.dilation == 0.0 && abs(expr.parameters.angle) == 360f
-        val result = expr.eval(objects)
+    fun addMultiExpr(expr: EXPR_ONE_TO_MANY): List<R?> {
+        val result = (expr as EXPR).evaluate(objects)
         val ix0 = calculateNextIndex()
         val tier = computeTier(ix0, expr)
         val resultSize =
-            if (periodicRotation) result.size - 1 // small hack to avoid duplicating original object
+            if (isExprPeriodic(expr)) result.size - 1 // small hack to avoid duplicating original object
             else result.size
         repeat(resultSize) { outputIndex ->
             val ix = ix0 + outputIndex
             expressions[ix] = ExprOutput.OneOf(expr, outputIndex)
             expr.args.forEach { parentIx ->
                 children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
+                incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
             }
             ix2tier[ix] = tier
             if (tier < tier2ixs.size) {
@@ -182,7 +201,11 @@ class ExpressionForest(
         return result
     }
 
-    fun findExpr(expr: Expr.Conformal?): List<Ix> {
+    /** Used in [addMultiExpr] to avoid creating the last object in 360-rotation-like
+     * operation which would duplicate the original target object */
+    protected abstract fun isExprPeriodic(expr: EXPR_ONE_TO_MANY): Boolean
+
+    fun findExpr(expr: EXPR?): List<Ix> {
         return expressions.entries
             .filter { (_, e) -> e?.expr == expr }
             .map { it.key }
@@ -194,6 +217,7 @@ class ExpressionForest(
             expressions[ix]?.let { previousExpr ->
                 previousExpr.expr.args.forEach { parentIx ->
                     children[parentIx] = (children[parentIx] ?: emptySet()) - ix
+                    incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
                 }
             }
             expressions[ix] = null
@@ -208,18 +232,20 @@ class ExpressionForest(
     }
 
     /** The new node still inherits its previous children */
-    fun changeExpr(ix: Ix, newExpr: Expr.Conformal.OneToOne): GCircle? {
+    fun changeExpr(ix: Ix, newExpr: EXPR_ONE_TO_ONE): R? {
         expressions[ix]?.let { previousExpr ->
             previousExpr.expr.args.forEach { parentIx ->
                 children[parentIx] = (children[parentIx] ?: emptySet()) - ix
+                incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
             }
         }
         val previousTier = ix2tier[ix]!!
         tier2ixs[previousTier] = tier2ixs[previousTier] - ix
         ix2tier[ix] = UNCALCULATED_TIER
-        expressions[ix] = ExprOutput.Just(newExpr)
+        expressions[ix] = ExprOutput.Just(newExpr) as ExprOutput<EXPR>
         newExpr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
+            incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
         }
         val tier = computeTier(ix)
         ix2tier[ix] = tier
@@ -229,13 +255,13 @@ class ExpressionForest(
             tier2ixs.add(setOf(ix))
         }
         recomputeChildrenTiers(ix)
-        val result = newExpr.eval(objects)
+        val result = (newExpr as EXPR).evaluate(objects)
 //        println("change $ix -> $newExpr -> $result")
         return result.firstOrNull()
     }
 
     /**
-     * Delete [ixs] nodes and all of their children from the [ExpressionForest] by
+     * Delete [ixs] nodes and all of their children from the [ConformalExpressions] by
      * setting [expressions]`[...] = null` and clearing [children], [ix2tier], [tier2ixs]
      * @return all the deleted nodes indices
      * */
@@ -249,10 +275,13 @@ class ExpressionForest(
         for (d in deleted) {
             expressions[d] = null // do not delete it since we want to keep indices (keys) in sync with VM.circles
             children.remove(d)
+            incidentChildren.remove(d)
             ix2tier[d] = ABANDONED_TIER
         }
-        for ((parentIx, childIxs) in children)
+        for ((parentIx, childIxs) in children) {
             children[parentIx] = childIxs - deleted
+            incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
+        }
         for ((tier, tiered) in tier2ixs.withIndex())
             tier2ixs[tier] = tiered - deleted
         return deleted
@@ -277,10 +306,10 @@ class ExpressionForest(
         }
         val toBeUpdated = (changed - changedIxs.toSet()) // we assume that changedIxs are up-to-date
             .sortedBy { ix2tier[it] }
-        val cache: MutableMap<Expr.Conformal.OneToMany, ExprResult> = mutableMapOf()
+        val cache: MutableMap<EXPR_ONE_TO_MANY, List<R?>> = mutableMapOf()
         for (ix in toBeUpdated) {
             // children always have non-null expressions
-            objects[ix] = expressions[ix]?.eval(cache)
+            objects[ix] = expressions[ix]?.evaluateWithCache(cache)
         }
         return toBeUpdated
     }
@@ -291,12 +320,12 @@ class ExpressionForest(
      * NOTE: don't forget to sync all `VM.objects` with [objects]
      */
     fun reEval() {
-        val cache = mutableMapOf<Expr.Conformal.OneToMany, ExprResult>()
+        val cache = mutableMapOf<EXPR_ONE_TO_MANY, List<R?>>()
         val deps = tier2ixs.drop(1) // no need to calc for tier 0
         for (ixs in deps) {
             for (ix in ixs) {
                 expressions[ix]?.let { expression ->
-                    objects[ix] = expression.eval(cache)
+                    objects[ix] = expression.evaluateWithCache(cache)
                 }
             }
         }
@@ -320,16 +349,10 @@ class ExpressionForest(
             if (e != null && e.expr.args.all { it in sources }) {
                 val newExpr = e.expr.reIndex { oldIx -> source2new[oldIx]!! }
                 when (e) {
-                    is ExprOutput.Just -> {
-                        addSoloExpr(
-                            newExpr as Expr.Conformal.OneToOne
-                        )
-                    }
-                    is ExprOutput.OneOf -> {
-                        addMultiExpression(
-                            ExprOutput.OneOf(newExpr as Expr.Conformal.OneToMany, e.outputIndex)
-                        )
-                    }
+                    is ExprOutput.Just -> addSoloExpr(newExpr as EXPR_ONE_TO_ONE)
+                    is ExprOutput.OneOf -> addMultiExpression(
+                        ExprOutput.OneOf(newExpr as EXPR_ONE_TO_MANY, e.outputIndex)
+                    )
                 }
             } else {
                 addFree()
@@ -346,10 +369,10 @@ class ExpressionForest(
      * @return updated ([targetIndices], [reservedIndices], updated objects at new target indices (to be set))
      * */
     fun adjustMultiExpr(
-        newExpr: Expr.Conformal.OneToMany,
+        newExpr: EXPR_ONE_TO_MANY,
         targetIndices: List<Ix>,
         reservedIndices: List<Ix>,
-    ): Triple<List<Ix>, List<Ix>, List<GCircle?>> {
+    ): Triple<List<Ix>, List<Ix>, List<R?>> {
         if (targetIndices.isEmpty()) // idk why it can happen but i had witnessed it
             return Triple(targetIndices, reservedIndices, emptyList())
         val i0 = targetIndices.first()
@@ -359,7 +382,7 @@ class ExpressionForest(
         }
         val tier = ix2tier[i0]!!
         var newMaxRange = reservedIndices
-        val result = newExpr.eval(objects)
+        val result = (newExpr as EXPR).evaluate(objects)
         val sizeIncrease = result.size - targetIndices.size
         val newTargetIndices: List<Ix>
         if (sizeIncrease > 0) {
@@ -368,8 +391,10 @@ class ExpressionForest(
                 newMaxRange = newMaxRange + (expressions.size until expressions.size + sizeOverflow)
             }
             val addedIndices = newMaxRange.take(result.size).drop(targetIndices.size)
-            for (parentIx in newExpr.args)
+            for (parentIx in newExpr.args) {
                 children[parentIx] = (children[parentIx] ?: emptySet()) + addedIndices
+                incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
+            }
             tier2ixs[tier] = tier2ixs[tier] + addedIndices
             for (ix in addedIndices)
                 ix2tier[ix] = tier
@@ -405,8 +430,8 @@ class ExpressionForest(
     /**
      * You must either supply [expr0] or set `expressions[ix]` BEFORE calling this
      */
-    private fun computeTier(ix: Ix, expr0: Expr.Conformal? = null): Tier {
-        val expr: Expr.Conformal? = expr0 ?: expressions[ix]?.expr
+    private fun computeTier(ix: Ix, expr0: EXPR? = null): Tier {
+        val expr: EXPR? = expr0 ?: expressions[ix]?.expr
         return if (expr == null) {
             FREE_TIER
         } else {
@@ -464,58 +489,14 @@ class ExpressionForest(
         }
     }
 
-    // MAYBE: cache
-    fun getIncidentPoints(parentIx: Ix): List<Ix> =
-        (children[parentIx] ?: emptySet())
-            .filter { expressions[it]?.expr is Expr.Incidence }
+    private fun getIncidentChildren(carrierIndex: Ix): Set<Ix>? =
+        children[carrierIndex]
+            ?.filter { expressions[it]?.expr is Expr.Incidence }
+            ?.toSet()
 
-    // MAYBE: cache cuz we use it very often
-    @Suppress("NOTHING_TO_INLINE")
-    inline fun getIncidentPointsTo(parentIx: Ix, destination: MutableCollection<in Ix>) {
-        (children[parentIx] ?: emptySet())
-            .filterTo(destination) { expressions[it]?.expr is Expr.Incidence }
-    }
-
-    // still unsure about potentially better ways of doing it
-    // especially for incident-p on dependent objects of those transformed
-    fun adjustIncidentPointExpressions(incidentPointIndices: Collection<Ix> = expressions.keys) {
-        for (ix in incidentPointIndices) {
-            val expr = expressions[ix]?.expr
-            val o = objects[ix]
-            if (expr is Expr.Incidence && o is Point) {
-                val parent = objects[expr.carrier]
-                if (parent is CircleOrLine) {
-                    expressions[ix] = ExprOutput.Just(expr.copy(
-                        parameters = IncidenceParameters(order = parent.point2order(o))
-                    ))
-                }
-            }
-        }
-    }
-
-    // FIX: NG, maybe bc of translation, idk
-    /**
-     * Adjust parameters of all points incident to lines,
-     * scaling them by [zoom]. Should be used after uniformly scaling
-     * all objects (e.g. when [get] scales source objects) to correctly zoom in/out
-     * points on lines.
-     * @return indices of changed expressions. You may want to [update]`()` them
-     */
-    fun scaleLineIncidenceExpressions(zoom: Double): List<Ix> {
-        val changedIxs = mutableListOf<Ix>()
-        for ((ix, e) in expressions) {
-            val expr = e?.expr
-            if (expr is Expr.Incidence && objects[expr.carrier] is Line) {
-                expressions[ix] = ExprOutput.Just(
-                    expr.copy(IncidenceParameters(
-                        order = zoom * expr.parameters.order
-                    ))
-                )
-                changedIxs.add(ix)
-            }
-        }
-        return changedIxs
-    }
+    abstract fun adjustIncidentPointExpressions(
+        incidentPointIndices: Collection<Ix> = expressions.keys
+    )
 
     @Suppress("NOTHING_TO_INLINE")
     inline fun getImmediateParents(childIx: Ix): List<Ix> =
@@ -539,44 +520,14 @@ class ExpressionForest(
         return visited
     }
 
-    fun findExistingIntersectionIndices(circleIndex1: Ix, circleIndex2: Ix): List<Ix> {
+    fun findExistingIntersectionIndices(intersectorIndex1: Ix, intersectorIndex2: Ix): List<Ix> {
         // find points that are incident to both
         return expressions.keys.filter { pointIndex ->
-            pointIndex != circleIndex1 && pointIndex != circleIndex2 &&
-            testDependentIncidence(pointIndex, circleIndex1) &&
-            testDependentIncidence(pointIndex, circleIndex2)
+            pointIndex != intersectorIndex1 && pointIndex != intersectorIndex2 &&
+            testDependentIncidence(pointIndex, intersectorIndex1) &&
+            testDependentIncidence(pointIndex, intersectorIndex2)
         }
     }
 
-    fun testDependentIncidence(pointIndex: Ix, carrierIndex: Ix): Boolean {
-        val pointExpr = expressions[pointIndex]?.expr
-        val directIncidence =
-            pointExpr is Expr.Incidence && pointExpr.carrier == carrierIndex ||
-            pointExpr is Expr.Intersection && (pointExpr.circle1 == carrierIndex || pointExpr.circle2 == carrierIndex)
-        val indirectIncidence = when (val carrierExpr = expressions[carrierIndex]?.expr) {
-            is Expr.CircleByCenterAndRadius -> carrierExpr.radiusPoint == pointIndex
-            is Expr.CircleBy3Points -> carrierExpr.object1 == pointIndex || carrierExpr.object2 == pointIndex || carrierExpr.object3 == pointIndex
-            is Expr.CircleBy2PointsAndSagittaRatio -> carrierExpr.chordStartPoint == pointIndex || carrierExpr.chordEndPoint == pointIndex
-            is Expr.CircleByPencilAndPoint ->
-                carrierExpr.perpendicularObject == pointIndex || pointExpr is Expr.Intersection && (
-                    pointExpr.circle1 == carrierExpr.pencilObject1 && pointExpr.circle2 == carrierExpr.pencilObject2 ||
-                    pointExpr.circle1 == carrierExpr.pencilObject2 && pointExpr.circle2 == carrierExpr.pencilObject1
-                )
-            is Expr.LineBy2Points -> carrierExpr.object1 == pointIndex || carrierExpr.object2 == pointIndex
-            // recursive transform check
-            is Expr.TransformLike -> if (pointExpr is Expr.TransformLike) {
-                val sameOutputIndex = (expressions[carrierIndex] as? ExprOutput.OneOf)?.outputIndex == (expressions[pointIndex] as? ExprOutput.OneOf)?.outputIndex
-                val sameExpr = when (pointExpr) {
-                    is Expr.CircleInversion -> pointExpr.copy(target = carrierIndex) == carrierExpr
-                    is Expr.Rotation -> pointExpr.copy(target = carrierIndex) == carrierExpr
-                    is Expr.BiInversion -> pointExpr.copy(target = carrierIndex) == carrierExpr
-                    is Expr.LoxodromicMotion -> pointExpr.copy(target = carrierIndex) == carrierExpr
-                }
-                sameOutputIndex && sameExpr && testDependentIncidence(pointExpr.target, carrierExpr.target)
-            } else false
-            // NOTE: there could exist even more indirect, 2+ step incidence cases tbh
-            else -> false
-        }
-        return directIncidence || indirectIncidence
-    }
+    abstract fun testDependentIncidence(pointIndex: Ix, carrierIndex: Ix): Boolean
 }

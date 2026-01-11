@@ -55,7 +55,7 @@ import domain.entails
 import domain.expressions.BiInversionParameters
 import domain.expressions.Expr
 import domain.expressions.ExprOutput
-import domain.expressions.ExpressionForest
+import domain.expressions.ConformalExpressions
 import domain.expressions.ExtrapolationParameters
 import domain.expressions.IncidenceParameters
 import domain.expressions.InterpolationParameters
@@ -134,7 +134,7 @@ class EditorViewModel : ViewModel() {
     val phantoms: Set<Ix> = objectModel.phantomObjectIndices
     // not in objectModel cuz i want it to be state-backed for nicer caching
     var objectLabels: Map<Ix, String> by mutableStateOf(mapOf())
-    var expressions: ExpressionForest = ExpressionForest( // stub
+    var expressions: ConformalExpressions = ConformalExpressions( // stub
         initialExpressions = emptyMap(),
         objects = objectModel.downscaledObjects,
     )
@@ -483,7 +483,7 @@ class EditorViewModel : ViewModel() {
             }
             objectModel.addObject(o)
         }
-        expressions = ExpressionForest(
+        expressions = ConformalExpressions(
             initialExpressions = constellation.toExpressionMap(),
             objects = objectModel.downscaledObjects,
         )
@@ -582,7 +582,7 @@ class EditorViewModel : ViewModel() {
         if (m is ToolMode && partialArgList?.args?.isNotEmpty() == true) {
             // MAYBE: just pop the last arg
             partialArgList = PartialArgList(m.signature, m.nonEqualityConditions)
-            if (submode is SubMode.ExprAdjustment) {
+            if (submode is SubMode.ExprAdjustment<*>) {
                 cancelExprAdjustment()
             }
         } else {
@@ -618,7 +618,7 @@ class EditorViewModel : ViewModel() {
         objectModel.phantomObjectIndices.clear()
         objectModel.clearObjects()
         objectModel.addObjects(state.objects)
-        expressions = ExpressionForest(
+        expressions = ConformalExpressions(
             initialExpressions = state.expressions,
             objects = objectModel.downscaledObjects,
         )
@@ -1780,7 +1780,7 @@ class EditorViewModel : ViewModel() {
                 else -> null
             }
             val adjustables = listOf(AdjustableExpr(expr, outputIndices, outputIndices))
-            val allAdjustables: List<AdjustableExpr> =
+            val allAdjustables: List<AdjustableExpr<Expr>> =
                 if (
                     expr is Expr.LoxodromicMotion &&
                     expr.otherHalfStart != null
@@ -2905,7 +2905,7 @@ class EditorViewModel : ViewModel() {
      * [parameters] and updates corresponding [objects] */
     fun updateParameters(parameters: Parameters) {
         val sm = submode
-        if (sm is SubMode.ExprAdjustment && parameters != sm.parameters) {
+        if (sm is SubMode.ExprAdjustment<*> && parameters != sm.parameters) {
             submode = when (sm.parameters) {
                 is InterpolationParameters -> { // single adjustable expr case
                     val (expr, outputIndices, reservedIndices) = sm.adjustables[0]
@@ -2935,7 +2935,7 @@ class EditorViewModel : ViewModel() {
                 is BiInversionParameters,
                 is LoxodromicMotionParameters -> {
                     regions = regions.withoutElementsAt(sm.regions)
-                    val newAdjustables = mutableListOf<AdjustableExpr>()
+                    val newAdjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
                     val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
                     for ((expr, outputIndices, reservedIndices) in sm.adjustables) {
                         val sourceIndex = (expr as Expr.TransformLike).target
@@ -3026,7 +3026,7 @@ class EditorViewModel : ViewModel() {
             null
         }
         when (val sm = submode) {
-            is SubMode.ExprAdjustment -> {
+            is SubMode.ExprAdjustment<*> -> {
                 when (val parameters = sm.parameters) {
                     is InterpolationParameters ->
                         defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
@@ -3062,7 +3062,7 @@ class EditorViewModel : ViewModel() {
                 if (submode == null && partialArgList?.args?.isNotEmpty() != true && partialArcPath == null) {
                     switchToCategory(Category.Drag)
                 } else {
-                    if (submode is SubMode.ExprAdjustment) {
+                    if (submode is SubMode.ExprAdjustment<*>) {
                         cancelExprAdjustment()
                         history.recordAccumulatedChanges()
                     }
@@ -3077,7 +3077,7 @@ class EditorViewModel : ViewModel() {
             }
             is SelectionMode -> {
                 when (val sm = submode) {
-                    is SubMode.ExprAdjustment -> {
+                    is SubMode.ExprAdjustment<*> -> {
                         val indices = sm.adjustables.flatMap { it.reservedIndices }.toSet()
                         history.accumulateChangedLocations(
                             objectIndices = indices,
@@ -3099,7 +3099,7 @@ class EditorViewModel : ViewModel() {
 
     fun cancelExprAdjustment() {
         when (val sm = submode) {
-            is SubMode.ExprAdjustment -> {
+            is SubMode.ExprAdjustment<*> -> {
                 val outputs = sm.adjustables.flatMap { it.outputIndices }
                 deleteObjectsWithDependenciesColorsAndRegions(
                     outputs,
@@ -3384,7 +3384,7 @@ class EditorViewModel : ViewModel() {
             is Arg.FixedPoint -> createNewFreePoint(pointArg.toPoint())
         }
         val targetIndices = objArg.indices
-        val adjustables = mutableListOf<AdjustableExpr>()
+        val adjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
         val params0 = defaultRotationParameters.params
         val oldSize = objects.size
         var outputIndex = oldSize
@@ -3425,7 +3425,7 @@ class EditorViewModel : ViewModel() {
             reverseSecondEngine = reverseSecondEngine
         )
         val targetIndices = objArg.indices
-        val adjustables = mutableListOf<AdjustableExpr>()
+        val adjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
         val params0 = defaultBiInversionParameters.params
         val oldSize = objects.size
         var outputIndex = oldSize
@@ -3475,7 +3475,7 @@ class EditorViewModel : ViewModel() {
             ),
         )
         val targetIndices = objArg.indices
-        val adjustables = mutableListOf<AdjustableExpr>()
+        val adjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
         val params0 = defaultLoxodromicMotionParameters.params
         val oldSize = objects.size
         var outputIndex = oldSize
@@ -3567,7 +3567,7 @@ class EditorViewModel : ViewModel() {
 
     fun updateLoxodromicBidirectionality(bidirectional: Boolean) {
         val sm = submode
-        if (sm is SubMode.ExprAdjustment) {
+        if (sm is SubMode.ExprAdjustment<*>) {
             when (sm.parameters) {
                 is LoxodromicMotionParameters -> {
                     defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters.copy(
@@ -3713,7 +3713,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun confirmCurrentAction() {
-        if (submode is SubMode.ExprAdjustment)
+        if (submode is SubMode.ExprAdjustment<*>)
             confirmAdjustedParameters()
         else if (mode == ToolMode.ARC_PATH)
             completeArcPath()
@@ -3738,7 +3738,7 @@ class EditorViewModel : ViewModel() {
             ToolMode.LOXODROMIC_MOTION -> DialogType.LOXODROMIC_MOTION
             else -> null
         } ?: submode.let { sm ->
-            if (sm is SubMode.ExprAdjustment) {
+            if (sm is SubMode.ExprAdjustment<*>) {
                 when (sm.parameters) {
                     is InterpolationParameters -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
                     is RotationParameters -> DialogType.ROTATION

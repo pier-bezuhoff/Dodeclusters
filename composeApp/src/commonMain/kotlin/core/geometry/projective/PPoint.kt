@@ -3,7 +3,7 @@ package core.geometry.projective
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
-/** A point (x:y:w) on a 2D projective plane. w=0 represents the points on infinity */
+/** A point [x]:[y]:w on a 2D projective plane. [isFinite]=`true` means `w = 1`, otherwise `w = 0` */
 @Immutable
 @Serializable
 data class PPoint(
@@ -13,7 +13,7 @@ data class PPoint(
 ) {
     init {
         require(
-            x.isFinite() && y.isFinite()
+            x.isFinite() && y.isFinite() && (isFinite || x != 0.0 || y != 0.0)
         ) { "Invalid Point($x, $y, isFinite = $isFinite)" }
     }
 }

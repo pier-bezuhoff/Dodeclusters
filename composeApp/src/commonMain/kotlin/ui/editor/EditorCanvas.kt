@@ -270,7 +270,7 @@ fun BoxScope.EditorCanvas(
             ArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
         } else {
             when (val sm = viewModel.submode) {
-                is SubMode.ExprAdjustment -> when (sm.parameters) {
+                is SubMode.ExprAdjustment<*> -> when (sm.parameters) {
                     is InterpolationParameters ->
                         InterpolationInterface(
                             concretePositions = concretePositions,
