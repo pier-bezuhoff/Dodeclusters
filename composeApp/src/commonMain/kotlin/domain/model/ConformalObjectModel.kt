@@ -24,7 +24,11 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         } else infinityIndex
     }
 
-    // NOTE: idk, handling of incident points is messy
+    // NOTE: handling of incident points is half-baked
+    //  under lvl1 IoC when we rotate a dependent line with incidents points on it,
+    //  targets are selected as its free parents,
+    //  so incident points arent adjusted cuz in general children arent transformed the same
+    //  way as their parents unless all the parents experience the same transformation
     override fun transform(
         expressions: Expressions<*, *, *, GCircle>,
         targets: List<Ix>,
@@ -33,9 +37,8 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         zoom: Float,
         rotationAngle: Float,
     ): Set<Ix> {
-        if (targets.isEmpty()) {
+        if (targets.isEmpty())
             return emptySet()
-        }
         val targetsSet = targets.toSet()
         val requiresZoom = zoom != 1f
         val requiresRotation = rotationAngle != 0f
@@ -76,7 +79,8 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         for (j in allUnmovedIncidentPoints) {
             val p0 = objects[j] as? Point
             val p = p0?.transformed(translation, focus, zoom, rotationAngle)
-            downscaledObjects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
+            downscaledObjects[j] = p?.downscale()
+            // objects[ix] will be recalculated & set during the update phase
         }
         syncDownscaledObjects(targets)
         expressions.adjustIncidentPointExpressions(allUnmovedIncidentPoints)

@@ -16,7 +16,7 @@ import domain.expressions.Expressions
  * Very mutable, track [invalidationsState]/[invalidations] for changes and use with care.
  * @param[R] object type (eg [GCircle])
  */
-abstract class ObjectModel<R : Any> {
+sealed class ObjectModel<R : Any> {
     /**
      * All existing objects; `null`s correspond either to unrealized outputs of
      * [domain.expressions.Expr.OneToMany], or to forever deleted objects (they have `null` `VM.expressions`),
