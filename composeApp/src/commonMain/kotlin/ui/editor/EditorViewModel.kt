@@ -81,7 +81,7 @@ import domain.io.constellation2svg
 import domain.io.tryParseDdc
 import domain.model.ChangeHistory
 import domain.model.ContinuousChange
-import domain.model.ObjectModel
+import domain.model.ConformalObjectModel
 import domain.model.SaveState
 import domain.reindexingMap
 import domain.settings.BlendModeType
@@ -128,7 +128,7 @@ import kotlin.time.Duration.Companion.seconds
 // MAYBE: timed autosave (cron-like), e.g. every 10min
 @Suppress("MemberVisibilityCanBePrivate")
 class EditorViewModel : ViewModel() {
-    val objectModel = ObjectModel()
+    val objectModel = ConformalObjectModel()
     val objects: List<GCircle?> = objectModel.objects
     // alt name: ghost[ed] objects
     val phantoms: Set<Ix> = objectModel.phantomObjectIndices
@@ -2481,9 +2481,9 @@ class EditorViewModel : ViewModel() {
     }
 
     /**
-     * Wrapper around [ObjectModel.transform] that adjusts [targets] based on [INVERSION_OF_CONTROL].
+     * Wrapper around [ConformalObjectModel.transform] that adjusts [targets] based on [INVERSION_OF_CONTROL].
      *
-     * [ObjectModel.transform] applies [translation];scaling;rotation
+     * [ConformalObjectModel.transform] applies [translation];scaling;rotation
      * to [targets] (that are all assumed free).
      *
      * Scaling and rotation are w.r.t. fixed [focus] by the factor of
@@ -4120,8 +4120,8 @@ class EditorViewModel : ViewModel() {
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
         // NOTE: changing it presently breaks all line-incident points
         /** [Double] arithmetic is best in range that is closer to 0 */
-        const val UPSCALING_FACTOR = ObjectModel.UPSCALING_FACTOR
-        const val DOWNSCALING_FACTOR = ObjectModel.DOWNSCALING_FACTOR
+        const val UPSCALING_FACTOR = ConformalObjectModel.UPSCALING_FACTOR
+        const val DOWNSCALING_FACTOR = ConformalObjectModel.DOWNSCALING_FACTOR
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)

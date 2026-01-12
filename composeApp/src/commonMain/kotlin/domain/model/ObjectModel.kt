@@ -4,39 +4,33 @@ import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import core.geometry.Circle
 import core.geometry.GCircle
-import core.geometry.ImaginaryCircle
-import core.geometry.Line
-import core.geometry.Point
-import core.geometry.scaled00
 import domain.Ix
 import domain.PathCache
 import domain.expressions.Expr
-import domain.expressions.ConformalExpressions
+import domain.expressions.Expressions
 
-// TODO: Projective variant
-// MAYBE: additionally store GeneralizedCircle representations
-// MAYBE: add ExpressionForest in
 /**
  * Purports to encapsulate & manage [objects] and object-related properties.
+ *
  * Very mutable, track [invalidationsState]/[invalidations] for changes and use with care.
+ * @param[R] object type (eg [GCircle])
  */
-class ObjectModel {
+abstract class ObjectModel<R : Any> {
     /**
-     * All existing [core.geometry.GCircle]s; `null`s correspond either to unrealized outputs of
+     * All existing objects; `null`s correspond either to unrealized outputs of
      * [domain.expressions.Expr.OneToMany], or to forever deleted objects (they have `null` `VM.expressions`),
      * or (rarely) to mismatching type casts.
      *
      * NOTE: don't forget to sync changes to [objects] with [downscaledObjects]
      */
-    val objects: MutableList<GCircle?> = mutableListOf()
+    val objects: MutableList<R?> = mutableListOf()
     /**
      * Same as [objects] but additionally downscaled (optimal for calculations).
      *
      * NOTE: u are responsible for MANUALLY sync-ing them
      */
-    val downscaledObjects: MutableList<GCircle?> = mutableListOf()
+    val downscaledObjects: MutableList<R?> = mutableListOf()
     val objectColors: MutableMap<Ix, Color> = mutableMapOf()
     // alt name: ghost[ed] objects
     val phantomObjectIndices: MutableSet<Int> = mutableSetOf()
@@ -87,21 +81,21 @@ class ObjectModel {
     }
 
     /** Don't forget to [invalidatePositions] post factum */
-    private fun setObject(ix: Ix, newObject: GCircle?) {
+    private fun setObject(ix: Ix, newObject: R?) {
         objects[ix] = newObject
         downscaledObjects[ix] = newObject?.downscale()
         pathCache.invalidateObjectPathAt(ix)
     }
 
     /** Don't forget to [invalidatePositions] post factum */
-    fun setDownscaledObject(ix: Ix, newDownscaledObject: GCircle?) {
+    fun setDownscaledObject(ix: Ix, newDownscaledObject: R?) {
         objects[ix] = newDownscaledObject?.upscale()
         downscaledObjects[ix] = newDownscaledObject
         pathCache.invalidateObjectPathAt(ix)
     }
 
     /** Don't forget to [invalidate] post factum */
-    fun addObject(newObject: GCircle?): Ix {
+    fun addObject(newObject: R?): Ix {
         objects.add(newObject)
         downscaledObjects.add(newObject?.downscale())
         pathCache.addObject()
@@ -109,7 +103,7 @@ class ObjectModel {
     }
 
     /** Don't forget to [invalidate] post factum */
-    fun addDownscaledObject(newDownscaledObject: GCircle?): Ix {
+    fun addDownscaledObject(newDownscaledObject: R?): Ix {
         objects.add(newDownscaledObject?.upscale())
         downscaledObjects.add(newDownscaledObject)
         pathCache.addObject()
@@ -117,7 +111,7 @@ class ObjectModel {
     }
 
     /** Don't forget to [invalidate] post factum */
-    fun addObjects(newObjects: List<GCircle?>) {
+    fun addObjects(newObjects: List<R?>) {
         objects.addAll(newObjects)
         for (o in newObjects) {
             downscaledObjects.add(o?.downscale())
@@ -126,7 +120,7 @@ class ObjectModel {
     }
 
     /** Don't forget to [invalidate] post factum */
-    fun addDownscaledObjects(newObjects: List<GCircle?>) {
+    fun addDownscaledObjects(newObjects: List<R?>) {
         for (o in newObjects) {
             objects.add(o?.upscale())
         }
@@ -173,13 +167,6 @@ class ObjectModel {
             downscaledObjects[ix] = objects[ix]?.downscale()
             pathCache.invalidateObjectPathAt(ix)
         }
-    }
-
-    fun getInfinityIndex(): Ix? {
-        val infinityIndex = objects.indexOfFirst { it == Point.CONFORMAL_INFINITY }
-        return if (infinityIndex == -1) {
-            null
-        } else infinityIndex
     }
 
     /**
@@ -229,7 +216,11 @@ class ObjectModel {
     }
 
     /** Already includes [invalidatePositions] */
-    fun changeExpr(expressions: ConformalExpressions, ix: Ix, newExpr: Expr.Conformal.OneToOne) {
+    fun <EXPR_ONE_TO_ONE : Expr.OneToOne> changeExpr(
+        expressions: Expressions<*, EXPR_ONE_TO_ONE, *, R>,
+        ix: Ix,
+        newExpr: EXPR_ONE_TO_ONE,
+    ) {
         val newObject = expressions.changeExpr(ix, newExpr)
         setDownscaledObject(ix, newObject)
         val toBeUpdated = expressions.update(listOf(ix))
@@ -238,7 +229,10 @@ class ObjectModel {
     }
 
     /** Already includes [invalidatePositions] */
-    fun setObjectsWithConsequences(expressions: ConformalExpressions, changes: Map<Ix, GCircle?>) {
+    fun setObjectsWithConsequences(
+        expressions: Expressions<*, *, *, R>,
+        changes: Map<Ix, R?>
+    ) {
         for ((ix, newObject) in changes) {
             setObject(ix, newObject)
         }
@@ -249,7 +243,11 @@ class ObjectModel {
 
     /** Already includes [invalidatePositions]
      * @return all indices of changed objects (including [ix]) */
-    fun setObjectWithConsequences(expressions: ConformalExpressions, ix: Ix, newObject: GCircle?): List<Ix> {
+    fun setObjectWithConsequences(
+        expressions: Expressions<*, *, *, R>,
+        ix: Ix,
+        newObject: R?
+    ): List<Ix> {
         setObject(ix, newObject)
         val updatedIndices = expressions.update(listOf(ix))
         syncObjects(updatedIndices)
@@ -268,90 +266,15 @@ class ObjectModel {
      *
      * @return indices of all changed objects/expressions
      */
-    fun transform(
-        expressions: ConformalExpressions,
+    abstract fun transform(
+        expressions: Expressions<*, *, *, R>,
         targets: List<Ix>,
-        translation: Offset = Offset.Companion.Zero,
-        focus: Offset = Offset.Companion.Unspecified,
+        translation: Offset = Offset.Zero,
+        focus: Offset = Offset.Unspecified,
         zoom: Float = 1f,
         rotationAngle: Float = 0f,
-    ): Set<Ix> {
-        if (targets.isEmpty()) {
-            return emptySet()
-        }
-        val targetsSet = targets.toSet()
-        val requiresZoom = zoom != 1f
-        val requiresRotation = rotationAngle != 0f
-        val allIncidentPoints = mutableSetOf<Ix>()
-        if (!requiresZoom && !requiresRotation) { // translation only
-            // we assume the transformation is not Id
-            for (ix in targets) {
-                val o = objects[ix]
-                objects[ix] = o?.translated(translation)
-                if (o is Line) {
-                    expressions.incidentChildren[ix]?.let { allIncidentPoints += it }
-                }
-            }
-        } else {
-            for (ix in targets) {
-                when (val o = objects[ix]) {
-                    is Circle -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                        if (requiresRotation) {
-                            expressions.incidentChildren[ix]?.let { allIncidentPoints += it }
-                        }
-                    }
-                    is Line -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                        expressions.incidentChildren[ix]?.let { allIncidentPoints += it }
-                    }
-                    is Point -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                    }
-                    is ImaginaryCircle -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                    }
-                    null -> {}
-                }
-            }
-        }
-        val allUnmovedIncidentPoints = allIncidentPoints - targetsSet
-        for (j in allUnmovedIncidentPoints) {
-            val p0 = objects[j] as? Point
-            val p = p0?.transformed(translation, focus, zoom, rotationAngle)
-            downscaledObjects[j] = p?.downscale() // objects[ix] will be recalculated & set during update phase
-        }
-        syncDownscaledObjects(targets)
-        expressions.adjustIncidentPointExpressions(allUnmovedIncidentPoints)
-        val updatedIndices = expressions.update(targets)
-        syncObjects(updatedIndices)
-        invalidatePositions()
-        return targetsSet + updatedIndices + allUnmovedIncidentPoints
-    }
+    ): Set<Ix>
 
-    companion object {
-        const val UPSCALING_FACTOR = 2_000.0
-        const val DOWNSCALING_FACTOR = 1.0/UPSCALING_FACTOR
-
-        fun GCircle.downscale(): GCircle =
-            scaled00(DOWNSCALING_FACTOR)
-        fun GCircle.upscale(
-//            screenCenter: Offset = Offset.Zero
-        ): GCircle =
-            when (this) {
-                is Circle -> {
-                    // this introduces visual errors
-//                    val upscaledCircle =
-//                        copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
-//                    if (upscaledCircle.radius >= MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS)
-//                        upscaledCircle.approximateToLine(Offset.Zero)
-//                    else upscaledCircle
-                    copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
-                }
-                is Line -> copy(c = UPSCALING_FACTOR * c)
-                is Point -> copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y)
-                is ImaginaryCircle ->
-                    copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
-            }
-    }
+    abstract fun R.downscale(): R
+    abstract fun R.upscale(): R
 }

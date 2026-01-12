@@ -154,13 +154,12 @@ fun LoxodromicMotionDialog(
                     PreTextFieldLabel(Res.string.loxodromic_motion_hyperbolic_prompt)
                     DoubleTextField(
                         value = dilation,
-                        onNewValue = { dilation = it; println("tf dilation:=$it") },
+                        onNewValue = { dilation = it },
                         placeholderStringResource = Res.string.dilation_placeholder,
                         nFractionalDigits = 3,
                     )
                 }
-                // BUG: below zero is -2 for some reason??
-                Slider(dilation.toFloat(), { dilation = it.toDouble(); println("slider dilation:=$dilation <- $it") },
+                Slider(dilation.toFloat(), { dilation = it.toDouble() },
                     valueRange = defaults.dilationRange
                 )
                 Row {
