@@ -3,9 +3,11 @@
 package domain
 
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sign
 
 // we unironically need Prelude for kotlin...
 
@@ -31,17 +33,19 @@ fun Number.formatDecimals(
     fractionalDigits: Int,
     showTrailingZeroes: Boolean = true
 ): String {
-    val x = this.toDouble() // 12.345
+    val x = this.toDouble() // 12.3456
+    val isNegative = x < 0.0
     val factor = 10.0.pow(fractionalDigits).roundToInt() // 100 (fractionalDigits = 2)
-    val x00 = (x * factor).roundToInt() // 1234.5
-    val integerPart: Int = x00.floorDiv(factor) // 12
-    val fractionalPart: Int = x00 - integerPart*factor // 34
+    val x00 = (abs(x) * factor).roundToInt() // 1234.56 -> 1235
+    val integerPart: Int = x00.div(factor) // 12
+    val fractionalPart: Int = x00 - integerPart*factor // 35
+    val sign = if (isNegative) "-" else ""
     return if (showTrailingZeroes)
-        "$integerPart.$fractionalPart" // 12.34
+        "$sign$integerPart.$fractionalPart" // 12.35
     else if (fractionalPart != 0)
-        "$integerPart.$fractionalPart".trimEnd('0')
-    else "$integerPart"
-}
+        "$sign$integerPart.$fractionalPart".trimEnd('0')
+    else "$sign$integerPart"
+} // -0.6666666, 3   f=1000   x*f = -666.6666  x00=-667   ip=-1   fp=333  -> -1.333
 
 /** [x] >= 0 => +1, otherwise => -1 */
 fun signNonZero(x: Double): Int =

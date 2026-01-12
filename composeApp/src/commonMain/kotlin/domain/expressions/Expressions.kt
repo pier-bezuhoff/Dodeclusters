@@ -177,12 +177,15 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
 
     /** don't forget to upscale the result afterwards! */
     fun addMultiExpr(expr: EXPR_ONE_TO_MANY): List<R?> {
-        val result = (expr as EXPR).evaluate(objects)
+        val result0 = (expr as EXPR).evaluate(objects)
+        val isPeriodic = isExprPeriodic(expr)
+        val result = // small hack to avoid duplicating the original object
+            if (isPeriodic && result0.isNotEmpty())
+                result0.dropLast(1)
+            else result0
         val ix0 = calculateNextIndex()
         val tier = computeTier(ix0, expr)
-        val resultSize =
-            if (isExprPeriodic(expr)) result.size - 1 // small hack to avoid duplicating original object
-            else result.size
+        val resultSize = result.size
         repeat(resultSize) { outputIndex ->
             val ix = ix0 + outputIndex
             expressions[ix] = ExprOutput.OneOf(expr, outputIndex)
@@ -382,7 +385,12 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         }
         val tier = ix2tier[i0]!!
         var newMaxRange = reservedIndices
-        val result = (newExpr as EXPR).evaluate(objects)
+        val result0 = (newExpr as EXPR).evaluate(objects)
+        val isPeriodic = isExprPeriodic(newExpr)
+        val result = // small hack to avoid duplicating the original object
+            if (isPeriodic && result0.isNotEmpty())
+                result0.dropLast(1)
+            else result0
         val sizeIncrease = result.size - targetIndices.size
         val newTargetIndices: List<Ix>
         if (sizeIncrease > 0) {

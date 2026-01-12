@@ -528,6 +528,8 @@ fun LabelColonBigValue(
     )
 }
 
+// BUG: sometimes on desktop after moving the slider and refocusing on the text field
+//  again arrows and some other keys stop working, instead affecting the cursor
 @Composable
 fun FloatTextField(
     value: Float,
