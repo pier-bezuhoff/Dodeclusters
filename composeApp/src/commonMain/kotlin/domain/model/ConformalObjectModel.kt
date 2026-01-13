@@ -51,6 +51,7 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
             }
         }
         val gluedIncidentPoints = expressions.getGluedIncidentPoints(targetsSet)
+//        println("glued to $targets: $gluedIncidentPoints")
         for (j in gluedIncidentPoints) {
             val p0 = objects[j] as? Point
             val p = p0?.transformed(translation, focus, zoom, rotationAngle)
@@ -60,10 +61,10 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         syncDownscaledObjects(targets)
         val updatedIndices = expressions.update(targets, excludedIxs = gluedIncidentPoints)
         expressions.adjustIncidentPointExpressions(gluedIncidentPoints)
-        // gluedIncidentPoints <= updatedIndices
-        syncObjects(updatedIndices)
+        val allUpdatedIndices = gluedIncidentPoints + updatedIndices
+        syncObjects(allUpdatedIndices)
         invalidatePositions()
-        return targetsSet + updatedIndices + gluedIncidentPoints
+        return targetsSet + allUpdatedIndices
     }
 
     override fun GCircle.downscale(): GCircle =
