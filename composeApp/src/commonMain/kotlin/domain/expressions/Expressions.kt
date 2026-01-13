@@ -49,6 +49,8 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
      * parent index -> set of all its children with *direct* dependency, inversion of [Expr.args]
      *
      * NOTE: [incidentChildren] has to be manually synced each time we alter [children]
+     *
+     * NOTE: [parents2gluedIncidentPoints] has to be cleared each time we alter [children]
      */
     val children: MutableMap<Ix, Set<Ix>> = expressions
         .keys
@@ -61,6 +63,9 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             .toSet()
     }.filterValues { it.isNotEmpty() }
     .toMutableMap()
+    /** Cache for looking up all glued/fully constrained incident point children by
+     * a set of parents. Cache should clear on [children] changes. */
+    protected val parents2gluedIncidentPoints: MutableMap<Set<Ix>, Set<Ix>> = mutableMapOf()
     /** index -> tier */
     protected val ix2tier: MutableMap<Ix, Tier> = initialExpressions
         .keys
@@ -127,6 +132,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         expressions[ix] = null
         children[ix] = emptySet()
         ix2tier[ix] = FREE_TIER
+        // no need to clear glued cache
         if (tier2ixs.isEmpty())
             tier2ixs += setOf(ix)
         else
@@ -149,6 +155,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         } else { // no hopping over tiers, we good
             tier2ixs.add(setOf(ix))
         }
+        parents2gluedIncidentPoints.clear()
         val result = (expr as EXPR).evaluate(objects)
         println("$ix -> $expr -> $result")
         return result.firstOrNull()
@@ -171,6 +178,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         } else { // no hopping over tiers, we good
             tier2ixs.add(setOf(ix))
         }
+        parents2gluedIncidentPoints.clear()
         println("$ix -> $exprOutput -> $result")
         return result
     }
@@ -200,6 +208,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
                 tier2ixs.add(setOf(ix))
             }
         }
+        parents2gluedIncidentPoints.clear()
         println("$ix0:${ix0+result.size} -> $expr -> $result")
         return result
     }
@@ -231,6 +240,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             tier2ixs[FREE_TIER] = tier2ixs[FREE_TIER] + ix
             ix2tier[ix] = FREE_TIER
             recomputeChildrenTiers(ix)
+            parents2gluedIncidentPoints.clear()
         }
     }
 
@@ -258,6 +268,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             tier2ixs.add(setOf(ix))
         }
         recomputeChildrenTiers(ix)
+        parents2gluedIncidentPoints.clear()
         val result = (newExpr as EXPR).evaluate(objects)
 //        println("change $ix -> $newExpr -> $result")
         return result.firstOrNull()
@@ -287,18 +298,20 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         }
         for ((tier, tiered) in tier2ixs.withIndex())
             tier2ixs[tier] = tiered - deleted
+        parents2gluedIncidentPoints.clear()
         return deleted
     }
 
     /**
      * Recursively re-evaluates expressions given that [changedIxs]/parents have changed
-     * and updates [objects]
+     * and updates [objects] (except [excludedIxs])
      *
      * NOTE: don't forget to sync `VM.objects` with [objects] at returned indices
      * @return all affected/child indices that were altered by [update] (excluding [changedIxs])
      */
     fun update(
         changedIxs: List<Ix>,
+        excludedIxs: Set<Ix> = emptySet(),
         // deltas (translation, rotation, scaling) to apply to immediate carried objects
     ): List<Ix> {
         val changed = mutableSetOf<Ix>()
@@ -307,7 +320,8 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             lvl = lvl.flatMap { children[it] ?: emptySet() }
             changed += lvl
         }
-        val toBeUpdated = (changed - changedIxs.toSet()) // we assume that changedIxs are up-to-date
+        // we assume that changedIxs are up-to-date
+        val toBeUpdated = (changed - changedIxs.toSet() - excludedIxs)
             .sortedBy { ix2tier[it] }
         val cache: MutableMap<EXPR_ONE_TO_MANY, List<R?>> = mutableMapOf()
         for (ix in toBeUpdated) {
@@ -418,6 +432,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             val ix = newTargetIndices[i]
             expressions[ix] = ExprOutput.OneOf(newExpr, outputIndex = i)
         }
+        parents2gluedIncidentPoints.clear()
         return Triple(newTargetIndices, newMaxRange, result)
     }
 
@@ -502,6 +517,40 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             ?.filter { expressions[it]?.expr is Expr.Incidence }
             ?.toSet()
 
+    // MAYBE: for performance, preemptively populate the cache somehow (after clearing)
+    fun getGluedIncidentPoints(parents: Set<Ix>): Set<Ix> {
+        val cached = parents2gluedIncidentPoints[parents]
+        if (cached != null)
+            return cached
+        val tieredParents: Map<Tier, Set<Ix>> = parents
+            .groupBy { ix2tier[it]!! }
+            .mapValues { it.value.toSet() }
+        val accumulatedParents = mutableSetOf<Ix>()
+        var parentsOfThisTier: Set<Ix> = emptySet()
+        var glued: Set<Ix> = emptySet()
+        val gluedIncidentPoints = mutableSetOf<Ix>()
+        for (tier in tier2ixs.indices) {
+            parentsOfThisTier = (tieredParents[tier] ?: emptySet()) + glued
+            if (parentsOfThisTier.isEmpty())
+                continue
+            accumulatedParents += parentsOfThisTier
+            glued = parentsOfThisTier
+                .flatMap { parent -> children[parent] ?: emptySet() }
+//                .distinct()
+                .filter { child ->
+                    expressions[child]?.expr?.args?.all { arg -> arg in accumulatedParents } == true
+                }.toSet()
+            gluedIncidentPoints += glued.filter { child ->
+                expressions[child]?.expr is Expr.Incidence && objects[child] != null
+            }
+        }
+        parents2gluedIncidentPoints[parents] = gluedIncidentPoints
+        return gluedIncidentPoints
+    }
+
+    /** For each incident point in [incidentPointIndices] project it onto its
+     * carrier and set order appropriate to its present position. Should be used
+     * after manually transforming the incident points. */
     abstract fun adjustIncidentPointExpressions(
         incidentPointIndices: Collection<Ix> = expressions.keys
     )

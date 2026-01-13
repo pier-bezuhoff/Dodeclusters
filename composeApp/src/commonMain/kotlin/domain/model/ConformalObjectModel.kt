@@ -24,11 +24,7 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         } else infinityIndex
     }
 
-    // NOTE: handling of incident points is half-baked
-    //  under lvl1 IoC when we rotate a dependent line with incidents points on it,
-    //  targets are selected as its free parents,
-    //  so incident points arent adjusted cuz in general children arent transformed the same
-    //  way as their parents unless all the parents experience the same transformation
+    // NOTE: handling of incident points on non-glued dependent objects is off
     override fun transform(
         expressions: Expressions<*, *, *, GCircle>,
         targets: List<Ix>,
@@ -42,52 +38,32 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         val targetsSet = targets.toSet()
         val requiresZoom = zoom != 1f
         val requiresRotation = rotationAngle != 0f
-        val allIncidentPoints = mutableSetOf<Ix>()
-        if (!requiresZoom && !requiresRotation) { // translation only
+        if (requiresZoom || requiresRotation) {
+            for (ix in targets) {
+                val o = objects[ix]
+                objects[ix] = o?.transformed(translation, focus, zoom, rotationAngle)
+            }
+        } else { // translation only
             // we assume the transformation is not Id
             for (ix in targets) {
                 val o = objects[ix]
                 objects[ix] = o?.translated(translation)
-                if (o is Line) {
-                    expressions.incidentChildren[ix]?.let { allIncidentPoints += it }
-                }
-            }
-        } else {
-            for (ix in targets) {
-                when (val o = objects[ix]) {
-                    is Circle -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                        if (requiresRotation) {
-                            expressions.incidentChildren[ix]?.let { allIncidentPoints += it }
-                        }
-                    }
-                    is Line -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                        expressions.incidentChildren[ix]?.let { allIncidentPoints += it }
-                    }
-                    is Point -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                    }
-                    is ImaginaryCircle -> {
-                        objects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
-                    }
-                    null -> {}
-                }
             }
         }
-        val allUnmovedIncidentPoints = allIncidentPoints - targetsSet
-        for (j in allUnmovedIncidentPoints) {
+        val gluedIncidentPoints = expressions.getGluedIncidentPoints(targetsSet)
+        for (j in gluedIncidentPoints) {
             val p0 = objects[j] as? Point
             val p = p0?.transformed(translation, focus, zoom, rotationAngle)
             downscaledObjects[j] = p?.downscale()
-            // objects[ix] will be recalculated & set during the update phase
+            // objects are synced later with syncObjects(updatedIndices)
         }
         syncDownscaledObjects(targets)
-        expressions.adjustIncidentPointExpressions(allUnmovedIncidentPoints)
-        val updatedIndices = expressions.update(targets)
+        val updatedIndices = expressions.update(targets, excludedIxs = gluedIncidentPoints)
+        expressions.adjustIncidentPointExpressions(gluedIncidentPoints)
+        // gluedIncidentPoints <= updatedIndices
         syncObjects(updatedIndices)
         invalidatePositions()
-        return targetsSet + updatedIndices + allUnmovedIncidentPoints
+        return targetsSet + updatedIndices + gluedIncidentPoints
     }
 
     override fun GCircle.downscale(): GCircle =
