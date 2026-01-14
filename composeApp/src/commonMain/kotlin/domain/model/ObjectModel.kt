@@ -223,7 +223,7 @@ sealed class ObjectModel<R : Any> {
     ) {
         val newObject = expressions.changeExpr(ix, newExpr)
         setDownscaledObject(ix, newObject)
-        val toBeUpdated = expressions.update(listOf(ix))
+        val toBeUpdated = expressions.update(setOf(ix))
         syncObjects(toBeUpdated)
         invalidatePositions()
     }
@@ -236,7 +236,7 @@ sealed class ObjectModel<R : Any> {
         for ((ix, newObject) in changes) {
             setObject(ix, newObject)
         }
-        val updatedIndices = expressions.update(changes.keys.toList())
+        val updatedIndices = expressions.update(changes.keys)
         syncObjects(updatedIndices)
         invalidatePositions()
     }
@@ -249,7 +249,7 @@ sealed class ObjectModel<R : Any> {
         newObject: R?
     ): List<Ix> {
         setObject(ix, newObject)
-        val updatedIndices = expressions.update(listOf(ix))
+        val updatedIndices = expressions.update(setOf(ix))
         syncObjects(updatedIndices)
         invalidatePositions()
         return updatedIndices + ix

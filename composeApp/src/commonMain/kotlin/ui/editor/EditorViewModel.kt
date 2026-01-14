@@ -563,6 +563,7 @@ class EditorViewModel : ViewModel() {
         )
     }
 
+    /** Pin current state to later record delta from it */
     private fun pinStateForHistory() {
         history.pinState(saveState())
     }

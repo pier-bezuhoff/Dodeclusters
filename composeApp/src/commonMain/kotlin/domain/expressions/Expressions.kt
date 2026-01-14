@@ -1,7 +1,6 @@
 package domain.expressions
 
 import domain.Ix
-import domain.setOrRemove
 
 /**
  * tier = 0: free object,
@@ -48,23 +47,15 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     /**
      * parent index -> set of all its children with *direct* dependency, inversion of [Expr.args]
      *
-     * NOTE: [incidentChildren] has to be manually synced each time we alter [children]
-     *
      * NOTE: [parents2gluedIncidentPoints] has to be cleared each time we alter [children]
      */
     val children: MutableMap<Ix, Set<Ix>> = expressions
         .keys
         .associateWith { emptySet<Ix>() }
         .toMutableMap()
-    /** NOTE: have to be updated in sync with [children] */
-    val incidentChildren: MutableMap<Ix, Set<Ix>> = children.mapValues { (_, childs) ->
-        childs
-            .filter { expressions[it]?.expr is Expr.Incidence }
-            .toSet()
-    }.filterValues { it.isNotEmpty() }
-    .toMutableMap()
     /** Cache for looking up all glued/fully constrained incident point children by
-     * a set of parents. Cache should clear on [children] changes. */
+     * a set of parents.
+     * Cache should be cleared on [children] changes. */
     protected val parents2gluedIncidentPoints: MutableMap<Set<Ix>, Set<Ix>> = mutableMapOf()
     /** index -> tier */
     protected val ix2tier: MutableMap<Ix, Tier> = initialExpressions
@@ -97,9 +88,6 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
                     }
                 }
             }
-        for (parentIx in children.keys) {
-            incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
-        }
     }
 
     protected abstract fun EXPR.evaluate(
@@ -146,7 +134,6 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         expressions[ix] = ExprOutput.Just(expr as Expr.OneToOne) as ExprOutput<EXPR>
         expr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
-            incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
         }
         val tier = computeTier(ix, expr as EXPR)
         ix2tier[ix] = tier
@@ -170,7 +157,6 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         expressions[ix] = exprOutput as ExprOutput<EXPR>
         expr.args.forEach { parentIx ->
             children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
-            incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
         }
         ix2tier[ix] = tier
         if (tier < tier2ixs.size) {
@@ -199,7 +185,6 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             expressions[ix] = ExprOutput.OneOf(expr, outputIndex)
             expr.args.forEach { parentIx ->
                 children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
-                incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
             }
             ix2tier[ix] = tier
             if (tier < tier2ixs.size) {
@@ -224,50 +209,47 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     }
 
     /** The new node still inherits its previous children */
-    fun changeToFree(ix: Ix) {
-        if (expressions[ix] != null) {
-            expressions[ix]?.let { previousExpr ->
+    fun changeToFree(index: Ix) {
+        if (expressions[index] != null) {
+            expressions[index]?.let { previousExpr ->
                 previousExpr.expr.args.forEach { parentIx ->
-                    children[parentIx] = (children[parentIx] ?: emptySet()) - ix
-                    incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
+                    children[parentIx] = (children[parentIx] ?: emptySet()) - index
                 }
             }
-            expressions[ix] = null
-            val previousTier = ix2tier[ix] ?: UNCALCULATED_TIER
+            expressions[index] = null
+            val previousTier = ix2tier[index] ?: UNCALCULATED_TIER
             if (previousTier != UNCALCULATED_TIER) {
-                tier2ixs[previousTier] = tier2ixs[previousTier] - ix
+                tier2ixs[previousTier] = tier2ixs[previousTier] - index
             }
-            tier2ixs[FREE_TIER] = tier2ixs[FREE_TIER] + ix
-            ix2tier[ix] = FREE_TIER
-            recomputeChildrenTiers(ix)
+            tier2ixs[FREE_TIER] = tier2ixs[FREE_TIER] + index
+            ix2tier[index] = FREE_TIER
+            recomputeChildrenTiers(index)
             parents2gluedIncidentPoints.clear()
         }
     }
 
     /** The new node still inherits its previous children */
-    fun changeExpr(ix: Ix, newExpr: EXPR_ONE_TO_ONE): R? {
-        expressions[ix]?.let { previousExpr ->
+    fun changeExpr(index: Ix, newExpr: EXPR_ONE_TO_ONE): R? {
+        expressions[index]?.let { previousExpr ->
             previousExpr.expr.args.forEach { parentIx ->
-                children[parentIx] = (children[parentIx] ?: emptySet()) - ix
-                incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
+                children[parentIx] = (children[parentIx] ?: emptySet()) - index
             }
         }
-        val previousTier = ix2tier[ix]!!
-        tier2ixs[previousTier] = tier2ixs[previousTier] - ix
-        ix2tier[ix] = UNCALCULATED_TIER
-        expressions[ix] = ExprOutput.Just(newExpr) as ExprOutput<EXPR>
+        val previousTier = ix2tier[index]!!
+        tier2ixs[previousTier] = tier2ixs[previousTier] - index
+        ix2tier[index] = UNCALCULATED_TIER
+        expressions[index] = ExprOutput.Just(newExpr) as ExprOutput<EXPR>
         newExpr.args.forEach { parentIx ->
-            children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
-            incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
+            children[parentIx] = children.getOrElse(parentIx) { emptySet() } + index
         }
-        val tier = computeTier(ix)
-        ix2tier[ix] = tier
+        val tier = computeTier(index)
+        ix2tier[index] = tier
         if (tier < tier2ixs.size) {
-            tier2ixs[tier] = tier2ixs[tier] + ix
+            tier2ixs[tier] = tier2ixs[tier] + index
         } else { // no hopping over tiers, we good
-            tier2ixs.add(setOf(ix))
+            tier2ixs.add(setOf(index))
         }
-        recomputeChildrenTiers(ix)
+        recomputeChildrenTiers(index)
         parents2gluedIncidentPoints.clear()
         val result = (newExpr as EXPR).evaluate(objects)
 //        println("change $ix -> $newExpr -> $result")
@@ -275,13 +257,13 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     }
 
     /**
-     * Delete [ixs] nodes and all of their children from the [ConformalExpressions] by
+     * Delete [indices] nodes and all of their children from the [ConformalExpressions] by
      * setting [expressions]`[...] = null` and clearing [children], [ix2tier], [tier2ixs]
      * @return all the deleted nodes indices
      * */
-    fun deleteNodes(ixs: List<Ix>): Set<Ix> {
-        val deleted = ixs.toMutableSet()
-        var lvl = ixs
+    fun deleteNodes(indices: List<Ix>): Set<Ix> {
+        val deleted = indices.toMutableSet()
+        var lvl = indices
         while (lvl.isNotEmpty()) {
             lvl = lvl.flatMap { children[it] ?: emptySet() }
             deleted += lvl
@@ -289,12 +271,10 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         for (d in deleted) {
             expressions[d] = null // do not delete it since we want to keep indices (keys) in sync with VM.circles
             children.remove(d)
-            incidentChildren.remove(d)
             ix2tier[d] = ABANDONED_TIER
         }
         for ((parentIx, childIxs) in children) {
             children[parentIx] = childIxs - deleted
-            incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
         }
         for ((tier, tiered) in tier2ixs.withIndex())
             tier2ixs[tier] = tiered - deleted
@@ -303,25 +283,25 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     }
 
     /**
-     * Recursively re-evaluates expressions given that [changedIxs]/parents have changed
-     * and updates [objects] (except [excludedIxs])
+     * Recursively re-evaluates expressions given that [changed]/parents have changed
+     * and updates [objects] (except [excluded])
      *
      * NOTE: don't forget to sync `VM.objects` with [objects] at returned indices
-     * @return all affected/child indices that were altered by [update] (excluding [changedIxs])
+     * @return all affected/child indices that were altered by [update] (excluding [changed])
      */
     fun update(
-        changedIxs: List<Ix>,
-        excludedIxs: Set<Ix> = emptySet(),
+        changed: Set<Ix>,
+        excluded: Set<Ix> = emptySet(),
         // deltas (translation, rotation, scaling) to apply to immediate carried objects
     ): List<Ix> {
-        val changed = mutableSetOf<Ix>()
-        var lvl = changedIxs
+        val changedTransitive = mutableSetOf<Ix>()
+        var lvl = changed.toList() // MAYBE: make this a set
         while (lvl.isNotEmpty()) {
             lvl = lvl.flatMap { children[it] ?: emptySet() }
-            changed += lvl
+            changedTransitive += lvl
         }
         // we assume that changedIxs are up-to-date
-        val toBeUpdated = (changed - changedIxs.toSet() - excludedIxs)
+        val toBeUpdated = (changedTransitive - changed - excluded)
             .sortedBy { ix2tier[it] }
         val cache: MutableMap<EXPR_ONE_TO_MANY, List<R?>> = mutableMapOf()
         for (ix in toBeUpdated) {
@@ -348,8 +328,8 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         }
     }
 
-    fun sortedByTier(ixs: List<Ix>): List<Ix> =
-        ixs.sortedBy { ix2tier[it] }
+    fun sortedByTier(indices: List<Ix>): List<Ix> =
+        indices.sortedBy { ix2tier[it] }
 
     /** Copies those expressions whose dependencies are also in [sourceIndices].
      * REQUIRES all used object to had been added already. Additionally requires
@@ -415,7 +395,6 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             val addedIndices = newMaxRange.take(result.size).drop(targetIndices.size)
             for (parentIx in newExpr.args) {
                 children[parentIx] = (children[parentIx] ?: emptySet()) + addedIndices
-                incidentChildren.setOrRemove(parentIx, getIncidentChildren(parentIx))
             }
             tier2ixs[tier] = tier2ixs[tier] + addedIndices
             for (ix in addedIndices)

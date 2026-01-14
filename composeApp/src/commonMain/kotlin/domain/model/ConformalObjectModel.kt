@@ -59,12 +59,12 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
             // objects are synced later with syncObjects(updatedIndices)
         }
         syncDownscaledObjects(targets)
-        val updatedIndices = expressions.update(targets, excludedIxs = gluedIncidentPoints)
+        val updatedIndices = gluedIncidentPoints + expressions.update(targetsSet, excluded = gluedIncidentPoints)
         expressions.adjustIncidentPointExpressions(gluedIncidentPoints)
-        val allUpdatedIndices = gluedIncidentPoints + updatedIndices
-        syncObjects(allUpdatedIndices)
+        // MAYBE: it's better to recalc glued atp (we transformed them, then adjusted the order)
+        syncObjects(updatedIndices)
         invalidatePositions()
-        return targetsSet + allUpdatedIndices
+        return targetsSet + updatedIndices
     }
 
     override fun GCircle.downscale(): GCircle =
