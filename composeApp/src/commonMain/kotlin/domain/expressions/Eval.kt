@@ -27,6 +27,7 @@ fun computeCircleByCenterAndRadius(
         center == Point.CONFORMAL_INFINITY || radiusPoint == Point.CONFORMAL_INFINITY ->
             null // or conformal infinity ig
         else ->
+            // radius point is a perfect candidate for fixedPoint
             Circle(center.x, center.y, radius)
     }
 }
@@ -69,7 +70,7 @@ fun computeCircleInversion(
     target: GCircle,
     engine: GCircle
 ): GCircle? {
-    // idk why but normal route returns seemingly arbitrary result for center
+    // idk why but the normal route returns seemingly arbitrary result for center
     if (target is Point && engine is Circle && engine.centerPoint.distanceFrom(target) < EPSILON)
         return Point.CONFORMAL_INFINITY
     val engineGC = GeneralizedCircle.fromGCircle(engine)
@@ -78,8 +79,7 @@ fun computeCircleInversion(
     return result.toGCircleAs(target)
 }
 
-// NOTE: not good since scaling line doesn't scale points incident to it
-// MAYBE: just repeat obj transformations for tier=0 carrier incident points
+// incident points glued to a scaled line require additional care
 fun computeIncidence(
     params: IncidenceParameters,
     carrier: CircleOrLine,

@@ -25,14 +25,14 @@ import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrImaginaryCircle
 import core.geometry.CircleOrLineOrPoint
 import core.geometry.GCircle
-import core.geometry.conformal.GeneralizedCircle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
 import core.geometry.Point
+import core.geometry.conformal.GeneralizedCircle
 import core.geometry.conformal.Rotor
 import core.geometry.conformal.calculateStereographicRotationBiEngine
-import core.geometry.fromCorners
 import core.geometry.conformal.generateSphereGrid
+import core.geometry.fromCorners
 import core.geometry.scaled00
 import core.geometry.selectWithRectangle
 import core.geometry.translationDelta
@@ -53,9 +53,9 @@ import domain.cluster.SignedDirectedArcIndex
 import domain.compressConstraints
 import domain.entails
 import domain.expressions.BiInversionParameters
+import domain.expressions.ConformalExpressions
 import domain.expressions.Expr
 import domain.expressions.ExprOutput
-import domain.expressions.ConformalExpressions
 import domain.expressions.ExtrapolationParameters
 import domain.expressions.IncidenceParameters
 import domain.expressions.InterpolationParameters
@@ -80,8 +80,8 @@ import domain.io.DdcV4
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
 import domain.model.ChangeHistory
-import domain.model.ContinuousChange
 import domain.model.ConformalObjectModel
+import domain.model.ContinuousChange
 import domain.model.SaveState
 import domain.reindexingMap
 import domain.settings.BlendModeType

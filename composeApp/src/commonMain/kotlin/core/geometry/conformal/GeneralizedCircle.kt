@@ -49,7 +49,7 @@ data class GeneralizedCircle(
     val z: Double
 ) {
     init {
-        require(isValidHomogenousCoordinates(w,x,y,z)) {
+        require(areValidHomogenousCoordinates(w,x,y,z)) {
             "GeneralizedCircle.init: homogenous coordinates ($w,$x,$y,$z) are invalid"
         }
     }
@@ -66,7 +66,7 @@ data class GeneralizedCircle(
 //        this scalarProduct this
     // NOTE: norm=0 for points, norm=w*radius for circles
     inline val norm: Double get() =
-    sqrt(abs(norm2))
+        sqrt(abs(norm2))
 
     /** Assumes normalization. Radius squared */
     inline val r2: Double get() =
@@ -512,6 +512,7 @@ data class GeneralizedCircle(
             val (w2, x2, y2, z2) = c2
             val (w3, x3, y3, z3) = c3
             // determinant-like totally antisymmetric product
+            // MAYBE: optimize by pre-computing and reusing 2x2 determinants
             val w = w1*x2*y3 - w1*x3*y2 - w2*x1*y3 + w2*x3*y1 + w3*x1*y2 - w3*x2*y1
             val x = -w1*y2*z3 + w1*y3*z2 + w2*y1*z3 - w2*y3*z1 - w3*y1*z2 + w3*y2*z1
             val y = w1*x2*z3 - w1*x3*z2 - w2*x1*z3 + w2*x3*z1 + w3*x1*z2 - w3*x2*z1
@@ -521,7 +522,7 @@ data class GeneralizedCircle(
 //                println("GeneralizedCircle.perp3 resulted in near-zero: ($w, $x, $y, $z) aka 0 or infinite number of solutions")
                 return null
             }
-            if (!isValidHomogenousCoordinates(w,x,y,z)) {
+            if (!areValidHomogenousCoordinates(w,x,y,z)) {
                 return null
             }
             return GeneralizedCircle(w, x, y, z).normalizedPreservingDirection()
@@ -553,7 +554,7 @@ data class GeneralizedCircle(
                 )
                 return null
             }
-            if (!isValidHomogenousCoordinates(w,x,y,z)) {
+            if (!areValidHomogenousCoordinates(w,x,y,z)) {
                 return null
             }
             return GeneralizedCircle(w, x, y, z).normalizedPreservingDirection()
@@ -566,7 +567,7 @@ data class GeneralizedCircle(
             abs(w) < EPSILON2 && abs(x) < EPSILON2 && abs(y) < EPSILON2 && abs(z) < EPSILON2
 
         @Suppress("NOTHING_TO_INLINE")
-        inline fun isValidHomogenousCoordinates(w: Double, x: Double, y: Double, z: Double): Boolean =
+        inline fun areValidHomogenousCoordinates(w: Double, x: Double, y: Double, z: Double): Boolean =
             w.isFinite() && x.isFinite() && y.isFinite() && z.isFinite() &&
             (w != 0.0 || x != 0.0 || y != 0.0 || z != 0.0) // (0,0,0,0) is invalid in homogenous
     }

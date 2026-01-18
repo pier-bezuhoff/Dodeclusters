@@ -6,6 +6,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 typealias ConformalExprOutput = ExprOutput<Expr.Conformal>
+typealias ProjectiveExprOutput = ExprOutput<Expr.Projective>
 
 /** Single-value expression result of [expr]. ([Expr] in general has multi-value results) */
 @Serializable

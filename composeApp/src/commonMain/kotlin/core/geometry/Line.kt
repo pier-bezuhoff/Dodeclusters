@@ -27,6 +27,8 @@ data class Line(
     val a: Double,
     val b: Double,
     val c: Double,
+    // MAYBE: fixedPoint1: Point = default1(a,b,c)
+    //  fixedPoint2: Point = default2(a,b,c) for consistent locus ordering
 ) : CircleOrLine, LineOrPoint {
 
     init {

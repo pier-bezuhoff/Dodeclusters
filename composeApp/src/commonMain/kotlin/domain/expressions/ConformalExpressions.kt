@@ -10,10 +10,11 @@ import kotlin.math.abs
 // MAYBE: cache carrier->incident points lookup (since it's called on every VM.transform)
 /**
  * Class for managing expressions (~ AST controller)
+ * @param[initialExpressions] pls include all possible indices as keys
  * @param[objects] reference to shared, *downscaled* mutable mirror-list of VM.objects
  */
 class ConformalExpressions(
-    initialExpressions: Map<Ix, ConformalExprOutput?>, // pls include all possible indices
+    initialExpressions: Map<Ix, ConformalExprOutput?>,
     objects: MutableList<GCircle?>,
 ) : Expressions<Expr.Conformal, Expr.Conformal.OneToOne, Expr.Conformal.OneToMany, GCircle>(
     initialExpressions, objects

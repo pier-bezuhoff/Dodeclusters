@@ -45,6 +45,7 @@ data class Circle(
     override val y: Double,
     override val radius: Double,
     val isCCW: Boolean = true,
+    // MAYBE: fixedPoint: Point = default(x,y,R) for consistent locus ordering
 ) : UndirectedCircle {
     inline val center: Offset get() =
         Offset(x.toFloat(), y.toFloat())

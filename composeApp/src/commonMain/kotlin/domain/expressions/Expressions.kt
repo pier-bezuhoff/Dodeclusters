@@ -24,6 +24,7 @@ internal const val ABANDONED_TIER: Tier = -2
 // see https://discuss.kotlinlang.org/t/current-intersection-type-options-in-kotlin/20903
 /**
  * Class for managing expressions (~ AST controller)
+ * @param[initialExpressions] pls include all possible [objects].indices as keys
  * @param[objects] reference to shared, *downscaled* mutable mirror-list of VM.objects
  * @param[EXPR] [Expr] subtype (eg [Expr.Conformal])
  * @param[EXPR_ONE_TO_ONE] [EXPR_ONE_TO_ONE] : [Expr.OneToOne], [EXPR_ONE_TO_ONE] : [EXPR] (eg [Expr.Conformal.OneToOne])
