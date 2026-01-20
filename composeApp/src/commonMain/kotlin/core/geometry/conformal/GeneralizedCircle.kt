@@ -150,8 +150,8 @@ data class GeneralizedCircle(
 
     /** To be used for temporary non-normalized results */
     fun normalized(): GeneralizedCircle {
-        val n = norm
-        if (abs(n) < EPSILON) {
+        val n = norm // >= 0
+        if (n < EPSILON) {
             return if (n == 0.0 && abs(w) < EPSILON || n != 0.0 && abs(w / n) < EPSILON) // is conformal infinity?
                 this * (1/z)
             else
@@ -175,9 +175,8 @@ data class GeneralizedCircle(
 
     /** To be used for temporary non-normalized results */
     fun normalizedPreservingDirection(): GeneralizedCircle {
-        val n = norm
-        val absN = abs(n)
-        return if (absN < EPSILON) {
+        val n = norm // >= 0
+        return if (n < EPSILON) {
             if (n == 0.0 && abs(w) < EPSILON ||
                 n != 0.0 && abs(w / n) < EPSILON
             ) // is conformal infinity?

@@ -11,6 +11,9 @@ data class PPoint(
     val y: Double,
     val isFinite: Boolean = true,
 ) {
+    inline val w: Int get() =
+        if (isFinite) 1 else 0
+
     init {
         require(
             x.isFinite() && y.isFinite() && (isFinite || x != 0.0 || y != 0.0)

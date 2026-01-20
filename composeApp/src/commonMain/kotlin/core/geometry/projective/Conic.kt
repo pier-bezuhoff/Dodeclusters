@@ -6,6 +6,8 @@ import androidx.compose.runtime.Immutable
 import core.geometry.EPSILON
 import core.geometry.EPSILON2
 import core.geometry.conformal.GeneralizedCircle
+import domain.squareDiff
+import domain.squareSum
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import kotlin.math.cos
@@ -143,9 +145,13 @@ data class Conic(
         }
     }
 
+    // c|p < 0 => p inside c?
+    /** conic.innerProduct(point) = 0 => the point lies on the conic */
     infix fun innerProduct(v: Conic): Double =
         -(dp*v.p + p*v.dp + dm*v.m + m*v.dm + dc*v.c + c*v.dc) + x*v.x + y*v.y
 
+    // -> Point(x/dp, y/dp)
+    // -> Line(x, y, -p)
     inline fun <reified R> fold(
         crossinline onPoint: (PPoint) -> R,
         crossinline onLine: (PLine) -> R,
@@ -163,7 +169,7 @@ data class Conic(
             abs(x) < EPSILON2 && abs(y) < EPSILON2 &&
             abs(p) < EPSILON2
 
-        inline fun areValidHomogenousCoordinates(
+        private inline fun areValidHomogenousCoordinates(
             dp: Double, dm: Double, dc: Double,
             x: Double, y: Double,
             p: Double, m: Double = 0.0, c: Double = 0.0
@@ -175,13 +181,25 @@ data class Conic(
             (dp != 0.0 || dm != 0.0 || dc != 0.0 || x != 0.0 || y != 0.0 || p != 0.0)
 
         fun fromPointXY(x: Double, y: Double): Conic = Conic(
-            x = x, y = y,
-            p = 0.5*(x*x + y*y),
             dp = 1.0,
-            m = 0.5*(x*x - y*y),
             dm = 0.0,
+            dc = 0.0,
+            x = x,
+            y = y,
+            p = 0.5*(x*x + y*y),
+            m = 0.5*(x*x - y*y),
             c = x*y,
-            dc = 0.0
+        )
+        // problem: w=0 point lies on any line
+        fun fromPoint(point: PPoint): Conic = Conic(
+            dp = point.w.toDouble(), // ideally w squared
+            dm = 0.0,
+            dc = 0.0,
+            x = point.w * point.x,
+            y = point.w * point.y,
+            p = 0.5*(squareSum(point.x, point.y)),
+            m = 0.5*(squareDiff(point.x, point.y)),
+            c = point.x*point.y,
         )
         private inline fun fromGeneric(
             alpha: Double, beta: Double,
@@ -191,25 +209,30 @@ data class Conic(
             val s = sin(2*angle)
             val c = cos(2*angle)
             return Conic(
+                dp = 1.0,
+                dm = -alpha*c,
+                dc = -alpha*s,
                 x = x + x*alpha*c - y*alpha*s,
                 y = y + y*alpha*c - x*alpha*s,
                 p = 0.5*(x*x + y*y - beta - (x*x - y*y)*alpha*c - 2*x*y*alpha*s),
-                dp = 1.0,
                 m = 0.0,
-                dm = -alpha*c,
                 c = 0.0,
-                dc = -alpha*s,
             )
         }
-        fun fromPoint(point: PPoint): Conic = TODO()
         fun from2Lines(line1: PLine, line2: PLine): Conic = TODO()
         fun fromLine(line: PLine): Conic =
             from2Lines(line, line)
+        // what about the line at infinity
         /** Line `a*x + b*y + c = 0` */
         fun fromLine(a: Double, b: Double, c: Double): Conic = Conic(
-            x = a, y = b,
+            dp = 0.0,
+            dm = 0.0,
+            dc = 0.0,
+            x = a,
+            y = b,
             p = -c,
-            dp = 0.0, m = 0.0, dm = 0.0, c = 0.0, dc = 0.0,
+            m = 0.0,
+            c = 0.0,
         )
         fun fromParallelLines(
             centerX: Double, centerY: Double,
@@ -222,6 +245,7 @@ data class Conic(
             centerX: Double, centerY: Double,
             tiltAngle: Double,
         ): Conic = fromGeneric((1+k*k)/(1-k*k), 0.0, centerX, centerY, tiltAngle)
+        // non-unique repr, cuz symmetry with tilt (mod pi/2), maybe related to some kind of orientation
         fun fromPerpendicularLines(
             x: Double, y: Double,
             tiltAngle: Double,
@@ -229,14 +253,14 @@ data class Conic(
             val s = sin(2*tiltAngle)
             val c = cos(2*tiltAngle)
             return Conic(
+                dp = 0.0,
+                dm = c,
+                dc = -s,
                 x = x*c - y*s,
                 y = y*c - x*s,
                 p = -0.5*((x*x - y*y)*c + 2*x*y*s),
-                dp = 0.0,
                 m = 0.0,
-                dm = c,
                 c = 0.0,
-                dc = -s,
             )
         }
         // axis-aligned ellipse at origin with semi-axis a,b:
@@ -249,10 +273,13 @@ data class Conic(
             x: Double, y: Double,
             radius: Double,
         ): Conic = Conic(
+            dp = 1.0,
+            dm = 0.0,
+            dc = 0.0,
             x = x, y = y,
             p = 0.5*(x*x + y*y - radius*radius),
-            dp = 1.0,
-            m = 0.0, dm = 0.0, c = 0.0, dc = 0.0,
+            m = 0.0,
+            c = 0.0,
         )
         /** mb swap minor <-> major
          * @param[tiltAngle] counterclockwise axis tilt angle in radians
@@ -266,7 +293,7 @@ data class Conic(
             val b2 = semiMajorAxis*semiMajorAxis
             val d = a2 + b2
             val alpha = (a2 - b2)/d
-            val beta = (2*a2*b2)/d
+            val beta = 2*a2*b2/d
             return fromGeneric(alpha, beta, centerX, centerY, tiltAngle)
         }
         /** mb swap minor <-> major
@@ -281,7 +308,7 @@ data class Conic(
             val b2 = semiMajorAxis*semiMajorAxis
             val d = a2 - b2
             val alpha = (a2 + b2)/d
-            val beta = -(2*a2*b2)/d
+            val beta = -2*a2*b2/d
             return fromGeneric(alpha, beta, centerX, centerY, tiltAngle)
         }
         /** mb swap minor <-> major
@@ -298,14 +325,14 @@ data class Conic(
             val s = sin(2*angle)
             val c = cos(2*angle)
             return Conic(
+                dp = 1.0,
+                dm = c,
+                dc = s,
                 x = x + x*c + y*s - 2*p*sin(angle),
                 y = y - y*c + x*s + 2*p*cos(angle),
                 p = 0.5*(x*x + y*y + (x*x - y*y)*c + 2*x*y*s - 4*p*x*sin(angle) + 4*p*y*cos(angle)),
-                dp = 1.0,
                 m = 0.0,
-                dm = c,
                 c = 0.0,
-                dc = s,
             )
         }
         // ellipse/hyperbola from rotated rectangle
