@@ -67,6 +67,7 @@ data class Conic(
         sqrt(abs(norm2))
 
     // ellipse, parabola, hyperbola discriminator
+    // aka how many points at infinity
     val m2det: Double = run {
         val A = dp + dm
         val B = dc
@@ -75,6 +76,7 @@ data class Conic(
     }
     // degenerate conic discriminator
     val m3det: Double = run {
+        // m3det = product of eigenvalues
         val A = dp + dm
         val B = dc
         val C = dp - dm
@@ -82,6 +84,18 @@ data class Conic(
         val E = -y
         val F = 2*p
         A*(C*F - E*E) - B*(B*F - E*D) + D*(B*E - C*D)
+    }
+    val trace: Double get() =
+        2*dp + 2*p // A+C+F = sum of eigenvalues
+    // chi(r) = r^3 - r^2 * trace + r * minorSum - m3det = 0
+    val minorSum: Double get() { // = r1*r2 + r2*r3 + r3*r1
+        val A = dp + dm
+        val B = dc
+        val C = dp - dm
+        val D = -x
+        val E = -y
+        val F = 2*p
+        return A*C + A*F + C*F - B*B - E*E - D*D
     }
     val isDegenerate: Boolean = abs(m3det) < EPSILON
     val type: Type = when {
