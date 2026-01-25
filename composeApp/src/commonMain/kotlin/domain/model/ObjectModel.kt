@@ -10,6 +10,7 @@ import domain.PathCache
 import domain.expressions.Expr
 import domain.expressions.Expressions
 
+// TODO: we should include Expressions as a param
 /**
  * Purports to encapsulate & manage [objects] and object-related properties.
  *
@@ -34,6 +35,8 @@ sealed class ObjectModel<R : Any> {
     val objectColors: MutableMap<Ix, Color> = mutableMapOf()
     // alt name: ghost[ed] objects
     val phantomObjectIndices: MutableSet<Int> = mutableSetOf()
+
+    abstract val expressions: Expressions<*, *, *, R>
 
     val invalidationsState: MutableIntState = mutableIntStateOf(0)
     /**
@@ -215,13 +218,15 @@ sealed class ObjectModel<R : Any> {
         }
     }
 
-    /** Already includes [invalidatePositions] */
+    /** Already includes [invalidatePositions]. [EXPR_ONE_TO_ONE] must be compatible with
+     * the second type parameter of [expressions] */
+    @Suppress("UNCHECKED_CAST")
     fun <EXPR_ONE_TO_ONE : Expr.OneToOne> changeExpr(
-        expressions: Expressions<*, EXPR_ONE_TO_ONE, *, R>,
         ix: Ix,
         newExpr: EXPR_ONE_TO_ONE,
     ) {
-        val newObject = expressions.changeExpr(ix, newExpr)
+        val newObject = (expressions as Expressions<*, EXPR_ONE_TO_ONE, *, R>)
+            .changeExpr(ix, newExpr)
         setDownscaledObject(ix, newObject)
         val toBeUpdated = expressions.update(setOf(ix))
         syncObjects(toBeUpdated)
@@ -229,10 +234,7 @@ sealed class ObjectModel<R : Any> {
     }
 
     /** Already includes [invalidatePositions] */
-    fun setObjectsWithConsequences(
-        expressions: Expressions<*, *, *, R>,
-        changes: Map<Ix, R?>
-    ) {
+    fun setObjectsWithConsequences(changes: Map<Ix, R?>) {
         for ((ix, newObject) in changes) {
             setObject(ix, newObject)
         }
@@ -244,7 +246,6 @@ sealed class ObjectModel<R : Any> {
     /** Already includes [invalidatePositions]
      * @return all indices of changed objects (including [ix]) */
     fun setObjectWithConsequences(
-        expressions: Expressions<*, *, *, R>,
         ix: Ix,
         newObject: R?
     ): List<Ix> {
@@ -267,7 +268,6 @@ sealed class ObjectModel<R : Any> {
      * @return indices of all changed objects/expressions
      */
     abstract fun transform(
-        expressions: Expressions<*, *, *, R>,
         targets: List<Ix>,
         translation: Offset = Offset.Zero,
         focus: Offset = Offset.Unspecified,

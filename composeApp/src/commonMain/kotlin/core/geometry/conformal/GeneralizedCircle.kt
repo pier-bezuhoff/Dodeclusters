@@ -84,7 +84,7 @@ data class GeneralizedCircle(
 
     /** Assumes normalization. Test [_isConformalInfinity] first */
     private inline val _isLine: Boolean get() =
-        w == 0.0 || abs(w) < EPSILON
+        abs(w) < EPSILON
 
     /** Assumes normalization. */
     private inline val _isPoint: Boolean get() = // includes conformal infinity
@@ -148,7 +148,7 @@ data class GeneralizedCircle(
     infix fun scalarProduct(other: GeneralizedCircle): Double =
         x*other.x + y*other.y - z*other.w - other.z*w
 
-    /** To be used for temporary non-normalized results */
+    /** To be used for temporary non-normalized results. Flips orientation to 'positive' */
     fun normalized(): GeneralizedCircle {
         val n = norm // >= 0
         if (n < EPSILON) {
@@ -186,7 +186,7 @@ data class GeneralizedCircle(
                 )
             else
                 this * (1 / abs(w))
-//        } else if (absN > 1e10) {
+//        } else if (n > 1e10) {
 //            CONFORMAL_INFINITY // more clutches stashed here
         } else if (abs(w / n) < EPSILON) {
             this.copy(w = 0.0) * (1/n)

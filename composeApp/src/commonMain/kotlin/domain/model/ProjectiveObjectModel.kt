@@ -3,11 +3,13 @@ package domain.model
 import androidx.compose.ui.geometry.Offset
 import core.geometry.projective.Conic
 import domain.Ix
-import domain.expressions.Expressions
+import domain.expressions.ProjectiveExpressions
 
 class ProjectiveObjectModel : ObjectModel<Conic>() {
+
+    override val expressions: ProjectiveExpressions = ProjectiveExpressions(emptyMap(), mutableListOf())
+
     override fun transform(
-        expressions: Expressions<*, *, *, Conic>,
         targets: List<Ix>,
         translation: Offset,
         focus: Offset,

@@ -8,7 +8,13 @@ import core.geometry.Line
 import core.geometry.Point
 import core.geometry.scaled00
 import domain.Ix
-import domain.expressions.Expressions
+import domain.cluster.Constellation
+import domain.expressions.ConformalExpressions
+import domain.expressions.ObjectConstruct
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.iterator
+import kotlin.collections.set
 
 // MAYBE: additionally store GeneralizedCircle representations
 /**
@@ -16,6 +22,9 @@ import domain.expressions.Expressions
  * Very mutable, track [invalidationsState]/[invalidations] for changes and use with care.
  */
 class ConformalObjectModel : ObjectModel<GCircle>() {
+
+    override var expressions: ConformalExpressions =
+        ConformalExpressions(emptyMap(), mutableListOf())
 
     fun getInfinityIndex(): Ix? {
         val infinityIndex = objects.indexOfFirst { it == Point.CONFORMAL_INFINITY }
@@ -26,7 +35,6 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
 
     // NOTE: handling of incident points on non-glued dependent objects is off
     override fun transform(
-        expressions: Expressions<*, *, *, GCircle>,
         targets: List<Ix>,
         translation: Offset,
         focus: Offset,
@@ -65,6 +73,59 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         syncObjects(updatedIndices)
         invalidatePositions()
         return targetsSet + updatedIndices
+    }
+
+    fun loadConstellation(constellation: Constellation) {
+        clearObjects()
+        for (objectConstruct in constellation.objects) {
+            val o = when (objectConstruct) {
+                is ObjectConstruct.ConcreteCircle -> objectConstruct.circle
+                is ObjectConstruct.ConcreteLine -> objectConstruct.line
+                is ObjectConstruct.ConcretePoint -> objectConstruct.point
+                is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
+            }
+            addObject(o)
+        }
+        expressions = ConformalExpressions(
+            initialExpressions = constellation.toExpressionMap(),
+            objects = downscaledObjects,
+        )
+        expressions.reEval() // calculates all dependent objects
+        syncObjects()
+//        expressions.update(
+//            expressions.scaleLineIncidenceExpressions(DOWNSCALING_FACTOR)
+//        )
+        val objectSize = objects.size
+        for ((ix, color) in constellation.objectColors) {
+            if (ix < objectSize) {
+                objectColors[ix] = color
+            }
+        }
+        for (phantomIndex in constellation.phantoms) {
+            if (phantomIndex < objectSize) {
+                phantomObjectIndices.add(phantomIndex)
+            }
+        }
+    }
+
+    fun loadState(state: SaveState) {
+        clearObjects()
+        addObjects(state.objects)
+        expressions = ConformalExpressions(
+            initialExpressions = state.expressions,
+            objects = downscaledObjects,
+        )
+        val objectSize = objects.size
+        for ((ix, color) in state.objectColors) {
+            if (ix < objectSize) {
+                objectColors[ix] = color
+            }
+        }
+        for (phantomIndex in state.phantoms) {
+            if (phantomIndex < objectSize) {
+                phantomObjectIndices.add(phantomIndex)
+            }
+        }
     }
 
     override fun GCircle.downscale(): GCircle =
