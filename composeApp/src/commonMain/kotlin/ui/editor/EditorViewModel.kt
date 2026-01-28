@@ -3872,14 +3872,20 @@ class EditorViewModel : ViewModel() {
                 val saveState = runCatching {
                     // NOTE: can crash when the underlying format changes
                     platform.autosaveStore.get()
-                }.getOrNull()
+                }
+                    .onFailure { it.printStackTrace() }
+                    .getOrNull()
                 if (saveState != null) {
                     restoreFromState(saveState)
                 } else {
                     val vmState = runCatching {
                         platform.lastStateStore.get()
-                    }.getOrNull()
+                    }
+                        .onFailure { it.printStackTrace() }
+                        .getOrNull()
                     if (vmState == null) {
+                        // i'd like to replace it with SaveState.SAMPLE
+                        // but the format disallows not-yet-calculated objects
                         restoreFromVMState(State.SAMPLE)
                     } else {
                         restoreFromVMState(vmState)
@@ -3890,14 +3896,18 @@ class EditorViewModel : ViewModel() {
             }
             runCatching {
                 platform.settingsStore.get()
-            }.getOrNull()?.let { settings ->
-                loadSettings(settings)
             }
+                .onFailure { it.printStackTrace() }
+                .getOrNull()?.let { settings ->
+                    loadSettings(settings)
+                }
             runCatching {
                 platform.historyStore.get()
-            }.getOrNull()?.let { historyState ->
-                history = historyState.load(undoIsEnabled, redoIsEnabled)
             }
+                .onFailure { it.printStackTrace() }
+                .getOrNull()?.let { historyState ->
+                    history = historyState.load(undoIsEnabled, redoIsEnabled)
+                }
             restoration.update { ProgressState.COMPLETED }
         }
     }
@@ -3922,7 +3932,7 @@ class EditorViewModel : ViewModel() {
         resetHistory()
     }
 
-    // TODO: migrate to SaveState
+    // NOTE: migrated to SaveState, this is left for compatibility with previous auto-saves
     private fun restoreFromVMState(state: State) {
         loadNewConstellation(state.constellation)
         centerizeTo(state.centerX, state.centerY)
@@ -3941,7 +3951,7 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    /** caches latest [State] using platform-specific local storage */
+    /** caches latest [SaveState] using platform-specific local storage */
     fun cacheState() {
         if (!cachingInProgress.value) {
             cachingInProgress.update { true }

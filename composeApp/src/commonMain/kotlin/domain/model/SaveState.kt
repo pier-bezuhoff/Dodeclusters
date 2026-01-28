@@ -2,17 +2,24 @@ package domain.model
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import core.geometry.Circle
 import core.geometry.GCircle
+import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
 import domain.SerializableOffset
+import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
 import domain.expressions.ConformalExprOutput
+import domain.expressions.Expr
+import domain.expressions.ExprOutput
+import domain.expressions.LoxodromicMotionParameters
 import domain.reindexingMap
 import domain.settings.ChessboardPattern
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import ui.editor.EditorViewModel.State
 import kotlin.math.max
 import kotlin.math.min
 
@@ -542,6 +549,48 @@ data class SaveState(
             encodeDefaults = true
             // support Infinity for Points
             allowSpecialFloatingPointValues = true
+        }
+        /** nice symmetric spiral */
+        val SAMPLE = run {
+            val circle = Circle(0.0, 0.0, 100.0)
+            val p1 = Point(-282.0, 0.0)
+            val p2 = Point(+282.0, 0.0)
+            val trajectoryLength = 10
+            val expr1 = Expr.LoxodromicMotion(
+                parameters = LoxodromicMotionParameters(-200f, 2.0, 9),
+                divergencePoint = 1, convergencePoint = 2,
+                target = 0,
+                otherHalfStart = trajectoryLength + 3
+            )
+            val expr2 = Expr.LoxodromicMotion(
+                parameters = LoxodromicMotionParameters(-200f, 2.0, 9),
+                divergencePoint = 2, convergencePoint = 1,
+                target = 0,
+                otherHalfStart = 3
+            )
+            val objects = listOf(circle, p1, p2) + (0 until 2*trajectoryLength).map { null }
+            // TODO: we need to calc objects here ig
+            val expressions = mutableMapOf<Ix, ConformalExprOutput?>(
+                0 to null, 1 to null, 2 to null,
+            )
+            for (i in 0 until trajectoryLength) {
+                expressions[3 + i] = ExprOutput.OneOf(expr1, i)
+                expressions[3 + trajectoryLength + i] = ExprOutput.OneOf(expr2, i)
+            }
+            SaveState(
+                objects = objects,
+                objectColors = emptyMap(),
+                objectLabels = emptyMap(),
+                expressions = expressions,
+                regions = emptyList(),
+                backgroundColor = null,
+                chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT,
+                chessboardColor = Color(56, 136, 116),
+                phantoms = emptySet(),
+                selection = listOf(),
+                center = Offset.Zero,
+                regionColor = null,
+            )
         }
     }
 }

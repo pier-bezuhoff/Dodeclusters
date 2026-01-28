@@ -389,6 +389,63 @@ fun _region2path(
     }
 }
 
+// canonical
+private fun hyperbola2bezier(a: Double, b: Double, inf: Int = 1_000): List<Offset> {
+    val a2 = a*a
+    val b2 = b*b
+    val step = inf/10
+    val points = mutableListOf<Offset>()
+    var x = a + inf
+    while (x > a) {
+        points.add(Offset(
+            (x*x).toFloat(),
+            -sqrt(b2*x*x/a2 - b2).toFloat()
+        ))
+        x -= step
+    }
+    x = a
+    while (x < a + inf) {
+        points.add(Offset(
+            (x*x).toFloat(),
+            sqrt(b2*x*x/a2 - b2).toFloat()
+        ))
+        x += step
+    }
+    return points
+}
+
+// sample, this should be inlined obviously
+private fun camtullRom2bezier(points: List<Offset>): List<List<Offset>> {
+    val bezier = mutableListOf<List<Offset>>()
+    for (i in 0 until (points.size - 3)) {
+        // sliding 4-window
+        val p1 = points[i]
+        val p2 = points[i+1]
+        val p3 = points[i+2]
+        val p4 = points[i+3]
+        val start = p2
+        val end = p3
+        val c1 = Offset(
+            p2.x + (p3.x-p1.x)/6,
+            p2.y + (p3.y-p1.y)/6
+        )
+        val c2 = Offset(
+            p3.x - (p4.x-p2.x)/6,
+            p3.y - (p4.y-p2.y)/6
+        )
+        bezier.add(listOf(start, end, c1, c2))
+    }
+    return bezier
+}
+
+// reference: https://stackoverflow.com/a/67450514
+fun hyperbola2path(
+    visibleRect: Rect,
+    path: Path = Path(),
+): Path {
+    TODO()
+}
+
 fun circleRectIntersection(
     bigCircle: Circle,
     visibleRect: Rect,

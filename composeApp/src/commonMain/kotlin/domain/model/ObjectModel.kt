@@ -10,7 +10,8 @@ import domain.PathCache
 import domain.expressions.Expr
 import domain.expressions.Expressions
 
-// TODO: we should include Expressions as a param
+// TODO: separate param types for underlying objects (used in computations) and
+//  display objects (fast & easy to draw)
 /**
  * Purports to encapsulate & manage [objects] and object-related properties.
  *
