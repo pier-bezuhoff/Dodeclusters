@@ -262,6 +262,8 @@ class EditorViewModel : ViewModel() {
     var defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters()
         private set
 
+    /** Open file requests that generally originate from the keyboard events and are used in
+     * platform-dependent buttons */
     val openFileRequests: MutableSharedFlow<Unit> =
         MutableSharedFlow(
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST

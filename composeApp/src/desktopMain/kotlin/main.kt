@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import ui.editor.KeyboardAction
-import ui.editor.keyboardActionsHandler
+import ui.editor.KeyboardActionMapping
 
 fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
@@ -21,7 +21,7 @@ fun main() = application {
     val icon = painterResource(Res.drawable.icon_256) // looks fine
     val keyboardActions: MutableSharedFlow<KeyboardAction> = remember { MutableSharedFlow() }
     val keyboardActionsScope = rememberCoroutineScope()
-    val handler = keyboardActionsHandler { action ->
+    val keyEventHandler = KeyboardActionMapping.Default.keyEventHandler { action ->
         keyboardActionsScope.launch {
             keyboardActions.emit(action)
         }
@@ -31,7 +31,7 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         title = "Dodeclusters",
         icon = icon,
-        onPreviewKeyEvent = handler,
+        onPreviewKeyEvent = keyEventHandler,
     ) {
         App(
             keyboardActions = keyboardActions
