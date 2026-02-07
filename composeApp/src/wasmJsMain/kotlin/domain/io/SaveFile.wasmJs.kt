@@ -64,8 +64,8 @@ actual fun SaveFileButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
-    saveRequests: SharedFlow<Unit>?,
-    onSaved: (success: Boolean?, filename: String?) -> Unit
+    saveRequests: SharedFlow<SaveRequest>?,
+    onSaved: (SaveResult) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var dialogIsOpen by remember { mutableStateOf(false) }
@@ -81,9 +81,14 @@ actual fun SaveFileButton(
             val data = saveData.copy(name = ddcName.text)
             try {
                 downloadTextFile3(data.filename, data.prepareContent(ddcName.text))
-                onSaved(true, data.filename)
+                onSaved(SaveResult.Success(
+                    filename = data.filename,
+                ))
             } catch (e: Exception) {
-                onSaved(false, data.filename)
+                onSaved(SaveResult.Failure(
+                    filename = data.filename,
+                    error = e.message,
+                ))
             }
         }
     }
@@ -160,7 +165,8 @@ actual fun SaveFileButton(
         }
     }
     LaunchedEffect(saveRequests) {
-        saveRequests?.collect {
+        saveRequests?.collect { saveRequest ->
+            // TODO: distinguish saveRequest types
             dialogIsOpen = true
         }
     }

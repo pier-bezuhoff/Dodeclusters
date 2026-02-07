@@ -12,6 +12,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ui.isCompact
 
+@Immutable
+enum class ColorTheme {
+    LIGHT, DARK,
+    /** Black on white, intended for presentations */
+    HIGH_CONTRAST,
+    /** Automatically detect current system color theme */
+    AUTO
+}
+
 val DEFAULT_COLOR_THEME = ColorTheme.DARK
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
@@ -22,6 +31,7 @@ fun DodeclustersTheme(
 ) {
     val isLight = when (colorTheme) {
         ColorTheme.LIGHT -> true
+        ColorTheme.HIGH_CONTRAST -> true // TODO: custom colors
         ColorTheme.DARK -> false
         ColorTheme.AUTO -> !isSystemInDarkTheme()
     }
@@ -72,11 +82,3 @@ fun DodeclustersTheme(
         )
     }
 }
-
-@Immutable
-enum class ColorTheme {
-    LIGHT, DARK,
-    /** Automatically detect current system color theme */
-    AUTO
-}
-

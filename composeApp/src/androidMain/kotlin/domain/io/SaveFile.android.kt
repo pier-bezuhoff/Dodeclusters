@@ -23,6 +23,8 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 
+// Q: is it possible to quickly overwrite previously saved file?
+
 @Composable
 actual fun SaveFileButton(
     saveData: SaveData<String>,
@@ -31,8 +33,8 @@ actual fun SaveFileButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
-    saveRequests: SharedFlow<Unit>?,
-    onSaved: (success: Boolean?, filename: String?) -> Unit
+    saveRequests: SharedFlow<SaveRequest>?,
+    onSaved: (SaveResult) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -43,17 +45,19 @@ actual fun SaveFileButton(
         coroutineScope.launch(Dispatchers.IO) {
             try {
                 uri?.let {
+                    var filename: String? = null
                     var name: String? = null
                     context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                         val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                         cursor.moveToFirst()
                         val displayName = cursor.getString(nameIndex)
                         //  reference: https://developer.android.com/privacy-and-security/risks/untrustworthy-contentprovider-provided-filename
-                        val filename = sanitizeFilename(displayName)
+                        filename = sanitizeFilename(displayName)
                         name = File(filename).nameWithoutExtension
                     }
                     if (name == null) {
-                        uri.lastPathSegment?.let { filename ->
+                        filename = uri.lastPathSegment
+                        if (filename != null) {
                             name = File(filename).nameWithoutExtension
                         }
                     }
@@ -61,16 +65,26 @@ actual fun SaveFileButton(
                         FileOutputStream(parcelFileDescriptor.fileDescriptor).use { outputStream ->
                             val content = saveData.prepareContent(name ?: DdcV4.DEFAULT_NAME)
                             outputStream.write(content.toByteArray())
-                            onSaved(true, name ?: "")
+                            onSaved(SaveResult.Success(
+                                filename = filename ?: "",
+                            ))
                         }
-                    } ?: onSaved(false, name ?: "")
-                } ?: onSaved(false, "")
+                    } ?: onSaved(SaveResult.Failure(
+                        filename = filename
+                    ))
+                } ?: onSaved(SaveResult.Failure(
+                    error = "ActivityResultContracts.CreateDocument launch returned uri = null"
+                ))
             } catch (e: IOException) {
                 e.printStackTrace()
-                onSaved(false, "")
+                onSaved(SaveResult.Failure(
+                    error = e.message,
+                ))
             } catch (e: FileNotFoundException) {
                 e.printStackTrace()
-                onSaved(false, "")
+                onSaved(SaveResult.Failure(
+                    error = e.message,
+                ))
             }
         }
     }
@@ -105,9 +119,9 @@ actual fun SaveFileButton(
 private fun sanitizeFilename(displayName: String): String {
     val badCharacters = arrayOf("..", "/")
     val segments = displayName.split("/")
-    var fileName = segments[segments.size - 1]
-    for (suspString in badCharacters) {
-        fileName = fileName.replace(suspString, "_")
+    var fileName = segments.last()
+    for (susString in badCharacters) {
+        fileName = fileName.replace(susString, "_")
     }
     return fileName
 }

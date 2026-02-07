@@ -20,12 +20,14 @@ import androidx.compose.ui.window.DialogProperties
 import domain.io.SaveBitmapAsPngButton
 import domain.io.SaveData
 import domain.io.SaveFileButton
+import domain.io.SaveResult
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.editor.EditorViewModel
 import ui.tools.Tool
 
+// TODO:  distinct (fast) save and save as options
 @Composable
 fun SaveOptionsDialog(
     viewModel: EditorViewModel,
@@ -33,7 +35,8 @@ fun SaveOptionsDialog(
     exportAsSvg: (name: String) -> String,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
-    onSavedStatus: (success: Boolean?, filename: String?) -> Unit,
+    onSaved: (SaveResult) -> Unit,
+    lastSaveResult: SaveResult? = null,
     dialogActions: SharedFlow<DialogAction>? = null,
 ) {
     Dialog(
@@ -54,75 +57,81 @@ fun SaveOptionsDialog(
                 val rowModifier = Modifier.fillMaxWidth() //.padding(end = 8.dp)
                 val containerColor = MaterialTheme.colorScheme.surface
                 val contentColor = MaterialTheme.colorScheme.onSurface
-                val saveCluster = Tool.SaveCluster
-                // NOTE: optimize by starting to encode bitmap when user is
+                // NOTE: optimize by starting to encode bitmap when the user is
                 //  shown name-choosing dialog
                 SaveFileButton(
-                    saveData = SaveData(
-                        name = saveCluster.DEFAULT_NAME,
-                        extension = saveCluster.EXTENSION, // yml
-                        otherDisplayedExtensions = saveCluster.otherDisplayedExtensions,
-                        mimeType = saveCluster.MIME_TYPE,
+                    saveData = SaveData( // name.yml
+                        filename = lastSaveResult?.filename ?: Tool.SaveCluster.DEFAULT_FILENAME,
+                        lastDir = lastSaveResult?.dir,
+                        otherDisplayedExtensions = Tool.SaveCluster.otherDisplayedExtensions,
+                        mimeType = Tool.SaveCluster.MIME_TYPE,
                         prepareContent = saveAsYaml
                     ),
                     buttonContent = {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
-                            Icon(painterResource(saveCluster.icon), stringResource(saveCluster.name), iconModifier)
-                            Text(stringResource(saveCluster.description))
+                            Icon(
+                                painterResource(Tool.SaveCluster.icon),
+                                stringResource(Tool.SaveCluster.name),
+                                iconModifier
+                            )
+                            Text(stringResource(Tool.SaveCluster.description))
                         }
                     },
                     modifier = buttonModifier,
                     containerColor = containerColor,
                     contentColor = contentColor,
-                ) { success, filename ->
-                    println(if (success == true) "YAML saved" else "YAML not saved")
-                    onSavedStatus(success, filename)
+                ) { saveResult ->
+                    println(if (saveResult.isSuccess) "YAML saved" else "YAML not saved")
+                    onSaved(saveResult)
                     onConfirm()
                 }
-                // for one reason or another png export is quite slow on Web (desktop is quite fast, mobile is unimplemented)
-                val pngExport = Tool.PngExport
+                // for one reason or another png export is quite slow on Web (desktop is quite fast,
+                // mobile is unimplemented)
                 SaveBitmapAsPngButton(
                     viewModel = viewModel,
                     saveData = SaveData(
-                        name = pngExport.DEFAULT_NAME,
-                        extension = pngExport.EXTENSION,
-                        mimeType = pngExport.MIME_TYPE,
+                        filename = lastSaveResult?.filename ?: Tool.PngExport.DEFAULT_FILENAME,
+                        lastDir = lastSaveResult?.dir,
+                        mimeType = Tool.PngExport.MIME_TYPE,
                         prepareContent = { }
                     ),
                     buttonContent = {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
-                            Icon(painterResource(pngExport.icon), stringResource(pngExport.name), iconModifier)
-                            Text(stringResource(pngExport.description))
+                            Icon(painterResource(Tool.PngExport.icon), stringResource(Tool.PngExport.name), iconModifier)
+                            Text(stringResource(Tool.PngExport.description))
                         }
                     },
                     modifier = buttonModifier,
                     containerColor = containerColor,
                     contentColor = contentColor,
-                ) { success, filename ->
-                    println(if (success == true) "PNG exported" else "PNG not exported")
-                    onSavedStatus(success, filename)
+                ) { saveResult ->
+                    println(if (saveResult.isSuccess) "PNG exported" else "PNG not exported")
+                    onSaved(saveResult)
                     onConfirm()
                 }
-                val svgExport = Tool.SvgExport
                 SaveFileButton(
                     saveData = SaveData(
-                        name = svgExport.DEFAULT_NAME,
-                        extension = svgExport.EXTENSION,
-                        mimeType = svgExport.MIME_TYPE,
+                        filename = lastSaveResult?.filename ?: Tool.SvgExport.DEFAULT_FILENAME,
+                        lastDir = lastSaveResult?.dir,
+                        mimeType = Tool.SvgExport.MIME_TYPE,
                         prepareContent = exportAsSvg
                     ),
                     buttonContent = {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
-                            Icon(painterResource(svgExport.icon), stringResource(svgExport.name), iconModifier)
-                            Text(stringResource(svgExport.description))
+                            Icon(
+                                painterResource(Tool.SvgExport.icon),
+                                stringResource(Tool.SvgExport.name),
+                                iconModifier,
+                            )
+                            Text(stringResource(Tool.SvgExport.description))
                         }
                     },
                     modifier = buttonModifier,
                     containerColor = containerColor,
                     contentColor = contentColor,
-                ) { success, filename ->
-                    println(if (success == true) "SVG exported" else "SVG not exported")
-                    onSavedStatus(success, filename)
+                ) { saveResult ->
+                    println(if (saveResult.isSuccess) "SVG exported" else "SVG not exported")
+                    onSaved(saveResult)
                     onConfirm()
                 }
             }

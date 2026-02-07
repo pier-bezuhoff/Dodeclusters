@@ -288,6 +288,7 @@ class EditorViewModel : ViewModel() {
 
     /** sets [tapRadius] based on [density] */
     fun setEpsilon(density: Density) {
+        println("VM.setEpsilon")
         with (density) {
             tapRadius = getPlatform().tapRadius.dp.toPx()
         }

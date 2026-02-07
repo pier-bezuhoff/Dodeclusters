@@ -75,16 +75,16 @@ actual fun SaveBitmapAsPngButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
-    onSaved: (success: Boolean?, filename: String?) -> Unit
+    onSaved: (SaveResult) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var openDialog by remember { mutableStateOf(false) }
-    var screenshotName by remember { mutableStateOf(
-        TextFieldValue(
-        text = saveData.name,
-        selection = TextRange(saveData.name.length) // important to insert cursor AT THE END
-    )
-    ) }
+    var screenshotName by remember {
+        mutableStateOf(TextFieldValue(
+            text = saveData.name,
+            selection = TextRange(saveData.name.length) // important to insert cursor AT THE END
+        ))
+    }
     val textFieldFocusRequester = remember { FocusRequester() }
     val bitmapFlow: MutableSharedFlow<ImageBitmap> = remember { MutableSharedFlow(replay = 1) }
     val bitmapState: State<ImageBitmap?> = bitmapFlow.collectAsState(null)
@@ -96,10 +96,15 @@ actual fun SaveBitmapAsPngButton(
             bitmapFlow.collect { bitmap ->
                 try {
                     downloadBitmapAsPng(bitmap, data.filename)
-                    onSaved(true, data.filename)
+                    onSaved(SaveResult.Success(
+                        filename = data.filename,
+                    ))
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    onSaved(false, data.filename)
+                    onSaved(SaveResult.Failure(
+                        filename = data.filename,
+                        error = e.message
+                    ))
                 } finally {
                     coroutineScope.cancel()
                 }

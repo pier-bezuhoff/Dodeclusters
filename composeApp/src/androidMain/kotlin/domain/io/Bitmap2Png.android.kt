@@ -17,8 +17,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat.startActivity
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import kotlinx.coroutines.Dispatchers
@@ -41,9 +39,9 @@ actual fun SaveBitmapAsPngButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
-    onSaved: (success: Boolean?, filename: String?) -> Unit
+    onSaved: (SaveResult) -> Unit
 ) {
-    val context = LocalContext.current
+//    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val writeStorageAccessState = rememberMultiplePermissionsState(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -68,7 +66,7 @@ actual fun SaveBitmapAsPngButton(
     //                        onFailure = {
     //                        }
     //                    )
-                        onSaved(null, saveData.filename)
+                        onSaved(SaveResult.Success(saveData.filename))
                     }
                 } else if (writeStorageAccessState.shouldShowRationale) {
     //                coroutineScope.launch {

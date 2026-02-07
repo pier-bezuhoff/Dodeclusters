@@ -275,6 +275,7 @@ sealed class Tool(
     ) {
         const val DEFAULT_NAME = DdcV4.DEFAULT_NAME
         const val EXTENSION = DdcV4.DEFAULT_EXTENSION // yml
+        const val DEFAULT_FILENAME = "$DEFAULT_NAME.$EXTENSION"
         val otherDisplayedExtensions = setOf("yaml", "ddc", "ddu")
         const val MIME_TYPE = "application/yaml"
     }
@@ -284,6 +285,7 @@ sealed class Tool(
     ) {
         const val DEFAULT_NAME = DdcV4.DEFAULT_NAME
         const val EXTENSION = "svg"
+        const val DEFAULT_FILENAME = "$DEFAULT_NAME.$EXTENSION"
         const val MIME_TYPE = "image/svg+xml" // apparently this is highly contested (since svg can contain js)
     }
     data object PngExport : CustomAction(
@@ -292,6 +294,7 @@ sealed class Tool(
     ) {
         const val DEFAULT_NAME = "dodeclusters-screenshot"
         const val EXTENSION = "png"
+        const val DEFAULT_FILENAME = "$DEFAULT_NAME.$EXTENSION"
         const val MIME_TYPE = "image/png"
     }
     data object OpenFile : CustomAction(

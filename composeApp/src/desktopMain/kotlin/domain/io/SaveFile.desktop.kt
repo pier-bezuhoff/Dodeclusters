@@ -32,12 +32,12 @@ actual fun SaveFileButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
-    saveRequests: SharedFlow<Unit>?,
-    onSaved: (success: Boolean?, filename: String?) -> Unit
+    saveRequests: SharedFlow<SaveRequest>?,
+    onSaved: (SaveResult) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var dialogIsOpen by remember { mutableStateOf(false) }
-    var lastDir by remember { mutableStateOf<String?>(null) }
+    var lastDir by remember { mutableStateOf<String?>(saveData.lastDir) }
     Button(
         onClick = {
             dialogIsOpen = true
@@ -65,12 +65,22 @@ actual fun SaveFileButton(
                     val file = File(directory, filename)
                     try {
                         saveTextFile(saveData.prepareContent(file.nameWithoutExtension), file)
-                        onSaved(true, file.absolutePath)
+                        onSaved(SaveResult.Success(
+                            filename = filename,
+                            dir = lastDir,
+                        ))
                     } catch (e: IOException) {
-                        onSaved(false, file.absolutePath)
+                        onSaved(SaveResult.Failure(
+                            filename = filename,
+                            dir = lastDir,
+                            error = e.message,
+                        ))
                     }
-                } else
-                    onSaved(null, null)
+                } else {
+                    onSaved(SaveResult.Cancelled(
+                        dir = lastDir,
+                    ))
+                }
             }
         }
     }

@@ -49,8 +49,12 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -85,6 +89,7 @@ import domain.PartialArgList
 import domain.io.DdcRepository
 import domain.io.LookupData
 import domain.io.OpenFileButton
+import domain.io.SaveResult
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
@@ -147,19 +152,26 @@ fun EditorScreen(
         factory = EditorViewModel.Factory
     )
     val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
-    viewModel.setEpsilon(LocalDensity.current)
+    var lastSaveResult: SaveResult? by rememberSaveable {
+        mutableStateOf(null)
+    }
+    val density = LocalDensity.current
+    LaunchedEffect(viewModel, density) {
+        viewModel.setEpsilon(density)
+    }
     Scaffold(
         // ig this may only be useful on android with kbd lol
         modifier = if (keyboardActions == null)
             Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
-        else Modifier
-        ,
-        snackbarHost = { SnackbarHost(snackbarHostState) { data ->
-            Snackbar(data,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        } },
+        else Modifier,
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(data,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+        },
         floatingActionButton = {
             if (!isLandscape && viewModel.showUI) {
                 // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
@@ -361,16 +373,25 @@ fun EditorScreen(
                 exportAsSvg = viewModel::exportAsSvg,
                 onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::closeDialog,
-                onSavedStatus = { success, filename ->
-                    // if success is null it means saving was canceled by the user
-                    if (success != null) {
-                        viewModel.queueSnackbarMessage(
-                            if (success) SnackbarMessage.SUCCESSFUL_SAVE
-                            else SnackbarMessage.FAILED_SAVE,
-                            " $filename"
-                        )
+                onSaved = { saveResult ->
+                    lastSaveResult = saveResult
+                    when (saveResult) {
+                        is SaveResult.Success ->
+                            viewModel.queueSnackbarMessage(SnackbarMessage.SUCCESSFUL_SAVE)
+                        is SaveResult.Failure -> {
+                            val errorMessage =
+                                if (saveResult.error == null) ""
+                                else "; error: \"${saveResult.error}\""
+
+                            viewModel.queueSnackbarMessage(
+                                SnackbarMessage.FAILED_SAVE,
+                                " ${saveResult.filename}" + errorMessage
+                            )
+                        }
+                        is SaveResult.Cancelled -> {}
                     }
                 },
+                lastSaveResult = lastSaveResult,
                 dialogActions = dialogActions,
             )
         }

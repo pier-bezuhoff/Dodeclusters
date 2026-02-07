@@ -19,5 +19,5 @@ expect fun SaveBitmapAsPngButton(
     shape: Shape = RoundedCornerShape(4.dp),
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
-    onSaved: (success: Boolean?, filename: String?) -> Unit = { _, _ -> }
+    onSaved: (SaveResult) -> Unit = { }
 )

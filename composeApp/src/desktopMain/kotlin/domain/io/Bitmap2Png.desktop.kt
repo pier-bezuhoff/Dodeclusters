@@ -37,11 +37,11 @@ actual fun SaveBitmapAsPngButton(
     shape: Shape,
     containerColor: Color,
     contentColor: Color,
-    onSaved: (success: Boolean?, filename: String?) -> Unit
+    onSaved: (SaveResult) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
-    var lastDir by remember { mutableStateOf<String?>(null) }
+    var lastDir by remember { mutableStateOf<String?>(saveData.lastDir) }
     val bitmapFlow: MutableSharedFlow<ImageBitmap> = remember { MutableSharedFlow(replay = 1) }
     val bitmapState: State<ImageBitmap?> = bitmapFlow.collectAsState(null)
     Button(
@@ -80,15 +80,25 @@ actual fun SaveBitmapAsPngButton(
                         bitmapFlow.collect { bitmap ->
                             try {
                                 saveBitmapToPngFile(bitmap, file)
-                                onSaved(true, file.absolutePath)
+                                onSaved(SaveResult.Success(
+                                    filename = filename,
+                                    dir = lastDir,
+                                ))
                             } catch (e: IOException) {
-                                onSaved(false, file.absolutePath)
+                                onSaved(SaveResult.Failure(
+                                    filename = filename,
+                                    dir = lastDir,
+                                    error = e.message,
+                                ))
                             } finally {
                                 coroutineScope.cancel()
                             }
                         }
-                    } else
-                        onSaved(null, null)
+                    } else {
+                        onSaved(SaveResult.Cancelled(
+                            dir = lastDir,
+                        ))
+                    }
                 }
             }
         }
