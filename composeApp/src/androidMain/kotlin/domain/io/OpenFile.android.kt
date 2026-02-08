@@ -15,7 +15,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.flowWithLifecycle
 import kotlinx.coroutines.flow.SharedFlow
-import java.io.FileNotFoundException
+import java.io.IOException
 
 @Composable
 actual fun OpenFileButton(
@@ -31,7 +31,7 @@ actual fun OpenFileButton(
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
         // Q: use launch as coroutine instead?
         val content: String? = uri?.let {
-            readDdcFromUri(context, uri)
+            readFromUri(context, uri)
         }
         onOpen(content)
     }
@@ -56,7 +56,7 @@ actual fun OpenFileButton(
     }
 }
 
-fun readDdcFromUri(context: Context, uri: Uri): String? {
+fun readFromUri(context: Context, uri: Uri): String? {
     //val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
     // NOTE: uncomment the following ONLY for ACTION_OPEN_DOCUMENT (ACTION_GET_CONTENT is NOT for persistable Uri's, only for temporary ones)
     // context.contentResolver.takePersistableUriPermission(uri, takeFlags)
@@ -66,7 +66,7 @@ fun readDdcFromUri(context: Context, uri: Uri): String? {
                 reader.readText()
             }
         }
-    } catch (e: FileNotFoundException) {
+    } catch (e: IOException) { // includes FileNotFoundException
         e.printStackTrace()
         return null
     }

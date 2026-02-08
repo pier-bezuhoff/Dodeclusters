@@ -9,9 +9,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.SharedFlow
 
-// TODO: implement logic (only feasible for the desktop version)
 enum class SaveRequest {
-    QUCK_SAVE, SAVE_AS
+    QUICK_SAVE, SAVE_AS
 }
 
 @Composable

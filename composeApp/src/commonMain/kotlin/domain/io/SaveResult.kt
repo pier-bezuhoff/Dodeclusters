@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 sealed interface SaveResult {
     val filename: String?
     val dir: String?
+    val uri: String?
 
     val isSuccess: Boolean get() =
         this is Success
@@ -16,18 +17,23 @@ sealed interface SaveResult {
     data class Success(
         override val filename: String,
         override val dir: String? = null,
+        override val uri: String? = null,
     ) : SaveResult
 
     @Serializable
     data class Cancelled(
         override val filename: String? = null,
         override val dir: String? = null,
-    ) : SaveResult
+    ) : SaveResult {
+        override val uri: String? = null
+    }
 
     @Serializable
     data class Failure(
         override val filename: String? = null,
         override val dir: String? = null,
         val error: String? = null,
-    ) : SaveResult
+    ) : SaveResult {
+        override val uri: String? = null
+    }
 }

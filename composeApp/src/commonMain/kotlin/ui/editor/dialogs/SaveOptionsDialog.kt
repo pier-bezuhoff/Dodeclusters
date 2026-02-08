@@ -28,6 +28,7 @@ import ui.editor.EditorViewModel
 import ui.tools.Tool
 
 // TODO:  distinct (fast) save and save as options
+//  there is already saveRequests flow as arg of SaveFileButton
 @Composable
 fun SaveOptionsDialog(
     viewModel: EditorViewModel,
@@ -63,6 +64,7 @@ fun SaveOptionsDialog(
                     saveData = SaveData( // name.yml
                         filename = lastSaveResult?.filename ?: Tool.SaveCluster.DEFAULT_FILENAME,
                         lastDir = lastSaveResult?.dir,
+                        uri = lastSaveResult?.uri,
                         otherDisplayedExtensions = Tool.SaveCluster.otherDisplayedExtensions,
                         mimeType = Tool.SaveCluster.MIME_TYPE,
                         prepareContent = saveAsYaml
@@ -92,6 +94,7 @@ fun SaveOptionsDialog(
                     saveData = SaveData(
                         filename = lastSaveResult?.filename ?: Tool.PngExport.DEFAULT_FILENAME,
                         lastDir = lastSaveResult?.dir,
+                        uri = lastSaveResult?.uri,
                         mimeType = Tool.PngExport.MIME_TYPE,
                         prepareContent = { }
                     ),
@@ -113,6 +116,7 @@ fun SaveOptionsDialog(
                     saveData = SaveData(
                         filename = lastSaveResult?.filename ?: Tool.SvgExport.DEFAULT_FILENAME,
                         lastDir = lastSaveResult?.dir,
+                        uri = lastSaveResult?.uri,
                         mimeType = Tool.SvgExport.MIME_TYPE,
                         prepareContent = exportAsSvg
                     ),

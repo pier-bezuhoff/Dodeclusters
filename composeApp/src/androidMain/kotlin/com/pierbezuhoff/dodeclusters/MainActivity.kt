@@ -30,8 +30,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.flowWithLifecycle
-import domain.io.readDdcFromUri
+import domain.io.readFromUri
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -206,7 +205,7 @@ class MainActivity : ComponentActivity() {
             .any { contentUri.path?.endsWith(it, ignoreCase = true) == true } || contentUri.path?.contains("encoded") == true
         ) {
             try {
-                content = readDdcFromUri(applicationContext, contentUri)
+                content = readFromUri(applicationContext, contentUri)
             } catch (e: SecurityException) {
                 // Q = API 29 = Android 10
                 if (useRecoveryLauncher && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
