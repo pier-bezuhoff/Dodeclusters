@@ -30,12 +30,15 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import domain.LoadingState
 import domain.io.readFromUri
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import setFilesDir
 import ui.LifecycleEvent
+import ui.theme.ColorTheme
+import ui.theme.DEFAULT_COLOR_THEME
 import ui.theme.DodeclustersColors
 import java.io.File
 import java.io.FileNotFoundException
@@ -43,7 +46,7 @@ import java.io.FileNotFoundException
 class MainActivity : ComponentActivity() {
     private val lifecycleEvents: MutableSharedFlow<LifecycleEvent> =
         MutableSharedFlow(replay = 1)
-    private val ddcFlow: MutableStateFlow<String?> = MutableStateFlow(null)
+    private val ddcFlow: MutableStateFlow<LoadingState<String>?> = MutableStateFlow(null)
     private val anchorUriFlow: MutableStateFlow<Uri?> = MutableStateFlow(null)
     private val altLauncher: ActivityResultLauncher<Array<String>> = registerForActivityResult(
         contract = object : ActivityResultContracts.OpenDocument() {
@@ -61,8 +64,9 @@ class MainActivity : ComponentActivity() {
             val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION // or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             applicationContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
             val newDdcContent = getContentFromExternalImplicitIntent(uri, useRecoveryLauncher = false, useAltLauncher = false)
-            if (newDdcContent != null)
-                ddcFlow.update { newDdcContent }
+            if (newDdcContent != null) {
+                ddcFlow.update { LoadingState.Completed(newDdcContent) }
+            }
         }
     }
     private val recoveryLauncher: ActivityResultLauncher<IntentSenderRequest> =
@@ -70,8 +74,9 @@ class MainActivity : ComponentActivity() {
             it.data?.let { intent ->
                 intent.data?.let { uri ->
                     val newDdcContent = getContentFromExternalImplicitIntent(uri, useRecoveryLauncher = false)
-                    if (newDdcContent != null)
-                        ddcFlow.update { newDdcContent }
+                    if (newDdcContent != null) {
+                        ddcFlow.update { LoadingState.Completed(newDdcContent) }
+                    }
                 }
             }
         }
@@ -81,8 +86,9 @@ class MainActivity : ComponentActivity() {
         if (isGranted) {
             anchorUriFlow.value?.let { uri ->
                 val newDdcContent = getContentFromExternalImplicitIntent(uri)
-                if (newDdcContent != null)
-                    ddcFlow.update { newDdcContent }
+                if (newDdcContent != null) {
+                    ddcFlow.update { LoadingState.Completed(newDdcContent) }
+                }
             }
         } else {
             println("permission denied :(")
@@ -127,15 +133,16 @@ class MainActivity : ComponentActivity() {
                 if (intent.action in setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT))
                     intent.data?.let {
                         val newDdcContent = getContentFromExternalImplicitIntent(it)
-                        if (newDdcContent != null)
-                            ddcFlow.update { newDdcContent }
+                        if (newDdcContent != null) {
+                            ddcFlow.update { LoadingState.Completed(newDdcContent) }
+                        }
                     }
             }
             val view = LocalView.current
-            val isDarkTheme = isSystemInDarkTheme()
-            val scheme =
-                if (isDarkTheme) DodeclustersColors.darkScheme
-                else DodeclustersColors.lightScheme
+            val themeFlow = MutableStateFlow<ColorTheme>(DEFAULT_COLOR_THEME)
+            val theme by themeFlow.collectAsStateWithLifecycle()
+            val isDarkTheme = theme.isDark()
+            val scheme = theme.toColorScheme()
             val statusBarColor = scheme.primary.toArgb()
             if (!view.isInEditMode) {
                 SideEffect {
@@ -150,6 +157,7 @@ class MainActivity : ComponentActivity() {
             }
             App(
                 ddcContent = ddcContent,
+                themeFlow = themeFlow,
                 // i think it's recommended to do some .flowWithLifecycle hopping but idc
                 lifecycleEvents = lifecycleEvents,
             )
@@ -171,8 +179,9 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         intent.data?.let { uri ->
             val newDdcContent = getContentFromExternalImplicitIntent(uri)
-            if (newDdcContent != null)
-                ddcFlow.update { newDdcContent }
+            if (newDdcContent != null) {
+                ddcFlow.update { LoadingState.Completed(newDdcContent) }
+            }
         }
     }
 

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -53,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,6 +66,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import core.geometry.CircleOrLine
@@ -85,7 +88,9 @@ import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_pro
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
+import domain.LoadingState
 import domain.PartialArgList
+import domain.ProgressState
 import domain.io.DdcRepository
 import domain.io.LookupData
 import domain.io.OpenFileButton
@@ -130,8 +135,7 @@ import kotlin.math.min
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun EditorScreen(
-    sampleName: String? = null,
-    ddcContent: String? = null,
+    ddcContent: LoadingState<String>? = null,
     keyboardActions: SharedFlow<KeyboardAction>? = null,
     lifecycleEvents: SharedFlow<LifecycleEvent>? = null,
 ) {
@@ -139,7 +143,6 @@ fun EditorScreen(
     val isLandscape = windowSizeClass.isLandscape
     val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
     val compact = windowSizeClass.isCompact
-    val ddcRepository = DdcRepository
     val coroutineScope = rememberCoroutineScope()
     val dialogActions = keyboardActions?.mapNotNull {
         when (it) {
@@ -151,13 +154,10 @@ fun EditorScreen(
     val viewModel: EditorViewModel = viewModel(
         factory = EditorViewModel.Factory
     )
+    val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
     var lastSaveResult: SaveResult? by rememberSaveable {
         mutableStateOf(null)
-    }
-    val density = LocalDensity.current
-    LaunchedEffect(viewModel, density) {
-        viewModel.setEpsilon(density)
     }
     Scaffold(
         // ig this may only be useful on android with kbd lol
@@ -250,6 +250,28 @@ fun EditorScreen(
                             compact,
                             Modifier.align(Alignment.BottomStart)
                         )
+                }
+                if (vmRestoration == ProgressState.IN_PROGRESS || ddcContent is LoadingState.InProgress) {
+                    Column(
+                        Modifier.align(Alignment.Center)
+                    ) {
+                        if (ddcContent is LoadingState.InProgress) {
+                            ddcContent.message?.let { message ->
+                                Surface(
+                                    Modifier.padding(32.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary,
+                                ) {
+                                    Text(
+                                        text = message,
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                        CircularProgressIndicator()
+                    }
                 }
             }
         }
@@ -422,18 +444,26 @@ fun EditorScreen(
         }
         null -> {}
     }
-    LaunchedEffect(ddcContent, sampleName, ddcRepository) {
-        viewModel.viewModelScope.launch {
-            viewModel.restoreFromDisk()
-            if (ddcContent != null) {
-                println("loading external ddc...")
-                viewModel.loadDdc(ddcContent)
-            } else if (sampleName != null) {
-                val content = ddcRepository.loadSampleClusterYaml(sampleName)
-                if (content != null) {
-                    viewModel.loadDdc(content)
+    val density = LocalDensity.current
+    LaunchedEffect(density) {
+        viewModel.setEpsilon(density)
+    }
+    LaunchedEffect(ddcContent, vmRestoration) {
+        when (vmRestoration) {
+            ProgressState.COMPLETED -> {
+                when (ddcContent) {
+                    null -> {}
+                    is LoadingState.InProgress -> {}
+                    is LoadingState.Completed<String> -> {
+                        viewModel.loadDdc(ddcContent.result)
+                    }
+                    is LoadingState.Error -> {
+                        println(ddcContent.exception.message)
+                        snackbarHostState.showSnackbar("Error: ${ddcContent.exception.message}")
+                    }
                 }
             }
+            else -> {}
         }
     }
     LaunchedEffect(keyboardActions) {

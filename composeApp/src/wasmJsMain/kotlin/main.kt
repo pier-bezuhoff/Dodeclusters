@@ -1,12 +1,19 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
+import androidx.compose.runtime.State
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
+import domain.LoadingState
+import domain.io.DdcRepository
 import kotlinx.browser.document
+import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
@@ -24,13 +31,14 @@ fun main() {
     // example:
     // https://pier-bezuhoff.github.io/Dodeclusters?theme=dark&sample=apollonius
     val url = URL(window.location.href)
-    val sampleName: String? = url.searchParams.get("sample")
     val colorTheme: ColorTheme = when (url.searchParams.get("theme")?.lowercase()) {
         "light" -> ColorTheme.LIGHT
         "dark" -> ColorTheme.DARK
         "auto" -> ColorTheme.AUTO
         else -> DEFAULT_COLOR_THEME
     }
+    val sharedId: String? = url.searchParams.get("shared")
+    val sampleName: String? = url.searchParams.get("sample")
     val lifecycleEvents: MutableSharedFlow<LifecycleEvent> = MutableSharedFlow(replay = 1)
     document.addEventListener("visibilitychange") {
         if (document["hidden"] == true.toJsBoolean()) {
@@ -38,6 +46,7 @@ fun main() {
         }
     }
     val coroutineScope = CoroutineScope(Dispatchers.Default)
+    val themeFlow = MutableStateFlow<ColorTheme>(colorTheme)
     val keyboardActions: MutableSharedFlow<KeyboardAction> = MutableSharedFlow(replay = 1)
     document.addEventListener("keydown") { event: Event ->
         (event as? KeyboardEvent)?.let { keyboardEvent ->
@@ -59,17 +68,36 @@ fun main() {
     ComposeViewport(
         viewportContainerId = "compose-root",
         configure = {
-            isA11YEnabled = false
+            isA11YEnabled = false // for performance
         }
     ) {
+        val sharedDdcContentState: State<LoadingState<String>>? = sharedId?.let {
+            val message = "Loading shared cluster '$sharedId'..."
+            produceState<LoadingState<String>>(LoadingState.InProgress(message), key1 = sharedId) {
+                val ddcContent = fetchSharedDdc(sharedId)
+                println("fetched shared ddc $sharedId")
+                value = if (ddcContent == null)
+                    LoadingState.Error(Error("Fetching shared resource '$sharedId' failed"))
+                else
+                    LoadingState.Completed(ddcContent)
+            }
+        }
+        val sampleDdcContentState: State<LoadingState<String>>? = sampleName?.let {
+            val message = "Loading sample cluster '$sampleName'..."
+            produceState<LoadingState<String>>(LoadingState.InProgress(message), key1 = sampleName) {
+                val ddcContent = DdcRepository.loadSampleClusterYaml(sampleName)
+                println("loaded sample ddc $sampleName")
+                value = if (ddcContent == null || true)
+                    LoadingState.Error(Error("No sample '$sampleName' found"))
+                else
+                    LoadingState.Completed(ddcContent)
+            }
+        }
         App(
-            sampleName = sampleName,
-            colorTheme = colorTheme,
+            ddcContent = sharedDdcContentState?.value ?: sampleDdcContentState?.value,
+            themeFlow = themeFlow,
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,
         )
     }
 }
-
-fun alert(message: String): Unit =
-    js("alert(message)")

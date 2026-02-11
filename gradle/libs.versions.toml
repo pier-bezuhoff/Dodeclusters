@@ -1,5 +1,5 @@
 [versions]
-dodeclusters-version = "0.4.5"
+dodeclusters-version = "0.5.0"
 dodeclusters-android-versionCode = "10"
 dodeclusters-desktop-packageVersion = "1.0.5" # cannot start with 0 it seems
 android-compileSdk = "36"

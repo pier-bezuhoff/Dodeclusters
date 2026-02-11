@@ -76,6 +76,7 @@ import domain.hug
 import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV4
+import domain.io.SaveRequest
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
 import domain.model.ChangeHistory
@@ -268,6 +269,13 @@ class EditorViewModel : ViewModel() {
         MutableSharedFlow(
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
+    // TODO: shortcuts and quick-save logic is unimplemented
+    /** Save file requests (quick save/overwrite or save as) that generally originate from
+     * the keyboard events and are used in platform-dependent buttons */
+    val saveFileRequests: MutableSharedFlow<SaveRequest> =
+        MutableSharedFlow(
+            replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
 
     val animations: MutableSharedFlow<ObjectAnimation> = MutableSharedFlow()
 
@@ -276,7 +284,7 @@ class EditorViewModel : ViewModel() {
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
 
-    private val restoration: MutableStateFlow<ProgressState> =
+    val restoration: MutableStateFlow<ProgressState> =
         MutableStateFlow(ProgressState.NOT_STARTED)
     private val cachingInProgress: MutableStateFlow<Boolean> =
         MutableStateFlow(false)
@@ -285,6 +293,12 @@ class EditorViewModel : ViewModel() {
     private var tapRadius = getPlatform().tapRadius
 
     private var movementAfterDown = false
+
+    init {
+        viewModelScope.launch {
+            restoreFromDisk()
+        }
+    }
 
     /** sets [tapRadius] based on [density] */
     fun setEpsilon(density: Density) {

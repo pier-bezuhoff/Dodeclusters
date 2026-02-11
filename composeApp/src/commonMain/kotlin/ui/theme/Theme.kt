@@ -2,6 +2,7 @@ package ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -19,6 +20,39 @@ enum class ColorTheme {
     HIGH_CONTRAST,
     /** Automatically detect current system color theme */
     AUTO
+    ;
+
+    @Composable
+    fun isLight(): Boolean =
+        when (this) {
+            ColorTheme.LIGHT -> true
+            ColorTheme.HIGH_CONTRAST -> true
+            ColorTheme.DARK -> false
+            ColorTheme.AUTO -> !isSystemInDarkTheme()
+        }
+
+    @Composable
+    fun isDark(): Boolean =
+        when (this) {
+            ColorTheme.LIGHT -> false
+            ColorTheme.HIGH_CONTRAST -> false
+            ColorTheme.DARK -> true
+            ColorTheme.AUTO -> isSystemInDarkTheme()
+        }
+
+    @Composable
+    fun toColorScheme(): ColorScheme {
+        val isLight = when (this) {
+            ColorTheme.LIGHT -> true
+            ColorTheme.HIGH_CONTRAST -> true // TODO: custom colors
+            ColorTheme.DARK -> false
+            ColorTheme.AUTO -> !isSystemInDarkTheme()
+        }
+        val scheme =
+            if (isLight) DodeclustersColors.lightScheme
+            else DodeclustersColors.darkScheme
+        return scheme
+    }
 }
 
 val DEFAULT_COLOR_THEME = ColorTheme.DARK
