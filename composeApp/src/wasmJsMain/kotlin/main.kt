@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
@@ -11,7 +12,6 @@ import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -37,6 +37,7 @@ fun main() {
         "auto" -> ColorTheme.AUTO
         else -> DEFAULT_COLOR_THEME
     }
+    val sharePerm: String? = url.searchParams.get("share_perm")
     val sharedId: String? = url.searchParams.get("shared")
     val sampleName: String? = url.searchParams.get("sample")
     val lifecycleEvents: MutableSharedFlow<LifecycleEvent> = MutableSharedFlow(replay = 1)
@@ -65,6 +66,15 @@ fun main() {
     loadingSpinner?.remove()
     document.querySelector("h2")?.setAttribute("style", "display: none;")
     document.querySelector("h1")?.setAttribute("style", "display: none;")
+    if (sharePerm != null) {
+        coroutineScope.launch {
+            localStorage.setItem(SHARE_PERMISSION_KEY, sharePerm)
+            val userId = WebDdcSharing.registerSharer()
+            if (userId != null) {
+                localStorage.setItem(USER_ID_KEY, userId)
+            }
+        }
+    }
     ComposeViewport(
         viewportContainerId = "compose-root",
         configure = {
@@ -74,7 +84,7 @@ fun main() {
         val sharedDdcContentState: State<LoadingState<String>>? = sharedId?.let {
             val message = "Loading shared cluster '$sharedId'..."
             produceState<LoadingState<String>>(LoadingState.InProgress(message), key1 = sharedId) {
-                val ddcContent = fetchSharedDdc(sharedId)
+                val ddcContent = WebDdcSharing.fetchSharedDdc(sharedId)
                 println("fetched shared ddc $sharedId")
                 value = if (ddcContent == null)
                     LoadingState.Error(Error("Fetching shared resource '$sharedId' failed"))
@@ -93,11 +103,28 @@ fun main() {
                     LoadingState.Completed(ddcContent)
             }
         }
+        val weHaveSharePerm: Boolean by produceState(WebDdcSharing.testSharePermission(), key1 = sharePerm) {
+            if (sharePerm != null) {
+                localStorage.setItem(SHARE_PERMISSION_KEY, sharePerm)
+                val oldUserId = localStorage.getItem(USER_ID_KEY)
+                if (oldUserId == null) {
+                    val newUserId = WebDdcSharing.registerSharer()
+                    if (newUserId != null) {
+                        localStorage.setItem(USER_ID_KEY, newUserId)
+                        println("acquired share perm for $newUserId")
+                        value = true
+                    }
+                } else {
+                    value = true
+                }
+            }
+        }
         App(
             ddcContent = sharedDdcContentState?.value ?: sampleDdcContentState?.value,
             themeFlow = themeFlow,
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,
+            ddcSharing = if (weHaveSharePerm) WebDdcSharing else null,
         )
     }
 }

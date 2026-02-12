@@ -2,6 +2,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import domain.LoadingState
+import domain.io.DdcSharing
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import ui.LifecycleEvent
@@ -17,6 +18,7 @@ fun App(
     themeFlow: MutableStateFlow<ColorTheme> = MutableStateFlow(DEFAULT_COLOR_THEME),
     keyboardActions: SharedFlow<KeyboardAction>? = null,
     lifecycleEvents: SharedFlow<LifecycleEvent>? = null,
+    ddcSharing: DdcSharing? = null,
 ) {
     val colorTheme by themeFlow.collectAsStateWithLifecycle()
     DodeclustersTheme(colorTheme) {

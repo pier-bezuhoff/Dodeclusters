@@ -54,7 +54,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,7 +66,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import core.geometry.CircleOrLine
 import core.geometry.ImaginaryCircle
@@ -91,7 +89,7 @@ import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment
 import domain.LoadingState
 import domain.PartialArgList
 import domain.ProgressState
-import domain.io.DdcRepository
+import domain.io.DdcSharing
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveResult
@@ -100,7 +98,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -138,6 +135,7 @@ fun EditorScreen(
     ddcContent: LoadingState<String>? = null,
     keyboardActions: SharedFlow<KeyboardAction>? = null,
     lifecycleEvents: SharedFlow<LifecycleEvent>? = null,
+    ddcSharing: DdcSharing? = null,
 ) {
     val windowSizeClass = calculateWindowSizeClass()
     val isLandscape = windowSizeClass.isLandscape
