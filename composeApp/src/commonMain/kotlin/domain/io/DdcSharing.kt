@@ -12,7 +12,7 @@ data class SharedLink(
 interface DdcSharing {
     /** @return (ddc content, is shared link owned by the user) */
     suspend fun fetchSharedDdc(sharedId: SharedId): Pair<DdcContent, Boolean>?
-    suspend fun registerSharer(): UserId?
+    suspend fun registerUser(): UserId?
     fun testSharePermission(): Boolean
     suspend fun shareNewDdc(content: DdcContent): SharedId?
     suspend fun overwriteSharedDdc(sharedId: SharedId, content: DdcContent): SharedId?

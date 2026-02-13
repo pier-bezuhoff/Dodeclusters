@@ -197,6 +197,7 @@ class ChangeHistory(
         future.clear()
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         accumulatedChanges = SaveState.Changes.EMPTY
+        // we dont reset continuousChange here
         refreshUndoRedoStates()
 //        println(
 //            "past = " + past.joinToString(";\n", prefix = "[\n", postfix = "\n]") { group ->
@@ -239,6 +240,7 @@ class ChangeHistory(
         pinnedState = newState
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         accumulatedChanges = SaveState.Changes.EMPTY
+        continuousChange = null
         refreshUndoRedoStates()
 //        println("undo: undoStep = $undoStep")
         return newState
@@ -262,6 +264,7 @@ class ChangeHistory(
         pinnedState = newState
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         accumulatedChanges = SaveState.Changes.EMPTY
+        continuousChange = null
         refreshUndoRedoStates()
 //        println("redo: redoStep = $redoStep")
         return newState

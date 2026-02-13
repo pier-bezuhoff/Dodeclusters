@@ -83,9 +83,12 @@ fun main() {
             isA11YEnabled = false // for performance
         }
     ) {
-        val sharedDdcContentState: State<LoadingState<String>>? = sharedId?.let {
-            val message = "Loading shared cluster '$sharedId'..."
-            produceState<LoadingState<String>>(LoadingState.InProgress(message), key1 = sharedId) {
+        val sharedDdcContent: LoadingState<String>? by produceState<LoadingState<String>?>(
+            if (sharedId == null) null
+            else LoadingState.InProgress("Loading shared cluster '$sharedId'..."),
+            key1 = sharedId,
+        ) {
+            if (sharedId != null) {
                 val ddcContentAndOwned = WebDdcSharing.fetchSharedDdc(sharedId)
                 println("fetched shared ddc $sharedId")
                 value = if (ddcContentAndOwned == null)
@@ -94,9 +97,12 @@ fun main() {
                     LoadingState.Completed(ddcContentAndOwned.first)
             }
         }
-        val sampleDdcContentState: State<LoadingState<String>>? = sampleName?.let {
-            val message = "Loading sample cluster '$sampleName'..."
-            produceState<LoadingState<String>>(LoadingState.InProgress(message), key1 = sampleName) {
+        val sampleDdcContent: LoadingState<String>? by produceState<LoadingState<String>?>(
+            if (sampleName == null) null
+            else LoadingState.InProgress("Loading sample cluster '$sampleName'..."),
+            key1 = sampleName,
+        ) {
+            if (sampleName != null) {
                 val ddcContent = DdcRepository.loadSampleClusterYaml(sampleName)
                 println("loaded sample ddc $sampleName")
                 value = if (ddcContent == null || true)
@@ -105,27 +111,33 @@ fun main() {
                     LoadingState.Completed(ddcContent)
             }
         }
-        val weHaveSharePerm: Boolean by produceState(WebDdcSharing.testSharePermission(), key1 = sharePerm) {
+        val weHaveSharePerm: Boolean by produceState(
+            WebDdcSharing.testSharePermission(),
+            key1 = sharePerm,
+        ) {
             if (sharePerm != null) {
                 localStorage.setItem(SHARE_PERMISSION_KEY, sharePerm)
                 val oldUserId = localStorage.getItem(USER_ID_KEY)
                 if (oldUserId == null) {
-                    val newUserId = WebDdcSharing.registerSharer()
+                    // NOTE: the server doesn't verify share-perm validity atp
+                    val newUserId = WebDdcSharing.registerUser()
                     if (newUserId != null) {
                         localStorage.setItem(USER_ID_KEY, newUserId)
                         println("acquired share perm for $newUserId")
+                        // ideally we display it as a snackbar notice
                         value = true
                     }
                 } else {
                     value = true
                 }
+                val newUrl = URL(window.location.href)
+                // clean url too assert dominance or smth
+                newUrl.searchParams.delete(SearchParamKeys.SHARE_PERM)
+                window.history.pushState(null, "", newUrl.href)
             }
-            val newUrl = URL(window.location.href)
-            newUrl.searchParams.delete(SearchParamKeys.SHARE_PERM)
-            window.history.pushState(null, "", newUrl.href)
         }
         App(
-            ddcContent = sharedDdcContentState?.value ?: sampleDdcContentState?.value,
+            ddcContent = sharedDdcContent ?: sampleDdcContent,
             themeFlow = themeFlow,
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,

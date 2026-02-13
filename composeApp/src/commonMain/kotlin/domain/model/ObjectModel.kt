@@ -220,18 +220,20 @@ sealed class ObjectModel<R : Any> {
     }
 
     /** Already includes [invalidatePositions]. [EXPR_ONE_TO_ONE] must be compatible with
-     * the second type parameter of [expressions] */
+     * the second type parameter of [expressions]
+     * @return indices of updated dependent objects, sorted by tiers */
     @Suppress("UNCHECKED_CAST")
     fun <EXPR_ONE_TO_ONE : Expr.OneToOne> changeExpr(
         ix: Ix,
         newExpr: EXPR_ONE_TO_ONE,
-    ) {
+    ): List<Ix> {
         val newObject = (expressions as Expressions<*, EXPR_ONE_TO_ONE, *, R>)
             .changeExpr(ix, newExpr)
         setDownscaledObject(ix, newObject)
         val toBeUpdated = expressions.update(setOf(ix))
         syncObjects(toBeUpdated)
         invalidatePositions()
+        return toBeUpdated
     }
 
     /** Already includes [invalidatePositions] */

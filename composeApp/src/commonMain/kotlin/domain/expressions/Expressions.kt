@@ -288,7 +288,8 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
      * and updates [objects] (except [excluded])
      *
      * NOTE: don't forget to sync `VM.objects` with [objects] at returned indices
-     * @return all affected/child indices that were altered by [update] (excluding [changed])
+     * @return all affected/child indices that were altered by [update] (excluding [changed]),
+     * sorted by tier
      */
     fun update(
         changed: Set<Ix>,

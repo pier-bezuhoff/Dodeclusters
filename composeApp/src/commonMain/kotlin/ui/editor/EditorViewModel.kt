@@ -2361,7 +2361,7 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    // special case that is not handled by transform()
+    // special case that is not handled by transformWhatWeCan()
     // MAYBE: instead transform then snap/project onto carrier and transform by snap-delta again
     private fun slidePointAcrossCarrier(
         pointIndex: Ix, carrierIndex: Ix,
@@ -2372,10 +2372,10 @@ class EditorViewModel : ViewModel() {
         val newPoint = carrier.project(pointer)
         val order = carrier.point2order(newPoint)
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
-        objectModel.changeExpr(pointIndex, newExpr)
+        val changedIndices = setOf(pointIndex) + objectModel.changeExpr(pointIndex, newExpr)
         history.accumulateChangedLocations(
-            objectIndices = setOf(pointIndex),
-            expressionIndices = setOf(pointIndex),
+            objectIndices = changedIndices,
+            expressionIndices = changedIndices,
         )
     }
 

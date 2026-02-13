@@ -71,7 +71,7 @@ object WebDdcSharing : DdcSharing {
         }
     }
 
-    override suspend fun registerSharer(): UserId? {
+    override suspend fun registerUser(): UserId? {
         try {
             val dk0 = generateDk().await<JsString>().toString()
             val dk = tmpDk
@@ -98,20 +98,20 @@ object WebDdcSharing : DdcSharing {
             val dk0 = generateDk().await<JsString>().toString()
             val dk = tmpDk
             val pk = localStorage.getItem(SHARE_PERMISSION_KEY)
-            if (pk == null)
+            val userId = localStorage.getItem(USER_ID_KEY)
+            if (pk == null || userId == null)
                 return null
-            val promise = window
-                .fetch(
-                    "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}",
-                    RequestInit(
-                        method = "POST",
-                        headers = Headers().apply {
-                            append("Content-Type", "text/plain; charset=UTF-8")
-                        },
-                        body = content.toJsString(),
-                        redirect = RequestRedirect.FOLLOW,
-                    )
+            val promise = window.fetch(
+                "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}?user_id=$userId",
+                RequestInit(
+                    method = "POST",
+                    headers = Headers().apply {
+                        append("Content-Type", "text/plain; charset=UTF-8")
+                    },
+                    body = content.toJsString(),
+                    redirect = RequestRedirect.FOLLOW,
                 )
+            )
             val response = promise.await<Response?>()
             if (response == null || !response.ok)
                 return null
@@ -131,20 +131,20 @@ object WebDdcSharing : DdcSharing {
             val dk0 = generateDk().await<JsString>().toString()
             val dk = tmpDk
             val pk = localStorage.getItem(SHARE_PERMISSION_KEY)
-            if (pk == null)
+            val userId = localStorage.getItem(USER_ID_KEY)
+            if (pk == null || userId == null)
                 return null
-            val promise = window
-                .fetch(
-                    "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&id=$sharedId",
-                    RequestInit(
-                        method = "POST",
-                        headers = Headers().apply {
-                            append("Content-Type", "text/plain; charset=UTF-8")
-                        },
-                        body = content.toJsString(),
-                        redirect = RequestRedirect.FOLLOW,
-                    )
+            val promise = window.fetch(
+                "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&user_id=$userId&id=$sharedId",
+                RequestInit(
+                    method = "POST",
+                    headers = Headers().apply {
+                        append("Content-Type", "text/plain; charset=UTF-8")
+                    },
+                    body = content.toJsString(),
+                    redirect = RequestRedirect.FOLLOW,
                 )
+            )
             val response = promise.await<Response?>()
             if (response == null || !response.ok)
                 return null
