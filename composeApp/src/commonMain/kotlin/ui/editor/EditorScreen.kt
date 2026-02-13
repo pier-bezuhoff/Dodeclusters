@@ -268,7 +268,9 @@ fun EditorScreen(
                                 }
                             }
                         }
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(
+                            Modifier.align(Alignment.CenterHorizontally)
+                        )
                     }
                 }
             }

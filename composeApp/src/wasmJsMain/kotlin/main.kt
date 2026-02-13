@@ -7,6 +7,9 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
 import domain.LoadingState
 import domain.io.DdcRepository
+import domain.io.SHARE_PERMISSION_KEY
+import domain.io.USER_ID_KEY
+import domain.io.WebDdcSharing
 import kotlinx.browser.document
 import kotlinx.browser.localStorage
 import kotlinx.browser.window
@@ -24,6 +27,14 @@ import ui.editor.KeyboardAction
 import ui.theme.ColorTheme
 import ui.theme.DEFAULT_COLOR_THEME
 
+object SearchParamKeys {
+    const val THEME = "theme"
+    // MAYBE: use "url#id" instead
+    const val SHARED_ID = "shared"
+    const val SHARE_PERM = "share_perm"
+    const val SAMPLE = "sample"
+}
+
 // NOTE: because Github Pages serves .wasm files with wrong mime type https://stackoverflow.com/a/54320709/7143065
 //  to open in mobile/firefox use netlify version
 @OptIn(ExperimentalComposeUiApi::class)
@@ -31,15 +42,15 @@ fun main() {
     // example:
     // https://pier-bezuhoff.github.io/Dodeclusters?theme=dark&sample=apollonius
     val url = URL(window.location.href)
-    val colorTheme: ColorTheme = when (url.searchParams.get("theme")?.lowercase()) {
+    val colorTheme: ColorTheme = when (url.searchParams.get(SearchParamKeys.THEME)?.lowercase()) {
         "light" -> ColorTheme.LIGHT
         "dark" -> ColorTheme.DARK
         "auto" -> ColorTheme.AUTO
         else -> DEFAULT_COLOR_THEME
     }
-    val sharePerm: String? = url.searchParams.get("share_perm")
-    val sharedId: String? = url.searchParams.get("shared")
-    val sampleName: String? = url.searchParams.get("sample")
+    val sharePerm: String? = url.searchParams.get(SearchParamKeys.SHARE_PERM)
+    val sharedId: String? = url.searchParams.get(SearchParamKeys.SHARED_ID)
+    val sampleName: String? = url.searchParams.get(SearchParamKeys.SAMPLE)
     val lifecycleEvents: MutableSharedFlow<LifecycleEvent> = MutableSharedFlow(replay = 1)
     document.addEventListener("visibilitychange") {
         if (document["hidden"] == true.toJsBoolean()) {
@@ -66,15 +77,6 @@ fun main() {
     loadingSpinner?.remove()
     document.querySelector("h2")?.setAttribute("style", "display: none;")
     document.querySelector("h1")?.setAttribute("style", "display: none;")
-    if (sharePerm != null) {
-        coroutineScope.launch {
-            localStorage.setItem(SHARE_PERMISSION_KEY, sharePerm)
-            val userId = WebDdcSharing.registerSharer()
-            if (userId != null) {
-                localStorage.setItem(USER_ID_KEY, userId)
-            }
-        }
-    }
     ComposeViewport(
         viewportContainerId = "compose-root",
         configure = {
@@ -84,12 +86,12 @@ fun main() {
         val sharedDdcContentState: State<LoadingState<String>>? = sharedId?.let {
             val message = "Loading shared cluster '$sharedId'..."
             produceState<LoadingState<String>>(LoadingState.InProgress(message), key1 = sharedId) {
-                val ddcContent = WebDdcSharing.fetchSharedDdc(sharedId)
+                val ddcContentAndOwned = WebDdcSharing.fetchSharedDdc(sharedId)
                 println("fetched shared ddc $sharedId")
-                value = if (ddcContent == null)
+                value = if (ddcContentAndOwned == null)
                     LoadingState.Error(Error("Fetching shared resource '$sharedId' failed"))
                 else
-                    LoadingState.Completed(ddcContent)
+                    LoadingState.Completed(ddcContentAndOwned.first)
             }
         }
         val sampleDdcContentState: State<LoadingState<String>>? = sampleName?.let {
@@ -118,6 +120,9 @@ fun main() {
                     value = true
                 }
             }
+            val newUrl = URL(window.location.href)
+            newUrl.searchParams.delete(SearchParamKeys.SHARE_PERM)
+            window.history.pushState(null, "", newUrl.href)
         }
         App(
             ddcContent = sharedDdcContentState?.value ?: sampleDdcContentState?.value,
