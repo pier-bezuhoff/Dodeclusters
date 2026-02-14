@@ -26,6 +26,7 @@ fun App(
             ddcContent = ddcContent,
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,
+            ddcSharing = ddcSharing,
         )
     }
 }

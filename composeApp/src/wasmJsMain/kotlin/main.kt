@@ -90,11 +90,14 @@ fun main() {
         ) {
             if (sharedId != null) {
                 val ddcContentAndOwned = WebDdcSharing.fetchSharedDdc(sharedId)
-                println("fetched shared ddc $sharedId")
-                value = if (ddcContentAndOwned == null)
+                println("fetched shared ddc @$sharedId, owned=${ddcContentAndOwned?.second}")
+                value = if (ddcContentAndOwned == null) {
                     LoadingState.Error(Error("Fetching shared resource '$sharedId' failed"))
-                else
-                    LoadingState.Completed(ddcContentAndOwned.first)
+                } else {
+                    val (ddcContent, owned) = ddcContentAndOwned
+                    WebDdcSharing.shared = Pair(sharedId, owned)
+                    LoadingState.Completed(ddcContent)
+                }
             }
         }
         val sampleDdcContent: LoadingState<String>? by produceState<LoadingState<String>?>(

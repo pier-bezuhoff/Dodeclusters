@@ -77,6 +77,7 @@ import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV4
 import domain.io.SaveRequest
+import domain.io.SharedIdAndOwnedStatus
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
 import domain.model.ChangeHistory
@@ -302,7 +303,6 @@ class EditorViewModel : ViewModel() {
 
     /** sets [tapRadius] based on [density] */
     fun setEpsilon(density: Density) {
-        println("VM.setEpsilon")
         with (density) {
             tapRadius = getPlatform().tapRadius.dp.toPx()
         }
@@ -2719,7 +2719,7 @@ class EditorViewModel : ViewModel() {
             println("flow-select -> $selection")
             toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
         }
-        when (submode) {
+        when (submode) { // history recordings
             is SubMode.FlowFill,
             is SubMode.RotateStereographicSphere,
             is SubMode.Rotate,

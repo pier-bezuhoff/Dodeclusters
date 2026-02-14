@@ -2,14 +2,14 @@
 
 package domain.io
 
+import SearchParamKeys
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlinx.coroutines.await
 import org.w3c.dom.url.URL
-import org.w3c.fetch.FOLLOW
-import org.w3c.fetch.Headers
-import org.w3c.fetch.RequestInit
-import org.w3c.fetch.RequestRedirect
 import org.w3c.fetch.Response
 import kotlin.js.Promise
 
@@ -21,10 +21,23 @@ private fun generateDk(): Promise<JsString> = js(
     """
 )
 
+@Suppress("unused")
+private fun fetchPost(url: String, content: String): Promise<Response?> = js(
+    """
+        fetch(url, {
+            redirect: "follow",
+            method: "POST",
+            headers: { "Content-Type": "text/plain; charset=UTF-8" },
+            body: content,
+        })
+    """
+)
+
+@Suppress("unused")
 private fun <T : JsAny> getObjectProperty(obj: JsAny, property: String): T? =
     js("obj[property]")
 
-private const val ENDPOINT = "https://script.google.com/macros/s/AKfycbyFwfMhcaFr93Mk7oo4Ko23E1ScO06ZVz22BrCakiOqb2StswKvjdLLHna-lp_EXwjp/exec"
+private const val ENDPOINT = "https://script.google.com/macros/s/AKfycbzuiUE8QtvIrFBwyeYMYWL7FUVMiuMzm_R4iTsLDkXWmqTcvACNUyapsOvGLa858m4_/exec"
 
 const val SHARE_PERMISSION_KEY = "ddc-share-perm"
 const val USER_ID_KEY = "ddc-user-id"
@@ -38,12 +51,14 @@ private fun setUrlSearchParam(key: String, value: String) {
 }
 
 object WebDdcSharing : DdcSharing {
+    override var shared: SharedIdAndOwnedStatus? by mutableStateOf(null)
+
     internal var tmpDk = ""
 
-    override suspend fun fetchSharedDdc(sharedId: SharedId): Pair<DdcContent, Boolean>? {
+    override suspend fun fetchSharedDdc(sharedId: SharedId): DdcContentAndOwnedStatus? {
         try {
-            val dk0 = generateDk().await<JsString>().toString()
-            val dk = tmpDk
+            var dk = generateDk().await<JsString>().toString()
+            dk = tmpDk
             val userId = localStorage.getItem(USER_ID_KEY)
             val promise = if (userId != null) {
                 window.fetch("$ENDPOINT?doko=$dk&user_id=$userId&id=$sharedId")
@@ -51,7 +66,7 @@ object WebDdcSharing : DdcSharing {
                 window.fetch("$ENDPOINT?doko=$dk&id=$sharedId")
             }
             val response = promise.await<Response?>()
-            if (response == null || !response.ok)
+            if (response?.ok != true)
                 return null
             val text = response.clone().text().await<JsString?>()?.toString()
             if (text == UNAUTHORIZED_RESPONSE || text.isNullOrBlank())
@@ -73,11 +88,11 @@ object WebDdcSharing : DdcSharing {
 
     override suspend fun registerUser(): UserId? {
         try {
-            val dk0 = generateDk().await<JsString>().toString()
-            val dk = tmpDk
+            var dk = generateDk().await<JsString>().toString()
+            dk = tmpDk
             val promise = window.fetch("$ENDPOINT?doko=$dk&register=1")
             val response = promise.await<Response?>()
-            if (response == null || !response.ok)
+            if (response?.ok != true)
                 return null
             val text = response.text().await<JsString?>()?.toString()
             if (text == UNAUTHORIZED_RESPONSE || text.isNullOrBlank())
@@ -95,29 +110,24 @@ object WebDdcSharing : DdcSharing {
 
     override suspend fun shareNewDdc(content: DdcContent): SharedId? {
         try {
-            val dk0 = generateDk().await<JsString>().toString()
-            val dk = tmpDk
+            var dk = generateDk().await<JsString>().toString()
+            dk = tmpDk
             val pk = localStorage.getItem(SHARE_PERMISSION_KEY)
             val userId = localStorage.getItem(USER_ID_KEY)
             if (pk == null || userId == null)
                 return null
-            val promise = window.fetch(
-                "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}?user_id=$userId",
-                RequestInit(
-                    method = "POST",
-                    headers = Headers().apply {
-                        append("Content-Type", "text/plain; charset=UTF-8")
-                    },
-                    body = content.toJsString(),
-                    redirect = RequestRedirect.FOLLOW,
-                )
-            )
+            val url = "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&user_id=$userId"
+//            println("fetch-post $url")
+            val promise = fetchPost(url, content)
             val response = promise.await<Response?>()
-            if (response == null || !response.ok)
+//            println("response = $response")
+            if (response?.ok != true)
                 return null
             val text = response.text().await<JsString?>()?.toString()
             if (text == UNAUTHORIZED_RESPONSE || text.isNullOrBlank())
                 return null
+            // FIX: when json error is returned we cannot detect it...
+            println("shared successfully -> $text")
             setUrlSearchParam(SearchParamKeys.SHARED_ID, text)
             return text
         } catch (e: Exception) {
@@ -128,35 +138,36 @@ object WebDdcSharing : DdcSharing {
 
     override suspend fun overwriteSharedDdc(sharedId: SharedId, content: DdcContent): SharedId? {
         try {
-            val dk0 = generateDk().await<JsString>().toString()
-            val dk = tmpDk
+            var dk = generateDk().await<JsString>().toString()
+            dk = tmpDk
             val pk = localStorage.getItem(SHARE_PERMISSION_KEY)
             val userId = localStorage.getItem(USER_ID_KEY)
             if (pk == null || userId == null)
                 return null
-            val promise = window.fetch(
-                "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&user_id=$userId&id=$sharedId",
-                RequestInit(
-                    method = "POST",
-                    headers = Headers().apply {
-                        append("Content-Type", "text/plain; charset=UTF-8")
-                    },
-                    body = content.toJsString(),
-                    redirect = RequestRedirect.FOLLOW,
-                )
-            )
+            val url = "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&user_id=$userId&id=$sharedId"
+            val promise = fetchPost(url, content)
             val response = promise.await<Response?>()
-            if (response == null || !response.ok)
+            println("response = $response")
+            if (response?.ok != true)
                 return null
             val text = response.text().await<JsString?>()?.toString()
+            println("response.text() = $text")
             if (text == UNAUTHORIZED_RESPONSE || text.isNullOrBlank())
                 return null
+            // FIX: when json error is returned we cannot detect it...
+            println("overwritten shared successfully -> $text")
             setUrlSearchParam(SearchParamKeys.SHARED_ID, text)
             return text
         } catch (e: Exception) {
             e.printStackTrace()
             return null
         }
+    }
+
+    override fun formatLink(sharedId: SharedId): String {
+        val link = URL(window.location.origin + window.location.pathname)
+        link.searchParams.set(SearchParamKeys.SHARED_ID, sharedId)
+        return link.href
     }
 }
 

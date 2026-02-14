@@ -391,6 +391,7 @@ fun EditorScreen(
         DialogType.SAVE_OPTIONS -> {
             SaveOptionsDialog(
                 viewModel = viewModel,
+                ddcSharing = ddcSharing,
                 saveAsYaml = viewModel::saveAsYaml,
                 exportAsSvg = viewModel::exportAsSvg,
                 onCancel = viewModel::closeDialog,

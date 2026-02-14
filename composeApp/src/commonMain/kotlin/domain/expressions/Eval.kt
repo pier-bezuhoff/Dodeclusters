@@ -33,6 +33,7 @@ fun computeCircleByCenterAndRadius(
 }
 
 // NOTE: can produce non-CCW circle
+// if any 2 of the 3 are incident, the orientation is undefined (e.g. a circle and a point on it)
 fun computeCircleBy3Points(
     point1: GCircle,
     point2: GCircle,
@@ -56,6 +57,7 @@ fun computeCircleByPencilAndPoint(
     )?.toGCircle()
 
 // for 2 intersecting lines the result is inf. point, but we return null
+// theoretically if any of the 2 is a line, the orientation is undefined (inf.p. lies on it)
 fun computeLineBy2Points(
     point1: GCircle,
     point2: GCircle
