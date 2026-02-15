@@ -6,6 +6,8 @@ import SearchParamKeys
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import getObjectProperty
+import jsonStringify
 import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlinx.coroutines.await
@@ -33,11 +35,7 @@ private fun fetchPost(url: String, content: String): Promise<Response?> = js(
     """
 )
 
-@Suppress("unused")
-private fun <T : JsAny> getObjectProperty(obj: JsAny, property: String): T? =
-    js("obj[property]")
-
-private const val ENDPOINT = "https://script.google.com/macros/s/AKfycbzuiUE8QtvIrFBwyeYMYWL7FUVMiuMzm_R4iTsLDkXWmqTcvACNUyapsOvGLa858m4_/exec"
+private const val ENDPOINT = "https://script.google.com/macros/s/AKfycbwMjpJfLFnUvrMCMlAA4DwiH-3PwW0bEc9PxE1oD7srYhmS8WPb43mY2JzIDi_K3D0J/exec"
 
 const val SHARE_PERMISSION_KEY = "ddc-share-perm"
 const val USER_ID_KEY = "ddc-user-id"
@@ -68,15 +66,14 @@ object WebDdcSharing : DdcSharing {
             val response = promise.await<Response?>()
             if (response?.ok != true)
                 return null
-            val text = response.clone().text().await<JsString?>()?.toString()
-            if (text == UNAUTHORIZED_RESPONSE || text.isNullOrBlank())
-                return null
             val json = response.json().await<JsAny?>()
             if (json == null)
                 return null
             val content = getObjectProperty<JsString>(json, "content")?.toString()
-            if (content == null)
+            if (content == null) {
+                println("no .content in ${jsonStringify(json)}")
                 return null
+            }
             val owned = getObjectProperty<JsBoolean>(json, "owned")?.toBoolean() ?: false
             setUrlSearchParam(SearchParamKeys.SHARED_ID, sharedId)
             return Pair(content, owned)
@@ -94,10 +91,15 @@ object WebDdcSharing : DdcSharing {
             val response = promise.await<Response?>()
             if (response?.ok != true)
                 return null
-            val text = response.text().await<JsString?>()?.toString()
-            if (text == UNAUTHORIZED_RESPONSE || text.isNullOrBlank())
+            val json = response.json().await<JsAny?>()
+            if (json == null)
                 return null
-            return text
+            val userId = getObjectProperty<JsString>(json, "user")?.toString()
+            if (userId == null) {
+                println("no .user in ${jsonStringify(json)}")
+                return null
+            }
+            return userId
         } catch (e: Exception) {
             e.printStackTrace()
             return null
@@ -117,19 +119,21 @@ object WebDdcSharing : DdcSharing {
             if (pk == null || userId == null)
                 return null
             val url = "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&user_id=$userId"
-//            println("fetch-post $url")
             val promise = fetchPost(url, content)
             val response = promise.await<Response?>()
-//            println("response = $response")
             if (response?.ok != true)
                 return null
-            val text = response.text().await<JsString?>()?.toString()
-            if (text == UNAUTHORIZED_RESPONSE || text.isNullOrBlank())
+            val json = response.json().await<JsAny?>()
+            if (json == null)
                 return null
-            // FIX: when json error is returned we cannot detect it...
-            println("shared successfully -> $text")
-            setUrlSearchParam(SearchParamKeys.SHARED_ID, text)
-            return text
+            val sharedId = getObjectProperty<JsString>(json, "id")?.toString()
+            if (sharedId == null) {
+                println("no .id in ${jsonStringify(json)}")
+                return null
+            }
+            println("shared successfully -> $sharedId")
+            setUrlSearchParam(SearchParamKeys.SHARED_ID, sharedId)
+            return sharedId
         } catch (e: Exception) {
             e.printStackTrace()
             return null
@@ -147,17 +151,19 @@ object WebDdcSharing : DdcSharing {
             val url = "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&user_id=$userId&id=$sharedId"
             val promise = fetchPost(url, content)
             val response = promise.await<Response?>()
-            println("response = $response")
             if (response?.ok != true)
                 return null
-            val text = response.text().await<JsString?>()?.toString()
-            println("response.text() = $text")
-            if (text == UNAUTHORIZED_RESPONSE || text.isNullOrBlank())
+            val json = response.json().await<JsAny?>()
+            if (json == null)
                 return null
-            // FIX: when json error is returned we cannot detect it...
-            println("overwritten shared successfully -> $text")
-            setUrlSearchParam(SearchParamKeys.SHARED_ID, text)
-            return text
+            val sharedId = getObjectProperty<JsString>(json, "id")?.toString()
+            if (sharedId == null) {
+                println("no .id in ${jsonStringify(json)}")
+                return null
+            }
+            println("overwritten shared successfully -> $sharedId")
+            setUrlSearchParam(SearchParamKeys.SHARED_ID, sharedId)
+            return sharedId
         } catch (e: Exception) {
             e.printStackTrace()
             return null

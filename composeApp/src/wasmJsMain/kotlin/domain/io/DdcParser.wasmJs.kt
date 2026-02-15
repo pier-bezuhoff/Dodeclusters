@@ -8,6 +8,7 @@ import core.geometry.Line
 import domain.ColorCssSerializer
 import domain.ColorULongSerializer
 import domain.cluster.LogicalRegion
+import jsonStringify
 import kotlinx.serialization.json.Json
 
 // i suppose i don't need this anymore...
@@ -170,22 +171,17 @@ fun JsString?.parseShape(): Shape? =
         }
     }
 
-@Suppress("UNUSED_PARAMETER")
-fun isCircleObject(obj: JsAny): Boolean =
+@Suppress("unused")
+private fun isCircleObject(obj: JsAny): Boolean =
     js("'x' in obj")
 
-@Suppress("UNUSED_PARAMETER")
-fun isLineObject(obj: JsAny): Boolean =
+@Suppress("unused")
+private fun isLineObject(obj: JsAny): Boolean =
     js("'a' in obj")
 
-@Suppress("UNUSED_PARAMETER")
-fun isClusterObject(obj: JsAny): Boolean =
+@Suppress("unused")
+private fun isClusterObject(obj: JsAny): Boolean =
     js("'circles' in obj")
-
-@Suppress("UNUSED_PARAMETER")
-fun jsonStringify(obj: JsAny): String =
-    js("JSON.stringify(obj)")
-
 
 typealias JsIntArray = JsArray<JsNumber>
 

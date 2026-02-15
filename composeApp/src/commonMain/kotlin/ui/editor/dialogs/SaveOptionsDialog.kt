@@ -31,11 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.Clipboard
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.NativeClipboard
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,6 +53,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import ui.LoadingOverlay
 import ui.editor.EditorViewModel
 import ui.tools.Tool
 
@@ -232,28 +229,8 @@ fun SaveOptionsDialog(
                     }
                 }
                 when (val loading = loadingShared) {
-                    is LoadingState.InProgress -> {
-                        Column(
-                            Modifier.align(Alignment.Center)
-                        ) {
-                            loading.message?.let { message ->
-                                Surface(
-                                    Modifier.padding(32.dp),
-                                    color = MaterialTheme.colorScheme.surface,
-                                    contentColor = MaterialTheme.colorScheme.primary,
-                                ) {
-                                    Text(
-                                        text = message,
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                            CircularProgressIndicator(
-                                Modifier.align(Alignment.CenterHorizontally)
-                            )
-                        }
-                    }
+                    is LoadingState.InProgress ->
+                        LoadingOverlay(loading)
                     else -> {}
                 }
             }

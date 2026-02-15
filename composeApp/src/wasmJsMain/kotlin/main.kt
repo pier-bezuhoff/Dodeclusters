@@ -1,6 +1,5 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -133,8 +132,8 @@ fun main() {
                 } else {
                     value = true
                 }
-                val newUrl = URL(window.location.href)
                 // clean url too assert dominance or smth
+                val newUrl = URL(window.location.href)
                 newUrl.searchParams.delete(SearchParamKeys.SHARE_PERM)
                 window.history.pushState(null, "", newUrl.href)
             }

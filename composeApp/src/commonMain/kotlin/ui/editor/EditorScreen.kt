@@ -103,6 +103,7 @@ import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import ui.DisableableButton
 import ui.LifecycleEvent
+import ui.LoadingOverlay
 import ui.OnOffButton
 import ui.SimpleButton
 import ui.ThreeIconButton
@@ -249,29 +250,10 @@ fun EditorScreen(
                             Modifier.align(Alignment.BottomStart)
                         )
                 }
-                if (vmRestoration == ProgressState.IN_PROGRESS || ddcContent is LoadingState.InProgress) {
-                    Column(
-                        Modifier.align(Alignment.Center)
-                    ) {
-                        if (ddcContent is LoadingState.InProgress) {
-                            ddcContent.message?.let { message ->
-                                Surface(
-                                    Modifier.padding(32.dp),
-                                    color = MaterialTheme.colorScheme.surface,
-                                    contentColor = MaterialTheme.colorScheme.primary,
-                                ) {
-                                    Text(
-                                        text = message,
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                        CircularProgressIndicator(
-                            Modifier.align(Alignment.CenterHorizontally)
-                        )
-                    }
+                when (ddcContent) {
+                    is LoadingState.InProgress ->
+                        LoadingOverlay(ddcContent)
+                    else -> {}
                 }
             }
         }
