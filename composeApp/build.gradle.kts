@@ -73,14 +73,13 @@ kotlin {
 
         commonMain.dependencies {
             // NOTE: compose.X translates into "org.jetbrains.compose.X:X" with compose-multiplatform version
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-//            implementation(compose.material3)
-            implementation(libs.compose.material3)
-            implementation(compose.ui)
-            implementation(compose.components.uiToolingPreview)
-            implementation(compose.components.resources)
+            implementation(libs.compose.runtime)
+            implementation(libs.compose.foundation)
+            implementation(libs.compose.ui)
+            implementation(libs.compose.ui.toolingPreview)
+            implementation(libs.compose.resources)
             implementation(libs.compose.ui.graphics)
+            implementation(libs.compose.material3)
             implementation(libs.compose.lifecycle.runtime)
             implementation(libs.compose.lifecycle.viewmodel)
             implementation(libs.compose.material.icons)
@@ -184,10 +183,6 @@ compose.desktop {
             }
         }
     }
-}
-
-compose.experimental {
-//    web.application {}
 }
 
 composeCompiler {

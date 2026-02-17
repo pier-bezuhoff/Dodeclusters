@@ -11,21 +11,22 @@ kotlin = "2.2.21"
 # https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility
 #noinspection AndroidGradlePluginVersion
 agp = "8.10.1"
-compose-multiplatform = "1.9.3"
+compose-multiplatform = "1.10.1"
 # check compose-multiplatform/release for version compatibility:
 # https://github.com/JetBrains/compose-multiplatform/releases/latest
 #noinspection GradleDependency
-jetpack-compose = "1.9.4"
-material3 = "1.9.0" # m3 is behind: https://github.com/JetBrains/compose-multiplatform/releases/tag/v1.9.0
-androidx-lifecycle = "2.9.6"
-kotlinx-serialization = "1.9.0"
+jetpack-compose = "1.10.2"
+material3 = "1.10.0-alpha05"
+androidx-lifecycle = "2.10.0-alpha06"
+kotlinx-serialization = "1.9.0" # 1.10 is based on kt 2.3
+# ^ depend on compose-multiplatform
 kotlinx-coroutines = "1.10.2"
-compose-activity = "1.12.0"
+compose-activity = "1.12.4"
 material-icons = "1.7.3"
 androidx-core-ktx = "1.17.0"
 window-size-klass = "0.5.0"
 colormath = "3.6.1"
-kaml = "0.104.0"
+kaml = "0.104.0" # the repo is archived
 kstore = "1.0.0"
 appdirs = "2.0.0"
 accompanist = "0.37.3"
@@ -33,9 +34,14 @@ accompanist = "0.37.3"
 
 [libraries]
 compose-ui-graphics = { module = "org.jetbrains.compose.ui:ui-graphics", version.ref = "compose-multiplatform" }
-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "jetpack-compose" }
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+compose-ui-toolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
+compose-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
 compose-lifecycle-runtime = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 compose-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "jetpack-compose" }
 compose-activity = { module = "androidx.activity:activity-compose", version.ref = "compose-activity" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidx-core-ktx" }
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
