@@ -629,21 +629,19 @@ class EditorViewModel : ViewModel() {
     ) {
         val newIndices = objects.size until objects.size + newGCircles.size
         val validNewGCircles = newGCircles.filterNotNull()
+        objectModel.addObjects(newGCircles)
         if (validNewGCircles.isNotEmpty()) {
             showCircles = true
-            objectModel.addObjects(newGCircles)
             selection = newIndices.filter { objects[it] != null }
-            objectModel.invalidate()
             viewModelScope.launch {
                 animations.emit(
                     CircleAnimation.Entrance(validNewGCircles.filterIsInstance<CircleOrLine>())
                 )
             }
         } else { // all nulls
-            objectModel.addObjects(newGCircles)
             selection = emptyList()
-            objectModel.invalidate()
         }
+        objectModel.invalidate()
         val indices = newIndices.toSet()
         history.accumulateChangedLocations(
             objectIndices = indices,
@@ -1245,13 +1243,8 @@ class EditorViewModel : ViewModel() {
                 )
                 pinStateForHistory()
                 val newPoint = (objectModel.expressions.addSoloExpr(expr) as Point).upscale()
+                createNewGCircle(newPoint)
                 val newIx = objects.size
-                objectModel.addObjects(listOf(newPoint))
-                objectModel.invalidate()
-                history.accumulateNewObjects(
-                    objectsSize = objects.size,
-                    count = 1,
-                )
                 history.recordAccumulatedChanges()
                 PointSnapResult.Eq(newPoint, newIx)
             }
@@ -1285,23 +1278,13 @@ class EditorViewModel : ViewModel() {
                         val p = objectModel.expressions.addMultiExpression(
                             ExprOutput.OneOf(expr, intersectionOutputIndex)
                         ) as Point
-                        objectModel.addDownscaledObject(p)
-                        objectModel.invalidate()
-                        history.accumulateNewObjects(
-                            objectsSize = objects.size,
-                            count = 1,
-                        )
+                        createNewGCircle(p.upscale())
                         history.recordAccumulatedChanges()
                         PointSnapResult.Eq(snapResult.result, oldSize)
                     } else {
                         val ps = objectModel.expressions.addMultiExpr(expr)
                             .map { it as? Point }
-                        objectModel.addDownscaledObjects(ps)
-                        objectModel.invalidate()
-                        history.accumulateNewObjects(
-                            objectsSize = objects.size,
-                            count = 2,
-                        )
+                        createNewGCircles(ps.map { it?.upscale() })
                         history.recordAccumulatedChanges()
                         PointSnapResult.Eq(snapResult.result, oldSize + intersectionOutputIndex)
                     }
@@ -1531,6 +1514,7 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    // MAYBE: axis-aligned cross centered at a point
     fun insertCenteredCross() {
         val (midX, midY) = canvasSize.toSize()/2f
         val horizontalLine = Line.by2Points(
@@ -2689,7 +2673,7 @@ class EditorViewModel : ViewModel() {
             }
             else -> {}
         }
-        if (partialArgList?.isFull == true && submode == null) {
+        if (partialArgList?.isFull == true && submode == null) { // full arg-list implies tool mode
             completeToolMode()
         }
         if ((mode == SelectionMode.Drag || mode == SelectionMode.Multiselect) &&

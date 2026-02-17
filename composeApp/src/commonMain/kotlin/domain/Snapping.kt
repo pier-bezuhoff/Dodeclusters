@@ -39,7 +39,7 @@ sealed interface PointSnapResult {
     }
 }
 
-/** Snaps when to 45 degree marks [snapMarkDeg] when closer than 5% [angleSnapPercent] */
+/** Snaps to 45 degree marks [snapMarkDeg] when closer than 5% [angleSnapPercent] */
 fun snapAngle(
     angleDeg: Double,
     angleSnapPercent: Double = 5.0,
@@ -70,7 +70,7 @@ fun snapPointToPoints(
     if (withinSnapDistance.isEmpty())
         return PointSnapResult.Free(point)
     // because of triple-intersects, we want to resolve them uniformly
-    // regardless of position, so natural points order is an easy choice.
+    // regardless of position, so the natural point order is an easy choice.
     val minDistance = withinSnapDistance.minOf { it.second }
     val oldestButCloseEnough =
         withinSnapDistance.first { it.second < minDistance + EPSILON }
@@ -235,7 +235,7 @@ fun snapCircleThru3PointsToCircles(p1: Point, p2: Point, freePoint: Point, circl
 }
 
 // MAYBE: use -1 for intersections
-fun distance(c1: CircleOrLine, c2: CircleOrLine): Double =
+private fun distance(c1: CircleOrLine, c2: CircleOrLine): Double =
     when {
         c1 is Circle && c2 is Circle -> {
             val d = hypot(c2.x - c1.x, c2.y - c1.y)

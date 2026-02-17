@@ -560,7 +560,7 @@ data class Circle(
                     val (a2, b2, c2) = circle2
                     val w = a1*b2 - a2*b1
                     // collinearity condition
-                    if (abs(w / circle1.norm / circle2.norm) < EPSILON) {
+                    if (abs(w) < EPSILON * circle1.norm * circle2.norm) {
                         listOf(Point.CONFORMAL_INFINITY) // & potentially full coincidence
                     } else {
                         val wx = b1*c2 - b2*c1 // det in homogenous coordinates
@@ -568,7 +568,8 @@ data class Circle(
                         // we know that w != 0 (non-parallel)
                         val p = Point(wx / w, wy / w)
                         val q = Point.CONFORMAL_INFINITY
-                        if (circle1.directionX*a2 + circle1.directionY*b2 >= 0)
+                        // 2's normal forms non-obtuse angle with 1's direction, or
+                        if (w >= 0)
                             listOf(p, q)
                         else
                             listOf(q, p)
@@ -595,8 +596,28 @@ data class Circle(
                             listOf(q, p)
                     }
                 }
-                circle1 is Circle && circle2 is Line ->
-                    calculateIntersectionPoints(circle2, circle1).reversed() // ^^^
+                circle1 is Circle && circle2 is Line -> {
+//                    calculateIntersectionPoints(circle2, circle1).reversed() // ^^^
+                    val (cx, cy, r) = circle1
+                    val (px, py) = circle2.project(Point(cx, cy))
+                    val distance = hypot(px - cx, py - cy)
+                    if (distance >= r + TANGENTIAL_TOUCH_EPSILON) {
+                        emptyList()
+                    } else if (abs(distance - r) < TANGENTIAL_TOUCH_EPSILON) {
+                        listOf(Point(px, py))
+                    } else {
+                        val pToIntersection = sqrt(r.pow(2) - distance * distance)
+                        val vx = circle2.directionX
+                        val vy = circle2.directionY
+                        val p = Point(px + vx * pToIntersection, py + vy * pToIntersection)
+                        val q = Point(px - vx * pToIntersection, py - vy * pToIntersection)
+                        val s = circle2.pointInBetween(p, q) // directed segment p->s->q
+                        if (circle1.hasInsideEpsilon(s))
+                            listOf(q, p)
+                        else
+                            listOf(p, q)
+                    }
+                }
                 circle1 is Circle && circle2 is Circle -> {
                     val (x1,y1,r1) = circle1
                     val (x2,y2,r2) = circle2

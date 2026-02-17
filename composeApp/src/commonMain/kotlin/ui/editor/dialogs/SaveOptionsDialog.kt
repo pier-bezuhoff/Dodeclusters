@@ -149,7 +149,7 @@ fun SaveOptionsDialog(
                         buttonContent = {
                             Row(
                                 modifier = rowModifier,
-                                horizontalArrangement = Arrangement.Center,
+//                                horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
@@ -182,7 +182,7 @@ fun SaveOptionsDialog(
                         buttonContent = {
                             Row(
                                 modifier = rowModifier,
-                                horizontalArrangement = Arrangement.Center,
+//                                horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(painterResource(Tool.PngExport.icon), stringResource(Tool.PngExport.name), iconModifier)
@@ -208,7 +208,7 @@ fun SaveOptionsDialog(
                         buttonContent = {
                             Row(
                                 modifier = rowModifier,
-                                horizontalArrangement = Arrangement.Center,
+//                                horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(

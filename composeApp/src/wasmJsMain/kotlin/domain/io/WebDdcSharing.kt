@@ -6,7 +6,8 @@ import SearchParamKeys
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import getObjectProperty
+import get
+import getStringProperty
 import jsonStringify
 import kotlinx.browser.localStorage
 import kotlinx.browser.window
@@ -40,8 +41,6 @@ private const val ENDPOINT = "https://script.google.com/macros/s/AKfycbwMjpJfLFn
 const val SHARE_PERMISSION_KEY = "ddc-share-perm"
 const val USER_ID_KEY = "ddc-user-id"
 
-private const val UNAUTHORIZED_RESPONSE = "Unauthorized"
-
 private fun setUrlSearchParam(key: String, value: String) {
     val newUrl = URL(window.location.href)
     newUrl.searchParams.set(key, value)
@@ -69,12 +68,12 @@ object WebDdcSharing : DdcSharing {
             val json = response.json().await<JsAny?>()
             if (json == null)
                 return null
-            val content = getObjectProperty<JsString>(json, "content")?.toString()
+            val content = json.getStringProperty("content")
             if (content == null) {
                 println("no .content in ${jsonStringify(json)}")
                 return null
             }
-            val owned = getObjectProperty<JsBoolean>(json, "owned")?.toBoolean() ?: false
+            val owned = (json["owned"] as? JsBoolean)?.toBoolean() ?: false
             setUrlSearchParam(SearchParamKeys.SHARED_ID, sharedId)
             return Pair(content, owned)
         } catch (e: Exception) {
@@ -94,7 +93,7 @@ object WebDdcSharing : DdcSharing {
             val json = response.json().await<JsAny?>()
             if (json == null)
                 return null
-            val userId = getObjectProperty<JsString>(json, "user")?.toString()
+            val userId = json.getStringProperty("user")
             if (userId == null) {
                 println("no .user in ${jsonStringify(json)}")
                 return null
@@ -126,7 +125,7 @@ object WebDdcSharing : DdcSharing {
             val json = response.json().await<JsAny?>()
             if (json == null)
                 return null
-            val sharedId = getObjectProperty<JsString>(json, "id")?.toString()
+            val sharedId = json.getStringProperty("id")
             if (sharedId == null) {
                 println("no .id in ${jsonStringify(json)}")
                 return null
@@ -156,7 +155,7 @@ object WebDdcSharing : DdcSharing {
             val json = response.json().await<JsAny?>()
             if (json == null)
                 return null
-            val sharedId = getObjectProperty<JsString>(json, "id")?.toString()
+            val sharedId = json.getStringProperty("id")
             if (sharedId == null) {
                 println("no .id in ${jsonStringify(json)}")
                 return null

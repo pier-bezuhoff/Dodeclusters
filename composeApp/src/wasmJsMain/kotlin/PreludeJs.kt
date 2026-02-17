@@ -1,7 +1,10 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
-operator fun <T : JsAny> JsAny.get(property: String): T? =
-    getObjectProperty<T>(this, property)
+operator fun JsAny.get(property: String): JsAny? =
+    getObjectProperty<JsAny>(this, property)
+
+fun JsAny.getStringProperty(property: String): String? =
+    getObjectProperty<JsString>(this, property)?.toString()
 
 @Suppress("unused")
 fun <T : JsAny> getObjectProperty(obj: JsAny, property: String): T? =

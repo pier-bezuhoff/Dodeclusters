@@ -76,6 +76,8 @@ class ConformalExpressions(
         val directIncidence =
             pointExpr is Expr.Incidence && pointExpr.carrier == carrierIndex ||
             pointExpr is Expr.Intersection && (pointExpr.circle1 == carrierIndex || pointExpr.circle2 == carrierIndex)
+        if (directIncidence)
+            return true
         val indirectIncidence = when (val carrierExpr = expressions[carrierIndex]?.expr) {
             is Expr.CircleByCenterAndRadius -> carrierExpr.radiusPoint == pointIndex
             is Expr.CircleBy3Points -> carrierExpr.object1 == pointIndex || carrierExpr.object2 == pointIndex || carrierExpr.object3 == pointIndex
@@ -100,6 +102,7 @@ class ConformalExpressions(
             // NOTE: there could exist even more indirect, 2+ step incidence cases tbh
             else -> false
         }
-        return directIncidence || indirectIncidence
+        return indirectIncidence
+//        return directIncidence || indirectIncidence // short-circuit returns instead
     }
 }
