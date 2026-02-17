@@ -16,6 +16,7 @@ import org.w3c.dom.url.URL
 import org.w3c.fetch.Response
 import kotlin.js.Promise
 
+// MAYBE: persist it
 private fun generateDk(): Promise<JsString> = js(
     """
         window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(window.location.origin + window.location.pathname))
@@ -50,12 +51,9 @@ private fun setUrlSearchParam(key: String, value: String) {
 object WebDdcSharing : DdcSharing {
     override var shared: SharedIdAndOwnedStatus? by mutableStateOf(null)
 
-    internal var tmpDk = ""
-
     override suspend fun fetchSharedDdc(sharedId: SharedId): DdcContentAndOwnedStatus? {
         try {
-            var dk = generateDk().await<JsString>().toString()
-            dk = tmpDk
+            val dk = generateDk().await<JsString>().toString()
             val userId = localStorage.getItem(USER_ID_KEY)
             val promise = if (userId != null) {
                 window.fetch("$ENDPOINT?doko=$dk&user_id=$userId&id=$sharedId")
@@ -84,8 +82,7 @@ object WebDdcSharing : DdcSharing {
 
     override suspend fun registerUser(): UserId? {
         try {
-            var dk = generateDk().await<JsString>().toString()
-            dk = tmpDk
+            val dk = generateDk().await<JsString>().toString()
             val promise = window.fetch("$ENDPOINT?doko=$dk&register=1")
             val response = promise.await<Response?>()
             if (response?.ok != true)
@@ -111,8 +108,7 @@ object WebDdcSharing : DdcSharing {
 
     override suspend fun shareNewDdc(content: DdcContent): SharedId? {
         try {
-            var dk = generateDk().await<JsString>().toString()
-            dk = tmpDk
+            val dk = generateDk().await<JsString>().toString()
             val pk = localStorage.getItem(SHARE_PERMISSION_KEY)
             val userId = localStorage.getItem(USER_ID_KEY)
             if (pk == null || userId == null)
@@ -141,8 +137,7 @@ object WebDdcSharing : DdcSharing {
 
     override suspend fun overwriteSharedDdc(sharedId: SharedId, content: DdcContent): SharedId? {
         try {
-            var dk = generateDk().await<JsString>().toString()
-            dk = tmpDk
+            val dk = generateDk().await<JsString>().toString()
             val pk = localStorage.getItem(SHARE_PERMISSION_KEY)
             val userId = localStorage.getItem(USER_ID_KEY)
             if (pk == null || userId == null)

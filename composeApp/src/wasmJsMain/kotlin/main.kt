@@ -38,7 +38,6 @@ object SearchParamKeys {
 //  to open in mobile/firefox use netlify version
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-    WebDdcSharing.tmpDk = "" // TMP
     // example:
     // https://pier-bezuhoff.github.io/Dodeclusters?theme=dark&sample=apollonius
     val url = URL(window.location.href)
