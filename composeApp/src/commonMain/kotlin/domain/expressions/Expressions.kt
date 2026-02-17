@@ -68,8 +68,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
 
     init {
         require(objects.indices.toSet() == initialExpressions.keys) {
-            "initialExpressions keys must coincide with objects.indices: " +
-                    "${initialExpressions.keys} == ${objects.indices.toSet()}"
+            "initialExpressions keys must coincide with objects.indices: ${initialExpressions.keys} == ${objects.indices.toSet()}, where objects = $objects, initialExpressions = $initialExpressions"
         }
         computeTiers() // computes ix2tier
         tier2ixs = ix2tier

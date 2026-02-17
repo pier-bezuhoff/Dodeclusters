@@ -8,7 +8,6 @@ import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
 import domain.SerializableOffset
-import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
 import domain.expressions.ConformalExprOutput
 import domain.expressions.Expr
@@ -19,9 +18,6 @@ import domain.settings.ChessboardPattern
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import ui.editor.EditorViewModel.State
-import kotlin.math.max
-import kotlin.math.min
 
 /** EditorViewModel's save-state for history.
  * [objects].indices must span all of [objectColors].keys and [objectLabels].keys.
@@ -423,26 +419,17 @@ data class SaveState(
             objects =
                 if (objects == earlierState.objects) null
                 else {
-                    val objectChanges = mutableMapOf<Ix, GCircle?>()
-                    val minSize = min(objects.size, earlierState.objects.size)
-                    for (ix in 0 until minSize) {
-                        val newObj = objects[ix]
-                        if (newObj != earlierState.objects[ix])
-                            objectChanges[ix] = newObj
-                    }
-                    if (objects.size >= earlierState.objects.size) {
-                        for (ix in minSize until objects.size) {
-                            objectChanges[ix] = objects[ix]
-                        }
-                    } else {
-                        for (ix in minSize until earlierState.objects.size) {
-                            objectChanges[ix] = null
-                        }
-                    }
-                    if (objectChanges.isEmpty())
+                    // realistically the earlier state must have smaller or equal size
+                    val size0 = earlierState.objects.size
+                    val size = objects.size
+                    require(size0 <= size) { "objects.size of the earlier state must not be greater, $earlierState vs $this" }
+                    val changedIndices = (0 until size0)
+                        .filter { objects[it] != earlierState.objects[it] }
+                        .plus(size0 until size)
+                    if (changedIndices.isEmpty())
                         null
                     else
-                        Change.Objects(objectChanges)
+                        Change.Objects(changedIndices.associateWith { objects[it] })
                 }
             ,
             objectColors =
@@ -470,11 +457,10 @@ data class SaveState(
                 else {
                     val size0 = earlierState.expressions.size
                     val size = expressions.size
-                    val minSize = min(size0, size)
-                    val maxSize = max(size0, size)
-                    val changedIndices = (0 until minSize)
+                    require(size0 <= size) { "expressions.size of the earlier state must NOT be greater, $earlierState vs $this" }
+                    val changedIndices = (0 until size0)
                         .filter { expressions[it] != earlierState.expressions[it] }
-                        .plus(minSize until maxSize)
+                        .plus(size0 until size)
                     if (changedIndices.isEmpty())
                         null
                     else
