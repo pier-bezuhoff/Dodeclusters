@@ -1241,9 +1241,9 @@ class EditorViewModel : ViewModel() {
                     snapResult.circleIndex
                 )
                 pinStateForHistory()
+                val newIx = objects.size
                 val newPoint = (objectModel.expressions.addSoloExpr(expr) as Point).upscale()
                 createNewGCircle(newPoint)
-                val newIx = objects.size
                 history.recordAccumulatedChanges()
                 PointSnapResult.Eq(newPoint, newIx)
             }
@@ -1265,8 +1265,8 @@ class EditorViewModel : ViewModel() {
                     PointSnapResult.Eq(objects[closestIndex] as Point, closestIndex)
                 } else {
                     // check if both outputIndices are present, if not add the other
-                    val oldSize = objects.size
                     pinStateForHistory()
+                    val oldSize = objects.size
                     val intersectionOutputIndex = computeIntersection(
                         objects[ix1] as CircleOrLine,
                         objects[ix2] as CircleOrLine
@@ -1936,8 +1936,7 @@ class EditorViewModel : ViewModel() {
             }
             // try selecting an existing (indexed) object
             if (!found &&
-                (inInterpolationMode entails
-                    (argList.currentArg?.type !is Arg.Type.Point))
+                (inInterpolationMode entails (argList.currentArg?.type !is Arg.Type.Point))
             ) {
                 val acceptsCircle = Arg.CircleIndex in nextType.possibleTypes
                 val acceptsLine = Arg.LineIndex in nextType.possibleTypes
@@ -3868,7 +3867,7 @@ class EditorViewModel : ViewModel() {
         if (restoration.value == ProgressState.NOT_STARTED) {
             restoration.update { ProgressState.IN_PROGRESS }
             val platform = getPlatform()
-            val restoreLastSave = false // TMP //RESTORE_LAST_SAVE_ON_LOAD
+            val restoreLastSave = RESTORE_LAST_SAVE_ON_LOAD
             val restoreSettings = true
             if (restoreLastSave) {
                 val saveState = runCatching {

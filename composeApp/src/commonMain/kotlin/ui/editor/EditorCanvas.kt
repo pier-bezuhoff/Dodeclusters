@@ -951,12 +951,12 @@ private fun DrawScope.drawRegions(
 }
 
 // draw stuff for tool modes
-private inline fun DrawScope.drawPartialConstructs(
+private fun DrawScope.drawPartialConstructs(
     objects: List<GCircle?>,
     mode: Mode,
     partialArgList: PartialArgList?,
     partialArcPath: PartialArcPath?,
-    crossinline getArg: (Arg) -> GCircle?,
+    getArg: (Arg) -> GCircle?,
     visibleRect: Rect,
     handleRadius: Float,
     circleStroke: Stroke,
