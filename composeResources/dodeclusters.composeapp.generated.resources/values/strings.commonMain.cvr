@@ -120,6 +120,7 @@ string|insert_centered_cross_name|SW5zZXJ0IGEgY2VudGVyZWQgY3Jvc3M=
 string|label_input_title|SW5wdXQgcG9pbnQgbGFiZWw=
 string|line_by_2_points_description|Q29uc3RydWN0IGEgbGluZSBieSAyIHBvaW50cyBvciBieSBvYmplY3RzIHBlcnBlbmRpY3VsYXIgdG8gaXQ=
 string|line_by_2_points_name|TGluZSBieSAyIHBvaW50cw==
+string|link_label|U2hhcmVhYmxlIGxpbms6
 string|locked_object_notice|VGhpcyBvYmplY3QgaXMgcGlubmVkLCBkZXRhY2ggaXQgdG8gbW92ZQ==
 string|locked_objects_notice|VGhlc2Ugb2JqZWN0cyBhcmUgcGlubmVkLCBkZXRhY2ggdGhlbSB0byBtb3Zl
 string|loxodromic_motion_angle_direction_ccw|Y291bnRlcmNsb2Nrd2lzZQ==
@@ -148,6 +149,7 @@ string|new_blank_name|TmV3IGJsYW5rIGZpbGU=
 string|ok|T0s=
 string|open_file_name|T3BlbiBEb2RlY2x1c3RlcnMgZmlsZQ==
 string|open_file|T3BlbiBmaWxl
+string|overwrite_shared_name|T3ZlcndyaXRlIHNoYXJlZCBjbHVzdGVy
 string|palette_description|UGljayBjb2xvcnM=
 string|palette_name|UGFsZXR0ZQ==
 string|phantom_object_explanation|Tm8gcGhhbnRvbSBvYmplY3RzLiBUbyBtYXJrIGFuIG9iamVjdCBhcyAncGhhbnRvbScgKD0gaW52aXNpYmxlKSwgc2VsZWN0IGl0IGFuZCBjbGljayB0aGUgJ2V5ZScgaWNvbiBvbiB0aGUgYm90dG9tLXJpZ2h0
@@ -182,6 +184,7 @@ string|save_name|U2F2ZQ==
 string|set_label_description|U2V0IGxhYmVs
 string|set_label_name|U2V0IGxhYmVs
 string|set_selection_as_tool_arg_prompt|VXNlIGFjdGl2ZSBzZWxlY3Rpb24gYXM=
+string|share_new_name|U2hhcmUgb25saW5l
 string|shrink_description|U2NhbGUgZG93biBieSAxMCU=
 string|shrink_name|U2hyaW5r
 string|steps_slider_name|TiBzdGVwcw==
