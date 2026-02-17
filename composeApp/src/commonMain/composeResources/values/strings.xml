@@ -4,9 +4,6 @@
     <!-- top toolbar -->
     <string name="new_blank_name">New blank file</string>
     <string name="save_name">Save</string>
-    <string name="save_cluster_name">Save as Dodeclusters file</string>
-    <string name="png_export_name">Capture screenshot as PNG</string>
-    <string name="svg_export_name">Export as SVG image</string>
     <string name="open_file_name">Open Dodeclusters file</string>
     <string name="undo_name">Undo</string>
     <string name="redo_name">Redo</string>
@@ -212,6 +209,13 @@
     <string name="angle_in_degrees_placeholder">&lt;angle in degrees&gt;</string>
     <string name="degrees_suffix">°</string>
     <string name="dilation_placeholder">&lt;log-dilation&gt;</string>
+    <!-- save dialog -->
+    <string name="link_label">Shareable link:</string>
+    <string name="share_new_name">Share online</string>
+    <string name="overwrite_shared_name">Overwrite shared cluster</string>
+    <string name="save_cluster_name">Save as Dodeclusters file</string>
+    <string name="png_export_name">Capture screenshot as PNG</string>
+    <string name="svg_export_name">Export as SVG image</string>
     <!-- color picker dialog -->
     <string name="color_picker_title">Pick a color</string>
     <string name="color_picker_used_and_saved_colors_label">Colors in use + Saved colors</string>

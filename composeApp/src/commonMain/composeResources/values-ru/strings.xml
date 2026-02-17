@@ -2,9 +2,6 @@
     <!-- top toolbar -->
     <string name="new_blank_name">Новый пустой файл</string>
     <string name="save_name">Сохранить</string>
-    <string name="save_cluster_name">Сохранить как файл Dodeclusters</string>
-    <string name="png_export_name">Сохранить скриншот как PNG</string>
-    <string name="svg_export_name">Экспортировать как изображение SVG</string>
     <string name="open_file_name">Открыть файл Dodeclusters</string>
     <string name="undo_name">Отменить действие</string>
     <string name="redo_name">Повторить действие</string>
@@ -208,6 +205,13 @@
     <string name="angle_in_degrees_placeholder">&lt;угол в градусах&gt;</string>
     <string name="degrees_suffix">°</string>
     <string name="dilation_placeholder">&lt;логарифм раздутия/сжатия&gt;</string>
+    <!-- save dialog -->
+    <string name="link_label">Ссылка:</string>
+    <string name="share_new_name">Поделиться онлайн</string>
+    <string name="overwrite_shared_name">Перезаписать кластер по ссылке</string>
+    <string name="save_cluster_name">Сохранить как файл Dodeclusters</string>
+    <string name="png_export_name">Сохранить скриншот как PNG</string>
+    <string name="svg_export_name">Экспортировать как изображение SVG</string>
     <!-- color picker dialog -->
     <string name="color_picker_title">Выберите цвет</string>
     <string name="color_picker_used_and_saved_colors_label">Использованные цвета + Сохранённые цвета</string>

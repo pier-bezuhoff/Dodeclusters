@@ -730,24 +730,28 @@ fun VerticalSlider(
 fun BoxScope.LoadingOverlay(
     loading: LoadingState.InProgress,
 ) {
-    Column(
-        Modifier.align(Alignment.Center)
+    Surface(
+        Modifier
+            .align(Alignment.Center)
+        ,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+        contentColor = MaterialTheme.colorScheme.primary,
     ) {
-        loading.explanation?.let { explanation ->
-            Surface(
-                Modifier.padding(32.dp),
-                color = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary,
-            ) {
+        Column(
+            Modifier
+                .padding(32.dp),
+            verticalArrangement = Arrangement.SpaceEvenly,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            loading.explanation?.let { explanation ->
                 Text(
                     text = explanation,
-                    style = MaterialTheme.typography.headlineMedium,
+                    Modifier.padding(vertical = 12.dp),
+                    style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+            CircularProgressIndicator(Modifier)
         }
-        CircularProgressIndicator(
-            Modifier.align(Alignment.CenterHorizontally)
-        )
     }
 }

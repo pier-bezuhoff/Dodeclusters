@@ -1,18 +1,21 @@
 package ui.editor.dialogs
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,7 +41,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.cloud_sync
+import dodeclusters.composeapp.generated.resources.cloud_upload
 import dodeclusters.composeapp.generated.resources.copy
+import dodeclusters.composeapp.generated.resources.link
+import dodeclusters.composeapp.generated.resources.link_label
+import dodeclusters.composeapp.generated.resources.overwrite_shared_name
+import dodeclusters.composeapp.generated.resources.share_new_name
+import dodeclusters.composeapp.generated.resources.shrink_description
 import domain.LoadingState
 import domain.io.DdcSharing
 import domain.io.DdcV4
@@ -86,146 +96,156 @@ fun SaveOptionsDialog(
             Box {
                 val buttonModifier = Modifier//.padding(4.dp)
                 val iconModifier = Modifier.padding(end = 12.dp)
+                val shared = ddcSharing?.shared
                 Column(
-                    Modifier
-                        .align(Alignment.Center)
-                        .width(IntrinsicSize.Max)
-                        .padding(16.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    val rowModifier = Modifier.fillMaxWidth() //.padding(end = 8.dp)
-                    val containerColor = MaterialTheme.colorScheme.surface
-                    val contentColor = MaterialTheme.colorScheme.onSurface
-                    if (ddcSharing != null) {
-                        ShareNewButton(
-                            modifier = buttonModifier,
-                            rowModifier = rowModifier,
-                            containerColor = containerColor,
-                            contentColor = contentColor,
+                    if (shared != null) {
+                        val link = remember(shared) { ddcSharing.formatLink(shared.first) }
+                        SharedLink(
+                            link = link,
                             coroutineScope = coroutineScope,
-                            shareNew = { ddcSharing.shareNewDdc(saveAsYaml(DdcV4.DEFAULT_NAME)) },
-                            setLoadingShared = { loadingShared = it },
-                            setShared = { ddcSharing.shared = it },
-                            closeDialog = onConfirm,
                         )
-                        val shared = ddcSharing.shared
-                        if (shared != null) {
-                            val link = remember(shared) { ddcSharing.formatLink(shared.first) }
-                            SharedLink(
-                                link = link,
-                                coroutineScope = coroutineScope,
+                        HorizontalDivider(color = MaterialTheme.colorScheme.secondary)
+                    }
+                    Column(
+                        Modifier
+                            .width(IntrinsicSize.Max)
+                            .padding(16.dp)
+                            .border(
+                                BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                                shape = MaterialTheme.shapes.medium,
                             )
-                        }
-                        if (shared?.second == true) {
-                            OverwriteSharedButton(
+                    ) {
+                        val rowModifier = Modifier.fillMaxWidth() //.padding(end = 8.dp)
+                        val containerColor = MaterialTheme.colorScheme.surface
+                        val contentColor = MaterialTheme.colorScheme.onSurface
+                        if (ddcSharing != null) {
+                            ShareNewButton(
                                 modifier = buttonModifier,
                                 rowModifier = rowModifier,
+                                iconModifier = iconModifier,
                                 containerColor = containerColor,
                                 contentColor = contentColor,
                                 coroutineScope = coroutineScope,
-                                overwriteShared = {
-                                    ddcSharing.overwriteSharedDdc(
-                                        sharedId = shared.first,
-                                        content = saveAsYaml(DdcV4.DEFAULT_NAME)
-                                    )
-                                },
+                                shareNew = { ddcSharing.shareNewDdc(saveAsYaml(DdcV4.DEFAULT_NAME)) },
                                 setLoadingShared = { loadingShared = it },
                                 setShared = { ddcSharing.shared = it },
                                 closeDialog = onConfirm,
                             )
+                            if (shared?.second == true) {
+                                OverwriteSharedButton(
+                                    modifier = buttonModifier,
+                                    rowModifier = rowModifier,
+                                    iconModifier = iconModifier,
+                                    containerColor = containerColor,
+                                    contentColor = contentColor,
+                                    coroutineScope = coroutineScope,
+                                    overwriteShared = {
+                                        ddcSharing.overwriteSharedDdc(
+                                            sharedId = shared.first,
+                                            content = saveAsYaml(DdcV4.DEFAULT_NAME)
+                                        )
+                                    },
+                                    setLoadingShared = { loadingShared = it },
+                                    setShared = { ddcSharing.shared = it },
+                                    closeDialog = onConfirm,
+                                )
+                            }
+                            HorizontalDivider()
                         }
-                        HorizontalDivider()
-                    }
-                    // NOTE: optimize by starting to encode bitmap when the user is
-                    //  shown name-choosing dialog
-                    SaveFileButton(
-                        saveData = SaveData( // name.yml
-                            filename = lastSaveResult?.filename ?: Tool.SaveCluster.DEFAULT_FILENAME,
-                            lastDir = lastSaveResult?.dir,
-                            uri = lastSaveResult?.uri,
-                            otherDisplayedExtensions = Tool.SaveCluster.otherDisplayedExtensions,
-                            mimeType = Tool.SaveCluster.MIME_TYPE,
-                            prepareContent = saveAsYaml
-                        ),
-                        buttonContent = {
-                            Row(
-                                modifier = rowModifier,
+                        // NOTE: optimize by starting to encode bitmap when the user is
+                        //  shown name-choosing dialog
+                        SaveFileButton(
+                            saveData = SaveData( // name.yml
+                                filename = lastSaveResult?.filename ?: Tool.SaveCluster.DEFAULT_FILENAME,
+                                lastDir = lastSaveResult?.dir,
+                                uri = lastSaveResult?.uri,
+                                otherDisplayedExtensions = Tool.SaveCluster.otherDisplayedExtensions,
+                                mimeType = Tool.SaveCluster.MIME_TYPE,
+                                prepareContent = saveAsYaml
+                            ),
+                            buttonContent = {
+                                Row(
+                                    modifier = rowModifier,
 //                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    painterResource(Tool.SaveCluster.icon),
-                                    stringResource(Tool.SaveCluster.name),
-                                    iconModifier
-                                )
-                                Text(stringResource(Tool.SaveCluster.description))
-                            }
-                        },
-                        modifier = buttonModifier,
-                        containerColor = containerColor,
-                        contentColor = contentColor,
-                    ) { saveResult ->
-                        println(if (saveResult.isSuccess) "YAML saved" else "YAML not saved")
-                        onSaved(saveResult)
-                        onConfirm()
-                    }
-                    // for one reason or another png export is quite slow on Web (desktop is quite fast,
-                    // mobile is unimplemented)
-                    SaveBitmapAsPngButton(
-                        viewModel = viewModel,
-                        saveData = SaveData(
-                            filename = lastSaveResult?.filename ?: Tool.PngExport.DEFAULT_FILENAME,
-                            lastDir = lastSaveResult?.dir,
-                            uri = lastSaveResult?.uri,
-                            mimeType = Tool.PngExport.MIME_TYPE,
-                            prepareContent = { }
-                        ),
-                        buttonContent = {
-                            Row(
-                                modifier = rowModifier,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        painterResource(Tool.SaveCluster.icon),
+                                        stringResource(Tool.SaveCluster.name),
+                                        iconModifier
+                                    )
+                                    Text(stringResource(Tool.SaveCluster.description))
+                                }
+                            },
+                            modifier = buttonModifier,
+                            containerColor = containerColor,
+                            contentColor = contentColor,
+                        ) { saveResult ->
+                            println(if (saveResult.isSuccess) "YAML saved" else "YAML not saved")
+                            onSaved(saveResult)
+                            onConfirm()
+                        }
+                        // for one reason or another png export is quite slow on Web (desktop is quite fast,
+                        // mobile is unimplemented)
+                        SaveBitmapAsPngButton(
+                            viewModel = viewModel,
+                            saveData = SaveData(
+                                filename = lastSaveResult?.filename ?: Tool.PngExport.DEFAULT_FILENAME,
+                                lastDir = lastSaveResult?.dir,
+                                uri = lastSaveResult?.uri,
+                                mimeType = Tool.PngExport.MIME_TYPE,
+                                prepareContent = { }
+                            ),
+                            buttonContent = {
+                                Row(
+                                    modifier = rowModifier,
 //                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(painterResource(Tool.PngExport.icon), stringResource(Tool.PngExport.name), iconModifier)
-                                Text(stringResource(Tool.PngExport.description))
-                            }
-                        },
-                        modifier = buttonModifier,
-                        containerColor = containerColor,
-                        contentColor = contentColor,
-                    ) { saveResult ->
-                        println(if (saveResult.isSuccess) "PNG exported" else "PNG not exported")
-                        onSaved(saveResult)
-                        onConfirm()
-                    }
-                    SaveFileButton(
-                        saveData = SaveData(
-                            filename = lastSaveResult?.filename ?: Tool.SvgExport.DEFAULT_FILENAME,
-                            lastDir = lastSaveResult?.dir,
-                            uri = lastSaveResult?.uri,
-                            mimeType = Tool.SvgExport.MIME_TYPE,
-                            prepareContent = exportAsSvg
-                        ),
-                        buttonContent = {
-                            Row(
-                                modifier = rowModifier,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(painterResource(Tool.PngExport.icon), stringResource(Tool.PngExport.name), iconModifier)
+                                    Text(stringResource(Tool.PngExport.description))
+                                }
+                            },
+                            modifier = buttonModifier,
+                            containerColor = containerColor,
+                            contentColor = contentColor,
+                        ) { saveResult ->
+                            println(if (saveResult.isSuccess) "PNG exported" else "PNG not exported")
+                            onSaved(saveResult)
+                            onConfirm()
+                        }
+                        SaveFileButton(
+                            saveData = SaveData(
+                                filename = lastSaveResult?.filename ?: Tool.SvgExport.DEFAULT_FILENAME,
+                                lastDir = lastSaveResult?.dir,
+                                uri = lastSaveResult?.uri,
+                                mimeType = Tool.SvgExport.MIME_TYPE,
+                                prepareContent = exportAsSvg
+                            ),
+                            buttonContent = {
+                                Row(
+                                    modifier = rowModifier,
 //                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    painterResource(Tool.SvgExport.icon),
-                                    stringResource(Tool.SvgExport.name),
-                                    iconModifier,
-                                )
-                                Text(stringResource(Tool.SvgExport.description))
-                            }
-                        },
-                        modifier = buttonModifier,
-                        containerColor = containerColor,
-                        contentColor = contentColor,
-                    ) { saveResult ->
-                        println(if (saveResult.isSuccess) "SVG exported" else "SVG not exported")
-                        onSaved(saveResult)
-                        onConfirm()
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        painterResource(Tool.SvgExport.icon),
+                                        stringResource(Tool.SvgExport.name),
+                                        iconModifier,
+                                    )
+                                    Text(stringResource(Tool.SvgExport.description))
+                                }
+                            },
+                            modifier = buttonModifier,
+                            containerColor = containerColor,
+                            contentColor = contentColor,
+                        ) { saveResult ->
+                            println(if (saveResult.isSuccess) "SVG exported" else "SVG not exported")
+                            onSaved(saveResult)
+                            onConfirm()
+                        }
                     }
                 }
                 when (val loading = loadingShared) {
@@ -250,6 +270,7 @@ fun SaveOptionsDialog(
 private fun ShareNewButton(
     modifier: Modifier,
     rowModifier: Modifier,
+    iconModifier: Modifier,
     shape: Shape = RoundedCornerShape(4.dp),
     containerColor: Color,
     contentColor: Color,
@@ -284,10 +305,11 @@ private fun ShareNewButton(
     ) {
         Row(
             modifier = rowModifier,
-            horizontalArrangement = Arrangement.Center,
+//            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Share online")
+            Icon(painterResource(Res.drawable.cloud_upload), "Share online", iconModifier)
+            Text(stringResource(Res.string.share_new_name))
         }
     }
 }
@@ -296,6 +318,7 @@ private fun ShareNewButton(
 private fun OverwriteSharedButton(
     modifier: Modifier,
     rowModifier: Modifier,
+    iconModifier: Modifier,
     shape: Shape = RoundedCornerShape(4.dp),
     containerColor: Color,
     contentColor: Color,
@@ -331,23 +354,33 @@ private fun OverwriteSharedButton(
     ) {
         Row(
             modifier = rowModifier,
-            horizontalArrangement = Arrangement.Center,
+//            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Overwrite shared")
+            Icon(painterResource(Res.drawable.cloud_sync), "Share online", iconModifier)
+            Text(stringResource(Res.string.overwrite_shared_name))
         }
     }
 }
 
 @Composable
-private fun SharedLink(
+private fun ColumnScope.SharedLink(
     link: String,
     coroutineScope: CoroutineScope,
 ) {
 //    val clipboard = LocalClipboard.current // clipboard seems not finished for KMP
     val clipboardManager = LocalClipboardManager.current
+    Row(Modifier.padding(top = 16.dp)) {
+        Icon(
+            painterResource(Res.drawable.link),
+            "Link icon",
+            Modifier.padding(end = 8.dp)
+        )
+        Text(stringResource(Res.string.link_label))
+    }
     Row(
-        horizontalArrangement = Arrangement.Center,
+        Modifier.padding(bottom = 4.dp),
+//        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SelectionContainer {
@@ -355,14 +388,15 @@ private fun SharedLink(
                 text = link,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
-                maxLines = 1,
+//                maxLines = 1,
                 overflow = TextOverflow.Visible,
-            ) // TODO: add link icon and copy-to-clipboard button
+            )
         }
         IconButton(
             onClick = {
                 clipboardManager.setText(AnnotatedString(text = link))
             },
+            Modifier,
             colors = IconButtonDefaults.iconButtonColors().copy(
                 contentColor = MaterialTheme.colorScheme.secondary,
             )
