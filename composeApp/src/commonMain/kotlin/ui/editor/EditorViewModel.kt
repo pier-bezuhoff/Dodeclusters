@@ -77,7 +77,6 @@ import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV4
 import domain.io.SaveRequest
-import domain.io.SharedIdAndOwnedStatus
 import domain.io.constellation2svg
 import domain.io.tryParseDdc
 import domain.model.ChangeHistory
@@ -3869,7 +3868,9 @@ class EditorViewModel : ViewModel() {
         if (restoration.value == ProgressState.NOT_STARTED) {
             restoration.update { ProgressState.IN_PROGRESS }
             val platform = getPlatform()
-            if (RESTORE_LAST_SAVE_ON_LOAD) {
+            val restoreLastSave = false // TMP //RESTORE_LAST_SAVE_ON_LOAD
+            val restoreSettings = true
+            if (restoreLastSave) {
                 val saveState = runCatching {
                     // NOTE: can crash when the underlying format changes
                     platform.autosaveStore.get()
@@ -3895,20 +3896,24 @@ class EditorViewModel : ViewModel() {
             } else {
                 restoreFromVMState(State.SAMPLE)
             }
-            runCatching {
-                platform.settingsStore.get()
-            }
-                .onFailure { it.printStackTrace() }
-                .getOrNull()?.let { settings ->
-                    loadSettings(settings)
+            if (restoreSettings) {
+                runCatching {
+                    platform.settingsStore.get()
                 }
-            runCatching {
-                platform.historyStore.get()
+                    .onFailure { it.printStackTrace() }
+                    .getOrNull()?.let { settings ->
+                        loadSettings(settings)
+                    }
             }
-                .onFailure { it.printStackTrace() }
-                .getOrNull()?.let { historyState ->
-                    history = historyState.load(undoIsEnabled, redoIsEnabled)
+            if (restoreLastSave) {
+                runCatching {
+                    platform.historyStore.get()
                 }
+                    .onFailure { it.printStackTrace() }
+                    .getOrNull()?.let { historyState ->
+                        history = historyState.load(undoIsEnabled, redoIsEnabled)
+                    }
+            }
             restoration.update { ProgressState.COMPLETED }
         }
     }

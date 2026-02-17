@@ -468,8 +468,13 @@ data class SaveState(
             expressions =
                 if (expressions == earlierState.expressions) null
                 else {
-                    val changedIndices = (0 until max(expressions.size, earlierState.expressions.size))
+                    val size0 = earlierState.expressions.size
+                    val size = expressions.size
+                    val minSize = min(size0, size)
+                    val maxSize = max(size0, size)
+                    val changedIndices = (0 until minSize)
                         .filter { expressions[it] != earlierState.expressions[it] }
+                        .plus(minSize until maxSize)
                     if (changedIndices.isEmpty())
                         null
                     else
