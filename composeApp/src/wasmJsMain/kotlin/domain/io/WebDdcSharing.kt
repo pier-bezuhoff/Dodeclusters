@@ -25,6 +25,12 @@ private fun generateDk(): Promise<JsString> = js(
     """
 )
 
+private fun generateDk_(): Promise<JsString> = js(
+    """
+        Promise.resolve("")
+    """
+)
+
 @Suppress("unused")
 private fun fetchPost(url: String, content: String): Promise<Response?> = js(
     """

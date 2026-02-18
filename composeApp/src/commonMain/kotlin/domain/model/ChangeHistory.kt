@@ -13,6 +13,8 @@ typealias RedoGroup = List<SaveState.Change>
 /**
  * `initialState <1:1< <1:2< <2:1< <3:1< NOW >4:1> >4:2> >4:3> >5:1>`
  *
+ * Usage: [pinState] -> [accumulateChangedLocations] -> [recordAccumulatedChanges]
+ *
  * Use [State] for serialization.
  */
 class ChangeHistory(
@@ -67,6 +69,7 @@ class ChangeHistory(
         SaveState.Change.Locations.EMPTY
     /** already reverted with previous [pinnedState]; oldest to newest */
     private var accumulatedChanges: SaveState.Changes = SaveState.Changes.EMPTY
+    /** primarily used for continuous actions without clearly defined start or end */
     private var continuousChange: ContinuousChange? = null
 
     private val undoIsPossible: Boolean get() =
@@ -151,7 +154,7 @@ class ChangeHistory(
     }
 
     /**
-     * [record] locations created thru [accumulateChangedLocations] with state from [pinState]
+     * [record] locations created thru [accumulateChangedLocations] with the state from [pinState]
      * Usage:
      * 1. Save the present [SaveState] using [pinState] (to [pinnedState])
      * 2. Apply changes

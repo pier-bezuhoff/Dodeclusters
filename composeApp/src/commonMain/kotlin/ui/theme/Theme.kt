@@ -9,6 +9,9 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ui.isCompact
@@ -116,3 +119,14 @@ fun DodeclustersTheme(
         )
     }
 }
+
+
+val LocalIsDarkTheme = staticCompositionLocalOf {
+    true
+}
+
+val MaterialTheme.isDarkTheme: Boolean
+    @Composable
+    @ReadOnlyComposable
+    get() =
+        LocalIsDarkTheme.current

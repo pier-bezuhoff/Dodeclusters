@@ -31,7 +31,7 @@ actual fun OpenFileButton(
     lookupData: LookupData,
     modifier: Modifier,
     openRequests: SharedFlow<Unit>?,
-    onOpen: (content: String?) -> Unit
+    onOpen: (content: String?, filename: String?) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
@@ -57,9 +57,9 @@ actual fun OpenFileButton(
                             reader.readText()
                         }
                     }
-                    onOpen(content)
+                    onOpen(content, filename)
                 } catch (e: IOException) {
-                    onOpen(null)
+                    onOpen(null, filename)
                 }
             }
         }

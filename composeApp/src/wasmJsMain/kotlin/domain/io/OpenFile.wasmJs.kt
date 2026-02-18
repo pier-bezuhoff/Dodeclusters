@@ -23,7 +23,7 @@ actual fun OpenFileButton(
     lookupData: LookupData,
     modifier: Modifier,
     openRequests: SharedFlow<Unit>?,
-    onOpen: (content: String?) -> Unit
+    onOpen: (content: String?, filename: String?) -> Unit
 ) {
     IconButton(
         onClick = {
@@ -42,17 +42,17 @@ actual fun OpenFileButton(
 
 private fun onClick(
     lookupData: LookupData,
-    onOpen: (content: String?) -> Unit
+    onOpen: (content: String?, filename: String?) -> Unit
 ) {
     queryFile(lookupData) { file ->
         file?.let {
             val reader = FileReader()
             reader.onload = {
                 val content = reader.result?.toString()
-                onOpen(content)
+                onOpen(content, file.name)
             }
             reader.readAsText(file, "UTF-8")
-        } ?: onOpen(null)
+        } ?: onOpen(null, null)
     }
 }
 

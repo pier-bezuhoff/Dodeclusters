@@ -207,11 +207,23 @@
     <string name="dilation_placeholder">&lt;логарифм раздутия/сжатия&gt;</string>
     <!-- save dialog -->
     <string name="link_label">Ссылка:</string>
-    <string name="share_new_name">Поделиться онлайн</string>
-    <string name="overwrite_shared_name">Перезаписать кластер по ссылке</string>
+    <string name="copy_link_description">Скопировать ссылку</string>
     <string name="save_cluster_name">Сохранить как файл Dodeclusters</string>
     <string name="png_export_name">Сохранить скриншот как PNG</string>
     <string name="svg_export_name">Экспортировать как изображение SVG</string>
+    <string name="share_new_name">Поделиться онлайн</string>
+    <string name="share_new_progress">Загрузка нового кластера...</string>
+    <string name="share_new_done">Загрузка успешна, ссылка наверху.</string>
+    <string name="share_new_error">Загрузка не удалась.</string>
+    <string name="overwrite_shared_name">Перезаписать кластер по ссылке</string>
+    <string name="overwrite_shared_progress">Загрузка и перезапись кластера...</string>
+    <string name="overwrite_shared_done">Перезапись успешна.</string>
+    <string name="overwrite_shared_error">Перезапись не удалась.</string>
+    <!-- loading shared -->
+    <string name="fetching_shared_progress">Скачивание кластера по ссылке "%1$s"...</string>
+    <string name="fetching_shared_error">Не удалось скачать "%1$s".</string>
+    <string name="loading_sample_progress">Чтение шаблонного кластера "%1$s"...</string>
+    <string name="loading_sample_error">Не найден шаблон "%1$s".</string>
     <!-- color picker dialog -->
     <string name="color_picker_title">Выберите цвет</string>
     <string name="color_picker_used_and_saved_colors_label">Использованные цвета + Сохранённые цвета</string>
@@ -270,9 +282,9 @@
     <string name="imaginary_circle_notice">Результат построения содержит мнимые окружности (не отрисованы)</string>
 <!--    <string name="successful_open_notice">Загружен новый файл</string>-->
     <string name="successful_restore_notice">Восстановлен из автосохранения</string>
-    <string name="failed_open_notice">Ошибка при попытке открыть файл</string>
-    <string name="successful_save_notice">Файл сохранён как</string>
-    <string name="failed_save_notice">Ошибка при сохранении файла</string>
+    <string name="failed_open_notice">Ошибка при попытке открыть файл "%1$s"</string>
+    <string name="successful_save_notice">Файл сохранён как "%1$s"</string>
+    <string name="failed_save_notice">Ошибка при сохранении файла "%1$s"%2$s</string>
     <string name="phantom_object_explanation">Нет фантомных объектов. Чтобы пометить объект как 'фантомный' (= невидимый), выделите его и кликните на 'глаз' справа снизу</string>
 
 </resources>

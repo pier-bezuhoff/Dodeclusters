@@ -35,5 +35,5 @@ expect fun OpenFileButton(
     lookupData: LookupData,
     modifier: Modifier = Modifier,
     openRequests: SharedFlow<Unit>? = null,
-    onOpen: (content: String?) -> Unit
+    onOpen: (content: String?, filename: String?) -> Unit
 )

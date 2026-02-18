@@ -4,6 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
+import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.fetching_shared_error
+import dodeclusters.composeapp.generated.resources.fetching_shared_progress
+import dodeclusters.composeapp.generated.resources.loading_sample_error
+import dodeclusters.composeapp.generated.resources.loading_sample_progress
 import domain.LoadingState
 import domain.io.DdcRepository
 import domain.io.SHARE_PERMISSION_KEY
@@ -17,6 +22,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.stringResource
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.get
@@ -83,15 +90,17 @@ fun main() {
         }
     ) {
         val sharedDdcContent: LoadingState<String>? by produceState<LoadingState<String>?>(
-            if (sharedId == null) null
-            else LoadingState.InProgress("Loading shared cluster '$sharedId'..."),
+            initialValue = null,
             key1 = sharedId,
         ) {
             if (sharedId != null) {
+                value = LoadingState.InProgress(
+                    getString(Res.string.fetching_shared_progress, sharedId)
+                )
                 val ddcContentAndOwned = WebDdcSharing.fetchSharedDdc(sharedId)
-                println("fetched shared ddc @$sharedId, owned=${ddcContentAndOwned?.second}")
+                println("finished fetching shared ddc @$sharedId, owned=${ddcContentAndOwned?.second}")
                 value = if (ddcContentAndOwned == null) {
-                    LoadingState.Error(Error("Fetching shared resource '$sharedId' failed"))
+                    LoadingState.Error(Error(getString(Res.string.fetching_shared_error, sharedId)))
                 } else {
                     val (ddcContent, owned) = ddcContentAndOwned
                     WebDdcSharing.shared = Pair(sharedId, owned)
@@ -100,15 +109,17 @@ fun main() {
             }
         }
         val sampleDdcContent: LoadingState<String>? by produceState<LoadingState<String>?>(
-            if (sampleName == null) null
-            else LoadingState.InProgress("Loading sample cluster '$sampleName'..."),
+            initialValue = null,
             key1 = sampleName,
         ) {
             if (sampleName != null) {
+                value = LoadingState.InProgress(
+                    getString(Res.string.loading_sample_progress, sampleName)
+                )
                 val ddcContent = DdcRepository.loadSampleClusterYaml(sampleName)
-                println("loaded sample ddc $sampleName")
-                value = if (ddcContent == null || true)
-                    LoadingState.Error(Error("No sample '$sampleName' found"))
+                println("finished loading sample ddc $sampleName")
+                value = if (ddcContent == null)
+                    LoadingState.Error(Error(getString(Res.string.loading_sample_error, sampleName)))
                 else
                     LoadingState.Completed(ddcContent)
             }

@@ -27,7 +27,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -98,6 +97,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -124,6 +124,7 @@ import ui.isCompact
 import ui.isLandscape
 import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
+import ui.theme.isDarkTheme
 import ui.tools.Category
 import ui.tools.ITool
 import ui.tools.Tool
@@ -227,9 +228,9 @@ fun EditorScreen(
                         redoIsEnabled = viewModel.redoIsEnabled.value,
                         showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
                         openNewBlank = viewModel::openNewBlankConstellation,
-                        loadFromYaml = { content ->
+                        loadFromYaml = { content, filename ->
                             content?.let {
-                                viewModel.loadDdc(content)
+                                viewModel.loadDdc(content, filename)
                             }
                         },
                         undo = viewModel::undo,
@@ -237,18 +238,19 @@ fun EditorScreen(
                         modifier = Modifier.align(Alignment.TopEnd),
                         openFileRequests = viewModel.openFileRequests,
                     )
-                    if (isLandscape)
+                    if (isLandscape) {
                         ToolbarLandscape(
                             viewModel,
                             compact,
                             Modifier.align(Alignment.CenterStart)
                         )
-                    else
+                    } else {
                         ToolbarPortrait(
                             viewModel,
                             compact,
                             Modifier.align(Alignment.BottomStart)
                         )
+                    }
                 }
                 when (ddcContent) {
                     is LoadingState.InProgress ->
@@ -382,7 +384,10 @@ fun EditorScreen(
                     lastSaveResult = saveResult
                     when (saveResult) {
                         is SaveResult.Success ->
-                            viewModel.queueSnackbarMessage(SnackbarMessage.SUCCESSFUL_SAVE)
+                            viewModel.queueSnackbarMessage(
+                                SnackbarMessage.SUCCESSFUL_SAVE,
+                                saveResult.filename,
+                            )
                         is SaveResult.Failure -> {
                             val errorMessage =
                                 if (saveResult.error == null) ""
@@ -390,7 +395,8 @@ fun EditorScreen(
 
                             viewModel.queueSnackbarMessage(
                                 SnackbarMessage.FAILED_SAVE,
-                                " ${saveResult.filename}" + errorMessage
+                                saveResult.filename ?: "-",
+                                errorMessage
                             )
                         }
                         is SaveResult.Cancelled -> {}
@@ -441,8 +447,10 @@ fun EditorScreen(
                         viewModel.loadDdc(ddcContent.result)
                     }
                     is LoadingState.Error -> {
-                        println(ddcContent.exception.message)
-                        snackbarHostState.showSnackbar("Error: ${ddcContent.exception.message}")
+                        println(ddcContent.exception.message ?: "Error")
+                        ddcContent.exception.message?.let { message ->
+                            viewModel.queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
+                        }
                     }
                 }
             }
@@ -469,17 +477,23 @@ fun EditorScreen(
             }
         }
     }
-    // NOTE: using getString(resource) here hangs windows/chrome for some reason
-    //  ticket: https://youtrack.jetbrains.com/issue/CMP-6930/Using-getString-method-causing-JsException
-    val snackbarMessageStrings = SnackbarMessage.entries.associateWith {
-        stringResource(it.stringResource)
+    LaunchedEffect(snackbarHostState) {
+        viewModel.snackbarMessages.collectLatest { (message, formatArgs) ->
+            snackbarHostState.showSnackbar(
+                getString(message.stringResource, *formatArgs),
+                duration = message.duration
+            )
+            // MAYBE: move on-selection action prompt here instead
+        }
     }
-    LaunchedEffect(snackbarHostState, snackbarMessageStrings) {
-        viewModel.snackbarMessages.collectLatest { (message, postfix) ->
-            // with this setup string interpolation with args is not possible
-            val s = snackbarMessageStrings[message] + postfix
-            snackbarHostState.showSnackbar(s, duration = message.duration)
-//            // MAYBE: move on-selection action prompt here instead
+    val colorScheme = MaterialTheme.colorScheme
+    val isDarkTheme = MaterialTheme.isDarkTheme
+    LaunchedEffect(viewModel.backgroundColor, isDarkTheme) {
+        if (viewModel.backgroundColor == null ||
+            isDarkTheme && viewModel.backgroundColor == DodeclustersColors.lightScheme.surface ||
+            !isDarkTheme && viewModel.backgroundColor == DodeclustersColors.darkScheme.surface
+        ) {
+            viewModel.backgroundColor = colorScheme.surface
         }
     }
     preloadIcons()
@@ -656,12 +670,9 @@ fun EditorTopBar(
     compact: Boolean,
     undoIsEnabled: Boolean,
     redoIsEnabled: Boolean,
-//    saveAsYaml: (name: String) -> String,
-//    exportAsSvg: (name: String) -> String,
-//    exportAsPng: suspend () -> Result<ImageBitmap>,
     openNewBlank: () -> Unit,
     showSaveOptionsDialog: () -> Unit,
-    loadFromYaml: (content: String?) -> Unit,
+    loadFromYaml: (content: String?, filename: String?) -> Unit,
     undo: () -> Unit,
     redo: () -> Unit,
     modifier: Modifier = Modifier,
@@ -939,7 +950,7 @@ fun CategoryButton(
         WithTooltip(name) {
             SimpleButton(
                 iconPainter = painterResource(category.icon),
-                name = name,
+                contentDescription = name,
                 modifier = categoryModifier,
                 iconModifier = categoryModifier,
             ) {
@@ -1164,7 +1175,7 @@ fun ToolButton(
             is ITool.InstantAction -> {
                 SimpleButton(
                     iconPainter = icon,
-                    name = name,
+                    contentDescription = name,
                     modifier = modifier,
                     contentColor = tint,
                     onClick = callback

@@ -279,7 +279,7 @@ class EditorViewModel : ViewModel() {
 
     val animations: MutableSharedFlow<ObjectAnimation> = MutableSharedFlow()
 
-    val snackbarMessages: MutableSharedFlow<Pair<SnackbarMessage, String>> =
+    val snackbarMessages: MutableSharedFlow<Pair<SnackbarMessage, Array<out Any>>> =
         MutableSharedFlow(
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
@@ -359,8 +359,8 @@ class EditorViewModel : ViewModel() {
             absolute(visibleCenter)
         }
 
-    // TODO: make it suspend
-    fun loadDdc(content: String) {
+    // MAYBE: make it suspend
+    fun loadDdc(content: String, filename: String? = null) {
         tryParseDdc(
             content = content,
             onDdc4 = { ddc4 ->
@@ -414,7 +414,7 @@ class EditorViewModel : ViewModel() {
                 )
             },
             onFail = {
-                queueSnackbarMessage(SnackbarMessage.FAILED_OPEN)
+                queueSnackbarMessage(SnackbarMessage.FAILED_OPEN, filename ?: "")
             },
         )
         resetHistory()
@@ -460,7 +460,7 @@ class EditorViewModel : ViewModel() {
         )
         println("partialArcPath = $partialArcPath")
         println("invalidation #${objectModel.invalidations}\t propertyInvalidation #${objectModel.propertyInvalidations}")
-        queueSnackbarMessage(SnackbarMessage.STUB, " | $selectedObjectsString;\n$selectedExpressionsString")
+        queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, "$selectedObjectsString;\n$selectedExpressionsString")
     }
 
     // MAYBE: make a suspend function + add load spinner
@@ -2746,8 +2746,8 @@ class EditorViewModel : ViewModel() {
 //    fun onLongDragCancel() {}
 //    fun onLongDragEnd() {}
 
-    fun queueSnackbarMessage(snackbarMessage: SnackbarMessage, postfix: String = "") {
-        snackbarMessages.tryEmit(snackbarMessage to postfix)
+    fun queueSnackbarMessage(snackbarMessage: SnackbarMessage, vararg formatArgs: Any) {
+        snackbarMessages.tryEmit(snackbarMessage to formatArgs)
 //        viewModelScope.launch {
 //            snackbarMessages.emit(snackbarMessage)
 //        }
@@ -3040,10 +3040,26 @@ class EditorViewModel : ViewModel() {
                         history.recordAccumulatedChanges()
                         undo() // contrived way to go to the before-adj savepoint
                     }
-                    else -> {}
+                    else -> {
+                        when (mode) {
+                            SelectionMode.Multiselect -> {
+                                if (selection.isNotEmpty()) {
+                                    submode = null
+                                    selection = emptyList()
+                                } else {
+                                    switchToCategory(Category.Drag)
+                                }
+                            }
+                            SelectionMode.Region -> {
+                                switchToCategory(Category.Drag)
+                            }
+                            else -> {
+                                submode = null
+                                selection = emptyList()
+                            }
+                        }
+                    }
                 }
-                submode = null
-                selection = emptyList()
             }
         }
     }

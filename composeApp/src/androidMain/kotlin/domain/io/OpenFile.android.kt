@@ -24,7 +24,7 @@ actual fun OpenFileButton(
     lookupData: LookupData,
     modifier: Modifier,
     openRequests: SharedFlow<Unit>?,
-    onOpen: (content: String?) -> Unit
+    onOpen: (content: String?, filename: String?) -> Unit
 ) {
     val context = LocalContext.current
     // MAYBE: use OpenDocument instead of GetContent for persistent files only (no cloud etc)
@@ -33,7 +33,7 @@ actual fun OpenFileButton(
         val content: String? = uri?.let {
             readFromUri(context, uri)
         }
-        onOpen(content)
+        onOpen(content, uri?.path)
     }
     IconButton(
         onClick = {

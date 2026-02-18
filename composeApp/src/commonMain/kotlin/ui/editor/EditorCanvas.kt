@@ -103,7 +103,6 @@ import kotlin.math.min
 
 private val dottedPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
 
-// TODO: make colors dependent on light/dark scheme
 // NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
 @Composable
 fun BoxScope.EditorCanvas(
@@ -179,9 +178,6 @@ fun BoxScope.EditorCanvas(
                 }
             }
         }
-    }
-    if (viewModel.backgroundColor == null) {
-        viewModel.backgroundColor = MaterialTheme.colorScheme.surface
     }
     Canvas(
         modifier
@@ -951,12 +947,12 @@ private fun DrawScope.drawRegions(
 }
 
 // draw stuff for tool modes
-private fun DrawScope.drawPartialConstructs(
+private inline fun DrawScope.drawPartialConstructs(
     objects: List<GCircle?>,
     mode: Mode,
     partialArgList: PartialArgList?,
     partialArcPath: PartialArcPath?,
-    getArg: (Arg) -> GCircle?,
+    crossinline getArg: (Arg) -> GCircle?,
     visibleRect: Rect,
     handleRadius: Float,
     circleStroke: Stroke,

@@ -42,10 +42,15 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cloud_sync
 import dodeclusters.composeapp.generated.resources.cloud_upload
 import dodeclusters.composeapp.generated.resources.copy
+import dodeclusters.composeapp.generated.resources.copy_link_description
 import dodeclusters.composeapp.generated.resources.link
 import dodeclusters.composeapp.generated.resources.link_label
+import dodeclusters.composeapp.generated.resources.overwrite_shared_error
 import dodeclusters.composeapp.generated.resources.overwrite_shared_name
+import dodeclusters.composeapp.generated.resources.overwrite_shared_progress
+import dodeclusters.composeapp.generated.resources.share_new_error
 import dodeclusters.composeapp.generated.resources.share_new_name
+import dodeclusters.composeapp.generated.resources.share_new_progress
 import domain.LoadingState
 import domain.io.DdcSharing
 import domain.io.DdcV4
@@ -58,10 +63,14 @@ import domain.io.SharedIdAndOwnedStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.LoadingOverlay
+import ui.SimpleButton
+import ui.WithTooltip
 import ui.editor.EditorViewModel
+import ui.editor.SnackbarMessage
 import ui.tools.Tool
 
 // TODO:  distinct (fast) save and save as options
@@ -127,8 +136,11 @@ fun SaveOptionsDialog(
                                 coroutineScope = coroutineScope,
                                 shareNew = { ddcSharing.shareNewDdc(saveAsYaml(DdcV4.DEFAULT_NAME)) },
                                 setLoadingShared = { loadingShared = it },
-                                setShared = { ddcSharing.shared = it },
-                                closeDialog = onConfirm,
+                                onShared = {
+                                    ddcSharing.shared = it
+                                    // we dont close the dialog cuz the user needs to grab the new link
+                                    viewModel.queueSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE)
+                                },
                             )
                             if (shared?.second == true) {
                                 OverwriteSharedButton(
@@ -145,8 +157,11 @@ fun SaveOptionsDialog(
                                         )
                                     },
                                     setLoadingShared = { loadingShared = it },
-                                    setShared = { ddcSharing.shared = it },
-                                    closeDialog = onConfirm,
+                                    onShared = {
+                                        ddcSharing.shared = it
+                                        viewModel.queueSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE_OVERWRITE)
+                                        onConfirm()
+                                    },
                                 )
                             }
                             HorizontalDivider()
@@ -274,22 +289,19 @@ private fun ShareNewButton(
     coroutineScope: CoroutineScope,
     shareNew: suspend () -> SharedId?,
     setLoadingShared: (LoadingState<SharedIdAndOwnedStatus>?) -> Unit,
-    setShared: (SharedIdAndOwnedStatus?) -> Unit,
-    closeDialog: () -> Unit,
+    onShared: (shared: SharedIdAndOwnedStatus) -> Unit,
 ) {
     Button(
         onClick = {
             coroutineScope.launch {
-                setLoadingShared(LoadingState.InProgress("Uploading new cluster..."))
+                setLoadingShared(LoadingState.InProgress(getString(Res.string.share_new_progress)))
                 val sharedId = shareNew()
                 if (sharedId == null) {
-                    setLoadingShared(LoadingState.Error(Error("Failed to upload.")))
+                    setLoadingShared(LoadingState.Error(Error(getString(Res.string.share_new_error))))
                 } else {
                     val newShared = Pair(sharedId, true)
                     setLoadingShared(LoadingState.Completed(newShared))
-                    setShared(newShared)
-                    // we dont want to close immediately cuz the user needs to copy the link
-//                    closeDialog()
+                    onShared(newShared)
                 }
             }
         },
@@ -322,23 +334,21 @@ private fun OverwriteSharedButton(
     coroutineScope: CoroutineScope,
     overwriteShared: suspend () -> SharedId?,
     setLoadingShared: (LoadingState<SharedIdAndOwnedStatus>?) -> Unit,
-    setShared: (SharedIdAndOwnedStatus?) -> Unit,
-    closeDialog: () -> Unit,
+    onShared: (SharedIdAndOwnedStatus) -> Unit,
 ) {
     Button( // overwrite shared
         onClick = {
             coroutineScope.launch {
                 setLoadingShared(
-                    LoadingState.InProgress("Uploading and overwriting shared cluster")
+                    LoadingState.InProgress(getString(Res.string.overwrite_shared_progress))
                 )
                 val sharedId = overwriteShared()
                 if (sharedId == null) {
-                    setLoadingShared(LoadingState.Error(Error("Failed to overwrite.")))
+                    setLoadingShared(LoadingState.Error(Error(getString(Res.string.overwrite_shared_error))))
                 } else {
                     val newShared = Pair(sharedId, true)
                     setLoadingShared(LoadingState.Completed(newShared))
-                    setShared(newShared)
-                    closeDialog()
+                    onShared(newShared)
                 }
             }
         },
@@ -367,6 +377,7 @@ private fun ColumnScope.SharedLink(
 ) {
 //    val clipboard = LocalClipboard.current // clipboard seems not finished for KMP
     val clipboardManager = LocalClipboardManager.current
+    val copyLinkTooltip = stringResource(Res.string.copy_link_description)
     Row(Modifier.padding(top = 16.dp)) {
         Icon(
             painterResource(Res.drawable.link),
@@ -389,16 +400,15 @@ private fun ColumnScope.SharedLink(
                 overflow = TextOverflow.Visible,
             )
         }
-        IconButton(
-            onClick = {
-                clipboardManager.setText(AnnotatedString(text = link))
-            },
-            Modifier,
-            colors = IconButtonDefaults.iconButtonColors().copy(
+        WithTooltip(copyLinkTooltip) {
+            SimpleButton(
+                iconPainter = painterResource(Res.drawable.copy),
+                contentDescription = "Copy link",
+                modifier = Modifier,
                 contentColor = MaterialTheme.colorScheme.secondary,
-            )
-        ) {
-            Icon(painterResource(Res.drawable.copy), "Copy link")
+            ) {
+                clipboardManager.setText(AnnotatedString(text = link))
+            }
         }
     }
 }

@@ -75,7 +75,7 @@ import ui.tools.ITool
 @Composable
 fun SimpleButton(
     iconPainter: Painter,
-    name: String,
+    contentDescription: String? = null,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
@@ -94,7 +94,7 @@ fun SimpleButton(
     ) {
         Icon(
             iconPainter,
-            contentDescription = name,
+            contentDescription = contentDescription,
             modifier = iconModifier,
         )
     }
@@ -112,7 +112,7 @@ inline fun <reified T> SimpleToolButton(
     crossinline onClick: (tool: T) -> Unit
 ) where T : ITool = SimpleButton(
     iconPainter = painterResource(tool.icon),
-    name = stringResource(tool.name),
+    contentDescription = stringResource(tool.name),
     modifier = modifier,
     iconModifier = iconModifier,
     contentColor = contentColor,
@@ -142,7 +142,7 @@ inline fun <reified T> SimpleToolButtonWithTooltip(
         ) {
             SimpleButton(
                 iconPainter = painterResource(tool.icon),
-                name = stringResource(tool.name),
+                contentDescription = stringResource(tool.name),
                 modifier = modifier,
                 iconModifier = iconModifier,
                 contentColor = contentColor,
