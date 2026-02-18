@@ -25,7 +25,7 @@ private fun generateDk(): Promise<JsString> = js(
     """
 )
 
-private fun generateDk_(): Promise<JsString> = js(
+private fun _generateDk(): Promise<JsString> = js(
     """
         Promise.resolve("")
     """

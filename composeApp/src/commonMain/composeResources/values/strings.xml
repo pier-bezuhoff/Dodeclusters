@@ -190,7 +190,6 @@
     <string name="region_category_name">Regions</string>
     <string name="visibility_category_name">View</string>
     <string name="colors_category_name">Colors</string>
-    <string name="attributes_category_name">Delete/Duplicate</string>
     <string name="transform_category_name">Transform</string>
     <string name="create_category_name">Create</string>
 
