@@ -148,9 +148,11 @@ class EditorViewModel : ViewModel() {
     /** indices of selected circles/lines/points */
     var selection: List<Ix> by mutableStateOf(emptyList())
         private set
-    var mode: Mode by mutableStateOf(SelectionMode.Drag)
+    private val modeState: MutableState<Mode> = mutableStateOf(SelectionMode.Drag)
+    var mode: Mode by modeState
         private set
-    var submode: SubMode? by mutableStateOf(null)
+    private val submodeState: MutableState<SubMode?> = mutableStateOf(null)
+    var submode: SubMode? by submodeState
         private set
     // NOTE: Arg.XYPoint & co use absolute positioning
     var partialArgList: PartialArgList? by mutableStateOf(null)

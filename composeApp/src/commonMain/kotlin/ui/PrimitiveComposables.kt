@@ -1,6 +1,7 @@
 package ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -360,6 +361,8 @@ fun WithTooltip(
 ) {
     // NOTE: ironically tooltips work much better on desktop/in browser than
     //  on android (since it requires hover vs long-press there)
+
+    val tooltipState = rememberMyTooltipState(tooltipDuration = tooltipDuration)
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
             positioning = TooltipAnchorPosition.Above,
@@ -367,11 +370,15 @@ fun WithTooltip(
         ),
         tooltip = {
             PlainTooltip(
+                modifier = Modifier
+                    // otherwise only clicks outside dismiss it, and it can block
+                    // buttons on mobile
+                    .clickable { tooltipState.dismiss() },
                 containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
             ) { Text(description) }
         },
-        state = rememberMyTooltipState(tooltipDuration = tooltipDuration),
+        state = tooltipState,
         modifier = modifier,
     ) {
         content()
