@@ -171,6 +171,7 @@ fun SaveOptionsDialog(
                         SaveFileButton(
                             saveData = SaveData( // name.yml
                                 filename = lastSaveResult?.filename ?: Tool.SaveCluster.DEFAULT_FILENAME,
+                                extension = Tool.SaveCluster.EXTENSION,
                                 lastDir = lastSaveResult?.dir,
                                 uri = lastSaveResult?.uri,
                                 otherDisplayedExtensions = Tool.SaveCluster.otherDisplayedExtensions,
@@ -205,6 +206,7 @@ fun SaveOptionsDialog(
                             viewModel = viewModel,
                             saveData = SaveData(
                                 filename = lastSaveResult?.filename ?: Tool.PngExport.DEFAULT_FILENAME,
+                                extension = Tool.PngExport.EXTENSION,
                                 lastDir = lastSaveResult?.dir,
                                 uri = lastSaveResult?.uri,
                                 mimeType = Tool.PngExport.MIME_TYPE,
@@ -231,6 +233,7 @@ fun SaveOptionsDialog(
                         SaveFileButton(
                             saveData = SaveData(
                                 filename = lastSaveResult?.filename ?: Tool.SvgExport.DEFAULT_FILENAME,
+                                extension = Tool.SvgExport.EXTENSION,
                                 lastDir = lastSaveResult?.dir,
                                 uri = lastSaveResult?.uri,
                                 mimeType = Tool.SvgExport.MIME_TYPE,

@@ -20,14 +20,16 @@ data class SaveData<T>(
 ) {
     constructor(
         filename: String,
+        extension: String? = null,
         lastDir: String? = null,
         uri: String? = null,
         otherDisplayedExtensions: Set<String> = emptySet(),
         mimeType: String = DEFAULT_MIME_TYPE,
+        _patchForJvmSignatureOverlap: Unit = Unit,
         prepareContent: suspend (name: String) -> T,
     ) : this(
         name = filename.substringBeforeLast('.', missingDelimiterValue = filename),
-        extension = filename.substringAfterLast('.', missingDelimiterValue = ""),
+        extension = extension ?: filename.substringAfterLast('.', missingDelimiterValue = ""),
         lastDir = lastDir,
         uri = uri,
         otherDisplayedExtensions = otherDisplayedExtensions,

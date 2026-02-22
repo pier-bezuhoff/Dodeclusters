@@ -381,8 +381,7 @@ fun EditorScreen(
                 onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::closeDialog,
                 onSaved = { saveResult ->
-                    // TODO: discriminate by save-method
-//                    lastSaveResult = saveResult
+                    lastSaveResult = saveResult
                     when (saveResult) {
                         is SaveResult.Success ->
                             viewModel.queueSnackbarMessage(
