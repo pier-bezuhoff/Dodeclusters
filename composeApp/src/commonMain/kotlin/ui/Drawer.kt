@@ -1,5 +1,6 @@
 package ui
 
+import androidx.compose.material3.DismissibleDrawerSheet
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -22,6 +23,7 @@ fun MyDrawer(modifier: Modifier = Modifier) {
     val drawerState = rememberDrawerState(DrawerValue.Open)
     ModalNavigationDrawer(
         drawerContent = {
+//            DismissibleDrawerSheet {  }
             ModalDrawerSheet(drawerState) {
                 NavigationDrawerItem(
                     label = { Text("item1") },
@@ -37,6 +39,7 @@ fun MyDrawer(modifier: Modifier = Modifier) {
         },
         drawerState = drawerState
     ) {
+        // scaffold
         Text("Body")
         SimpleButton(
             painterResource(Res.drawable.open_file),

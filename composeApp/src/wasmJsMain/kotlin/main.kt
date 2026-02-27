@@ -11,8 +11,6 @@ import dodeclusters.composeapp.generated.resources.loading_sample_error
 import dodeclusters.composeapp.generated.resources.loading_sample_progress
 import domain.LoadingState
 import domain.io.DdcRepository
-import domain.io.SHARE_PERMISSION_KEY
-import domain.io.USER_ID_KEY
 import domain.io.WebDdcSharing
 import kotlinx.browser.document
 import kotlinx.browser.localStorage
@@ -39,6 +37,14 @@ object SearchParamKeys {
     const val SHARED_ID = "shared"
     const val SHARE_PERM = "share_perm"
     const val SAMPLE = "sample"
+}
+
+/** Local storage namespace is shared within the domain, so it's better
+ * to prefix keys with 'ddc-' */
+object LocalStorageKeys {
+    const val USER_ID = "ddc-user-id"
+    /** Presently unused */
+    const val SHARE_PERMISSION = "ddc-share-perm"
 }
 
 // NOTE: because Github Pages serves .wasm files with wrong mime type https://stackoverflow.com/a/54320709/7143065
@@ -128,25 +134,23 @@ fun main() {
             WebDdcSharing.testSharePermission(),
             key1 = sharePerm,
         ) {
-            if (sharePerm != null) {
-                localStorage.setItem(SHARE_PERMISSION_KEY, sharePerm)
-                val oldUserId = localStorage.getItem(USER_ID_KEY)
-                if (oldUserId == null) {
-                    // NOTE: the server doesn't verify share-perm validity atp
-                    val newUserId = WebDdcSharing.registerUser()
-                    if (newUserId != null) {
-                        localStorage.setItem(USER_ID_KEY, newUserId)
-                        println("acquired share perm for $newUserId")
-                        // ideally we display it as a snackbar notice
-                        value = true
-                    }
-                } else {
-                    value = true
-                }
+            if (sharePerm != null) { // unused
+                localStorage.setItem(LocalStorageKeys.SHARE_PERMISSION, sharePerm)
                 // clean url too assert dominance or smth
                 val newUrl = URL(window.location.href)
                 newUrl.searchParams.delete(SearchParamKeys.SHARE_PERM)
                 window.history.pushState(null, "", newUrl.href)
+            }
+            val oldUserId = localStorage.getItem(LocalStorageKeys.USER_ID)
+            if (oldUserId == null) {
+                val newUserId = WebDdcSharing.registerUser()
+                if (newUserId != null) {
+                    localStorage.setItem(LocalStorageKeys.USER_ID, newUserId)
+                    println("acquired share perm for $newUserId")
+                    value = true
+                }
+            } else {
+                value = true
             }
         }
         App(

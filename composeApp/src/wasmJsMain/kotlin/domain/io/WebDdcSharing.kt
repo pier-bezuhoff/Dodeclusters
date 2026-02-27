@@ -15,6 +15,8 @@ import kotlinx.coroutines.await
 import org.w3c.dom.url.URL
 import org.w3c.fetch.Response
 import kotlin.js.Promise
+import kotlin.random.Random
+import kotlin.random.nextULong
 
 // MAYBE: persist it
 private fun generateDk(): Promise<JsString> = js(
@@ -43,10 +45,16 @@ private fun fetchPost(url: String, content: String): Promise<Response?> = js(
     """
 )
 
-private const val ENDPOINT = "https://script.google.com/macros/s/AKfycbwMjpJfLFnUvrMCMlAA4DwiH-3PwW0bEc9PxE1oD7srYhmS8WPb43mY2JzIDi_K3D0J/exec"
+// NOTE: new kotlin version may change seeding algo (but likely will not)
+private val PK_RANDOM = Random(0x12c161086L)
 
-const val SHARE_PERMISSION_KEY = "ddc-share-perm"
-const val USER_ID_KEY = "ddc-user-id"
+private fun generatePk(): ULong {
+    return PK_RANDOM.nextULong(10_000_000UL .. 99_999_999UL)
+}
+
+private val PK = "${generatePk()}${generatePk()}${generatePk()}${generatePk()}"
+
+private const val ENDPOINT = "https://script.google.com/macros/s/AKfycbw7hmxreFXv_b2D_XzDHRpZ3iopD1J5jTI2ef66RIQpM2WJ2LWgTNjsmy5lmFrhBDNp/exec"
 
 private fun setUrlSearchParam(key: String, value: String) {
     val newUrl = URL(window.location.href)
@@ -60,7 +68,7 @@ object WebDdcSharing : DdcSharing {
     override suspend fun fetchSharedDdc(sharedId: SharedId): DdcContentAndOwnedStatus? {
         try {
             val dk = generateDk().await<JsString>().toString()
-            val userId = localStorage.getItem(USER_ID_KEY)
+            val userId = localStorage.getItem(LocalStorageKeys.USER_ID)
             val promise = if (userId != null) {
                 window.fetch("$ENDPOINT?doko=$dk&user_id=$userId&id=$sharedId")
             } else {
@@ -109,14 +117,14 @@ object WebDdcSharing : DdcSharing {
     }
 
     override fun testSharePermission(): Boolean =
-        localStorage.getItem(SHARE_PERMISSION_KEY) != null &&
-        localStorage.getItem(USER_ID_KEY) != null
+//        localStorage.getItem(SHARE_PERMISSION_KEY) != null &&
+        localStorage.getItem(LocalStorageKeys.USER_ID) != null
 
     override suspend fun shareNewDdc(content: DdcContent): SharedId? {
         try {
             val dk = generateDk().await<JsString>().toString()
-            val pk = localStorage.getItem(SHARE_PERMISSION_KEY)
-            val userId = localStorage.getItem(USER_ID_KEY)
+            val pk = PK //localStorage.getItem(SHARE_PERMISSION_KEY)
+            val userId = localStorage.getItem(LocalStorageKeys.USER_ID)
             if (pk == null || userId == null)
                 return null
             val url = "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&user_id=$userId"
@@ -144,8 +152,8 @@ object WebDdcSharing : DdcSharing {
     override suspend fun overwriteSharedDdc(sharedId: SharedId, content: DdcContent): SharedId? {
         try {
             val dk = generateDk().await<JsString>().toString()
-            val pk = localStorage.getItem(SHARE_PERMISSION_KEY)
-            val userId = localStorage.getItem(USER_ID_KEY)
+            val pk = PK //localStorage.getItem(SHARE_PERMISSION_KEY)
+            val userId = localStorage.getItem(LocalStorageKeys.USER_ID)
             if (pk == null || userId == null)
                 return null
             val url = "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&user_id=$userId&id=$sharedId"
