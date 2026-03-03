@@ -9,11 +9,13 @@ typealias DdcContentAndOwnedStatus = Pair<DdcContent, OwnedStatus>
 
 interface DdcSharing {
     var shared: SharedIdAndOwnedStatus?
-    /** @return (ddc content, is shared link owned by the user) */
-    suspend fun fetchSharedDdc(sharedId: SharedId): DdcContentAndOwnedStatus?
-    suspend fun registerUser(): UserId?
-    fun testSharePermission(): Boolean
-    suspend fun shareNewDdc(content: DdcContent): SharedId?
-    suspend fun overwriteSharedDdc(sharedId: SharedId, content: DdcContent): SharedId?
+
     fun formatLink(sharedId: SharedId): String
+    fun testSharePermission(): Boolean
+
+    /** @return (ddc content, is shared link owned by the user) */
+    suspend fun fetchSharedDdc(sharedId: SharedId): Result<DdcContentAndOwnedStatus>
+    suspend fun registerUser(): Result<UserId>
+    suspend fun shareNewDdc(content: DdcContent): Result<SharedId>
+    suspend fun overwriteSharedDdc(sharedId: SharedId, content: DdcContent): Result<SharedId>
 }

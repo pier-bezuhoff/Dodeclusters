@@ -16,8 +16,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -290,7 +288,7 @@ private fun ShareNewButton(
     containerColor: Color,
     contentColor: Color,
     coroutineScope: CoroutineScope,
-    shareNew: suspend () -> SharedId?,
+    shareNew: suspend () -> Result<SharedId>,
     setLoadingShared: (LoadingState<SharedIdAndOwnedStatus>?) -> Unit,
     onShared: (shared: SharedIdAndOwnedStatus) -> Unit,
 ) {
@@ -298,14 +296,16 @@ private fun ShareNewButton(
         onClick = {
             coroutineScope.launch {
                 setLoadingShared(LoadingState.InProgress(getString(Res.string.share_new_progress)))
-                val sharedId = shareNew()
-                if (sharedId == null) {
-                    setLoadingShared(LoadingState.Error(Error(getString(Res.string.share_new_error))))
-                } else {
-                    val newShared = Pair(sharedId, true)
-                    setLoadingShared(LoadingState.Completed(newShared))
-                    onShared(newShared)
-                }
+                shareNew()
+                    .onSuccess { sharedId ->
+                        val newShared = Pair(sharedId, true)
+                        setLoadingShared(LoadingState.Completed(newShared))
+                        onShared(newShared)
+                    }
+                    .onFailure {
+                        println(it.message)
+                        setLoadingShared(LoadingState.Error(Error(getString(Res.string.share_new_error))))
+                    }
             }
         },
         modifier = modifier,
@@ -335,7 +335,7 @@ private fun OverwriteSharedButton(
     containerColor: Color,
     contentColor: Color,
     coroutineScope: CoroutineScope,
-    overwriteShared: suspend () -> SharedId?,
+    overwriteShared: suspend () -> Result<SharedId>,
     setLoadingShared: (LoadingState<SharedIdAndOwnedStatus>?) -> Unit,
     onShared: (SharedIdAndOwnedStatus) -> Unit,
 ) {
@@ -345,14 +345,16 @@ private fun OverwriteSharedButton(
                 setLoadingShared(
                     LoadingState.InProgress(getString(Res.string.overwrite_shared_progress))
                 )
-                val sharedId = overwriteShared()
-                if (sharedId == null) {
-                    setLoadingShared(LoadingState.Error(Error(getString(Res.string.overwrite_shared_error))))
-                } else {
-                    val newShared = Pair(sharedId, true)
-                    setLoadingShared(LoadingState.Completed(newShared))
-                    onShared(newShared)
-                }
+                overwriteShared()
+                    .onSuccess { sharedId ->
+                        val newShared = Pair(sharedId, true)
+                        setLoadingShared(LoadingState.Completed(newShared))
+                        onShared(newShared)
+                    }
+                    .onFailure {
+                        println(it.message)
+                        setLoadingShared(LoadingState.Error(Error(getString(Res.string.overwrite_shared_error))))
+                    }
             }
         },
         modifier = modifier,
@@ -397,7 +399,7 @@ private fun ColumnScope.SharedLink(
         SelectionContainer {
             Text(
                 text = link,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.secondary,
 //                maxLines = 1,
                 overflow = TextOverflow.Visible,

@@ -741,7 +741,7 @@ fun BoxScope.LoadingOverlay(
         Modifier
             .align(Alignment.Center)
         ,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
         contentColor = MaterialTheme.colorScheme.primary,
     ) {
         Column(
@@ -754,7 +754,7 @@ fun BoxScope.LoadingOverlay(
                 Text(
                     text = explanation,
                     Modifier.padding(vertical = 12.dp),
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
             }

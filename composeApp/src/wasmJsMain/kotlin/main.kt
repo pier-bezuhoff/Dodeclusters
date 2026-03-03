@@ -103,7 +103,7 @@ fun main() {
                 value = LoadingState.InProgress(
                     getString(Res.string.fetching_shared_progress, sharedId)
                 )
-                val ddcContentAndOwned = WebDdcSharing.fetchSharedDdc(sharedId)
+                val ddcContentAndOwned = WebDdcSharing.fetchSharedDdc(sharedId).getOrNull()
                 println("finished fetching shared ddc @$sharedId, owned=${ddcContentAndOwned?.second}")
                 value = if (ddcContentAndOwned == null) {
                     LoadingState.Error(Error(getString(Res.string.fetching_shared_error, sharedId)))
@@ -143,12 +143,15 @@ fun main() {
             }
             val oldUserId = localStorage.getItem(LocalStorageKeys.USER_ID)
             if (oldUserId == null) {
-                val newUserId = WebDdcSharing.registerUser()
-                if (newUserId != null) {
-                    localStorage.setItem(LocalStorageKeys.USER_ID, newUserId)
-                    println("acquired share perm for $newUserId")
-                    value = true
-                }
+                WebDdcSharing.registerUser()
+                    .onSuccess { newUserId ->
+                        localStorage.setItem(LocalStorageKeys.USER_ID, newUserId)
+                        println("acquired share perm for $newUserId")
+                        value = true
+                    }
+                    .onFailure {
+                        println(it.message)
+                    }
             } else {
                 value = true
             }
