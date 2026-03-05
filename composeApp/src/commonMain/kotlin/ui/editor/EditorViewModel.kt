@@ -36,8 +36,6 @@ import core.geometry.fromCorners
 import core.geometry.scaled00
 import core.geometry.selectWithRectangle
 import core.geometry.translationDelta
-import domain.ArcPathArc
-import domain.ArcPathPoint
 import domain.Arg
 import domain.ArgType
 import domain.ColorAsCss
@@ -47,9 +45,10 @@ import domain.PartialArgList
 import domain.PointSnapResult
 import domain.ProgressState
 import domain.angleDeg
+import domain.cluster.Arc
+import domain.cluster.ArcPath
 import domain.cluster.Constellation
 import domain.cluster.LogicalRegion
-import domain.cluster.SignedDirectedArcIndex
 import domain.compressConstraints
 import domain.entails
 import domain.expressions.BiInversionParameters
@@ -62,7 +61,6 @@ import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.ObjectConstruct
 import domain.expressions.Parameters
 import domain.expressions.RotationParameters
-import domain.expressions.SagittaRatioParameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
@@ -83,6 +81,7 @@ import domain.model.ChangeHistory
 import domain.model.ConformalObjectModel
 import domain.model.ContinuousChange
 import domain.model.SaveState
+import domain.model.Selection
 import domain.reindexingMap
 import domain.settings.BlendModeType
 import domain.settings.ChessboardPattern
@@ -117,7 +116,6 @@ import ui.editor.dialogs.DialogType
 import ui.theme.DodeclustersColors
 import ui.tools.Category
 import ui.tools.Tool
-import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
@@ -126,16 +124,15 @@ import kotlin.time.Duration.Companion.seconds
 // TODO: decouple navigation & tools/categories
 // MAYBE: timed autosave (cron-like), e.g. every 10min
 class EditorViewModel : ViewModel() {
-    val objectModel = ConformalObjectModel()
+    val objectModel: ConformalObjectModel = ConformalObjectModel()
     val objects: List<GCircle?> = objectModel.objects
+    val arcPaths: List<ArcPath> = objectModel.arcPaths
     // alt name: ghost[ed] objects
     val phantoms: Set<Ix> = objectModel.phantomObjectIndices
     // not in objectModel cuz i want it to be state-backed for nicer caching
     var objectLabels: Map<Ix, String> by mutableStateOf(mapOf())
     /** Filled regions delimited by some objects from [objects] */
     var regions: List<LogicalRegion> by mutableStateOf(listOf())
-//    var arcPaths: List<ArcPath> by mutableStateOf(emptyList())
-//        private set
 
     var backgroundColor: Color? by mutableStateOf(null)
     var chessboardColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
@@ -145,9 +142,10 @@ class EditorViewModel : ViewModel() {
 //    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
     // MAYBE: when circles are hidden select regions instead
-    /** indices of selected circles/lines/points */
-    var selection: List<Ix> by mutableStateOf(emptyList())
+    /** indices of selected circles/lines/points & arc-paths */
+    var selection: Selection by mutableStateOf(Selection())
         private set
+    val objectSelection: List<Ix> get() = selection.objects
     private val modeState: MutableState<Mode> = mutableStateOf(SelectionMode.Drag)
     var mode: Mode by modeState
         private set
@@ -190,7 +188,7 @@ class EditorViewModel : ViewModel() {
     var regionManipulationStrategy: RegionManipulationStrategy by mutableStateOf(RegionManipulationStrategy.REPLACE)
         private set
     /** applies to [SelectionMode.Region]:
-     * only use circles present in the [selection] to determine which regions to fill */
+     * only use circles present in the [objectSelection] to determine which regions to fill */
     var restrictRegionsToSelection: Boolean by mutableStateOf(false)
         private set
 
@@ -209,18 +207,18 @@ class EditorViewModel : ViewModel() {
 
     // these 2 are NG
     inline val circleSelectionIsActive: Boolean get() =
-        showCircles && selection.any { objects[it] is CircleOrLineOrImaginaryCircle } && mode.isSelectingCircles()
+        showCircles && objectSelection.any { objects[it] is CircleOrLineOrImaginaryCircle } && mode.isSelectingCircles()
     inline val pointSelectionIsActive: Boolean get() =
-        showCircles && selection.any { objects[it] is Point } && mode.isSelectingCircles()
+        showCircles && objectSelection.any { objects[it] is Point } && mode.isSelectingCircles()
     val handleConfig: HandleConfig? by derivedStateOf { // depends on selectionMode & selection
         when (mode) {
             SelectionMode.Drag ->
-                if (selection.isEmpty()) null
-                else HandleConfig.SingleCircle(selection.single())
+                if (objectSelection.isEmpty()) null
+                else HandleConfig.SingleCircle(objectSelection.single())
             SelectionMode.Multiselect -> when {
-                selection.isEmpty() -> null
-                selection.size == 1 -> HandleConfig.SingleCircle(selection.single())
-                selection.size > 1 -> HandleConfig.SeveralCircles(selection)
+                objectSelection.isEmpty() -> null
+                objectSelection.size == 1 -> HandleConfig.SingleCircle(objectSelection.single())
+                objectSelection.size > 1 -> HandleConfig.SeveralCircles(objectSelection)
                 else -> null // never
             }
             SelectionMode.Region -> null
@@ -245,7 +243,7 @@ class EditorViewModel : ViewModel() {
     val selectionIsLocked: Boolean get() {
         hug(selectionIsLockedTrigger, objectModel.invalidations)
         // NOTE: isFree depends on expressions, so propertyInvalidations is not enough
-        return selection.all { objects[it] == null || !isFree(it) }
+        return objectSelection.all { objects[it] == null || !isFree(it) }
     }
 
     private lateinit var history: ChangeHistory
@@ -440,24 +438,24 @@ class EditorViewModel : ViewModel() {
     }
 
     fun showDebugInfo() {
-        val selectedObjectsString = selection.joinToString { ix ->
+        val selectedObjectsString = objectSelection.joinToString { ix ->
             "$ix: " + objects[ix].toString()
         }
-        val selectedExpressionsString = selection.joinToString { ix ->
+        val selectedExpressionsString = objectSelection.joinToString { ix ->
             "$ix: " + objectModel.expressions.expressions[ix].toString()
         }
         println("mode = $mode, submode = $submode")
         println("partialArgList = $partialArgList")
-        println("selection = $selection")
+        println("selection = $objectSelection")
         println("selected objects = $selectedObjectsString")
-        println("selected objects downscaled = " + selection.joinToString { ix ->
+        println("selected objects downscaled = " + objectSelection.joinToString { ix ->
             "$ix: " + objectModel.downscaledObjects[ix].toString()
         })
         println("selected objects expressions = $selectedExpressionsString")
         println(
             "regions bounded by some of selected objects = " + regions.filter {
-                it.insides.any { ix -> ix in selection } ||
-                it.outsides.any { ix -> ix in selection }
+                it.insides.any { ix -> ix in objectSelection } ||
+                it.outsides.any { ix -> ix in objectSelection }
             }.joinToString { it.toString() }
         )
         println("partialArcPath = $partialArcPath")
@@ -482,7 +480,7 @@ class EditorViewModel : ViewModel() {
     private fun loadConstellation(constellation: Constellation) {
         objectLabels = emptyMap()
         regions = emptyList() // important, since draws are async (otherwise can crash)
-        selection = emptyList()
+        selection = Selection()
         objectModel.loadConstellation(constellation)
         val objectIndices = objects.indices.toSet()
         regions = constellation.parts
@@ -574,7 +572,7 @@ class EditorViewModel : ViewModel() {
                 is SubMode.RotateStereographicSphere -> switchToCategory(Category.Drag)
                 else -> switchToMode(mode) // clears up stuff
             }
-            selection = emptyList()
+            selection = Selection()
             val state = saveState()
             val newState = history.undo(state)
             loadState(newState)
@@ -598,14 +596,18 @@ class EditorViewModel : ViewModel() {
         submode = null
         objectLabels = emptyMap()
         regions = emptyList() // important, since draws are async (otherwise can crash)
-        selection = emptyList()
+        selection = Selection()
         objectModel.loadState(state)
         regions = state.regions
         backgroundColor = state.backgroundColor
         objectLabels = state.objectLabels
         objectModel.invalidate()
-        val validSelection = state.selection.filter { it in objects.indices } // just in case
-        val switchToMultiselect = selection.size <= 1 && validSelection.size > 1
+        val validSelection = state.selection.copy(
+            // just in case
+            state.selection.objects.filter { it in objects.indices },
+            state.selection.arcPaths.filter { it in arcPaths.indices },
+        )
+        val switchToMultiselect = objectSelection.size <= 1 && validSelection.objects.size > 1
         selection = validSelection
         centerizeTo(state.center.x, state.center.y)
         chessboardPattern = state.chessboardPattern
@@ -633,14 +635,14 @@ class EditorViewModel : ViewModel() {
         objectModel.addObjects(newGCircles)
         if (validNewGCircles.isNotEmpty()) {
             showCircles = true
-            selection = newIndices.filter { objects[it] != null }
+            selection = Selection(objects = newIndices.filter { objects[it] != null })
             viewModelScope.launch {
                 animations.emit(
                     CircleAnimation.Entrance(validNewGCircles.filterIsInstance<CircleOrLine>())
                 )
             }
         } else { // all nulls
-            selection = emptyList()
+            selection = Selection()
         }
         objectModel.invalidate()
         val indices = newIndices.toSet()
@@ -669,7 +671,7 @@ class EditorViewModel : ViewModel() {
      * We assume that appropriate expressions were/will be created and
      * that those expressions follow the order of [sourceIndex2NewTrajectory]`.flatten()`, but
      * the objects themselves are yet to be added to [objects]. In addition, set
-     * new objects that are circles/lines/points as [selection].
+     * new objects that are circles/lines/points as [objectSelection].
      * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`,
      * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
      * @param[circleAnimationInit] given list of circles/lines queue [CircleAnimation]
@@ -686,9 +688,11 @@ class EditorViewModel : ViewModel() {
         objectModel.addObjects(newObjects) // row-column order
         objectModel.copySourceColorsOntoTrajectories(sourceIndex2NewTrajectory, oldSize)
         copySourceRegionsOntoTrajectories(sourceIndex2NewTrajectory, oldSize, flipRegionsInAndOut)
-        selection = (oldSize until objects.size).filter { ix ->
-            objects[ix] is CircleOrLine || objects[ix] is Point
-        }
+        selection = Selection(
+            objects = (oldSize until objects.size).filter { ix ->
+                objects[ix] is CircleOrLine || objects[ix] is Point
+            }
+        )
         objectModel.invalidate()
         circleAnimationInit(newObjects.filterIsInstance<CircleOrLine>())?.let { circleAnimation ->
             viewModelScope.launch {
@@ -778,7 +782,7 @@ class EditorViewModel : ViewModel() {
      * We assume that appropriate expressions were/will be created separately and
      * that those expressions follow the order of [sourceIndex2NewObject], but
      * the objects themselves are yet to be added to [objects]. In addition set
-     * new objects that are circles/lines/points as [selection].
+     * new objects that are circles/lines/points as [objectSelection].
      * @param[sourceIndex2NewObject] `[(original index ~ style source, new object)]`, note that
      * original indices CAN repeat (tho its regions will be copied only once even for the repeats).
      * @param[circleAnimationInit] given list of circles/lines queue [CircleAnimation]
@@ -812,9 +816,11 @@ class EditorViewModel : ViewModel() {
             newIndices = newIndicesOfCircles,
             flipInAndOut = flipRegionsInAndOut
         )
-        selection = (oldSize until objects.size).filter { ix ->
-            objects[ix] is CircleOrLine || objects[ix] is Point
-        }
+        selection = Selection(
+            objects = (oldSize until objects.size).filter { ix ->
+                objects[ix] is CircleOrLine || objects[ix] is Point
+            }
+        )
         circleAnimationInit(ix2circle.map { it.second })?.let { circleAnimation ->
             viewModelScope.launch {
                 animations.emit(circleAnimation)
@@ -826,7 +832,7 @@ class EditorViewModel : ViewModel() {
         if (mode.isSelectingCircles()) {
             // pre-sorting is mandatory for expression copying to work properly
             val toBeCopied = objectModel.expressions.sortedByTier(
-                selection.filter { objects[it] is CircleOrLine || objects[it] is Point }
+                objectSelection.filter { objects[it] is CircleOrLine || objects[it] is Point }
             )
             if (toBeCopied.isNotEmpty()) {
                 pinStateForHistory()
@@ -886,10 +892,10 @@ class EditorViewModel : ViewModel() {
     }
 
     fun deleteSelectedPointsAndCircles() {
-        val toBeDeleted = selection
+        val toBeDeleted = objectSelection
         if (showCircles && toBeDeleted.isNotEmpty() && mode.isSelectingCircles()) {
             pinStateForHistory()
-            selection = emptyList()
+            selection = Selection()
             deleteObjectsWithDependenciesColorsAndRegions(toBeDeleted)
             history.recordAccumulatedChanges()
         }
@@ -959,12 +965,12 @@ class EditorViewModel : ViewModel() {
 
     fun switchToMode(newMode: Mode) {
         // NOTE: these altering shortcuts are unused for now so that they don't confuse category-expand buttons
-        if (selection.size > 1 && newMode == SelectionMode.Drag) {
-            selection = emptyList()
+        if (objectSelection.size > 1 && newMode == SelectionMode.Drag) {
+            selection = Selection()
         }
         showPromptToSetActiveSelectionAsToolArg = false
         if (newMode is ToolMode) {
-            if (selection.size > 1 &&
+            if (objectSelection.size > 1 &&
                 newMode.signature.argTypes.first() == ArgType.INDICES
             ) {
                 showPromptToSetActiveSelectionAsToolArg = true
@@ -1092,10 +1098,11 @@ class EditorViewModel : ViewModel() {
             }
         }
         return selectCircle(circles, visiblePosition)?.also { ix ->
-            if (ix in selection)
-                selection -= ix
-            else
-                selection += ix
+            selection = Selection(
+                objects =
+                    if (ix in objectSelection) selection.objects - ix
+                    else selection.objects + ix
+            )
         }
     }
 
@@ -1147,15 +1154,15 @@ class EditorViewModel : ViewModel() {
             allRegions = regions,
             regionManipulationStrategy = regionManipulationStrategy,
             shouldUpdateSelection = shouldUpdateSelection,
-            setSelection = { selection = it },
+            setSelection = { selection = Selection(objects = it) },
         )
         history.accumulateChangedLocations(regions = true)
     }
 
     /** @return [Rect] using absolute positions */
     fun calculateSelectionRect(): Rect? {
-        val selectedCircles = selection.mapNotNull { objects[it] as? Circle }
-        if (selectedCircles.isEmpty() || selection.any { objects[it] is Line }) {
+        val selectedCircles = objectSelection.mapNotNull { objects[it] as? Circle }
+        if (selectedCircles.isEmpty() || objectSelection.any { objects[it] is Line }) {
             return null
         }
         val left = selectedCircles.minOf { it.x - it.radius }.toFloat()
@@ -1230,7 +1237,10 @@ class EditorViewModel : ViewModel() {
     /** Adds a new point(s) with expression defined by [snapResult] when non-free
      * @return the same [snapResult] if [snapResult] is [PointSnapResult.Free], otherwise
      * [PointSnapResult.Eq] that points to the newly added point */
-    private fun realizePointCircleSnap(snapResult: PointSnapResult): PointSnapResult.PointToPoint =
+    private fun realizePointSnap(
+        snapResult: PointSnapResult,
+        pinAndRecordHistory: Boolean = true,
+    ): PointSnapResult.PointToPoint =
         when (snapResult) {
             is PointSnapResult.Free -> snapResult
             is PointSnapResult.Eq -> snapResult
@@ -1242,11 +1252,13 @@ class EditorViewModel : ViewModel() {
                     IncidenceParameters(order),
                     snapResult.circleIndex
                 )
-                pinStateForHistory()
+                if (pinAndRecordHistory)
+                    pinStateForHistory()
                 val newIx = objects.size
                 val newPoint = (objectModel.expressions.addSoloExpr(expr) as Point).upscale()
                 createNewGCircle(newPoint)
-                history.recordAccumulatedChanges()
+                if (pinAndRecordHistory)
+                    history.recordAccumulatedChanges()
                 PointSnapResult.Eq(newPoint, newIx)
             }
             is PointSnapResult.Intersection -> {
@@ -1267,7 +1279,8 @@ class EditorViewModel : ViewModel() {
                     PointSnapResult.Eq(objects[closestIndex] as Point, closestIndex)
                 } else {
                     // check if both outputIndices are present, if not add the other
-                    pinStateForHistory()
+                    if (pinAndRecordHistory)
+                        pinStateForHistory()
                     val oldSize = objects.size
                     val intersectionOutputIndex = computeIntersection(
                         objects[ix1] as CircleOrLine,
@@ -1280,13 +1293,15 @@ class EditorViewModel : ViewModel() {
                             ExprOutput.OneOf(expr, intersectionOutputIndex)
                         ) as Point
                         createNewGCircle(p.upscale())
-                        history.recordAccumulatedChanges()
+                        if (pinAndRecordHistory)
+                            history.recordAccumulatedChanges()
                         PointSnapResult.Eq(snapResult.result, oldSize)
                     } else {
                         val ps = objectModel.expressions.addMultiExpr(expr)
                             .map { it as? Point }
                         createNewGCircles(ps.map { it?.upscale() })
-                        history.recordAccumulatedChanges()
+                        if (pinAndRecordHistory)
+                            history.recordAccumulatedChanges()
                         PointSnapResult.Eq(snapResult.result, oldSize + intersectionOutputIndex)
                     }
                 }
@@ -1295,13 +1310,13 @@ class EditorViewModel : ViewModel() {
 
     fun activateRectangularSelect() {
         switchToMode(SelectionMode.Multiselect)
-        selection = emptyList()
+        selection = Selection()
         submode = SubMode.RectangularSelect()
     }
 
     fun activateFlowSelect() {
         switchToMode(SelectionMode.Multiselect)
-        selection = emptyList()
+        selection = Selection()
         submode = SubMode.FlowSelect()
     }
 
@@ -1312,7 +1327,8 @@ class EditorViewModel : ViewModel() {
 
     fun forceSelectAll() {
         if (!mode.isSelectingCircles() || !showCircles) { // more intuitive behavior
-            selection = emptyList() // forces to select all instead of toggling
+            // forces to select all instead of toggling
+            selection = Selection()
         }
         switchToCategory(Category.Multiselect)
         toggleSelectAll()
@@ -1322,12 +1338,16 @@ class EditorViewModel : ViewModel() {
         switchToMode(SelectionMode.Multiselect)
         showCircles = true
         val allCLPIndices = objects.filterIndices { it is CircleOrLineOrPoint }
-        val everythingIsSelected = selection.containsAll(allCLPIndices)
-        selection = if (everythingIsSelected) {
-            emptyList()
-        } else { // maybe select Imaginary's and nulls too
-            allCLPIndices
-        }
+        val everythingIsSelected = objectSelection.containsAll(allCLPIndices)
+        selection =
+            if (everythingIsSelected)
+                Selection()
+            else
+                Selection(
+                    // maybe select Imaginary's and nulls too
+                    objects = allCLPIndices,
+                    arcPaths = arcPaths.indices.toList(),
+                )
         history.accumulateChangedLocations(selection = true)
     }
 
@@ -1335,7 +1355,7 @@ class EditorViewModel : ViewModel() {
         showCircles = !showCircles
         if (!showCircles && mode is ToolMode)
             switchToMode(SelectionMode.Drag)
-        selection = emptyList()
+        selection = Selection()
         history.accumulateChangedLocations(selection = true)
     }
 
@@ -1415,14 +1435,14 @@ class EditorViewModel : ViewModel() {
 
     fun concludeCircleColorPicker(colorPickerParameters: ColorPickerParameters) {
         pinStateForHistory()
-        for (ix in selection) {
+        for (ix in objectSelection) {
             objectModel.objectColors[ix] = colorPickerParameters.currentColor
         }
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
         objectModel.invalidate()
         history.accumulateChangedLocations(
-            objectColorIndices = selection.toSet(),
+            objectColorIndices = objectSelection.toSet(),
         )
         history.recordAccumulatedChanges()
     }
@@ -1457,7 +1477,7 @@ class EditorViewModel : ViewModel() {
 
     fun getMostCommonCircleColorInSelection(): Color? {
         hug(objectModel.propertyInvalidations)
-        return selection
+        return objectSelection
             .map { objectModel.objectColors[it] }
             .groupingBy { it }
             .eachCount()
@@ -1492,7 +1512,7 @@ class EditorViewModel : ViewModel() {
     fun cancelSelectionAsToolArgPrompt() {
         if (showPromptToSetActiveSelectionAsToolArg) {
             showPromptToSetActiveSelectionAsToolArg = false
-            selection = emptyList()
+            selection = Selection()
             history.accumulateChangedLocations(selection = true)
         }
     }
@@ -1502,11 +1522,11 @@ class EditorViewModel : ViewModel() {
             require(
                 tool is Tool.MultiArg &&
                 tool.signature.argTypes.first() == ArgType.INDICES &&
-                selection.isNotEmpty()
-            ) { "Illegal state in setActiveSelectionAsToolArg(): tool = $tool, selection == $selection" }
+                objectSelection.isNotEmpty()
+            ) { "Illegal state in setActiveSelectionAsToolArg(): tool = $tool, selection == $objectSelection" }
         }
         partialArgList = partialArgList!!.addArg(
-            Arg.Indices(selection.filter { objects[it] != null }),
+            Arg.Indices(objectSelection.filter { objects[it] != null }),
             confirmThisArg = true
         )
         cancelSelectionAsToolArgPrompt()
@@ -1533,7 +1553,7 @@ class EditorViewModel : ViewModel() {
         objectModel.expressions.addFree()
         switchToMode(SelectionMode.Multiselect)
         val indices = listOf(objects.size - 2, objects.size - 1)
-        selection = indices
+        selection = Selection(objects = indices)
         history.accumulateChangedLocations(
             objectIndices = indices.toSet(),
             expressionIndices = indices.toSet(),
@@ -1551,13 +1571,13 @@ class EditorViewModel : ViewModel() {
             if (firstZoom) {
                 pinStateForHistory()
             }
-            if (showCircles && mode.isSelectingCircles() && selection.isNotEmpty()) {
+            if (showCircles && mode.isSelectingCircles() && objectSelection.isNotEmpty()) {
                 val rect = calculateSelectionRect()
                 val focus =
                     if (rect == null || rect.minDimension >= 5_000)
                         computeAbsoluteCenter() ?: Offset.Zero
                     else rect.center
-                transformWhatWeCan(selection,
+                transformWhatWeCan(objectSelection,
                     focus = focus, zoom = zoom,
                     continuousChange = ContinuousChange.ZOOM
                 )
@@ -1584,11 +1604,11 @@ class EditorViewModel : ViewModel() {
 
     private fun detachEverySelectedObject() {
         pinStateForHistory()
-        for (ix in selection) {
+        for (ix in objectSelection) {
             objectModel.expressions.changeToFree(ix)
         }
         selectionIsLockedTrigger = !selectionIsLockedTrigger
-        history.accumulateChangedLocations(expressionIndices = selection.toSet())
+        history.accumulateChangedLocations(expressionIndices = objectSelection.toSet())
         history.recordAccumulatedChanges()
     }
 
@@ -1596,20 +1616,20 @@ class EditorViewModel : ViewModel() {
         pinStateForHistory()
         val labels = objectLabels.toMutableMap()
         if (label == null) {
-            labels -= selection.toSet()
+            labels -= objectSelection.toSet()
         } else {
-            for (ix in selection) {
+            for (ix in objectSelection) {
                 labels[ix] = label
             }
         }
         objectLabels = labels.toMap()
         openedDialog = null
-        history.accumulateChangedLocations(objectLabelIndices = selection.toSet())
+        history.accumulateChangedLocations(objectLabelIndices = objectSelection.toSet())
         history.recordAccumulatedChanges()
     }
 
     private fun markSelectedObjectsAsPhantoms() {
-        objectModel.phantomObjectIndices.addAll(selection)
+        objectModel.phantomObjectIndices.addAll(objectSelection)
         // selection = emptyList() // being able to instantly undo is prob better ux
         // showPhantomObjects = false // i think this behavior is confuzzling
         objectModel.invalidate()
@@ -1617,13 +1637,13 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun unmarkSelectedObjectsAsPhantoms() {
-        objectModel.phantomObjectIndices.removeAll(selection.toSet())
+        objectModel.phantomObjectIndices.removeAll(objectSelection.toSet())
         objectModel.invalidate()
         history.accumulateChangedLocations(phantoms = true)
     }
 
     private fun swapDirectionsOfSelectedCircles() {
-        val targets = selection.filter { ix ->
+        val targets = objectSelection.filter { ix ->
             objects[ix] is CircleOrLine && isFree(ix)
         }
         if (targets.isEmpty()) {
@@ -1645,7 +1665,7 @@ class EditorViewModel : ViewModel() {
     }
 
     inline val showAdjustExprButton: Boolean get() {
-        val sel = selection
+        val sel = objectSelection
         return sel.isNotEmpty() && (exprOf(sel[0])?.let { expr0 ->
             (expr0 is Expr.CircleInterpolation ||
                 expr0 is Expr.PointInterpolation ||
@@ -1657,7 +1677,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun adjustExpr() {
-        val expr = exprOf(selection[0])
+        val expr = exprOf(objectSelection[0])
         if (expr !is Expr.HasParameters) {
             return
         }
@@ -1751,22 +1771,22 @@ class EditorViewModel : ViewModel() {
                     } ?: adjustables
                 } else adjustables
             submode = SubMode.ExprAdjustment(allAdjustables)
-            selection = emptyList() // clear selection to hide selection HUD
+            selection = Selection() // clear selection to hide selection HUD
             history.accumulateChangedLocations(selection = true)
         }
     }
 
     // might be useful for duplication with dependencies
-    /** For each object in [selection], add to selection its siblings and parents */
+    /** For each object in [objectSelection], add to selection its siblings and parents */
     private fun expandSelectionToFamily() {
         if (mode.isSelectingCircles()) {
-            val familyMembers = selection.flatMap { ix ->
+            val familyMembers = objectSelection.flatMap { ix ->
                 listOf(ix) + findSiblingsAndParents(ix)
             }.distinct()
             if (familyMembers.size > 1 && mode == SelectionMode.Drag) {
                 switchToMode(SelectionMode.Multiselect)
             }
-            selection = familyMembers
+            selection = Selection(objects = familyMembers)
             history.accumulateChangedLocations(selection = true)
         }
     }
@@ -1774,7 +1794,7 @@ class EditorViewModel : ViewModel() {
     /** sibling = has the same [Expr] (possibly `null`) */
     private fun expandSelectionToAllSiblings() {
         if (mode.isSelectingCircles()) {
-            val siblings = selection
+            val siblings = objectSelection
                 .map { exprOf(it) }
                 .distinct()
                 .flatMap { expr ->
@@ -1783,7 +1803,7 @@ class EditorViewModel : ViewModel() {
             if (mode == SelectionMode.Drag && siblings.size > 1) {
                 switchToMode(SelectionMode.Multiselect)
             }
-            selection = siblings
+            selection = Selection(objects = siblings)
             history.accumulateChangedLocations(selection = true)
         }
     }
@@ -1828,7 +1848,7 @@ class EditorViewModel : ViewModel() {
                     pinStateForHistory()
                 null -> when (mode) {
                     SelectionMode.Drag, SelectionMode.Multiselect -> {
-                        if (selection.isNotEmpty()) {
+                        if (objectSelection.isNotEmpty()) {
                             pinStateForHistory()
                         }
                     }
@@ -1840,21 +1860,23 @@ class EditorViewModel : ViewModel() {
             if (mode == SelectionMode.Drag && submode == null) {
                 val selectedPointIndex = selectPointAt(visiblePosition)
                 if (selectedPointIndex != null) {
-                    selection = listOf(selectedPointIndex)
+                    selection = Selection(objects = listOf(selectedPointIndex))
                 } else {
-                    val previouslySelectedCircle = selection.firstOrNull()?.let { ix ->
+                    val previouslySelectedCircle = objectSelection.firstOrNull()?.let { ix ->
                         if (objects[ix] is CircleOrLine)
                             ix
                         else null
                     }
                     val selectedCircleIndex = selectCircleAt(visiblePosition)
-                    selection = if (previouslySelectedCircle != null && selectedCircleIndex == null) {
-                        listOf(previouslySelectedCircle)
-                        // we keep previous selection in case we want to drag it
-                        // but it can still be discarded in onTap
-                    } else {
-                        listOfNotNull(selectedCircleIndex)
-                    }
+                    selection = Selection(
+                        objects = if (previouslySelectedCircle != null && selectedCircleIndex == null) {
+                            listOf(previouslySelectedCircle)
+                            // we keep previous selection in case we want to drag it
+                            // but it can still be discarded in onTap
+                        } else {
+                            listOfNotNull(selectedCircleIndex)
+                        }
+                    )
                 }
                 history.accumulateChangedLocations(selection = true)
             } else {
@@ -1873,7 +1895,7 @@ class EditorViewModel : ViewModel() {
                 } else if (mode == SelectionMode.Region && submode is SubMode.FlowFill) {
                     val (_, qualifiedRegion) = selectRegionAt(visiblePosition)
                     submode = SubMode.FlowFill(qualifiedRegion)
-                    val selectedCircles = selection.filter { objects[it] is CircleOrLine }
+                    val selectedCircles = objectSelection.filter { objects[it] is CircleOrLine }
                     if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
                         reselectRegionAt(visiblePosition, selectedCircles)
                     } else {
@@ -1971,7 +1993,7 @@ class EditorViewModel : ViewModel() {
                 if (inFastCenteredCircle && argList.currentArg == null) {
                     // we have to realize the first point here so we don't forget its
                     // snap after panning
-                    val newArg = realizePointCircleSnap(snap).toArgPoint()
+                    val newArg = realizePointSnap(snap).toArgPoint()
                     val newArg2 = Arg.PointXY(snap.result)
                     partialArgList = argList
                         .addArg(newArg, confirmThisArg = true)
@@ -2047,7 +2069,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun movePointToInfinity() {
-        selection.singleOrNull()?.let { ix ->
+        objectSelection.singleOrNull()?.let { ix ->
             pinStateForHistory()
             val expr = exprOf(ix)
             if (expr == null) {
@@ -2071,31 +2093,27 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun downArcPathPoint(visiblePosition: Offset) {
-        val absolutePoint = snapped(absolute(visiblePosition)).result
+        val snap = snapped(absolute(visiblePosition))
         val arcPath = partialArcPath
         partialArcPath = if (arcPath == null) {
             PartialArcPath(
-                startVertex = ArcPathPoint.Free(absolutePoint),
-                focus = PartialArcPath.Focus.StartPoint
+                vertices = listOf(PartialArcPath.Vertex(snap)),
+                focus = PartialArcPath.Focus.Vertex(0),
             )
         } else {
-            if (isCloseEnoughToSelect(arcPath.startVertex.point.toOffset(), visiblePosition)) {
-                arcPath.copy(focus = PartialArcPath.Focus.StartPoint)
+            val vertexIndex = arcPath.vertices.indexOfFirst { vertex ->
+                isCloseEnoughToSelect(vertex.point.toOffset(), visiblePosition)
+            }
+            if (vertexIndex != -1) {
+                arcPath.copy(focus = PartialArcPath.Focus.Vertex(vertexIndex))
             } else {
-                val pointIx = arcPath.vertices.indexOfFirst {
-                    isCloseEnoughToSelect(it.point.toOffset(), visiblePosition)
+                val arcIndex = arcPath.arcs.indexOfFirst { arc ->
+                    isCloseEnoughToSelect(arc.middlePoint.toOffset(), visiblePosition)
                 }
-                if (pointIx != -1) {
-                    arcPath.copy(focus = PartialArcPath.Focus.Point(pointIx))
+                if (arcIndex != -1) {
+                    arcPath.copy(focus = PartialArcPath.Focus.MidPoint(arcIndex))
                 } else {
-                    val midpointIx = arcPath.midpoints.indexOfFirst {
-                        isCloseEnoughToSelect(it.toOffset(), visiblePosition)
-                    }
-                    if (midpointIx != -1) {
-                        arcPath.copy(focus = PartialArcPath.Focus.MidPoint(midpointIx))
-                    } else {
-                        arcPath.addNewVertexAndGrabIt(ArcPathPoint.Free(absolutePoint))
-                    }
+                    arcPath.addNewVertexAndGrabIt(PartialArcPath.Vertex(snap))
                 }
             }
         }
@@ -2114,10 +2132,14 @@ class EditorViewModel : ViewModel() {
             when (mode) {
                 SelectionMode.Drag -> {
                     var selectedIndex = selectPointAt(position)
-                    selection = listOfNotNull(selectedIndex)
+                    selection = Selection(
+                        objects = listOfNotNull(selectedIndex)
+                    )
                     if (selectedIndex == null) {
                         selectedIndex = selectCircleAt(position)
-                        selection = listOfNotNull(selectedIndex)
+                        selection = Selection(
+                            objects = listOfNotNull(selectedIndex)
+                        )
                         highlightSelectionParents()
                     }
                     history.accumulateChangedLocations(selection = true)
@@ -2130,10 +2152,12 @@ class EditorViewModel : ViewModel() {
                         if (region0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
                             toggleSelectAll()
                             if (!showPhantomObjects) {
-                                selection = selection.filter { it !in phantoms }
+                                selection = Selection(
+                                    objects = objectSelection.filter { it !in phantoms }
+                                )
                             }
                         } else {
-                            val selectedCircles = selection.filter { objects[it] is CircleOrLine }
+                            val selectedCircles = objectSelection.filter { objects[it] is CircleOrLine }
                             val largestInnerRegion = regions
                                 .filter { region isObviouslyInside it || region0 isObviouslyInside it }
                                 .maxByOrNull { it.insides.size + it.outsides.size }
@@ -2141,30 +2165,34 @@ class EditorViewModel : ViewModel() {
                                 println("bounds of $region")
                                 val bounds: Set<Ix> = region.insides + region.outsides
                                 if (bounds != selectedCircles.toSet()) {
-                                    selection = bounds.toList()
+                                    selection = Selection(
+                                        objects = bounds.toList()
+                                    )
                                     highlightSelectionParents()
                                 } else {
-                                    selection = emptyList()
+                                    selection = Selection()
                                 }
                             } else {
                                 println("existing bound of $largestInnerRegion")
                                 val bounds: Set<Ix> = largestInnerRegion.insides + largestInnerRegion.outsides
                                 if (bounds != selectedCircles.toSet()) {
-                                    selection = bounds.toList()
+                                    selection = Selection(
+                                        objects = bounds.toList()
+                                    )
                                     highlightSelectionParents()
                                 } else {
-                                    selection = emptyList()
+                                    selection = Selection()
                                 }
                             }
                         }
-                    } else if (selectedCircleIndex in selection) {
+                    } else if (selectedCircleIndex in objectSelection) {
                         highlightSelectionParents()
                     }
                     history.accumulateChangedLocations(selection = true)
                 }
                 SelectionMode.Region -> {
                     if (submode !is SubMode.FlowFill) {
-                        val selectedCircles = selection.filter { objects[it] is CircleOrLine }
+                        val selectedCircles = objectSelection.filter { objects[it] is CircleOrLine }
                         pinStateForHistory()
                         if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
                             reselectRegionAt(position, selectedCircles)
@@ -2239,7 +2267,7 @@ class EditorViewModel : ViewModel() {
             }
         }
         val scaleFactor = sliderPercentageDeltaToZoom(newSliderPercentage - sm.sliderPercentage)
-        transformWhatWeCan(selection, focus = sm.center, zoom = scaleFactor)
+        transformWhatWeCan(objectSelection, focus = sm.center, zoom = scaleFactor)
         submode = sm.copy(sliderPercentage = newSliderPercentage)
     }
 
@@ -2267,7 +2295,7 @@ class EditorViewModel : ViewModel() {
                     if (ENABLE_ANGLE_SNAPPING) snapAngle(newAngle)
                     else newAngle
                 val dAngle = (snappedAngle - sm.snappedAngle).toFloat()
-                transformWhatWeCan(selection, focus = sm.center, rotationAngle = dAngle)
+                transformWhatWeCan(objectSelection, focus = sm.center, rotationAngle = dAngle)
                 submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
             }
             else -> {}
@@ -2293,7 +2321,7 @@ class EditorViewModel : ViewModel() {
         absoluteCentroid: Offset,
         translation: Offset, zoom: Float, rotationAngle: Float
     ) {
-        val selectedIndex = selection.single()
+        val selectedIndex = objectSelection.single()
         if (ENABLE_TANGENT_SNAPPING) {
             val circle = objects[selectedIndex] as CircleOrLine
             val result0 = circle.transformed(translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
@@ -2328,7 +2356,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun dragPoint(absolutePointerPosition: Offset) {
-        val ix = selection.first()
+        val ix = objectSelection.first()
         val expr = exprOf(ix)
         if (expr is Expr.Incidence) {
             slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, absolutePointerPosition = absolutePointerPosition)
@@ -2369,7 +2397,7 @@ class EditorViewModel : ViewModel() {
         zoom: Float,
         rotationAngle: Float,
     ) {
-        val targets = selection.filter {
+        val targets = objectSelection.filter {
             val obj = objects[it]
             obj is CircleOrLine || obj is Point
         }
@@ -2493,8 +2521,8 @@ class EditorViewModel : ViewModel() {
         movementAfterDown = true
         /** absolute cursor/pointer position */
         val c = absolute(centroid)
-        val selectedCircles = selection.filter { objects[it] is CircleOrLineOrImaginaryCircle }
-        val selectedPoints = selection.filter { objects[it] is Point }
+        val selectedCircles = objectSelection.filter { objects[it] is CircleOrLineOrImaginaryCircle }
+        val selectedPoints = objectSelection.filter { objects[it] is Point }
         val sm = submode
         if (sm != null) {
             // drag handle
@@ -2509,9 +2537,9 @@ class EditorViewModel : ViewModel() {
                 is HandleConfig.SeveralCircles -> {
                     when (sm) {
                         is SubMode.Scale ->
-                            scaleSeveralCircles(pan, selection)
+                            scaleSeveralCircles(pan, objectSelection)
                         is SubMode.Rotate ->
-                            rotateSeveralCircles(pan = pan, c = c, sm = sm, targets = selection)
+                            rotateSeveralCircles(pan = pan, c = c, sm = sm, targets = objectSelection)
                         else -> {}
                     }
                 }
@@ -2523,7 +2551,9 @@ class EditorViewModel : ViewModel() {
                 val selectables = objects.mapIndexed { ix, o ->
                     if (showPhantomObjects || ix !in phantoms) o else null
                 }
-                selection = selectWithRectangle(selectables, rect)
+                selection = Selection(
+                    objects = selectWithRectangle(selectables, rect)
+                )
                 submode = SubMode.RectangularSelect(corner1, c)
                 history.accumulateChangedLocations(selection = true)
             } else if (mode == SelectionMode.Multiselect && sm is SubMode.FlowSelect) {
@@ -2537,7 +2567,10 @@ class EditorViewModel : ViewModel() {
                         (newQualifiedRegion.insides - qualifiedRegion.insides) union
                         (qualifiedRegion.outsides - newQualifiedRegion.outsides) union
                         (newQualifiedRegion.outsides - qualifiedRegion.outsides)
-                    selection += diff.filter { it !in selection && (showPhantomObjects || it !in phantoms) }
+                    selection = Selection(objects =
+                        selection.objects +
+                                diff.filter { it !in objectSelection && (showPhantomObjects || it !in phantoms) }
+                    )
                     history.accumulateChangedLocations(selection = true)
                 }
             } else if (mode == SelectionMode.Region && sm is SubMode.FlowFill) {
@@ -2566,28 +2599,27 @@ class EditorViewModel : ViewModel() {
         ) {
             dragCirclesOrPoints(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
         } else {
-            val result = snapped(c)
-            val absolutePoint = result.result
+            val snap = snapped(c)
+            val absolutePoint = snap.result
             val argList = partialArgList
             val currentArg = argList?.currentArg
             val currentArgType = argList?.currentArgType
             if (mode == ToolMode.ARC_PATH) {
-                // TODO: if last with n>=3, snap to start
-                partialArcPath = partialArcPath?.moveFocused(absolutePoint)
+                partialArcPath = partialArcPath?.moveFocused(snap)
             } else if (
                 mode is ToolMode &&
                 currentArgType?.possibleTypes?.any { it is Arg.Type.Point } == true &&
                 ((mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION) entails
                     (currentArg?.type is Arg.Type.Point))
             ) {
-                val newArg = when (result) {
-                    is PointSnapResult.Eq -> Arg.PointIndex(result.pointIndex)
+                val newArg = when (snap) {
+                    is PointSnapResult.Eq -> Arg.PointIndex(snap.pointIndex)
                     else -> Arg.PointXY(absolutePoint)
                 }
                 if (argList.validateUpdatedArg(newArg)) {
                     partialArgList = argList
                         .updateCurrentArg(newArg, confirmThisArg = false)
-                        .copy(lastSnap = result)
+                        .copy(lastSnap = snap)
                 }
             } else {
                 if (zoom != 1.0f || rotationAngle != 0.0f) {
@@ -2654,10 +2686,10 @@ class EditorViewModel : ViewModel() {
                                 )
                                 null
                             } else {
-                                realizePointCircleSnap(snap).toArgPoint()
+                                realizePointSnap(snap).toArgPoint()
                             }
                         } else {
-                            realizePointCircleSnap(snap).toArgPoint()
+                            realizePointSnap(snap).toArgPoint()
                             // realized, but might be invalid (nonEqualityConditions)
                         }
                     }
@@ -2679,7 +2711,7 @@ class EditorViewModel : ViewModel() {
         if ((mode == SelectionMode.Drag || mode == SelectionMode.Multiselect) &&
             movementAfterDown &&
             submode == null &&
-            selection.none { isFree(it) }
+            objectSelection.none { isFree(it) }
         ) {
             highlightSelectionParents()
         }
@@ -2691,16 +2723,17 @@ class EditorViewModel : ViewModel() {
                 val selectables = objects.mapIndexed { ix, o ->
                     if (showPhantomObjects || ix !in phantoms) o else null
                 }
-                selection = selectWithRectangle(selectables, rect)
+                val rectSelection = selectWithRectangle(selectables, rect)
                     .also {
                         println("rectangle selection -> $it")
                     }
+                selection = Selection(objects = rectSelection)
                 submode = SubMode.RectangularSelect(corner1, corner2)
                 history.accumulateChangedLocations(selection = true)
             }
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) { // haxx
-            println("flow-select -> $selection")
+            println("flow-select -> $objectSelection")
             toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
         }
         when (submode) { // history recordings
@@ -2712,7 +2745,7 @@ class EditorViewModel : ViewModel() {
                 history.recordAccumulatedChanges()
             null -> when (mode) {
                 SelectionMode.Drag, SelectionMode.Multiselect -> {
-                    if (selection.isNotEmpty() && movementAfterDown) {
+                    if (objectSelection.isNotEmpty() && movementAfterDown) {
                         history.recordAccumulatedChanges()
                     }
                 }
@@ -2757,10 +2790,10 @@ class EditorViewModel : ViewModel() {
 
     /** Signals locked state to the user with animation & snackbar message */
     private fun highlightSelectionParents() {
-        val allParents = selection.flatMap { selectedIndex ->
+        val allParents = objectSelection.flatMap { selectedIndex ->
             if (isConstrained(selectedIndex)) emptyList() // exclude semi-free Expr.Incidence
             else objectModel.expressions.getImmediateParents(selectedIndex)
-                .minus(selection.toSet())
+                .minus(objectSelection.toSet())
         }.distinct().mapNotNull { objects[it] }
         if (allParents.isNotEmpty()) {
             viewModelScope.launch {
@@ -3045,9 +3078,9 @@ class EditorViewModel : ViewModel() {
                     else -> {
                         when (mode) {
                             SelectionMode.Multiselect -> {
-                                if (selection.isNotEmpty()) {
+                                if (objectSelection.isNotEmpty()) {
                                     submode = null
-                                    selection = emptyList()
+                                    selection = Selection()
                                 } else {
                                     switchToCategory(Category.Drag)
                                 }
@@ -3057,7 +3090,7 @@ class EditorViewModel : ViewModel() {
                             }
                             else -> {
                                 submode = null
-                                selection = emptyList()
+                                selection = Selection()
                             }
                         }
                     }
@@ -3074,7 +3107,7 @@ class EditorViewModel : ViewModel() {
                     outputs,
                     circleAnimationInit = { null },
                 )
-                selection = emptyList()
+                selection = Selection()
             }
             else -> {}
         }
@@ -3557,104 +3590,59 @@ class EditorViewModel : ViewModel() {
     fun completeArcPath() {
         partialArcPath?.let { pArcPath ->
             pinStateForHistory()
-            val vertices = listOf(pArcPath.startVertex) + pArcPath.vertices
-            val vertexIndices: List<Ix> = vertices.map { vertex ->
-                when (vertex) {
-                    is ArcPathPoint.Eq -> vertex.index
-                    is ArcPathPoint.Free -> createNewFreePoint(vertex.point)
-                    is ArcPathPoint.Incident -> {
-                        val carrier = objects[vertex.carrierIndex] as CircleOrLine
-                        val order = carrier.downscale().point2order(vertex.point.downscale())
-                        val point = objectModel.expressions.addSoloExpr(
-                            Expr.Incidence(IncidenceParameters(order), vertex.carrierIndex)
-                        ) as Point
-                        objectModel.addDownscaledObject(point)
-                    }
-                    is ArcPathPoint.Intersection -> {
-                        val exprOutput = ExprOutput.OneOf(
-                            Expr.Intersection(vertex.carrier1Index, vertex.carrier2Index),
-                            outputIndex = 0
+            val vertexIndices: List<Ix> = pArcPath.vertices.map { vertex ->
+                when (val p2p = realizePointSnap(vertex.snap, pinAndRecordHistory = false)) {
+                    is PointSnapResult.Eq -> p2p.pointIndex
+                    is PointSnapResult.Free -> createNewFreePoint(p2p.result)
+                }
+            }
+            val arcs = pArcPath.arcs.mapIndexed { arcIndex, arc ->
+                when (val p2p = realizePointSnap(arc.snap, pinAndRecordHistory = false)) {
+                    is PointSnapResult.Free -> {
+                        Arc.By2Points(sagittaRatio =
+                            if (arc.circle == null) 0.0 // straight line
+                            else
+                                computeSagittaRatio(
+                                    circle = arc.circle,
+                                    chordStart = pArcPath.arcIndex2startVertex(arcIndex).point,
+                                    chordEnd = pArcPath.arcIndex2endVertex(arcIndex).point,
+                                )
                         )
-                        val point = objectModel.expressions.addMultiExpression(exprOutput) as Point
-                        objectModel.addDownscaledObject(point)
+                    }
+                    is PointSnapResult.Eq -> {
+                        Arc.By3Points(middlePointIndex = p2p.pointIndex)
                     }
                 }
             }
-            val auxiliaryIndices = mutableListOf<Ix>()
-            val signedDirectedArcIndices: List<SignedDirectedArcIndex> =
-                pArcPath.arcs.mapIndexed { arcIndex, arc ->
-                    when (val arc = pArcPath.arcs[arcIndex]) {
-                        is ArcPathArc.Eq -> {
-                            if (arc.sameDirection) {
-                                1 + arc.index
-                            } else {
-                                -1 - arc.index
-                            }
-                        }
-                        is ArcPathArc.Free -> {
-                            // vertexIndices: vertexNumber -> index within VM.objects
-                            val previousVertexIndex: Ix = vertexIndices[arcIndex]
-                            val nextVertexIndex: Ix = vertexIndices[(arcIndex + 1) % vertexIndices.size]
-                            val circle = arc.circle
-                            if (circle == null) {
-                                val expr = Expr.LineBy2Points(previousVertexIndex, nextVertexIndex)
-                                val line = objectModel.expressions.addSoloExpr(expr) as Line
-                                val ix = objectModel.addDownscaledObject(line)
-                                auxiliaryIndices.add(ix)
-                                1 + ix
-                            } else {
-                                val sagittaRatio = computeSagittaRatio(
-                                    circle,
-                                    objects[previousVertexIndex] as Point,
-                                    objects[nextVertexIndex] as Point,
-                                )
-                                val expr = Expr.CircleBy2PointsAndSagittaRatio(
-                                    SagittaRatioParameters(sagittaRatio),
-                                    previousVertexIndex, nextVertexIndex
-                                )
-                                val circle1 = objectModel.expressions.addSoloExpr(expr) as CircleOrLine
-                                val ix = objectModel.addDownscaledObject(circle1)
-                                auxiliaryIndices.add(ix)
-                                1 + ix
-                            }
-                        }
-                    }
-                }
-            val indices = (vertexIndices + signedDirectedArcIndices.map { abs(it) - 1 }).toSet()
+            objectModel.addArcPath(
+                if (pArcPath.isClosed)
+                    ArcPath.Closed(
+                        vertices = vertexIndices,
+                        arcs = arcs,
+                        borderColor = regionColor,
+                    )
+                else
+                    ArcPath.Open(
+                        vertices = vertexIndices,
+                        arcs = arcs,
+                        borderColor = regionColor,
+                    )
+            )
+            val middlePointIndices = arcs
+                .filterIsInstance<Arc.By3Points>()
+                .map { it.middlePointIndex }
+            val indicesToRecolor = vertexIndices + middlePointIndices
+            // recolor vertices and middle points to match the arc-path color
+            for (ix in indicesToRecolor) {
+                objectModel.objectColors[ix] = regionColor
+            }
+            selection = Selection(arcPaths = listOf(arcPaths.lastIndex))
             history.accumulateChangedLocations(
-                objectIndices = indices,
-                expressionIndices = indices,
-                // arcPaths
+                objectColorIndices = indicesToRecolor.toSet(),
+                arcPaths = true,
+                selection = true,
             )
             history.recordAccumulatedChanges()
-            /*
-            objectModel.phantomObjectIndices += auxiliaryIndices
-            val newArcPath = if (pArcPath.isClosed) {
-                ClosedArcPath(
-                    vertices = vertexIndices,
-                    arcs = signedDirectedArcIndices,
-                    fillColor = regionColor,
-                    borderColor = regionColor,
-                )
-            } else {
-                OpenArcPath(
-                    vertices = vertexIndices,
-                    arcs = signedDirectedArcIndices,
-                    borderColor = regionColor,
-                )
-            }
-            */
-            // only static circles
-//            val newCircles: List<CircleOrLine> = pArcPath.arcs
-//                .mapIndexed { arcIndex, circle ->
-//                    when (circle) {
-//                        is ArcPathArc.Eq -> null
-//                        is ArcPathArc.Free -> pArcPath.arcIndex2CircleOrLine(arcIndex)
-////                        else -> never()
-//                    }
-//                }.filterNotNull()
-//            createNewGCircles(newCircles)
-
             objectModel.invalidate()
         }
         partialArcPath = null
@@ -3792,7 +3780,7 @@ class EditorViewModel : ViewModel() {
                 // become imaginary/null
 //                hug(objectModel.invalidations)
                 hug(objectModel.propertyInvalidations)
-                selection.containsAll(objects.filterIndices { it is CircleOrLineOrPoint })
+                objectSelection.containsAll(objects.filterIndices { it is CircleOrLineOrPoint })
             }
             Tool.Region ->
                 mode == SelectionMode.Region && submode !is SubMode.FlowFill
@@ -3812,7 +3800,7 @@ class EditorViewModel : ViewModel() {
                 showDirectionArrows
             Tool.MarkAsPhantoms -> {
                 hug(objectModel.propertyInvalidations)
-                selection.none { it in phantoms }
+                objectSelection.none { it in phantoms }
             }
             Tool.InfinitePoint -> { // whether to prompt infinite-point input
                 partialArgList?.let { argList ->
@@ -3834,7 +3822,7 @@ class EditorViewModel : ViewModel() {
                 // NOTE: without changing selection, the only way to change the predicate is
                 //  after applying move-to-infinity or on detachment.
                 hug(objectModel.invalidations)
-                selection.singleOrNull()?.let { ix ->
+                objectSelection.singleOrNull()?.let { ix ->
                     val o = objects[ix]
                     val expr = exprOf(ix)
                     o is Point && o != Point.CONFORMAL_INFINITY &&
@@ -3864,12 +3852,13 @@ class EditorViewModel : ViewModel() {
 
     private fun saveState(): SaveState {
         val center = computeAbsoluteCenter() ?: Offset.Zero
-        // it's important to copy mutable collections
+        // NOTE: it's important to copy mutable collections
         return SaveState(
             objects = objectModel.objects.toList(),
             objectColors = objectModel.objectColors.toMap(),
             objectLabels = objectLabels.toMap(),
             expressions = objectModel.expressions.expressions.toMap(),
+            arcPaths = objectModel.arcPaths.toList(),
             regions = regions,
             backgroundColor = backgroundColor,
             chessboardPattern = chessboardPattern,
@@ -3959,8 +3948,8 @@ class EditorViewModel : ViewModel() {
     private fun restoreFromVMState(state: State) {
         loadNewConstellation(state.constellation)
         centerizeTo(state.centerX, state.centerY)
-        val switchToMultiselect = state.selection.size > 1 && selection.size <= 1
-        selection = state.selection
+        val switchToMultiselect = state.selection.size > 1 && objectSelection.size <= 1
+        selection = Selection(objects = state.selection)
         state.regionColor?.let {
             regionColor = it
         }

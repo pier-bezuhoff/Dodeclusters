@@ -10,10 +10,14 @@ import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.EPSILON2
 import core.geometry.Line
+import core.geometry.Point
 import domain.PathCache
-import domain.cluster.ConcreteClosedArcPath
-import domain.cluster.ConcreteOpenArcPath
+import domain.cluster.Arc
+import domain.cluster.ArcPath
 import domain.cluster.LogicalRegion
+import domain.expressions.SagittaRatioParameters
+import domain.expressions.computeCircleBy2PointsAndSagittaRatio
+import domain.expressions.computeCircleBy3Points
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow
@@ -512,49 +516,137 @@ fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
     }
 }
 
-fun ConcreteClosedArcPath.toPath(): Path {
-    val path = Path()
-    intersectionPoints.firstOrNull()?.let { startPoint ->
-        path.moveTo(startPoint.x.toFloat(), startPoint.y.toFloat())
-    }
-    for (i in indices) {
-        when (circles[i]) {
-            is Line -> {
-                val cyclicNextIndex = (i + 1) % size
-                val nextPoint = intersectionPoints[cyclicNextIndex]
-                path.lineTo(nextPoint.x.toFloat(), nextPoint.y.toFloat())
+fun ArcPath.toPath(
+    points: List<Point?>,
+    path: Path = Path(),
+): Path {
+    if (vertices.isEmpty())
+        return path
+    val v0 = points[vertices[0]]
+    if (v0 != null && v0 != Point.CONFORMAL_INFINITY)
+        path.moveTo(v0.x.toFloat(), v0.y.toFloat())
+    when (this) {
+        is ArcPath.Closed -> {
+            for (i in 0 until arcs.size) {
+                val start = points[vertices[i]]
+                val end = points[vertices[(i + 1) % vertices.size]]
+                if (start == null || end == null)
+                    continue
+                when (val arc = arcs[i]) {
+                    is Arc.By2Points -> {
+                        when (val circle = computeCircleBy2PointsAndSagittaRatio(
+                            SagittaRatioParameters(arc.sagittaRatio),
+                            start, end,
+                        )) {
+                            null -> {}
+                            // non-null circle implies start & end are both finite
+                            is Line -> {
+                                path.lineTo(end.x.toFloat(), end.y.toFloat())
+                            }
+                            is Circle -> {
+                                val rect = circle.toRect()
+                                val startAngle = circle.calculateStartAngle(start)
+                                val sweepAngle = circle.calculateSweepAngle(start, end)
+                                path.arcToRad(
+                                    rect = rect,
+                                    startAngleRadians = startAngle.toFloat(),
+                                    sweepAngleRadians = sweepAngle.toFloat(),
+                                    forceMoveTo = true, // since it's suppose to be closed
+                                )
+                            }
+                        }
+                    }
+                    is Arc.By3Points -> {
+                        val middle = points[arc.middlePointIndex]
+                        if (middle == null)
+                            continue
+                        when (val circle =
+                            computeCircleBy3Points(start, middle, end) as? CircleOrLine
+//                            CircleOrLine.by3Points(start, middle, end)
+                        ) {
+                            null -> {}
+                            is Line -> {
+                                if (end != Point.CONFORMAL_INFINITY)
+                                    path.lineTo(end.x.toFloat(), end.y.toFloat())
+                            }
+                            // non-null circle implies start, middle and end are all finite
+                            is Circle -> {
+                                val rect = circle.toRect()
+                                val startAngle = circle.calculateStartAngle(start)
+                                val sweepAngle = circle.calculateSweepAngle(start, middle, end)
+                                path.arcToRad(
+                                    rect = rect,
+                                    startAngleRadians = startAngle.toFloat(),
+                                    sweepAngleRadians = sweepAngle.toFloat(),
+                                    forceMoveTo = true, // since it's suppose to be closed
+                                )
+                            }
+                        }
+                    }
+                }
             }
-            is Circle -> {
-                path.arcTo(
-                    rect = rects[i],
-                    startAngleDegrees = startAngles[i],
-                    sweepAngleDegrees = sweepAngles[i],
-                    forceMoveTo = false
-                )
-            }
+            path.close()
         }
-    }
-    path.close() // just in case
-    return path
-}
-
-fun ConcreteOpenArcPath.toPath(): Path {
-    val path = Path()
-    path.moveTo(startPoint.x.toFloat(), startPoint.y.toFloat())
-    for ((i, circle) in circles.withIndex()) {
-        when (circle) {
-            is Line -> {
-                // there are 1 more intersection points than circles in open arc path
-                val nextPoint = intersectionPoints[i + 1]
-                path.lineTo(nextPoint.x.toFloat(), nextPoint.y.toFloat())
-            }
-            is Circle -> {
-                path.arcTo(
-                    rect = rects[i],
-                    startAngleDegrees = startAngles[i],
-                    sweepAngleDegrees = sweepAngles[i],
-                    forceMoveTo = false
-                )
+        is ArcPath.Open -> {
+            if (vertices.size <= 1)
+                return path
+            for (i in 0 until arcs.size) {
+                val start = points[vertices[i]]
+                val end = points[vertices[(i + 1) % vertices.size]]
+                if (start == null || end == null)
+                    continue
+                when (val arc = arcs[i]) {
+                    is Arc.By2Points -> {
+                        when (val circle = computeCircleBy2PointsAndSagittaRatio(
+                            SagittaRatioParameters(arc.sagittaRatio),
+                            start, end,
+                        )) {
+                            null -> {}
+                            // non-null circle implies start & end are both finite
+                            is Line -> {
+                                path.lineTo(end.x.toFloat(), end.y.toFloat())
+                            }
+                            is Circle -> {
+                                val rect = circle.toRect()
+                                val startAngle = circle.calculateStartAngle(start)
+                                val sweepAngle = circle.calculateSweepAngle(start, end)
+                                path.arcToRad(
+                                    rect = rect,
+                                    startAngleRadians = startAngle.toFloat(),
+                                    sweepAngleRadians = sweepAngle.toFloat(),
+                                    forceMoveTo = false,
+                                )
+                            }
+                        }
+                    }
+                    is Arc.By3Points -> {
+                        val middle = points[arc.middlePointIndex]
+                        if (middle == null)
+                            continue
+                        when (val circle =
+                            computeCircleBy3Points(start, middle, end) as? CircleOrLine
+//                            CircleOrLine.by3Points(start, middle, end)
+                        ) {
+                            null -> {}
+                            is Line -> {
+                                if (end != Point.CONFORMAL_INFINITY)
+                                    path.lineTo(end.x.toFloat(), end.y.toFloat())
+                            }
+                            // non-null circle implies start, middle and end are all finite
+                            is Circle -> {
+                                val rect = circle.toRect()
+                                val startAngle = circle.calculateStartAngle(start)
+                                val sweepAngle = circle.calculateSweepAngle(start, middle, end)
+                                path.arcToRad(
+                                    rect = rect,
+                                    startAngleRadians = startAngle.toFloat(),
+                                    sweepAngleRadians = sweepAngle.toFloat(),
+                                    forceMoveTo = false,
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

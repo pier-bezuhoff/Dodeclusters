@@ -274,7 +274,7 @@ fun EditorScreen(
         }
         DialogType.CIRCLE_COLOR_PICKER -> {
             val initialColor = viewModel.getMostCommonCircleColorInSelection()
-                ?: if (viewModel.selection.all { viewModel.objects[it] is ImaginaryCircle })
+                ?: if (viewModel.objectSelection.all { viewModel.objects[it] is ImaginaryCircle })
                     DodeclustersColors.fadedRed.copy(alpha = 1f) // imaginary circle
                 else
                     MaterialTheme.extendedColorScheme.highAccentColor // free real circle
@@ -417,7 +417,7 @@ fun EditorScreen(
         }
         DialogType.LABEL_INPUT -> {
             LabelInputDialog(
-                previousLabel = viewModel.selection
+                previousLabel = viewModel.objectSelection
                     .firstNotNullOfOrNull { viewModel.objectLabels[it] }
                 ,
                 // for debug

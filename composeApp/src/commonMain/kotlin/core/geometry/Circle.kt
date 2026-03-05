@@ -4,6 +4,7 @@ package core.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import core.geometry.conformal.GeneralizedCircle
 import core.kmath_complex.ComplexField
 import core.kmath_complex.r
@@ -69,6 +70,9 @@ data class Circle(
 
     constructor(center: Offset, radius: Float, isCCW: Boolean = true) :
         this(center.x.toDouble(), center.y.toDouble(), radius.toDouble(), isCCW)
+
+    fun toRect(): Rect =
+        Rect(center = center, radius = radius.toFloat())
 
     override fun project(point: Point): Point {
         val (x1, y1) = point
@@ -434,8 +438,44 @@ data class Circle(
             }
     }
 
+    /** From the East, clockwise, in `[0; 2*PI]` */
+    fun calculateStartAngle(start: Point): Double {
+        val dx = x - start.x
+        val dy = y - start.y
+//        val eastX = x + radius
+//        val eastY = y
+        return PI + atan2(dy, dx) // CCW and reversed y-axis cancel each other
+    }
+
+
+    /** Clockwise, `(-2*PI; 2*PI)` */
+    fun calculateSweepAngle(start: Point, midpoint: Point, end: Point): Double {
+        val c = centerPoint
+        val angle = calculateAngle(c, start, end)
+        val midAngle = calculateAngle(c, start, midpoint)
+        val angle1 = (angle + TAU) % TAU // in [0; TAU)
+        val midAngle1 = (midAngle + TAU) % TAU
+        val otherArc = midAngle1 > angle1
+        return if (otherArc)
+            angle1 - TAU
+        else
+            angle1
+    }
+
+    /** Clockwise, `(-2*PI; 2*PI)`, takes into account this circle's orientation ([isCCW]) */
+    fun calculateSweepAngle(start: Point, end: Point): Double {
+        val c = centerPoint
+        val angle = calculateAngle(c, start, end)
+        val angle1 = (angle + TAU) % TAU // in [0; TAU)
+        val otherArc = isCCW //test
+        return if (otherArc)
+            angle1 - TAU
+        else
+            angle1
+    }
+
     companion object {
-        @Deprecated("Superseded by more general and stable method GeneralizedCircle.perp3")
+        /** NOTE: cmp with CircleOrLine.by3Points and GeneralizedCircle.perp3 */
         fun by3Points(p1: Offset, p2: Offset, p3: Offset): Circle {
             // reference: https://math.stackexchange.com/a/3503338
             if (p1 == p2)

@@ -8,6 +8,7 @@ import core.geometry.Line
 import core.geometry.Point
 import core.geometry.scaled00
 import domain.Ix
+import domain.cluster.ArcPath
 import domain.cluster.Constellation
 import domain.expressions.ConformalExpressions
 import domain.expressions.ObjectConstruct
@@ -23,6 +24,8 @@ import kotlin.collections.set
  */
 class ConformalObjectModel : ObjectModel<GCircle>() {
 
+    val arcPaths: MutableList<ArcPath> = mutableListOf()
+
     override var expressions: ConformalExpressions =
         ConformalExpressions(emptyMap(), mutableListOf())
 
@@ -31,6 +34,11 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         return if (infinityIndex == -1) {
             null
         } else infinityIndex
+    }
+
+    fun addArcPath(arcPath: ArcPath) {
+        arcPaths.add(arcPath)
+        invalidate()
     }
 
     // NOTE: handling of incident points on non-glued dependent objects is off
@@ -108,6 +116,11 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         }
     }
 
+    override fun clearObjects() {
+        arcPaths.clear()
+        super.clearObjects()
+    }
+
     fun loadState(state: SaveState) {
         clearObjects()
         addObjects(state.objects)
@@ -125,6 +138,9 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
             if (phantomIndex < objectSize) {
                 phantomObjectIndices.add(phantomIndex)
             }
+        }
+        for (arcPath in state.arcPaths) {
+            arcPaths.add(arcPath)
         }
     }
 

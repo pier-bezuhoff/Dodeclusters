@@ -49,6 +49,58 @@ sealed interface CircleOrLine : CircleOrLineOrImaginaryCircle, CircleOrLineOrPoi
     /** @return tangent line to `this` object at [point], if the
      * [point] is not incident to `this` object, [project] it onto `this` object */
     fun tangentAt(point: Point): Line
+
+    companion object {
+        // FIX: dont work
+        // TEST: if this is faster/more accurate than perp3
+        /** note more general GeneralizedCircle.perp3 */
+        fun by3Points(point1: Point, point2: Point, point3: Point): CircleOrLine? {
+            return when {
+                point1 == Point.CONFORMAL_INFINITY ->
+                    if (point2 == Point.CONFORMAL_INFINITY || point3 == Point.CONFORMAL_INFINITY) {
+                        null
+                    } else {
+                        Line.by2Points(point2, point3)
+                    }
+                point2 == Point.CONFORMAL_INFINITY ->
+                    if (point1 == Point.CONFORMAL_INFINITY || point3 == Point.CONFORMAL_INFINITY) {
+                        null
+                    } else {
+                        Line.by2Points(point3, point1)
+                    }
+                point3 == Point.CONFORMAL_INFINITY ->
+                    if (point1 == Point.CONFORMAL_INFINITY || point2 == Point.CONFORMAL_INFINITY) {
+                        null
+                    } else {
+                        Line.by2Points(point1, point2)
+                    }
+                else -> {
+                    val (x1, y1) = point1
+                    val (x2, y2) = point2
+                    val (x3, y3) = point3
+                    val dx21 = x2 - x1
+                    val dy21 = y2 - y1
+                    val dx31 = x3 - x1
+                    val dy31 = y3 - y1
+                    val crossProduct = dy31*dx21 - dy21*dx31 // v12 x v13
+                    if (abs(crossProduct) < EPSILON2) {
+                        // we ignore point2 atp
+                        if (dx31*dx31 + dy31*dy31 < EPSILON2)
+                            null
+                        else
+                            Line.by2Points(point1, point3)
+                    } else {
+                        val m21 = dx21*(x1 + x2) + dy21*(y1 + y2)
+                        val m31 = dx31*(x1 + x3) + dy31*(y1 + y3)
+                        val centerX = (dy31*m21 - dy21*m31)/(2*crossProduct)
+                        val centerY = (dx31*m21 - dx21*m31)/(2*crossProduct)
+                        val radius = hypot(x1 - centerX, y1 - centerY)
+                        Circle(centerX, centerY, radius, isCCW = crossProduct < 0)
+                    }
+                }
+            }
+        }
+    }
 }
 
 /** Result of intersecting 2 [CircleOrLine]s */

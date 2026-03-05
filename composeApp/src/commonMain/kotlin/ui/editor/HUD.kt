@@ -348,6 +348,19 @@ fun BoxScope.PointContextActions(
     }
 }
 
+@Composable
+fun BoxScope.PartialArcPathContextActions() {
+    // when selected middle anchors for 2p-arcs become draggable (diff color)
+    // +scale/rotate handles
+    // edit (add/remove vertices)
+    // border color
+    // if closed: fill color
+    // swap direction?
+    // layer up/down
+    // duplicate
+    // delete
+}
+
 /**
  * @param[interpolateCircles] as opposed to interpolating points
  */
@@ -826,7 +839,7 @@ private fun ReverseDirectionToggle(
 
 // TODO: move it somewhere else, this location is bad
 @Composable
-fun BoxScope.ArcPathContextActions(
+fun BoxScope.PartialArcPathContextActions(
     canvasSize: IntSize,
     toolAction: (Tool) -> Unit,
 ) {

@@ -6,7 +6,6 @@ import core.geometry.EPSILON
 import core.geometry.Line
 import core.geometry.Point
 import core.geometry.RegionPointLocation
-import domain.cluster.ClosedArcPath
 
 /** [ins] and [outs] delimiters must not contain `null` circles */
 fun compressConstraints(
@@ -197,7 +196,7 @@ fun constraints2arcpaths(
     ins: List<Ix>,
     outs: List<Ix>,
     allCircles: List<CircleOrLine>,
-): List<ClosedArcPath> {
+): List<Nothing> {
     val inCircles = ins.map { allCircles[it] }
     val outCircles = outs.map { allCircles[it] }
 
@@ -277,7 +276,7 @@ fun constraints2arcpaths(
         .toMutableMap()
     var focus = arcsByStart.keys.first()
     var arcPath: List<Arc.Normal> = emptyList()
-    val paths = mutableListOf<ClosedArcPath>()
+    val paths = mutableListOf<Nothing>()
     while (arcsByStart.isNotEmpty()) {
         val possibleContinuations = arcsByStart[focus] ?: emptyList()
         when (possibleContinuations.size) {
@@ -285,11 +284,11 @@ fun constraints2arcpaths(
                 arcsByStart.remove(focus)
                 if (arcPath.isNotEmpty()) {
                     val isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
-                    if (isClosed)
-                        paths.add(ClosedArcPath(
-                            vertices = TODO(),
-                            arcs = arcPath.map { 1 + it.circleIndex }
-                        ))
+                    if (isClosed) {
+//                        paths.add(
+//                            ClosedArcPath(vertices = TODO(), arcs = arcPath.map { 1 + it.circleIndex })
+//                        )
+                    }
                 }
                 arcPath = emptyList()
                 focus = arcsByStart.keys.first()
@@ -327,21 +326,22 @@ fun constraints2arcpaths(
     }
     if (arcPath.isNotEmpty()) {
         val isClosed = arcPath.first().startPointIndex == arcPath.last().endPointIndex
-        if (isClosed)
-            paths.add(ClosedArcPath(
-                vertices =
-                    if (arcPath.size == 1) emptyList()
-                    else TODO(),
-                arcs = arcPath.map { 1 + it.circleIndex })
-            )
+        if (isClosed) {
+//            paths.add(ClosedArcPath(
+//                vertices =
+//                    if (arcPath.size == 1) emptyList()
+//                    else TODO(),
+//                arcs = arcPath.map { 1 + it.circleIndex })
+//            )
+        }
     }
     val fullArcs = arcs.filterIsInstance<Arc.Full>()
     for (fullArc in fullArcs) {
         val i = fullArc.circleIndex
-        paths.add(ClosedArcPath(
-            vertices = emptyList(),
-            arcs = listOf(i + 1))
-        )
+//        paths.add(ClosedArcPath(
+//            vertices = emptyList(),
+//            arcs = listOf(i + 1))
+//        )
     }
     return paths
 }

@@ -2,76 +2,15 @@ package domain
 
 import androidx.compose.runtime.Immutable
 import core.geometry.Circle
-import core.geometry.CircleOrLine
 import core.geometry.EPSILON
-import core.geometry.Line
 import core.geometry.Point
-import core.geometry.calculateAngle
 import domain.expressions.computeCircleBy3Points
-import kotlin.math.PI
-import kotlin.math.atan2
 import kotlin.math.hypot
 
 @Immutable
-sealed interface ArcPathPoint {
-    sealed interface Vertex : ArcPathPoint
-
-    val point: Point
-
-    data class Free(override val point: Point) : Vertex
-    /** The vertex already exists as a point @ [index] in VM.objects */
-    data class Eq(override val point: Point, val index: Ix) : Vertex
-    /** The vertex is incident to a carrier object @ [carrierIndex] */
-    data class Incident(override val point: Point, val carrierIndex: Ix) : Vertex
-    /** The vertex is the 1st intersection of [carrier1Index] and [carrier2Index].
-     * Before using this check if such point already exists and use [Eq] in if it does */
-    data class Intersection(override val point: Point, val carrier1Index: Ix, val carrier2Index: Ix) : Vertex
-
-    /** Midpoints should not be constrained, other than to circles incident to both arc-start and
-     * arc-end points, in which case set [carrierIndex] */
-    data class Midpoint(override val point: Point, val carrierIndex: Ix? = null) : ArcPathPoint
-}
-
-sealed interface ArcPathArc {
-    /** `null` corresponds to a [core.geometry.Line] */
-    val circle: Circle?
-
-    data class Free(override val circle: Circle?) : ArcPathArc
-    /** The circle or line already exists @ [index] in VM.objects */
-    data class Eq(override val circle: Circle?, val index: Ix, val sameDirection: Boolean) : ArcPathArc
-}
-
-/** vertexNumber = vertexIndex+1
- * vertexNumber=0 is the startVertex
- * vertexNumber=(i+1) => `vertices[i]` */
-internal typealias VertexNumber = Int
-
-/**
- * NOTE: vertexIndex+1 = vertexNumber
- *  vertexIndex < vertices.size <= nArcs
- *  arcIndex < nArcs
- *
- * Example: triangle ABC:
- * ```
- * nArcs = 3
- * vertices.size = 2
- * A[vertexNumber=0, no vertexIndex] = startVertex
- *   AB[arcIndex=0] = arcs[0]
- * B[vertexNumber=1, vertexIndex=0] = vertices[0]
- *   BC[arcIndex=1] = arcs[1]
- * C[vertexNumber=2, vertexIndex=1] = vertices[1]
- *   CA[arcIndex=2] = arcs[2]
- * ```
- */
-@Suppress("NOTHING_TO_INLINE")
-@Immutable
 data class PartialArcPath(
-    val startVertex: ArcPathPoint.Vertex,
-    val vertices: List<ArcPathPoint.Vertex> = emptyList(),
-    // if a midpoint snaps to an existing circle, it should be
-    // marked by setting corresponding circle as Eq
-    val midpoints: List<Point> = emptyList(),
-    val arcs: List<ArcPathArc> = emptyList(),
+    val vertices: List<Vertex> = emptyList(),
+    val arcs: List<Arc> = emptyList(),
     val isClosed: Boolean = false,
 
     val startAngles: List<Double> = emptyList(),
@@ -79,204 +18,175 @@ data class PartialArcPath(
 
     /** Grabbed node: any vertex or midpoint */
     val focus: Focus? = null,
-    // moving a vertex should invalidate its snappables
-    val vertexNumber2snappableCircles: Map<VertexNumber, Set<Ix>> = emptyMap(),
 ) {
-    val lastVertex: ArcPathPoint.Vertex get() =
-        vertices.lastOrNull() ?: startVertex
+    @Immutable
+    data class Vertex(val snap: PointSnapResult) {
+        constructor(
+            point: Point
+        ) : this(PointSnapResult.Free(point))
 
-    inline val nArcs: Int get() =
-        if (isClosed)
-            vertices.size + 1
-        else
-            vertices.size
+        val point: Point get() = snap.result
+    }
+
+    /**
+     * @property[circle] `null` corresponds to a [core.geometry.Line]
+     */
+    @Immutable
+    data class Arc(
+        val circle: Circle?,
+        val snap: PointSnapResult,
+    ) {
+        constructor(
+            circle: Circle?,
+            middlePoint: Point
+        ) : this(circle, PointSnapResult.Free(middlePoint))
+
+        val middlePoint: Point get() = snap.result
+    }
 
     /** A type of the grabbed node */
     @Immutable
     sealed interface Focus {
-        data object StartPoint : Focus
-        data class Point(val vertexIndex: Int) : Focus
+        data class Vertex(val vertexIndex: Int) : Focus
         data class MidPoint(val arcIndex: Int) : Focus
     }
 
     init {
         require(
-            midpoints.size == nArcs && arcs.size == nArcs &&
-            startAngles.size == nArcs && sweepAngles.size == nArcs
+            vertices.isNotEmpty() &&
+            (isClosed && (vertices.size - arcs.size + 2 == 2) || !isClosed && (vertices.size - arcs.size + 1 == 2)) &&
+            startAngles.size == arcs.size && sweepAngles.size == arcs.size
         )
     }
 
-    inline fun vertexAt(vertexNumber: VertexNumber): ArcPathPoint.Vertex =
-        if (vertexNumber == 0)
-            startVertex
-        else
-            vertices[vertexNumber - 1]
+    fun previousVertex(vertexIndex: Int): Vertex =
+        vertices[(vertexIndex - 1).mod(vertices.size)]
 
-    inline fun previousVertex(vertexNumber: VertexNumber): ArcPathPoint.Vertex =
-        if (vertexNumber == 0)
-            vertices.last()
-        else if (vertexNumber == 1)
-            startVertex
-        else vertices[vertexNumber - 2]
+    fun nextVertex(vertexIndex: Int): Vertex =
+        vertices[(vertexIndex + 1).mod(vertices.size)]
 
-    inline fun nextVertex(vertexNumber: VertexNumber): ArcPathPoint.Vertex =
-        if (vertexNumber == vertices.size)
-            startVertex
-        else vertices[vertexNumber]
+    fun arcIndex2startVertex(arcIndex: Int): Vertex =
+        vertices[arcIndex]
 
-    inline fun arcIndex2startVertexNumber(arcIndex: Int): VertexNumber =
-        arcIndex
+    fun arcIndex2endVertex(arcIndex: Int): Vertex =
+        vertices[(arcIndex + 1).mod(vertices.size)]
 
-    inline fun arcIndex2endVertexNumber(arcIndex: Int): VertexNumber =
-        (arcIndex + 1).mod(vertices.size + 1)
-
-    fun arcIndex2CircleOrLine(arcIndex: Int): CircleOrLine =
-        when (val c = arcs[arcIndex].circle) {
-            is Circle -> c
-            null -> Line.by2Points(
-                vertexAt(arcIndex2startVertexNumber(arcIndex)).point,
-                vertexAt(arcIndex2endVertexNumber(arcIndex)).point
-            )
-//            else -> never()
-        }
-
-    fun addNewVertexAndGrabIt(newVertex: ArcPathPoint.Vertex): PartialArcPath = copy(
-        startVertex = startVertex,
+    fun addNewVertexAndGrabIt(newVertex: Vertex): PartialArcPath = copy(
         vertices = vertices + newVertex,
-        midpoints = midpoints + lastVertex.point.middle(newVertex.point),
-        arcs = arcs + ArcPathArc.Free(null),
+        arcs = arcs + Arc(
+            circle = null,
+            middlePoint = vertices.last().point.middle(newVertex.point),
+        ),
         startAngles = startAngles + 0.0, sweepAngles = sweepAngles + 0.0,
-        focus = Focus.Point(vertices.size),
+        focus = Focus.Vertex(vertices.size),
     )
 
     // TODO: vertex-vertex snapping
-    /** [vertexNumber] = vertexIndex+1; [vertexNumber]=0 is the [startVertex] */
-    fun updateVertex(vertexNumber: VertexNumber, newVertex: ArcPathPoint.Vertex): PartialArcPath =
-        if (vertices.isEmpty()) {
-            copy(startVertex = newVertex)
-        } else if (vertexNumber == 0 && !isClosed) { // move detached start case
-            // only forward arc
-            val newPoint = newVertex.point
-            val point = startVertex.point
-            val nextPoint = vertices[0].point
-            val newMidpoint =
-                updateMidpointFromMovingEnd(point, nextPoint, midpoints[0], newPoint)
-            val newNextCircle =
-                circleByChordEndsAndMidArc(newPoint, nextPoint, newMidpoint)
-//                computeCircleBy3Points(newPoint, newMidpoint, nextPoint) as? Circle
-            val newNextStartAngle =
-                if (newNextCircle != null)
-                    calculateStartAngle(newPoint, newNextCircle)
-                else 0.0
-            // TODO: snap to end to close loop
-//            if (newPoint.distanceFrom(vertices.last().point) < EPSILON) {}
-            copy(
-                startVertex = newVertex, vertices = vertices,
-                midpoints = midpoints.updated(0, newMidpoint),
-                arcs = arcs.updated(0, ArcPathArc.Free(newNextCircle)),
-                startAngles = startAngles.updated(0, newNextStartAngle),
-                sweepAngles = sweepAngles,
-                vertexNumber2snappableCircles =
-                    vertexNumber2snappableCircles + (vertexNumber to emptySet()),
-            )
-        } else if (vertexNumber == vertices.size && !isClosed) { // move detached end case
-            // only backward arc
-            val newPoint = newVertex.point
-            val vertexIndex = vertexNumber - 1
-            val point = vertexAt(vertexNumber).point
-            val previousPoint = previousVertex(vertexNumber).point
-            val newMidpoint =
-                updateMidpointFromMovingEnd(point, previousPoint, midpoints[vertexIndex], newPoint)
-            val newPreviousCircle =
-                circleByChordEndsAndMidArc(previousPoint, newPoint, newMidpoint)
-//                computeCircleBy3Points(previousPoint, newMidpoint, newPoint) as? Circle
-            val newPreviousStartAngle =
-                if (newPreviousCircle is Circle)
-                    calculateStartAngle(previousPoint, newPreviousCircle)
-                else 0.0
-            // TODO: snap to start to close loop
-            copy(
-                startVertex = startVertex, vertices = vertices.updated(vertexIndex, newVertex),
-                midpoints = midpoints.updated(vertexIndex, newMidpoint),
-                arcs = arcs.updated(vertexIndex, ArcPathArc.Free(newPreviousCircle)),
-                startAngles = startAngles.updated(vertexIndex, newPreviousStartAngle),
-                sweepAngles = sweepAngles,
-                vertexNumber2snappableCircles =
-                    vertexNumber2snappableCircles + (vertexNumber to emptySet()),
-            )
-        } else { // backward + forward
-            val newPoint = newVertex.point
-            val arcIndex = (vertexNumber - 1).mod(nArcs)
-            val nextArcIndex = vertexNumber.mod(nArcs)
-            val point = vertexAt(vertexNumber).point
-            val previousPoint = previousVertex(vertexNumber).point
-            val nextPoint = nextVertex(vertexNumber).point
-            val newPreviousMidpoint = updateMidpointFromMovingEnd(
-                point, previousPoint, midpoints[arcIndex], newPoint
-            )
-            val newPreviousCircle =
-                circleByChordEndsAndMidArc(previousPoint, newPoint, newPreviousMidpoint)
-//                computeCircleBy3Points(previousPoint, newPreviousMidpoint, newPoint) as? Circle
-            val newPreviousStartAngle =
-                if (newPreviousCircle != null)
-                    calculateStartAngle(previousPoint, newPreviousCircle)
-                else 0.0
-            val newNextMidpoint =
-                updateMidpointFromMovingEnd(point, nextPoint, midpoints[nextArcIndex], newPoint)
-            val newNextCircle =
-                circleByChordEndsAndMidArc(newPoint, nextPoint, newNextMidpoint)
-//                computeCircleBy3Points(newPoint, newNextMidpoint, nextPoint) as? Circle
-            val newNextStartAngle =
-                if (newNextCircle is Circle)
-                    calculateStartAngle(newPoint, newNextCircle)
-                else 0.0
-            copy(
-                startVertex =
-                    if (vertexNumber == 0)
-                        newVertex
-                    else
-                        startVertex
-                ,
-                vertices =
-                    if (vertexNumber == 0)
-                        vertices
-                    else
-                        vertices.updated(arcIndex, newVertex)
-                ,
-                midpoints = midpoints.updated(
-                    arcIndex to newPreviousMidpoint,
-                    nextArcIndex to newNextMidpoint
-                ),
-                arcs = arcs.updated(
-                    arcIndex to ArcPathArc.Free(newPreviousCircle),
-                    nextArcIndex to ArcPathArc.Free(newNextCircle)
-                ),
-                startAngles = startAngles.updated(
-                    arcIndex to newPreviousStartAngle,
-                    nextArcIndex to newNextStartAngle
-                ),
-                sweepAngles = sweepAngles,
-                vertexNumber2snappableCircles =
-                    vertexNumber2snappableCircles + (vertexNumber to emptySet()),
-            )
+    // MAYBE: dont move midpoint if it's snapped
+    fun updateVertex(vertexIndex: Int, newVertex: Vertex): PartialArcPath =
+        when {
+            vertices.size == 1 -> {
+                require(vertexIndex == 0)
+                copy(vertices = listOf(newVertex))
+            }
+            vertexIndex == 0 && !isClosed -> { // move detached start case, 2+ vertices
+                // only forward arc
+                val newPoint = newVertex.point
+                val point = vertices[0].point
+                val nextPoint = vertices[1].point
+                val newMidpoint =
+                    updateMidpointFromMovingEnd(point, nextPoint, arcs[0].middlePoint, newPoint)
+                val newNextCircle =
+                    circleByChordEndsAndMidArc(newPoint, nextPoint, newMidpoint)
+    //                computeCircleBy3Points(newPoint, newMidpoint, nextPoint) as? Circle
+                val newNextStartAngle =
+                    newNextCircle?.calculateStartAngle(newPoint) ?: 0.0
+                // TODO: snap to end to close loop
+    //            if (newPoint.distanceFrom(vertices.last().point) < EPSILON) {}
+                copy(
+                    vertices = vertices.updated(0, newVertex),
+                    arcs = arcs.updated(0, Arc(circle = newNextCircle, middlePoint = newMidpoint)),
+                    startAngles = startAngles.updated(0, newNextStartAngle),
+                    sweepAngles = sweepAngles,
+                )
+            }
+            vertexIndex == vertices.lastIndex && !isClosed -> { // move detached end case
+                // only backward arc
+                val newPoint = newVertex.point
+                val point = vertices[vertexIndex].point
+                val previousPoint = previousVertex(vertexIndex).point
+                val previousArcIndex = arcs.lastIndex
+                val newMidpoint =
+                    updateMidpointFromMovingEnd(point, previousPoint, arcs[previousArcIndex].middlePoint, newPoint)
+                val newPreviousCircle =
+                    circleByChordEndsAndMidArc(previousPoint, newPoint, newMidpoint)
+    //                computeCircleBy3Points(previousPoint, newMidpoint, newPoint) as? Circle
+                val newPreviousStartAngle =
+                    if (newPreviousCircle is Circle)
+                        newPreviousCircle.calculateStartAngle(previousPoint)
+                    else 0.0
+                // TODO: snap to start to close loop
+                copy(
+                    vertices = vertices.updated(vertexIndex, newVertex),
+                    arcs = arcs.updated(previousArcIndex, Arc(
+                        circle = newPreviousCircle, middlePoint = newMidpoint
+                    )),
+                    startAngles = startAngles.updated(previousArcIndex, newPreviousStartAngle),
+                    sweepAngles = sweepAngles,
+                )
+            }
+            else -> { // backward + forward, move within the chain
+                val newPoint = newVertex.point
+                val previousArcIndex = (vertexIndex - 1).mod(arcs.size) // not the last arc with free end
+                require(vertexIndex < arcs.size) { "this case should have been handled within detached end" }
+                val nextArcIndex = vertexIndex // not the first arc with free start
+                val point = vertices[vertexIndex].point
+                val previousPoint = previousVertex(vertexIndex).point
+                val nextPoint = nextVertex(vertexIndex).point
+                val newPreviousMidpoint = updateMidpointFromMovingEnd(
+                    point, previousPoint, arcs[previousArcIndex].middlePoint, newPoint
+                )
+                val newPreviousCircle =
+                    circleByChordEndsAndMidArc(previousPoint, newPoint, newPreviousMidpoint)
+    //                computeCircleBy3Points(previousPoint, newPreviousMidpoint, newPoint) as? Circle
+                val newPreviousStartAngle =
+                    newPreviousCircle?.calculateStartAngle(previousPoint) ?: 0.0
+                val newNextMidpoint =
+                    updateMidpointFromMovingEnd(point, nextPoint, arcs[nextArcIndex].middlePoint, newPoint)
+                val newNextCircle =
+                    circleByChordEndsAndMidArc(newPoint, nextPoint, newNextMidpoint)
+    //                computeCircleBy3Points(newPoint, newNextMidpoint, nextPoint) as? Circle
+                val newNextStartAngle =
+                    if (newNextCircle is Circle)
+                        newNextCircle.calculateStartAngle(newPoint)
+                    else 0.0
+                copy(
+                    vertices = vertices.updated(vertexIndex, newVertex),
+                    arcs = arcs.updated(
+                        previousArcIndex to Arc(circle = newPreviousCircle, middlePoint = newPreviousMidpoint),
+                        nextArcIndex to Arc(circle = newNextCircle, middlePoint = newNextMidpoint)
+                    ),
+                    startAngles = startAngles.updated(
+                        previousArcIndex to newPreviousStartAngle,
+                        nextArcIndex to newNextStartAngle
+                    ),
+                    sweepAngles = sweepAngles,
+                )
+            }
         }
 
-    fun updateMidpoint(arcIndex: Int, newMidpoint: Point): PartialArcPath {
-        val startVertexNumber = arcIndex2startVertexNumber(arcIndex)
-        val endVertexNumber = arcIndex2endVertexNumber(arcIndex)
-        val start = vertexAt(startVertexNumber).point
-        val end = vertexAt(endVertexNumber).point
+    fun updateMidpoint(arcIndex: Int, snap: PointSnapResult): PartialArcPath {
+        val newMidpoint = snap.result
+        val start = arcIndex2startVertex(arcIndex).point
+        val end = arcIndex2endVertex(arcIndex).point
         val newCircle =
             computeCircleBy3Points(start, newMidpoint, end) as? Circle
         val newStartAngle =
-            if (newCircle == null) 0.0
-            else calculateStartAngle(start, newCircle)
+            newCircle?.calculateStartAngle(start) ?: 0.0
         val newSweepAngle =
-            if (newCircle == null) 0.0
-            else calculateSweepAngle(start, newMidpoint, end, newCircle)
+            newCircle?.calculateSweepAngle(start, newMidpoint, end) ?: 0.0
         return copy(
-            midpoints = midpoints.updated(arcIndex, newMidpoint),
-            arcs = arcs.updated(arcIndex, ArcPathArc.Free(newCircle)),
+            arcs = arcs.updated(arcIndex, Arc(circle = newCircle, snap)),
             startAngles = startAngles.updated(arcIndex, newStartAngle),
             sweepAngles = sweepAngles.updated(arcIndex, newSweepAngle)
         )
@@ -285,50 +195,40 @@ data class PartialArcPath(
     // TODO: snapping to create smooth connection between arcs (their circles are to touch tangentially)
     //  also snap to existing points, intersections, existing circle=arc, incidence with existing circles
     //  + snap midpoints to straight segment
-    fun moveFocused(newPoint: Point): PartialArcPath =
+    fun moveFocused(snap: PointSnapResult): PartialArcPath =
         when (focus) {
-            Focus.StartPoint -> updateVertex(0, ArcPathPoint.Free(newPoint))
-            is Focus.Point -> updateVertex(focus.vertexIndex + 1, ArcPathPoint.Free(newPoint))
-            is Focus.MidPoint -> updateMidpoint(focus.arcIndex, newPoint)
+            is Focus.Vertex -> updateVertex(focus.vertexIndex, Vertex(snap))
+            is Focus.MidPoint -> updateMidpoint(focus.arcIndex, snap)
             null -> this
         }
 
     fun unFocus(): PartialArcPath = copy(
-        midpoints =
+        arcs =
             // normalize grabbed midpoint to be in the middle
-            if (focus is Focus.MidPoint) {
+            if (focus is Focus.MidPoint && arcs[focus.arcIndex].snap is PointSnapResult.Free) {
                 val arcIndex = focus.arcIndex
-                val startVertexNumber = arcIndex2startVertexNumber(arcIndex)
-                val endVertexNumber = arcIndex2endVertexNumber(arcIndex)
+                val start = arcIndex2startVertex(arcIndex).point
+                val end = arcIndex2endVertex(arcIndex).point
                 val circle = arcs[arcIndex].circle
-                val start = vertexAt(startVertexNumber).point
-                val end = vertexAt(endVertexNumber).point
                 val correctedMidpoint =
                     circle?.pointInBetween(start, end) ?: start.middle(end)
-                midpoints.updated(arcIndex, correctedMidpoint)
-            } else midpoints
+                arcs.updated(arcIndex, Arc(circle = circle, middlePoint = correctedMidpoint))
+            } else arcs
         ,
         focus = null,
     )
 
-    // call in VM.onUp when Vertex is in focus
-    fun updateSnappables(vertexNumber: VertexNumber, snappables: Set<Ix>): PartialArcPath =
-        copy(
-            vertexNumber2snappableCircles =
-                vertexNumber2snappableCircles + (vertexNumber to snappables)
-        )
-
     fun closeLoop(): PartialArcPath = copy(
-        startVertex = startVertex,
-        vertices = vertices,
-        midpoints = midpoints + lastVertex.point.middle(startVertex.point),
-        arcs = arcs + ArcPathArc.Free(null),
+        arcs = arcs + Arc(
+            circle = null,
+            middlePoint = vertices.last().point.middle(vertices.first().point)
+        ),
         startAngles = startAngles + 0.0,
         sweepAngles = sweepAngles + 0.0,
         isClosed = true,
     )
 
-    fun deleteVertex(vertexNumber: VertexNumber): PartialArcPath {
+    fun deleteVertex(vertexIndex: Int): PartialArcPath {
         // rm point[i]
         // and flatten 2 adjacent arcs
         // or mk the deleted point into a new midpoint for its 2 neighbors
@@ -376,31 +276,9 @@ private fun circleByChordEndsAndMidArc(chordStart: Point, chordEnd: Point, midAr
     if (s < EPSILON)
         return null
     val a2 = squareSum(mx - chordStart.x, my - chordStart.y) // half-chord squared
-    val r = (s*s + a2)/(2*s) // radius
-    val k = (r - s)/s
+    val r = s/2 + a2/(2*s) // radius
+    val k = r/s - 1.0
     val ox = mx + k*sx
     val oy = my + k*sy
     return Circle(ox, oy, r)
-}
-
-/** From the East, clockwise, in `[0; 2*PI]` */
-private fun calculateStartAngle(start: Point, circle: Circle): Double {
-    val x = circle.x - start.x
-    val y = circle.y - start.y
-//    val eastX = circle.x + circle.radius
-//    val eastY = circle.y
-    return PI + atan2(y, x) // CCW and reversed y-axis cancel each other
-}
-
-/** Clockwise, `(-2*PI; 2*PI)` */
-private fun calculateSweepAngle(start: Point, midpoint: Point, end: Point, circle: Circle): Double {
-    val angle = calculateAngle(circle.centerPoint, start, end)
-    val midAngle = calculateAngle(circle.centerPoint, start, midpoint)
-    val angle1 = (angle + TAU) % TAU // in [0; TAU)
-    val midAngle1 = (midAngle + TAU) % TAU
-    val otherArc = midAngle1 > angle1
-    return if (otherArc)
-        angle1 - TAU // i think thats correct?
-    else
-        angle1
 }

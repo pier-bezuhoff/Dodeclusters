@@ -2,6 +2,7 @@ package domain
 
 import androidx.compose.ui.graphics.Path
 
+// TODO: add arc path caching
 class PathCache {
     /** __Closed__ [Path]s used when constructing region paths (via intersections and
      * differences) OR when display standalone circles/lines */

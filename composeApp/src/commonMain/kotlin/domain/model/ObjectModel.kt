@@ -149,7 +149,7 @@ sealed class ObjectModel<R : Any> {
     }
 
     /** Don't forget to [invalidate] post factum */
-    fun clearObjects() {
+    open fun clearObjects() {
         objects.clear()
         downscaledObjects.clear()
         objectColors.clear()
