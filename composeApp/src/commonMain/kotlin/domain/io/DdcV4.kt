@@ -10,22 +10,6 @@ import domain.expressions.ObjectConstruct
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-// new format idea:
-// 1. store coordinates even for expressions, for easier integration with other programs
-// 2. store expression as a Map<String, String> for simpler evolution of parameters
-// objects:
-// - type: Circle | Line | Point | Imaginary circle | null
-//   x, y, r | a, b, c
-//   expr index
-//   expr output index
-// ...
-// exprs:
-// - type: ExprType
-//   obj1
-//   targetObj
-//   param1
-
-// MAYBE: collapse contiguously indexed Expression.OneOf outputs
 @Immutable
 @Serializable
 data class DdcV4(
@@ -42,7 +26,6 @@ data class DdcV4(
     // using Map<Int, _> instead of list to force yaml to use numbered list
     val objects: Map<Ix, Token.Object>, // this disallows missing "objects" field, and produces exception on DdcV3
     val arcPaths: List<Token.ArcPath> = DEFAULT_ARC_PATHS,
-    // MAYBE: add isPhantom bool field to Token.Object instead
     val phantoms: List<Ix> = emptyList(),
 ) {
     @Immutable
@@ -101,7 +84,6 @@ data class DdcV4(
                 phantoms = constellation.phantoms,
             )
 
-        const val HEADER = "Ddc v4, created in Dodeclusters"
         const val DEFAULT_NAME = "cluster"
         const val DEFAULT_EXTENSION = "yml"
         val DEFAULT_BACKGROUND_COLOR: Color? = null
@@ -110,7 +92,6 @@ data class DdcV4(
         const val DEFAULT_CHESSBOARD_PATTERN = false
         const val DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED = true
         val DEFAULT_CHESSBOARD_COLOR: Color? = null
-        val DEFAULT_INITIAL_REGION_COLOR: Color? = null
         val DEFAULT_ARC_PATHS = emptyList<Token.ArcPath>()
     }
 }

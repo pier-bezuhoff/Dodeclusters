@@ -31,7 +31,7 @@ sealed interface Arc {
 sealed interface ArcPath {
     val vertices: List<Ix>
     val arcs: List<Arc>
-    val borderColor: ColorAsCss
+    val borderColor: ColorAsCss?
 
     @Stable
     val dependencies: Set<Ix> get() =
@@ -44,7 +44,7 @@ sealed interface ArcPath {
     data class Closed(
         override val vertices: List<Ix>,
         override val arcs: List<Arc>,
-        override val borderColor: ColorAsCss,
+        override val borderColor: ColorAsCss? = null,
         val fillColor: ColorAsCss? = null,
     ) : ArcPath {
 
@@ -61,7 +61,7 @@ sealed interface ArcPath {
     data class Open(
         override val vertices: List<Ix>,
         override val arcs: List<Arc>,
-        override val borderColor: ColorAsCss,
+        override val borderColor: ColorAsCss? = null,
     ) : ArcPath {
 
         init {

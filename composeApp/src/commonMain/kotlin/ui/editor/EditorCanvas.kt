@@ -71,7 +71,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Arg
-import domain.settings.ChessboardPattern
+import domain.model.ChessboardPattern
 import domain.Ix
 import domain.PartialArgList
 import domain.PathCache
@@ -106,37 +106,32 @@ import kotlin.math.min
 private val dottedPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
 
 // NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
+//  and for domain.io.Svg
 @Composable
 fun BoxScope.EditorCanvas(
     viewModel: EditorViewModel,
     modifier: Modifier = Modifier
 ) {
-    // MAYBE: im supposed to remember { } all of these things (thatd be insane)
-    val strokeWidth = with (LocalDensity.current) { 2.dp.toPx() }
-    val circleStroke = Stroke(
-        width = strokeWidth,
-    )
-    val circleThiccStroke = Stroke(
-        width = 2 * strokeWidth,
-    )
-    val dottedStroke = remember { Stroke(
+    val density = LocalDensity.current
+    val strokeWidth = with (density) { 2.dp.toPx() }
+    val circleStroke = remember(strokeWidth) { Stroke(width = strokeWidth) }
+    val circleThiccStroke = remember(strokeWidth) { Stroke(width = 2 * strokeWidth) }
+    val dottedStroke = remember(strokeWidth) { Stroke(
         width = strokeWidth,
         pathEffect = dottedPathEffect,
     ) }
-    val thiccDottedStroke = remember { Stroke(
+    val thiccDottedStroke = remember(strokeWidth) { Stroke(
         width = 2 * strokeWidth,
         pathEffect = dottedPathEffect,
     ) }
-    val pathStroke = remember { Stroke(
-        width = 2 * strokeWidth,
-    ) }
+    val pathStroke = remember(strokeWidth) { Stroke(width = 2 * strokeWidth) }
     // handles stuff
-    val handleRadius = 8f // with (LocalDensity.current) { 8.dp.toPx() }
+    val handleRadius = 8f // with (density) { 8.dp.toPx() }
     val pointRadius = 2.5f * strokeWidth
     val scaleIcon = painterResource(Res.drawable.zoom_in)
     val scaleIconColor = MaterialTheme.colorScheme.secondary
     val scaleIndicatorColor = DodeclustersColors.skyBlue
-    val iconDim = with (LocalDensity.current) { 24.dp.toPx() }
+    val iconDim = with (density) { 24.dp.toPx() }
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
     val rotateIconColor = MaterialTheme.colorScheme.secondary
     val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
@@ -148,19 +143,21 @@ fun BoxScope.EditorCanvas(
     val pointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
     val freePointColor = freeCircleColor
     val selectedCircleColor = DodeclustersColors.strongSalad
-    val selectedPointColor = selectedCircleColor
     val imaginaryCircleColor = DodeclustersColors.fadedRed
     val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
     val stereographicGridColor = MaterialTheme.colorScheme.secondary
+    val arcPathColor = MaterialTheme.extendedColorScheme.highAccentColor
     val thiccSelectionCircleAlpha = 0.9f
     val textMeasurer = rememberTextMeasurer()
     val labelTextStyle = MaterialTheme.typography.headlineSmall
-    val objectLabelLayouts = remember(viewModel.objectLabels) {
+    val objectLabelLayouts = remember(viewModel.objectLabels, textMeasurer, labelTextStyle) {
         viewModel.objectLabels.mapValues { (_, label) ->
             textMeasurer.measure(label, labelTextStyle)
         }
     }
-    val concretePositions = ConcreteOnScreenPositions(viewModel.canvasSize.toSize(), LocalDensity.current)
+    val concretePositions = remember(viewModel.canvasSize, density) {
+        ConcreteOnScreenPositions(viewModel.canvasSize.toSize(), density)
+    }
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableStateMapOf() }
     val coroutineScope = rememberCoroutineScope()
@@ -219,7 +216,7 @@ fun BoxScope.EditorCanvas(
                 drawObjects(objects = viewModel.objects, hiddenObjectIndices = hiddenObjectIndices, objectColors = viewModel.objectModel.objectColors, selection = viewModel.objectSelection, selectionIsActive = selectionIsActive, isObjectFree = { viewModel.isFree(it) }, pathCache = viewModel.objectModel.pathCache, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
                 drawSelectedObjects(objects = viewModel.objects, objectColors = viewModel.objectModel.objectColors, selection = viewModel.objectSelection, mode = viewModel.mode, pathCache = viewModel.objectModel.pathCache, selectionIsActive = selectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleThiccStroke = thiccDottedStroke)
             }
-            drawArcPaths(arcPaths = viewModel.arcPaths, points = viewModel.objects.map { it as? Point }, pathFillOpacity = viewModel.regionsOpacity, pathStroke = pathStroke)
+            drawArcPaths(arcPaths = viewModel.arcPaths, points = viewModel.objects.map { it as? Point }, pathCache = viewModel.objectModel.pathCache, defaultArcPathColor = arcPathColor, arcPathFillOpacity = viewModel.regionsOpacity, arcPathStroke = pathStroke)
             drawPartialConstructs(objects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke)
             drawHandles(objects = viewModel.objects, selection = viewModel.objectSelection, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.calculateSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             drawGrids(visibleRect = visibleRect, submode = viewModel.submode, stereographicGridColor = stereographicGridColor, stereographicGridStroke = circleStroke, southPointRadius = handleRadius)
@@ -342,29 +339,35 @@ fun ScreenshotableCanvas(
     bitmapFlow: MutableSharedFlow<ImageBitmap>,
     modifier: Modifier = Modifier
 ) {
-    val strokeWidth = with (LocalDensity.current) { 2.dp.toPx() }
-    val circleStroke = Stroke(width = strokeWidth)
-    val circleThiccStroke = Stroke(width = 2 * strokeWidth)
-    val dottedStroke = remember { Stroke(
+    val density = LocalDensity.current
+    val strokeWidth = with (density) { 2.dp.toPx() }
+    val circleStroke = remember(strokeWidth) { Stroke(width = strokeWidth) }
+    val circleThiccStroke = remember(strokeWidth) { Stroke(width = 2 * strokeWidth) }
+    val dottedStroke = remember(strokeWidth) { Stroke(
         width = strokeWidth,
         pathEffect = dottedPathEffect,
     ) }
-    val thiccDottedStroke = remember { Stroke(
+    val thiccDottedStroke = remember(strokeWidth) { Stroke(
         width = 2 * strokeWidth,
         pathEffect = dottedPathEffect,
     ) }
-    val pathStroke = remember { Stroke(
-        width = 2 * strokeWidth,
-    ) }
+    val pathStroke = remember(strokeWidth) { Stroke(width = 2 * strokeWidth) }
     val pointRadius = 2.5f * strokeWidth
     val circleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
     val freeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
     val pointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
     val freePointColor = freeCircleColor
     val selectedCircleColor = DodeclustersColors.strongSalad
-//        MaterialTheme.colorScheme.primary
     val imaginaryCircleColor = DodeclustersColors.fadedRed
+    val arcPathColor = MaterialTheme.extendedColorScheme.highAccentColor
     val thiccSelectionCircleAlpha = 0.9f
+    val textMeasurer = rememberTextMeasurer()
+    val labelTextStyle = MaterialTheme.typography.headlineSmall
+    val objectLabelLayouts = remember(viewModel.objectLabels, textMeasurer, labelTextStyle) {
+        viewModel.objectLabels.mapValues { (_, label) ->
+            textMeasurer.measure(label, labelTextStyle)
+        }
+    }
     val graphicsLayer = rememberGraphicsLayer()
     Box(modifier
         .fillMaxSize()
@@ -401,7 +404,8 @@ fun ScreenshotableCanvas(
                         drawObjects(objects = viewModel.objects, hiddenObjectIndices = hiddenObjectIndices, objectColors = viewModel.objectModel.objectColors, selection = viewModel.objectSelection, pathCache = viewModel.objectModel.pathCache, selectionIsActive = selectionIsActive, isObjectFree = { viewModel.isFree(it) }, visibleRect = visibleRect, circleColor = circleColor, freeCircleColor = freeCircleColor, circleStroke = circleStroke, pointColor = pointColor, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
                         drawSelectedObjects(objects = viewModel.objects, objectColors = viewModel.objectModel.objectColors, selection = viewModel.objectSelection, mode = viewModel.mode, pathCache = viewModel.objectModel.pathCache, selectionIsActive = selectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = viewModel.showDirectionArrows, visibleRect = visibleRect, selectedCircleColor = selectedCircleColor, thiccSelectionCircleAlpha = thiccSelectionCircleAlpha, circleThiccStroke = circleThiccStroke, freePointColor = freePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleThiccStroke = thiccDottedStroke)
                     }
-                    drawArcPaths(arcPaths = viewModel.arcPaths, points = viewModel.objects.map { it as? Point }, pathFillOpacity = viewModel.regionsOpacity, pathStroke = pathStroke)
+                    drawArcPaths(arcPaths = viewModel.arcPaths, points = viewModel.objects.map { it as? Point }, pathCache = viewModel.objectModel.pathCache, defaultArcPathColor = arcPathColor, arcPathFillOpacity = viewModel.regionsOpacity, arcPathStroke = pathStroke)
+                    drawLabels(objects = viewModel.objects, objectColors = viewModel.objectModel.objectColors, objectLabelLayouts = objectLabelLayouts, freePointColor = freePointColor)
                 }
             }
         }
@@ -506,8 +510,8 @@ private fun DrawScope.drawCircleWithCache(
         }
         drawCircle(color = color, radius = radius, center = circle.center, alpha = alpha, style = style, blendMode = blendMode)
     } else if (radius < MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS) {
-        var path: Path? = pathCache.cachedObjectPaths[ix]
-        if (path == null || !pathCache.pathCacheValidity[ix]) {
+        var path: Path? = pathCache.objectPaths[ix]
+        if (path == null || !pathCache.objectPathValidity[ix]) {
             path = circle2cubicPath(circle, visibleRect, closed = true, path ?: Path())
             pathCache.cacheObjectPath(ix, path)
         }
@@ -561,8 +565,8 @@ private fun DrawScope.drawLineWithCache(
 ) {
     when (style) {
         Fill -> if (drawHalfPlanesForLines) {
-            var path: Path? = pathCache.cachedObjectPaths[ix]
-            if (path == null || !pathCache.pathCacheValidity[ix]) {
+            var path: Path? = pathCache.objectPaths[ix]
+            if (path == null || !pathCache.objectPathValidity[ix]) {
                 path = halfPlanePath(line, visibleRect, path ?: Path())
                 pathCache.cacheObjectPath(ix, path)
             }
@@ -726,7 +730,7 @@ private fun DrawScope.drawArrowsPatchedForAndroid(
             val farBack = pointClosestToScreenCenter - direction * maxDim
             val farForward = pointClosestToScreenCenter + direction * maxDim
             // NOTE: Android  clips arrows & hair on near-horizontal and near-vertical lines
-            //  do im trying to toe around it
+            //  so im trying to toe around it
             //  ┏━━━━┛
             val normalExtension = 3f * HAIR_LENGTH // why 3f and not 1f? don't ask me...
             val start = farBack - circle.normalVector * normalExtension
@@ -899,23 +903,28 @@ private fun DrawScope.drawSelectedObjects(
     }
 }
 
-// TODO: path caching
 private fun DrawScope.drawArcPaths(
     arcPaths: List<ArcPath>,
     points: List<Point?>,
+    pathCache: PathCache,
+    defaultArcPathColor: Color,
     @FloatRange(from = 0.0, to = 1.0)
-    pathFillOpacity: Float,
-    pathStroke: Stroke,
+    arcPathFillOpacity: Float,
+    arcPathStroke: Stroke,
 ) {
-    for (arcPath in arcPaths) {
-        val path = arcPath.toPath(points)
+    arcPaths.forEachIndexed { index, arcPath ->
+        var path: Path? = pathCache.dependentPaths[index]
+        if (path == null || !pathCache.dependentPathValidity[index]) {
+            path = arcPath.toPath(points)
+            pathCache.cacheDependentPath(index, path)
+        }
         when (arcPath) {
             is ArcPath.Closed -> {
                 if (arcPath.fillColor != null)
                     drawPath(
                         path = path,
                         color = arcPath.fillColor,
-                        alpha = pathFillOpacity,
+                        alpha = arcPathFillOpacity,
                         style = Fill
                     )
             }
@@ -923,8 +932,8 @@ private fun DrawScope.drawArcPaths(
         }
         drawPath(
             path = path,
-            color = arcPath.borderColor,
-            style = pathStroke,
+            color = arcPath.borderColor ?: defaultArcPathColor,
+            style = arcPathStroke,
         )
     }
 }

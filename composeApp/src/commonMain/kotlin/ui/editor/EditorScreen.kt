@@ -260,6 +260,7 @@ fun EditorScreen(
             }
         }
     }
+    val extendedColorScheme = MaterialTheme.extendedColorScheme
     when (viewModel.openedDialog) {
         DialogType.REGION_COLOR_PICKER -> {
             ColorPickerDialog(
@@ -377,7 +378,12 @@ fun EditorScreen(
                 viewModel = viewModel,
                 ddcSharing = ddcSharing,
                 saveAsYaml = viewModel::saveAsYaml,
-                exportAsSvg = viewModel::exportAsSvg,
+                exportAsSvg = { name ->
+                    viewModel.exportAsSvg(
+                        name = name,
+                        extendedColorScheme = extendedColorScheme
+                    )
+                },
                 onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::closeDialog,
                 onSaved = { saveResult ->

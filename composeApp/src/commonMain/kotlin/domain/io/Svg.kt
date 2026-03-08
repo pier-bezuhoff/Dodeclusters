@@ -4,13 +4,11 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
 import core.geometry.CircleOrLine
-import core.geometry.GCircle
 import core.geometry.Line
 import core.geometry.Point
-import domain.settings.ChessboardPattern
 import domain.ColorCssSerializer
-import domain.Ix
-import domain.cluster.Constellation
+import domain.model.ChessboardPattern
+import domain.model.SaveState
 import kotlinx.serialization.json.Json
 import ui.region2path
 import kotlin.math.hypot
@@ -30,17 +28,17 @@ private const val defs = """<defs>
 </defs>"""
 private const val svgClose = "</svg>"
 
+// TODO: save arc-paths
 // NOTE: "For reliable results cross-browser, use numbers with no more
 //  than 2 digits after the decimal and four digits before it." -- im gonna ignore this >.<
-fun constellation2svg(
-    constellation: Constellation,
-    objects: List<GCircle?>,
-    freeObjectIndices: Set<Ix>,
+// MAYBE: encode point labels
+fun saveStateAsSvg(
+    saveState: SaveState,
     width: Float, height: Float,
     encodeCirclesAndPoints: Boolean = true,
-    chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
-    chessboardCellColor: Color = Color.White,
     name: String? = null,
+    accentColor: Color,
+    highAccentColor: Color,
 ): String = buildString {
     val visibleRect = Rect(0f, 0f, width, height)
     val inflatedVisibleRect = visibleRect.inflate(100f)
@@ -49,44 +47,46 @@ fun constellation2svg(
         appendLine(title(name))
     appendLine(desc)
 //    appendLine(defs)
-    constellation.backgroundColor?.let {
+    saveState.backgroundColor?.let {
         val bg = Json.encodeToString(ColorCssSerializer, it).trim('"')
         appendLine(formatRect(visibleRect, bg))
     }
-    when (chessboardPattern) {
-        ChessboardPattern.NONE -> {}
-        ChessboardPattern.STARTS_COLORED -> {
-            appendLine(
-                chessboardPath(
-                    objects
-                        .filterIndexed { ix, _ -> ix !in constellation.phantoms }
-                        .filterIsInstance<CircleOrLine>()
-                    ,
-                    color = chessboardCellColor,
-                    visibleRect = visibleRect,
-                    startsColored = true
+    if (saveState.chessboardColor != null) {
+        when (saveState.chessboardPattern) {
+            ChessboardPattern.NONE -> {}
+            ChessboardPattern.STARTS_COLORED -> {
+                appendLine(
+                    chessboardPath(
+                        saveState.objects
+                            .filterIndexed { ix, _ -> ix !in saveState.phantoms }
+                            .filterIsInstance<CircleOrLine>()
+                        ,
+                        color = saveState.chessboardColor,
+                        visibleRect = visibleRect,
+                        startsColored = true
+                    )
                 )
-            )
-        }
-        ChessboardPattern.STARTS_TRANSPARENT -> {
-            appendLine(
-                chessboardPath(
-                    objects
-                        .filterIndexed { ix, _ -> ix !in constellation.phantoms }
-                        .filterIsInstance<CircleOrLine>()
-                    ,
-                    color = chessboardCellColor,
-                    visibleRect = visibleRect,
-                    startsColored = false
+            }
+            ChessboardPattern.STARTS_TRANSPARENT -> {
+                appendLine(
+                    chessboardPath(
+                        saveState.objects
+                            .filterIndexed { ix, _ -> ix !in saveState.phantoms }
+                            .filterIsInstance<CircleOrLine>()
+                        ,
+                        color = saveState.chessboardColor,
+                        visibleRect = visibleRect,
+                        startsColored = false
+                    )
                 )
-            )
+            }
         }
     }
-    val circlesOrLines = objects.map { it as? CircleOrLine }
-    constellation.parts.forEach { part ->
-        val fillColorString = Json.encodeToString(ColorCssSerializer, part.fillColor).trim('"')
-//                val strokeColorString = Json.encodeToString(ColorCssSerializer, part.borderColor).trim('"')
-        val path = region2path(circlesOrLines, part, visibleRect)
+    val circlesOrLines = saveState.objects.map { it as? CircleOrLine }
+    saveState.regions.forEach { region ->
+        val fillColorString = Json.encodeToString(ColorCssSerializer, region.fillColor).trim('"')
+//                val strokeColorString = Json.encodeToString(ColorCssSerializer, region.borderColor).trim('"')
+        val path = region2path(circlesOrLines, region, visibleRect)
         // NOTE: path.toSvg is bugged for elliptic/circular arcs (not yet implemented)
         //  https://youtrack.jetbrains.com/issue/CMP-7418/Path.toSvg-is-completely-broken
         val pathData = path.toCircularSvg()
@@ -94,17 +94,19 @@ fun constellation2svg(
     }
     if (encodeCirclesAndPoints) {
         // colors mimic EditorCanvas setup
-        val circleColor = Color(0xFF_D4BE51).copy(alpha = 0.6f) // accentColorDark
-        val freeCircleColor = Color(0xFF_F5BD6F) // highAccentColorDark
-        val pointColor = Color(0xFF_D4BE51).copy(alpha = 0.7f) // accentColorDark
+        val circleColor = accentColor.copy(alpha = 0.6f)
+        val freeCircleColor = highAccentColor
+        val pointColor = accentColor.copy(alpha = 0.7f)
         val pointRadius = 5f
         val highlightClassString = "" //"""class="$highlightClass" """
-        objects.forEachIndexed { ix, o ->
-            if (ix !in constellation.phantoms) {
+        val freeObjectIndices = saveState.objects.indices
+            .filter { ix -> saveState.expressions[ix] == null }
+        saveState.objects.forEachIndexed { ix, o ->
+            if (ix !in saveState.phantoms) {
                 val color = when {
                     o is Point -> pointColor // points cant be colored for now
-                    ix in freeObjectIndices -> constellation.objectColors[ix] ?: freeCircleColor
-                    else -> constellation.objectColors[ix] ?: circleColor
+                    ix in freeObjectIndices -> saveState.objectColors[ix] ?: freeCircleColor
+                    else -> saveState.objectColors[ix] ?: circleColor
                 }
                 val colorString = Json.encodeToString(ColorCssSerializer, color).trim('"')
                 when (o) {

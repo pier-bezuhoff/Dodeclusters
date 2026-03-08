@@ -211,7 +211,7 @@ import domain.SIGNATURE_INDICES_AND_FINITE_POINT
 import domain.SIGNATURE_N_POINTS_PLACEHOLDER
 import domain.SIGNATURE_REAL_CIRCLE_AND_LINE_OR_FINITE_POINT
 import domain.Signature
-import domain.io.DdcV4
+import domain.io.DdcV5
 import domain.nonEqualityConditionsOf
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
@@ -273,8 +273,8 @@ sealed class Tool(
         Res.string.save_cluster_name,
         icon = Res.drawable.save
     ) {
-        const val DEFAULT_NAME = DdcV4.DEFAULT_NAME
-        const val EXTENSION = DdcV4.DEFAULT_EXTENSION // yml
+        const val DEFAULT_NAME = DdcV5.DEFAULT_NAME
+        const val EXTENSION = DdcV5.DEFAULT_EXTENSION // yml
         const val DEFAULT_FILENAME = "$DEFAULT_NAME.$EXTENSION"
         val otherDisplayedExtensions = setOf("yaml", "ddc", "ddu")
         const val MIME_TYPE = "application/yaml"
@@ -283,7 +283,7 @@ sealed class Tool(
         Res.string.svg_export_name,
         icon = Res.drawable.upload
     ) {
-        const val DEFAULT_NAME = DdcV4.DEFAULT_NAME
+        const val DEFAULT_NAME = DdcV5.DEFAULT_NAME
         const val EXTENSION = "svg"
         const val DEFAULT_FILENAME = "$DEFAULT_NAME.$EXTENSION"
         const val MIME_TYPE = "image/svg+xml" // apparently this is highly contested (since svg can contain js)

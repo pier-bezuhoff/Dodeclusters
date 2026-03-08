@@ -15,7 +15,8 @@ import kotlinx.serialization.Serializable
 
 // aka ClusterV3.2
 /**
- * Evolution of [Cluster] (v3.2) that contains both concretes and expressions
+ * Evolution of [Cluster] (v3.2) that contains both concretes and expressions.
+ * Should prob be replaced by SaveState
  * @param[phantoms] indices of hidden [objects]
  */
 @Immutable
@@ -84,7 +85,7 @@ data class Constellation(
             }
             if (infinityIndex == -1) {
                 // lets add infinity @index=0
-                // and shift all indexes by +1
+                // and shift all indices by +1
                 val infinity = ObjectConstruct.ConcretePoint(Point.CONFORMAL_INFINITY)
                 val newObjects = objects.map { construct ->
                     when (construct) {

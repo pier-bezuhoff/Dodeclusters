@@ -24,7 +24,8 @@ import kotlin.collections.set
  */
 class ConformalObjectModel : ObjectModel<GCircle>() {
 
-    val arcPaths: MutableList<ArcPath> = mutableListOf()
+    private val _arcPaths: MutableList<ArcPath> = mutableListOf()
+    val arcPaths: List<ArcPath> = _arcPaths
 
     override var expressions: ConformalExpressions =
         ConformalExpressions(emptyMap(), mutableListOf())
@@ -37,7 +38,14 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
     }
 
     fun addArcPath(arcPath: ArcPath) {
-        arcPaths.add(arcPath)
+        _arcPaths.add(arcPath)
+        pathCache.addDependent(arcPath.dependencies)
+        invalidate()
+    }
+
+    fun removeArcPathAt(arcPathIndex: Int) {
+        _arcPaths.removeAt(arcPathIndex)
+        pathCache.removeDependent(arcPathIndex)
         invalidate()
     }
 
@@ -117,7 +125,7 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
     }
 
     override fun clearObjects() {
-        arcPaths.clear()
+        _arcPaths.clear()
         super.clearObjects()
     }
 
@@ -140,12 +148,14 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
             }
         }
         for (arcPath in state.arcPaths) {
-            arcPaths.add(arcPath)
+            _arcPaths.add(arcPath)
+            pathCache.addDependent(arcPath.dependencies)
         }
     }
 
     override fun GCircle.downscale(): GCircle =
         scaled00(DOWNSCALING_FACTOR)
+
     override fun GCircle.upscale(
 //            screenCenter: Offset = Offset.Zero
     ): GCircle =

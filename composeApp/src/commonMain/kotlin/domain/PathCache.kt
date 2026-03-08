@@ -2,12 +2,16 @@ package domain
 
 import androidx.compose.ui.graphics.Path
 
-// TODO: add arc path caching
 class PathCache {
     /** __Closed__ [Path]s used when constructing region paths (via intersections and
-     * differences) OR when display standalone circles/lines */
-    val cachedObjectPaths: MutableList<Path?> = mutableListOf()
-    var pathCacheValidity = BooleanArray(0)
+     * differences) OR for standalone circles/lines */
+    val objectPaths: MutableList<Path?> = mutableListOf()
+    var objectPathValidity = BooleanArray(0)
+    /** Arc-paths that depend on a subset [objectPaths] */
+    val dependentPaths: MutableList<Path?> = mutableListOf()
+    var dependentPathValidity = BooleanArray(0)
+    /** object index -> dependent path indices */
+    val dependencies: MutableMap<Ix, Set<Int>> = mutableMapOf()
 
     // object index => index of composite paths that depend on it
 //    val object2dependents: MutableMap<Ix, Ix> = mutableMapOf()
@@ -15,45 +19,82 @@ class PathCache {
 //    var compositePathCacheValidity = BooleanArray(0)
 
     fun addObject() {
-        val previousSize = pathCacheValidity.size
-        cachedObjectPaths.add(null)
-        pathCacheValidity = pathCacheValidity.copyOf(previousSize + 1)
+        val previousSize = objectPathValidity.size
+        objectPaths.add(null)
+        objectPathValidity = objectPathValidity.copyOf(previousSize + 1)
     }
 
     fun addObjects(sizeIncrement: Int) {
-        val previousSize = pathCacheValidity.size
+        val previousSize = objectPathValidity.size
         for (index in 0 until sizeIncrement) {
-            cachedObjectPaths.add(null)
+            objectPaths.add(null)
         }
-        pathCacheValidity = pathCacheValidity.copyOf(previousSize + sizeIncrement)
+        objectPathValidity = objectPathValidity.copyOf(previousSize + sizeIncrement)
     }
 
     fun invalidateObjectPathAt(objectIndex: Ix) {
-        pathCacheValidity[objectIndex] = false
+        objectPathValidity[objectIndex] = false
         // rewind could be bad when circle<->cubic<->line change verb/point counts
         // reset seems to be a bit faster than rewind (during stereographic rotation)
 //        cachedObjectPaths[objectIndex]?.rewind()
-        cachedObjectPaths[objectIndex]?.reset()
+        objectPaths[objectIndex]?.reset()
+        for (dependentIndex in dependencies[objectIndex].orEmpty()) {
+            dependentPathValidity[dependentIndex] = false
+            dependentPaths[dependentIndex]?.reset()
+        }
     }
 
     fun removeObjectAt(objectIndex: Ix) {
-        cachedObjectPaths[objectIndex] = null
+        objectPaths[objectIndex] = null
         invalidateObjectPathAt(objectIndex)
+        dependencies.remove(objectIndex)
     }
 
     fun clear() {
-        cachedObjectPaths.clear()
-        pathCacheValidity = BooleanArray(0)
+        objectPaths.clear()
+        objectPathValidity = BooleanArray(0)
+        dependentPaths.clear()
+        dependencies.clear()
+        dependentPathValidity = BooleanArray(0)
     }
 
     fun invalidateAll() {
-        for (ix in pathCacheValidity.indices) {
+        for (ix in objectPathValidity.indices) {
             invalidateObjectPathAt(ix)
         }
     }
 
     fun cacheObjectPath(objectIndex: Ix, path: Path) {
-        cachedObjectPaths[objectIndex] = path
-        pathCacheValidity[objectIndex] = true
+        objectPaths[objectIndex] = path
+        objectPathValidity[objectIndex] = true
+    }
+
+    fun addDependent(deps: Set<Ix>) {
+        val dependentIndex = dependentPaths.size
+        dependentPaths.add(null)
+        dependentPathValidity = dependentPathValidity.copyOf(dependentPathValidity.size + 1)
+        for (dependencyIndex in deps) {
+            dependencies[dependencyIndex] =
+                dependencies[dependencyIndex]?.plus(dependentIndex) ?: setOf(dependentIndex)
+        }
+    }
+
+    fun removeDependent(dependentIndex: Int) {
+        dependentPaths.removeAt(dependentIndex)
+        dependentPathValidity =
+            dependentPathValidity.slice(0 until dependentIndex)
+                .plus(dependentPathValidity.drop(dependentIndex + 1))
+                .toBooleanArray()
+        for (objectIndex in dependencies.keys) {
+            val dependents = dependencies[objectIndex]
+            if (dependents != null) {
+                dependencies[objectIndex] = dependents - dependentIndex
+            }
+        }
+    }
+
+    fun cacheDependentPath(dependentIndex: Int, path: Path) {
+        dependentPaths[dependentIndex] = path
+        dependentPathValidity[dependentIndex] = true
     }
 }

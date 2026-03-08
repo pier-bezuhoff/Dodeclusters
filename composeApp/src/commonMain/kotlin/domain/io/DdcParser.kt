@@ -13,7 +13,10 @@ val yaml = Yaml(
     )
 )
 
-// TODO: coroutines
+@Throws(SerializationException::class, IllegalArgumentException::class)
+fun parseDdcV5(content: String): DdcV5 =
+    DdcV5.YAML.decodeFromString(DdcV5.serializer(), content)
+
 @Throws(SerializationException::class, IllegalArgumentException::class)
 fun parseDdcV4(content: String): DdcV4 =
     yaml.decodeFromString(DdcV4.serializer(), content)

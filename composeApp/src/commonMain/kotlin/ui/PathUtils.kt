@@ -238,8 +238,8 @@ fun region2pathWithCache(
     for (ix in region.insides) {
         when (val circle = circles[ix]) {
             is Circle -> {
-                var p: Path? = pathCache.cachedObjectPaths[ix]
-                if (p == null || !pathCache.pathCacheValidity[ix]) {
+                var p: Path? = pathCache.objectPaths[ix]
+                if (p == null || !pathCache.objectPathValidity[ix]) {
                     p = circle2path(circle, visibleRect, p ?: Path())
                     pathCache.cacheObjectPath(ix, p)
                 }
@@ -249,8 +249,8 @@ fun region2pathWithCache(
                 )
             }
             is Line -> {
-                var p: Path? = pathCache.cachedObjectPaths[ix]
-                if (p == null || !pathCache.pathCacheValidity[ix]) {
+                var p: Path? = pathCache.objectPaths[ix]
+                if (p == null || !pathCache.objectPathValidity[ix]) {
                     p = halfPlanePath(circle, visibleRect, p ?: Path())
                     pathCache.cacheObjectPath(ix, p)
                 }
@@ -262,8 +262,8 @@ fun region2pathWithCache(
     for (ix in region.outsides) {
         when (val circle = circles[ix]) {
             is Circle -> {
-                var p: Path? = pathCache.cachedObjectPaths[ix]
-                if (p == null || !pathCache.pathCacheValidity[ix]) {
+                var p: Path? = pathCache.objectPaths[ix]
+                if (p == null || !pathCache.objectPathValidity[ix]) {
                     p = circle2path(circle, visibleRect, p ?: Path())
                     pathCache.cacheObjectPath(ix, p)
                 }
@@ -273,8 +273,8 @@ fun region2pathWithCache(
                 )
             }
             is Line -> {
-                var p: Path? = pathCache.cachedObjectPaths[ix]
-                if (p == null || !pathCache.pathCacheValidity[ix]) {
+                var p: Path? = pathCache.objectPaths[ix]
+                if (p == null || !pathCache.objectPathValidity[ix]) {
                     p = halfPlanePath(circle, visibleRect, p ?: Path())
                     pathCache.cacheObjectPath(ix, p)
                 }

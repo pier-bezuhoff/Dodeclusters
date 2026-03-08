@@ -349,16 +349,31 @@ fun BoxScope.PointContextActions(
 }
 
 @Composable
-fun BoxScope.PartialArcPathContextActions() {
-    // when selected middle anchors for 2p-arcs become draggable (diff color)
-    // +scale/rotate handles
-    // edit (add/remove vertices)
+fun BoxScope.ArcPathContextActions() {
+    // scale/rotate handles
     // border color
     // if closed: fill color
     // swap direction?
     // layer up/down
     // duplicate
     // delete
+}
+
+@Composable
+fun BoxScope.PartialArcPathContextActions() {
+    // +scale/rotate handles
+    // border color
+    // if closed: fill color
+
+    // when vertex is focused:
+    // delete
+
+    // when midpoint is focused
+    // *textual*
+    // smoothen arc start
+    // smoothen arc end
+    // straighten arc
+    // if non-free: unpin
 }
 
 /**
@@ -872,6 +887,7 @@ fun BoxScope.PartialArcPathContextActions(
     }
 }
 
+// FIX: takes too much screen space, esp on mobile
 @Composable
 fun BoxScope.RegionManipulationStrategySelector(
     currentStrategy: RegionManipulationStrategy,

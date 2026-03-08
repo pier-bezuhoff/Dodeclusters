@@ -1,4 +1,4 @@
-package domain.settings
+package domain.model
 
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable

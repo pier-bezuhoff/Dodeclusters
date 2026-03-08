@@ -33,26 +33,6 @@ data class DdcV2(
     val chessboardPatternStartsColored: Boolean = DEFAULT_CHESSBOARD_PATTERN_STARTS_COLORED,
     val content: List<Token>,
 ) {
-    val nCircles: Int
-        get() = content.lastOrNull()?.let {
-            when (it) {
-                is Token.Circle -> it.index + 1
-                is Token.Line -> it.index + 1
-                is Token.Cluster -> it.indices.last() + 1
-            }
-        } ?: 0
-
-    constructor(cluster: Cluster) : this(
-        content = listOf(
-            Token.Cluster(
-                if (cluster.circles.isEmpty()) emptyList()
-                else listOf(0, cluster.circles.size - 1),
-                cluster.circles,
-                cluster.parts,
-            )
-        )
-    )
-
     @Serializable
     sealed class Token {
         @SerialName("Cluster")

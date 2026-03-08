@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -74,8 +75,9 @@ import domain.hug
 import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV4
+import domain.io.DdcV5
 import domain.io.SaveRequest
-import domain.io.constellation2svg
+import domain.io.saveStateAsSvg
 import domain.io.tryParseDdc
 import domain.model.ChangeHistory
 import domain.model.ConformalObjectModel
@@ -84,7 +86,7 @@ import domain.model.SaveState
 import domain.model.Selection
 import domain.reindexingMap
 import domain.settings.BlendModeType
-import domain.settings.ChessboardPattern
+import domain.model.ChessboardPattern
 import domain.settings.InversionOfControl
 import domain.settings.Settings
 import domain.snapAngle
@@ -114,6 +116,7 @@ import ui.editor.dialogs.DefaultLoxodromicMotionParameters
 import ui.editor.dialogs.DefaultRotationParameters
 import ui.editor.dialogs.DialogType
 import ui.theme.DodeclustersColors
+import ui.theme.ExtendedColorScheme
 import ui.tools.Category
 import ui.tools.Tool
 import kotlin.math.min
@@ -316,38 +319,26 @@ class EditorViewModel : ViewModel() {
         objectModel.invalidatePositions()
     }
 
-    fun saveAsYaml(name: String = DdcV4.DEFAULT_NAME): String {
+    fun saveAsYaml(name: String = DdcV5.DEFAULT_NAME): String {
         // Q: there seemingly was an issue with saving circleColors on Android
-        return YamlEncoding.encodeToString(DdcV4.from(toConstellation()).copy(
-            name = name,
-            bestCenterX = computeAbsoluteCenter()?.x,
-            bestCenterY = computeAbsoluteCenter()?.y,
-            chessboardPattern = chessboardPattern != ChessboardPattern.NONE,
-            chessboardPatternStartsColored = chessboardPattern == ChessboardPattern.STARTS_COLORED,
-            chessboardColor = chessboardColor,
-        ))
+        return YamlEncoding.encodeToString(
+            DdcV5.fromSaveState(saveState())
+                .copy(name = name)
+        )
     }
 
-    fun exportAsSvg(name: String = DdcV4.DEFAULT_NAME): String {
-        val constellation = toConstellation()
-        return constellation2svg(
-            constellation =
-                if (showPhantomObjects)
-                    constellation.copy(phantoms = emptyList())
-                else constellation
-            ,
-            objects = objects.toList()
-                .map { o ->
-                    o?.translated(translation) // back to top-left = (0,0) system
-                }
-            ,
-            freeObjectIndices = objects.indices.filter { isFree(it) }.toSet(),
+    fun exportAsSvg(
+        name: String = DdcV5.DEFAULT_NAME,
+        extendedColorScheme: ExtendedColorScheme = DodeclustersColors.extendedDarkScheme,
+    ): String {
+        return saveStateAsSvg(
+            saveState = saveState(),
             width = canvasSize.width.toFloat(),
             height = canvasSize.height.toFloat(),
             encodeCirclesAndPoints = showCircles,
-            chessboardPattern = chessboardPattern,
-            chessboardCellColor = chessboardColor,
             name = name,
+            accentColor = extendedColorScheme.accentColor,
+            highAccentColor = extendedColorScheme.highAccentColor,
         )
     }
 
@@ -363,6 +354,10 @@ class EditorViewModel : ViewModel() {
     fun loadDdc(content: String, filename: String? = null) {
         tryParseDdc(
             content = content,
+            onDdc5 = { ddc5 ->
+                val state = ddc5.toSaveState()
+                loadState(state)
+            },
             onDdc4 = { ddc4 ->
                 val constellation = ddc4.toConstellation()
                 loadNewConstellation(constellation)
@@ -463,7 +458,6 @@ class EditorViewModel : ViewModel() {
         queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, "$selectedObjectsString;\n$selectedExpressionsString")
     }
 
-    // MAYBE: make a suspend function + add load spinner
     fun loadNewConstellation(constellation: Constellation) {
         val updatedConstellation = constellation.updated()
         showPromptToSetActiveSelectionAsToolArg = false
@@ -609,7 +603,10 @@ class EditorViewModel : ViewModel() {
         )
         val switchToMultiselect = objectSelection.size <= 1 && validSelection.objects.size > 1
         selection = validSelection
-        centerizeTo(state.center.x, state.center.y)
+        if (state.center.isSpecified)
+            centerizeTo(state.center.x, state.center.y)
+        else
+            translation = Offset.Zero
         chessboardPattern = state.chessboardPattern
         regionColor = state.regionColor ?: regionColor
         chessboardColor = state.chessboardColor ?: regionColor
@@ -3616,29 +3613,12 @@ class EditorViewModel : ViewModel() {
             }
             objectModel.addArcPath(
                 if (pArcPath.isClosed)
-                    ArcPath.Closed(
-                        vertices = vertexIndices,
-                        arcs = arcs,
-                        borderColor = regionColor,
-                    )
+                    ArcPath.Closed(vertices = vertexIndices, arcs = arcs)
                 else
-                    ArcPath.Open(
-                        vertices = vertexIndices,
-                        arcs = arcs,
-                        borderColor = regionColor,
-                    )
+                    ArcPath.Open(vertices = vertexIndices, arcs = arcs)
             )
-            val middlePointIndices = arcs
-                .filterIsInstance<Arc.By3Points>()
-                .map { it.middlePointIndex }
-            val indicesToRecolor = vertexIndices + middlePointIndices
-            // recolor vertices and middle points to match the arc-path color
-            for (ix in indicesToRecolor) {
-                objectModel.objectColors[ix] = regionColor
-            }
             selection = Selection(arcPaths = listOf(arcPaths.lastIndex))
             history.accumulateChangedLocations(
-                objectColorIndices = indicesToRecolor.toSet(),
                 arcPaths = true,
                 selection = true,
             )

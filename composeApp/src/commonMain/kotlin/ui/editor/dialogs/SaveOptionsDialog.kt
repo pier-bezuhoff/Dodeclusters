@@ -51,7 +51,7 @@ import dodeclusters.composeapp.generated.resources.share_new_name
 import dodeclusters.composeapp.generated.resources.share_new_progress
 import domain.LoadingState
 import domain.io.DdcSharing
-import domain.io.DdcV4
+import domain.io.DdcV5
 import domain.io.SaveBitmapAsPngButton
 import domain.io.SaveData
 import domain.io.SaveFileButton
@@ -132,7 +132,7 @@ fun SaveOptionsDialog(
                                 containerColor = containerColor,
                                 contentColor = contentColor,
                                 coroutineScope = coroutineScope,
-                                shareNew = { ddcSharing.shareNewDdc(saveAsYaml(DdcV4.DEFAULT_NAME)) },
+                                shareNew = { ddcSharing.shareNewDdc(saveAsYaml(DdcV5.DEFAULT_NAME)) },
                                 setLoadingShared = { loadingShared = it },
                                 onShared = {
                                     ddcSharing.shared = it
@@ -151,7 +151,7 @@ fun SaveOptionsDialog(
                                     overwriteShared = {
                                         ddcSharing.overwriteSharedDdc(
                                             sharedId = shared.first,
-                                            content = saveAsYaml(DdcV4.DEFAULT_NAME)
+                                            content = saveAsYaml(DdcV5.DEFAULT_NAME)
                                         )
                                     },
                                     setLoadingShared = { loadingShared = it },

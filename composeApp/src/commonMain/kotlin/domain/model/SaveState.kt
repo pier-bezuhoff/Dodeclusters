@@ -16,7 +16,7 @@ import domain.expressions.Expr
 import domain.expressions.ExprOutput
 import domain.expressions.LoxodromicMotionParameters
 import domain.reindexingMap
-import domain.settings.ChessboardPattern
+import domain.model.ChessboardPattern
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -40,7 +40,7 @@ data class SaveState(
     @SerialName("selections") // TMP: for backwards compat
     val selection: Selection = Selection(),
     val center: SerializableOffset,
-    val regionColor: ColorAsCss?,
+    val regionColor: ColorAsCss? = null,
 ) {
     // since we generate save-state every undo-able action, i think it's prudent to
     // omit any validation
@@ -182,7 +182,7 @@ data class SaveState(
         data class BackgroundColor(val color: ColorAsCss?) : Replacement
         @Serializable
         @SerialName("ChessboardPattern")
-        data class ChessboardPattern(val pattern: domain.settings.ChessboardPattern) : Replacement
+        data class ChessboardPattern(val pattern: domain.model.ChessboardPattern) : Replacement
         @Serializable
         @SerialName("ChessboardColor")
         data class ChessboardColor(val color: ColorAsCss?) : Replacement
