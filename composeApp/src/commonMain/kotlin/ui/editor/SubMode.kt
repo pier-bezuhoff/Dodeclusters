@@ -5,7 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import core.geometry.CircleOrLine
 import core.geometry.Point
 import domain.Ix
-import domain.cluster.LogicalRegion
+import domain.model.LogicalRegion
 import domain.expressions.Expr
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient

@@ -12,12 +12,13 @@ import core.geometry.EPSILON2
 import core.geometry.Line
 import core.geometry.Point
 import domain.PathCache
-import domain.cluster.Arc
-import domain.cluster.ArcPath
-import domain.cluster.LogicalRegion
+import domain.model.Arc
+import domain.model.ArcPath
+import domain.model.LogicalRegion
 import domain.expressions.SagittaRatioParameters
 import domain.expressions.computeCircleBy2PointsAndSagittaRatio
 import domain.expressions.computeCircleBy3Points
+import domain.model.ConcreteArcPath
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow
@@ -516,6 +517,33 @@ fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
     }
 }
 
+fun ConcreteArcPath.toPath(
+    path: Path = Path(),
+): Path {
+    vertices.firstOrNull { it.isFinite }?.let { (x, y) ->
+        path.moveTo(x.toFloat(), y.toFloat())
+    }
+    arcs.forEachIndexed { i, arc ->
+        val end = vertices[(i + 1).mod(vertices.size)]
+        when (val circle = arc.circleOrLine) {
+            is Circle ->
+                path.arcToRad(
+                    rect = circle.toRect(),
+                    startAngleRadians = arc.startAngle.toFloat(),
+                    sweepAngleRadians = arc.sweepAngle.toFloat(),
+                    forceMoveTo = isClosed,
+                )
+            is Line -> if (end.isFinite)
+                path.lineTo(end.x.toFloat(), end.y.toFloat())
+            null -> if (end.isFinite)
+                path.lineTo(end.x.toFloat(), end.y.toFloat())
+        }
+    }
+    if (isClosed)
+        path.close()
+    return path
+}
+
 fun ArcPath.toPath(
     points: List<Point?>,
     path: Path = Path(),
@@ -566,19 +594,19 @@ fun ArcPath.toPath(
                         ) {
                             null -> {}
                             is Line -> {
-                                if (end != Point.CONFORMAL_INFINITY)
+                                if (end != Point.CONFORMAL_INFINITY) {
                                     path.lineTo(end.x.toFloat(), end.y.toFloat())
+                                }
                             }
                             // non-null circle implies start, middle and end are all finite
                             is Circle -> {
                                 val rect = circle.toRect()
                                 val startAngle = circle.calculateStartAngle(start)
                                 val sweepAngle = circle.calculateSweepAngle(start, middle, end)
-                                path.arcToRad(
-                                    rect = rect,
+                                path.addArcRad(
+                                    oval = rect,
                                     startAngleRadians = startAngle.toFloat(),
                                     sweepAngleRadians = sweepAngle.toFloat(),
-                                    forceMoveTo = true, // since it's suppose to be closed
                                 )
                             }
                         }

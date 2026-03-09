@@ -5,6 +5,7 @@ import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.Line
 import domain.expressions.ObjectConstruct
+import domain.model.LogicalRegion
 import kotlinx.serialization.Serializable
 
 // ClusterV2

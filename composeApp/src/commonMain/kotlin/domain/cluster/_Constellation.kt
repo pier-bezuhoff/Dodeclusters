@@ -10,6 +10,7 @@ import domain.expressions.deprecated._CircleConstruct
 import domain.expressions.deprecated._Expression
 import domain.expressions.deprecated._Indexed
 import domain.expressions.deprecated._PointConstruct
+import domain.model.LogicalRegion
 import kotlinx.serialization.Serializable
 
 // aka ClusterV3.1, deprecate for Constellation (that does not employ _Indexed)

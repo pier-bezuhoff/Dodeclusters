@@ -7,7 +7,7 @@ import core.geometry.Circle
 import core.geometry.Line
 import domain.ColorCssSerializer
 import domain.ColorULongSerializer
-import domain.cluster.LogicalRegion
+import domain.model.LogicalRegion
 import jsonStringify
 import kotlinx.serialization.json.Json
 

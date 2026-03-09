@@ -46,10 +46,7 @@ import domain.PartialArgList
 import domain.PointSnapResult
 import domain.ProgressState
 import domain.angleDeg
-import domain.cluster.Arc
-import domain.cluster.ArcPath
 import domain.cluster.Constellation
-import domain.cluster.LogicalRegion
 import domain.compressConstraints
 import domain.entails
 import domain.expressions.BiInversionParameters
@@ -59,7 +56,6 @@ import domain.expressions.ExtrapolationParameters
 import domain.expressions.IncidenceParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
-import domain.expressions.ObjectConstruct
 import domain.expressions.Parameters
 import domain.expressions.RotationParameters
 import domain.expressions.computeCircleBy3Points
@@ -69,24 +65,25 @@ import domain.expressions.computeIntersection
 import domain.expressions.computeLineBy2Points
 import domain.expressions.computeSagittaRatio
 import domain.expressions.copyWithNewParameters
-import domain.expressions.reIndex
 import domain.filterIndices
 import domain.hug
 import domain.io.DdcV1
 import domain.io.DdcV2
-import domain.io.DdcV4
 import domain.io.DdcV5
 import domain.io.SaveRequest
 import domain.io.saveStateAsSvg
 import domain.io.tryParseDdc
+import domain.model.Arc
+import domain.model.ArcPath
 import domain.model.ChangeHistory
+import domain.model.ChessboardPattern
+import domain.model.ConcreteArcPath
 import domain.model.ConformalObjectModel
 import domain.model.ContinuousChange
+import domain.model.LogicalRegion
 import domain.model.SaveState
 import domain.model.Selection
-import domain.reindexingMap
 import domain.settings.BlendModeType
-import domain.model.ChessboardPattern
 import domain.settings.InversionOfControl
 import domain.settings.Settings
 import domain.snapAngle
@@ -130,6 +127,7 @@ class EditorViewModel : ViewModel() {
     val objectModel: ConformalObjectModel = ConformalObjectModel()
     val objects: List<GCircle?> = objectModel.objects
     val arcPaths: List<ArcPath> = objectModel.arcPaths
+    val concreteArcPaths: List<ConcreteArcPath> = objectModel.concreteArcPaths
     // alt name: ghost[ed] objects
     val phantoms: Set<Ix> = objectModel.phantomObjectIndices
     // not in objectModel cuz i want it to be state-backed for nicer caching
@@ -310,6 +308,10 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    fun clearSelection() { // better for autocomplete
+        selection = Selection()
+    }
+
     fun changeCanvasSize(newCanvasSize: IntSize) {
         val prevCenter = Offset(canvasSize.width/2f, canvasSize.height/2f)
         val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
@@ -320,7 +322,6 @@ class EditorViewModel : ViewModel() {
     }
 
     fun saveAsYaml(name: String = DdcV5.DEFAULT_NAME): String {
-        // Q: there seemingly was an issue with saving circleColors on Android
         return YamlEncoding.encodeToString(
             DdcV5.fromSaveState(saveState())
                 .copy(name = name)
@@ -350,7 +351,7 @@ class EditorViewModel : ViewModel() {
             absolute(visibleCenter)
         }
 
-    // MAYBE: make it suspend
+    // i dont want to make it suspend tbh
     fun loadDdc(content: String, filename: String? = null) {
         tryParseDdc(
             content = content,
@@ -474,7 +475,7 @@ class EditorViewModel : ViewModel() {
     private fun loadConstellation(constellation: Constellation) {
         objectLabels = emptyMap()
         regions = emptyList() // important, since draws are async (otherwise can crash)
-        selection = Selection()
+        clearSelection()
         objectModel.loadConstellation(constellation)
         val objectIndices = objects.indices.toSet()
         regions = constellation.parts
@@ -485,57 +486,6 @@ class EditorViewModel : ViewModel() {
         backgroundColor = constellation.backgroundColor
         objectLabels = constellation.objectLabels
         objectModel.invalidate()
-    }
-
-    fun toConstellation(): Constellation {
-        // pruning nulls
-        val deleted = objects.indices.filter { ix ->
-            objects[ix] == null && isFree(ix)
-        }.toSet()
-        // reindexing because of pruning
-        val reindexing = reindexingMap(
-            originalIndices = objects.indices,
-            deletedIndices = deleted
-        )
-//        expressions.scaleLineIncidenceExpressions(UPSCALING_FACTOR)
-        val objectConstructs = objects.indices.mapNotNull { ix ->
-            val e = objectModel.expressions.expressions[ix]
-            if (e == null) {
-                when (val o = objects[ix]) {
-                    is Point -> ObjectConstruct.ConcretePoint(o)
-                    is Line -> ObjectConstruct.ConcreteLine(o)
-                    is Circle -> ObjectConstruct.ConcreteCircle(o)
-                    else -> null
-                }
-            } else {
-                ObjectConstruct.Dynamic(
-                    // since children are auto-deleted with their parent we can !! safely
-                    e.reIndex(reIndexer = { reindexing[it]!! })
-                )
-            }
-        }
-//        expressions.scaleLineIncidenceExpressions(DOWNSCALING_FACTOR)
-        val logicalRegions = regions.mapNotNull { region ->
-            val insides = region.insides.mapNotNull { reindexing[it] }.toSet()
-            val outsides = region.outsides.mapNotNull { reindexing[it] }.toSet()
-            if (insides.isEmpty() && outsides.isEmpty())
-                null
-            else
-                region.copy(insides = insides, outsides = outsides)
-        }
-        return Constellation(
-            objects = objectConstructs,
-            parts = logicalRegions,
-            objectColors = objectModel.objectColors.mapNotNull { (ix, color) ->
-                reindexing[ix]?.let { it to color }
-            }.toMap(),
-            objectLabels = objectLabels.mapNotNull { (ix, label) ->
-                reindexing[ix]?.let { it to label }
-            }.toMap(),
-            backgroundColor = backgroundColor,
-            // NOTE: we keep track of phantoms EVEN when they are shown
-            phantoms = objectModel.phantomObjectIndices.mapNotNull { reindexing[it] },
-        )
     }
 
     /** Pin current state to later record delta from it */
@@ -566,7 +516,7 @@ class EditorViewModel : ViewModel() {
                 is SubMode.RotateStereographicSphere -> switchToCategory(Category.Drag)
                 else -> switchToMode(mode) // clears up stuff
             }
-            selection = Selection()
+            clearSelection()
             val state = saveState()
             val newState = history.undo(state)
             loadState(newState)
@@ -590,7 +540,7 @@ class EditorViewModel : ViewModel() {
         submode = null
         objectLabels = emptyMap()
         regions = emptyList() // important, since draws are async (otherwise can crash)
-        selection = Selection()
+        clearSelection()
         objectModel.loadState(state)
         regions = state.regions
         backgroundColor = state.backgroundColor
@@ -639,7 +589,7 @@ class EditorViewModel : ViewModel() {
                 )
             }
         } else { // all nulls
-            selection = Selection()
+            clearSelection()
         }
         objectModel.invalidate()
         val indices = newIndices.toSet()
@@ -888,12 +838,19 @@ class EditorViewModel : ViewModel() {
         return oldSize until regions.size
     }
 
-    fun deleteSelectedPointsAndCircles() {
-        val toBeDeleted = objectSelection
-        if (showCircles && toBeDeleted.isNotEmpty() && mode.isSelectingCircles()) {
+    fun deleteSelection() {
+        val toBeDeleted = selection.objects
+        val arcPathsToBeDeleted = selection.arcPaths
+        if ((showCircles && toBeDeleted.isNotEmpty() || arcPathsToBeDeleted.isNotEmpty()) &&
+            mode.isSelectingCircles()
+        ) {
             pinStateForHistory()
-            selection = Selection()
+            clearSelection()
+            for (arcPathIndex in arcPathsToBeDeleted) {
+                objectModel.removeArcPathAt(arcPathIndex)
+            }
             deleteObjectsWithDependenciesColorsAndRegions(toBeDeleted)
+            history.accumulateChangedLocations(selection = true, arcPaths = true)
             history.recordAccumulatedChanges()
         }
     }
@@ -948,6 +905,7 @@ class EditorViewModel : ViewModel() {
             objectColorIndices = toBeDeleted,
             objectLabelIndices = toBeDeleted,
             expressionIndices = toBeDeleted,
+            arcPaths = true,
             selection = true,
         )
     }
@@ -963,7 +921,7 @@ class EditorViewModel : ViewModel() {
     fun switchToMode(newMode: Mode) {
         // NOTE: these altering shortcuts are unused for now so that they don't confuse category-expand buttons
         if (objectSelection.size > 1 && newMode == SelectionMode.Drag) {
-            selection = Selection()
+            clearSelection()
         }
         showPromptToSetActiveSelectionAsToolArg = false
         if (newMode is ToolMode) {
@@ -1307,13 +1265,13 @@ class EditorViewModel : ViewModel() {
 
     fun activateRectangularSelect() {
         switchToMode(SelectionMode.Multiselect)
-        selection = Selection()
+        clearSelection()
         submode = SubMode.RectangularSelect()
     }
 
     fun activateFlowSelect() {
         switchToMode(SelectionMode.Multiselect)
-        selection = Selection()
+        clearSelection()
         submode = SubMode.FlowSelect()
     }
 
@@ -1325,7 +1283,7 @@ class EditorViewModel : ViewModel() {
     fun forceSelectAll() {
         if (!mode.isSelectingCircles() || !showCircles) { // more intuitive behavior
             // forces to select all instead of toggling
-            selection = Selection()
+            clearSelection()
         }
         switchToCategory(Category.Multiselect)
         toggleSelectAll()
@@ -1352,7 +1310,7 @@ class EditorViewModel : ViewModel() {
         showCircles = !showCircles
         if (!showCircles && mode is ToolMode)
             switchToMode(SelectionMode.Drag)
-        selection = Selection()
+        clearSelection()
         history.accumulateChangedLocations(selection = true)
     }
 
@@ -1509,7 +1467,7 @@ class EditorViewModel : ViewModel() {
     fun cancelSelectionAsToolArgPrompt() {
         if (showPromptToSetActiveSelectionAsToolArg) {
             showPromptToSetActiveSelectionAsToolArg = false
-            selection = Selection()
+            clearSelection()
             history.accumulateChangedLocations(selection = true)
         }
     }
@@ -1768,7 +1726,7 @@ class EditorViewModel : ViewModel() {
                     } ?: adjustables
                 } else adjustables
             submode = SubMode.ExprAdjustment(allAdjustables)
-            selection = Selection() // clear selection to hide selection HUD
+            clearSelection() // clear selection to hide selection HUD
             history.accumulateChangedLocations(selection = true)
         }
     }
@@ -2167,7 +2125,7 @@ class EditorViewModel : ViewModel() {
                                     )
                                     highlightSelectionParents()
                                 } else {
-                                    selection = Selection()
+                                    clearSelection()
                                 }
                             } else {
                                 println("existing bound of $largestInnerRegion")
@@ -2178,7 +2136,7 @@ class EditorViewModel : ViewModel() {
                                     )
                                     highlightSelectionParents()
                                 } else {
-                                    selection = Selection()
+                                    clearSelection()
                                 }
                             }
                         }
@@ -2836,7 +2794,7 @@ class EditorViewModel : ViewModel() {
         if (openedDialog == null) {
             when (action) {
                 KeyboardAction.SELECT_ALL -> forceSelectAll()
-                KeyboardAction.DELETE -> deleteSelectedPointsAndCircles()
+                KeyboardAction.DELETE -> deleteSelection()
                 KeyboardAction.PASTE -> duplicateSelectedCircles()
                 KeyboardAction.ZOOM_IN -> scaleSelection(KEYBOARD_ZOOM_INCREMENT)
                 KeyboardAction.ZOOM_OUT -> scaleSelection(1/KEYBOARD_ZOOM_INCREMENT)
@@ -3077,7 +3035,7 @@ class EditorViewModel : ViewModel() {
                             SelectionMode.Multiselect -> {
                                 if (objectSelection.isNotEmpty()) {
                                     submode = null
-                                    selection = Selection()
+                                    clearSelection()
                                 } else {
                                     switchToCategory(Category.Drag)
                                 }
@@ -3087,7 +3045,7 @@ class EditorViewModel : ViewModel() {
                             }
                             else -> {
                                 submode = null
-                                selection = Selection()
+                                clearSelection()
                             }
                         }
                     }
@@ -3104,7 +3062,7 @@ class EditorViewModel : ViewModel() {
                     outputs,
                     circleAnimationInit = { null },
                 )
-                selection = Selection()
+                clearSelection()
             }
             else -> {}
         }
@@ -3727,7 +3685,7 @@ class EditorViewModel : ViewModel() {
             Tool.Duplicate -> duplicateSelectedCircles()
             Tool.PickCircleColor -> openedDialog = DialogType.CIRCLE_COLOR_PICKER
             Tool.SetLabel -> openedDialog = DialogType.LABEL_INPUT
-            Tool.Delete -> deleteSelectedPointsAndCircles()
+            Tool.Delete -> deleteSelection()
             is Tool.AppliedColor -> setNewRegionColorToSelectedColorSplash(tool.color)
             is Tool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
             is Tool.CustomAction -> {} // custom, platform-dependent handlers for open/save
@@ -4037,7 +3995,7 @@ class EditorViewModel : ViewModel() {
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
         const val FAST_CENTERED_CIRCLE = true
-        const val ENABLE_ANGLE_SNAPPING = true
+        const val ENABLE_ANGLE_SNAPPING = false //true
         const val ENABLE_TANGENT_SNAPPING = false
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only

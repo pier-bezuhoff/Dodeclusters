@@ -84,18 +84,26 @@ sealed class ObjectModel<R : Any> {
         propertyInvalidationsState.value += 1
     }
 
+    /** called each time an object changes */
+    protected open fun objectChangedAt(ix: Ix) {
+        pathCache.invalidateObjectPathAt(ix)
+    }
+
+    /** called each time an object is removed */
+    protected open fun objectRemovedAt(ix: Ix) {}
+
     /** Don't forget to [invalidatePositions] post factum */
     private fun setObject(ix: Ix, newObject: R?) {
         objects[ix] = newObject
         downscaledObjects[ix] = newObject?.downscale()
-        pathCache.invalidateObjectPathAt(ix)
+        objectChangedAt(ix)
     }
 
     /** Don't forget to [invalidatePositions] post factum */
     fun setDownscaledObject(ix: Ix, newDownscaledObject: R?) {
         objects[ix] = newDownscaledObject?.upscale()
         downscaledObjects[ix] = newDownscaledObject
-        pathCache.invalidateObjectPathAt(ix)
+        objectChangedAt(ix)
     }
 
     /** Don't forget to [invalidate] post factum */
@@ -139,6 +147,7 @@ sealed class ObjectModel<R : Any> {
         objectColors.remove(ix)
         phantomObjectIndices.remove(ix)
         pathCache.removeObjectAt(ix)
+        objectRemovedAt(ix)
     }
 
     /** Don't forget to [invalidate] post factum */
@@ -161,7 +170,7 @@ sealed class ObjectModel<R : Any> {
     fun syncObjects(indices: Iterable<Ix> = downscaledObjects.indices) {
         for (ix in indices) {
             objects[ix] = downscaledObjects[ix]?.upscale()
-            pathCache.invalidateObjectPathAt(ix)
+            objectChangedAt(ix)
         }
     }
 
@@ -169,7 +178,7 @@ sealed class ObjectModel<R : Any> {
     fun syncDownscaledObjects(indices: Iterable<Ix> = objects.indices) {
         for (ix in indices) {
             downscaledObjects[ix] = objects[ix]?.downscale()
-            pathCache.invalidateObjectPathAt(ix)
+            objectChangedAt(ix)
         }
     }
 

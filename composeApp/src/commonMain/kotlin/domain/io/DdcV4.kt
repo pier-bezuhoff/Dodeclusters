@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 import domain.ColorAsCss
 import domain.Ix
 import domain.cluster.Constellation
-import domain.cluster.LogicalRegion
+import domain.model.LogicalRegion
 import domain.expressions.ObjectConstruct
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

@@ -10,8 +10,8 @@ import com.charleskorn.kaml.YamlConfiguration
 import core.geometry.GCircle
 import domain.ColorAsCss
 import domain.Ix
-import domain.cluster.ArcPath
-import domain.cluster.LogicalRegion
+import domain.model.ArcPath
+import domain.model.LogicalRegion
 import domain.expressions.ConformalExprOutput
 import domain.model.SaveState
 import domain.model.ChessboardPattern

@@ -11,6 +11,7 @@ import domain.expressions.ExprOutput
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.ObjectConstruct
 import domain.expressions.reIndex
+import domain.model.LogicalRegion
 import kotlinx.serialization.Serializable
 
 // aka ClusterV3.2

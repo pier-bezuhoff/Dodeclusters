@@ -83,10 +83,8 @@ data class Circle(
         val vx = x1 - x
         val vy = y1 - y
         val vLength = hypot(vx, vy)
-        return Point(
-            x + (vx / vLength) * radius,
-            y + (vy / vLength) * radius
-        )
+        val k = radius/vLength
+        return Point(x + k*vx, y + k*vy)
     }
 
     override fun distanceFrom(point: Offset): Double =

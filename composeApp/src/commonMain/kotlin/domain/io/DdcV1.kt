@@ -3,6 +3,7 @@ package domain.io
 import androidx.compose.ui.graphics.Color
 import domain.ColorCssSerializer
 import domain.cluster.Cluster
+import domain.model.LogicalRegion
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -28,7 +29,7 @@ data class DdcV1(
             val indices: List<Int>,
             val circles: List<core.geometry.Circle>,
             /** circle indices used parts shall be Ddc-global circle indices, the one consistent with cluster.indices */
-            val parts: List<domain.cluster.LogicalRegion>,
+            val parts: List<LogicalRegion>,
             val filled: Boolean = DdcV2.DEFAULT_CLUSTER_FILLED,
             /** circle indices used shall be Ddc-global circle indices, the one consistent with cluster.indices and circle.index */
             val rule: List<Int> = DdcV2.DEFAULT_CLUSTER_RULE,

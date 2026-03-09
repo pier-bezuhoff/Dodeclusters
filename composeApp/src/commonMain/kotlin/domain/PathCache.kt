@@ -79,6 +79,21 @@ class PathCache {
         }
     }
 
+    fun updateDependent(dependentIndex: Int, deps: Set<Ix>) {
+        for (objectIndex in dependencies.keys) {
+            val dependents = dependencies[objectIndex]
+            if (objectIndex in deps) {
+                if (dependents == null)
+                    dependencies[objectIndex] = setOf(dependentIndex)
+                else if (dependentIndex !in dependents)
+                    dependencies[objectIndex] = dependents + dependentIndex
+            } else if (dependents != null) {
+                dependencies[objectIndex] = dependents - dependentIndex
+            }
+        }
+        dependentPathValidity[dependentIndex] = false
+    }
+
     fun removeDependent(dependentIndex: Int) {
         dependentPaths.removeAt(dependentIndex)
         dependentPathValidity =

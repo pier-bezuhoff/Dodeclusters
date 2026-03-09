@@ -37,6 +37,9 @@ data class Point(
         ) { "Invalid Point($x, $y)" }
     }
 
+    val isFinite: Boolean get() =
+        x.isFinite() && y.isFinite()
+
     fun toOffset(): Offset =
         if (this == CONFORMAL_INFINITY)
             Offset.Infinite

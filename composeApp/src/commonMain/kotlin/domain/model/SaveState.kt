@@ -8,15 +8,11 @@ import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
 import domain.SerializableOffset
-import domain.cluster.Arc
-import domain.cluster.ArcPath
-import domain.cluster.LogicalRegion
 import domain.expressions.ConformalExprOutput
 import domain.expressions.Expr
 import domain.expressions.ExprOutput
 import domain.expressions.LoxodromicMotionParameters
 import domain.reindexingMap
-import domain.model.ChessboardPattern
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -548,27 +544,31 @@ data class SaveState(
                 .mapNotNull { (ix, expression) ->
                     reindexing[ix]?.let { ix to expression }
                 }.toMap(),
-            arcPaths = arcPaths.map { arcPath ->
+            arcPaths = arcPaths.mapNotNull { arcPath ->
                 when (arcPath) {
                     // Q: what if a vertex/arc-middle is cleared?
                     is ArcPath.Closed -> arcPath.copy(
-                        vertices = arcPath.vertices.map { reindexing[it]!! },
+                        vertices = arcPath.vertices.map {
+                            reindexing[it] ?: return@mapNotNull null
+                        },
                         arcs = arcPath.arcs.map { arc ->
                             when (arc) {
                                 is Arc.By2Points -> arc
                                 is Arc.By3Points -> arc.copy(
-                                    reindexing[arc.middlePointIndex]!!
+                                    reindexing[arc.middlePointIndex] ?: return@mapNotNull null
                                 )
                             }
                         }
                     )
                     is ArcPath.Open -> arcPath.copy(
-                        vertices = arcPath.vertices.map { reindexing[it]!! },
+                        vertices = arcPath.vertices.map {
+                            reindexing[it] ?: return@mapNotNull null
+                        },
                         arcs = arcPath.arcs.map { arc ->
                             when (arc) {
                                 is Arc.By2Points -> arc
                                 is Arc.By3Points -> arc.copy(
-                                    reindexing[arc.middlePointIndex]!!
+                                    reindexing[arc.middlePointIndex] ?: return@mapNotNull null
                                 )
                             }
                         }

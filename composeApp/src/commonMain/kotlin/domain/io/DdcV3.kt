@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import domain.ColorAsCss
 import domain.Ix
-import domain.cluster.LogicalRegion
+import domain.model.LogicalRegion
 import domain.cluster._Constellation
 import domain.expressions.deprecated._CircleConstruct
 import domain.expressions.deprecated._PointConstruct

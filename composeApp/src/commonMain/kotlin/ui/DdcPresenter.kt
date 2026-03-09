@@ -8,7 +8,7 @@ import androidx.compose.ui.graphics.PathOperation
 import com.github.ajalt.colormath.model.RGB
 import com.github.ajalt.colormath.transform.interpolate
 import domain.Ix
-import domain.cluster.LogicalRegion
+import domain.model.LogicalRegion
 import domain.io.DdcV2
 import kotlin.math.exp
 

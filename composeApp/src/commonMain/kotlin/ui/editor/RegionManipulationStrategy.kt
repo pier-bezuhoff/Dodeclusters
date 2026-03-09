@@ -6,7 +6,7 @@ import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_erase
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_replace
 import domain.Ix
-import domain.cluster.LogicalRegion
+import domain.model.LogicalRegion
 import domain.filterIndices
 import domain.updated
 import domain.withoutElementAt

@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
 import domain.ColorCssSerializer
 import domain.io.DdcV2
+import domain.model.LogicalRegion
 import kotlinx.serialization.Serializable
 
 /** old version of Cluster */

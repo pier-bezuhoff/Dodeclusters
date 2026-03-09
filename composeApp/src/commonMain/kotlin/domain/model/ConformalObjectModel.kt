@@ -8,7 +8,6 @@ import core.geometry.Line
 import core.geometry.Point
 import core.geometry.scaled00
 import domain.Ix
-import domain.cluster.ArcPath
 import domain.cluster.Constellation
 import domain.expressions.ConformalExpressions
 import domain.expressions.ObjectConstruct
@@ -26,6 +25,8 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
 
     private val _arcPaths: MutableList<ArcPath> = mutableListOf()
     val arcPaths: List<ArcPath> = _arcPaths
+    private val _concreteArcPaths: MutableList<ConcreteArcPath> = mutableListOf()
+    val concreteArcPaths: List<ConcreteArcPath> = _concreteArcPaths
 
     override var expressions: ConformalExpressions =
         ConformalExpressions(emptyMap(), mutableListOf())
@@ -39,14 +40,46 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
 
     fun addArcPath(arcPath: ArcPath) {
         _arcPaths.add(arcPath)
+        _concreteArcPaths.add(arcPath.toConcrete(objects))
         pathCache.addDependent(arcPath.dependencies)
-        invalidate()
+    }
+
+    fun updateArcPath(arcPathIndex: Int, arcPath: ArcPath) {
+        _arcPaths[arcPathIndex] = arcPath
+        _concreteArcPaths[arcPathIndex] = arcPath.toConcrete(objects)
+        pathCache.updateDependent(arcPathIndex, arcPath.dependencies)
     }
 
     fun removeArcPathAt(arcPathIndex: Int) {
         _arcPaths.removeAt(arcPathIndex)
+        _concreteArcPaths.removeAt(arcPathIndex)
         pathCache.removeDependent(arcPathIndex)
-        invalidate()
+    }
+
+    override fun objectChangedAt(ix: Ix) {
+        // a bit iffy to rely on path cache dependency mechanism
+        val dependents = pathCache.dependencies[ix]
+        super.objectChangedAt(ix)
+        if (dependents != null) {
+            for (arcPathIndex in dependents) {
+                _concreteArcPaths[arcPathIndex] = arcPaths[arcPathIndex].toConcrete(objects)
+            }
+        }
+    }
+
+    override fun objectRemovedAt(ix: Ix) {
+        val dependents = pathCache.dependencies[ix]
+        super.objectRemovedAt(ix)
+        if (dependents != null) {
+            for (arcPathIndex in dependents) {
+                val updatedArcPath = arcPaths[arcPathIndex].withoutPointsAt(setOf(ix))
+                if (updatedArcPath == null) {
+                    removeArcPathAt(arcPathIndex)
+                } else {
+                    updateArcPath(arcPathIndex, updatedArcPath)
+                }
+            }
+        }
     }
 
     // NOTE: handling of incident points on non-glued dependent objects is off
@@ -126,6 +159,7 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
 
     override fun clearObjects() {
         _arcPaths.clear()
+        _concreteArcPaths.clear()
         super.clearObjects()
     }
 
@@ -148,8 +182,7 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
             }
         }
         for (arcPath in state.arcPaths) {
-            _arcPaths.add(arcPath)
-            pathCache.addDependent(arcPath.dependencies)
+            addArcPath(arcPath)
         }
     }
 
