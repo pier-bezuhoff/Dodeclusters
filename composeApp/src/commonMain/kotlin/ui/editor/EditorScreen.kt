@@ -262,7 +262,7 @@ fun EditorScreen(
     }
     val extendedColorScheme = MaterialTheme.extendedColorScheme
     when (viewModel.openedDialog) {
-        DialogType.REGION_COLOR_PICKER -> {
+        DialogType.REGION_FILL_COLOR_PICKER -> {
             ColorPickerDialog(
                 parameters = viewModel.colorPickerParameters.copy(
                     currentColor = viewModel.regionColor,
@@ -273,8 +273,8 @@ fun EditorScreen(
                 dialogActions = dialogActions,
             )
         }
-        DialogType.CIRCLE_COLOR_PICKER -> {
-            val initialColor = viewModel.getMostCommonCircleColorInSelection()
+        DialogType.BORDER_COLOR_PICKER -> {
+            val initialColor = viewModel.getMostCommonBorderColorInSelection()
                 ?: if (viewModel.objectSelection.all { viewModel.objects[it] is ImaginaryCircle })
                     DodeclustersColors.fadedRed.copy(alpha = 1f) // imaginary circle
                 else
@@ -284,10 +284,13 @@ fun EditorScreen(
                     currentColor = initialColor,
                     usedColors = viewModel.getColorsByMostUsed(),
                 ),
-                onCancel = viewModel::dismissCircleColorPicker,
-                onConfirm = viewModel::concludeCircleColorPicker,
+                onCancel = viewModel::dismissBorderColorPicker,
+                onConfirm = viewModel::concludeBorderColorPicker,
                 dialogActions = dialogActions,
             )
+        }
+        DialogType.FILL_COLOR_PICKER -> {
+            TODO()
         }
         DialogType.BACKGROUND_COLOR_PICKER -> {
             val initialColor = viewModel.backgroundColor ?: MaterialTheme.colorScheme.background
@@ -523,7 +526,7 @@ fun preloadIcons() {
         .plus(
             listOf(
                 Tool.Expand, Tool.Shrink,
-                Tool.PickCircleColor,
+                Tool.BorderColor,
                 Tool.MarkAsPhantoms,
                 Tool.SwapDirection,
                 Tool.Detach,

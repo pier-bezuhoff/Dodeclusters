@@ -76,9 +76,9 @@ data class Circle(
 
     override fun project(point: Point): Point {
         val (x1, y1) = point
-        if (x == x1 && y == y1 || point == Point.CONFORMAL_INFINITY) {
+        if (x == x1 && y == y1 || point.isInfinite) {
             println("WARNING: bad projection at Circle.project")
-            return order2point(0.0)
+            return order2point(ORDER_OF_CONFORMAL_INFINITY)
         }
         val vx = x1 - x
         val vy = y1 - y
@@ -91,7 +91,7 @@ data class Circle(
         abs((point - center).getDistance() - radius)
 
     override fun distanceFrom(point: Point): Double =
-        if (point == Point.CONFORMAL_INFINITY)
+        if (point.isInfinite)
             Double.POSITIVE_INFINITY
         else abs(hypot(point.x - x, point.y - y) - radius)
 
@@ -114,7 +114,7 @@ data class Circle(
     }
 
     override fun calculateLocationEpsilon(point: Point): RegionPointLocation {
-        if (point == Point.CONFORMAL_INFINITY) {
+        if (point.isInfinite) {
             return if (isCCW) RegionPointLocation.OUT else RegionPointLocation.IN
         }
         val distance = hypot(point.x - x, point.y - y)
@@ -129,6 +129,7 @@ data class Circle(
     }
 
     override fun hasInsideEpsilon(point: Point): Boolean {
+        // works for infinity
         val distance = hypot(point.x - x, point.y - y)
         return abs(radius - distance) >= EPSILON && distance < radius == isCCW
     }
@@ -145,6 +146,7 @@ data class Circle(
     }
 
     override fun hasOutsideEpsilon(point: Point): Boolean {
+        // works for infinity
         val distance = hypot(point.x - x, point.y - y)
         return abs(radius - distance) >= EPSILON && distance < radius != isCCW
     }
@@ -156,12 +158,15 @@ data class Circle(
     }
 
     override fun point2angle(point: Point): Float {
-        require(point != Point.CONFORMAL_INFINITY && point != centerPoint)
+        if (point.isInfinite || point == centerPoint)
+            return ORDER_OF_CONFORMAL_INFINITY.toFloat()
         return atan2(-point.y + y, point.x - x).degrees
     }
 
     /** CCW order in [-[PI]; +[PI]] starting from the East: ENWS */
     override fun point2order(point: Point): Double {
+        if (point.isInfinite)
+            return ORDER_OF_CONFORMAL_INFINITY
         // NOTE: atan2 uses CCW y-top, x-right coordinates
         //  so we negate y for CCW direction
         val order = atan2(-point.y + y, point.x - x)
@@ -298,7 +303,7 @@ data class Circle(
         val center2pointX = x - point.x
         val center2pointY = y - point.y
         val center2point = hypot(center2pointX, center2pointY)
-        if (center2point == 0.0)
+        if (center2point == 0.0 || center2point.isInfinite())
             return Line(0.0, 1.0, y + point.y)
         val sign = if (isCCW) +1 else -1 // if the circle is CCW, it is to the left of the tangent
         val a = sign*center2pointX/center2point // normal
@@ -438,6 +443,8 @@ data class Circle(
 
     /** From the East, clockwise, in `[0; 2*PI]` */
     fun calculateStartAngle(start: Point): Double {
+        if (start.isInfinite)
+            return 0.0
         val dx = x - start.x
         val dy = y - start.y
 //        val eastX = x + radius
@@ -448,6 +455,8 @@ data class Circle(
 
     /** Clockwise, `(-2*PI; 2*PI)` */
     fun calculateSweepAngle(start: Point, midpoint: Point, end: Point): Double {
+        if (start.isInfinite || midpoint.isInfinite || end.isInfinite)
+            return 0.0
         val c = centerPoint
         val angle = calculateAngle(c, start, end)
         val midAngle = calculateAngle(c, start, midpoint)
@@ -462,6 +471,8 @@ data class Circle(
 
     /** Clockwise, `(-2*PI; 2*PI)`, takes into account this circle's orientation ([isCCW]) */
     fun calculateSweepAngle(start: Point, end: Point): Double {
+        if (start.isInfinite || end.isInfinite)
+            return 0.0
         val c = centerPoint
         val angle = calculateAngle(c, start, end)
         val angle1 = (angle + TAU) % TAU // in [0; TAU)
@@ -473,6 +484,9 @@ data class Circle(
     }
 
     companion object {
+        /** `Circle.point2order(Point.CONFORMAL_INFINITY)` */
+        const val ORDER_OF_CONFORMAL_INFINITY = 0.0
+
         /** NOTE: cmp with CircleOrLine.by3Points and GeneralizedCircle.perp3 */
         fun by3Points(p1: Offset, p2: Offset, p3: Offset): Circle {
             // reference: https://math.stackexchange.com/a/3503338

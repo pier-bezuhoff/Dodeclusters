@@ -223,17 +223,11 @@ fun BoxScope.SelectionContextActions(
                 )
             }
             SimpleToolButtonWithTooltip(
-                Tool.PickCircleColor,
+                Tool.BorderColor,
                 buttonModifier,
                 contentColor = objectColor,
                 onClick = toolAction
             )
-            // TMP
-//            SimpleToolButtonWithTooltip(
-//                Tool.SetLabel,
-//                buttonModifier,
-//                onClick = toolAction
-//            )
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
                 painterResource(Tool.MarkAsPhantoms.disabledIcon),
@@ -272,7 +266,6 @@ fun BoxScope.SelectionContextActions(
     }
 }
 
-// MAYBE: add scale/rotation handles if multiple are selected
 // only points
 @Composable
 fun BoxScope.PointContextActions(
@@ -305,7 +298,7 @@ fun BoxScope.PointContextActions(
                 )
             }
             SimpleToolButtonWithTooltip(
-                Tool.PickCircleColor,
+                Tool.BorderColor,
                 buttonModifier,
                 contentColor = objectColor,
                 onClick = toolAction
@@ -349,7 +342,9 @@ fun BoxScope.PointContextActions(
 }
 
 @Composable
-fun BoxScope.ArcPathContextActions() {
+fun BoxScope.ArcPathContextActions(
+    toolAction: (Tool) -> Unit,
+) {
     // scale/rotate handles
     // border color
     // if closed: fill color
@@ -357,6 +352,33 @@ fun BoxScope.ArcPathContextActions() {
     // layer up/down
     // duplicate
     // delete
+    val buttonModifier = Modifier
+        .padding(8.dp)
+        .size(36.dp)
+    Surface(
+        Modifier
+            .align(Alignment.CenterEnd)
+            .padding(end = 8.dp)
+        ,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+        ) {
+            SimpleToolButtonWithTooltip(
+                Tool.Duplicate,
+                buttonModifier,
+                onClick = toolAction
+            )
+            SimpleToolButtonWithTooltip(
+                Tool.Delete,
+                buttonModifier,
+                onClick = toolAction
+            )
+        }
+    }
 }
 
 @Composable

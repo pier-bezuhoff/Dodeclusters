@@ -64,20 +64,17 @@ import core.geometry.CircleOrLine
 import core.geometry.GCircle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
-import domain.PartialArcPath
 import core.geometry.Point
 import core.geometry.fromCorners
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Arg
-import domain.model.ChessboardPattern
 import domain.Ix
+import domain.PartialArcPath
 import domain.PartialArgList
 import domain.PathCache
 import domain.angleDeg
-import domain.model.ArcPath
-import domain.model.LogicalRegion
 import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
@@ -86,7 +83,9 @@ import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeLineBy2Points
 import domain.hug
+import domain.model.ChessboardPattern
 import domain.model.ConcreteArcPath
+import domain.model.LogicalRegion
 import domain.rotateBy
 import domain.rotateByAround
 import getPlatform
@@ -236,7 +235,7 @@ fun BoxScope.EditorCanvas(
                 scaleSliderPercentage = viewModel.scaleSliderPercentage,
                 rotationHandleAngle = viewModel.rotationHandleAngle,
                 objectColor =
-                    viewModel.getMostCommonCircleColorInSelection()
+                    viewModel.getMostCommonBorderColorInSelection()
                         ?: if (viewModel.objectSelection.all { viewModel.objects[it] is ImaginaryCircle })
                             imaginaryCircleColor
                         else
@@ -254,14 +253,18 @@ fun BoxScope.EditorCanvas(
                 onRotateFinished = viewModel::finishHandleRotation,
             )
         } else if (viewModel.pointSelectionIsActive) {
-            PointContextActions( // only points are selected
+            PointContextActions(
+                // only points are selected
                 objectColor =
-                    viewModel.getMostCommonCircleColorInSelection() ?: freePointColor
-                ,
+                    viewModel.getMostCommonBorderColorInSelection() ?: freePointColor,
                 showAdjustExprButton = viewModel.showAdjustExprButton,
                 isLocked = viewModel.selectionIsLocked,
                 toolAction = viewModel::toolAction,
                 toolPredicate = viewModel::toolPredicate,
+            )
+        } else if (viewModel.arcPathSelectionIsActive) {
+            ArcPathContextActions(
+                toolAction = viewModel::toolAction,
             )
         } else if (
             viewModel.mode == ToolMode.ARC_PATH &&

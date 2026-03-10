@@ -99,7 +99,7 @@ data class Line(
 
     /** Project Point(x, y) down onto this line */
     override fun project(point: Point): Point {
-        if (point == Point.CONFORMAL_INFINITY)
+        if (point.isInfinite)
             return point
         val (x, y) = point
         val t = b*x - a*y
@@ -114,7 +114,7 @@ data class Line(
         abs(a*point.x + b*point.y + c)/norm
 
     override fun distanceFrom(point: Point): Double =
-        if (point == Point.CONFORMAL_INFINITY) 0.0
+        if (point.isInfinite) 0.0
         else abs(a*point.x + b*point.y + c)/norm
 
     override fun calculateLocation(point: Offset): RegionPointLocation {
@@ -125,7 +125,7 @@ data class Line(
     }
 
     override fun calculateLocationEpsilon(point: Point): RegionPointLocation {
-        if (point == Point.CONFORMAL_INFINITY)
+        if (point.isInfinite)
             return RegionPointLocation.BORDERING
         val t = (a*point.x + b*point.y + c)/norm
         return if (abs(t) < EPSILON)
@@ -138,7 +138,7 @@ data class Line(
 
     // conf_inf < projection along line direction; order 0 = project(0,0)
     override fun point2order(point: Point): Double {
-        return if (point == Point.CONFORMAL_INFINITY)
+        return if (point.isInfinite)
             ORDER_OF_CONFORMAL_INFINITY
         else
             point.x*directionX + point.y*directionY

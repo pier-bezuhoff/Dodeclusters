@@ -149,8 +149,8 @@
     <string name="shrink_description">Уменьшить на 10%</string>
     <string name="adjust_expr_name">Настроить параметры формулы</string>
     <string name="adjust_expr_description">Поменять параметры формулы выделенных объектов</string>
-    <string name="pick_circle_color_name">Цвет окружности</string>
-    <string name="pick_circle_color_description">Выбор цвета (границы) окружности</string>
+    <string name="border_color_description">Выбор цвета границы</string>
+    <string name="fill_color_description">Выбор цвета заливки</string>
     <string name="set_label_name">Добавить подпись</string>
     <string name="set_label_description">Добавить подпись</string>
     <string name="mark_as_phantoms_name">Фантомность</string>

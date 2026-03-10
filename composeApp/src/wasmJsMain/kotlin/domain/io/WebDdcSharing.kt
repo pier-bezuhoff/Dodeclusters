@@ -82,9 +82,7 @@ object WebDdcSharing : DdcSharing {
             val response = promise.await<Response?>()
             if (response?.ok != true)
                 return NO_RESPONSE
-            val json = response.json().await<JsAny?>()
-            if (json == null)
-                return NO_RESPONSE_JSON
+            val json = response.json().await<JsAny?>() ?: return NO_RESPONSE_JSON
             val content = json.getStringProperty("content")
             if (content == null) {
                 println("no .content in ${jsonStringify(json)}")
@@ -106,9 +104,7 @@ object WebDdcSharing : DdcSharing {
             val response = promise.await<Response?>()
             if (response?.ok != true)
                 return NO_RESPONSE
-            val json = response.json().await<JsAny?>()
-            if (json == null)
-                return NO_RESPONSE_JSON
+            val json = response.json().await<JsAny?>() ?: return NO_RESPONSE_JSON
             val userId = json.getStringProperty("user")
             if (userId == null) {
                 println("no .user in ${jsonStringify(json)}")
@@ -137,9 +133,7 @@ object WebDdcSharing : DdcSharing {
             val response = promise.await<Response?>()
             if (response?.ok != true)
                 return NO_RESPONSE
-            val json = response.json().await<JsAny?>()
-            if (json == null)
-                return NO_RESPONSE_JSON
+            val json = response.json().await<JsAny?>() ?: return NO_RESPONSE_JSON
             val sharedId = json.getStringProperty("id")
             if (sharedId == null) {
                 println("no .id in ${jsonStringify(json)}")
@@ -166,9 +160,7 @@ object WebDdcSharing : DdcSharing {
             val response = promise.await<Response?>()
             if (response?.ok != true)
                 return NO_RESPONSE
-            val json = response.json().await<JsAny?>()
-            if (json == null)
-                return NO_RESPONSE_JSON
+            val json = response.json().await<JsAny?>() ?: return NO_RESPONSE_JSON
             val sharedId = json.getStringProperty("id")
             if (sharedId == null) {
                 println("no .id in ${jsonStringify(json)}")

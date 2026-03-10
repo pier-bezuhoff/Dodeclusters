@@ -21,6 +21,7 @@ import dodeclusters.composeapp.generated.resources.bidirectional_spiral
 import dodeclusters.composeapp.generated.resources.bidirectional_spiral_description
 import dodeclusters.composeapp.generated.resources.bidirectional_spiral_disabled_description
 import dodeclusters.composeapp.generated.resources.bidirectional_spiral_name
+import dodeclusters.composeapp.generated.resources.border_color_description
 import dodeclusters.composeapp.generated.resources.change_background_description
 import dodeclusters.composeapp.generated.resources.change_background_name
 import dodeclusters.composeapp.generated.resources.chessboard
@@ -79,6 +80,7 @@ import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_alter
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_description
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_disabled_description
 import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_name
+import dodeclusters.composeapp.generated.resources.fill_color_description
 import dodeclusters.composeapp.generated.resources.fill_region
 import dodeclusters.composeapp.generated.resources.fill_swiped_circles
 import dodeclusters.composeapp.generated.resources.filled_circle
@@ -124,13 +126,12 @@ import dodeclusters.composeapp.generated.resources.open_file
 import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.open_region
 import dodeclusters.composeapp.generated.resources.paint_splash
+import dodeclusters.composeapp.generated.resources.paint_splash_border
 import dodeclusters.composeapp.generated.resources.palette
 import dodeclusters.composeapp.generated.resources.palette_description
 import dodeclusters.composeapp.generated.resources.palette_name
 import dodeclusters.composeapp.generated.resources.phantom
 import dodeclusters.composeapp.generated.resources.phantom_crossed
-import dodeclusters.composeapp.generated.resources.pick_circle_color_description
-import dodeclusters.composeapp.generated.resources.pick_circle_color_name
 import dodeclusters.composeapp.generated.resources.png_export_name
 import dodeclusters.composeapp.generated.resources.polarity_by_circle_and_line_or_point_arg_descriptions
 import dodeclusters.composeapp.generated.resources.polarity_by_circle_and_line_or_point_description
@@ -562,10 +563,15 @@ sealed class Tool(
         description = Res.string.adjust_expr_description,
         icon = Res.drawable.two_vertical_sliders
     )
-    data object PickCircleColor : ContextAction(
-        name = Res.string.pick_circle_color_name,
-        description = Res.string.pick_circle_color_description,
-        icon = Res.drawable.paint_splash
+    data object BorderColor : ContextAction(
+        name = Res.string.border_color_description,
+        description = Res.string.border_color_description,
+        icon = Res.drawable.paint_splash_border,
+    )
+    data object FillColor : ContextAction(
+        name = Res.string.fill_color_description,
+        description = Res.string.fill_color_description,
+        icon = Res.drawable.paint_splash,
     )
     data object SetLabel : ContextAction(
         name = Res.string.set_label_name,

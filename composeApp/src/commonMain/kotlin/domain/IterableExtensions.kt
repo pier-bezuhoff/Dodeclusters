@@ -35,6 +35,13 @@ fun <T> List<T>.withoutElementsAt(indices: List<Ix>): List<T> {
     return list
 }
 
+/** remove [element] if it's in, add it otherwise */
+fun <T> List<T>.xor(element: T): List<T> =
+    if (element in this)
+        this - element
+    else
+        this + element
+
 /**
  * Removes elements at [indices] starting from the highest index.
  * Not atomic, so if 2+ threads are trying to write it's NG

@@ -150,8 +150,8 @@
     <string name="shrink_description">Scale down by 10%</string>
     <string name="adjust_expr_name">Adjust expression</string>
     <string name="adjust_expr_description">Adjust expression parameters of selected objects</string>
-    <string name="pick_circle_color_name">Border color</string>
-    <string name="pick_circle_color_description">Pick border color</string>
+    <string name="border_color_description">Pick border color</string>
+    <string name="fill_color_description">Pick fill color</string>
     <string name="set_label_name">Set label</string>
     <string name="set_label_description">Set label</string>
     <string name="mark_as_phantoms_name">Phantom toggle</string>

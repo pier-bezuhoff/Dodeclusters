@@ -202,9 +202,8 @@ data class PartialArcPath(
             null -> this
         }
 
-    fun unFocus(): PartialArcPath = copy(
+    fun realignGrabbedMidpoint(): PartialArcPath = copy(
         arcs =
-            // normalize grabbed midpoint to be in the middle
             if (focus is Focus.MidPoint && arcs[focus.arcIndex].snap is PointSnapResult.Free) {
                 val arcIndex = focus.arcIndex
                 val start = arcIndex2startVertex(arcIndex).point
@@ -215,6 +214,9 @@ data class PartialArcPath(
                 arcs.updated(arcIndex, Arc(circle = circle, middlePoint = correctedMidpoint))
             } else arcs
         ,
+    )
+
+    fun unFocus(): PartialArcPath = copy(
         focus = null,
     )
 

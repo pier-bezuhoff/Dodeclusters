@@ -6,8 +6,9 @@ import kotlinx.serialization.Serializable
 @Immutable
 @Serializable
 enum class DialogType {
-    REGION_COLOR_PICKER,
-    CIRCLE_COLOR_PICKER,
+    REGION_FILL_COLOR_PICKER,
+    BORDER_COLOR_PICKER,
+    FILL_COLOR_PICKER,
     BACKGROUND_COLOR_PICKER,
     CIRCLE_OR_POINT_INTERPOLATION,
     CIRCLE_EXTRAPOLATION,

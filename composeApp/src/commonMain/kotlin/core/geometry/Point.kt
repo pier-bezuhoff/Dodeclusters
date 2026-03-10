@@ -3,9 +3,6 @@ package core.geometry
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isFinite
-import core.geometry.RegionPointLocation.BORDERING
-import core.geometry.RegionPointLocation.IN
-import core.geometry.RegionPointLocation.OUT
 import domain.radians
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -40,35 +37,38 @@ data class Point(
     val isFinite: Boolean get() =
         x.isFinite() && y.isFinite()
 
+    inline val isInfinite: Boolean get() =
+        this == CONFORMAL_INFINITY
+
     fun toOffset(): Offset =
-        if (this == CONFORMAL_INFINITY)
+        if (isInfinite)
             Offset.Infinite
         else
             Offset(x.toFloat(), y.toFloat())
 
     override fun distanceFrom(point: Point): Double =
         when {
-            this == CONFORMAL_INFINITY && point == CONFORMAL_INFINITY -> 0.0
-            this == CONFORMAL_INFINITY && point != CONFORMAL_INFINITY -> Double.POSITIVE_INFINITY
-            this != CONFORMAL_INFINITY && point == CONFORMAL_INFINITY -> Double.POSITIVE_INFINITY
+            this.isInfinite && point.isInfinite -> 0.0
+            this.isInfinite && point.isFinite -> Double.POSITIVE_INFINITY
+            this.isFinite && point.isInfinite -> Double.POSITIVE_INFINITY
             else ->
                 hypot(point.x - x, point.y - y)
         }
 
     override fun translated(vector: Offset): Point =
-        if (this == CONFORMAL_INFINITY)
+        if (isInfinite)
             CONFORMAL_INFINITY
         else
             Point(x + vector.x, y + vector.y)
 
     override fun translated(dx: Double, dy: Double): Point =
-        if (this == CONFORMAL_INFINITY)
+        if (isInfinite)
             CONFORMAL_INFINITY
         else
             Point(x + dx, y + dy)
 
     fun scaled(focus: Offset, zoom: Float): Point =
-        if (this == CONFORMAL_INFINITY)
+        if (isInfinite)
             CONFORMAL_INFINITY
         else
             Point(
@@ -77,7 +77,7 @@ data class Point(
             )
 
     override fun scaled(focusX: Double, focusY: Double, zoom: Double): Point =
-        if (this == CONFORMAL_INFINITY)
+        if (isInfinite)
             CONFORMAL_INFINITY
         else Point(
             (x - focusX) * zoom + focusX,
@@ -85,7 +85,7 @@ data class Point(
         )
 
     override fun rotated(focusX: Double, focusY: Double, angleInRadians: Double): Point =
-        if (this == CONFORMAL_INFINITY)
+        if (isInfinite)
             CONFORMAL_INFINITY
         else { // cmp with Offset.rotateBy
             val x0 = x - focusX
@@ -99,7 +99,7 @@ data class Point(
         }
 
     fun rotated(focus: Offset, angleDeg: Float): Point =
-        if (this == CONFORMAL_INFINITY)
+        if (isInfinite)
             CONFORMAL_INFINITY
         else { // cmp with Offset.rotateBy
             val focusX = focus.x
@@ -116,7 +116,7 @@ data class Point(
         }
 
     override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): Point {
-        if (this == CONFORMAL_INFINITY)
+        if (isInfinite)
             return CONFORMAL_INFINITY
         var newX: Double = x + translation.x
         var newY: Double = y + translation.y
@@ -142,7 +142,7 @@ data class Point(
         zoom: Double = 1.0,
         rotationAngle: Float = 0f,
     ): Point {
-        if (this == CONFORMAL_INFINITY)
+        if (isInfinite)
             return CONFORMAL_INFINITY
         var newX: Double = x + translationX
         var newY: Double = y + translationY
@@ -159,13 +159,14 @@ data class Point(
 
     /** = `(this + point)/2` */
     infix fun middle(point: Point): Point =
-        if (this == CONFORMAL_INFINITY || point == CONFORMAL_INFINITY)
+        if (this.isInfinite || point.isInfinite)
             CONFORMAL_INFINITY
         else Point((x + point.x)/2, (y + point.y)/2)
 
     companion object {
         /** All lines pass through this point, it's a stereographic projection of the North pole */
-        val CONFORMAL_INFINITY = Point(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
+        val CONFORMAL_INFINITY =
+            Point(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
         fun fromOffset(offset: Offset): Point =
             if (offset.isFinite)
@@ -187,6 +188,8 @@ enum class RegionPointLocation {
 
 /** CCW angle from [start] to [end] in `[-PI; PI]` */
 fun calculateAngle(center: Point, start: Point, end: Point): Double {
+    if (start.isInfinite || center.isInfinite || end.isInfinite)
+        return 0.0
     val v1x = start.x - center.x
     val v1y = start.y - center.y
     val v2x = end.x - center.x

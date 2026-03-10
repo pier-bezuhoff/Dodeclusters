@@ -44,7 +44,7 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         pathCache.addDependent(arcPath.dependencies)
     }
 
-    fun updateArcPath(arcPathIndex: Int, arcPath: ArcPath) {
+    fun modifyArcPath(arcPathIndex: Int, arcPath: ArcPath) {
         _arcPaths[arcPathIndex] = arcPath
         _concreteArcPaths[arcPathIndex] = arcPath.toConcrete(objects)
         pathCache.updateDependent(arcPathIndex, arcPath.dependencies)
@@ -76,7 +76,7 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
                 if (updatedArcPath == null) {
                     removeArcPathAt(arcPathIndex)
                 } else {
-                    updateArcPath(arcPathIndex, updatedArcPath)
+                    modifyArcPath(arcPathIndex, updatedArcPath)
                 }
             }
         }

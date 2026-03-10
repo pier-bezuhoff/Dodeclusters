@@ -56,20 +56,20 @@ sealed interface CircleOrLine : CircleOrLineOrImaginaryCircle, CircleOrLineOrPoi
         /** note more general GeneralizedCircle.perp3 */
         fun by3Points(point1: Point, point2: Point, point3: Point): CircleOrLine? {
             return when {
-                point1 == Point.CONFORMAL_INFINITY ->
-                    if (point2 == Point.CONFORMAL_INFINITY || point3 == Point.CONFORMAL_INFINITY) {
+                point1.isInfinite->
+                    if (point2.isInfinite || point3.isInfinite) {
                         null
                     } else {
                         Line.by2Points(point2, point3)
                     }
-                point2 == Point.CONFORMAL_INFINITY ->
-                    if (point1 == Point.CONFORMAL_INFINITY || point3 == Point.CONFORMAL_INFINITY) {
+                point2.isInfinite ->
+                    if (point1.isInfinite || point3.isInfinite) {
                         null
                     } else {
                         Line.by2Points(point3, point1)
                     }
-                point3 == Point.CONFORMAL_INFINITY ->
-                    if (point1 == Point.CONFORMAL_INFINITY || point2 == Point.CONFORMAL_INFINITY) {
+                point3.isInfinite ->
+                    if (point1.isInfinite || point2.isInfinite) {
                         null
                     } else {
                         Line.by2Points(point1, point2)

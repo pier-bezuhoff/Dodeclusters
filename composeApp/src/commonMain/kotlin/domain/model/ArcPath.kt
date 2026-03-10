@@ -136,6 +136,7 @@ fun Arc.toCircleOrLine(
     end: Point,
     objects: List<GCircle?>,
 ): CircleOrLine? = when(this) {
+    // works for infinite points
     is Arc.By2Points -> {
         computeCircleBy2PointsAndSagittaRatio(SagittaRatioParameters(sagittaRatio), start, end)
     }
