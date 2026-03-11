@@ -281,8 +281,8 @@
     <!-- label input dialog -->
     <string name="label_input_title">Input point label</string>
     <!-- snackbar messages -->
-    <string name="locked_objects_notice">These objects are pinned, detach them to move</string>
-    <string name="locked_object_notice">This object is pinned, detach it to move</string>
+    <string name="locked_objects_notice">These objects are LOCKED (no degrees of freedom), DETACH them before altering</string>
+    <string name="locked_object_notice">This object s LOCKED (no degrees of freedom), DETACH it before altering</string>
     <string name="imaginary_circle_notice">Construction resulted in an imaginary circle</string>
 <!--    <string name="successful_open_notice">Loaded</string>-->
     <string name="successful_restore_notice">Restored from autosave</string>

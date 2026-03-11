@@ -46,6 +46,13 @@ data class Point(
         else
             Offset(x.toFloat(), y.toFloat())
 
+    fun distanceFrom(offset: Offset): Double =
+        when {
+            this.isInfinite -> Double.POSITIVE_INFINITY
+            else ->
+                hypot(x - offset.x, y - offset.y)
+        }
+
     override fun distanceFrom(point: Point): Double =
         when {
             this.isInfinite && point.isInfinite -> 0.0

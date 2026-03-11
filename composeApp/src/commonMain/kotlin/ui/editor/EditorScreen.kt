@@ -284,13 +284,22 @@ fun EditorScreen(
                     currentColor = initialColor,
                     usedColors = viewModel.getColorsByMostUsed(),
                 ),
-                onCancel = viewModel::dismissBorderColorPicker,
+                onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::concludeBorderColorPicker,
                 dialogActions = dialogActions,
             )
         }
         DialogType.FILL_COLOR_PICKER -> {
-            TODO()
+            val initialColor = viewModel.getMostCommonFillColorInSelection() ?: viewModel.regionColor
+            ColorPickerDialog(
+                parameters = viewModel.colorPickerParameters.copy(
+                    currentColor = initialColor,
+                    usedColors = viewModel.getColorsByMostUsed(),
+                ),
+                onCancel = viewModel::closeDialog,
+                onConfirm = viewModel::concludeFillColorPicker,
+                dialogActions = dialogActions,
+            )
         }
         DialogType.BACKGROUND_COLOR_PICKER -> {
             val initialColor = viewModel.backgroundColor ?: MaterialTheme.colorScheme.background
@@ -299,7 +308,7 @@ fun EditorScreen(
                     currentColor = initialColor,
                     usedColors = viewModel.getColorsByMostUsed(),
                 ),
-                onCancel = viewModel::dismissBackgroundColorPicker,
+                onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::concludeBackgroundColorPicker,
                 dialogActions = dialogActions,
             )

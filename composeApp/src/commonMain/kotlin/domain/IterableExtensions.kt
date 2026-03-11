@@ -111,6 +111,16 @@ fun <T> Iterable<T>.sortedByFrequency(): List<T> =
         .sortedByDescending { (_, count) -> count }
         .map { (t, _) -> t }
 
+inline fun <T, K> Iterable<T>.mostCommonOf(
+    crossinline key: (T) -> K,
+): K? =
+    this
+        .map { key(it) }
+        .groupingBy { it }
+        .eachCount()
+        .maxByOrNull { it.value }
+        ?.key
+
 /** @return `null` instead of `-1` */
 fun <T> List<T>.indexOfOrNull(element: T): Int? {
     val index = indexOf(element)

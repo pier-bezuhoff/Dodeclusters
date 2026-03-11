@@ -16,6 +16,7 @@ import domain.expressions.computeCircleBy3Points
 import domain.filterIndices
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.math.min
 
 @Immutable
 @Serializable
@@ -121,8 +122,11 @@ data class ConcreteArcPath(
                 is CircleOrLine -> {
                     val closest = circle.project(point)
                     // another projection onto circle is always farther than arc ends
-                    if (circle.pointIsInBetween(start, closest, end))
-                        distance = arc.circleOrLine.distanceFrom(point)
+                    val onTheArc =
+                        circle.pointIsInBetween(start, closest, end)
+                    if (onTheArc) {
+                        distance = min(distance, arc.circleOrLine.distanceFrom(point))
+                    }
                 }
                 null -> {}
             }

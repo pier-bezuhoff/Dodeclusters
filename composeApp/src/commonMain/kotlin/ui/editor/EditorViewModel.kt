@@ -82,6 +82,7 @@ import domain.model.ContinuousChange
 import domain.model.LogicalRegion
 import domain.model.SaveState
 import domain.model.Selection
+import domain.mostCommonOf
 import domain.settings.BlendModeType
 import domain.settings.InversionOfControl
 import domain.settings.Settings
@@ -436,11 +437,14 @@ class EditorViewModel : ViewModel() {
     }
 
     fun showDebugInfo() {
-        val selectedObjectsString = objectSelection.joinToString { ix ->
+        val selectedObjectsString = selection.objects.joinToString { ix ->
             "$ix: " + objects[ix].toString()
         }
-        val selectedExpressionsString = objectSelection.joinToString { ix ->
+        val selectedExpressionsString = selection.objects.joinToString { ix ->
             "$ix: " + objectModel.expressions.expressions[ix].toString()
+        }
+        val selectedArcPathsString = selection.arcPaths.joinToString { j ->
+            "$j: " + objectModel.arcPaths[j].toString()
         }
         println("mode = $mode, submode = $submode")
         println("partialArgList = $partialArgList")
@@ -450,6 +454,7 @@ class EditorViewModel : ViewModel() {
             "$ix: " + objectModel.downscaledObjects[ix].toString()
         })
         println("selected objects expressions = $selectedExpressionsString")
+        println("selected arc-paths = $selectedArcPathsString")
         println(
             "regions bounded by some of selected objects = " + regions.filter {
                 it.insides.any { ix -> ix in objectSelection } ||
@@ -777,26 +782,30 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    fun duplicateSelectedCircles() {
+    fun duplicateSelection() {
         if (mode.isSelectingCircles()) {
             // pre-sorting is mandatory for expression copying to work properly
-            val toBeCopied = objectModel.expressions.sortedByTier(
-                objectSelection.filter { objects[it] is CircleOrLine || objects[it] is Point }
+            val copiedObjects = objectModel.expressions.sortedByTier(
+                selection.objects.filter { objects[it] is CircleOrLineOrPoint }
             )
-            if (toBeCopied.isNotEmpty()) {
+            if (copiedObjects.isNotEmpty() || selection.arcPaths.isNotEmpty()) {
                 pinStateForHistory()
-                copyRegionsAndStyles(toBeCopied.map { it to objects[it] }) { circles ->
+                copyRegionsAndStyles(copiedObjects.map { it to objects[it] }) { circles ->
                     CircleAnimation.ReEntrance(circles)
                 }
-                objectModel.expressions.copyExpressionsWithDependencies(toBeCopied)
+                objectModel.expressions.copyExpressionsWithDependencies(copiedObjects)
+                for (arcPathIndex in selection.arcPaths) {
+                    objectModel.addArcPath(arcPaths[arcPathIndex])
+                }
                 objectModel.invalidate()
-                val indices = (objects.size until (objects.size + toBeCopied.size)).toSet()
+                val indices = (objects.size until (objects.size + copiedObjects.size)).toSet()
                 history.accumulateChangedLocations(
                     objectIndices = indices,
                     objectColorIndices = indices,
                     expressionIndices = indices,
+                    arcPaths = true,
                     regions = true,
-                    selection = true,
+//                    selection = true,
                 )
                 history.recordAccumulatedChanges()
             }
@@ -841,17 +850,17 @@ class EditorViewModel : ViewModel() {
     }
 
     fun deleteSelection() {
-        val toBeDeleted = selection.objects
-        val arcPathsToBeDeleted = selection.arcPaths
-        if ((showCircles && toBeDeleted.isNotEmpty() || arcPathsToBeDeleted.isNotEmpty()) &&
+        val deletedObjects = selection.objects
+        val deletedArcPaths = selection.arcPaths
+        if ((showCircles && deletedObjects.isNotEmpty() || deletedArcPaths.isNotEmpty()) &&
             mode.isSelectingCircles()
         ) {
             pinStateForHistory()
             clearSelection()
-            for (arcPathIndex in arcPathsToBeDeleted) {
+            for (arcPathIndex in deletedArcPaths) {
                 objectModel.removeArcPathAt(arcPathIndex)
             }
-            deleteObjectsWithDependenciesColorsAndRegions(toBeDeleted)
+            deleteObjectsWithDependenciesColorsAndRegions(deletedObjects)
             history.accumulateChangedLocations(selection = true, arcPaths = true)
             history.recordAccumulatedChanges()
         }
@@ -1054,7 +1063,7 @@ class EditorViewModel : ViewModel() {
             .minByOrNull { it.second }
             ?.first
             ?.also {
-                println("select arcPath #$it")
+                println("select arcPath #$it: ${arcPaths[it]}")
             }
     }
 
@@ -1138,6 +1147,7 @@ class EditorViewModel : ViewModel() {
     //  tho from tests this function behaves the same way
     // MAYBE: also add backgroundColor (tho it is MT.surface by default and thus 0-contrast)
     fun getColorsByMostUsed(): List<Color> {
+        hug(objectModel.propertyInvalidations)
         val regionBorderColors = regions.mapNotNull { it.borderColor }
         val regionFillColors = regions.map { it.fillColor }
         val objectColors = objectModel.objectColors.values
@@ -1462,18 +1472,14 @@ class EditorViewModel : ViewModel() {
         return selection.objects
             .map { objectModel.objectColors[it] }
             .plus(selection.arcPaths.map { objectModel.arcPaths[it].borderColor })
-            .groupingBy { it }
-            .eachCount()
-            .maxByOrNull { (_, k) -> k }
-            ?.key
+            .mostCommonOf { it }
     }
 
-    fun dismissBorderColorPicker() {
-        openedDialog = null
-    }
-
-    fun dismissBackgroundColorPicker() {
-        openedDialog = null
+    fun getMostCommonFillColorInSelection(): Color? {
+        hug(objectModel.propertyInvalidations)
+        return selection.arcPaths
+            .mapNotNull { (arcPaths[it] as? ArcPath.Closed)?.fillColor }
+            .mostCommonOf { it }
     }
 
     // MAYBE: replace with select-all->delete in invisible-circles region manipulation mode
@@ -1625,14 +1631,15 @@ class EditorViewModel : ViewModel() {
         history.accumulateChangedLocations(phantoms = true)
     }
 
-    private fun swapDirectionsOfSelectedCircles() {
-        val targets = objectSelection.filter { ix ->
+    private fun swapOrientationsInSelection() {
+        // TODO: swap arc-path orientations
+        val targets = selection.objects.filter { ix ->
             objects[ix] is CircleOrLine && isFree(ix)
         }
         if (targets.isEmpty()) {
-            if (targets.size == 1)
+            if (selection.objects.size == 1)
                 queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
-            else if (targets.size > 1)
+            else if (selection.objects.size > 1)
                 queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
             pinStateForHistory()
@@ -2223,8 +2230,12 @@ class EditorViewModel : ViewModel() {
                 ToolMode.ARC_PATH -> {
                     partialArcPath?.also { pArcPath ->
                         if (pArcPath.arcs.size >= 2) {
-                            partialArcPath = pArcPath.closeLoop()
-                            completeArcPath()
+                            val distanceToStart = pArcPath.vertices.first().point
+                                .distanceFrom(position)
+                            if (distanceToStart < tapRadius) {
+                                partialArcPath = pArcPath.closeLoop()
+                                completeArcPath()
+                            }
                         }
                     }
                 }
@@ -2855,7 +2866,7 @@ class EditorViewModel : ViewModel() {
             when (action) {
                 KeyboardAction.SELECT_ALL -> forceSelectAll()
                 KeyboardAction.DELETE -> deleteSelection()
-                KeyboardAction.PASTE -> duplicateSelectedCircles()
+                KeyboardAction.PASTE -> duplicateSelection()
                 KeyboardAction.ZOOM_IN -> scaleSelection(KEYBOARD_ZOOM_INCREMENT)
                 KeyboardAction.ZOOM_OUT -> scaleSelection(1/KEYBOARD_ZOOM_INCREMENT)
                 KeyboardAction.UNDO -> undo()
@@ -3737,12 +3748,12 @@ class EditorViewModel : ViewModel() {
             Tool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
             Tool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
             Tool.Detach -> detachEverySelectedObject()
-            Tool.SwapDirection -> swapDirectionsOfSelectedCircles()
+            Tool.SwapDirection -> swapOrientationsInSelection()
             Tool.MarkAsPhantoms ->
                 if (toolPredicate(tool))
                     markSelectedObjectsAsPhantoms()
                 else unmarkSelectedObjectsAsPhantoms()
-            Tool.Duplicate -> duplicateSelectedCircles()
+            Tool.Duplicate -> duplicateSelection()
             Tool.BorderColor -> openedDialog = DialogType.BORDER_COLOR_PICKER
             Tool.FillColor -> openedDialog = DialogType.FILL_COLOR_PICKER
             Tool.SetLabel -> openedDialog = DialogType.LABEL_INPUT

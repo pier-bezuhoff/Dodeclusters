@@ -67,6 +67,8 @@ import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
+import domain.model.ArcPath
+import domain.mostCommonOf
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -89,12 +91,16 @@ import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.math.sinh
 
+private val buttonModifier = Modifier
+    .padding(8.dp)
+    .size(36.dp)
+
 @Composable
 fun BoxScope.SelectionContextActions(
     concretePositions: ConcreteOnScreenPositions,
     scaleSliderPercentage: Float,
     rotationHandleAngle: Float,
-    objectColor: Color,
+    borderColor: Color,
     showAdjustExprButton: Boolean,
     showOrientationToggle: Boolean,
     isLocked: Boolean,
@@ -107,9 +113,6 @@ fun BoxScope.SelectionContextActions(
     onRotateFinished: () -> Unit,
 ) {
     // rotate handle
-    val buttonModifier = Modifier
-        .padding(8.dp)
-        .size(36.dp)
     val sliderColors = SliderDefaults.colors(
         thumbColor = MaterialTheme.colorScheme.secondary,
         activeTrackColor = MaterialTheme.colorScheme.secondary,
@@ -225,7 +228,7 @@ fun BoxScope.SelectionContextActions(
             SimpleToolButtonWithTooltip(
                 Tool.BorderColor,
                 buttonModifier,
-                contentColor = objectColor,
+                contentColor = borderColor,
                 onClick = toolAction
             )
             TwoIconButtonWithTooltip(
@@ -269,15 +272,12 @@ fun BoxScope.SelectionContextActions(
 // only points
 @Composable
 fun BoxScope.PointContextActions(
-    objectColor: Color,
+    pointColor: Color,
     showAdjustExprButton: Boolean,
     isLocked: Boolean,
     toolAction: (Tool) -> Unit,
     toolPredicate: (Tool) -> Boolean,
 ) {
-    val buttonModifier = Modifier
-        .padding(8.dp)
-        .size(36.dp)
     Surface(
         Modifier
             .align(Alignment.CenterEnd)
@@ -300,7 +300,7 @@ fun BoxScope.PointContextActions(
             SimpleToolButtonWithTooltip(
                 Tool.BorderColor,
                 buttonModifier,
-                contentColor = objectColor,
+                contentColor = pointColor,
                 onClick = toolAction
             )
             SimpleToolButtonWithTooltip(
@@ -343,18 +343,14 @@ fun BoxScope.PointContextActions(
 
 @Composable
 fun BoxScope.ArcPathContextActions(
+    arcPaths: List<ArcPath>,
     toolAction: (Tool) -> Unit,
 ) {
     // scale/rotate handles
-    // border color
-    // if closed: fill color
     // swap direction?
     // layer up/down
-    // duplicate
-    // delete
-    val buttonModifier = Modifier
-        .padding(8.dp)
-        .size(36.dp)
+    val defaultBorderColor = MaterialTheme.extendedColorScheme.highAccentColor
+    val defaultFillColor = MaterialTheme.extendedColorScheme.highAccentColor
     Surface(
         Modifier
             .align(Alignment.CenterEnd)
@@ -367,6 +363,32 @@ fun BoxScope.ArcPathContextActions(
         Column(
             verticalArrangement = Arrangement.Center,
         ) {
+            val borderColor = remember(arcPaths) {
+                arcPaths.mostCommonOf { it.borderColor } ?: defaultBorderColor
+            }
+            SimpleToolButtonWithTooltip(
+                Tool.BorderColor,
+                buttonModifier,
+                contentColor = borderColor,
+                onClick = toolAction
+            )
+            val someAreClosed = remember(arcPaths) {
+                arcPaths.any { it is ArcPath.Closed }
+            }
+            val fillColor = remember(arcPaths) {
+                arcPaths
+                    .filterIsInstance<ArcPath.Closed>()
+                    .mostCommonOf { it.fillColor }
+            }
+            if (someAreClosed) {
+                SimpleToolButtonWithTooltip(
+                    Tool.FillColor,
+                    buttonModifier,
+                    contentColor = fillColor ?: defaultFillColor,
+                    onClick = toolAction
+                )
+            }
+            // close/cut loop button
             SimpleToolButtonWithTooltip(
                 Tool.Duplicate,
                 buttonModifier,
@@ -621,7 +643,7 @@ fun BiInversionInterface(
     // f(x) := k1 * sinh(k2 * x) such that
     // f(0) = 0; f(1/2) = 1; f(1) = max-speed
     val k2 = remember { 2.0 * acosh(defaults.maxSpeed / 2.0) }
-    val k1 = remember {  1.0 / sinh(k2 / 2.0) }
+    val k1 = remember { 1.0 / sinh(k2 / 2.0) }
     val minVisibleSpeedValue = remember { (asinh(defaults.minSpeed/k1)/k2).toFloat() }
     val maxVisibleSpeedValue = remember { (asinh(defaults.maxSpeed/k1)/k2).toFloat() }
     val speedSliderState = remember { SliderState(

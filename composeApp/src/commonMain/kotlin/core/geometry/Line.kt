@@ -181,6 +181,15 @@ data class Line(
         else order <= endOrder || startOrder <= order // segment contains infinity
     }
 
+    /** direction-independent */
+    fun pointIsInBetweenUndirected(startPoint: Point, point: Point, endPoint: Point): Boolean {
+        val ax = point.x - startPoint.x
+        val ay = point.y - startPoint.y
+        val bx = point.x - endPoint.x
+        val by = point.y - endPoint.y
+        return ax*bx + ay*by <= 0.0
+    }
+
     override fun translated(vector: Offset): Line =
        copy(c = c - (a*vector.x + b*vector.y))
 
@@ -277,17 +286,17 @@ data class Line(
         const val ORDER_OF_CONFORMAL_INFINITY = Double.NEGATIVE_INFINITY
 
         fun by2Points(p1: Offset, p2: Offset): Line {
-            val dy = p2.y.toDouble() - p1.y
             val dx = p2.x.toDouble() - p1.x
-            val c = p1.y*dx - p1.x*dy
-            return Line(dy, -dx, c).normalized()
+            val dy = p2.y.toDouble() - p1.y
+            val c = p1.x*dy - p1.y*dx
+            return Line(-dy, dx, c).normalized()
         }
 
         fun by2Points(p1: Point, p2: Point): Line {
-            val dy = p2.y - p1.y
             val dx = p2.x - p1.x
-            val c = p1.y*dx - p1.x*dy
-            return Line(dy, -dx, c).normalized()
+            val dy = p2.y - p1.y
+            val c = p1.x*dy - p1.y*dx
+            return Line(-dy, dx, c).normalized()
         }
     }
 }
