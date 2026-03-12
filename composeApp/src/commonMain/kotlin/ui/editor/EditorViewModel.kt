@@ -860,10 +860,21 @@ class EditorViewModel : ViewModel() {
         ) {
             pinStateForHistory()
             clearSelection()
+            val deletedArcPathPointIndices = mutableListOf<Ix>()
             for (arcPathIndex in deletedArcPaths) {
+                deletedArcPathPointIndices += arcPaths[arcPathIndex].dependencies.filter { ix ->
+                    val hasNoChildren = objectModel.expressions.children[ix].isNullOrEmpty()
+                    val dependentArcPaths = objectModel.pathCache.dependencies[ix]
+                    // dependentArcPaths is guaranteed to contain arcPathIndex
+                    val hasNoOtherDependentArcPaths =
+                        dependentArcPaths.isNullOrEmpty() || dependentArcPaths.size == 1
+                    isFree(ix) && hasNoChildren && hasNoOtherDependentArcPaths
+                }
                 objectModel.removeArcPathAt(arcPathIndex)
             }
-            deleteObjectsWithDependenciesColorsAndRegions(deletedObjects)
+            deleteObjectsWithDependenciesColorsAndRegions(
+                deletedObjects + deletedArcPathPointIndices
+            )
             history.accumulateChangedLocations(
                 selection = true,
                 arcPaths = true,
@@ -3811,7 +3822,7 @@ class EditorViewModel : ViewModel() {
                     markSelectedObjectsAsPhantoms()
                 else unmarkSelectedObjectsAsPhantoms()
             Tool.Duplicate -> duplicateSelection()
-            Tool.BorderColor -> openedDialog = DialogType.BORDER_COLOR_PICKER
+            Tool.BorderColor, Tool.PointColor -> openedDialog = DialogType.BORDER_COLOR_PICKER
             Tool.FillColor -> openedDialog = DialogType.FILL_COLOR_PICKER
             Tool.SetLabel -> openedDialog = DialogType.LABEL_INPUT
             Tool.Delete -> deleteSelection()

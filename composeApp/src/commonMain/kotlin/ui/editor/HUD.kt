@@ -112,6 +112,7 @@ fun BoxScope.SelectionContextActions(
     onRotateStarted: (center: Offset) -> Unit,
     onRotateFinished: () -> Unit,
 ) {
+    // TODO: convert to arc-paths
     // rotate handle
     val sliderColors = SliderDefaults.colors(
         thumbColor = MaterialTheme.colorScheme.secondary,
@@ -299,7 +300,7 @@ fun BoxScope.PointContextActions(
                 )
             }
             SimpleToolButtonWithTooltip(
-                Tool.BorderColor,
+                Tool.PointColor,
                 buttonModifier,
                 contentColor = pointColor,
                 onClick = toolAction

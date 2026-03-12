@@ -133,6 +133,7 @@ import dodeclusters.composeapp.generated.resources.palette_name
 import dodeclusters.composeapp.generated.resources.phantom
 import dodeclusters.composeapp.generated.resources.phantom_crossed
 import dodeclusters.composeapp.generated.resources.png_export_name
+import dodeclusters.composeapp.generated.resources.point_color_description
 import dodeclusters.composeapp.generated.resources.polarity_by_circle_and_line_or_point_arg_descriptions
 import dodeclusters.composeapp.generated.resources.polarity_by_circle_and_line_or_point_description
 import dodeclusters.composeapp.generated.resources.polarity_by_circle_and_line_or_point_name
@@ -571,6 +572,11 @@ sealed class Tool(
     data object FillColor : ContextAction(
         name = Res.string.fill_color_description,
         description = Res.string.fill_color_description,
+        icon = Res.drawable.paint_splash,
+    )
+    data object PointColor : ContextAction(
+        name = Res.string.point_color_description,
+        description = Res.string.point_color_description,
         icon = Res.drawable.paint_splash,
     )
     data object SetLabel : ContextAction(

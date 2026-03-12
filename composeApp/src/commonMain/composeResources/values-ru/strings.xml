@@ -151,6 +151,7 @@
     <string name="adjust_expr_description">Поменять параметры формулы выделенных объектов</string>
     <string name="border_color_description">Выбор цвета границы</string>
     <string name="fill_color_description">Выбор цвета заливки</string>
+    <string name="point_color_description">Выбор цвета точек</string>
     <string name="set_label_name">Добавить подпись</string>
     <string name="set_label_description">Добавить подпись</string>
     <string name="mark_as_phantoms_name">Фантомность</string>

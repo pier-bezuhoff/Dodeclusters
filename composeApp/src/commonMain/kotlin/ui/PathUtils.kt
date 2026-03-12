@@ -5,6 +5,7 @@ import MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.PathOperation
 import core.geometry.Circle
 import core.geometry.CircleOrLine
@@ -520,6 +521,7 @@ fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
 fun ConcreteArcPath.toPath(
     path: Path = Path(),
 ): Path {
+    path.fillType = PathFillType.EvenOdd
     vertices.firstOrNull { it.isFinite }?.let { (x, y) ->
         path.moveTo(x.toFloat(), y.toFloat())
     }
@@ -539,7 +541,7 @@ fun ConcreteArcPath.toPath(
                 path.lineTo(end.x.toFloat(), end.y.toFloat())
         }
     }
-    if (isClosed)
-        path.close()
+//    if (isClosed)
+//        path.close()
     return path
 }

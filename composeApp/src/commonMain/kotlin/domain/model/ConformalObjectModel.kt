@@ -76,7 +76,6 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         pathCache.removeObjectAt(ix)
         if (dependents != null) {
             for (arcPathIndex in dependents) {
-                // FIX: borken
                 val updatedArcPath = arcPaths[arcPathIndex].withoutPointsAt(setOf(ix))
                 if (updatedArcPath == null) {
                     removeArcPathAt(arcPathIndex)

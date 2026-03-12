@@ -81,6 +81,7 @@ class PathCache {
 
     fun updateDependent(dependentIndex: Int, deps: Set<Ix>) {
         for ((objectIndex, dependents) in dependencies) {
+            // NOTE: that you cannot REMOVE map items using entry iterator
             if (objectIndex in deps) { // in new
                 if (dependentIndex !in dependents) // but not in old
                     dependencies[objectIndex] = dependents + dependentIndex
@@ -100,13 +101,16 @@ class PathCache {
             dependentPathValidity.slice(0 until dependentIndex)
                 .plus(dependentPathValidity.drop(dependentIndex + 1))
                 .toBooleanArray()
+        val toBeRemoved = mutableListOf<Int>()
         for ((objectIndex, dependents) in dependencies) {
             val newDependents = dependents - dependentIndex
-            if (newDependents.isEmpty())
-                dependencies.remove(objectIndex)
+            if (newDependents.isEmpty()) // careful about removing during iteration
+                toBeRemoved.add(objectIndex)
             else
                 dependencies[objectIndex] = newDependents
         }
+        for (objectIndex in toBeRemoved) // cannot remove during itereation
+            dependencies.remove(objectIndex)
     }
 
     fun cacheDependentPath(dependentIndex: Int, path: Path) {
