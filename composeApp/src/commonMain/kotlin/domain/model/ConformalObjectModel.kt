@@ -67,11 +67,16 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         }
     }
 
-    override fun objectRemovedAt(ix: Ix) {
+    override fun removeObjectAt(ix: Ix) {
+        objects[ix] = null
+        downscaledObjects[ix] = null
+        objectColors.remove(ix)
+        phantomObjectIndices.remove(ix)
         val dependents = pathCache.dependencies[ix]
-        super.objectRemovedAt(ix)
+        pathCache.removeObjectAt(ix)
         if (dependents != null) {
             for (arcPathIndex in dependents) {
+                // FIX: borken
                 val updatedArcPath = arcPaths[arcPathIndex].withoutPointsAt(setOf(ix))
                 if (updatedArcPath == null) {
                     removeArcPathAt(arcPathIndex)

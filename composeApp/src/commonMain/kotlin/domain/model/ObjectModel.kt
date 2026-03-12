@@ -89,9 +89,6 @@ sealed class ObjectModel<R : Any> {
         pathCache.invalidateObjectPathAt(ix)
     }
 
-    /** called each time an object is removed */
-    protected open fun objectRemovedAt(ix: Ix) {}
-
     /** Don't forget to [invalidatePositions] post factum */
     private fun setObject(ix: Ix, newObject: R?) {
         objects[ix] = newObject
@@ -141,13 +138,12 @@ sealed class ObjectModel<R : Any> {
     }
 
     /** Don't forget to [invalidate] post factum */
-    fun removeObjectAt(ix: Ix) {
+    open fun removeObjectAt(ix: Ix) {
         objects[ix] = null
         downscaledObjects[ix] = null
         objectColors.remove(ix)
         phantomObjectIndices.remove(ix)
         pathCache.removeObjectAt(ix)
-        objectRemovedAt(ix)
     }
 
     /** Don't forget to [invalidate] post factum */

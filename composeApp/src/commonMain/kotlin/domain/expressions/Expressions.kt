@@ -42,6 +42,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     // here nulls correspond to free objects
     /**
      * object index -> its expression, `null` meaning "free" object
+     *
      * `expressions.keys` == `objects.indices`
      */
     val expressions: MutableMap<Ix, ExprOutput<EXPR>?> = initialExpressions.toMutableMap()

@@ -350,7 +350,7 @@ fun BoxScope.ArcPathContextActions(
     // swap direction?
     // layer up/down
     val defaultBorderColor = MaterialTheme.extendedColorScheme.highAccentColor
-    val defaultFillColor = MaterialTheme.extendedColorScheme.highAccentColor
+    val defaultFillColor = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
     Surface(
         Modifier
             .align(Alignment.CenterEnd)

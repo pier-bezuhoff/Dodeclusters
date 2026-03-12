@@ -73,23 +73,23 @@ class PathCache {
         val dependentIndex = dependentPaths.size
         dependentPaths.add(null)
         dependentPathValidity = dependentPathValidity.copyOf(dependentPathValidity.size + 1)
-        for (dependencyIndex in deps) {
-            dependencies[dependencyIndex] =
-                dependencies[dependencyIndex]?.plus(dependentIndex) ?: setOf(dependentIndex)
+        for (objectIndex in deps) {
+            dependencies[objectIndex] =
+                dependencies[objectIndex]?.plus(dependentIndex) ?: setOf(dependentIndex)
         }
     }
 
     fun updateDependent(dependentIndex: Int, deps: Set<Ix>) {
-        for (objectIndex in dependencies.keys) {
-            val dependents = dependencies[objectIndex]
-            if (objectIndex in deps) {
-                if (dependents == null)
-                    dependencies[objectIndex] = setOf(dependentIndex)
-                else if (dependentIndex !in dependents)
+        for ((objectIndex, dependents) in dependencies) {
+            if (objectIndex in deps) { // in new
+                if (dependentIndex !in dependents) // but not in old
                     dependencies[objectIndex] = dependents + dependentIndex
-            } else if (dependents != null) {
+            } else if (dependentIndex in dependents) { // not in new but in old
                 dependencies[objectIndex] = dependents - dependentIndex
             }
+        }
+        for (newObjectIndex in (deps - dependencies.keys)) {
+            dependencies[newObjectIndex] = setOf(dependentIndex)
         }
         dependentPathValidity[dependentIndex] = false
     }
@@ -100,11 +100,12 @@ class PathCache {
             dependentPathValidity.slice(0 until dependentIndex)
                 .plus(dependentPathValidity.drop(dependentIndex + 1))
                 .toBooleanArray()
-        for (objectIndex in dependencies.keys) {
-            val dependents = dependencies[objectIndex]
-            if (dependents != null) {
-                dependencies[objectIndex] = dependents - dependentIndex
-            }
+        for ((objectIndex, dependents) in dependencies) {
+            val newDependents = dependents - dependentIndex
+            if (newDependents.isEmpty())
+                dependencies.remove(objectIndex)
+            else
+                dependencies[objectIndex] = newDependents
         }
     }
 
