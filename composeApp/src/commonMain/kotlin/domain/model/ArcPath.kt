@@ -2,11 +2,9 @@ package domain.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.GCircle
-import core.geometry.Line
 import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
@@ -283,39 +281,38 @@ fun ArcPath.withoutPointsAt(indices: Set<Ix>): ArcPath? {
         return null
     return when (this) {
         is ArcPath.Closed -> {
-            val deletedVertices = vertices.filterIndices { it in indices }.toSet()
-            val remainingVertices = vertices.filterIndices { it !in indices }
+            val deletedArcIndices = vertices.filterIndices { it in indices }.toSet()
             val newArcs: List<Arc> = arcs.mapIndexedNotNull { arcIndex, arc ->
                 when {
                     // start is deleted -> delete arc
-                    arcIndex in deletedVertices -> null
+                    arcIndex in deletedArcIndices -> null
                     // end is deleted -> straighten
-                    (arcIndex + 1).mod(vertices.size) in deletedVertices -> Arc.LineSegment
+                    (arcIndex + 1).mod(vertices.size) in deletedArcIndices -> Arc.LineSegment
                     else -> arc
                 }
             }
             copy(
-                vertices = remainingVertices,
+                vertices = vertices - indices,
                 arcs = newArcs,
             )
         }
         is ArcPath.Open -> {
-            val deletedVertices = vertices.filterIndices { it in indices }.toSet()
-            val remainingVertices = vertices.filterIndices { it !in indices }
+            val deletedArcIndices = vertices.filterIndices { it in indices }.toSet()
+            val remainingArcIndices = vertices.filterIndices { it !in indices }
             val newArcs: List<Arc> = arcs.mapIndexedNotNull { arcIndex, arc ->
                 when {
                     // start is deleted -> delete arc
-                    arcIndex in deletedVertices -> null
+                    arcIndex in deletedArcIndices -> null
                     // end is deleted -> if new start exists straighten else delete
-                    (arcIndex + 1).mod(vertices.size) in deletedVertices ->
-                        if (remainingVertices.findLast { it < arcIndex } != null)
+                    (arcIndex + 1).mod(vertices.size) in deletedArcIndices ->
+                        if (remainingArcIndices.findLast { it < arcIndex } != null)
                             Arc.LineSegment
                         else null
                     else -> arc
                 }
             }
             copy(
-                vertices = remainingVertices,
+                vertices = vertices - indices,
                 arcs = newArcs,
             )
         }

@@ -231,6 +231,7 @@ fun BoxScope.SelectionContextActions(
                 contentColor = borderColor,
                 onClick = toolAction
             )
+            // MAYBE: fill color here too
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
                 painterResource(Tool.MarkAsPhantoms.disabledIcon),
@@ -349,6 +350,7 @@ fun BoxScope.ArcPathContextActions(
     // scale/rotate handles
     // swap direction?
     // layer up/down
+    // style = path effect
     val defaultBorderColor = MaterialTheme.extendedColorScheme.highAccentColor
     val defaultFillColor = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
     Surface(
