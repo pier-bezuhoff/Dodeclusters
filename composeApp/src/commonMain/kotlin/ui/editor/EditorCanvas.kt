@@ -216,7 +216,8 @@ fun BoxScope.EditorCanvas(
             // Q: the layering is debatable
             //  should the selected be layered at the top?
             //  even it's inside? what about rise/lower layer controls?
-            // points/circles should be above filled arc-paths & regions
+            // now i think layering order should be shared between
+            // objects & arc-paths, newer higher
             if (viewModel.showCircles) {
                 val selectionIsActive = viewModel.mode.isSelectingCircles() && viewModel.objectSelection.isNotEmpty()
                 val visibleNonSelectedObjectIndices = if (selectionIsActive) viewModel.objects.indices - hiddenObjectIndices - viewModel.selection.objects.toSet() else viewModel.objects.indices - hiddenObjectIndices

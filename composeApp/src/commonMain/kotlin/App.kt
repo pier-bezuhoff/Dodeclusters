@@ -16,6 +16,7 @@ import ui.theme.DodeclustersTheme
 fun App(
     ddcContent: LoadingState<String>? = null,
     themeFlow: MutableStateFlow<ColorTheme> = MutableStateFlow(DEFAULT_COLOR_THEME),
+    titleFlow: MutableStateFlow<String> = MutableStateFlow("Dodeclusters"),
     keyboardActions: SharedFlow<KeyboardAction>? = null,
     lifecycleEvents: SharedFlow<LifecycleEvent>? = null,
     ddcSharing: DdcSharing? = null,

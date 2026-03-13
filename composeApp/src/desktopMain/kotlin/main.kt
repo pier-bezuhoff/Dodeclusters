@@ -1,7 +1,9 @@
-import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
@@ -9,6 +11,7 @@ import androidx.compose.ui.window.rememberWindowState
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.icon_256
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import ui.editor.KeyboardAction
@@ -19,6 +22,8 @@ fun main() = application {
 //    windowState.placement = WindowPlacement.Fullscreen
 //    val icon = painterResource(Res.drawable.icon_128) // broken?
     val icon = painterResource(Res.drawable.icon_256) // looks fine
+    val titleFlow: MutableStateFlow<String> = MutableStateFlow("Dodeclusters")
+    val title: String by titleFlow.collectAsState(initial = "Dodeclusters")
     val keyboardActions: MutableSharedFlow<KeyboardAction> = remember { MutableSharedFlow() }
     val keyboardActionsScope = rememberCoroutineScope()
     val keyEventHandler = KeyboardActionMapping.Default.keyEventHandler { action ->
@@ -29,12 +34,13 @@ fun main() = application {
     Window(
         state = windowState,
         onCloseRequest = ::exitApplication,
-        title = "Dodeclusters",
+        title = title,
         icon = icon,
         onPreviewKeyEvent = keyEventHandler,
     ) {
         App(
-            keyboardActions = keyboardActions
+            titleFlow = titleFlow,
+            keyboardActions = keyboardActions,
         )
     }
 }

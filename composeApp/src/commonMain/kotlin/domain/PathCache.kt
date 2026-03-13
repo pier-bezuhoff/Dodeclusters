@@ -109,7 +109,7 @@ class PathCache {
             else
                 dependencies[objectIndex] = newDependents
         }
-        for (objectIndex in toBeRemoved) // cannot remove during itereation
+        for (objectIndex in toBeRemoved) // cannot remove during iteration
             dependencies.remove(objectIndex)
     }
 

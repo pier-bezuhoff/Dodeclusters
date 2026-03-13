@@ -533,7 +533,8 @@ fun ConcreteArcPath.toPath(
                     rect = circle.toRect(),
                     startAngleRadians = arc.startAngle.toFloat(),
                     sweepAngleRadians = arc.sweepAngle.toFloat(),
-                    forceMoveTo = isClosed,
+                    // NOTE: forceMoveTo=true starts new subpath each time
+                    forceMoveTo = false,
                 )
             is Line -> if (end.isFinite)
                 path.lineTo(end.x.toFloat(), end.y.toFloat())
@@ -541,7 +542,7 @@ fun ConcreteArcPath.toPath(
                 path.lineTo(end.x.toFloat(), end.y.toFloat())
         }
     }
-//    if (isClosed)
-//        path.close()
+    if (isClosed)
+        path.close()
     return path
 }

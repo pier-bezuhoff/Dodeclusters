@@ -70,7 +70,15 @@ fun main() {
         }
     }
     val coroutineScope = CoroutineScope(Dispatchers.Default)
-    val themeFlow = MutableStateFlow<ColorTheme>(colorTheme)
+    val themeFlow = MutableStateFlow(colorTheme)
+    val titleFlow: MutableStateFlow<String> = MutableStateFlow(
+        "Dodeclusters" // &#1421; = ֍
+    )
+    coroutineScope.launch {
+        titleFlow.collect { newTitle ->
+            setTitle(newTitle)
+        }
+    }
     val keyboardActions: MutableSharedFlow<KeyboardAction> = MutableSharedFlow(replay = 1)
     document.addEventListener("keydown") { event: Event ->
         (event as? KeyboardEvent)?.let { keyboardEvent ->
@@ -114,7 +122,7 @@ fun main() {
                 }
             }
         }
-        val sampleDdcContent: LoadingState<String>? by produceState<LoadingState<String>?>(
+        val sampleDdcContent: LoadingState<String>? by produceState(
             initialValue = null,
             key1 = sampleName,
         ) {
@@ -159,9 +167,14 @@ fun main() {
         App(
             ddcContent = sharedDdcContent ?: sampleDdcContent,
             themeFlow = themeFlow,
+            titleFlow = titleFlow,
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,
             ddcSharing = if (weHaveSharePerm) WebDdcSharing else null,
         )
     }
+}
+
+private fun setTitle(title: String) {
+    document.title = title
 }

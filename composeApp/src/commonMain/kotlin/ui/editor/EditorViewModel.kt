@@ -466,7 +466,10 @@ class EditorViewModel : ViewModel() {
         )
         println("partialArcPath = $partialArcPath")
         println("invalidation #${objectModel.invalidations}\t propertyInvalidation #${objectModel.propertyInvalidations}")
-        queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, "$selectedObjectsString;\n$selectedExpressionsString")
+        queueSnackbarMessage(
+            SnackbarMessage.PLACEHOLDER,
+            "$selectedObjectsString;\n$selectedExpressionsString;\n$selectedArcPathsString"
+        )
     }
 
     fun loadNewConstellation(constellation: Constellation) {
@@ -1456,6 +1459,7 @@ class EditorViewModel : ViewModel() {
         history.recordAccumulatedChanges()
     }
 
+    // FIX: doesnt immediately redraw fill for some reason
     fun concludeFillColorPicker(colorPickerParameters: ColorPickerParameters) {
         pinStateForHistory()
         val color = colorPickerParameters.currentColor
