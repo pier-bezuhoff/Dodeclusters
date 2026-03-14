@@ -113,6 +113,7 @@ data class ConcreteArcPath(
         var distance = vertices.minOfOrNull {
             it.distanceFrom(point)
         } ?: Double.POSITIVE_INFINITY
+        // wrong for some arcs
         arcs.forEachIndexed { i, arc ->
             val start = vertices[i]
             val end = vertices[(i + 1).mod(vertices.size)]
@@ -140,7 +141,10 @@ fun Arc.toCircleOrLine(
 ): CircleOrLine? = when(this) {
     // works for infinite points
     is Arc.By2Points -> {
-        computeCircleBy2PointsAndSagittaRatio(SagittaRatioParameters(sagittaRatio), start, end)
+        computeCircleBy2PointsAndSagittaRatio(
+            SagittaRatioParameters(sagittaRatio),
+            start, end
+        )
     }
     is Arc.By3Points -> {
         val middle = objects[middlePointIndex] as? Point
@@ -180,6 +184,7 @@ fun ArcPath.toConcrete(objects: List<GCircle?>): ConcreteArcPath {
                                     arcIndex = i,
                                     circleOrLine = circleOrLine,
                                     startAngle = circle?.calculateStartAngle(vertex) ?: 0.0,
+                                    //wrong
                                     sweepAngle = circle?.calculateSweepAngle(vertex, nextVertex) ?: 0.0,
                                     freeMidpoint =
                                         if (arc is Arc.By2Points && circleOrLine is CircleOrLine)

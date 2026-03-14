@@ -13,9 +13,6 @@ data class PartialArcPath(
     val arcs: List<Arc> = emptyList(),
     val isClosed: Boolean = false,
 
-    val startAngles: List<Double> = emptyList(),
-    val sweepAngles: List<Double> = emptyList(),
-
     /** Grabbed node: any vertex or midpoint */
     val focus: Focus? = null,
 ) {
@@ -35,11 +32,15 @@ data class PartialArcPath(
     data class Arc(
         val circle: Circle?,
         val snap: PointSnapResult,
+        val startAngle: Double = 0.0,
+        val sweepAngle: Double = 0.0,
     ) {
         constructor(
             circle: Circle?,
-            middlePoint: Point
-        ) : this(circle, PointSnapResult.Free(middlePoint))
+            middlePoint: Point,
+            startAngle: Double = 0.0,
+            sweepAngle: Double = 0.0,
+        ) : this(circle, PointSnapResult.Free(middlePoint), startAngle, sweepAngle)
 
         val middlePoint: Point get() = snap.result
     }
@@ -54,8 +55,7 @@ data class PartialArcPath(
     init {
         require(
             vertices.isNotEmpty() &&
-            (isClosed && (vertices.size - arcs.size + 2 == 2) || !isClosed && (vertices.size - arcs.size + 1 == 2)) &&
-            startAngles.size == arcs.size && sweepAngles.size == arcs.size
+            (isClosed && (vertices.size - arcs.size + 2 == 2) || !isClosed && (vertices.size - arcs.size + 1 == 2))
         )
     }
 
@@ -77,7 +77,6 @@ data class PartialArcPath(
             circle = null,
             middlePoint = vertices.last().point.middle(newVertex.point),
         ),
-        startAngles = startAngles + 0.0, sweepAngles = sweepAngles + 0.0,
         focus = Focus.Vertex(vertices.size),
     )
 
@@ -105,9 +104,14 @@ data class PartialArcPath(
     //            if (newPoint.distanceFrom(vertices.last().point) < EPSILON) {}
                 copy(
                     vertices = vertices.updated(0, newVertex),
-                    arcs = arcs.updated(0, Arc(circle = newNextCircle, middlePoint = newMidpoint)),
-                    startAngles = startAngles.updated(0, newNextStartAngle),
-                    sweepAngles = sweepAngles,
+                    arcs = arcs.updated(0,
+                        Arc(
+                            circle = newNextCircle,
+                            middlePoint = newMidpoint,
+                            startAngle = newNextStartAngle,
+                            sweepAngle = arcs[0].sweepAngle,
+                        )
+                    ),
                 )
             }
             vertexIndex == vertices.lastIndex && !isClosed -> { // move detached end case
@@ -129,10 +133,11 @@ data class PartialArcPath(
                 copy(
                     vertices = vertices.updated(vertexIndex, newVertex),
                     arcs = arcs.updated(previousArcIndex, Arc(
-                        circle = newPreviousCircle, middlePoint = newMidpoint
+                        circle = newPreviousCircle,
+                        middlePoint = newMidpoint,
+                        startAngle = newPreviousStartAngle,
+                        sweepAngle = arcs[previousArcIndex].sweepAngle
                     )),
-                    startAngles = startAngles.updated(previousArcIndex, newPreviousStartAngle),
-                    sweepAngles = sweepAngles,
                 )
             }
             else -> { // backward + forward, move within the chain
@@ -163,14 +168,19 @@ data class PartialArcPath(
                 copy(
                     vertices = vertices.updated(vertexIndex, newVertex),
                     arcs = arcs.updated(
-                        previousArcIndex to Arc(circle = newPreviousCircle, middlePoint = newPreviousMidpoint),
-                        nextArcIndex to Arc(circle = newNextCircle, middlePoint = newNextMidpoint)
+                        previousArcIndex to Arc(
+                            circle = newPreviousCircle,
+                            middlePoint = newPreviousMidpoint,
+                            startAngle = newPreviousStartAngle,
+                            sweepAngle = arcs[previousArcIndex].sweepAngle,
+                        ),
+                        nextArcIndex to Arc(
+                            circle = newNextCircle,
+                            middlePoint = newNextMidpoint,
+                            startAngle = newNextStartAngle,
+                            sweepAngle = arcs[nextArcIndex].sweepAngle,
+                        )
                     ),
-                    startAngles = startAngles.updated(
-                        previousArcIndex to newPreviousStartAngle,
-                        nextArcIndex to newNextStartAngle
-                    ),
-                    sweepAngles = sweepAngles,
                 )
             }
         }
@@ -186,9 +196,14 @@ data class PartialArcPath(
         val newSweepAngle =
             newCircle?.calculateSweepAngle(start, newMidpoint, end) ?: 0.0
         return copy(
-            arcs = arcs.updated(arcIndex, Arc(circle = newCircle, snap)),
-            startAngles = startAngles.updated(arcIndex, newStartAngle),
-            sweepAngles = sweepAngles.updated(arcIndex, newSweepAngle)
+            arcs = arcs.updated(arcIndex,
+                Arc(
+                    circle = newCircle,
+                    snap = snap,
+                    startAngle = newStartAngle,
+                    sweepAngle = newSweepAngle,
+                )
+            ),
         )
     }
 
@@ -211,7 +226,14 @@ data class PartialArcPath(
                 val circle = arcs[arcIndex].circle
                 val correctedMidpoint =
                     circle?.pointInBetween(start, end) ?: start.middle(end)
-                arcs.updated(arcIndex, Arc(circle = circle, middlePoint = correctedMidpoint))
+                arcs.updated(arcIndex,
+                    Arc(
+                        circle = circle,
+                        middlePoint = correctedMidpoint,
+                        startAngle = arcs[arcIndex].startAngle,
+                        sweepAngle = arcs[arcIndex].sweepAngle,
+                    )
+                )
             } else arcs
         ,
     )
@@ -225,8 +247,6 @@ data class PartialArcPath(
             circle = null,
             middlePoint = vertices.last().point.middle(vertices.first().point)
         ),
-        startAngles = startAngles + 0.0,
-        sweepAngles = sweepAngles + 0.0,
         isClosed = true,
     )
 
@@ -259,10 +279,11 @@ private fun updateMidpointFromMovingEnd(
         return newStart.middle(end)
     val left = signNonZero(-vy*hx + vx*hy)
     val h = left * hypot(hx, hy)
+    val k = h/vLength
     val newVx = end.x - newStart.x
     val newVy = end.y - newStart.y
-    val newHx = -newVy*h/vLength
-    val newHy = newVx*h/vLength
+    val newHx = -newVy*k
+    val newHy = newVx*k
     return Point(
         (newStart.x + end.x) / 2 + newHx,
         (newStart.y + end.y) / 2 + newHy,

@@ -80,18 +80,25 @@ class PathCache {
     }
 
     fun updateDependent(dependentIndex: Int, deps: Set<Ix>) {
+        val toBeRemoved = mutableListOf<Int>()
         for ((objectIndex, dependents) in dependencies) {
             // NOTE: that you cannot REMOVE map items using entry iterator
             if (objectIndex in deps) { // in new
                 if (dependentIndex !in dependents) // but not in old
                     dependencies[objectIndex] = dependents + dependentIndex
             } else if (dependentIndex in dependents) { // not in new but in old
-                dependencies[objectIndex] = dependents - dependentIndex
+                val newDependents = dependents - dependentIndex
+                if (newDependents.isEmpty())
+                    toBeRemoved.add(objectIndex)
+                else
+                    dependencies[objectIndex] = newDependents
             }
         }
         for (newObjectIndex in (deps - dependencies.keys)) {
             dependencies[newObjectIndex] = setOf(dependentIndex)
         }
+        for (objectIndex in toBeRemoved)
+            dependencies.remove(objectIndex)
         dependentPathValidity[dependentIndex] = false
     }
 
@@ -101,7 +108,7 @@ class PathCache {
             dependentPathValidity.slice(0 until dependentIndex)
                 .plus(dependentPathValidity.drop(dependentIndex + 1))
                 .toBooleanArray()
-        val toBeRemoved = mutableListOf<Int>()
+        val toBeRemoved = mutableListOf<Ix>()
         for ((objectIndex, dependents) in dependencies) {
             val newDependents = dependents - dependentIndex
             if (newDependents.isEmpty()) // careful about removing during iteration

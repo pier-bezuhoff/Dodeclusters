@@ -106,6 +106,7 @@ import ui.LifecycleEvent
 import ui.LoadingOverlay
 import ui.OnOffButton
 import ui.SimpleButton
+import ui.SnackbarWithMarkdown
 import ui.ThreeIconButton
 import ui.TwoIconButton
 import ui.WithTooltip
@@ -166,9 +167,11 @@ fun EditorScreen(
         else Modifier,
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
-                Snackbar(data,
+                SnackbarWithMarkdown(data,
                     containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
+//                    highlightColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         },
@@ -521,7 +524,7 @@ fun EditorScreen(
  * Otherwise icons only start being loaded when the corresponding category panel is open,
  * which is noticeable & jarring */
 @Composable
-fun preloadIcons() {
+private fun preloadIcons() {
     val categoryList = listOf(
         Category.Drag,
         Category.Multiselect,

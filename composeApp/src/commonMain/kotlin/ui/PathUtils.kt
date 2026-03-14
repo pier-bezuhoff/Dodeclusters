@@ -12,6 +12,7 @@ import core.geometry.CircleOrLine
 import core.geometry.EPSILON2
 import core.geometry.Line
 import core.geometry.Point
+import domain.PartialArcPath
 import domain.PathCache
 import domain.model.Arc
 import domain.model.ArcPath
@@ -516,6 +517,32 @@ fun verticalSegmentCircleIntersection(x: Float, circle: Circle): List<Offset> {
             )
         }
     }
+}
+
+fun PartialArcPath.toPath(
+    path: Path = Path(),
+): Path {
+    val start = vertices.first().point.toOffset()
+    path.moveTo(start.x, start.y)
+    arcs.forEachIndexed { arcIndex, arc ->
+        when (val circle = arc.circle) {
+            is Circle -> {
+                path.arcToRad(
+                    rect = circle.toRect(),
+                    startAngleRadians = arc.startAngle.toFloat(),
+                    sweepAngleRadians = arc.sweepAngle.toFloat(),
+                    forceMoveTo = false,
+                )
+            }
+            null -> {
+                val arcEnd = arcIndex2endVertex(arcIndex).point.toOffset()
+                path.lineTo(arcEnd.x, arcEnd.y)
+            }
+        }
+    }
+    if (isClosed)
+        path.close()
+    return path
 }
 
 fun ConcreteArcPath.toPath(

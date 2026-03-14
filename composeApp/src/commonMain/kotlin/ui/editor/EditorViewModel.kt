@@ -1459,7 +1459,6 @@ class EditorViewModel : ViewModel() {
         history.recordAccumulatedChanges()
     }
 
-    // FIX: doesnt immediately redraw fill for some reason
     fun concludeFillColorPicker(colorPickerParameters: ColorPickerParameters) {
         pinStateForHistory()
         val color = colorPickerParameters.currentColor

@@ -476,7 +476,7 @@ data class Circle(
         val c = centerPoint
         val angle = calculateAngle(c, start, end)
         val angle1 = (angle + TAU) % TAU // in [0; TAU)
-        val otherArc = isCCW //test
+        val otherArc = isCCW
         return if (otherArc)
             angle1 - TAU
         else

@@ -939,6 +939,9 @@ private fun DrawScope.drawArcPaths(
         val arcPath = allArcPaths[i]
         var path: Path? = pathCache.dependentPaths[i]
         if (path == null || !pathCache.dependentPathValidity[i]) {
+            // Q: when we don't call reset()/rewind() here but the color changes,
+            //  first draw results in transparent fill (???)
+            path?.reset() // or rewind()
             path = arcPath.toPath(path = path ?: Path())
             pathCache.cacheDependentPath(i, path)
         }
@@ -973,6 +976,9 @@ private fun DrawScope.drawSelectedArcPaths(
         val arcPath = allArcPaths[i]
         var path: Path? = pathCache.dependentPaths[i]
         if (path == null || !pathCache.dependentPathValidity[i]) {
+            // Q: when we don't call reset()/rewind() here but the color changes,
+            //  first draw results in transparent fill (???)
+            path?.reset() // or rewind()
             path = arcPath.toPath(path = path ?: Path())
             pathCache.cacheDependentPath(i, path)
         }
@@ -1192,25 +1198,9 @@ private inline fun DrawScope.drawPartialConstructs(
             }
         }
         ToolMode.ARC_PATH -> partialArcPath?.let { arcPath ->
-            val path = Path()
-            val start = arcPath.vertices.first().point.toOffset()
-            path.moveTo(start.x, start.y)
+            val path = arcPath.toPath()
             for (arcIndex in arcPath.arcs.indices) { // for each arc: draw start & mid-point
                 val point = arcPath.vertices[arcIndex].point.toOffset()
-                when (val circle = arcPath.arcs[arcIndex].circle) {
-                    is Circle -> {
-                        path.arcToRad(
-                            rect = Rect(circle.center, circle.radius.toFloat()),
-                            startAngleRadians = arcPath.startAngles[arcIndex].toFloat(),
-                            sweepAngleRadians = arcPath.sweepAngles[arcIndex].toFloat(),
-                            forceMoveTo = arcPath.isClosed,
-                        )
-                    }
-                    null -> {
-                        val arcEnd = arcPath.arcIndex2endVertex(arcIndex).point.toOffset()
-                        path.lineTo(arcEnd.x, arcEnd.y)
-                    }
-                }
                 drawCircle(
                     color = creationPrototypeColor,
                     radius = creationPointRadius,

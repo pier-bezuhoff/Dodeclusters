@@ -281,16 +281,15 @@
     <string name="blend_mode_plus">Addition</string>
     <!-- label input dialog -->
     <string name="label_input_title">Input point label</string>
-    <!-- snackbar messages -->
-    <string name="locked_objects_notice">These objects are LOCKED (no degrees of freedom), DETACH them before altering</string>
-    <string name="locked_object_notice">This object s LOCKED (no degrees of freedom), DETACH it before altering</string>
-    <string name="imaginary_circle_notice">Construction resulted in an imaginary circle</string>
-<!--    <string name="successful_open_notice">Loaded</string>-->
+    <!-- snackbar messages, surround with ^important^ for highlight -->
+    <string name="locked_objects_notice">These objects are ^locked^ (no degrees of freedom), ^detach^ them before altering (lock icon on the right panel)</string>
+    <string name="locked_object_notice">This object is ^locked^ (no degrees of freedom), ^detach^ it before altering (lock icon on the right panel)</string>
+    <string name="imaginary_circle_notice">Construction resulted in an ^imaginary circle^</string>
     <string name="successful_restore_notice">Restored from autosave</string>
-    <string name="failed_open_notice">Failed to load "%1$s"</string>
-    <string name="successful_save_notice">Saved as "%1$s"</string>
-    <string name="failed_save_notice">Failed to save "%1$s"%2$s</string>
-    <string name="phantom_object_explanation">No phantom objects. To mark an object as 'phantom' (= invisible), select it and click the 'eye' icon on the bottom-right</string>
+    <string name="failed_open_notice">Failed to load ^"%1$s"^</string>
+    <string name="successful_save_notice">Saved as ^"%1$s"^</string>
+    <string name="failed_save_notice">Failed to save ^"%1$s"^%2$s</string>
+    <string name="phantom_object_explanation">No ^phantom objects^. To mark an object as ^'phantom'^ (= invisible), select it and click the 'eye' icon on the bottom-right</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

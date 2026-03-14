@@ -32,6 +32,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SliderState
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarData
+import androidx.compose.material3.SnackbarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
@@ -45,10 +48,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -761,4 +766,54 @@ fun BoxScope.LoadingOverlay(
             CircularProgressIndicator(Modifier)
         }
     }
+}
+
+private object HighlightMarkdown {
+    const val HIGHLIGHT_DELIMITER = "^"
+    val HIGHLIGHT_FONT_WEIGHT = FontWeight.Bold
+
+    fun parse(
+        textWithMarkdown: String,
+        highlightColor: Color,
+    ): AnnotatedString = buildAnnotatedString {
+        val style = SpanStyle(
+            color = highlightColor,
+            fontWeight = HIGHLIGHT_FONT_WEIGHT,
+        )
+        val parts = textWithMarkdown.splitToSequence(HIGHLIGHT_DELIMITER)
+        var delimited = false
+        for (part in parts) {
+            if (delimited) {
+                withStyle(style) {
+                    append(part)
+                }
+            } else {
+                append(part)
+            }
+            delimited = !delimited
+        }
+    }
+}
+
+@Composable
+fun SnackbarWithMarkdown(
+    snackbarData: SnackbarData,
+    modifier: Modifier = Modifier,
+    shape: Shape = SnackbarDefaults.shape,
+    containerColor: Color = SnackbarDefaults.color,
+    contentColor: Color = SnackbarDefaults.contentColor,
+    highlightColor: Color = MaterialTheme.colorScheme.secondary,
+) {
+    Snackbar(
+        modifier = modifier.padding(12.dp),
+        shape = shape,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        content = {
+            val annotatedMessage = remember(snackbarData, highlightColor) {
+                HighlightMarkdown.parse(snackbarData.visuals.message, highlightColor)
+            }
+            Text(text = annotatedMessage)
+        },
+    )
 }

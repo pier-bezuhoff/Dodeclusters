@@ -84,6 +84,10 @@ sealed class ObjectModel<R : Any> {
         propertyInvalidationsState.value += 1
     }
 
+    private fun invalidateProperties() {
+        propertyInvalidationsState.value += 1
+    }
+
     /** called each time an object changes */
     protected open fun objectChangedAt(ix: Ix) {
         pathCache.invalidateObjectPathAt(ix)

@@ -11,7 +11,6 @@ import core.geometry.RegionPointLocation
 import domain.squareSum
 import kotlin.math.abs
 import kotlin.math.hypot
-import kotlin.math.sign
 
 // eval for one-to-one functions
 
@@ -107,26 +106,25 @@ fun computeCircleBy2PointsAndSagittaRatio(
 ): CircleOrLine? {
     if (chordStart == chordEnd ||
         chordStart == Point.CONFORMAL_INFINITY || chordEnd == Point.CONFORMAL_INFINITY
-    ) {
-        return null
-    }
+    ) return null
     val sagittaRatio = params.sagittaRatio
-    if (abs(sagittaRatio) < EPSILON) {
+    if (abs(sagittaRatio) < EPSILON)
         return Line.by2Points(chordStart, chordEnd)
-    }
+    if (sagittaRatio.isInfinite())
+        return Line.by2Points(chordEnd, chordStart)
     val chordX  = chordEnd.x - chordStart.x
     val chordY  = chordEnd.y - chordStart.y
-    val chordLength = hypot(chordX, chordY)
-    val sagitta = sagittaRatio * chordLength
+    val chord = hypot(chordX, chordY)
+    val sagitta = sagittaRatio * chord
     val chordMidX = (chordStart.x + chordEnd.x)/2.0
     val chordMidY = (chordStart.y + chordEnd.y)/2.0
-    val radius = (4*sagitta + chordLength/sagittaRatio)/8.0
+    val radius = (4*sagitta + chord/sagittaRatio)/8.0
     val apothem = radius - sagitta
     return Circle(
-        x = chordMidX + apothem*chordY/chordLength,
-        y = chordMidY - apothem*chordX/chordLength,
+        x = chordMidX + apothem*chordY/chord,
+        y = chordMidY - apothem*chordX/chord,
         radius = abs(radius),
-        isCCW = radius > 0,
+        isCCW = sagittaRatio > 0,
     )
 //    val sagittaX = params.sagittaRatio*(chordStart.y - chordEnd.y)
 //    val sagittaY = params.sagittaRatio*(-chordStart.x + chordEnd.x)
@@ -143,20 +141,25 @@ fun computeSagittaRatio(
     chordStart: Point,
     chordEnd: Point,
 ): Double {
-    require(chordStart != Point.CONFORMAL_INFINITY && chordEnd != Point.CONFORMAL_INFINITY)
+    require(chordStart.isFinite && chordEnd.isFinite)
     val chordX = chordEnd.x - chordStart.x
     val chordY = chordEnd.y - chordStart.y
     val chord = hypot(chordX, chordY)
-    if (chord < EPSILON) {
-        return 0.0
-    }
+    if (chord < EPSILON)
+        return Double.POSITIVE_INFINITY // infinity sign doesn't matter
     val chordMidX = (chordStart.x + chordEnd.x)/2.0
     val chordMidY = (chordStart.y + chordEnd.y)/2.0
     val apothemX = chordMidX - circle.x
     val apothemY = chordMidY - circle.y
-    val sign = sign(chordX*apothemY - chordY*apothemX)
+    val apothemCrossChord = chordX*apothemY - chordY*apothemX
     val sagitta = circle.radius - hypot(apothemX, apothemY)
-    return sign*sagitta/chord
+    val sign = if (circle.isCCW) +1 else -1
+    val sagitta1 =
+        if ((apothemCrossChord >= 0.0) == circle.isCCW)
+            sagitta
+        else
+            2*circle.radius - sagitta
+    return sign*sagitta1/chord
 }
 
 fun computePolarLine(
@@ -191,11 +194,10 @@ fun computePole(
 ): Point {
     val (x, y, r) = circle
     val (a, b, c) = polarLine
-    if (polarLine.calculateLocationEpsilon(circle.centerPoint) == RegionPointLocation.BORDERING) {
+    if (polarLine.calculateLocationEpsilon(circle.centerPoint) == RegionPointLocation.BORDERING)
         // NOTE: projectively correct pole would be the infinite point in a direction that
         //  is perpendicular to the polar line
         return Point.CONFORMAL_INFINITY
-    }
     val eq = a*x + b*y + c
     val k = r*r/eq
     return Point(x - a*k, y - b*k)
