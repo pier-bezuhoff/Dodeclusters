@@ -206,27 +206,19 @@ data class Circle(
             order1 + (TAU - (order1 - order2))/2.0
 //        val half = (order2 - order1).mod(2*PI)/2.0
 
-    // FIX: only works half the time
     override fun orderIsInBetween(startOrder: Double, order: Double, endOrder: Double): Boolean {
         val o = (order + TAU) % TAU
         val start = (startOrder + TAU) % TAU
         val end = (endOrder + TAU) % TAU
-        return if (isCCW) {
-            if (start <= end) {
-                o in start..end
-            } else { // the arc contains order=0
-                o in start..0.0 || o in 0.0..end
-            }
-        } else {
-            if (end <= start) { // CW circle order is reversed
-                o in end..start
-            } else {
-                o in end..0.0 || o in 0.0..start
-            }
+        return if (start <= end) {
+            o in start..end
+        } else { // the arc contains order=0
+            o in start..TAU || o in 0.0..end
         }
     }
 
     override fun pointIsInBetween(startPoint: Point, point: Point, endPoint: Point): Boolean {
+        // -startToPoint x startToEnd
         val cross = (point.x - startPoint.x)*(endPoint.y - startPoint.y) - (point.y - startPoint.y)*(endPoint.x - startPoint.x)
         if (abs(cross) < EPSILON)
             return true
@@ -460,14 +452,13 @@ data class Circle(
         return PI + atan2(dy, dx) // CCW and reversed y-axis cancel each other
     }
 
-
     /** Clockwise, `(-2*PI; 2*PI)` */
     fun calculateSweepAngle(start: Point, midpoint: Point, end: Point): Double {
         if (start.isInfinite || midpoint.isInfinite || end.isInfinite)
             return 0.0
         val c = centerPoint
-        val angle = calculateAngle(c, start, end)
-        val midAngle = calculateAngle(c, start, midpoint)
+        val angle = Point.calculateAngle(c, start, end)
+        val midAngle = Point.calculateAngle(c, start, midpoint)
         val angle1 = (angle + TAU) % TAU // in [0; TAU)
         val midAngle1 = (midAngle + TAU) % TAU
         val otherArc = midAngle1 > angle1
@@ -482,7 +473,7 @@ data class Circle(
         if (start.isInfinite || end.isInfinite)
             return 0.0
         val c = centerPoint
-        val angle = calculateAngle(c, start, end)
+        val angle = Point.calculateAngle(c, start, end)
         val angle1 = (angle + TAU) % TAU // in [0; TAU)
         val otherArc = isCCW
         return if (otherArc)

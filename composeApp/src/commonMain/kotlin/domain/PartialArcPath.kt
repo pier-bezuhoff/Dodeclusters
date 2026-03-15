@@ -303,5 +303,8 @@ private fun circleByChordEndsAndMidArc(chordStart: Point, chordEnd: Point, midAr
     val k = r/s - 1.0
     val ox = mx + k*sx
     val oy = my + k*sy
-    return Circle(ox, oy, r)
+    return Circle(
+        ox, oy, r,
+        isCCW = Point.calculateOrientation(chordStart, midArc, chordEnd),
+    )
 }

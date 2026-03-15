@@ -1878,7 +1878,7 @@ class EditorViewModel : ViewModel() {
                 }
                 else -> {}
             }
-            if (submode == null) {
+            if (submode == null) { // try grabbing arc midpoint
                 for (arcPathIndex in selection.arcPaths) {
                     val concreteArcPath = concreteArcPaths[arcPathIndex]
                     for (arcIndex in concreteArcPath.arcs.indices) {
@@ -1961,7 +1961,9 @@ class EditorViewModel : ViewModel() {
                 ToolMode.ARC_PATH -> {
                     partialArcPath = partialArcPath?.unFocus()
                     if (submode == null) { // we might have grabbed an arc midpoint
+                        clearSelection()
                         downArcPathPoint(position)
+                        history.accumulateChangedLocations(selection = true)
                     }
                 }
                 is ToolMode -> if (partialArgList?.isFull != true)
@@ -3717,6 +3719,7 @@ class EditorViewModel : ViewModel() {
 
     fun completeArcPath() {
         partialArcPath?.let { pArcPath ->
+//            println(pArcPath.toString())
             pinStateForHistory()
             val vertexIndices: List<Ix> = pArcPath.vertices.map { vertex ->
                 when (val p2p = realizePointSnap(vertex.snap, pinAndRecordHistory = false)) {
@@ -3728,7 +3731,8 @@ class EditorViewModel : ViewModel() {
                 when (val p2p = realizePointSnap(arc.snap, pinAndRecordHistory = false)) {
                     is PointSnapResult.Free -> {
                         Arc.By2Points(sagittaRatio =
-                            if (arc.circle == null) 0.0 // straight line
+                            if (arc.circle == null)
+                                0.0 // straight line
                             else
                                 computeSagittaRatio(
                                     circle = arc.circle,

@@ -523,6 +523,7 @@ fun EditorScreen(
 /** Loads all tool icons and caches them.
  * Otherwise icons only start being loaded when the corresponding category panel is open,
  * which is noticeable & jarring */
+@Suppress("ComposableNaming")
 @Composable
 private fun preloadIcons() {
     val categoryList = listOf(
@@ -622,6 +623,7 @@ fun ToolDescription(
             )
         }
         val inputPrompt = stringResource(Res.string.tool_arg_input_prompt)
+        // TODO: highlight markdown for arg descriptions
         val argDescriptions = (tool as? Tool.MultiArg)?.let {
             stringArrayResource(it.argDescriptions)
         }

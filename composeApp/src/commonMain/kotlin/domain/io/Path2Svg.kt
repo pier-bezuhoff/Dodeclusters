@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathIterator
 import androidx.compose.ui.graphics.PathSegment
 import core.geometry.Point
-import core.geometry.calculateAngle
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.tan
@@ -79,7 +78,7 @@ private fun conicSegment2arc(points: FloatArray): String {
     val p0 = Point(p0x.toDouble(), p0y.toDouble())
     val p1 = Point(p1x.toDouble(), p1y.toDouble())
     val p2 = Point(p2x.toDouble(), p2y.toDouble())
-    val p0p1p2 = calculateAngle(start = p0, center = p1, end = p2)
+    val p0p1p2 = Point.calculateAngle(start = p0, center = p1, end = p2)
     if (abs(p0p1p2) > PI)
         println("conicSegment2arc: weird control point $points")
     // we average p0p1 and p2p1 just in case, they should be equal anyway

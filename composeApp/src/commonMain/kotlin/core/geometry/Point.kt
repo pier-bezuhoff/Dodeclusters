@@ -179,6 +179,25 @@ data class Point(
             if (offset.isFinite)
                 Point(offset.x.toDouble(), offset.y.toDouble())
             else CONFORMAL_INFINITY
+
+        /** CCW angle from [start] to [end] in `[-PI; PI]` */
+        fun calculateAngle(center: Point, start: Point, end: Point): Double {
+            if (start.isInfinite || center.isInfinite || end.isInfinite)
+                return 0.0
+            val v1x = start.x - center.x
+            val v1y = start.y - center.y
+            val v2x = end.x - center.x
+            val v2y = end.y - center.y
+            return atan2(
+                v1x*v2y - v1y*v2x,
+                v1x*v2x + v1y*v2y
+            )
+        }
+
+        /** counterclockwise -> true, clockwise -> false */
+        fun calculateOrientation(p1: Point, p2: Point, p3: Point): Boolean {
+            return (p2.x-p1.x)*(p3.y-p1.y) - (p2.y-p1.y)*(p3.x-p1.x) <= 0.0
+        }
     }
 }
 
@@ -191,18 +210,4 @@ enum class RegionPointLocation {
     BORDERING,
     /** A point is outside of a region */
     OUT,
-}
-
-/** CCW angle from [start] to [end] in `[-PI; PI]` */
-fun calculateAngle(center: Point, start: Point, end: Point): Double {
-    if (start.isInfinite || center.isInfinite || end.isInfinite)
-        return 0.0
-    val v1x = start.x - center.x
-    val v1y = start.y - center.y
-    val v2x = end.x - center.x
-    val v2y = end.y - center.y
-    return atan2(
-        v1x*v2y - v1y*v2x,
-        v1x*v2x + v1y*v2y
-    )
 }

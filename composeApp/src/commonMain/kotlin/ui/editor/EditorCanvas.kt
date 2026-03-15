@@ -1012,14 +1012,13 @@ private fun DrawScope.drawSelectedArcPaths(
             color = arcPath.borderColor ?: defaultSelectedArcPathColor,
             style = arcPathStroke,
         )
-        // FIX: only show in selection mode or allow moving them in the tool mode
+        // TODO: dont show when not showCircles; layer above else
         for (arc in arcPath.arcs) {
             arc.freeMidpoint?.let { middlePoint ->
                 drawCircle(
                     color = arcMiddlePointColor,
                     radius = arcMiddlePointRadius,
                     center = middlePoint.toOffset(),
-//                    alpha = middlePointAlpha,
                 )
             }
         }

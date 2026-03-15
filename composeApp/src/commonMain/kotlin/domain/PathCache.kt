@@ -39,7 +39,7 @@ class PathCache {
 //        cachedObjectPaths[objectIndex]?.rewind()
         objectPaths[objectIndex]?.reset()
         for (dependentIndex in dependencies[objectIndex].orEmpty()) {
-            dependentPathValidity[dependentIndex] = false
+            dependentPathValidity[dependentIndex] = false // NOTE: seeming OOB error after deletion happened once
             dependentPaths[dependentIndex]?.reset()
         }
     }
@@ -88,16 +88,15 @@ class PathCache {
                     dependencies[objectIndex] = dependents + dependentIndex
             } else if (dependentIndex in dependents) { // not in new but in old
                 val newDependents = dependents - dependentIndex
+                dependencies[objectIndex] = newDependents
                 if (newDependents.isEmpty())
                     toBeRemoved.add(objectIndex)
-                else
-                    dependencies[objectIndex] = newDependents
             }
         }
         for (newObjectIndex in (deps - dependencies.keys)) {
             dependencies[newObjectIndex] = setOf(dependentIndex)
         }
-        for (objectIndex in toBeRemoved)
+        for (objectIndex in toBeRemoved) // cannot remove during map entry iteration
             dependencies.remove(objectIndex)
         dependentPathValidity[dependentIndex] = false
     }
@@ -105,16 +104,15 @@ class PathCache {
     fun removeDependent(dependentIndex: Int) {
         dependentPaths.removeAt(dependentIndex)
         dependentPathValidity =
-            dependentPathValidity.slice(0 until dependentIndex)
+            dependentPathValidity.take(dependentIndex)
                 .plus(dependentPathValidity.drop(dependentIndex + 1))
                 .toBooleanArray()
         val toBeRemoved = mutableListOf<Ix>()
         for ((objectIndex, dependents) in dependencies) {
             val newDependents = dependents - dependentIndex
+            dependencies[objectIndex] = newDependents
             if (newDependents.isEmpty()) // careful about removing during iteration
                 toBeRemoved.add(objectIndex)
-            else
-                dependencies[objectIndex] = newDependents
         }
         for (objectIndex in toBeRemoved) // cannot remove during iteration
             dependencies.remove(objectIndex)
