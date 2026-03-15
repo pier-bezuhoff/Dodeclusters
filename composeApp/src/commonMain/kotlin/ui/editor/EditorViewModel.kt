@@ -118,7 +118,6 @@ import ui.theme.DodeclustersColors
 import ui.theme.ExtendedColorScheme
 import ui.tools.Category
 import ui.tools.Tool
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -1876,18 +1875,20 @@ class EditorViewModel : ViewModel() {
                             }
                         }
                     }
-                    for (arcPathIndex in selection.arcPaths) {
-                        val concreteArcPath = concreteArcPaths[arcPathIndex]
-                        for (arcIndex in concreteArcPath.arcs.indices) {
-                            concreteArcPath.arcs[arcIndex].freeMidpoint?.let { midpoint ->
-                                if (isCloseEnoughToSelect(midpoint.toOffset(), position, lowAccuracy = true)) {
-                                    submode = SubMode.GrabbedArcMidpoint(arcPathIndex, arcIndex)
-                                }
+                }
+                else -> {}
+            }
+            if (submode == null) {
+                for (arcPathIndex in selection.arcPaths) {
+                    val concreteArcPath = concreteArcPaths[arcPathIndex]
+                    for (arcIndex in concreteArcPath.arcs.indices) {
+                        concreteArcPath.arcs[arcIndex].freeMidpoint?.let { midpoint ->
+                            if (isCloseEnoughToSelect(midpoint.toOffset(), position, lowAccuracy = true)) {
+                                submode = SubMode.GrabbedArcMidpoint(arcPathIndex, arcIndex)
                             }
                         }
                     }
                 }
-                else -> {}
             }
             when (submode) {
                 is SubMode.FlowFill,
@@ -1959,11 +1960,12 @@ class EditorViewModel : ViewModel() {
                 }
                 ToolMode.ARC_PATH -> {
                     partialArcPath = partialArcPath?.unFocus()
-                    downArcPathPoint(position)
+                    if (submode == null) { // we might have grabbed an arc midpoint
+                        downArcPathPoint(position)
+                    }
                 }
-                is ToolMode -> if (partialArgList?.isFull != true) {
+                is ToolMode -> if (partialArgList?.isFull != true)
                     downToolArg(position)
-                }
                 else -> {}
             }
         }
@@ -2316,10 +2318,10 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun rotateSingleCircle(ix: Ix, pan: Offset, c: Offset, sm: SubMode.Rotate) {
+    private fun rotateSingleCircle(ix: Ix, translation: Offset, c: Offset, sm: SubMode.Rotate) {
         val center = sm.center
         val centerToCurrent = c - center
-        val centerToPreviousHandle = centerToCurrent - pan
+        val centerToPreviousHandle = centerToCurrent - translation
         val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
         val newAngle = sm.angle + angle
         val snappedAngle =
@@ -2638,33 +2640,24 @@ class EditorViewModel : ViewModel() {
         val c = absolute(centroid)
         val selectedCircles = objectSelection.filter { objects[it] is CircleOrLineOrImaginaryCircle }
         val selectedPoints = objectSelection.filter { objects[it] is Point }
-        val sm = submode
-        if (sm != null) {
-            // drag handle
-            when (handleConfig) {
-                HandleConfig.SINGLE_CIRCLE -> {
-                    when (sm) {
-                        is SubMode.Scale ->
-                            scaleSingleCircle(ix = selection.objects.single(), c = c, zoom = zoom, sm = sm)
-                        is SubMode.Rotate ->
-                            rotateSingleCircle(ix = selection.objects.single(), pan = pan, c = c, sm = sm)
-                        else -> {}
-                    }
-                }
-                HandleConfig.SEVERAL_OBJECTS -> {
-                    when (sm) {
-                        is SubMode.Scale ->
-                            scaleSeveralCircles(pan, selectedIndices)
-                        is SubMode.Rotate ->
-                            rotateSeveralCircles(pan = pan, c = c, sm = sm, targets = selectedIndices)
-                        is SubMode.GrabbedArcMidpoint ->
-                            dragGrabbedArcMidpoint(absoluteCentroid = c, sm = sm)
-                        else -> {}
-                    }
-                }
-                else -> {}
+        when (val sm = submode) {
+            is SubMode.Scale -> when (handleConfig) {
+                HandleConfig.SINGLE_CIRCLE ->
+                    scaleSingleCircle(ix = selection.objects.single(), c = c, zoom = zoom, sm = sm)
+                HandleConfig.SEVERAL_OBJECTS ->
+                    scaleSeveralCircles(pan, selectedIndices)
+                null -> {}
             }
-            if (mode == SelectionMode.Multiselect && sm is SubMode.RectangularSelect) {
+            is SubMode.Rotate -> when (handleConfig) {
+                HandleConfig.SINGLE_CIRCLE ->
+                    rotateSingleCircle(ix = selection.objects.single(), translation = pan, c = c, sm = sm)
+                HandleConfig.SEVERAL_OBJECTS ->
+                    rotateSingleCircle(ix = selection.objects.single(), translation = pan, c = c, sm = sm)
+                null -> {}
+            }
+            is SubMode.GrabbedArcMidpoint ->
+                dragGrabbedArcMidpoint(absoluteCentroid = c, sm = sm)
+            is SubMode.RectangularSelect -> {
                 val corner1 = sm.corner1
                 val rect = Rect.fromCorners(corner1 ?: c, c)
                 val selectables = objects.mapIndexed { ix, o ->
@@ -2675,7 +2668,8 @@ class EditorViewModel : ViewModel() {
                 )
                 submode = SubMode.RectangularSelect(corner1, c)
                 history.accumulateChangedLocations(selection = true)
-            } else if (mode == SelectionMode.Multiselect && sm is SubMode.FlowSelect) {
+            }
+            is SubMode.FlowSelect -> {
                 val qualifiedRegion = sm.lastQualifiedRegion
                 val (_, newQualifiedRegion) = selectRegionAt(centroid)
                 if (qualifiedRegion == null) {
@@ -2688,11 +2682,12 @@ class EditorViewModel : ViewModel() {
                         (newQualifiedRegion.outsides - qualifiedRegion.outsides)
                     selection = Selection(objects =
                         selection.objects +
-                                diff.filter { it !in objectSelection && (showPhantomObjects || it !in phantoms) }
+                            diff.filter { it !in objectSelection && (showPhantomObjects || it !in phantoms) }
                     )
                     history.accumulateChangedLocations(selection = true)
                 }
-            } else if (mode == SelectionMode.Region && sm is SubMode.FlowFill) {
+            }
+            is SubMode.FlowFill -> {
                 val qualifiedRegion = sm.lastQualifiedRegion
                 val (_, newQualifiedRegion) = selectRegionAt(centroid)
                 if (qualifiedRegion == null) {
@@ -2705,59 +2700,67 @@ class EditorViewModel : ViewModel() {
                         reselectRegionAt(centroid)
                     }
                 }
-            } else if (mode == ViewMode.StereographicRotation && sm is SubMode.RotateStereographicSphere) {
+            }
+            is SubMode.RotateStereographicSphere ->
                 stereographicallyRotateEverything(sm, c)
+            null -> when (mode) {
+                SelectionMode.Drag if selectedCircles.isNotEmpty() && showCircles ->
+                    dragCircle(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+                SelectionMode.Drag if selectedPoints.isNotEmpty() && showCircles ->
+                    dragPoint(absolutePointerPosition = c)
+                SelectionMode.Drag if selection.arcPaths.isNotEmpty() ->
+                    dragArcPaths(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+                SelectionMode.Multiselect if (
+                        selectedCircles.isNotEmpty() && showCircles ||
+                                selectedPoints.isNotEmpty() || selection.arcPaths.isNotEmpty()
+                        ) ->
+                    dragSelection(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+                else -> {
+                    val snap = snapped(c)
+                    val absolutePoint = snap.result
+                    val argList = partialArgList
+                    val currentArg = argList?.currentArg
+                    val currentArgType = argList?.currentArgType
+                    if (mode == ToolMode.ARC_PATH) {
+                        partialArcPath = partialArcPath?.moveFocused(snap)
+                    } else if (
+                        mode is ToolMode &&
+                        currentArgType?.possibleTypes?.any { it is Arg.Type.Point } == true &&
+                        ((mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION) entails
+                                (currentArg?.type is Arg.Type.Point))
+                    ) {
+                        val newArg = when (snap) {
+                            is PointSnapResult.Eq -> Arg.PointIndex(snap.pointIndex)
+                            else -> Arg.PointXY(absolutePoint)
+                        }
+                        if (argList.validateUpdatedArg(newArg)) {
+                            partialArgList = argList
+                                .updateCurrentArg(newArg, confirmThisArg = false)
+                                .copy(lastSnap = snap)
+                        }
+                    } else {
+                        if (zoom != 1.0f || rotationAngle != 0.0f) {
+                            val targets = objects.indices.toList()
+                            val center = computeAbsoluteCenter() ?: Offset.Zero
+                            val changedIndices =
+                                objectModel.transform(
+                                    targets,
+                                    focus = center,
+                                    zoom = zoom,
+                                    rotationAngle = rotationAngle
+                                )
+                            history.accumulateChangedLocations(
+                                objectIndices = changedIndices,
+                                expressionIndices = changedIndices,
+                                center = true,
+                            )
+                        }
+                        translation += pan // navigate canvas
+                        objectModel.pathCache.invalidateAll() // sadly have to do this cuz we use visibleRect in path construction
+                    }
+                }
             }
-        // submode == null
-        } else if (mode == SelectionMode.Drag && selectedCircles.isNotEmpty() && showCircles) {
-            dragCircle(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
-        } else if (mode == SelectionMode.Drag && selectedPoints.isNotEmpty() && showCircles) {
-            dragPoint(absolutePointerPosition = c)
-        } else if (mode == SelectionMode.Drag && selection.arcPaths.isNotEmpty()) {
-            dragArcPaths(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
-        } else if (
-            mode == SelectionMode.Multiselect &&
-            (selectedCircles.isNotEmpty() && showCircles || selectedPoints.isNotEmpty() || selection.arcPaths.isNotEmpty())
-        ) {
-            dragSelection(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
-        } else {
-            val snap = snapped(c)
-            val absolutePoint = snap.result
-            val argList = partialArgList
-            val currentArg = argList?.currentArg
-            val currentArgType = argList?.currentArgType
-            if (mode == ToolMode.ARC_PATH) {
-                partialArcPath = partialArcPath?.moveFocused(snap)
-            } else if (
-                mode is ToolMode &&
-                currentArgType?.possibleTypes?.any { it is Arg.Type.Point } == true &&
-                ((mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION) entails
-                    (currentArg?.type is Arg.Type.Point))
-            ) {
-                val newArg = when (snap) {
-                    is PointSnapResult.Eq -> Arg.PointIndex(snap.pointIndex)
-                    else -> Arg.PointXY(absolutePoint)
-                }
-                if (argList.validateUpdatedArg(newArg)) {
-                    partialArgList = argList
-                        .updateCurrentArg(newArg, confirmThisArg = false)
-                        .copy(lastSnap = snap)
-                }
-            } else {
-                if (zoom != 1.0f || rotationAngle != 0.0f) {
-                    val targets = objects.indices.toList()
-                    val center = computeAbsoluteCenter() ?: Offset.Zero
-                    val changedIndices =
-                        objectModel.transform(targets, focus = center, zoom = zoom, rotationAngle = rotationAngle)
-                    history.accumulateChangedLocations(
-                        objectIndices = changedIndices,
-                        expressionIndices = changedIndices,
-                        center = true,
-                    )
-                }
-                translation += pan // navigate canvas
-                objectModel.pathCache.invalidateAll() // sadly have to do this cuz we use visibleRect in path construction
-            }
+            else -> {}
         }
     }
 
