@@ -203,9 +203,10 @@ data class Circle(
         if (order2 > order1)
             order1 + (order2 - order1)/2.0
         else // includes order1 == order2 case
-            order1 + (2* PI - (order1 - order2))/2.0
+            order1 + (TAU - (order1 - order2))/2.0
 //        val half = (order2 - order1).mod(2*PI)/2.0
 
+    // FIX: only works half the time
     override fun orderIsInBetween(startOrder: Double, order: Double, endOrder: Double): Boolean {
         val o = (order + TAU) % TAU
         val start = (startOrder + TAU) % TAU
@@ -223,6 +224,13 @@ data class Circle(
                 o in end..0.0 || o in 0.0..start
             }
         }
+    }
+
+    override fun pointIsInBetween(startPoint: Point, point: Point, endPoint: Point): Boolean {
+        val cross = (point.x - startPoint.x)*(endPoint.y - startPoint.y) - (point.y - startPoint.y)*(endPoint.x - startPoint.x)
+        if (abs(cross) < EPSILON)
+            return true
+        return (cross < 0) == isCCW
     }
 
     override fun translated(vector: Offset): Circle =

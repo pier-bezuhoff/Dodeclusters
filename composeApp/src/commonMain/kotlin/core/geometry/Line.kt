@@ -182,11 +182,11 @@ data class Line(
     }
 
     /** direction-independent */
-    fun pointIsInBetweenUndirected(startPoint: Point, point: Point, endPoint: Point): Boolean {
-        val ax = point.x - startPoint.x
-        val ay = point.y - startPoint.y
-        val bx = point.x - endPoint.x
-        val by = point.y - endPoint.y
+    fun pointIsInBetweenUndirected(p1: Point, p2: Point, p3: Point): Boolean {
+        val ax = p2.x - p1.x
+        val ay = p2.y - p1.y
+        val bx = p2.x - p3.x
+        val by = p2.y - p3.y
         return ax*bx + ay*by <= 0.0
     }
 

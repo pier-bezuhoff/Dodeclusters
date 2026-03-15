@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Selection(
     val objects: List<Ix> = emptyList(),
-    val arcPaths: List<Ix> = emptyList(),
+    val arcPaths: List<Int> = emptyList(),
 ) {
     val size: Int get() = objects.size + arcPaths.size
 }

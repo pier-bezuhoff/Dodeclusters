@@ -106,7 +106,7 @@ import ui.LifecycleEvent
 import ui.LoadingOverlay
 import ui.OnOffButton
 import ui.SimpleButton
-import ui.SnackbarWithMarkdown
+import ui.SnackbarWithHighlightMarkdown
 import ui.ThreeIconButton
 import ui.TwoIconButton
 import ui.WithTooltip
@@ -167,7 +167,7 @@ fun EditorScreen(
         else Modifier,
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
-                SnackbarWithMarkdown(data,
+                SnackbarWithHighlightMarkdown(data,
                     containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,

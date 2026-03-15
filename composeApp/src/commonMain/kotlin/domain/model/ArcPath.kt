@@ -11,7 +11,9 @@ import domain.Ix
 import domain.expressions.SagittaRatioParameters
 import domain.expressions.computeCircleBy2PointsAndSagittaRatio
 import domain.expressions.computeCircleBy3Points
+import domain.expressions.computeSagittaRatio
 import domain.filterIndices
+import domain.updated
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.min
@@ -113,7 +115,6 @@ data class ConcreteArcPath(
         var distance = vertices.minOfOrNull {
             it.distanceFrom(point)
         } ?: Double.POSITIVE_INFINITY
-        // wrong for some arcs
         arcs.forEachIndexed { i, arc ->
             val start = vertices[i]
             val end = vertices[(i + 1).mod(vertices.size)]
@@ -152,6 +153,27 @@ fun Arc.toCircleOrLine(
             null
         else
             computeCircleBy3Points(start, middle, end) as? CircleOrLine
+    }
+}
+
+fun ArcPath.moveArcMidpoint(allObjects: List<GCircle?>, arcIndex: Int, midpoint: Point): ArcPath {
+    require(arcs[arcIndex] is Arc.By2Points)
+    val arcStartIx = vertices[arcIndex]
+    val arcEndIx = vertices[(arcIndex + 1).mod(vertices.size)]
+    val start = allObjects[arcStartIx] as? Point ?: return this
+    val end = allObjects[arcEndIx] as? Point ?: return this
+    val newCircle = computeCircleBy3Points(start, midpoint, end) as? Circle
+    val newSagittaRatio = if (newCircle == null) 0.0
+    else computeSagittaRatio(newCircle, start, end)
+    return when (this) {
+        is ArcPath.Closed ->
+            copy(arcs = arcs.updated(arcIndex,
+                Arc.By2Points(newSagittaRatio)
+            ))
+        is ArcPath.Open ->
+            copy(arcs = arcs.updated(arcIndex,
+                Arc.By2Points(newSagittaRatio)
+            ))
     }
 }
 

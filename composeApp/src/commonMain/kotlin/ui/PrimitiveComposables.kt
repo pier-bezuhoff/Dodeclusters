@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,7 +70,9 @@ import androidx.compose.ui.unit.sp
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.apply
 import dodeclusters.composeapp.generated.resources.cancel
+import dodeclusters.composeapp.generated.resources.close
 import dodeclusters.composeapp.generated.resources.confirm
+import dodeclusters.composeapp.generated.resources.dismiss
 import dodeclusters.composeapp.generated.resources.ok
 import domain.LoadingState
 import domain.formatDecimals
@@ -795,20 +799,48 @@ private object HighlightMarkdown {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SnackbarWithMarkdown(
+fun SnackbarWithHighlightMarkdown(
     snackbarData: SnackbarData,
     modifier: Modifier = Modifier,
     shape: Shape = SnackbarDefaults.shape,
     containerColor: Color = SnackbarDefaults.color,
     contentColor: Color = SnackbarDefaults.contentColor,
     highlightColor: Color = MaterialTheme.colorScheme.secondary,
+    dismissActionContentColor: Color = SnackbarDefaults.dismissActionContentColor,
 ) {
+    val dismissActionComposable: (@Composable () -> Unit)? =
+        // see Snackbar default source code
+        if (snackbarData.visuals.withDismissAction) {
+            @Composable {
+                val contentDescription = stringResource(Res.string.dismiss)
+                TooltipBox(
+                    positionProvider =
+                        TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Above
+                        ),
+                    tooltip = { PlainTooltip { Text(contentDescription) } },
+                    state = rememberTooltipState(),
+                ) {
+                    IconButton(
+                        onClick = { snackbarData.dismiss() },
+                        content = {
+                            Icon(painterResource(Res.drawable.close), contentDescription = contentDescription)
+                        },
+                    )
+                }
+            }
+        } else {
+            null
+        }
     Snackbar(
         modifier = modifier.padding(12.dp),
+        dismissAction = dismissActionComposable,
         shape = shape,
         containerColor = containerColor,
         contentColor = contentColor,
+        dismissActionContentColor = dismissActionContentColor,
         content = {
             val annotatedMessage = remember(snackbarData, highlightColor) {
                 HighlightMarkdown.parse(snackbarData.visuals.message, highlightColor)

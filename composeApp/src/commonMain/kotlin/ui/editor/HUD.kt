@@ -347,6 +347,7 @@ fun BoxScope.PointContextActions(
 fun BoxScope.ArcPathContextActions(
     arcPaths: List<ArcPath>,
     toolAction: (Tool) -> Unit,
+    // grabbed midpoint <- submode
 ) {
     // scale/rotate handles
     // swap direction?

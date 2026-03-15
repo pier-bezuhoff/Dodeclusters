@@ -8,11 +8,9 @@ import dodeclusters.composeapp.generated.resources.imaginary_circle_notice
 import dodeclusters.composeapp.generated.resources.locked_object_notice
 import dodeclusters.composeapp.generated.resources.locked_objects_notice
 import dodeclusters.composeapp.generated.resources.overwrite_shared_done
-import dodeclusters.composeapp.generated.resources.overwrite_shared_name
 import dodeclusters.composeapp.generated.resources.phantom_object_explanation
 import dodeclusters.composeapp.generated.resources.placeholder
 import dodeclusters.composeapp.generated.resources.share_new_done
-import dodeclusters.composeapp.generated.resources.share_new_name
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.successful_save_notice
 import org.jetbrains.compose.resources.StringResource
@@ -24,11 +22,9 @@ enum class SnackbarMessage(
     STUB(Res.string.stub, duration = SnackbarDuration.Long),
     /** `$string` */
     PLACEHOLDER(Res.string.placeholder, duration = SnackbarDuration.Long),
-    LOCKED_OBJECTS_NOTICE(Res.string.locked_objects_notice),
-    LOCKED_OBJECT_NOTICE(Res.string.locked_object_notice),
+    LOCKED_OBJECTS_NOTICE(Res.string.locked_objects_notice, duration = SnackbarDuration.Long),
+    LOCKED_OBJECT_NOTICE(Res.string.locked_object_notice, duration = SnackbarDuration.Long),
     IMAGINARY_CIRCLE_NOTICE(Res.string.imaginary_circle_notice),
-//    SUCCESSFUL_RESTORE(Res.string.successful_restore_notice),
-//    SUCCESSFUL_OPEN(Res.string.stub),
     /** `... "$filename"` */
     FAILED_OPEN(Res.string.failed_open_notice),
     /** `... "$filename"` */

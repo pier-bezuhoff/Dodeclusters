@@ -82,6 +82,7 @@ import domain.model.ContinuousChange
 import domain.model.LogicalRegion
 import domain.model.SaveState
 import domain.model.Selection
+import domain.model.moveArcMidpoint
 import domain.mostCommonOf
 import domain.settings.BlendModeType
 import domain.settings.InversionOfControl
@@ -117,6 +118,7 @@ import ui.theme.DodeclustersColors
 import ui.theme.ExtendedColorScheme
 import ui.tools.Category
 import ui.tools.Tool
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -449,6 +451,9 @@ class EditorViewModel : ViewModel() {
         val selectedArcPathsString = selection.arcPaths.joinToString { j ->
             "$j: " + objectModel.arcPaths[j].toString()
         }
+        val selectedConcreteArcPathsString = selection.arcPaths.joinToString { j ->
+            "$j: " + objectModel.concreteArcPaths[j].toString()
+        }
         println("mode = $mode, submode = $submode")
         println("partialArgList = $partialArgList")
         println("selection = $objectSelection")
@@ -458,6 +463,7 @@ class EditorViewModel : ViewModel() {
         })
         println("selected objects expressions = $selectedExpressionsString")
         println("selected arc-paths = $selectedArcPathsString")
+        println("selected concrete arc-paths = $selectedConcreteArcPathsString")
         println(
             "regions bounded by some of selected objects = " + regions.filter {
                 it.insides.any { ix -> ix in objectSelection } ||
@@ -1078,6 +1084,7 @@ class EditorViewModel : ViewModel() {
         return objectModel.concreteArcPaths
             .mapIndexed { arcPathIndex, concreteArcPath ->
                 arcPathIndex to concreteArcPath.distanceFrom(position)
+//                    .also { println("$arcPathIndex: distance=$it") }
             }
             .filter { (_, distance) -> distance <= tapRadius }
             .minByOrNull { it.second }
@@ -1869,13 +1876,24 @@ class EditorViewModel : ViewModel() {
                             }
                         }
                     }
+                    for (arcPathIndex in selection.arcPaths) {
+                        val concreteArcPath = concreteArcPaths[arcPathIndex]
+                        for (arcIndex in concreteArcPath.arcs.indices) {
+                            concreteArcPath.arcs[arcIndex].freeMidpoint?.let { midpoint ->
+                                if (isCloseEnoughToSelect(midpoint.toOffset(), position, lowAccuracy = true)) {
+                                    submode = SubMode.GrabbedArcMidpoint(arcPathIndex, arcIndex)
+                                }
+                            }
+                        }
+                    }
                 }
                 else -> {}
             }
             when (submode) {
                 is SubMode.FlowFill,
                 is SubMode.Rotate, is SubMode.Scale, is SubMode.ScaleViaSlider,
-                is SubMode.RotateStereographicSphere, ->
+                is SubMode.RotateStereographicSphere,
+                is SubMode.GrabbedArcMidpoint ->
                     pinStateForHistory()
                 null -> when (mode) {
                     SelectionMode.Drag, SelectionMode.Multiselect -> {
@@ -2487,6 +2505,20 @@ class EditorViewModel : ViewModel() {
         transformWhatWeCan(targets, translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
     }
 
+    private fun dragGrabbedArcMidpoint(
+        sm: SubMode.GrabbedArcMidpoint,
+        absoluteCentroid: Offset,
+    ) {
+        objectModel.modifyArcPath(
+            sm.arcPathIndex,
+            arcPaths[sm.arcPathIndex].moveArcMidpoint(
+               objects,  sm.arcIndex, Point.fromOffset(absoluteCentroid)
+            )
+        )
+        objectModel.invalidatePositions()
+        history.accumulateChangedLocations(arcPaths = true)
+    }
+
     // NOTE: polar lines and line-by-2 transform weirdly:
     //  it becomes circle during st-rot, but afterwards when
     //  its carrier is moved it becomes line again
@@ -2625,6 +2657,8 @@ class EditorViewModel : ViewModel() {
                             scaleSeveralCircles(pan, selectedIndices)
                         is SubMode.Rotate ->
                             rotateSeveralCircles(pan = pan, c = c, sm = sm, targets = selectedIndices)
+                        is SubMode.GrabbedArcMidpoint ->
+                            dragGrabbedArcMidpoint(absoluteCentroid = c, sm = sm)
                         else -> {}
                     }
                 }
@@ -2674,6 +2708,7 @@ class EditorViewModel : ViewModel() {
             } else if (mode == ViewMode.StereographicRotation && sm is SubMode.RotateStereographicSphere) {
                 stereographicallyRotateEverything(sm, c)
             }
+        // submode == null
         } else if (mode == SelectionMode.Drag && selectedCircles.isNotEmpty() && showCircles) {
             dragCircle(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
         } else if (mode == SelectionMode.Drag && selectedPoints.isNotEmpty() && showCircles) {
@@ -2827,7 +2862,8 @@ class EditorViewModel : ViewModel() {
             is SubMode.RotateStereographicSphere,
             is SubMode.Rotate,
             is SubMode.Scale,
-            is SubMode.ScaleViaSlider ->
+            is SubMode.ScaleViaSlider,
+            is SubMode.GrabbedArcMidpoint ->
                 history.recordAccumulatedChanges()
             null -> when (mode) {
                 SelectionMode.Drag, SelectionMode.Multiselect -> {
@@ -2843,7 +2879,8 @@ class EditorViewModel : ViewModel() {
             is SubMode.Rotate,
             is SubMode.Scale,
             is SubMode.ScaleViaSlider,
-            is SubMode.FlowSelect, ->
+            is SubMode.FlowSelect,
+            is SubMode.GrabbedArcMidpoint ->
                 submode = null
             is SubMode.RectangularSelect ->
                 submode = SubMode.RectangularSelect()

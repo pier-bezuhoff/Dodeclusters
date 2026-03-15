@@ -93,6 +93,11 @@ sealed interface SubMode {
             ) { "Invalid adjustables $adjustables" }
         }
     }
+
+    data class GrabbedArcMidpoint(
+        val arcPathIndex: Int,
+        val arcIndex: Int,
+    ) : SubMode
 }
 
 /** Adjustable [expr] with indices that are occupied by its outputs.

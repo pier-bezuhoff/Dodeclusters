@@ -202,6 +202,7 @@
     <string name="ok">OK</string>
     <string name="confirm">Подтвердить</string>
     <string name="apply">Применить</string>
+    <string name="dismiss">Закрыть</string>
     <string name="n_steps_prompt">Число шагов</string>
     <string name="n_steps_placeholder">&lt;число шагов&gt;</string>
     <string name="angle_in_degrees_placeholder">&lt;угол в градусах&gt;</string>

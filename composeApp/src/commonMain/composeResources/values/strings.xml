@@ -205,6 +205,7 @@
     <string name="ok">OK</string>
     <string name="confirm">Confirm</string>
     <string name="apply">Apply</string>
+    <string name="dismiss">Dismiss</string>
     <string name="n_steps_prompt">Number of steps</string>
     <string name="n_steps_placeholder">&lt;number of steps&gt;</string>
     <string name="angle_in_degrees_placeholder">&lt;angle in degrees&gt;</string>
