@@ -2320,10 +2320,10 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun rotateSingleCircle(ix: Ix, translation: Offset, c: Offset, sm: SubMode.Rotate) {
+    private fun rotateSingleCircle(ix: Ix, pan: Offset, c: Offset, sm: SubMode.Rotate) {
         val center = sm.center
         val centerToCurrent = c - center
-        val centerToPreviousHandle = centerToCurrent - translation
+        val centerToPreviousHandle = centerToCurrent - pan
         val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
         val newAngle = sm.angle + angle
         val snappedAngle =
@@ -2652,9 +2652,9 @@ class EditorViewModel : ViewModel() {
             }
             is SubMode.Rotate -> when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
-                    rotateSingleCircle(ix = selection.objects.single(), translation = pan, c = c, sm = sm)
+                    rotateSingleCircle(ix = selection.objects.single(), pan = pan, c = c, sm = sm)
                 HandleConfig.SEVERAL_OBJECTS ->
-                    rotateSingleCircle(ix = selection.objects.single(), translation = pan, c = c, sm = sm)
+                    rotateSeveralCircles(pan = pan, c = c, sm = sm, targets = selectedIndices)
                 null -> {}
             }
             is SubMode.GrabbedArcMidpoint ->
