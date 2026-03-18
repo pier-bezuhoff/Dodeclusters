@@ -1,6 +1,8 @@
 package ui.editor
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.draggable2D
 import androidx.compose.foundation.gestures.rememberDraggable2DState
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +18,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +36,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -55,6 +60,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import core.geometry.Circle
+import core.geometry.ImaginaryCircle
+import core.geometry.Line
+import core.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.expand
@@ -403,6 +412,58 @@ fun BoxScope.ArcPathContextActions(
                 buttonModifier,
                 onClick = toolAction
             )
+        }
+    }
+}
+
+@Composable
+fun BoxScope.SelectionChoices(
+    choices: List<SubMode.SelectionChoices.Choice>,
+    selectChoice: (indexAmongChoices: Int) -> Unit,
+) {
+    // TODO: title, close button; TL
+    Surface(
+        modifier = Modifier
+            .align(Alignment.Center)
+        ,
+        shape = MaterialTheme.shapes.large,
+//        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+        tonalElevation = 12.dp,
+        shadowElevation = 12.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(8.dp)
+                .verticalScroll(rememberScrollState())
+            ,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            choices.forEachIndexed { i, choice ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val name = when (choice.objectOrArcPath) {
+                        is Circle -> "circle"
+                        is Line -> "line"
+                        is ImaginaryCircle -> "imaginary circles"
+                        is Point -> "point"
+                        null -> "arc-path"
+                    }
+                    TextButton(
+                        onClick = { selectChoice(i) },
+                        shape = MaterialTheme.shapes.small,
+                        border =
+                            if (i == 0) BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)
+                            else null,
+                    ) {
+                        Text(
+                            text = "$name #${choice.index}",
+                            color = choice.borderColor ?: choice.fillColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                }
+            }
         }
     }
 }

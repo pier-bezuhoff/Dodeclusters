@@ -67,6 +67,8 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     /** tier -> indices */
     protected val tier2ixs: MutableList<Set<Ix>>
 
+    val freeObjectsIndices: Set<Ix> get() = tier2ixs[FREE_TIER]
+
     init {
         require(objects.indices.toSet() == initialExpressions.keys) {
             "initialExpressions keys must coincide with objects.indices: ${initialExpressions.keys} == ${objects.indices.toSet()}, where objects = $objects, initialExpressions = $initialExpressions"

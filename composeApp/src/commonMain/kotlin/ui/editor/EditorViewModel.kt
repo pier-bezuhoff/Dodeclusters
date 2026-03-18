@@ -83,6 +83,7 @@ import domain.model.LogicalRegion
 import domain.model.SaveState
 import domain.model.Selection
 import domain.model.moveArcMidpoint
+import domain.model.reIndex
 import domain.mostCommonOf
 import domain.settings.BlendModeType
 import domain.settings.InversionOfControl
@@ -118,6 +119,7 @@ import ui.theme.DodeclustersColors
 import ui.theme.ExtendedColorScheme
 import ui.tools.Category
 import ui.tools.Tool
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -795,28 +797,49 @@ class EditorViewModel : ViewModel() {
 
     fun duplicateSelection() {
         if (mode.isSelectingCircles()) {
+            val objectsToCopy = selection.objects.filter { objects[it] is CircleOrLineOrPoint }
+            val copiedArcPaths = selection.arcPaths
+            val deps = copiedArcPaths.flatMap { arcPaths[it].dependencies }.toSet()
             // pre-sorting is mandatory for expression copying to work properly
             val copiedObjects = objectModel.expressions.sortedByTier(
-                selection.objects.filter { objects[it] is CircleOrLineOrPoint }
+                (objectsToCopy.toSet() + deps).sorted()
             )
-            if (copiedObjects.isNotEmpty() || selection.arcPaths.isNotEmpty()) {
+            if (copiedObjects.isNotEmpty()) {
                 pinStateForHistory()
+                val newIndices = (objects.size until (objects.size + copiedObjects.size)).toList()
+                val newArcPathIndices = (arcPaths.size until (arcPaths.size + copiedArcPaths.size)).toList()
+                // TODO: arc-path duplication animation
+                // NOTE: alters selection
                 copyRegionsAndStyles(copiedObjects.map { it to objects[it] }) { circles ->
                     CircleAnimation.ReEntrance(circles)
                 }
                 objectModel.expressions.copyExpressionsWithDependencies(copiedObjects)
-                for (arcPathIndex in selection.arcPaths) {
-                    objectModel.addArcPath(arcPaths[arcPathIndex])
+                val old2new = copiedObjects.zip(newIndices).associate { it }
+                for (arcPathIndex in copiedArcPaths) {
+                    objectModel.addArcPath(
+                        arcPaths[arcPathIndex].reIndex { oldIndex -> old2new[oldIndex]!! }
+                    )
+                }
+                selection = if (mode == SelectionMode.Drag) {
+                    if (objectsToCopy.isNotEmpty())
+                        Selection(objects = newIndices.take(1))
+                    else
+                        Selection(arcPaths = newArcPathIndices.take(1))
+                } else {
+                    Selection(
+                        objects = newIndices,
+                        arcPaths = newArcPathIndices,
+                    )
                 }
                 objectModel.invalidate()
-                val indices = (objects.size until (objects.size + copiedObjects.size)).toSet()
+                val newIndicesSet = newIndices.toSet()
                 history.accumulateChangedLocations(
-                    objectIndices = indices,
-                    objectColorIndices = indices,
-                    expressionIndices = indices,
+                    objectIndices = newIndicesSet,
+                    objectColorIndices = newIndicesSet,
+                    expressionIndices = newIndicesSet,
                     arcPaths = true,
                     regions = true,
-//                    selection = true,
+                    selection = true,
                 )
                 history.recordAccumulatedChanges()
             }
@@ -994,103 +1017,89 @@ class EditorViewModel : ViewModel() {
         return (absolutePosition - position).getDistance() <= tapRadius * (if (lowAccuracy) LOW_ACCURACY_FACTOR else 1f)
     }
 
-    fun selectPoint(
-        targets: List<Point?>,
+    fun getPointsAround(
+        targets: List<GCircle?>,
         visiblePosition: Offset,
-        priorityTargets: Set<Ix> = emptySet(),
-    ): Ix? {
+        priorityTargets: Set<Int> = emptySet(),
+    ): List<Int> {
         val position = absolute(visiblePosition)
         val absolutePoint = Point.fromOffset(position)
-        return targets
-            .mapIndexed { ix, point ->
+        return targets.asSequence()
+            .mapIndexed { ix, o ->
+                val point = o as? Point
                 val distance = point?.distanceFrom(absolutePoint) ?: Double.POSITIVE_INFINITY
                 ix to distance
-            }.filter { (_, distance) -> distance <= tapRadius }
-            .filter { (ix, _) -> showPhantomObjects || ix !in phantoms }
-            .minByOrNull { (ix, distance) ->
+            }
+            .filter { (ix, distance) ->
+                distance <= tapRadius && (showPhantomObjects || ix !in phantoms)
+            }.sortedBy { (ix, distance) ->
                 val priority =
                     if (ix in priorityTargets) 100
                     else 1
                 distance / priority
             }
-            ?.first
-            ?.also {
-                println("select point #$it: ${objects[it]} <- ${objectModel.expressions.expressions[it]}")
-            }
+            .map { it.first }
+            .toList()
     }
 
-    /** [selectPoint] around [visiblePosition] while prioritizing free points */
-    fun selectPointAt(visiblePosition: Offset): Ix? {
-        val points = objects.map { it as? Point }
-        val nearPointIndex = selectPoint(points, visiblePosition,
-            priorityTargets = points.indices
-                .filter { isFree(it) }
-                .toSet()
+    /** [getPointsAround] around [visiblePosition] while prioritizing free points */
+    fun getPreferablyFreePointsAround(visiblePosition: Offset): List<Ix> {
+        val closePoints = getPointsAround(objects, visiblePosition,
+            priorityTargets = objectModel.expressions.freeObjectsIndices
         )
-        return nearPointIndex
+        return closePoints
     }
 
     /**
-     * @param[targets] to select [ImaginaryCircle] convert it to real [Circle]
+     * @param[targets] to select from, [ImaginaryCircle]s are converted to real [Circle]s
      */
-    private fun selectCircle(
-        targets: List<CircleOrLine?>,
+    private fun getCirclesAround(
+        targets: List<GCircle?>,
         visiblePosition: Offset,
-        priorityTargets: Set<Ix> = emptySet(),
-    ): Ix? {
+        priorityTargets: Set<Int> = emptySet(),
+    ): List<Int> {
         val position = absolute(visiblePosition)
-        return targets.mapIndexed { ix, circle ->
-            val distance = circle?.distanceFrom(position) ?: Double.POSITIVE_INFINITY
-            ix to distance
-        }
-            .filter { (_, distance) -> distance <= tapRadius }
-            .filter { (ix, _) -> showPhantomObjects || ix !in phantoms }
-            .minByOrNull { (ix, distance) ->
+        return targets.asSequence()
+            .mapIndexed { ix, o ->
+                val circle = when (o) {
+                    is Circle -> o
+                    is Line -> o
+                    is ImaginaryCircle -> Circle(o.x, o.y, abs(o.radius))
+                    else -> null
+                }
+                val distance = circle?.distanceFrom(position) ?: Double.POSITIVE_INFINITY
+                ix to distance
+            }
+            .filter { (ix, distance) ->
+                distance <= tapRadius && (showPhantomObjects || ix !in phantoms)
+            }.sortedBy { (ix, distance) ->
                 val priority =
                     if (ix in priorityTargets) 100
                     else 1
                 distance / priority
             }
-            ?.let { (ix, _) -> ix }
-            ?.also {
-                // NOTE: this is printed twice when tapping on a circle in
-                //  drag mode, since both 0nDown & 0nTap trigger it once
-                println("select circle #$it: ${objects[it]} <- expr: ${objectModel.expressions.expressions[it]}")
-            }
+            .map { it.first }
+            .toList()
     }
 
-    /** [selectCircle] around [visiblePosition] while prioritizing free circles */
-    fun selectCircleAt(visiblePosition: Offset): Ix? {
-        val circles = objects.map { o ->
-            when (o) {
-                is Circle -> o
-                is Line -> o
-                // imaginary circles selected as if they were real
-                is ImaginaryCircle -> Circle(o.x, o.y, o.radius)
-                else -> null
-            }
-        }
-        val nearCircleIndex = selectCircle(circles, visiblePosition,
-            priorityTargets = circles.indices
-                .filter { isFree(it) }
-                .toSet()
+    /** [getCirclesAround] around [visiblePosition] while prioritizing free circles */
+    fun getPreferablyFreeCirclesAround(visiblePosition: Offset): List<Ix> {
+        val closeCircles = getCirclesAround(objects, visiblePosition,
+            priorityTargets = objectModel.expressions.freeObjectsIndices
         )
-        return nearCircleIndex
+        return closeCircles
     }
 
-    fun selectArcPathAt(visiblePosition: Offset): Int? {
+    fun getArcPathsAround(visiblePosition: Offset): List<Int> {
         val position = Point.fromOffset(absolute(visiblePosition))
-        return objectModel.concreteArcPaths
+        return objectModel.concreteArcPaths.asSequence()
             .mapIndexed { arcPathIndex, concreteArcPath ->
                 arcPathIndex to concreteArcPath.distanceFrom(position)
-//                    .also { println("$arcPathIndex: distance=$it") }
             }
             .filter { (_, distance) -> distance <= tapRadius }
-            .minByOrNull { it.second }
-            ?.first
-            ?.also {
-                println("select arcPath #$it: ${arcPaths[it]}")
-            }
+            .sortedBy { it.second }
+            .map { it.first }
+            .toList()
     }
 
     private fun findSiblingsAndParents(ix: Ix): List<Ix> {
@@ -1850,7 +1859,8 @@ class EditorViewModel : ViewModel() {
             history.recordAccumulatedChanges()
         }
         movementAfterDown = false
-        // reset grabbed thingies
+        if (submode is SubMode.SelectionChoices)
+            submode = null
         if (showCircles) {
             when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE -> {
@@ -1908,15 +1918,15 @@ class EditorViewModel : ViewModel() {
             }
             when (mode) {
                 SelectionMode.Drag -> if (submode == null) { // select point > circle > arcpath
-                    val selectedPointIndex = selectPointAt(position)
+                    val selectedPointIndex = getPreferablyFreePointsAround(position).firstOrNull()
                     selection = if (selectedPointIndex != null) {
                         Selection(objects = listOf(selectedPointIndex))
                     } else {
-                        val selectedCircleIndex = selectCircleAt(position)
+                        val selectedCircleIndex = getPreferablyFreeCirclesAround(position).firstOrNull()
                         if (selectedCircleIndex != null) {
                             Selection(objects = listOf(selectedCircleIndex))
                         } else {
-                            val selectedArcPathIndex = selectArcPathAt(position)
+                            val selectedArcPathIndex = getArcPathsAround(position).firstOrNull()
                             if (selectedArcPathIndex != null) {
                                 Selection(arcPaths = listOf(selectedArcPathIndex))
                             } else {
@@ -2038,7 +2048,7 @@ class EditorViewModel : ViewModel() {
                             else -> null
                         }
                     }
-                    selectCircle(selectableObjects, visiblePosition)?.let { ix ->
+                    getCirclesAround(selectableObjects, visiblePosition).firstOrNull()?.let { ix ->
                         val newArg = Arg.IndexOf(ix, objects[ix]!!)
                         // test non-equality conditions
                         if (argList.validateNewArg(newArg)) {
@@ -2077,8 +2087,7 @@ class EditorViewModel : ViewModel() {
             }
             // try selecting an existing object (singular as a group)
             if (!found && Arg.Indices in nextType.possibleTypes) {
-                val points = objects.map { it as? Point }
-                val selectedPointIndex = selectPoint(points, visiblePosition)
+                val selectedPointIndex = getPointsAround(objects, visiblePosition).firstOrNull()
                 if (selectedPointIndex == null) {
                     val circles = objects.map { o ->
                         when (o) {
@@ -2088,7 +2097,7 @@ class EditorViewModel : ViewModel() {
                             else -> null
                         }
                     }
-                    val selectedCircleIndex = selectCircle(circles, visiblePosition)
+                    val selectedCircleIndex = getCirclesAround(circles, visiblePosition).firstOrNull()
                     if (selectedCircleIndex != null) {
                         val newArg = Arg.Indices(listOf(selectedCircleIndex))
                         if (argList.validateNewArg(newArg)) {
@@ -2193,27 +2202,66 @@ class EditorViewModel : ViewModel() {
         } else if (showCircles) { // select circle(s)/region
             when (mode) {
                 SelectionMode.Drag -> {
-                    val selectedPointIndex = selectPointAt(position)
-                    if (selectedPointIndex != null) {
-                        selection = Selection(objects = listOf(selectedPointIndex))
+                    // when multiple close candidates, show choice list
+                    if (SHOW_SELECTION_CHOICES) {
+                        val selectablePoints = getPreferablyFreePointsAround(position)
+                        val selectableCircles = getPreferablyFreeCirclesAround(position)
+                        val selectableArcPaths = getArcPathsAround(position)
+                        when {
+                            selectablePoints.isNotEmpty() ->
+                                selection = Selection(objects = selectablePoints.take(1))
+                            selectableCircles.isNotEmpty() -> {
+                                selection = Selection(objects = selectableCircles.take(1))
+                                highlightSelectionParents()
+                            }
+                            selectableArcPaths.isNotEmpty() ->
+                                selection = Selection(arcPaths = selectableArcPaths.take(1))
+                            else ->
+                                clearSelection()
+                        }
+                        if (selectablePoints.size + selectableCircles.size + selectableArcPaths.size > 1) {
+                            submode = SubMode.SelectionChoices(
+                                (selectablePoints + selectableCircles).mapNotNull { ix ->
+                                    val obj = objects[ix] ?: return@mapNotNull null
+                                    val color = objectModel.objectColors[ix]
+                                    SubMode.SelectionChoices.Choice(
+                                        index = ix, objectOrArcPath = obj,
+                                        borderColor = color, fillColor = color,
+                                    )
+                                } + selectableArcPaths.map { arcPathIndex ->
+                                    val arcPath = arcPaths[arcPathIndex]
+                                    val borderColor = arcPath.borderColor
+                                    val fillColor = (arcPath as? ArcPath.Closed)?.fillColor
+                                    SubMode.SelectionChoices.Choice(
+                                        index = arcPathIndex, objectOrArcPath = null,
+                                        borderColor = borderColor, fillColor = fillColor,
+                                    )
+                                }
+                            )
+                        }
                     } else {
-                        val selectedCircleIndex = selectCircleAt(position)
-                        if (selectedCircleIndex != null) {
-                            selection = Selection(objects = listOf(selectedCircleIndex))
-                            highlightSelectionParents()
+                        val selectedPointIndex = getPreferablyFreePointsAround(position).firstOrNull()
+                        if (selectedPointIndex != null) {
+                            selection = Selection(objects = listOf(selectedPointIndex))
                         } else {
-                            val selectedArcPathIndex = selectArcPathAt(position)
-                            selection = if (selectedArcPathIndex != null) {
-                                Selection(arcPaths = listOf(selectedArcPathIndex))
+                            val selectedCircleIndex = getPreferablyFreeCirclesAround(position).firstOrNull()
+                            if (selectedCircleIndex != null) {
+                                selection = Selection(objects = listOf(selectedCircleIndex))
+                                highlightSelectionParents()
                             } else {
-                                Selection()
+                                val selectedArcPathIndex = getArcPathsAround(position).firstOrNull()
+                                if (selectedArcPathIndex != null)
+                                    selection = Selection(arcPaths = listOf(selectedArcPathIndex))
+                                else
+                                    clearSelection()
+
                             }
                         }
                     }
                     history.accumulateChangedLocations(selection = true)
                 }
                 SelectionMode.Multiselect -> {
-                    val selectedPointIndex = selectPointAt(position)
+                    val selectedPointIndex = getPreferablyFreePointsAround(position).firstOrNull()
                     if (selectedPointIndex != null) {
                         if (selectedPointIndex in selection.objects) {
                             selection = selection.copy(objects = selection.objects - selectedPointIndex)
@@ -2222,7 +2270,7 @@ class EditorViewModel : ViewModel() {
                             highlightSelectionParents()
                         }
                     } else {
-                        val selectedCircleIndex = selectCircleAt(position)
+                        val selectedCircleIndex = getPreferablyFreeCirclesAround(position).firstOrNull()
                         if (selectedCircleIndex != null) {
                             if (selectedCircleIndex in selection.objects) {
                                 selection = selection.copy(objects = selection.objects - selectedCircleIndex)
@@ -2231,7 +2279,7 @@ class EditorViewModel : ViewModel() {
                                 highlightSelectionParents()
                             }
                         } else {
-                            val selectedArcPathIndex = selectArcPathAt(position)
+                            val selectedArcPathIndex = getArcPathsAround(position).firstOrNull()
                             if (selectedArcPathIndex != null) {
                                 selection = selection.copy(
                                     arcPaths = selection.arcPaths.xor(selectedArcPathIndex)
@@ -2308,21 +2356,37 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun scaleSingleCircle(ix: Ix, c: Offset, zoom: Float, sm: SubMode.Scale) {
+    fun selectFromChoices(indexAmongChoices: Int) {
+        (submode as? SubMode.SelectionChoices)?.let { sm ->
+            if (indexAmongChoices != 0) { // index=0 is already selected
+                val newChoice = sm.choices[indexAmongChoices]
+                selection = when (newChoice.objectOrArcPath) {
+                    null ->
+                        Selection(arcPaths = listOf(newChoice.index))
+                    else ->
+                        Selection(objects = listOf(newChoice.index))
+                }
+                history.accumulateChangedLocations(selection = true)
+            }
+        }
+        submode = null
+    }
+
+    private fun scaleSingleCircle(ix: Ix, absoluteCentroid: Offset, zoom: Float, sm: SubMode.Scale) {
         val circle = objects[ix] as? CircleOrLine
         if (circle is Circle) {
             val center = sm.center
-            val r = (c - center).getDistance()
+            val r = (absoluteCentroid - center).getDistance()
             transformWhatWeCan(listOf(ix), focus = center, zoom = (r/circle.radius).toFloat())
         } else if (circle is Line) {
-            val center = circle.project(c)
+            val center = circle.project(absoluteCentroid)
             transformWhatWeCan(listOf(ix), focus = center, zoom = zoom)
         }
     }
 
-    private fun rotateSingleCircle(ix: Ix, pan: Offset, c: Offset, sm: SubMode.Rotate) {
+    private fun rotateSingleCircle(ix: Ix, absoluteCentroid: Offset, pan: Offset, sm: SubMode.Rotate) {
         val center = sm.center
-        val centerToCurrent = c - center
+        val centerToCurrent = absoluteCentroid - center
         val centerToPreviousHandle = centerToCurrent - pan
         val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
         val newAngle = sm.angle + angle
@@ -2334,7 +2398,7 @@ class EditorViewModel : ViewModel() {
         submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
     }
 
-    private fun scaleSeveralCircles(pan: Offset, targets: List<Ix>) {
+    private fun scaleSeveralCircles(targets: List<Ix>, pan: Offset) {
         calculateSelectionRect()?.let { rect ->
             val scaleHandlePosition = rect.topRight
             val center = rect.center
@@ -2392,9 +2456,9 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun rotateSeveralCircles(pan: Offset, c: Offset, sm: SubMode.Rotate, targets: List<Ix>) {
+    private fun rotateSeveralCircles(targets: List<Ix>, absoluteCentroid: Offset, pan: Offset, sm: SubMode.Rotate) {
         val center = sm.center
-        val centerToCurrent = c - center
+        val centerToCurrent = absoluteCentroid - center
         val centerToPreviousHandle = centerToCurrent - pan
         val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
         val newAngle = sm.angle + angle
@@ -2445,18 +2509,18 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun dragPoint(absolutePointerPosition: Offset) {
+    private fun dragPoint(absoluteCentroid: Offset) {
         val ix = objectSelection.first()
         val expr = exprOf(ix)
         if (expr is Expr.Incidence) {
-            slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, absolutePointerPosition = absolutePointerPosition)
+            slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, absolutePointerPosition = absoluteCentroid)
         } else {
             val childCircles = objectModel.expressions.getAllChildren(ix)
                 .filter { objects[it] is CircleOrLine }
                 .toSet()
             // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
             val parents = objectModel.expressions.getAllParents(listOf(ix))
-            val newPoint = snapped(absolutePointerPosition,
+            val newPoint = snapped(absoluteCentroid,
                 excludePoints = true, excludedCircles = childCircles + parents
             ).result
             transformWhatWeCan(listOf(ix), translation = newPoint.toOffset() - (objects[ix] as Point).toOffset())
@@ -2510,8 +2574,8 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun dragGrabbedArcMidpoint(
-        sm: SubMode.GrabbedArcMidpoint,
         absoluteCentroid: Offset,
+        sm: SubMode.GrabbedArcMidpoint,
     ) {
         objectModel.modifyArcPath(
             sm.arcPathIndex,
@@ -2527,8 +2591,8 @@ class EditorViewModel : ViewModel() {
     //  it becomes circle during st-rot, but afterwards when
     //  its carrier is moved it becomes line again
     private fun stereographicallyRotateEverything(
-        sm: SubMode.RotateStereographicSphere,
         absolutePointerPosition: Offset,
+        sm: SubMode.RotateStereographicSphere,
     ) {
         // MAYBE: wrap in try-catch
         // MAYBE: snap North & South to screen center
@@ -2636,39 +2700,39 @@ class EditorViewModel : ViewModel() {
     }
 
     // MAYBE: handle key arrows as panning
-    fun onPanZoomRotate(pan: Offset, centroid: Offset, zoom: Float, rotationAngle: Float) {
+    fun onPanZoomRotate(centroid: Offset, pan: Offset, zoom: Float, rotationAngle: Float) {
         movementAfterDown = true
-        /** absolute cursor/pointer position */
-        val c = absolute(centroid)
+        /** absolute cursor/pointer position/centroid */
+        val absoluteCentroid = absolute(centroid)
         val selectedCircles = objectSelection.filter { objects[it] is CircleOrLineOrImaginaryCircle }
         val selectedPoints = objectSelection.filter { objects[it] is Point }
         when (val sm = submode) {
             is SubMode.Scale -> when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
-                    scaleSingleCircle(ix = selection.objects.single(), c = c, zoom = zoom, sm = sm)
+                    scaleSingleCircle(ix = selection.objects.single(), absoluteCentroid = absoluteCentroid, zoom = zoom, sm = sm)
                 HandleConfig.SEVERAL_OBJECTS ->
-                    scaleSeveralCircles(pan, selectedIndices)
+                    scaleSeveralCircles(targets = selectedIndices, pan = pan)
                 null -> {}
             }
             is SubMode.Rotate -> when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
-                    rotateSingleCircle(ix = selection.objects.single(), pan = pan, c = c, sm = sm)
+                    rotateSingleCircle(ix = selection.objects.single(), pan = pan, absoluteCentroid = absoluteCentroid, sm = sm)
                 HandleConfig.SEVERAL_OBJECTS ->
-                    rotateSeveralCircles(pan = pan, c = c, sm = sm, targets = selectedIndices)
+                    rotateSeveralCircles(targets = selectedIndices, absoluteCentroid = absoluteCentroid, pan = pan, sm = sm)
                 null -> {}
             }
             is SubMode.GrabbedArcMidpoint ->
-                dragGrabbedArcMidpoint(absoluteCentroid = c, sm = sm)
+                dragGrabbedArcMidpoint(absoluteCentroid = absoluteCentroid, sm = sm)
             is SubMode.RectangularSelect -> {
                 val corner1 = sm.corner1
-                val rect = Rect.fromCorners(corner1 ?: c, c)
+                val rect = Rect.fromCorners(corner1 ?: absoluteCentroid, absoluteCentroid)
                 val selectables = objects.mapIndexed { ix, o ->
                     if (showPhantomObjects || ix !in phantoms) o else null
                 }
-                selection = Selection(
+                selection = Selection( // TODO: select arc-paths too
                     objects = selectWithRectangle(selectables, rect)
                 )
-                submode = SubMode.RectangularSelect(corner1, c)
+                submode = SubMode.RectangularSelect(corner1, absoluteCentroid)
                 history.accumulateChangedLocations(selection = true)
             }
             is SubMode.FlowSelect -> {
@@ -2704,21 +2768,21 @@ class EditorViewModel : ViewModel() {
                 }
             }
             is SubMode.RotateStereographicSphere ->
-                stereographicallyRotateEverything(sm, c)
+                stereographicallyRotateEverything(absolutePointerPosition = absoluteCentroid, sm = sm)
             null -> when (mode) {
                 SelectionMode.Drag if selectedCircles.isNotEmpty() && showCircles ->
-                    dragCircle(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+                    dragCircle(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                 SelectionMode.Drag if selectedPoints.isNotEmpty() && showCircles ->
-                    dragPoint(absolutePointerPosition = c)
+                    dragPoint(absoluteCentroid = absoluteCentroid)
                 SelectionMode.Drag if selection.arcPaths.isNotEmpty() ->
-                    dragArcPaths(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+                    dragArcPaths(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                 SelectionMode.Multiselect if (
                         selectedCircles.isNotEmpty() && showCircles ||
                                 selectedPoints.isNotEmpty() || selection.arcPaths.isNotEmpty()
                         ) ->
-                    dragSelection(absoluteCentroid = c, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+                    dragSelection(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                 else -> {
-                    val snap = snapped(c)
+                    val snap = snapped(absoluteCentroid)
                     val absolutePoint = snap.result
                     val argList = partialArgList
                     val currentArg = argList?.currentArg
@@ -2749,7 +2813,7 @@ class EditorViewModel : ViewModel() {
                                     targets,
                                     focus = center,
                                     zoom = zoom,
-                                    rotationAngle = rotationAngle
+                                    rotationAngle = rotationAngle,
                                 )
                             history.accumulateChangedLocations(
                                 objectIndices = changedIndices,
@@ -3885,6 +3949,8 @@ class EditorViewModel : ViewModel() {
             Tool.InfinitePoint -> addInfinitePointArg()
             Tool.MovePointToInfinity -> movePointToInfinity()
         }
+        if (submode is SubMode.SelectionChoices)
+            submode = null
     }
 
     /** Is [tool] enabled? */
@@ -4188,6 +4254,9 @@ class EditorViewModel : ViewModel() {
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         const val SHOW_IMAGINARY_CIRCLES = true
+        /** When several objects are close enough to the tap position,
+         * show the list of them to choose from */
+        const val SHOW_SELECTION_CHOICES = true
         /** Allow moving non-free object IF all of it's lvl 1 parents=dependencies are free by
          * moving all of its parent with it */ // ggbra-like
         val INVERSION_OF_CONTROL = InversionOfControl.LEVEL_1

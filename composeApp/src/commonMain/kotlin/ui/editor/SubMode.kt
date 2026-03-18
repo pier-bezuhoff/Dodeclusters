@@ -2,7 +2,9 @@ package ui.editor
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import core.geometry.CircleOrLine
+import core.geometry.GCircle
 import core.geometry.Point
 import domain.Ix
 import domain.model.LogicalRegion
@@ -14,7 +16,7 @@ import kotlinx.serialization.Transient
 @Serializable
 /** Additional mode accompanying [Mode] and
  * carrying [SubMode]-specific relevant data, also
- * they have specific behavior for VM.[onPanZoom] */
+ * they have specific behavior for VM.onPanZoom */
 sealed interface SubMode {
     sealed interface OnlyActiveWhenPressed : SubMode
 
@@ -41,6 +43,19 @@ sealed interface SubMode {
     data class FlowFill(
         val lastQualifiedRegion: LogicalRegion? = null
     ) : SubMode
+
+    data class SelectionChoices(
+        val choices: List<Choice>,
+    ) : SubMode {
+        /** @property[objectOrArcPath] null means arc-path */
+        @Immutable
+        data class Choice(
+            val index: Int,
+            val objectOrArcPath: GCircle?,
+            val borderColor: Color?,
+            val fillColor: Color?,
+        )
+    }
 
     /**
      * Rotate domain-sphere of stereographic projection

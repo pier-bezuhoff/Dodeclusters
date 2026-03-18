@@ -330,6 +330,12 @@ fun BoxScope.EditorCanvas(
                 else -> {}
             }
         }
+
+        when (val sm = viewModel.submode) {
+            is SubMode.SelectionChoices ->
+                SelectionChoices(sm.choices, viewModel::selectFromChoices)
+            else -> {}
+        }
 //        if (viewModel.mode == SelectionMode.Region && viewModel.showCircles) {
 //            RegionManipulationStrategySelector(
 //                currentStrategy = viewModel.regionManipulationStrategy,

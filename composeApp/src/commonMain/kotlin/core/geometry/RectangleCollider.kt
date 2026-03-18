@@ -48,6 +48,14 @@ fun objectRectangleCollisionTest(obj: GCircle, rect: Rect): Boolean =
         is ImaginaryCircle -> false
     }
 
+fun arcRectangleCollisionTest(
+    arcStart: Point, arcEnd: Point,
+    circleOrLine: CircleOrLine,
+    rect: Rect,
+): Boolean {
+    TODO()
+}
+
 fun calculateRectangleCircleIntersectionContour(rect: Rect, circle: Circle): List<Offset> {
     // segment between 1st 2 points is line segment of the rect, then circle, then rect,
     // ..., and lastly circle; going CCW along the rect
