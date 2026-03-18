@@ -2,7 +2,6 @@ package ui.editor
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.draggable2D
 import androidx.compose.foundation.gestures.rememberDraggable2DState
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +26,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -65,10 +65,17 @@ import core.geometry.ImaginaryCircle
 import core.geometry.Line
 import core.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.arc_path_number_label
+import dodeclusters.composeapp.generated.resources.circle_number_label
+import dodeclusters.composeapp.generated.resources.close
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.expand
+import dodeclusters.composeapp.generated.resources.imaginary_circle_number_label
+import dodeclusters.composeapp.generated.resources.line_number_label
 import dodeclusters.composeapp.generated.resources.ok
+import dodeclusters.composeapp.generated.resources.point_number_label
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
+import dodeclusters.composeapp.generated.resources.selection_choices_title
 import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import domain.angleDeg
@@ -91,6 +98,7 @@ import ui.editor.dialogs.DefaultBiInversionParameters
 import ui.editor.dialogs.DefaultInterpolationParameters
 import ui.editor.dialogs.DefaultLoxodromicMotionParameters
 import ui.editor.dialogs.DefaultRotationParameters
+import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
 import ui.tools.Tool
 import kotlin.math.abs
@@ -419,9 +427,9 @@ fun BoxScope.ArcPathContextActions(
 @Composable
 fun BoxScope.SelectionChoices(
     choices: List<SubMode.SelectionChoices.Choice>,
-    selectChoice: (indexAmongChoices: Int) -> Unit,
+    selectChoice: (indexAmongChoices: Int?) -> Unit,
 ) {
-    // TODO: title, close button; TL
+    // TODO: title: alternative selection
     Surface(
         modifier = Modifier
             .align(Alignment.Center)
@@ -433,35 +441,49 @@ fun BoxScope.SelectionChoices(
     ) {
         Column(
             modifier = Modifier
-                .padding(8.dp)
+                .width(IntrinsicSize.Max)
+                .padding(12.dp)
                 .verticalScroll(rememberScrollState())
             ,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            choices.forEachIndexed { i, choice ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(Modifier.size(24.dp)) // manually balancing close-icon to ceneter the title
+                Text(stringResource(Res.string.selection_choices_title), style = MaterialTheme.typography.titleSmall)
+                IconButton(
+                    onClick = { selectChoice(null) },
                 ) {
-                    val name = when (choice.objectOrArcPath) {
-                        is Circle -> "circle"
-                        is Line -> "line"
-                        is ImaginaryCircle -> "imaginary circles"
-                        is Point -> "point"
-                        null -> "arc-path"
-                    }
-                    TextButton(
-                        onClick = { selectChoice(i) },
-                        shape = MaterialTheme.shapes.small,
-                        border =
-                            if (i == 0) BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)
-                            else null,
-                    ) {
-                        Text(
-                            text = "$name #${choice.index}",
-                            color = choice.borderColor ?: choice.fillColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                    }
+                    Icon(painterResource(Res.drawable.close), "close", Modifier.size(18.dp))
+                }
+            }
+            choices.forEachIndexed { i, choice ->
+                val label = when (choice.objectOrArcPath) {
+                    is Circle -> stringResource(Res.string.circle_number_label, choice.index)
+                    is Line -> stringResource(Res.string.line_number_label, choice.index)
+                    is ImaginaryCircle -> stringResource(Res.string.imaginary_circle_number_label, choice.index)
+                    is Point -> stringResource(Res.string.point_number_label, choice.index)
+                    null -> stringResource(Res.string.arc_path_number_label, choice.index)
+                }
+                TextButton(
+                    onClick = { selectChoice(i) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    border =
+                        if (i == 0)
+                            // salad green is the default selection color
+                            BorderStroke(2.dp, DodeclustersColors.strongSalad)
+//                                BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)
+                        else null,
+                ) {
+                    Text(
+                        text = label,
+                        color = choice.borderColor ?: choice.fillColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
                 }
             }
         }

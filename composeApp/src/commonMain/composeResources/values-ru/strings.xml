@@ -181,6 +181,13 @@
     <string name="move_point_to_infinity_name">Переместить на бесконечность</string>
     <string name="move_point_to_infinity_description">Переместить выделенную точку на бесконечность</string>
     <string name="steps_slider_name">N шагов</string>
+    <!-- HUD selection choices -->
+    <string name="selection_choices_title">Альтернативные выделения:</string>
+    <string name="circle_number_label">Окружность №%1$d</string>
+    <string name="line_number_label">Прямая №%1$d</string>
+    <string name="imaginary_circle_number_label">Мнимая окружность №%1$d</string>
+    <string name="point_number_label">Точка №%1$d</string>
+    <string name="arc_path_number_label">Контур №%1$d</string>
 
     <!-- categories -->
     <string name="drag_category_name">Перетаскивание</string>

@@ -182,6 +182,13 @@
     <string name="move_point_to_infinity_name">Move to infinity</string>
     <string name="move_point_to_infinity_description">Move selected point to infinity</string>
     <string name="steps_slider_name">N steps</string>
+    <!-- HUD selection choices -->
+    <string name="selection_choices_title">Alternative selections:</string>
+    <string name="circle_number_label">Circle #%1$d</string>
+    <string name="line_number_label">Line #%1$d</string>
+    <string name="imaginary_circle_number_label">Imaginary circle #%1$d</string>
+    <string name="point_number_label">Point #%1$d</string>
+    <string name="arc_path_number_label">Arc-path #%1$d</string>
 <!--    <string name="_name"></string>-->
 <!--    <string name="_description"></string>-->
 

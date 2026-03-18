@@ -2219,7 +2219,10 @@ class EditorViewModel : ViewModel() {
                             else ->
                                 clearSelection()
                         }
-                        if (selectablePoints.size + selectableCircles.size + selectableArcPaths.size > 1) {
+                        // selecting points over circle/paths is unambiguous
+                        if ((selectablePoints.isEmpty() || selectablePoints.size > 1) &&
+                            selectablePoints.size + selectableCircles.size + selectableArcPaths.size > 1
+                        ) {
                             submode = SubMode.SelectionChoices(
                                 (selectablePoints + selectableCircles).mapNotNull { ix ->
                                     val obj = objects[ix] ?: return@mapNotNull null
@@ -2356,9 +2359,9 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    fun selectFromChoices(indexAmongChoices: Int) {
+    fun selectFromChoices(indexAmongChoices: Int?) {
         (submode as? SubMode.SelectionChoices)?.let { sm ->
-            if (indexAmongChoices != 0) { // index=0 is already selected
+            if (indexAmongChoices != null && indexAmongChoices != 0) { // index=0 is already selected
                 val newChoice = sm.choices[indexAmongChoices]
                 selection = when (newChoice.objectOrArcPath) {
                     null ->
