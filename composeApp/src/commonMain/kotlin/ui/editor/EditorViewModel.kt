@@ -2219,10 +2219,10 @@ class EditorViewModel : ViewModel() {
                             else ->
                                 clearSelection()
                         }
-                        // selecting points over circle/paths is unambiguous
-                        if ((selectablePoints.isEmpty() || selectablePoints.size > 1) &&
+                        // selecting a point over circles/paths is unambiguous
+                        val selectionIsAmbiguous = selectablePoints.size != 1 &&
                             selectablePoints.size + selectableCircles.size + selectableArcPaths.size > 1
-                        ) {
+                        if (selectionIsAmbiguous) {
                             submode = SubMode.SelectionChoices(
                                 (selectablePoints + selectableCircles).mapNotNull { ix ->
                                     val obj = objects[ix] ?: return@mapNotNull null

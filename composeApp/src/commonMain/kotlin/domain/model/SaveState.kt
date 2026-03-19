@@ -1,5 +1,6 @@
 package domain.model
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
@@ -16,6 +17,25 @@ import domain.reindexingMap
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlin.math.max
+
+@Immutable
+@Serializable
+sealed interface ArrayChange<out T> {
+    val index: Int
+
+    @Serializable
+    data class Modify<T>(override val index: Int, val newValue: T) : ArrayChange<T>
+    @Serializable
+    data class Insert<T>(override val index: Int,val newValue: T) : ArrayChange<T>
+    @Serializable
+    data class Delete(override val index: Int) : ArrayChange<Nothing>
+
+    @Serializable
+    enum class Type {
+        MODIFY, INSERT, DELETE
+    }
+}
 
 /** EditorViewModel's save-state for history.
  * [objects].indices must span all of [objectColors].keys and [objectLabels].keys.
@@ -54,7 +74,7 @@ data class SaveState(
             @Serializable
             data class Expressions(val indices: Set<Ix>) : Location
             @Serializable
-            data object ArcPaths : Location
+            data class ArcPaths(val indexedChanges: List<Pair<Int, ArrayChange.Type>>) : Location
             @Serializable
             data object Regions : Location
             @Serializable
@@ -79,7 +99,7 @@ data class SaveState(
             val objectColorIndices: Set<Ix> = emptySet(),
             val objectLabelIndices: Set<Ix> = emptySet(),
             val expressionIndices: Set<Ix> = emptySet(),
-            val arcPaths: Boolean = false,
+            val arcPaths: List<Pair<Int, ArrayChange.Type>> = emptyList(),
             val regions: Boolean = false,
             val backgroundColor: Boolean = false,
             val chessboardPattern: Boolean = false,
@@ -98,7 +118,7 @@ data class SaveState(
             inline val expressionsLocation: Location.Expressions? get() =
                 if (expressionIndices.isEmpty()) null else Location.Expressions(expressionIndices)
             inline val arcPathsLocation: Location.ArcPaths? get() =
-                if (arcPaths) Location.ArcPaths else null
+                if (arcPaths.isEmpty()) null else Location.ArcPaths(arcPaths)
             inline val regionsLocation: Location.Regions? get() =
                 if (regions) Location.Regions else null
             inline val backgroundColorLocation: Location.BackgroundColor? get() =
@@ -116,26 +136,13 @@ data class SaveState(
             inline val regionColorLocation: Location.RegionColor? get() =
                 if (regionColor) Location.RegionColor else null
 
-            val changed: List<Location> = listOfNotNull(
-                objectsLocation, objectColorsLocation, objectLabelsLocation,
-                expressionsLocation,
-                arcPathsLocation,
-                regionsLocation,
-                backgroundColorLocation,
-                chessboardPatternLocation, chessboardColorLocation,
-                phantomsLocation,
-                selectionLocation,
-                centerLocation,
-                regionColorLocation,
-            )
-
             fun accumulate(locations: Locations): Locations =
                 Locations(
                     objectIndices = objectIndices.union(locations.objectIndices),
                     objectColorIndices = objectColorIndices.union(locations.objectColorIndices),
                     objectLabelIndices = objectLabelIndices.union(locations.objectLabelIndices),
                     expressionIndices = expressionIndices.union(locations.expressionIndices),
-                    arcPaths = arcPaths || locations.arcPaths,
+                    arcPaths = arcPaths + locations.arcPaths,
                     regions = regions || locations.regions,
                     backgroundColor = backgroundColor || locations.backgroundColor,
                     chessboardPattern = chessboardPattern || locations.chessboardPattern,
@@ -167,9 +174,11 @@ data class SaveState(
         @Serializable
         @SerialName("Expressions")
         data class Expressions(val expressions: Map<Ix, ConformalExprOutput?>) : Update
+        // arcPaths cannot be a Map<Int, _> since same-index changes are possible
+        /** @property[arcPaths] should be in the execution/increasing index order */
         @Serializable
         @SerialName("ArcPaths")
-        data class ArcPaths(val arcPaths: List<ArcPath>) : Replacement
+        data class ArcPaths(val arcPaths: List<ArrayChange<ArcPath>>) : Update
         @Serializable
         @SerialName("Regions")
         data class Regions(val regions: List<LogicalRegion>) : Replacement
@@ -221,7 +230,13 @@ data class SaveState(
             objectColorIndices = objectColors?.colors?.keys ?: emptySet(),
             objectLabelIndices = objectLabels?.labels?.keys ?: emptySet(),
             expressionIndices = expressions?.expressions?.keys ?: emptySet(),
-            arcPaths = arcPaths != null,
+            arcPaths = arcPaths?.arcPaths?.map { arrayChange ->
+                arrayChange.index to when (arrayChange) {
+                    is ArrayChange.Modify<ArcPath> -> ArrayChange.Type.MODIFY
+                    is ArrayChange.Insert<ArcPath> -> ArrayChange.Type.INSERT
+                    is ArrayChange.Delete -> ArrayChange.Type.DELETE
+                }
+            } ?: emptyList(),
             regions = regions != null,
             backgroundColor = backgroundColor != null,
             chessboardPattern = chessboardPattern != null,
@@ -246,7 +261,9 @@ data class SaveState(
                 expressions = combineNullables(expressions, changes.expressions) { a, b ->
                     Change.Expressions(a.expressions + b.expressions)
                 },
-                arcPaths = changes.arcPaths ?: arcPaths,
+                arcPaths = combineNullables(arcPaths, changes.arcPaths) { a, b ->
+                    Change.ArcPaths(a.arcPaths + b.arcPaths)
+                },
                 regions = changes.regions ?: regions,
                 backgroundColor = changes.backgroundColor ?: backgroundColor,
                 chessboardPattern = changes.chessboardPattern ?: chessboardPattern,
@@ -262,36 +279,6 @@ data class SaveState(
         }
     }
 
-    fun revert(changeLocation: Change.Location): Change =
-        when (changeLocation) {
-            is Change.Location.Objects ->
-                Change.Objects(changeLocation.indices.associateWith { ix -> objects.getOrNull(ix) })
-            is Change.Location.ObjectColors ->
-                Change.ObjectColors(changeLocation.indices.associateWith { ix -> objectColors[ix] })
-            is Change.Location.ObjectLabels ->
-                Change.ObjectLabels(changeLocation.indices.associateWith { ix -> objectLabels[ix] })
-            is Change.Location.Expressions ->
-                Change.Expressions(changeLocation.indices.associateWith { ix -> expressions[ix] })
-            is Change.Location.ArcPaths ->
-                Change.ArcPaths(arcPaths)
-            is Change.Location.Regions ->
-                Change.Regions(regions)
-            is Change.Location.BackgroundColor ->
-                Change.BackgroundColor(backgroundColor)
-            is Change.Location.ChessboardPattern ->
-                Change.ChessboardPattern(chessboardPattern)
-            is Change.Location.ChessboardColor ->
-                Change.ChessboardColor(chessboardColor)
-            is Change.Location.Phantoms ->
-                Change.Phantoms(phantoms)
-            is Change.Location.Selection ->
-                Change.Selection(selection)
-            is Change.Location.Center ->
-                Change.Center(center)
-            is Change.Location.RegionColor ->
-                Change.RegionColor(regionColor)
-        }
-
     fun revert(locations: Change.Locations): Changes =
         Changes(
             objects = locations.objectsLocation?.let { changeLocation ->
@@ -306,8 +293,34 @@ data class SaveState(
             expressions = locations.expressionsLocation?.let { changeLocation ->
                 Change.Expressions(changeLocation.indices.associateWith { ix -> expressions[ix] })
             },
-            arcPaths =
-                if (locations.arcPaths) Change.ArcPaths(arcPaths) else null,
+            arcPaths = locations.arcPathsLocation?.let { changeLocation ->
+                val backwardChanges = mutableListOf<ArrayChange<ArcPath>>()
+                val simulatedArcPaths: MutableList<ArcPath?> = arcPaths.toMutableList()
+                // MAYBE: also fuse orthogonal consecutive ones
+                //  modify->modify; insert->modify; insert->delete
+                // i think this should work?
+                for ((i, arrayChangeType) in changeLocation.indexedChanges) {
+                    when (arrayChangeType) {
+                        ArrayChange.Type.MODIFY -> {
+                            backwardChanges.add(ArrayChange.Modify(i,
+                                simulatedArcPaths[i] ?: continue
+                            ))
+                            simulatedArcPaths[i] = null
+                        }
+                        ArrayChange.Type.INSERT -> {
+                            backwardChanges.add(ArrayChange.Delete(i))
+                            simulatedArcPaths.add(i, null)
+                        }
+                        ArrayChange.Type.DELETE -> {
+                            backwardChanges.add(ArrayChange.Insert(i,
+                                simulatedArcPaths[i] ?: continue
+                            ))
+                            simulatedArcPaths.removeAt(i)
+                        }
+                    }
+                }
+                Change.ArcPaths(backwardChanges.reversed())
+            },
             regions =
                 if (locations.regions) Change.Regions(regions) else null,
             backgroundColor =
@@ -336,8 +349,31 @@ data class SaveState(
                 Change.ObjectLabels(change.labels.mapValues { (ix, _) -> objectLabels[ix] })
             is Change.Expressions ->
                 Change.Expressions(change.expressions.mapValues { (ix, _) -> expressions[ix] })
-            is Change.ArcPaths ->
-                Change.ArcPaths(arcPaths)
+            is Change.ArcPaths -> {
+                // MAYBE: also fuse orthogonal consecutive ones
+                val backwardChanges = mutableListOf<ArrayChange<ArcPath>>()
+                val simulatedArcPaths = arcPaths.toMutableList()
+                // full forward simulation seems a bit inefficient but
+                // ig it's necessary to account for double modify
+                for (arrayChange in change.arcPaths) {
+                    val i = arrayChange.index
+                    when (arrayChange) {
+                        is ArrayChange.Modify<ArcPath> -> {
+                            backwardChanges.add(ArrayChange.Modify(i, simulatedArcPaths[i]))
+                            simulatedArcPaths[i] = arrayChange.newValue
+                        }
+                        is ArrayChange.Insert<ArcPath> -> {
+                            backwardChanges.add(ArrayChange.Delete(i))
+                            simulatedArcPaths.add(i, arrayChange.newValue)
+                        }
+                        is ArrayChange.Delete -> {
+                            backwardChanges.add(ArrayChange.Insert(i, simulatedArcPaths[i]))
+                            simulatedArcPaths.removeAt(i)
+                        }
+                    }
+                }
+                Change.ArcPaths(backwardChanges.reversed())
+            }
             is Change.Regions ->
                 Change.Regions(regions)
             is Change.BackgroundColor ->
@@ -364,7 +400,7 @@ data class SaveState(
         val objectColors: MutableMap<Ix, ColorAsCss> = this.objectColors.toMutableMap()
         val objectLabels: MutableMap<Ix, String> = this.objectLabels.toMutableMap()
         val expressions: MutableMap<Ix, ConformalExprOutput?> = this.expressions.toMutableMap()
-        var arcPaths: List<ArcPath> = this.arcPaths
+        val arcPaths: MutableList<ArcPath> = this.arcPaths.toMutableList()
         var regions: List<LogicalRegion> = this.regions
         var backgroundColor: Color? = this.backgroundColor
         var chessboardPattern: ChessboardPattern = this.chessboardPattern
@@ -392,7 +428,7 @@ data class SaveState(
                         if (color == null) {
                             objectColors.remove(ix)
                         } else {
-                            objectColors.put(ix, color)
+                            objectColors[ix] = color
                         }
                     }
                 }
@@ -401,14 +437,25 @@ data class SaveState(
                         if (label == null) {
                             objectLabels.remove(ix)
                         } else {
-                            objectLabels.put(ix, label)
+                            objectLabels[ix] = label
                         }
                     }
                 }
                 is Change.Expressions -> {
                     expressions.putAll(change.expressions)
                 }
-                is Change.ArcPaths -> arcPaths = change.arcPaths
+                is Change.ArcPaths -> {
+                    for (arrayChange in change.arcPaths) {
+                        when (arrayChange) {
+                            is ArrayChange.Modify<ArcPath> ->
+                                arcPaths[arrayChange.index] = arrayChange.newValue
+                            is ArrayChange.Insert<ArcPath> ->
+                                arcPaths.add(arrayChange.index, arrayChange.newValue)
+                            is ArrayChange.Delete ->
+                                arcPaths.removeAt(arrayChange.index)
+                        }
+                    }
+                }
                 is Change.Regions -> regions = change.regions
                 is Change.BackgroundColor -> backgroundColor = change.color
                 is Change.ChessboardPattern -> chessboardPattern = change.pattern
@@ -490,7 +537,23 @@ data class SaveState(
                 },
             arcPaths =
                 if (arcPaths == earlierState.arcPaths) null
-                else Change.ArcPaths(arcPaths),
+                else {
+                    val changedIndices = (0 until max(earlierState.arcPaths.size, arcPaths.size))
+                        .filter { arcPaths.getOrNull(it) != earlierState.arcPaths.getOrNull(it) }
+                    if (changedIndices.isEmpty())
+                        null
+                    else
+                        Change.ArcPaths(changedIndices.map { i ->
+                            if (i < arcPaths.size) {
+                                if (i < earlierState.arcPaths.size)
+                                    ArrayChange.Modify(i, arcPaths[i])
+                                else
+                                    ArrayChange.Insert(i, arcPaths[i])
+                            } else { // i < earlierState.arcPaths.size
+                                ArrayChange.Delete(i)
+                            }
+                        })
+                },
             regions =
                 if (regions == earlierState.regions) null
                 else Change.Regions(regions),
@@ -554,7 +617,7 @@ data class SaveState(
                         arcs = arcPath.arcs.map { arc ->
                             when (arc) {
                                 is Arc.By2Points -> arc
-                                is Arc.By3Points -> arc.copy(
+                                is Arc.By3Points -> arc.copy(middlePointIndex =
                                     reindexing[arc.middlePointIndex] ?: return@mapNotNull null
                                 )
                             }
@@ -567,7 +630,7 @@ data class SaveState(
                         arcs = arcPath.arcs.map { arc ->
                             when (arc) {
                                 is Arc.By2Points -> arc
-                                is Arc.By3Points -> arc.copy(
+                                is Arc.By3Points -> arc.copy(middlePointIndex =
                                     reindexing[arc.middlePointIndex] ?: return@mapNotNull null
                                 )
                             }
@@ -648,7 +711,7 @@ data class SaveState(
 }
 
 // not liftA2 actually
-/** [combinator]`(a, b)` or [a] or [b] */
+/** [combinator]`(a, b)` otherwise [a] or [b] */
 private inline fun <reified T: Any> combineNullables(
     a: T?, b: T?,
     crossinline combinator: (T, T) -> T,

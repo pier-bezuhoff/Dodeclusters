@@ -429,13 +429,11 @@ fun BoxScope.SelectionChoices(
     choices: List<SubMode.SelectionChoices.Choice>,
     selectChoice: (indexAmongChoices: Int?) -> Unit,
 ) {
-    // TODO: title: alternative selection
     Surface(
         modifier = Modifier
             .align(Alignment.Center)
         ,
         shape = MaterialTheme.shapes.large,
-//        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
         tonalElevation = 12.dp,
         shadowElevation = 12.dp,
     ) {
@@ -452,7 +450,7 @@ fun BoxScope.SelectionChoices(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Spacer(Modifier.size(24.dp)) // manually balancing close-icon to ceneter the title
+                Spacer(Modifier.size(24.dp)) // manually balancing close-icon to center the title
                 Text(stringResource(Res.string.selection_choices_title), style = MaterialTheme.typography.titleSmall)
                 IconButton(
                     onClick = { selectChoice(null) },
