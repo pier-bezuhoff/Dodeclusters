@@ -16,6 +16,8 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
+// thoughts out-loud
+
 // alternative setup: fuse x,y,r | a,b,c representation with GeneralizedCircle coordinates,
 // resulting in
 // type: Byte = null | circle | line | point | imaginary circle

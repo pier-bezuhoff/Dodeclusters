@@ -468,8 +468,8 @@ data class SaveState(
             arcPaths =
                 if (arcPaths == earlierState.arcPaths) null
                 else {
-                    val size0 = earlierState.objects.size
-                    val size = objects.size
+                    val size0 = earlierState.arcPaths.size
+                    val size = arcPaths.size
                     require(size0 <= size) { "arcPaths.size of an earlier state must not be greater, $earlierState vs $this" }
                     val changedIndices = (0 until size0)
                         .filter { arcPaths[it] != earlierState.arcPaths[it] }
