@@ -9,8 +9,8 @@ typealias ConformalExprOutput = ExprOutput<Expr.Conformal>
 typealias ProjectiveExprOutput = ExprOutput<Expr.Projective>
 
 /** Single-value expression result of [expr]. ([Expr] in general has multi-value results) */
-@Serializable
 @Immutable
+@Serializable
 sealed interface ExprOutput<out EXPR> where EXPR : Expr {
     val expr: EXPR
 
@@ -32,9 +32,9 @@ inline fun <reified EXPR : Expr> ExprOutput<EXPR>.reIndex(
 ): ExprOutput<EXPR> =
     when (this) {
         is ExprOutput.Just -> copy(
-            expr.reIndex { reIndexer(it) } as EXPR
+            expr = expr.reIndex { reIndexer(it) }
         )
         is ExprOutput.OneOf -> copy(
-            expr.reIndex { reIndexer(it) } as EXPR
+            expr = expr.reIndex { reIndexer(it) }
         )
     }

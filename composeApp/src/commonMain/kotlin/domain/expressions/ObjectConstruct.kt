@@ -8,8 +8,9 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 // for conformal geometry
-@Serializable
+/** Not used anymore */
 @Immutable
+@Serializable
 sealed interface ObjectConstruct {
     @Serializable
     @SerialName("ConcretePoint")

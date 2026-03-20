@@ -1,5 +1,6 @@
 package domain.model
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
@@ -20,6 +21,7 @@ import kotlinx.serialization.json.Json
 /** EditorViewModel's save-state for history.
  * [objects].indices must span all of [objectColors].keys and [objectLabels].keys.
  * And [objects].indices == [expressions].keys */
+@Immutable
 @Serializable
 @SerialName("SaveState")
 data class SaveState(
@@ -41,8 +43,10 @@ data class SaveState(
     // since we generate save-state every undo-able action, i think it's prudent to
     // omit any validation
 
+    @Immutable
     @Serializable
     sealed interface Change {
+        @Immutable
         @Serializable
         sealed interface Location {
             @Serializable
@@ -73,6 +77,7 @@ data class SaveState(
             data object RegionColor : Location
         }
 
+        @Immutable
         @Serializable
         data class Locations(
             val objectIndices: Set<Ix> = emptySet(),
@@ -186,6 +191,7 @@ data class SaveState(
         data class RegionColor(val color: ColorAsCss?) : Replacement
     }
 
+    @Immutable
     @Serializable
     data class Changes(
         val objects: Change.Objects? = null,

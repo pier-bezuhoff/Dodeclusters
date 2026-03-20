@@ -1,5 +1,6 @@
 package domain.model
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import domain.Ix
 import kotlinx.serialization.SerialName
@@ -27,6 +28,7 @@ class ChangeHistory(
 ) {
     /** Serializable DTO for [domain.model.ChangeHistory],
      * direct serialization is ugly bc @Transient init is handled weirdly */
+    @Immutable
     @Serializable
     @SerialName("HistoryState")
     data class State(
@@ -88,7 +90,11 @@ class ChangeHistory(
         redoIsEnabled?.value = future.isNotEmpty()
     }
 
-    /** @return if the continuous change is the first of this type [newContinuousChange] */
+    /**
+     * Use it to trigger on-start event for continuous changes.
+     * [continuousChange] resets in VM.onDown
+     * @return if the continuous change is the first of this type
+     * */
     fun newContinuousChange(newContinuousChange: ContinuousChange?): Boolean {
         val isFirstChange = continuousChange != newContinuousChange
         continuousChange = newContinuousChange

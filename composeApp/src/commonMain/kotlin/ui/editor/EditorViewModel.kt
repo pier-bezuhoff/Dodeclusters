@@ -330,6 +330,7 @@ class EditorViewModel : ViewModel() {
         objectModel.invalidatePositions()
     }
 
+    // TODO: save history (checkbox)
     fun saveAsYaml(name: String = DdcV5.DEFAULT_NAME): String {
         return YamlEncoding.encodeToString(
             DdcV5.fromSaveState(saveState())
@@ -472,11 +473,16 @@ class EditorViewModel : ViewModel() {
             }.joinToString { it.toString() }
         )
         println("partialArcPath = $partialArcPath")
-        println("invalidation #${objectModel.invalidations}\t propertyInvalidation #${objectModel.propertyInvalidations}")
-        queueSnackbarMessage(
-            SnackbarMessage.PLACEHOLDER,
-            "$selectedObjectsString;\n$selectedExpressionsString;\n$selectedArcPathsString"
+        println("invalidation #${objectModel.invalidations}\t " +
+                "propertyInvalidation #${objectModel.propertyInvalidations}"
         )
+        if (selection.isNotEmpty()) {
+            val s1 = if (selectedObjectsString.isEmpty()) "" else "$selectedObjectsString;\n"
+            val s2 = if (selectedExpressionsString.isEmpty()) "" else "$selectedExpressionsString;\n"
+            queueSnackbarMessage(SnackbarMessage.PLACEHOLDER,
+                "$s1$s2$selectedArcPathsString"
+            )
+        }
     }
 
     fun loadNewConstellation(constellation: Constellation) {
@@ -2203,15 +2209,17 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    // pointer input callbacks
-    // Down -> Up -> Tap OR
-    // Down -> Up -> Down! -> Tap -> Up (i.e. double tap)
+    /**
+     * Pointer input callback sequences:
+     * Down -> Up -> Tap OR
+     * Down -> Up -> Down! -> Tap -> Up (double tap)
+     * @param[position] _visible_ position of the tap
+     */
     fun onTap(position: Offset, pointerCount: Int) {
         // 2-finger tap for undo (works only on Android afaik)
         if (TWO_FINGER_TAP_FOR_UNDO && pointerCount == 2) {
-            if (undoIsEnabled.value) {
+            if (undoIsEnabled.value)
                 undo()
-            }
         } else if (showCircles) { // select circle(s)/region
             when (mode) {
                 SelectionMode.Drag -> {
@@ -2255,7 +2263,7 @@ class EditorViewModel : ViewModel() {
                                 }
                             )
                         }
-                    } else {
+                    } else { // no selection choices
                         val selectedPointIndex = getPreferablyFreePointsAround(position).firstOrNull()
                         if (selectedPointIndex != null) {
                             selection = Selection(objects = listOf(selectedPointIndex))
@@ -2359,7 +2367,7 @@ class EditorViewModel : ViewModel() {
                         if (pArcPath.arcs.size >= 2) {
                             if (isCloseEnoughToSelect(
                                     pArcPath.vertices.first().point.toOffset(),
-                                    position
+                                    position,
                             )) {
                                 partialArcPath = pArcPath.closeLoop()
                                 completeArcPath()
@@ -2718,6 +2726,40 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    private fun tryClosingPartialArcPath(visibleFocusPosition: Offset) {
+        val pArcPath = partialArcPath
+        if (pArcPath != null && !pArcPath.isClosed && pArcPath.vertices.size > 2) {
+            when (val focus = pArcPath.focus) {
+                is PartialArcPath.Focus.Vertex -> when {
+                    focus.vertexIndex == 0 -> {
+                        val end = pArcPath.vertices.last().point
+                        val startAndEndAreClose = isCloseEnoughToSelect(
+                            absolutePosition = end.toOffset(),
+                            visiblePosition = visibleFocusPosition,
+                        )
+                        if (startAndEndAreClose) {
+                            partialArcPath = pArcPath.closeLoop()
+                            completeArcPath()
+                        }
+                    }
+                    focus.vertexIndex == pArcPath.vertices.lastIndex -> {
+                        val start = pArcPath.vertices.first().point
+                        val startAndEndAreClose = isCloseEnoughToSelect(
+                            absolutePosition = start.toOffset(),
+                            visiblePosition = visibleFocusPosition,
+                        )
+                        if (startAndEndAreClose) {
+                            partialArcPath = pArcPath.closeLoop()
+                            completeArcPath()
+                        }
+                    }
+                    else -> {}
+                }
+                else -> {}
+            }
+        }
+    }
+
     // MAYBE: handle key arrows as panning
     fun onPanZoomRotate(centroid: Offset, pan: Offset, zoom: Float, rotationAngle: Float) {
         movementAfterDown = true
@@ -2797,7 +2839,7 @@ class EditorViewModel : ViewModel() {
                     dragArcPaths(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                 SelectionMode.Multiselect if (
                         selectedCircles.isNotEmpty() && showCircles ||
-                                selectedPoints.isNotEmpty() || selection.arcPaths.isNotEmpty()
+                            selectedPoints.isNotEmpty() || selection.arcPaths.isNotEmpty()
                         ) ->
                     dragSelection(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                 else -> {
@@ -2808,11 +2850,12 @@ class EditorViewModel : ViewModel() {
                     val currentArgType = argList?.currentArgType
                     if (mode == ToolMode.ARC_PATH) {
                         partialArcPath = partialArcPath?.moveFocused(snap)
+                        tryClosingPartialArcPath(visibleFocusPosition = centroid)
                     } else if (
                         mode is ToolMode &&
                         currentArgType?.possibleTypes?.any { it is Arg.Type.Point } == true &&
                         ((mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION) entails
-                                (currentArg?.type is Arg.Type.Point))
+                            (currentArg?.type is Arg.Type.Point))
                     ) {
                         val newArg = when (snap) {
                             is PointSnapResult.Eq -> Arg.PointIndex(snap.pointIndex)
@@ -4284,7 +4327,7 @@ class EditorViewModel : ViewModel() {
         /** When constructing an object depending on not-yet-existing points,
          * always create them. In contrast to replacing its expression with a static, free circle */
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
-        // NOTE: changing it presently breaks all line-incident points
+        // NOTE: changing this factor breaks all line-incident points (scale-dependence)
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = ConformalObjectModel.UPSCALING_FACTOR
         const val DOWNSCALING_FACTOR = ConformalObjectModel.DOWNSCALING_FACTOR

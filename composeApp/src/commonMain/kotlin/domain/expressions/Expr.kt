@@ -51,12 +51,14 @@ sealed interface Expr {
     @Serializable
     sealed interface OneToMany : Expr
 
+    @Immutable
     @Serializable
     sealed interface Conformal : Expr {
         // hand-made intersection types
         sealed interface OneToOne : Conformal, Expr.OneToOne
         sealed interface OneToMany : Conformal, Expr. OneToMany
     }
+    @Immutable
     @Serializable
     sealed interface Projective : Expr {
         sealed interface OneToOne : Projective, Expr.OneToOne

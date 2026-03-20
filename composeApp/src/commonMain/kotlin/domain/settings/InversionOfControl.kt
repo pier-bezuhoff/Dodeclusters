@@ -1,5 +1,10 @@
 package domain.settings
 
+import androidx.compose.runtime.Immutable
+import kotlinx.serialization.Serializable
+
+@Immutable
+@Serializable
 enum class InversionOfControl {
     /** All non-free, non-constrained objects are locked */
     NONE,

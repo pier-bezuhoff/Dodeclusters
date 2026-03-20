@@ -14,8 +14,8 @@ import kotlinx.serialization.Serializable
  * @param[insides] Indices of circles inside which we are
  * @param[outsides] Indices of circles outside of which we are
  * */
-@Serializable
 @Immutable
+@Serializable
 data class LogicalRegion(
     /** indices of interior circles */
     val insides: Set<Ix>,

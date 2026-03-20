@@ -27,6 +27,7 @@ data class PartialArcPath(
 
     /**
      * @property[circle] `null` corresponds to a [core.geometry.Line]
+     * @property[snap] snap of the arc's middle point
      */
     @Immutable
     data class Arc(
