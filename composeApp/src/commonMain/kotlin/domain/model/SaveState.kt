@@ -1,6 +1,5 @@
 package domain.model
 
-import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
@@ -17,25 +16,6 @@ import domain.reindexingMap
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlin.math.max
-
-@Immutable
-@Serializable
-sealed interface ArrayChange<out T> {
-    val index: Int
-
-    @Serializable
-    data class Modify<T>(override val index: Int, val newValue: T) : ArrayChange<T>
-    @Serializable
-    data class Insert<T>(override val index: Int,val newValue: T) : ArrayChange<T>
-    @Serializable
-    data class Delete(override val index: Int) : ArrayChange<Nothing>
-
-    @Serializable
-    enum class Type {
-        MODIFY, INSERT, DELETE
-    }
-}
 
 /** EditorViewModel's save-state for history.
  * [objects].indices must span all of [objectColors].keys and [objectLabels].keys.
@@ -47,7 +27,7 @@ data class SaveState(
     val objectColors: Map<Ix, ColorAsCss> = emptyMap(),
     val objectLabels: Map<Ix, String> = emptyMap(),
     val expressions: Map<Ix, ConformalExprOutput?>,
-    val arcPaths: List<ArcPath> = emptyList(),
+    val arcPaths: List<ArcPath?> = emptyList(),
     val regions: List<LogicalRegion> = emptyList(),
     val backgroundColor: ColorAsCss?,
     val chessboardPattern: ChessboardPattern,
@@ -74,7 +54,7 @@ data class SaveState(
             @Serializable
             data class Expressions(val indices: Set<Ix>) : Location
             @Serializable
-            data class ArcPaths(val indexedChanges: List<Pair<Int, ArrayChange.Type>>) : Location
+            data class ArcPaths(val indices: Set<Int>) : Location
             @Serializable
             data object Regions : Location
             @Serializable
@@ -99,7 +79,7 @@ data class SaveState(
             val objectColorIndices: Set<Ix> = emptySet(),
             val objectLabelIndices: Set<Ix> = emptySet(),
             val expressionIndices: Set<Ix> = emptySet(),
-            val arcPaths: List<Pair<Int, ArrayChange.Type>> = emptyList(),
+            val arcPaths: Set<Int> = emptySet(),
             val regions: Boolean = false,
             val backgroundColor: Boolean = false,
             val chessboardPattern: Boolean = false,
@@ -142,7 +122,7 @@ data class SaveState(
                     objectColorIndices = objectColorIndices.union(locations.objectColorIndices),
                     objectLabelIndices = objectLabelIndices.union(locations.objectLabelIndices),
                     expressionIndices = expressionIndices.union(locations.expressionIndices),
-                    arcPaths = arcPaths + locations.arcPaths,
+                    arcPaths = arcPaths.union(locations.arcPaths),
                     regions = regions || locations.regions,
                     backgroundColor = backgroundColor || locations.backgroundColor,
                     chessboardPattern = chessboardPattern || locations.chessboardPattern,
@@ -178,7 +158,7 @@ data class SaveState(
         /** @property[arcPaths] should be in the execution/increasing index order */
         @Serializable
         @SerialName("ArcPaths")
-        data class ArcPaths(val arcPaths: List<ArrayChange<ArcPath>>) : Update
+        data class ArcPaths(val arcPaths: Map<Int, ArcPath?>) : Update
         @Serializable
         @SerialName("Regions")
         data class Regions(val regions: List<LogicalRegion>) : Replacement
@@ -230,13 +210,7 @@ data class SaveState(
             objectColorIndices = objectColors?.colors?.keys ?: emptySet(),
             objectLabelIndices = objectLabels?.labels?.keys ?: emptySet(),
             expressionIndices = expressions?.expressions?.keys ?: emptySet(),
-            arcPaths = arcPaths?.arcPaths?.map { arrayChange ->
-                arrayChange.index to when (arrayChange) {
-                    is ArrayChange.Modify<ArcPath> -> ArrayChange.Type.MODIFY
-                    is ArrayChange.Insert<ArcPath> -> ArrayChange.Type.INSERT
-                    is ArrayChange.Delete -> ArrayChange.Type.DELETE
-                }
-            } ?: emptyList(),
+            arcPaths = arcPaths?.arcPaths?.keys ?: emptySet(),
             regions = regions != null,
             backgroundColor = backgroundColor != null,
             chessboardPattern = chessboardPattern != null,
@@ -294,32 +268,7 @@ data class SaveState(
                 Change.Expressions(changeLocation.indices.associateWith { ix -> expressions[ix] })
             },
             arcPaths = locations.arcPathsLocation?.let { changeLocation ->
-                val backwardChanges = mutableListOf<ArrayChange<ArcPath>>()
-                val simulatedArcPaths: MutableList<ArcPath?> = arcPaths.toMutableList()
-                // MAYBE: also fuse orthogonal consecutive ones
-                //  modify->modify; insert->modify; insert->delete
-                // i think this should work?
-                for ((i, arrayChangeType) in changeLocation.indexedChanges) {
-                    when (arrayChangeType) {
-                        ArrayChange.Type.MODIFY -> {
-                            backwardChanges.add(ArrayChange.Modify(i,
-                                simulatedArcPaths[i] ?: continue
-                            ))
-                            simulatedArcPaths[i] = null
-                        }
-                        ArrayChange.Type.INSERT -> {
-                            backwardChanges.add(ArrayChange.Delete(i))
-                            simulatedArcPaths.add(i, null)
-                        }
-                        ArrayChange.Type.DELETE -> {
-                            backwardChanges.add(ArrayChange.Insert(i,
-                                simulatedArcPaths[i] ?: continue
-                            ))
-                            simulatedArcPaths.removeAt(i)
-                        }
-                    }
-                }
-                Change.ArcPaths(backwardChanges.reversed())
+                Change.ArcPaths(changeLocation.indices.associateWith { i -> arcPaths.getOrNull(i) })
             },
             regions =
                 if (locations.regions) Change.Regions(regions) else null,
@@ -349,31 +298,8 @@ data class SaveState(
                 Change.ObjectLabels(change.labels.mapValues { (ix, _) -> objectLabels[ix] })
             is Change.Expressions ->
                 Change.Expressions(change.expressions.mapValues { (ix, _) -> expressions[ix] })
-            is Change.ArcPaths -> {
-                // MAYBE: also fuse orthogonal consecutive ones
-                val backwardChanges = mutableListOf<ArrayChange<ArcPath>>()
-                val simulatedArcPaths = arcPaths.toMutableList()
-                // full forward simulation seems a bit inefficient but
-                // ig it's necessary to account for double modify
-                for (arrayChange in change.arcPaths) {
-                    val i = arrayChange.index
-                    when (arrayChange) {
-                        is ArrayChange.Modify<ArcPath> -> {
-                            backwardChanges.add(ArrayChange.Modify(i, simulatedArcPaths[i]))
-                            simulatedArcPaths[i] = arrayChange.newValue
-                        }
-                        is ArrayChange.Insert<ArcPath> -> {
-                            backwardChanges.add(ArrayChange.Delete(i))
-                            simulatedArcPaths.add(i, arrayChange.newValue)
-                        }
-                        is ArrayChange.Delete -> {
-                            backwardChanges.add(ArrayChange.Insert(i, simulatedArcPaths[i]))
-                            simulatedArcPaths.removeAt(i)
-                        }
-                    }
-                }
-                Change.ArcPaths(backwardChanges.reversed())
-            }
+            is Change.ArcPaths ->
+                Change.ArcPaths(change.arcPaths.mapValues { (i, _) -> arcPaths.getOrNull(i) })
             is Change.Regions ->
                 Change.Regions(regions)
             is Change.BackgroundColor ->
@@ -400,7 +326,7 @@ data class SaveState(
         val objectColors: MutableMap<Ix, ColorAsCss> = this.objectColors.toMutableMap()
         val objectLabels: MutableMap<Ix, String> = this.objectLabels.toMutableMap()
         val expressions: MutableMap<Ix, ConformalExprOutput?> = this.expressions.toMutableMap()
-        val arcPaths: MutableList<ArcPath> = this.arcPaths.toMutableList()
+        val arcPaths: MutableList<ArcPath?> = this.arcPaths.toMutableList()
         var regions: List<LogicalRegion> = this.regions
         var backgroundColor: Color? = this.backgroundColor
         var chessboardPattern: ChessboardPattern = this.chessboardPattern
@@ -412,15 +338,17 @@ data class SaveState(
         for (change in changes) {
             when (change) {
                 is Change.Objects -> {
-                    for ((ix, obj) in change.objects) {
-                        val size = objects.size
-                        if (ix >= size) {
-                            repeat(size - ix) {
+                    for (ix in change.objects.keys.sorted()) {
+                        val obj = change.objects[ix]
+                        val overshoot = ix - objects.size
+                        if (overshoot >= 0) {
+                            repeat(overshoot) {
                                 objects.add(null)
                             }
                             objects.add(obj)
+                        } else {
+                            objects[ix] = obj
                         }
-                        objects[ix] = obj
                     }
                 }
                 is Change.ObjectColors -> {
@@ -445,14 +373,16 @@ data class SaveState(
                     expressions.putAll(change.expressions)
                 }
                 is Change.ArcPaths -> {
-                    for (arrayChange in change.arcPaths) {
-                        when (arrayChange) {
-                            is ArrayChange.Modify<ArcPath> ->
-                                arcPaths[arrayChange.index] = arrayChange.newValue
-                            is ArrayChange.Insert<ArcPath> ->
-                                arcPaths.add(arrayChange.index, arrayChange.newValue)
-                            is ArrayChange.Delete ->
-                                arcPaths.removeAt(arrayChange.index)
+                    for (i in change.arcPaths.keys.sorted()) {
+                        val arcPath = change.arcPaths[i]
+                        val overshoot = i - arcPaths.size
+                        if (overshoot >= 0) {
+                            repeat(overshoot) {
+                                arcPaths.add(null)
+                            }
+                            arcPaths.add(arcPath)
+                        } else {
+                            arcPaths[i] = arcPath
                         }
                     }
                 }
@@ -491,7 +421,7 @@ data class SaveState(
                     // realistically the earlier state must have smaller or equal size
                     val size0 = earlierState.objects.size
                     val size = objects.size
-                    require(size0 <= size) { "objects.size of the earlier state must not be greater, $earlierState vs $this" }
+                    require(size0 <= size) { "objects.size of an earlier state must not be greater, $earlierState vs $this" }
                     val changedIndices = (0 until size0)
                         .filter { objects[it] != earlierState.objects[it] }
                         .plus(size0 until size)
@@ -526,7 +456,7 @@ data class SaveState(
                 else {
                     val size0 = earlierState.expressions.size
                     val size = expressions.size
-                    require(size0 <= size) { "expressions.size of the earlier state must NOT be greater, $earlierState vs $this" }
+                    require(size0 <= size) { "expressions.size of an earlier state must NOT be greater, $earlierState vs $this" }
                     val changedIndices = (0 until size0)
                         .filter { expressions[it] != earlierState.expressions[it] }
                         .plus(size0 until size)
@@ -538,21 +468,16 @@ data class SaveState(
             arcPaths =
                 if (arcPaths == earlierState.arcPaths) null
                 else {
-                    val changedIndices = (0 until max(earlierState.arcPaths.size, arcPaths.size))
-                        .filter { arcPaths.getOrNull(it) != earlierState.arcPaths.getOrNull(it) }
+                    val size0 = earlierState.objects.size
+                    val size = objects.size
+                    require(size0 <= size) { "arcPaths.size of an earlier state must not be greater, $earlierState vs $this" }
+                    val changedIndices = (0 until size0)
+                        .filter { arcPaths[it] != earlierState.arcPaths[it] }
+                        .plus(size0 until size)
                     if (changedIndices.isEmpty())
                         null
                     else
-                        Change.ArcPaths(changedIndices.map { i ->
-                            if (i < arcPaths.size) {
-                                if (i < earlierState.arcPaths.size)
-                                    ArrayChange.Modify(i, arcPaths[i])
-                                else
-                                    ArrayChange.Insert(i, arcPaths[i])
-                            } else { // i < earlierState.arcPaths.size
-                                ArrayChange.Delete(i)
-                            }
-                        })
+                        Change.ArcPaths(changedIndices.associateWith { arcPaths[it] })
                 },
             regions =
                 if (regions == earlierState.regions) null
@@ -636,6 +561,7 @@ data class SaveState(
                             }
                         }
                     )
+                    null -> null
                 }
             },
             regions = regions

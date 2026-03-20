@@ -110,7 +110,7 @@ class ChangeHistory(
         objectColorIndices: Set<Ix> = emptySet(),
         objectLabelIndices: Set<Ix> = emptySet(),
         expressionIndices: Set<Ix> = emptySet(),
-        arcPaths: Boolean = false,
+        arcPaths: Set<Int> = emptySet(),
         regions: Boolean = false,
         backgroundColor: Boolean = false,
         chessboardPattern: Boolean = false,

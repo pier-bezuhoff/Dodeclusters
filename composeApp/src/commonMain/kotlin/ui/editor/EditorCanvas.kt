@@ -279,7 +279,7 @@ fun BoxScope.EditorCanvas(
             )
         } else if (viewModel.showArcPathContextActions) {
             ArcPathContextActions(
-                arcPaths = viewModel.selection.arcPaths.map { viewModel.arcPaths[it] },
+                arcPaths = viewModel.selection.arcPaths.mapNotNull { viewModel.arcPaths[it] },
                 toolAction = viewModel::toolAction,
             )
         } else if (
@@ -937,7 +937,7 @@ private fun DrawScope.drawSelectedObjects(
 }
 
 private fun DrawScope.drawArcPaths(
-    allArcPaths: List<ConcreteArcPath>,
+    allArcPaths: List<ConcreteArcPath?>,
     indices: List<Ix>,
     pathCache: PathCache,
     defaultArcPathColor: Color,
@@ -946,7 +946,7 @@ private fun DrawScope.drawArcPaths(
     arcPathStroke: Stroke,
 ) {
     for (i in indices) {
-        val arcPath = allArcPaths[i]
+        val arcPath = allArcPaths[i] ?: continue
         var path: Path? = pathCache.dependentPaths[i]
         if (path == null || !pathCache.dependentPathValidity[i]) {
             // Q: when we don't call reset()/rewind() here but the color changes,
@@ -972,7 +972,7 @@ private fun DrawScope.drawArcPaths(
 }
 
 private fun DrawScope.drawSelectedArcPaths(
-    allArcPaths: List<ConcreteArcPath>,
+    allArcPaths: List<ConcreteArcPath?>,
     indices: List<Int>,
     pathCache: PathCache,
     @FloatRange(from = 0.0, to = 1.0)
@@ -985,7 +985,7 @@ private fun DrawScope.drawSelectedArcPaths(
     arcMiddlePointRadius: Float,
 ) {
     for (i in indices) {
-        val arcPath = allArcPaths[i]
+        val arcPath = allArcPaths[i] ?: continue
         var path: Path? = pathCache.dependentPaths[i]
         if (path == null || !pathCache.dependentPathValidity[i]) {
             // Q: when we don't call reset()/rewind() here but the color changes,

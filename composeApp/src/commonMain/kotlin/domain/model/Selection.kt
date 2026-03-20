@@ -12,4 +12,10 @@ data class Selection(
     val arcPaths: List<Int> = emptyList(),
 ) {
     val size: Int get() = objects.size + arcPaths.size
+
+    fun isEmpty(): Boolean =
+        objects.isEmpty() && arcPaths.isEmpty()
+
+    fun isNotEmpty(): Boolean =
+        objects.isNotEmpty() || arcPaths.isNotEmpty()
 }

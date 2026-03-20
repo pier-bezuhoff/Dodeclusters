@@ -23,13 +23,15 @@ import kotlin.collections.set
  */
 class ConformalObjectModel : ObjectModel<GCircle>() {
 
-    private val _arcPaths: MutableList<ArcPath> = mutableListOf()
-    val arcPaths: List<ArcPath> = _arcPaths
-    private val _concreteArcPaths: MutableList<ConcreteArcPath> = mutableListOf()
-    val concreteArcPaths: List<ConcreteArcPath> = _concreteArcPaths
+    private val _arcPaths: MutableList<ArcPath?> = mutableListOf()
+    val arcPaths: List<ArcPath?> = _arcPaths
+    private val _concreteArcPaths: MutableList<ConcreteArcPath?> = mutableListOf()
+    val concreteArcPaths: List<ConcreteArcPath?> = _concreteArcPaths
 
     override var expressions: ConformalExpressions =
         ConformalExpressions(emptyMap(), mutableListOf())
+
+    val object2arcPathDependencies: Map<Ix, Set<Int>> = pathCache.dependencies
 
     fun getInfinityIndex(): Ix? {
         val infinityIndex = objects.indexOfFirst { it == Point.CONFORMAL_INFINITY }
@@ -38,10 +40,13 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         } else infinityIndex
     }
 
-    fun addArcPath(arcPath: ArcPath) {
+    fun getDependentArcPaths(objectIx: Ix): Set<Int> =
+        object2arcPathDependencies[objectIx] ?: emptySet()
+
+    fun addArcPath(arcPath: ArcPath?) {
         _arcPaths.add(arcPath)
-        _concreteArcPaths.add(arcPath.toConcrete(objects))
-        pathCache.addDependent(arcPath.dependencies)
+        _concreteArcPaths.add(arcPath?.toConcrete(objects))
+        pathCache.addDependent(arcPath?.dependencies ?: emptySet())
     }
 
     fun modifyArcPath(arcPathIndex: Int, arcPath: ArcPath) {
@@ -51,18 +56,18 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
     }
 
     fun removeArcPathAt(arcPathIndex: Int) {
-        _arcPaths.removeAt(arcPathIndex)
-        _concreteArcPaths.removeAt(arcPathIndex)
+        _arcPaths[arcPathIndex] = null
+        _concreteArcPaths[arcPathIndex] = null
         pathCache.removeDependent(arcPathIndex)
     }
 
     override fun objectChangedAt(ix: Ix) {
         // a bit iffy to rely on path cache dependency mechanism
-        val dependents = pathCache.dependencies[ix]
+        val dependents = object2arcPathDependencies[ix]
         super.objectChangedAt(ix)
         if (dependents != null) {
             for (arcPathIndex in dependents) {
-                _concreteArcPaths[arcPathIndex] = arcPaths[arcPathIndex].toConcrete(objects)
+                _concreteArcPaths[arcPathIndex] = arcPaths[arcPathIndex]?.toConcrete(objects)
             }
         }
     }
@@ -72,11 +77,11 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         downscaledObjects[ix] = null
         objectColors.remove(ix)
         phantomObjectIndices.remove(ix)
-        val dependents = pathCache.dependencies[ix]
+        val dependents = object2arcPathDependencies[ix]
         pathCache.removeObjectAt(ix)
         if (dependents != null) {
             for (arcPathIndex in dependents) {
-                val updatedArcPath = arcPaths[arcPathIndex].withoutPointsAt(setOf(ix))
+                val updatedArcPath = arcPaths[arcPathIndex]?.withoutPointsAt(setOf(ix))
                 if (updatedArcPath == null) {
                     removeArcPathAt(arcPathIndex)
                 } else {

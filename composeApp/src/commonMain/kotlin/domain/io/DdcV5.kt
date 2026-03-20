@@ -134,7 +134,7 @@ data class DdcV5(
                         )
                     },
                     regions = regions,
-                    arcPaths = arcPaths,
+                    arcPaths = arcPaths.filterNotNull(),
                 )
             }
         }

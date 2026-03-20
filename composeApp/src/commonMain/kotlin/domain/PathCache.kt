@@ -102,11 +102,8 @@ class PathCache {
     }
 
     fun removeDependent(dependentIndex: Int) {
-        dependentPaths.removeAt(dependentIndex)
-        dependentPathValidity =
-            dependentPathValidity.take(dependentIndex)
-                .plus(dependentPathValidity.drop(dependentIndex + 1))
-                .toBooleanArray()
+        dependentPaths[dependentIndex] = null
+        dependentPathValidity[dependentIndex] = false
         val toBeRemoved = mutableListOf<Ix>()
         for ((objectIndex, dependents) in dependencies) {
             val newDependents = dependents - dependentIndex
