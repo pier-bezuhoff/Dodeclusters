@@ -4,7 +4,10 @@ import androidx.compose.runtime.Immutable
 import core.geometry.Circle
 import core.geometry.EPSILON
 import core.geometry.Point
+import domain.expressions.SagittaRatioParameters
+import domain.expressions.computeCircleBy2PointsAndSagittaRatio
 import domain.expressions.computeCircleBy3Points
+import domain.expressions.computeSagittaRatio
 import kotlin.math.hypot
 
 @Immutable
@@ -81,8 +84,7 @@ data class PartialArcPath(
         focus = Focus.Vertex(vertices.size),
     )
 
-    // TODO: vertex-vertex snapping
-    // MAYBE: dont move midpoint if it's snapped
+    // MAYBE: dont move midpoint if it's Eq-snapped
     fun updateVertex(vertexIndex: Int, newVertex: Vertex): PartialArcPath =
         when {
             vertices.size == 1 -> {
@@ -101,8 +103,6 @@ data class PartialArcPath(
     //                computeCircleBy3Points(newPoint, newMidpoint, nextPoint) as? Circle
                 val newNextStartAngle =
                     newNextCircle?.calculateStartAngle(newPoint) ?: 0.0
-                // TODO: snap to end to close loop
-    //            if (newPoint.distanceFrom(vertices.last().point) < EPSILON) {}
                 copy(
                     vertices = vertices.updated(0, newVertex),
                     arcs = arcs.updated(0,
@@ -209,8 +209,7 @@ data class PartialArcPath(
     }
 
     // TODO: snapping to create smooth connection between arcs (their circles are to touch tangentially)
-    //  also snap to existing points, intersections, existing circle=arc, incidence with existing circles
-    //  + snap midpoints to straight segment
+    //  also snap to existing arcs + snap midpoints to straight segment
     fun moveFocused(snap: PointSnapResult): PartialArcPath =
         when (focus) {
             is Focus.Vertex -> updateVertex(focus.vertexIndex, Vertex(snap))
@@ -243,7 +242,65 @@ data class PartialArcPath(
         focus = null,
     )
 
-    fun closeLoop(): PartialArcPath = copy(
+    /** fuse vertex `firstVertexIndex+1` into [firstVertexIndex] */
+    fun fuseSubsequentVertices(firstVertexIndex: Int): PartialArcPath =
+        if (!isClosed && firstVertexIndex > arcs.lastIndex)
+            connectLastToFirst().collapseArc(firstVertexIndex)
+        else
+            collapseArc(firstVertexIndex)
+
+    /** fuse arc-end vertex into arc-start */
+    fun collapseArc(arcIndex: Int): PartialArcPath {
+        val nextVertexIndex = (arcIndex + 1).mod(vertices.size)
+        return if (arcIndex == arcs.lastIndex) {
+            copy(
+                vertices = vertices.withoutElementAt(nextVertexIndex),
+                arcs = arcs.dropLast(1),
+            )
+        } else {
+            val nextArc = arcs[arcIndex + 1]
+            val nextArcStart = arcIndex2startVertex(arcIndex).point
+            val oldNextArcEnd = arcIndex2startVertex(arcIndex + 1).point
+            val nextArcEnd = arcIndex2endVertex(arcIndex + 1).point
+            val newNextArc = when (val snap = nextArc.snap) {
+                is PointSnapResult.Free -> if (nextArc.circle == null) {
+                    Arc(circle = null, middlePoint = nextArcStart.middle(nextArcEnd))
+                } else {
+                    val sr = computeSagittaRatio(nextArc.circle, nextArcStart, oldNextArcEnd)
+                    val newCircle = computeCircleBy2PointsAndSagittaRatio(
+                        SagittaRatioParameters(sr),
+                        nextArcStart, nextArcEnd
+                    ) as? Circle
+                    val newStartAngle =
+                        newCircle?.calculateStartAngle(nextArcStart) ?: 0.0
+                    val newSweepAngle =
+                        newCircle?.calculateSweepAngle(nextArcStart, snap.result, nextArcEnd) ?: 0.0
+                    Arc(
+                        circle = newCircle, snap = snap,
+                        startAngle = newStartAngle, sweepAngle = newSweepAngle
+                    )
+                }
+                else -> {
+                    val newCircle =
+                        computeCircleBy3Points(nextArcStart, snap.result, nextArcEnd) as? Circle
+                    val newStartAngle =
+                        newCircle?.calculateStartAngle(nextArcStart) ?: 0.0
+                    val newSweepAngle =
+                        newCircle?.calculateSweepAngle(nextArcStart, snap.result, nextArcEnd) ?: 0.0
+                    Arc(
+                        circle = newCircle, snap = snap,
+                        startAngle = newStartAngle, sweepAngle = newSweepAngle
+                    )
+                }
+            }
+            copy(
+                vertices = vertices.withoutElementAt(nextVertexIndex),
+                arcs = arcs.withoutElementAt(arcIndex).updated(arcIndex, newNextArc),
+            )
+        }
+    }
+
+    fun connectLastToFirst(): PartialArcPath = copy(
         arcs = arcs + Arc(
             circle = null,
             middlePoint = vertices.last().point.middle(vertices.first().point)
@@ -251,11 +308,46 @@ data class PartialArcPath(
         isClosed = true,
     )
 
-    fun deleteVertex(vertexIndex: Int): PartialArcPath {
-        // rm point[i]
-        // and flatten 2 adjacent arcs
-        // or mk the deleted point into a new midpoint for its 2 neighbors
-        TODO()
+    fun removeVertex(vertexIndex: Int): PartialArcPath {
+        require(vertices.size > 1) { "Cannot remove the last vertex" }
+        return when (vertexIndex) {
+            0 ->
+                if (isClosed) copy(
+                    vertices = vertices.drop(1),
+                    // replace prev arc with a line segment
+                    arcs = arcs.slice(1 until arcs.lastIndex) + Arc(
+                        circle = null,
+                        middlePoint = vertices.last().point.middle(vertices[1].point),
+                    )
+                )
+                else copy(
+                    vertices = vertices.drop(1),
+                    arcs = arcs.drop(1),
+                )
+            vertices.lastIndex ->
+                if (isClosed) copy(
+                    vertices = vertices.dropLast(1),
+                    arcs = listOf(Arc(
+                        circle = null,
+                        middlePoint = vertices.first().point.middle(
+                            vertices[vertexIndex - 1].point
+                        )
+                    )) + arcs.slice(1 until arcs.lastIndex),
+                )
+                else copy( // deleting the last vertex, with no subsequent arc
+                    vertices = vertices.dropLast(1),
+                    arcs = arcs.dropLast(1),
+                )
+            else -> copy( // atp: 1 <= vertexIndex < vertices.lastIndex
+                vertices = vertices.withoutElementAt(vertexIndex),
+                arcs = arcs.take(vertexIndex - 1) + Arc(
+                    circle = null,
+                    middlePoint = vertices[vertexIndex - 1].point.middle(
+                        arcIndex2endVertex(vertexIndex).point
+                    )
+                ) + arcs.drop(vertexIndex + 1),
+            )
+        }
     }
 }
 

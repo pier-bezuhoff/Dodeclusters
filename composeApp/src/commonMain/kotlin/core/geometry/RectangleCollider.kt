@@ -12,6 +12,37 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+object RectangleCollider {
+    fun selectWithRectangle(objects: List<GCircle?>, rect: Rect): List<Int> =
+        objects.filterIndices { o ->
+            if (o == null)
+                false
+            else
+                objectRectangleCollisionTest(o, rect)
+        }
+
+    /** Rectangle collider.
+     * @return `true` if intersection of [obj]'s border and [rect] is
+     * non-empty (including [rect]'s interior), otherwise `false` */
+    fun objectRectangleCollisionTest(obj: GCircle, rect: Rect): Boolean =
+        when (obj) {
+            is Circle -> {
+                circleRectCollisionTest(obj, rect)
+//            circleRectCollisionTestEveryEdge(obj, rect)
+            }
+            is Line -> {
+                testHorizontalSegmentLineIntersection(rect.top, rect.left, rect.right, obj) ||
+                        testHorizontalSegmentLineIntersection(rect.bottom, rect.left, rect.right, obj) ||
+                        testVerticalSegmentLineIntersection(rect.left, rect.top, rect.bottom, obj) ||
+                        testVerticalSegmentLineIntersection(rect.right, rect.top, rect.bottom, obj)
+            }
+            is Point ->
+                obj.x in rect.left .. rect.right &&
+                        obj.y in rect.top .. rect.bottom
+            is ImaginaryCircle -> false
+        }
+}
+
 /** Unlike the default [Rect] constructor, works correctly for any configuration of corners */
 fun Rect.Companion.fromCorners(corner1: Offset, corner2: Offset): Rect {
     val topLeft = Offset(min(corner1.x, corner2.x), min(corner1.y, corner2.y))
@@ -19,36 +50,7 @@ fun Rect.Companion.fromCorners(corner1: Offset, corner2: Offset): Rect {
     return Rect(topLeft, bottomRight)
 }
 
-fun selectWithRectangle(objects: List<GCircle?>, rect: Rect): List<Int> =
-    objects.filterIndices { o ->
-        if (o == null)
-            false
-        else
-            objectRectangleCollisionTest(o, rect)
-    }
-
-/** Rectangle collider.
- * @return `true` if intersection of [obj]'s border and [rect] is
- * non-empty (including [rect]'s interior), otherwise `false` */
-fun objectRectangleCollisionTest(obj: GCircle, rect: Rect): Boolean =
-    when (obj) {
-        is Circle -> {
-            circleRectCollisionTest(obj, rect)
-//            circleRectCollisionTestEveryEdge(obj, rect)
-        }
-        is Line -> {
-            testHorizontalSegmentLineIntersection(rect.top, rect.left, rect.right, obj) ||
-            testHorizontalSegmentLineIntersection(rect.bottom, rect.left, rect.right, obj) ||
-            testVerticalSegmentLineIntersection(rect.left, rect.top, rect.bottom, obj) ||
-            testVerticalSegmentLineIntersection(rect.right, rect.top, rect.bottom, obj)
-        }
-        is Point ->
-            obj.x in rect.left .. rect.right &&
-            obj.y in rect.top .. rect.bottom
-        is ImaginaryCircle -> false
-    }
-
-fun arcRectangleCollisionTest(
+private fun arcRectangleCollisionTest(
     arcStart: Point, arcEnd: Point,
     circleOrLine: CircleOrLine,
     rect: Rect,
@@ -56,7 +58,7 @@ fun arcRectangleCollisionTest(
     TODO()
 }
 
-fun calculateRectangleCircleIntersectionContour(rect: Rect, circle: Circle): List<Offset> {
+private fun calculateRectangleCircleIntersectionContour(rect: Rect, circle: Circle): List<Offset> {
     // segment between 1st 2 points is line segment of the rect, then circle, then rect,
     // ..., and lastly circle; going CCW along the rect
     // for tangential contact, 2 points of segment should coincide
@@ -69,7 +71,7 @@ fun calculateRectangleCircleIntersectionContour(rect: Rect, circle: Circle): Lis
 
 // reference: https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection
 /** Simpler interior intersection test that ignores rect-inside-circle & circle-inside-rect cases */
-fun simpleCircleRectCollisionTest(circle: Circle, rect: Rect): Boolean {
+private fun simpleCircleRectCollisionTest(circle: Circle, rect: Rect): Boolean {
     val cx = circle.x.toFloat()
     val cy = circle.y.toFloat()
     // get rect's closest point to circle center by clamping

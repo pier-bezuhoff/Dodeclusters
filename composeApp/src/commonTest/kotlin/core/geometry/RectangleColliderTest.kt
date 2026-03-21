@@ -14,14 +14,14 @@ class RectangleColliderTest {
         // ┏━┳━┳━┓
         // ┗━┻━┻━┛
         val smolIn = Circle(0.0, 150.0, 50.0)
-        assertTrue(objectRectangleCollisionTest(smolIn, rect))
+        assertTrue(RectangleCollider.objectRectangleCollisionTest(smolIn, rect))
         val smolOut = Circle(1000.0, 150.0, 50.0)
-        assertFalse(objectRectangleCollisionTest(smolOut, rect))
+        assertFalse(RectangleCollider.objectRectangleCollisionTest(smolOut, rect))
         val out = Circle(-150.0, 150.0, 60.0)
-        assertTrue(objectRectangleCollisionTest(out, rect))
+        assertTrue(RectangleCollider.objectRectangleCollisionTest(out, rect))
         val bigCenterIn = Circle(0.0, 150.0, 500.0)
-        assertFalse(objectRectangleCollisionTest(bigCenterIn, rect))
+        assertFalse(RectangleCollider.objectRectangleCollisionTest(bigCenterIn, rect))
         val midIn = Circle(100.0, 150.0, 60.0)
-        assertTrue(objectRectangleCollisionTest(midIn, rect))
+        assertTrue(RectangleCollider.objectRectangleCollisionTest(midIn, rect))
     }
 }

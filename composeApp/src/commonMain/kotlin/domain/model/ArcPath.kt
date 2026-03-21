@@ -206,7 +206,6 @@ fun ArcPath.toConcrete(objects: List<GCircle?>): ConcreteArcPath {
                                     arcIndex = i,
                                     circleOrLine = circleOrLine,
                                     startAngle = circle?.calculateStartAngle(vertex) ?: 0.0,
-                                    //wrong
                                     sweepAngle = circle?.calculateSweepAngle(vertex, nextVertex) ?: 0.0,
                                     freeMidpoint =
                                         if (arc is Arc.By2Points && circleOrLine is CircleOrLine)

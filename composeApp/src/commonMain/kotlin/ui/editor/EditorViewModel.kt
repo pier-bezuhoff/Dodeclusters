@@ -1,5 +1,6 @@
 package ui.editor
 
+import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -28,13 +29,13 @@ import core.geometry.GCircle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
 import core.geometry.Point
+import core.geometry.RectangleCollider
 import core.geometry.conformal.GeneralizedCircle
 import core.geometry.conformal.Rotor
 import core.geometry.conformal.calculateStereographicRotationBiEngine
 import core.geometry.conformal.generateSphereGrid
 import core.geometry.fromCorners
 import core.geometry.scaled00
-import core.geometry.selectWithRectangle
 import core.geometry.translationDelta
 import domain.Arg
 import domain.ArgType
@@ -151,20 +152,27 @@ class EditorViewModel : ViewModel() {
     /** indices of selected circles/lines/points & arc-paths */
     var selection: Selection by mutableStateOf(Selection())
         private set
+    /** Distinct selected object indices +
+     * indices of all vertices/midpoints of selected arc-paths */
     inline val selectedIndices: List<Ix> get() =
         selection.objects.plus(
             selection.arcPaths.flatMap { arcPaths[it]?.dependencies ?: emptySet() }
         ).distinct()
     inline val objectSelection: List<Ix> get() = selection.objects
+
     private val modeState: MutableState<Mode> = mutableStateOf(SelectionMode.Drag)
+    /** Major editing mode */
     var mode: Mode by modeState
         private set
     private val submodeState: MutableState<SubMode?> = mutableStateOf(null)
+    /** Minor editing mode, bound to [mode]; can hold transient data */
     var submode: SubMode? by submodeState
         private set
     // NOTE: Arg.XYPoint & co use absolute positioning
+    /** Partly filled [Tool] arg-list during [ToolMode] */
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set
+    /** Under-construction arc-path during [ToolMode.ARC_PATH] */
     var partialArcPath: PartialArcPath? by mutableStateOf(null)
         private set
 
@@ -174,15 +182,14 @@ class EditorViewModel : ViewModel() {
     var circlesAreCoDirected: Boolean by mutableStateOf(true)
         private set
 
-    /** currently selected color */
-    var regionColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
-        private set
-
     var translation: Offset by mutableStateOf(Offset.Zero)
         private set
     var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
         private set
 
+    /** currently selected color */
+    var regionColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
+        private set
     /** `[0; 1]` transparency of non-chessboard [regions] */
     var regionsOpacity: Float by mutableStateOf(1.0f)
         private set
@@ -301,6 +308,9 @@ class EditorViewModel : ViewModel() {
 
     /** min tap/grab distance to select an object */
     private var tapRadius = getPlatform().tapRadius
+    private val lowAccuracyTapRadius get() = tapRadius*LOW_ACCURACY_FACTOR
+    private val tapRadius2 get() = tapRadius*tapRadius
+    private val lowAccuracyTapRadius2 get() = tapRadius*tapRadius*LOW_ACCURACY_FACTOR*LOW_ACCURACY_FACTOR
 
     private var movementAfterDown = false
 
@@ -1026,7 +1036,11 @@ class EditorViewModel : ViewModel() {
 
     fun isCloseEnoughToSelect(absolutePosition: Offset, visiblePosition: Offset, lowAccuracy: Boolean = false): Boolean {
         val position = absolute(visiblePosition)
-        return (absolutePosition - position).getDistance() <= tapRadius * (if (lowAccuracy) LOW_ACCURACY_FACTOR else 1f)
+        val d2 = (absolutePosition - position).getDistanceSquared()
+        return if (lowAccuracy)
+            d2 <= lowAccuracyTapRadius2
+        else
+            d2 <= tapRadius2
     }
 
     fun getPointsAround(
@@ -2362,19 +2376,6 @@ class EditorViewModel : ViewModel() {
                     }
                 }
                 ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> {}
-                ToolMode.ARC_PATH -> {
-                    partialArcPath?.also { pArcPath ->
-                        if (pArcPath.arcs.size >= 2) {
-                            if (isCloseEnoughToSelect(
-                                    pArcPath.vertices.first().point.toOffset(),
-                                    position,
-                            )) {
-                                partialArcPath = pArcPath.closeLoop()
-                                completeArcPath()
-                            }
-                        }
-                    }
-                }
                 else -> {}
             }
         }
@@ -2726,38 +2727,131 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun tryClosingPartialArcPath(visibleFocusPosition: Offset) {
-        val pArcPath = partialArcPath
-        if (pArcPath != null && !pArcPath.isClosed && pArcPath.vertices.size > 2) {
-            when (val focus = pArcPath.focus) {
-                is PartialArcPath.Focus.Vertex -> when {
-                    focus.vertexIndex == 0 -> {
-                        val end = pArcPath.vertices.last().point
-                        val startAndEndAreClose = isCloseEnoughToSelect(
-                            absolutePosition = end.toOffset(),
-                            visiblePosition = visibleFocusPosition,
-                        )
-                        if (startAndEndAreClose) {
-                            partialArcPath = pArcPath.closeLoop()
-                            completeArcPath()
-                        }
-                    }
-                    focus.vertexIndex == pArcPath.vertices.lastIndex -> {
-                        val start = pArcPath.vertices.first().point
-                        val startAndEndAreClose = isCloseEnoughToSelect(
-                            absolutePosition = start.toOffset(),
-                            visiblePosition = visibleFocusPosition,
-                        )
-                        if (startAndEndAreClose) {
-                            partialArcPath = pArcPath.closeLoop()
-                            completeArcPath()
-                        }
-                    }
-                    else -> {}
-                }
-                else -> {}
+    private fun updateRectangleSelect(absolutePosition: Offset, sm: SubMode.RectangularSelect) {
+        val corner1 = sm.corner1
+        val rect = Rect.fromCorners(corner1 ?: absolutePosition, absolutePosition)
+        val selectables = objects.mapIndexed { ix, o ->
+            if (showPhantomObjects || ix !in phantoms) o else null
+        }
+        selection = Selection( // TODO: select arc-paths too
+            objects = RectangleCollider.selectWithRectangle(selectables, rect)
+        )
+        submode = SubMode.RectangularSelect(corner1, absolutePosition)
+        history.accumulateChangedLocations(selection = true)
+    }
+
+    private fun updateFlowSelect(visiblePosition: Offset, sm: SubMode.FlowSelect) {
+        val qualifiedRegion = sm.lastQualifiedRegion
+        val (_, newQualifiedRegion) = selectRegionAt(visiblePosition)
+        if (qualifiedRegion == null) {
+            submode = SubMode.FlowSelect(newQualifiedRegion)
+        } else {
+            val diff =
+                (qualifiedRegion.insides - newQualifiedRegion.insides) union
+                        (newQualifiedRegion.insides - qualifiedRegion.insides) union
+                        (qualifiedRegion.outsides - newQualifiedRegion.outsides) union
+                        (newQualifiedRegion.outsides - qualifiedRegion.outsides)
+            selection = Selection(objects =
+                selection.objects +
+                        diff.filter { it !in objectSelection && (showPhantomObjects || it !in phantoms) }
+            )
+            history.accumulateChangedLocations(selection = true)
+        }
+    }
+
+    private fun updateFlowFill(visiblePosition: Offset, selectedCircles: List<Ix>, sm: SubMode.FlowFill) {
+        val qualifiedRegion = sm.lastQualifiedRegion
+        val (_, newQualifiedRegion) = selectRegionAt(visiblePosition)
+        if (qualifiedRegion == null) {
+            submode = SubMode.FlowFill(newQualifiedRegion)
+        } else if (qualifiedRegion != newQualifiedRegion) {
+            submode = SubMode.FlowFill(newQualifiedRegion)
+            if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
+                reselectRegionAt(visiblePosition, selectedCircles)
+            } else {
+                reselectRegionAt(visiblePosition)
             }
         }
+    }
+
+    private fun updatePartialArcPathFocus(absolutePosition: Offset) {
+        val snap = snapped(absolutePosition)
+        val pArcPath = partialArcPath
+        partialArcPath = if (
+            pArcPath != null && snap is PointSnapResult.Free &&
+            pArcPath.focus is PartialArcPath.Focus.Vertex
+        ) { // try snapping to vertices & midpoints
+            val snapToVertices = snapPointToPoints(
+                snap.result, pArcPath.vertices.map { it.point },
+                snapDistance = tapRadius.toDouble(),
+            )
+            if (snapToVertices !is PointSnapResult.Free) {
+                pArcPath.moveFocused(
+                    PointSnapResult.Free(snapToVertices.result)
+                )
+            } else {
+                val snapToMidpoints = snapPointToPoints(
+                    snap.result, pArcPath.arcs.map { it.middlePoint },
+                    snapDistance = tapRadius.toDouble(),
+                )
+                if (snapToMidpoints !is PointSnapResult.Free) {
+                    pArcPath.moveFocused(
+                        PointSnapResult.Free(snapToMidpoints.result)
+                    )
+                } else {
+                    pArcPath.moveFocused(snap)
+                }
+            }
+        } else {
+            pArcPath?.moveFocused(snap)
+        }
+    }
+
+    private fun tryUpdatingToolArg(absolutePosition: Offset): Boolean {
+        val snap = snapped(absolutePosition)
+        val absolutePoint = snap.result
+        val argList = partialArgList
+        val currentArg = argList?.currentArg
+        val currentArgType = argList?.currentArgType
+        if (
+            mode is ToolMode &&
+            currentArgType?.possibleTypes?.any { it is Arg.Type.Point } == true &&
+            ((mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION) entails
+                    (currentArg?.type is Arg.Type.Point))
+        ) {
+            val newArg = when (snap) {
+                is PointSnapResult.Eq -> Arg.PointIndex(snap.pointIndex)
+                else -> Arg.PointXY(absolutePoint)
+            }
+            if (argList.validateUpdatedArg(newArg)) {
+                partialArgList = argList
+                    .updateCurrentArg(newArg, confirmThisArg = false)
+                    .copy(lastSnap = snap)
+            }
+            return true
+        }
+        return false
+    }
+
+    private fun moveAroundCanvas(pan: Offset, zoom: Float, rotationAngle: Float) {
+        if (zoom != 1.0f || rotationAngle != 0.0f) {
+            val targets = objects.indices.toList()
+            val center = computeAbsoluteCenter() ?: Offset.Zero
+            val changedIndices =
+                objectModel.transform(
+                    targets,
+                    focus = center,
+                    zoom = zoom,
+                    rotationAngle = rotationAngle,
+                )
+            history.accumulateChangedLocations(
+                objectIndices = changedIndices,
+                expressionIndices = changedIndices,
+                center = true,
+            )
+        }
+        translation += pan // navigate canvas
+        objectModel.pathCache.invalidateAll() // sadly have to do this cuz we use visibleRect in path construction
     }
 
     // MAYBE: handle key arrows as panning
@@ -2784,50 +2878,12 @@ class EditorViewModel : ViewModel() {
             }
             is SubMode.GrabbedArcMidpoint ->
                 dragGrabbedArcMidpoint(absoluteCentroid = absoluteCentroid, sm = sm)
-            is SubMode.RectangularSelect -> {
-                val corner1 = sm.corner1
-                val rect = Rect.fromCorners(corner1 ?: absoluteCentroid, absoluteCentroid)
-                val selectables = objects.mapIndexed { ix, o ->
-                    if (showPhantomObjects || ix !in phantoms) o else null
-                }
-                selection = Selection( // TODO: select arc-paths too
-                    objects = selectWithRectangle(selectables, rect)
-                )
-                submode = SubMode.RectangularSelect(corner1, absoluteCentroid)
-                history.accumulateChangedLocations(selection = true)
-            }
-            is SubMode.FlowSelect -> {
-                val qualifiedRegion = sm.lastQualifiedRegion
-                val (_, newQualifiedRegion) = selectRegionAt(centroid)
-                if (qualifiedRegion == null) {
-                    submode = SubMode.FlowSelect(newQualifiedRegion)
-                } else {
-                    val diff =
-                        (qualifiedRegion.insides - newQualifiedRegion.insides) union
-                        (newQualifiedRegion.insides - qualifiedRegion.insides) union
-                        (qualifiedRegion.outsides - newQualifiedRegion.outsides) union
-                        (newQualifiedRegion.outsides - qualifiedRegion.outsides)
-                    selection = Selection(objects =
-                        selection.objects +
-                            diff.filter { it !in objectSelection && (showPhantomObjects || it !in phantoms) }
-                    )
-                    history.accumulateChangedLocations(selection = true)
-                }
-            }
-            is SubMode.FlowFill -> {
-                val qualifiedRegion = sm.lastQualifiedRegion
-                val (_, newQualifiedRegion) = selectRegionAt(centroid)
-                if (qualifiedRegion == null) {
-                    submode = SubMode.FlowFill(newQualifiedRegion)
-                } else if (qualifiedRegion != newQualifiedRegion) {
-                    submode = SubMode.FlowFill(newQualifiedRegion)
-                    if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
-                        reselectRegionAt(centroid, selectedCircles)
-                    } else {
-                        reselectRegionAt(centroid)
-                    }
-                }
-            }
+            is SubMode.RectangularSelect ->
+                updateRectangleSelect(absolutePosition = absoluteCentroid, sm = sm)
+            is SubMode.FlowSelect ->
+                updateFlowSelect(visiblePosition = centroid, sm = sm)
+            is SubMode.FlowFill ->
+                updateFlowFill(visiblePosition = centroid, selectedCircles = selectedCircles, sm = sm)
             is SubMode.RotateStereographicSphere ->
                 stereographicallyRotateEverything(absolutePointerPosition = absoluteCentroid, sm = sm)
             null -> when (mode) {
@@ -2842,49 +2898,11 @@ class EditorViewModel : ViewModel() {
                             selectedPoints.isNotEmpty() || selection.arcPaths.isNotEmpty()
                         ) ->
                     dragSelection(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+                ToolMode.ARC_PATH ->
+                    updatePartialArcPathFocus(absoluteCentroid)
                 else -> {
-                    val snap = snapped(absoluteCentroid)
-                    val absolutePoint = snap.result
-                    val argList = partialArgList
-                    val currentArg = argList?.currentArg
-                    val currentArgType = argList?.currentArgType
-                    if (mode == ToolMode.ARC_PATH) {
-                        partialArcPath = partialArcPath?.moveFocused(snap)
-                        tryClosingPartialArcPath(visibleFocusPosition = centroid)
-                    } else if (
-                        mode is ToolMode &&
-                        currentArgType?.possibleTypes?.any { it is Arg.Type.Point } == true &&
-                        ((mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION) entails
-                            (currentArg?.type is Arg.Type.Point))
-                    ) {
-                        val newArg = when (snap) {
-                            is PointSnapResult.Eq -> Arg.PointIndex(snap.pointIndex)
-                            else -> Arg.PointXY(absolutePoint)
-                        }
-                        if (argList.validateUpdatedArg(newArg)) {
-                            partialArgList = argList
-                                .updateCurrentArg(newArg, confirmThisArg = false)
-                                .copy(lastSnap = snap)
-                        }
-                    } else {
-                        if (zoom != 1.0f || rotationAngle != 0.0f) {
-                            val targets = objects.indices.toList()
-                            val center = computeAbsoluteCenter() ?: Offset.Zero
-                            val changedIndices =
-                                objectModel.transform(
-                                    targets,
-                                    focus = center,
-                                    zoom = zoom,
-                                    rotationAngle = rotationAngle,
-                                )
-                            history.accumulateChangedLocations(
-                                objectIndices = changedIndices,
-                                expressionIndices = changedIndices,
-                                center = true,
-                            )
-                        }
-                        translation += pan // navigate canvas
-                        objectModel.pathCache.invalidateAll() // sadly have to do this cuz we use visibleRect in path construction
+                    if (!tryUpdatingToolArg(absoluteCentroid)) {
+                        moveAroundCanvas(pan = pan, zoom = zoom, rotationAngle = rotationAngle)
                     }
                 }
             }
@@ -2892,6 +2910,7 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    /** @param[position] null if cancelled/OOB */
     fun onUp(position: Offset?) {
         cancelSelectionAsToolArgPrompt()
         // history is recorded at the end of :onUp
@@ -2901,7 +2920,31 @@ class EditorViewModel : ViewModel() {
             }
             SelectionMode.Multiselect -> {}
             ToolMode.ARC_PATH -> {
-                partialArcPath = partialArcPath?.realignGrabbedMidpoint()
+                var pArcPath = partialArcPath?.realignGrabbedMidpoint()
+                val focus = pArcPath?.focus
+                if (pArcPath != null && position != null && focus is PartialArcPath.Focus.Vertex) {
+                    val absolutePosition = absolute(position)
+                    val closeVertices = pArcPath.vertices.indices.minus(focus.vertexIndex)
+                        .filter { i ->
+                            absolutePosition.minus(pArcPath.vertices[i].point.toOffset())
+                                .getDistanceSquared() <= tapRadius2
+                        }.toSet()
+                    val nextVertexIndex = (focus.vertexIndex + 1).mod(pArcPath.vertices.size)
+                    val previousVertexIndex = (focus.vertexIndex - 1).mod(pArcPath.vertices.size)
+                    when {
+                        nextVertexIndex in closeVertices -> {
+                            pArcPath = pArcPath.fuseSubsequentVertices(focus.vertexIndex)
+                        }
+                        previousVertexIndex in closeVertices -> {
+                            pArcPath = pArcPath.fuseSubsequentVertices(previousVertexIndex)
+                        }
+                        else -> {
+                            // we can also snap 2 non-neighboring vertices, but
+                            // it's prob not a good idea
+                        }
+                    }
+                }
+                partialArcPath = pArcPath
             }
             ViewMode.StereographicRotation -> {
                 // MAYBE: normalize line-only-output expressions (e.g. polar line)
@@ -2976,7 +3019,7 @@ class EditorViewModel : ViewModel() {
                 val selectables = objects.mapIndexed { ix, o ->
                     if (showPhantomObjects || ix !in phantoms) o else null
                 }
-                val rectSelection = selectWithRectangle(selectables, rect)
+                val rectSelection = RectangleCollider.selectWithRectangle(selectables, rect)
                     .also {
                         println("rectangle selection -> $it")
                     }

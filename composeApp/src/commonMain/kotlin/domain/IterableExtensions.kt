@@ -21,6 +21,7 @@ inline fun <T> Iterable<T>.partitionIndices(
             )
         }
 
+/** equivalent to `take(index) + drop(index + 1)` */
 inline fun <T> List<T>.withoutElementAt(index: Int): List<T> {
     val list = this.toMutableList()
     list.removeAt(index)
@@ -79,6 +80,14 @@ fun combinations(n: Int, r: Int): Sequence<List<Int>> = sequence {
 
 fun <T> Iterable<T>.updated(index: Int, newElement: T): List<T> =
     this.toMutableList().apply { this[index] = newElement }
+
+inline fun <T> Iterable<T>.updated(
+    index: Int,
+    crossinline transformValue: (T) -> T,
+): List<T> =
+    this.toMutableList().apply {
+        this[index] = transformValue(this[index])
+    }
 
 fun <T> Iterable<T>.updated(vararg index2element: Pair<Int, T>): List<T> {
     val list = this.toMutableList()

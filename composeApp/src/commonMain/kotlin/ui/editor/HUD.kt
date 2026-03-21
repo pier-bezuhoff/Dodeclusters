@@ -108,6 +108,8 @@ import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.math.sinh
 
+// MAYBE: expanded mode with icon+label
+
 private val buttonModifier = Modifier
     .padding(8.dp)
     .size(36.dp)

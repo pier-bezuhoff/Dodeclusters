@@ -8,6 +8,7 @@ import ui.tools.Tool
 import kotlin.jvm.Transient
 
 @Immutable
+@Serializable
 sealed interface Mode {
     val tool: Tool
 

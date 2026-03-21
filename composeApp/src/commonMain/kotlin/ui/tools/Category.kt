@@ -94,7 +94,7 @@ sealed class Category(
             Tool.InsertCenteredCross,
             Tool.ConstructArcPath,
         ),
-        defaultables = listOf(0, 1, 2, 3, 4, 5)
+        defaultables = listOf(0, 1, 2, 3, 4, 5, 7)
     ) { // ~mode-like
         // mode: rectangle by top-left & bottom-right
         // mode: polygon
