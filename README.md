@@ -3,7 +3,7 @@
 ![Static Badge](https://img.shields.io/badge/status-beta-violet)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-### Circle-based vector graphics editor &nbsp;&nbsp;&nbsp; ⸽ &nbsp;&nbsp;&nbsp; **EN** | [RU](README-ru.md)
+### Circle-based vector graphics editor &nbsp;&nbsp;&nbsp; ⸽ &nbsp;&nbsp;&nbsp; \[ **EN** | [RU](README-ru.md) \] 
 
 ![Dodeclusters](docs/02inf-art.png)
 
@@ -58,7 +58,7 @@ You can find the apk in the assets [attached to the latest release](https://gith
 > [!NOTE]
 > Bundled binaries are likely behind the web version
 
-## Keyboard shortcuts
+## Keyboard shortcuts:
 - `Ctrl + A`: quickly select/deselect everything
 - `Delete`, `Backspace`: delete selected objects
 - `Ctrl + V`: duplicate selected objects
@@ -114,7 +114,6 @@ output directory: `composeApp/build/outputs/apk/debug/`
 
 
 ## Web Wasm compatibility
-
 To run applications built with Kotlin/Wasm in a browser, you need a browser supporting [wasm garbage collection feature](https://github.com/WebAssembly/gc):  
 - For **Chrome** and **Chromium-based** browsers (Edge, Brave etc.), it **should just work** since version 119.
 - For **Firefox** 120+ it **should just work**.

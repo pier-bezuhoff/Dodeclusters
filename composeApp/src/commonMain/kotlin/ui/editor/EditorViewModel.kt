@@ -126,7 +126,6 @@ import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
 // this class is obviously too big
-// TODO: decouple navigation & tools/categories
 // MAYBE: timed autosave (cron-like), e.g. every 10min
 class EditorViewModel : ViewModel() {
     val objectModel: ConformalObjectModel = ConformalObjectModel()
@@ -137,6 +136,7 @@ class EditorViewModel : ViewModel() {
     val phantoms: Set<Ix> = objectModel.phantomObjectIndices
     // not in objectModel cuz i want it to be state-backed for nicer caching
     var objectLabels: Map<Ix, String> by mutableStateOf(mapOf())
+    // MAYBE: encapsulate regions into ObjectModel
     /** Filled regions delimited by some objects from [objects] */
     var regions: List<LogicalRegion> by mutableStateOf(listOf())
 
@@ -1089,7 +1089,7 @@ class EditorViewModel : ViewModel() {
                 val circle = when (o) {
                     is Circle -> o
                     is Line -> o
-                    is ImaginaryCircle -> Circle(o.x, o.y, abs(o.radius))
+                    is ImaginaryCircle -> o.toRealCircle()
                     else -> null
                 }
                 val distance = circle?.distanceFrom(position) ?: Double.POSITIVE_INFINITY

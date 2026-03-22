@@ -1,3 +1,5 @@
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.ClipEntry
 import domain.settings.Settings
 import domain.io.getAppDataDir
 import domain.model.ChangeHistory
@@ -12,6 +14,7 @@ import kotlinx.io.IOException
 import kotlinx.io.files.Path
 import kotlinx.serialization.Serializable
 import ui.editor.EditorViewModel
+import java.awt.datatransfer.StringSelection
 import java.io.File
 import kotlin.math.pow
 
@@ -88,3 +91,7 @@ object JVMPlatform: Platform {
 }
 
 actual fun getPlatform(): Platform = JVMPlatform
+
+@OptIn(ExperimentalComposeUiApi::class)
+actual fun clipEntryOf(text: String): ClipEntry =
+    ClipEntry(StringSelection(text))

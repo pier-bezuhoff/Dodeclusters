@@ -3,7 +3,7 @@
 ![Static Badge](https://img.shields.io/badge/status-beta-violet)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-### Векторный редактор, построенный на окружностях &nbsp;&nbsp;&nbsp; ⸽ &nbsp;&nbsp;&nbsp; [EN](README.md) | **RU**
+### Векторный редактор, построенный на окружностях &nbsp;&nbsp;&nbsp; ⸽ &nbsp;&nbsp;&nbsp; \[ [EN](README.md) | **RU** \] 
 
 ![Dodeclusters](docs/02inf-art.png)
 
@@ -13,7 +13,7 @@
 💬 Простой, интуитивный дизайн с интерактивными подсказками и пояснениями  
 💯 Кроссплатформенность (сайт + офлайн приложение + мобильное приложение  
 🌲 Динамическое дерево взаимозависимых объектов  
-📜 История операций: отменить & повторить действие; автосохранение  
+📜 История операций: отменить ↶ & повторить ↷ действие; автосохранение  
 🔗 Возможность быстро делиться с друзьями своими чертежами/рисунками по ссылке  
 💾 Удобный и легко читаемый формат сохранения, основанный на YAML + Safe SVG экспорт  
 ✌ Умные жесты и комбинации клавиш  
@@ -52,12 +52,12 @@
 4. `chmod +x` его в терминале и далее вы можете запускать программу с помощью `./com.pierbezuhoff.dodeclusters` (содержит JVM)
 
 ### Android
-Скачайте и установите APK файл из ассетов [последнего релиза](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) `Dodeclusters-android.apk`.
+Скачайте и установите `apk` файл из ассетов [последнего релиза](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) `Dodeclusters-android.apk`.
 
 > [!NOTE]
 > Офлайн приложение скорее всего несколко отстаёт от веб-приложения
 
-## Быстрые сочетания клавиш
+## Быстрые сочетания клавиш:
 - `Ctrl + A`: выделить всё/снять выделение
 - `Delete`, `Backspace`: удалить выделенные объекты
 - `Ctrl + V`: продублировать/склонировать выделенные объекты
@@ -67,8 +67,8 @@
 - `Esc`: отменить текущее построение/режим
 - `O`: открыть файл
 - `S`: сохранить файл
-- `M`: перейти в режим навигации (~ **M**ove)
-- `L`: в режим выделения  (~ Se**L**ect)
+- `M`: перейти в режим навигации (мнемоника ~ **M**ove)
+- `L`: в режим мульти-выделения  (~ mu**L**ti-se**L**ect)
 - `R`: в режим заливки регионов между окружностями (~ **R**egions)
 - `T`: открыть панель трансформирующих инструментов (~ **T**ransform)
 - `C`: открыть панель инструментов создания объектов (~ **C**reate)
@@ -93,7 +93,7 @@
 `./gradlew composeApp:createReleaseDistributable`  
 папка с результатом: `composeApp/build/compose/binaries/main-release/app/`  
 
-По-отдельности:  
+По отдельности:  
 - `./gradlew packageReleaseMsi`  
 - `./gradlew packageReleaseDmg` + нотаризация/регистрация (требует Apple dev аккаунт)  
 - `./gradlew packageReleaseDeb`  
@@ -113,7 +113,6 @@
 
 
 ## Веб Wasm совместимость
-
 Чтобы запустить приложение на Kotlin/Wasm, требуется браузер, поддерживающий [Wasm garbage collection](https://github.com/WebAssembly/gc):  
 - Для **Chrome** и **основанных на Chromium** браузеров (Edge, Brave, и т.п.), это должно работать с `версии 119`.
 - Для **Firefox** должно работать начиная с `версии 120`.

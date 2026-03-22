@@ -1,4 +1,6 @@
+import android.content.ClipData
 import android.os.Build
+import androidx.compose.ui.platform.ClipEntry
 import domain.model.ChangeHistory
 import domain.model.SaveState
 import domain.settings.Settings
@@ -89,6 +91,9 @@ object AndroidPlatform : Platform {
 }
 
 actual fun getPlatform(): Platform = AndroidPlatform
+
+actual fun clipEntryOf(text: String): ClipEntry =
+    ClipEntry(ClipData.newPlainText("copied text", text))
 
 fun setFilesDir(filesDir: File) {
     AndroidPlatform.filesDir = Path(filesDir.absolutePath)

@@ -1,5 +1,6 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
+import androidx.compose.ui.platform.ClipEntry
 import domain.model.ChangeHistory
 import domain.model.SaveState
 import domain.settings.Settings
@@ -104,3 +105,6 @@ private fun detectUnderlyingPlatform(): UnderlyingPlatform {
             UnderlyingPlatform.LINUX
     }
 }
+
+actual fun clipEntryOf(text: String): ClipEntry =
+    ClipEntry.withPlainText(text)

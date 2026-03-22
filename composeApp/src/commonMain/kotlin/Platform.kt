@@ -1,3 +1,4 @@
+import androidx.compose.ui.platform.ClipEntry
 import domain.model.ChangeHistory
 import domain.model.SaveState
 import domain.settings.Settings
@@ -64,3 +65,6 @@ enum class PlatformKind {
 }
 
 expect fun getPlatform(): Platform
+
+// they've been stalling on the official cross-platform API: https://youtrack.jetbrains.com/issue/CMP-7624
+expect fun clipEntryOf(text: String): ClipEntry

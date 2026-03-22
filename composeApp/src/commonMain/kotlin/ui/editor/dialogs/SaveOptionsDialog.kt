@@ -30,12 +30,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import clipEntryOf
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.cloud_sync
 import dodeclusters.composeapp.generated.resources.cloud_upload
@@ -380,8 +382,7 @@ private fun ColumnScope.SharedLink(
     link: String,
     coroutineScope: CoroutineScope,
 ) {
-//    val clipboard = LocalClipboard.current // clipboard seems not finished for KMP
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val copyLinkTooltip = stringResource(Res.string.copy_link_description)
     Row(Modifier.padding(top = 16.dp)) {
         Icon(
@@ -412,7 +413,11 @@ private fun ColumnScope.SharedLink(
                 modifier = Modifier,
                 contentColor = MaterialTheme.colorScheme.secondary,
             ) {
-                clipboardManager.setText(AnnotatedString(text = link))
+                coroutineScope.launch {
+                    clipboard.setClipEntry(
+                        clipEntryOf(link)
+                    )
+                }
             }
         }
     }

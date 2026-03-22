@@ -859,7 +859,7 @@ private inline fun DrawScope.drawObjects(
             is ImaginaryCircle -> {
                 if (showImaginaryCircles) {
                     drawCircleOrLineWithCache(
-                        Circle(o.x, o.y, o.radius), ix, pathCache, visibleRect,
+                        o.toRealCircle(), ix, pathCache, visibleRect,
                         color = objectColor ?: imaginaryCircleColor,
                         style = imaginaryCircleStroke,
                     )
