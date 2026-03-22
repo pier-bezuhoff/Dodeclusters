@@ -3,7 +3,7 @@
 ![Static Badge](https://img.shields.io/badge/status-beta-violet)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-### Circle-based vector graphics editor   ⸽   **EN** | [RU](README-ru.md)
+### Circle-based vector graphics editor &nbsp;&nbsp; ⸽ &nbsp;&nbsp; **EN** | [RU](README-ru.md)
 
 ![Dodeclusters](docs/02inf-art.png)
 
@@ -24,7 +24,7 @@
 Built with [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform), targeting
 - [x] Desktop (Windows, Linux)
 - [x] Android 7.0+ (SDK 24+)
-- [x] Web (via [Wasm](#Web-Wasm-compatibility))
+- [x] [Web](https://pier-bezuhoff.github.io/Dodeclusters/) (via [Wasm](#Web-Wasm-compatibility))
 - [ ] macOS/iOS if ever get an Apple dev account (have to notarize/staple binaries), for now 
   only works as a web app
 
