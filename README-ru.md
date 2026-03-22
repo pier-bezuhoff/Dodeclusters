@@ -58,21 +58,21 @@
 > Офлайн приложение скорее всего несколко отстаёт от веб-приложения
 
 ## Быстрые сочетания клавиш
-- `Ctrl + A`: quickly select/deselect everything
-- `Delete`, `Backspace`: delete selected objects
-- `Ctrl + V`: duplicate selected objects
-- `Ctrl + +`, `Ctrl + =`; `Ctrl + -`; mouse wheel: enlarge/shrink selected objects or zoom in/out
-- `Ctrl + Z`: undo ↶
-- `Ctrl + Y`: redo ↷
-- `Esc`: cancel any ongoing constructions
-- `O`: open existing file
-- `S`: save file
-- `M`: go to Drag mode (~ **M**ove)
-- `L`: go to Mu**L**tiselect mode
-- `R`: go to **R**egions mode
-- `T`: open **T**ransform tools
-- `C`: open **C**reate tools
-- `Enter`: confirm & conclude current action
+- `Ctrl + A`: выделить всё/снять выделение
+- `Delete`, `Backspace`: удалить выделенные объекты
+- `Ctrl + V`: продублировать/склонировать выделенные объекты
+- `Ctrl + +`, `Ctrl + =`; `Ctrl + -`; колёсико мыши: увеличить/уменьшить выделенные объекты либо приблизиться/отдалиться
+- `Ctrl + Z`: отменить действие ↶ (назад по истории)
+- `Ctrl + Y`: повторить отменённое действи ↷ (вперёд по истории)
+- `Esc`: отменить текущее построение/режим
+- `O`: открыть файл
+- `S`: сохранить файл
+- `M`: перейти в режим навигации (~ **M**ove)
+- `L`: в режим выделения  (~ Se**L**ect)
+- `R`: в режим заливки регионов между окружностями (~ **R**egions)
+- `T`: открыть панель трансформирующих инструментов (~ **T**ransform)
+- `C`: открыть панель инструментов создания объектов (~ **C**reate)
+- `Enter`: подтвердить и завершить текущее действие
 
 
 ## Build and run via Gradle
