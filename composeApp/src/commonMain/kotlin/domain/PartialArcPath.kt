@@ -84,6 +84,7 @@ data class PartialArcPath(
         focus = Focus.Vertex(vertices.size),
     )
 
+    // TODO: snap to other arc-paths' arcs
     // MAYBE: dont move midpoint if it's Eq-snapped
     fun updateVertex(vertexIndex: Int, newVertex: Vertex): PartialArcPath =
         when {
@@ -130,7 +131,6 @@ data class PartialArcPath(
                     if (newPreviousCircle is Circle)
                         newPreviousCircle.calculateStartAngle(previousPoint)
                     else 0.0
-                // TODO: snap to start to close loop
                 copy(
                     vertices = vertices.updated(vertexIndex, newVertex),
                     arcs = arcs.updated(previousArcIndex, Arc(
@@ -186,6 +186,7 @@ data class PartialArcPath(
             }
         }
 
+    // TODO: snap to line and to smooth-start and smooth-end (tangential touch)
     fun updateMidpoint(arcIndex: Int, snap: PointSnapResult): PartialArcPath {
         val newMidpoint = snap.result
         val start = arcIndex2startVertex(arcIndex).point
@@ -208,8 +209,6 @@ data class PartialArcPath(
         )
     }
 
-    // TODO: snapping to create smooth connection between arcs (their circles are to touch tangentially)
-    //  also snap to existing arcs + snap midpoints to straight segment
     fun moveFocused(snap: PointSnapResult): PartialArcPath =
         when (focus) {
             is Focus.Vertex -> updateVertex(focus.vertexIndex, Vertex(snap))

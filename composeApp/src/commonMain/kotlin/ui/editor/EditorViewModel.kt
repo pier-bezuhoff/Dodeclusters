@@ -1,6 +1,5 @@
 package ui.editor
 
-import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -2833,7 +2832,7 @@ class EditorViewModel : ViewModel() {
         return false
     }
 
-    private fun moveAroundCanvas(pan: Offset, zoom: Float, rotationAngle: Float) {
+    private fun moveAroundCanvas(translation: Offset, zoom: Float, rotationAngle: Float) {
         if (zoom != 1.0f || rotationAngle != 0.0f) {
             val targets = objects.indices.toList()
             val center = computeAbsoluteCenter() ?: Offset.Zero
@@ -2850,7 +2849,7 @@ class EditorViewModel : ViewModel() {
                 center = true,
             )
         }
-        translation += pan // navigate canvas
+        this.translation += translation // navigate canvas
         objectModel.pathCache.invalidateAll() // sadly have to do this cuz we use visibleRect in path construction
     }
 
@@ -2902,7 +2901,7 @@ class EditorViewModel : ViewModel() {
                     updatePartialArcPathFocus(absoluteCentroid)
                 else -> {
                     if (!tryUpdatingToolArg(absoluteCentroid)) {
-                        moveAroundCanvas(pan = pan, zoom = zoom, rotationAngle = rotationAngle)
+                        moveAroundCanvas(translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                     }
                 }
             }
@@ -2910,7 +2909,101 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    /** @param[position] null if cancelled/OOB */
+    private fun upPartialArcPath(visiblePosition: Offset?) {
+        var pArcPath = partialArcPath?.realignGrabbedMidpoint()
+        val focus = pArcPath?.focus
+        if (pArcPath != null && visiblePosition != null && focus is PartialArcPath.Focus.Vertex) {
+            val absolutePosition = absolute(visiblePosition)
+            val closeVertices = pArcPath.vertices.indices.minus(focus.vertexIndex)
+                .filter { i ->
+                    absolutePosition.minus(pArcPath.vertices[i].point.toOffset())
+                        .getDistanceSquared() <= tapRadius2
+                }.toSet()
+            val nextVertexIndex = (focus.vertexIndex + 1).mod(pArcPath.vertices.size)
+            val previousVertexIndex = (focus.vertexIndex - 1).mod(pArcPath.vertices.size)
+            when {
+                nextVertexIndex in closeVertices -> {
+                    pArcPath = pArcPath.fuseSubsequentVertices(focus.vertexIndex)
+                }
+                previousVertexIndex in closeVertices -> {
+                    pArcPath = pArcPath.fuseSubsequentVertices(previousVertexIndex)
+                }
+                else -> {
+                    // we can also snap 2 non-neighboring vertices, but
+                    // it's prob not a good idea
+                }
+            }
+        }
+        partialArcPath = pArcPath
+    }
+
+    private fun upToolMode(visiblePosition: Offset?) {
+        if (submode == null) {
+            var argList = partialArgList
+            // we only confirm args in 0nUp, they are created in 0nDown etc.
+            val newArg = when (argList?.currentArg) {
+                is Arg.Point -> visiblePosition?.let {
+                    val args = argList.args
+                    val snap = snapped(absolute(visiblePosition))
+                    // we cant realize it here since for fast circles the first point already has been
+                    // realized in 0nDown and we don't know yet if we moved far enough from it to
+                    // create the second point
+                    if (mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS &&
+                        FAST_CENTERED_CIRCLE &&
+                        args.size == 2
+                    ) {
+                        val firstPoint: Point =
+                            when (val first = args.first() as Arg.Point) {
+                                is Arg.PointIndex -> objects[first.index] as Point
+                                is Arg.FixedPoint -> first.toPoint()
+                            }
+                        val pointsAreTooClose = firstPoint.distanceFrom(snap.result) < 1e-3
+                        if (pointsAreTooClose) { // haxxz
+                            argList = argList.copy(
+                                args = args.take(1),
+                                lastArgIsConfirmed = true,
+                                lastSnap = null
+                            )
+                            null
+                        } else {
+                            realizePointSnap(snap).toArgPoint()
+                        }
+                    } else {
+                        realizePointSnap(snap).toArgPoint()
+                        // realized, but might be invalid (nonEqualityConditions)
+                    }
+                }
+                else -> null
+            }
+            partialArgList = if (
+                newArg == null ||
+                argList?.validateUpdatedArg(newArg) != true
+            )
+                argList?.copy(lastArgIsConfirmed = true)
+            else
+                argList.updateCurrentArg(newArg, confirmThisArg = true)
+        }
+    }
+
+    private fun upRectangularSelect(visiblePosition: Offset) {
+        val (corner1, corner2) = submode as SubMode.RectangularSelect
+        if (corner1 != null && corner2 != null) {
+            val newCorner2 = absolute(visiblePosition)
+            val rect = Rect.fromCorners(corner1, newCorner2)
+            val selectables = objects.mapIndexed { ix, o ->
+                if (showPhantomObjects || ix !in phantoms) o else null
+            }
+            val rectSelection = RectangleCollider.selectWithRectangle(selectables, rect)
+                .also {
+                    println("rectangle selection -> $it")
+                }
+            selection = Selection(objects = rectSelection)
+            submode = SubMode.RectangularSelect(corner1, corner2)
+            history.accumulateChangedLocations(selection = true)
+        }
+    }
+
+    /** @param[position] `null` if cancelled/OOB */
     fun onUp(position: Offset?) {
         cancelSelectionAsToolArgPrompt()
         // history is recorded at the end of :onUp
@@ -2919,33 +3012,8 @@ class EditorViewModel : ViewModel() {
                 // MAYBE: try to re-attach free points / new pinning/sticky mode
             }
             SelectionMode.Multiselect -> {}
-            ToolMode.ARC_PATH -> {
-                var pArcPath = partialArcPath?.realignGrabbedMidpoint()
-                val focus = pArcPath?.focus
-                if (pArcPath != null && position != null && focus is PartialArcPath.Focus.Vertex) {
-                    val absolutePosition = absolute(position)
-                    val closeVertices = pArcPath.vertices.indices.minus(focus.vertexIndex)
-                        .filter { i ->
-                            absolutePosition.minus(pArcPath.vertices[i].point.toOffset())
-                                .getDistanceSquared() <= tapRadius2
-                        }.toSet()
-                    val nextVertexIndex = (focus.vertexIndex + 1).mod(pArcPath.vertices.size)
-                    val previousVertexIndex = (focus.vertexIndex - 1).mod(pArcPath.vertices.size)
-                    when {
-                        nextVertexIndex in closeVertices -> {
-                            pArcPath = pArcPath.fuseSubsequentVertices(focus.vertexIndex)
-                        }
-                        previousVertexIndex in closeVertices -> {
-                            pArcPath = pArcPath.fuseSubsequentVertices(previousVertexIndex)
-                        }
-                        else -> {
-                            // we can also snap 2 non-neighboring vertices, but
-                            // it's prob not a good idea
-                        }
-                    }
-                }
-                partialArcPath = pArcPath
-            }
+            ToolMode.ARC_PATH ->
+                upPartialArcPath(visiblePosition = position)
             ViewMode.StereographicRotation -> {
                 // MAYBE: normalize line-only-output expressions (e.g. polar line)
                 // fixes incident points for line->circle and circle->line transitions
@@ -2954,51 +3022,8 @@ class EditorViewModel : ViewModel() {
                     expressionIndices = objects.indices.toSet(),
                 )
             }
-            is ToolMode -> if (submode == null) {
-                var argList = partialArgList
-                // we only confirm args in 0nUp, they are created in 0nDown etc.
-                val newArg = when (argList?.currentArg) {
-                    is Arg.Point -> position?.let {
-                        val args = argList.args
-                        val snap = snapped(absolute(position))
-                        // we cant realize it here since for fast circles the first point already has been
-                        // realized in 0nDown and we don't know yet if we moved far enough from it to
-                        // create the second point
-                        if (mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS &&
-                            FAST_CENTERED_CIRCLE &&
-                            args.size == 2
-                        ) {
-                            val firstPoint: Point =
-                                when (val first = args.first() as Arg.Point) {
-                                    is Arg.PointIndex -> objects[first.index] as Point
-                                    is Arg.FixedPoint -> first.toPoint()
-                                }
-                            val pointsAreTooClose = firstPoint.distanceFrom(snap.result) < 1e-3
-                            if (pointsAreTooClose) { // haxxz
-                                argList = argList.copy(
-                                    args = args.take(1),
-                                    lastArgIsConfirmed = true,
-                                    lastSnap = null
-                                )
-                                null
-                            } else {
-                                realizePointSnap(snap).toArgPoint()
-                            }
-                        } else {
-                            realizePointSnap(snap).toArgPoint()
-                            // realized, but might be invalid (nonEqualityConditions)
-                        }
-                    }
-                    else -> null
-                }
-                partialArgList = if (
-                    newArg == null ||
-                    argList?.validateUpdatedArg(newArg) != true
-                )
-                    argList?.copy(lastArgIsConfirmed = true)
-                else
-                    argList.updateCurrentArg(newArg, confirmThisArg = true)
-            }
+            is ToolMode ->
+                upToolMode(visiblePosition = position)
             else -> {}
         }
         if (partialArgList?.isFull == true && submode == null) { // full arg-list implies tool mode
@@ -3012,21 +3037,7 @@ class EditorViewModel : ViewModel() {
             highlightSelectionParents()
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect && position != null) {
-            val (corner1, corner2) = submode as SubMode.RectangularSelect
-            if (corner1 != null && corner2 != null) {
-                val newCorner2 = absolute(position)
-                val rect = Rect.fromCorners(corner1, newCorner2)
-                val selectables = objects.mapIndexed { ix, o ->
-                    if (showPhantomObjects || ix !in phantoms) o else null
-                }
-                val rectSelection = RectangleCollider.selectWithRectangle(selectables, rect)
-                    .also {
-                        println("rectangle selection -> $it")
-                    }
-                selection = Selection(objects = rectSelection)
-                submode = SubMode.RectangularSelect(corner1, corner2)
-                history.accumulateChangedLocations(selection = true)
-            }
+            upRectangularSelect(visiblePosition = position)
         }
         if (mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect) { // haxx
             println("flow-select -> $objectSelection")

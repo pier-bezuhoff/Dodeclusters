@@ -3,17 +3,18 @@
 ![Static Badge](https://img.shields.io/badge/status-beta-violet)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-### Circle-based vector graphics editor
+### Circle-based vector graphics editor   ⸽   **EN** | [RU](README-ru.md)
 
 ![Dodeclusters](docs/02inf-art.png)
 
-## Features
+## Features:
 ♾️ Infinite canvas, infinite zoom, infinite precision<sup>\*</sup>  
 ⬤ Powerful circle geometry instrumentation: treating points, circles and straight lines uniformly  
 💬 Simple & intuitive design with interactive tips & brief descriptions  
 💯 Cross-platform (mobile + desktop + browser)  
 🌲 Dynamic expression-dependency tree  
 📜 Undo/redo history & auto-save  
+🔗 Easy share via generated link
 💾 Custom YAML-derived file format + Safe SVG export  
 ✌ Smart gestures: drag-and-drop, swipe coloring & swipe selection, keyboard shortcuts  
 🌘 Light/dark mode (*WIP*, for now as a URL argument `?theme=light` or `?theme=dark`)  
@@ -33,11 +34,11 @@ with vector graphics editor ~ Inkscape
 and specific type of animations ~ [Möbius transformations](https://en.wikipedia.org/wiki/M%C3%B6bius_transformation) and possibly [Lie sphere geometry](https://en.wikipedia.org/wiki/Lie_sphere_geometry)  
 
 > [!NOTE]
-> This project is in beta, beware of bugs and breaking changes
+> This project is in beta, beware of bugs and breaking changes. Please report them in Gihub Issues
 
 ## Installation
 [Live deployed here](https://pier-bezuhoff.github.io/Dodeclusters/) from the `github-pages` branch.  
-Executables for Linux, Window and Android can be found in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) or [on Google Drive](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=sharing).
+Executables for Windows, Linux and Android can be found in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) or [on Google Drive](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=sharing).
 
 ### Windows
 1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) go to `assets` and download `windows.zip`
