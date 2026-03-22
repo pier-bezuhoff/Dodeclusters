@@ -3,7 +3,7 @@
 ![Static Badge](https://img.shields.io/badge/status-beta-violet)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-### Circle-based vector graphics editor &nbsp;&nbsp; ⸽ &nbsp;&nbsp; **EN** | [RU](README-ru.md)
+### Circle-based vector graphics editor &nbsp;&nbsp;&nbsp; ⸽ &nbsp;&nbsp;&nbsp; **EN** | [RU](README-ru.md)
 
 ![Dodeclusters](docs/02inf-art.png)
 
@@ -41,22 +41,22 @@ and specific type of animations ~ [Möbius transformations](https://en.wikipedia
 Executables for Windows, Linux and Android can be found in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) or [on Google Drive](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=sharing).
 
 ### Windows
-1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) go to `assets` and download `windows.zip`
+1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) go to `assets` and download `Dodeclusters-windows-standalone.zip`
 2. Unarchive it
 3. In folder `com.pierbezuhoff.dodeclusters` find file `com.pierbezuhoff.dodeclusters.exe`
 4. Run it! That's it~ (it is bundled with JVM)
 
 ### Linux
-1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) go to `assets` and download `linux.zip`
+1. From [the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) go to `assets` and download `Dodeclusters-linux-standalone.zip`
 2. Unarchive it
 3. Go into folder `com.pierbezuhoff.dodeclusters/bin`, you'll find executable file `com.pierbezuhoff.dodeclusters`
 4. `chmod +x` it and you can run it as `./com.pierbezuhoff.dodeclusters` (bundled with JVM)
 
 ### Android
-You can find the apk in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest).
+You can find the apk in the assets [attached to the latest release](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) `Dodeclusters-android.apk`.
 
 > [!NOTE]
-> Bundled binaries are likely behind web version
+> Bundled binaries are likely behind the web version
 
 ## Keyboard shortcuts
 - `Ctrl + A`: quickly select/deselect everything

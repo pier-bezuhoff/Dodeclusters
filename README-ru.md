@@ -3,7 +3,7 @@
 ![Static Badge](https://img.shields.io/badge/status-beta-violet)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/pier-bezuhoff/Dodeclusters/build.yml?branch=master&event=push)](https://github.com/pier-bezuhoff/Dodeclusters/actions)  
 
-### Векторный редактор, построенный на окружностях   ⸽   [EN](README.md) | **RU**
+### Векторный редактор, построенный на окружностях &nbsp;&nbsp;&nbsp; ⸽ &nbsp;&nbsp;&nbsp; [EN](README.md) | **RU**
 
 ![Dodeclusters](docs/02inf-art.png)
 
@@ -25,7 +25,7 @@
 - [x] ПК версию (Windows, Linux)
 - [x] Android 7.0+ (SDK 24+)
 - [x] [Сайт](https://pier-bezuhoff.github.io/Dodeclusters/) (браузерная версия на [Wasm](#Web-Wasm-compatibility))
-- [ ] Мак/iPhone, если я откопаю Apple dev аккаунт, т.к. там требуют подписать программу. Пока работает только как веб-версия
+- [ ] Mac/iPhone, если я откопаю Apple dev аккаунт, т.к. там требуют подписать программу. Пока работает только как веб-версия
 
 ## Желаемая цель проекта
 Совместить интерактивный дизайн ~ Geogebra  
@@ -36,23 +36,23 @@
 > Этот проект на бета-стадии, могут возникать баги и ошибки при смене версий. Если вы их встретили, прошу описать в Issues на Гитхабе
 
 ## Установка и запуск
-[Веб-приложение размещено здесь](https://pier-bezuhoff.github.io/Dodeclusters/) из ветки `github-pages`.  
+[Веб-приложение размещено здесь](https://pier-bezuhoff.github.io/Dodeclusters/), сборка из ветки `github-pages`.  
 Файлы для запуска на Windows, Linux и Android вы найдёте здесь, [прикреплённые к последней версии программприкреплённые к последней версии программы](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) или [на Гугл диске](https://drive.google.com/drive/folders/1abGxbUhnnr4mGyZERKv4ePH--us66Wd4?usp=sharing).
 
 ### Windows
-1. Из [последнего релиза](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) перейдите в `assets` и скачайте `windows.zip`
+1. Из [последнего релиза](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) перейдите в `assets` и скачайте `Dodeclusters-windows.zip`
 2. Разархивируйте его в папку
 3. Внутри неё, в папке `com.pierbezuhoff.dodeclusters` вы найдёте `com.pierbezuhoff.dodeclusters.exe`
 4. Запустите этот экзешник для офлайн версии (он также содержит нужную JVM)
 
 ### Linux
-1. Из [последнего релиза](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) перейдите в `assets` и скачайте `linux.zip`
+1. Из [последнего релиза](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) перейдите в `assets` и скачайте `Dodeclusters-linux.zip`
 2. Разархивируйте его в папку
 3. Внутри неё, в папке `com.pierbezuhoff.dodeclusters/bin` вы найдёте ELF `com.pierbezuhoff.dodeclusters`
 4. `chmod +x` его в терминале и далее вы можете запускать программу с помощью `./com.pierbezuhoff.dodeclusters` (содержит JVM)
 
 ### Android
-Скачайте и установите APK файл из ассетов [последнего релиза](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest).
+Скачайте и установите APK файл из ассетов [последнего релиза](https://github.com/pier-bezuhoff/Dodeclusters/releases/latest) `Dodeclusters-android.apk`.
 
 > [!NOTE]
 > Офлайн приложение скорее всего несколко отстаёт от веб-приложения
@@ -75,51 +75,51 @@
 - `Enter`: подтвердить и завершить текущее действие
 
 
-## Build and run via Gradle
+## Сборка из исходного кода и запуск через Gradle
 
 > [!IMPORTANT]
-> Requires JDK 17 (later versions may work too)
+> Используется JDK 17 (более поздние версии могут тоже сработать, или версия от Android Studio)
 
-### Run desktop app
+### Запустить приложение для ПК 
 `./gradlew :composeApp:run`  
-### Run web app (dev)
+### Запустить веб-приложение (dev)
 `./gradlew :composeApp:wasmJsBrowserDevelopmentRun`  
 
-### Package for Windows/macOS/Linux
-Build platform-dependent package (e.g. run thru Github Actions using corresponding OS):  
+### Создать пакет для установки на Windows/macOS/Linux
+Собрать платформо-зависимый пакет (например через Github Actions на соответствующей ОС):
 `./gradlew composeApp:createDistributable`  
-output directory: `composeApp/build/compose/binaries/main/app/`  
-Same + use ProGuard to minify:  
+папка с результатом: `composeApp/build/compose/binaries/main/app/`  
+То же + ProGuard для сжатия/оптимизации:  
 `./gradlew composeApp:createReleaseDistributable`  
-output directory: `composeApp/build/compose/binaries/main-release/app/`  
+папка с результатом: `composeApp/build/compose/binaries/main-release/app/`  
 
-Individually:  
+По-отдельности:  
 - `./gradlew packageReleaseMsi`  
-- `./gradlew packageReleaseDmg` + notarize/register (requires Apple dev acc)  
+- `./gradlew packageReleaseDmg` + нотаризация/регистрация (требует Apple dev аккаунт)  
 - `./gradlew packageReleaseDeb`  
-output directory: `composeApp/build/compose/binaries/main-release/app/`  
+папка с результатом: `composeApp/build/compose/binaries/main-release/app/`  
 
-### Package for web browser 
+### Собрать веб-приложени (production)
 `./gradlew wasmJsBrowserDistribution`  
-output directory: `composeApp/build/dist/wasmJs/productionExecutable/`  
+папка с результатом: `composeApp/build/dist/wasmJs/productionExecutable/`  
 
-#### Package development version for web
+#### Собрать веб-приложение (dev)
 `./gradlew wasmJsBrowserDevelopmentExecutableDistribution`  
-output directory: `composeApp/build/dist/wasmJs/developmentExecutable/`  
+папка с результатом: `composeApp/build/dist/wasmJs/developmentExecutable/`  
 
-### Generate debug .apk for Android
+### Сгенерировать debug .apk для Android
 `./gradlew assembleDebug`  
-output directory: `composeApp/build/outputs/apk/debug/`
+папка с результатом: `composeApp/build/outputs/apk/debug/`
 
 
-## Web Wasm compatibility
+## Веб Wasm совместимость
 
-To run applications built with Kotlin/Wasm in a browser, you need a browser supporting [wasm garbage collection feature](https://github.com/WebAssembly/gc):  
-- For **Chrome** and **Chromium-based** browsers (Edge, Brave etc.), it **should just work** since version 119.
-- For **Firefox** 120+ it **should just work**.
-- For **Safari** it should work starting from version 18.2.
+Чтобы запустить приложение на Kotlin/Wasm, требуется браузер, поддерживающий [Wasm garbage collection](https://github.com/WebAssembly/gc):  
+- Для **Chrome** и **основанных на Chromium** браузеров (Edge, Brave, и т.п.), это должно работать с `версии 119`.
+- Для **Firefox** должно работать начиная с `версии 120`.
+- Для **Safari** должно работать с `версии 18.2`.
 > [!NOTE]
 > Safari 18.2 is available for iOS 18.2, iPadOS 18.2, visionOS 2.2, macOS 15.2, macOS Sonoma, and macOS Ventura. On iOS and iPadOS, Safari 18.2 is bundled with the operating system. To get it, update your device to version 18.2 or later. [Safari release notes](https://developer.apple.com/documentation/safari-release-notes/safari-18_2-release-notes#Overview)
-- [Relevant Wasm compatibility table.](https://webassembly.org/features/#table-row-gc)
+- [Таблица совместимости с Wasm.](https://webassembly.org/features/#table-row-gc)
 
-For more information see https://kotl.in/wasm_help/.
+Больше инфо по Kotlin+Wasm: https://kotl.in/wasm_help/.
