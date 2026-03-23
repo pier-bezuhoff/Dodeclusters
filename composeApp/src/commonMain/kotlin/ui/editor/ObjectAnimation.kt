@@ -5,6 +5,8 @@ import androidx.compose.ui.graphics.Color
 import core.geometry.CircleOrLine
 import core.geometry.GCircle
 import domain.ColorAsCss
+import domain.model.ConcreteArcPath
+import domain.model.SaveState
 import kotlinx.serialization.Serializable
 import ui.theme.DodeclustersColors
 
@@ -60,4 +62,27 @@ sealed class CircleAnimation(
     /** Animation for deleting circles */
     data class Exit(override val objects: List<CircleOrLine>) :
         CircleAnimation(objects, Color.Red)
+}
+
+/** params for create/copy/delete animations */
+@Immutable
+@Serializable
+sealed class ArcPathAnimation(
+    open val concreteArcPaths: List<ConcreteArcPath>,
+    val color: ColorAsCss,
+) {
+    val maxAlpha: Float = 0.2f
+    val alpha01Duration: Int = 50
+    val alpha10Duration: Int = 1_500
+    val fillCircle: Boolean = true
+
+    /** Animation for creating new arc-paths */
+    data class Entrance(override val concreteArcPaths: List<ConcreteArcPath>) :
+        ArcPathAnimation(concreteArcPaths, Color.Green)
+    /** Animation for duplicating arc-paths */
+    data class ReEntrance(override val concreteArcPaths: List<ConcreteArcPath>) :
+        ArcPathAnimation(concreteArcPaths, Color.Blue)
+    /** Animation for deleting arc-paths */
+    data class Exit(override val concreteArcPaths: List<ConcreteArcPath>) :
+        ArcPathAnimation(concreteArcPaths, Color.Red)
 }

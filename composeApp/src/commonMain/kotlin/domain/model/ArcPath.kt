@@ -89,6 +89,7 @@ sealed interface ArcPath {
 
 /** [ArcPath] representation for calculation */
 @Immutable
+@Serializable
 data class ConcreteArcPath(
     val vertices: List<Point>,
     val arcs: List<Arc>,
@@ -103,6 +104,7 @@ data class ConcreteArcPath(
      * @property[freeMidpoint] for sagitta-defined arcs
      */
     @Immutable
+    @Serializable
     data class Arc(
         val arcIndex: Int?,
         val circleOrLine: CircleOrLine?,

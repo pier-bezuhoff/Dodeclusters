@@ -92,6 +92,7 @@ import domain.settings.InversionOfControl
 import domain.settings.Settings
 import domain.sortedByFrequency
 import domain.transpose
+import domain.withoutElementAt
 import domain.withoutElementsAt
 import domain.xor
 import getPlatform
@@ -898,7 +899,7 @@ class EditorViewModel : ViewModel() {
         val deletedObjects = selection.objects
         val deletedArcPaths = selection.arcPaths
         if ((showCircles && deletedObjects.isNotEmpty() || deletedArcPaths.isNotEmpty()) &&
-            mode.isSelectingCircles()
+            (mode.isSelectingCircles() || mode == ToolMode.ARC_PATH)
         ) {
             pinStateForHistory()
             clearSelection()
@@ -915,6 +916,7 @@ class EditorViewModel : ViewModel() {
                         isFree(ix) && hasNoChildren && hasNoOtherDependentArcPaths
                     }
                 }
+                // TODO: arc-path entrance/exit animations
                 objectModel.removeArcPathAt(arcPathIndex)
             }
             deleteObjectsWithDependenciesColorsAndRegions(
@@ -1010,6 +1012,7 @@ class EditorViewModel : ViewModel() {
                 // accepts selection as the first arg
             }
             if (newMode == ToolMode.ARC_PATH) {
+                clearSelection()
                 partialArgList = null
             } else {
                 showCircles = true
@@ -1246,24 +1249,22 @@ class EditorViewModel : ViewModel() {
         val point = Point.fromOffset(absolutePosition)
         val point2pointSnapping = !excludePoints && mode != ToolMode.POINT
         if (point2pointSnapping) {
-            val snappablePoints = objects.mapIndexed { ix, obj ->
-                if (!showPhantomObjects && ix in phantoms)
-                    null
-                else
-                    obj as? Point
-            }
-            val p2pResult = Snapping.snapPointToPoints(point, snappablePoints, snapDistance)
+            val p2pResult = Snapping.snapPointToPoints(point, objects,
+                snapDistance = snapDistance,
+                excludedIndices = if (showPhantomObjects) emptySet() else phantoms
+            )
             if (p2pResult is PointSnapResult.Eq)
                 return p2pResult
         }
         val point2circleSnapping = showCircles
         if (!point2circleSnapping) // no snapping to invisibles
             return PointSnapResult.Free(point)
-        val snappableCircles = objects.mapIndexed { ix, c ->
-            if (ix in excludedCircles || !showPhantomObjects && ix in phantoms) null
-            else c as? CircleOrLine
-        }
-        val p2cResult = Snapping.snapPointToCircles(point, snappableCircles, snapDistance)
+        val p2cResult = Snapping.snapPointToCircles(point, objects,
+            snapDistance = snapDistance,
+            excludedIndices =
+                if (showPhantomObjects) excludedCircles
+                else excludedCircles.union(phantoms)
+        )
         return p2cResult
     }
 
@@ -1339,6 +1340,7 @@ class EditorViewModel : ViewModel() {
                     }
                 }
             }
+            else -> PointSnapResult.Free(snapResult.result)
         }
 
     fun activateRectangularSelect() {
@@ -2516,14 +2518,11 @@ class EditorViewModel : ViewModel() {
             val result0 = circle.transformed(translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
                 as CircleOrLine
             val snapDistance = tapRadius.toDouble()/TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR
-            val excludedCircles =
+            val excludedIndices =
                 setOf(selectedIndex) +
+                (if (showPhantomObjects) emptySet() else phantoms) +
                 objectModel.expressions.getAllChildren(selectedIndex) +
                 objectModel.expressions.getAllParents(listOf(selectedIndex))
-            val snappableCLPs = objects.mapIndexed { ix, c ->
-                if (ix in excludedCircles || !showPhantomObjects && ix in phantoms) null
-                else c as? CircleOrLineOrPoint
-            }
             val center = computeAbsoluteCenter()
             val absoluteVisibilityRect =
                 if (center != null && canvasSize != IntSize.Zero)
@@ -2532,10 +2531,10 @@ class EditorViewModel : ViewModel() {
                         center.x + canvasSize.width/2f, center.y + canvasSize.height/2f,
                     )
                 else null
-            val snap = Snapping.snapCircleToCircles(
-                result0, snappableCLPs,
+            val snap = Snapping.snapCircleToCircles(result0, objects,
                 snapDistance = snapDistance,
                 visibleRect = absoluteVisibilityRect,
+                excludedIndices = excludedIndices,
             )
             val delta = result0 translationDelta snap.result
             transformWhatWeCan(listOf(selectedIndex), translation = translation + delta, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
@@ -2791,21 +2790,34 @@ class EditorViewModel : ViewModel() {
             pArcPath != null && snap is PointSnapResult.Free &&
             pArcPath.focus is PartialArcPath.Focus.Vertex
         ) { // try snapping to vertices & midpoints
-            val snapToVertices = Snapping.snapPointToPoints(
-                snap.result, pArcPath.vertices.map { it.point },
+            val point = snap.result // free
+            val vertexPoints = pArcPath.vertices
+                .withoutElementAt(pArcPath.focus.vertexIndex)
+                .map { it.point }
+            val snapToVertices = Snapping.snapPointToPointsSimple(
+                point, vertexPoints,
                 snapDistance = tapRadius.toDouble(),
             )
             if (snapToVertices !is PointSnapResult.Free) {
                 pArcPath.moveFocused(PointSnapResult.Free(snapToVertices.result))
             } else {
-                val snapToMidpoints = Snapping.snapPointToPoints(
-                    snap.result, pArcPath.arcs.map { it.middlePoint },
+                val snapToMidpoints = Snapping.snapPointToPointsSimple(
+                    point, pArcPath.arcs.map { it.middlePoint },
                     snapDistance = tapRadius.toDouble(),
                 )
                 if (snapToMidpoints !is PointSnapResult.Free) {
                     pArcPath.moveFocused(PointSnapResult.Free(snapToMidpoints.result))
+                } else if (ENABLE_ALIGNMENT_SNAPPING) {
+                    val alignmentSnap = Snapping.snapAlignPointToPointsVerticallyOrHorizontally(
+                        point, vertexPoints,
+                        snapDistance = tapRadius.toDouble(),
+                    )
+                    // MAYBE: display alignment line for clarity
+                    if (alignmentSnap !is PointSnapResult.Free)
+                        pArcPath.moveFocused(PointSnapResult.Free(alignmentSnap.result))
+                    else
+                        pArcPath.moveFocused(snap)
                 } else {
-                    // TODO: try snapping to other vertices's x & y
                     pArcPath.moveFocused(snap)
                 }
             }
@@ -2919,6 +2931,7 @@ class EditorViewModel : ViewModel() {
     private fun upPartialArcPath(visiblePosition: Offset?) {
         var pArcPath = partialArcPath?.realignGrabbedMidpoint()
         val focus = pArcPath?.focus
+        // attempt fusing focused vertex to the next or previous
         if (pArcPath != null && visiblePosition != null && focus is PartialArcPath.Focus.Vertex) {
             val absolutePosition = absolute(visiblePosition)
             val closeVertices = pArcPath.vertices.indices.minus(focus.vertexIndex)
@@ -2936,8 +2949,7 @@ class EditorViewModel : ViewModel() {
                     pArcPath = pArcPath.fuseSubsequentVertices(previousVertexIndex)
                 }
                 else -> {
-                    // we can also snap 2 non-neighboring vertices, but
-                    // it's prob not a good idea
+                    // we can also snap 2 non-neighboring vertices, but it's prob not a good idea
                 }
             }
         }
@@ -4375,6 +4387,9 @@ class EditorViewModel : ViewModel() {
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = false //true
         const val ENABLE_TANGENT_SNAPPING = false
+        /** try aligning PartialArcPath vertices horizontally or
+         * vertically to each other */
+        const val ENABLE_ALIGNMENT_SNAPPING = true
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false

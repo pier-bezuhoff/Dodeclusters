@@ -6,6 +6,7 @@ import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrPoint
 import core.geometry.EPSILON
+import core.geometry.GCircle
 import core.geometry.Line
 import core.geometry.Point
 import core.geometry.closestPerpendicularPoint
@@ -22,12 +23,13 @@ sealed interface PointSnapResult {
 
     sealed interface PointToPoint : PointSnapResult
     sealed interface PointToCircle : PointSnapResult
+    sealed interface PointAlignment : PointSnapResult
 
     data class Free(
         override val result: Point,
-    ) : PointToPoint, PointToCircle
+    ) : PointToPoint, PointToCircle, PointAlignment
 
-    data class Eq(
+        data class Eq(
         override val result: Point,
         val pointIndex: Ix,
     ) : PointToPoint
@@ -46,6 +48,22 @@ sealed interface PointSnapResult {
             require(circle1Index != circle2index)
         }
     }
+
+    data class HorizontalAlignment(
+        override val result: Point,
+        val x: Double,
+    ) : PointAlignment
+
+    data class VerticalAlignment(
+        override val result: Point,
+        val y: Double,
+    ) : PointAlignment
+
+    data class HorizontalAndVerticalAlignment(
+        override val result: Point,
+        val x: Double,
+        val y: Double,
+    ) : PointAlignment
 
     fun toArgPoint(): Arg.Point = when (this) {
         is Eq -> Arg.PointIndex(this.pointIndex)
@@ -94,13 +112,18 @@ object Snapping {
         }
     }
 
+    /** additionally chooses first closest point within epsilon-vicinity of the minimum */
     fun snapPointToPoints(
         point: Point,
-        points: List<Point?>,
-        snapDistance: Double
+        allObjects: List<GCircle?>,
+        snapDistance: Double,
+        excludedIndices: Set<Int> = emptySet(),
     ): PointSnapResult.PointToPoint {
-        val withinSnapDistance = points.mapIndexed { ix, p ->
-            ix to (p?.distanceFrom(point) ?: Double.POSITIVE_INFINITY)
+        val withinSnapDistance = allObjects.mapIndexed { ix, o ->
+            if (ix in excludedIndices || o !is Point)
+                ix to Double.POSITIVE_INFINITY
+            else
+                ix to o.distanceFrom(point)
         }.filter { (_, d) -> d <= snapDistance }
         if (withinSnapDistance.isEmpty())
             return PointSnapResult.Free(point)
@@ -110,21 +133,25 @@ object Snapping {
         val oldestButCloseEnough =
             withinSnapDistance.first { it.second < minDistance + EPSILON }
         val ix = oldestButCloseEnough.first
-        return PointSnapResult.Eq(points[ix]!!, pointIndex = ix)
-//    val ix = points
-//        .mapIndexed { ix, p ->
-//            ix to (p?.distanceFrom(point) ?: Double.POSITIVE_INFINITY)
-//        }
-//        .filter { (_, d) -> d <= snapDistance }
-//        .minByOrNull { (_, d) -> d }
-//        ?.first
-//    return if (ix == null)
-//        PointSnapResult.Free(point)
-//    else
-//        PointSnapResult.Eq(points[ix]!!, pointIndex = ix)
+        return PointSnapResult.Eq(allObjects[ix] as Point, pointIndex = ix)
     }
 
-    /** Project [point] onto the closest circle among [circles] that
+    fun snapPointToPointsSimple(
+        point: Point,
+        points: List<Point>,
+        snapDistance: Double,
+    ): PointSnapResult.PointToPoint {
+        val closestPointIndex = points.topIndexBy(
+            measurer = { point.distanceFrom(it) },
+            condition = { _, d -> d <= snapDistance },
+        )
+        return if (closestPointIndex == null)
+            PointSnapResult.Free(point)
+        else
+            PointSnapResult.Eq(points[closestPointIndex], closestPointIndex)
+    }
+
+    /** Project [point] onto the closest circle/line among [allObjects] that
      * are closer than [snapDistance] from it.
      *
      * @param[intersectionTolerance] how much easier it is to snap to an intersection than
@@ -132,19 +159,25 @@ object Snapping {
      * */
     fun snapPointToCircles(
         point: Point,
-        circles: List<CircleOrLine?>,
+        allObjects: List<GCircle?>,
         snapDistance: Double,
-        intersectionTolerance: Double = 1.5
+        intersectionTolerance: Double = 1.5,
+        excludedIndices: Set<Int> = emptySet(),
     ): PointSnapResult.PointToCircle {
-        val closestCircles: List<Ix> = circles.top2IndicesBy(
-            measurer = { it?.distanceFrom(point) ?: Double.POSITIVE_INFINITY },
-            condition = { _, d -> d <= snapDistance }
+        val closestCircles: List<Ix> = allObjects.top2IndicesBy(
+            measurer = { o ->
+                if (o is CircleOrLine)
+                    o.distanceFrom(point)
+                else
+                    Double.POSITIVE_INFINITY
+            },
+            condition = { i, _, d -> d <= snapDistance && i !in excludedIndices },
         ) // get 2 closest circles
         return if (closestCircles.isEmpty()) {
             PointSnapResult.Free(point)
         } else if (closestCircles.size == 1) {
             val ix = closestCircles.first()
-            val circle = circles[ix]!!
+            val circle = allObjects[ix] as CircleOrLine
             PointSnapResult.Incidence(
                 circle.project(point),
                 circleIndex = ix
@@ -152,8 +185,8 @@ object Snapping {
         } else {
             // NOTE: triple intersections introduce chaos
             val (ix1, ix2) = closestCircles
-            val c1 = circles[ix1]!!
-            val c2 = circles[ix2]!!
+            val c1 = allObjects[ix1] as CircleOrLine
+            val c2 = allObjects[ix2] as CircleOrLine
             val intersections = Circle.calculateIntersectionPoints(c1, c2)
             if (intersections.isEmpty()) {
                 PointSnapResult.Incidence(
@@ -181,20 +214,56 @@ object Snapping {
         }
     }
 
+    fun snapAlignPointToPointsVerticallyOrHorizontally(
+        point: Point,
+        points: List<Point>,
+        snapDistance: Double,
+    ): PointSnapResult.PointAlignment {
+        val closestHorizontalPointIndex = points.topIndexBy(
+            measurer = { p -> abs(point.x - p.x) },
+            condition = { _, d -> d <= snapDistance }
+        )
+        val closestVerticalPointIndex = points.topIndexBy(
+            measurer = { p -> abs(point.y - p.y) },
+            condition = { _, d -> d <= snapDistance }
+        )
+        val x1 = closestHorizontalPointIndex?.let { points[it].x }
+        val y1 = closestVerticalPointIndex?.let { points[it].y }
+        return when (x1) {
+            null ->
+                if (y1 == null)
+                    PointSnapResult.Free(point)
+                else
+                    PointSnapResult.VerticalAlignment(point.copy(y = y1), y1)
+            else ->
+                if (y1 == null)
+                    PointSnapResult.HorizontalAlignment(point.copy(x = x1), x1)
+                else
+                    PointSnapResult.HorizontalAndVerticalAlignment(
+                        point.copy(x = x1, y = y1),
+                        x = x1, y = y1,
+                    )
+        }
+    }
+
     // NOTE: dont forget to exclude [circle], its immediate parents and all children from snappanbles
     fun snapCircleToCircles(
         circle: CircleOrLine,
-        circlesLinesOrPoints: List<CircleOrLineOrPoint?>,
+        allObjects: List<GCircle?>,
         snapDistance: Double,
         bitangentTolerance: Double = 1.2,
         visibleRect: Rect? = null,
+        excludedIndices: Set<Int> = emptySet(),
     ): CircleSnapResult {
-        val closestCircles: List<Ix> = circlesLinesOrPoints.top2IndicesBy(
-            measurer = {
-                abs(it?.perpendicularDistance(circle) ?: Double.POSITIVE_INFINITY)
+        val closestCircles: List<Ix> = allObjects.top2IndicesBy(
+            measurer = { o ->
+                if (o is CircleOrLineOrPoint)
+                    abs(o.perpendicularDistance(circle))
+                else
+                    Double.POSITIVE_INFINITY
             },
-            condition = { o, d ->
-                d <= snapDistance && o != null &&
+            condition = { i, o, d ->
+                d <= snapDistance && o is CircleOrLineOrPoint && i !in excludedIndices &&
                     (visibleRect == null || visibleRect.contains(
                         circle.closestPerpendicularPoint(o).toOffset()
                     ))
@@ -207,15 +276,15 @@ object Snapping {
             circle is Line || closestCircles.size == 1  -> {
                 // line cannot snap to 2 objects (without rotation)
                 val ix1 = closestCircles.first()
-                val c1 = circlesLinesOrPoints[ix1]!!
+                val c1 = allObjects[ix1] as CircleOrLineOrPoint
                 val newCircle = circle.translatedUntilTangency(c1)
                 CircleSnapResult.Tangent(newCircle, ix1)
             }
             else -> { // 2 tangents
                 val (ix1, ix2) = closestCircles
                 val c = circle as Circle
-                val c1 = circlesLinesOrPoints[ix1]!!
-                val c2 = circlesLinesOrPoints[ix2]!!
+                val c1 = allObjects[ix1] as CircleOrLineOrPoint
+                val c2 = allObjects[ix2] as CircleOrLineOrPoint
                 val newCircle = c.translatedUntilBiTangency(c1, c2)
                 if (newCircle == null ||
                     newCircle.distanceBetweenCenters(c) >= bitangentTolerance * snapDistance

@@ -180,8 +180,8 @@ inline fun <T> List<List<T>>.transpose(filler: T? = null): List<List<T?>> {
 }
 
 inline fun <reified T> List<T>.topIndexBy(
-    crossinline measurer: (T) -> Double,
-    crossinline condition: (T, Double) -> Boolean = { _, _ -> true },
+    crossinline measurer: (element: T) -> Double,
+    crossinline condition: (element: T, measure: Double) -> Boolean = { _, _ -> true },
 ): Int? {
     var top: Double = Double.POSITIVE_INFINITY
     var topIndex: Int? = null
@@ -204,7 +204,7 @@ inline fun <reified T> List<T>.topIndexBy(
 // around 1x-1.5x times faster than built-in chain calls mapIndexed, sortedBy, etc on asSequence()
 inline fun <reified T> List<T>.top2IndicesBy(
     crossinline measurer: (T) -> Double,
-    crossinline condition: (T, Double) -> Boolean = { _, _ -> true },
+    crossinline condition: (index: Int, element: T, measure: Double) -> Boolean = { _, _, _ -> true },
 ): List<Int> {
     var top1: Double = Double.POSITIVE_INFINITY
     var top2: Double = Double.POSITIVE_INFINITY
@@ -213,7 +213,7 @@ inline fun <reified T> List<T>.top2IndicesBy(
     for (i in this.indices) {
         val element = this[i]
         val measure = measurer(element)
-        if (condition(element, measure)) {
+        if (condition(i, element, measure)) {
             if (top1Index == null) {
                 top1Index = i
                 top1 = measure
@@ -238,9 +238,9 @@ inline fun <reified T> List<T>.top2IndicesBy(
 }
 
 inline fun <reified T> List<T>.indicesSortedBy(
-    crossinline measurer: (T) -> Double,
-    crossinline condition: (Int, Double) -> Boolean = { _, _ -> true },
-    crossinline sortingPriority: (Int, Double) -> Double = { _, m -> m },
+    crossinline measurer: (element: T) -> Double,
+    crossinline condition: (index: Int, measure: Double) -> Boolean = { _, _ -> true },
+    crossinline sortingPriority: (index: Int, measure: Double) -> Double = { _, m -> m },
 ): List<Int> = this
     .asSequence()
     .mapIndexed { index, element -> index to measurer(element) }
