@@ -178,3 +178,73 @@ inline fun <T> List<List<T>>.transpose(filler: T? = null): List<List<T?>> {
         this.map { row -> row.getOrElse(i) { filler } }
     }
 }
+
+inline fun <reified T> List<T>.topIndexBy(
+    crossinline measurer: (T) -> Double,
+    crossinline condition: (T, Double) -> Boolean = { _, _ -> true },
+): Int? {
+    var top: Double = Double.POSITIVE_INFINITY
+    var topIndex: Int? = null
+    for (i in this.indices) {
+        val element = this[i]
+        val measure = measurer(element)
+        if (condition(element, measure)) {
+            if (topIndex == null) {
+                topIndex = i
+                top = measure
+            } else if (measure >= top) {
+                topIndex = i
+                top = measure
+            }
+        }
+    }
+    return topIndex
+}
+
+// around 1x-1.5x times faster than built-in chain calls mapIndexed, sortedBy, etc on asSequence()
+inline fun <reified T> List<T>.top2IndicesBy(
+    crossinline measurer: (T) -> Double,
+    crossinline condition: (T, Double) -> Boolean = { _, _ -> true },
+): List<Int> {
+    var top1: Double = Double.POSITIVE_INFINITY
+    var top2: Double = Double.POSITIVE_INFINITY
+    var top1Index: Int? = null
+    var top2Index: Int? = null
+    for (i in this.indices) {
+        val element = this[i]
+        val measure = measurer(element)
+        if (condition(element, measure)) {
+            if (top1Index == null) {
+                top1Index = i
+                top1 = measure
+            } else if (top2Index == null || measure > top2) {
+                if (measure >= top1) {
+                    top2Index = top1Index
+                    top2 = top1
+                    top1Index = i
+                    top1 = measure
+                } else {
+                    top2Index = i
+                    top2 = measure
+                }
+            }
+        }
+    }
+    return when {
+        top1Index == null -> emptyList()
+        top2Index == null -> listOf(top1Index)
+        else -> listOf(top1Index, top2Index)
+    }
+}
+
+inline fun <reified T> List<T>.indicesSortedBy(
+    crossinline measurer: (T) -> Double,
+    crossinline condition: (Int, Double) -> Boolean = { _, _ -> true },
+    crossinline sortingPriority: (Int, Double) -> Double = { _, m -> m },
+): List<Int> = this
+    .asSequence()
+    .mapIndexed { index, element -> index to measurer(element) }
+    .filter { (index, m) -> condition(index, m) }
+    .sortedBy { (index, m) -> sortingPriority(index, m) }
+    .map { (index, _) -> index }
+    .toList()
