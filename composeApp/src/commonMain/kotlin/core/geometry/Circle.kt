@@ -439,7 +439,10 @@ data class Circle(
             .distinct()
             .minByOrNull { it.distanceFrom(this.centerPoint) }
             ?.let { newCenter ->
-                this.copy(x = newCenter.x, y = newCenter.y)
+                if (newCenter.isInfinite)
+                    null
+                else
+                    this.copy(x = newCenter.x, y = newCenter.y)
             }
     }
 

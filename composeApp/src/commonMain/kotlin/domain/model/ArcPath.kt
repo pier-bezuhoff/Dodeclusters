@@ -124,11 +124,12 @@ data class ConcreteArcPath(
             when (val circle = arc.circleOrLine) {
                 is CircleOrLine -> {
                     val closest = circle.project(point)
-                    // another projection onto circle is always farther than arc ends
+                    // another projection onto the circle is always farther than both of the arc ends
                     val onTheArc =
                         circle.pointIsInBetween(start, closest, end)
                     if (onTheArc) {
-                        distance = min(distance, arc.circleOrLine.distanceFrom(point))
+                        val d = point.distanceFrom(closest)
+                        distance = min(distance, d)
                     }
                 }
                 null -> {}
@@ -138,6 +139,7 @@ data class ConcreteArcPath(
     }
 
     /**
+     * assumes at least 1 vertex
      * @return (arcIndex, projectedPoint, arcPercentage)
      */
     fun project(point: Point): Triple<Int, Point, Double> {

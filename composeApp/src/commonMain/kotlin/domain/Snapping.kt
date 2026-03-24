@@ -12,6 +12,7 @@ import core.geometry.Point
 import core.geometry.closestPerpendicularPoint
 import core.geometry.perpendicularDistance
 import core.geometry.translatedUntilTangency
+import domain.model.ConcreteArcPath
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
@@ -23,11 +24,12 @@ sealed interface PointSnapResult {
 
     sealed interface PointToPoint : PointSnapResult
     sealed interface PointToCircle : PointSnapResult
+    sealed interface PointToArcPath : PointSnapResult
     sealed interface PointAlignment : PointSnapResult
 
     data class Free(
         override val result: Point,
-    ) : PointToPoint, PointToCircle, PointAlignment
+    ) : PointToPoint, PointToCircle, PointToArcPath, PointAlignment
 
         data class Eq(
         override val result: Point,
@@ -48,6 +50,12 @@ sealed interface PointSnapResult {
             require(circle1Index != circle2index)
         }
     }
+
+    data class ArcPathIncidence(
+        override val result: Point,
+        val arcPathIndex: Int,
+        val arcIndex: Int,
+    ) : PointToArcPath
 
     data class HorizontalAlignment(
         override val result: Point,
@@ -117,7 +125,7 @@ object Snapping {
         point: Point,
         allObjects: List<GCircle?>,
         snapDistance: Double,
-        excludedIndices: Set<Int> = emptySet(),
+        excludedIndices: Set<Ix> = emptySet(),
     ): PointSnapResult.PointToPoint {
         val withinSnapDistance = allObjects.mapIndexed { ix, o ->
             if (ix in excludedIndices || o !is Point)
@@ -141,7 +149,7 @@ object Snapping {
         points: List<Point>,
         snapDistance: Double,
     ): PointSnapResult.PointToPoint {
-        val closestPointIndex = points.topIndexBy(
+        val closestPointIndex = points.bottomIndexBy(
             measurer = { point.distanceFrom(it) },
             condition = { _, d -> d <= snapDistance },
         )
@@ -162,9 +170,9 @@ object Snapping {
         allObjects: List<GCircle?>,
         snapDistance: Double,
         intersectionTolerance: Double = 1.5,
-        excludedIndices: Set<Int> = emptySet(),
+        excludedIndices: Set<Ix> = emptySet(),
     ): PointSnapResult.PointToCircle {
-        val closestCircles: List<Ix> = allObjects.top2IndicesBy(
+        val closestCircles: List<Ix> = allObjects.bottom2IndicesBy(
             measurer = { o ->
                 if (o is CircleOrLine)
                     o.distanceFrom(point)
@@ -214,16 +222,48 @@ object Snapping {
         }
     }
 
+    fun snapPointToArcPaths(
+        point: Point,
+        concreteArcPaths: List<ConcreteArcPath?>,
+        snapDistance: Double,
+    ): PointSnapResult.PointToArcPath {
+        var arcPathIndex: Int? = null
+        var distance: Double = Double.POSITIVE_INFINITY
+        var snappedPoint = point
+        var snappedArcIndex = 0
+        for (i in concreteArcPaths.indices) {
+            val concreteArcPath = concreteArcPaths[i] ?: continue
+            val (arcIndex, projectedPoint, _) = concreteArcPath.project(point)
+            val d = point.distanceFrom(projectedPoint)
+            if (d < snapDistance) {
+                if (arcPathIndex == null || d < distance) {
+                    arcPathIndex = i
+                    distance = d
+                    snappedPoint = projectedPoint
+                    snappedArcIndex = arcIndex
+                }
+            }
+        }
+        return if (arcPathIndex == null)
+            PointSnapResult.Free(point)
+        else
+            PointSnapResult.ArcPathIncidence(
+                result = snappedPoint,
+                arcPathIndex = arcPathIndex,
+                arcIndex = snappedArcIndex
+            )
+    }
+
     fun snapAlignPointToPointsVerticallyOrHorizontally(
         point: Point,
         points: List<Point>,
         snapDistance: Double,
     ): PointSnapResult.PointAlignment {
-        val closestHorizontalPointIndex = points.topIndexBy(
+        val closestHorizontalPointIndex = points.bottomIndexBy(
             measurer = { p -> abs(point.x - p.x) },
             condition = { _, d -> d <= snapDistance }
         )
-        val closestVerticalPointIndex = points.topIndexBy(
+        val closestVerticalPointIndex = points.bottomIndexBy(
             measurer = { p -> abs(point.y - p.y) },
             condition = { _, d -> d <= snapDistance }
         )
@@ -255,7 +295,7 @@ object Snapping {
         visibleRect: Rect? = null,
         excludedIndices: Set<Int> = emptySet(),
     ): CircleSnapResult {
-        val closestCircles: List<Ix> = allObjects.top2IndicesBy(
+        val closestCircles: List<Ix> = allObjects.bottom2IndicesBy(
             measurer = { o ->
                 if (o is CircleOrLineOrPoint)
                     abs(o.perpendicularDistance(circle))

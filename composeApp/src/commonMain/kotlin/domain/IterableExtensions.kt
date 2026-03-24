@@ -183,16 +183,13 @@ inline fun <reified T> List<T>.topIndexBy(
     crossinline measurer: (element: T) -> Double,
     crossinline condition: (element: T, measure: Double) -> Boolean = { _, _ -> true },
 ): Int? {
-    var top: Double = Double.POSITIVE_INFINITY
+    var top: Double = Double.NEGATIVE_INFINITY
     var topIndex: Int? = null
     for (i in this.indices) {
         val element = this[i]
         val measure = measurer(element)
         if (condition(element, measure)) {
-            if (topIndex == null) {
-                topIndex = i
-                top = measure
-            } else if (measure >= top) {
+            if (topIndex == null || measure > top) {
                 topIndex = i
                 top = measure
             }
@@ -201,13 +198,32 @@ inline fun <reified T> List<T>.topIndexBy(
     return topIndex
 }
 
+inline fun <reified T> List<T>.bottomIndexBy(
+    crossinline measurer: (element: T) -> Double,
+    crossinline condition: (element: T, measure: Double) -> Boolean = { _, _ -> true },
+): Int? {
+    var bottom: Double = Double.POSITIVE_INFINITY
+    var bottomIndex: Int? = null
+    for (i in this.indices) {
+        val element = this[i]
+        val measure = measurer(element)
+        if (condition(element, measure)) {
+            if (bottomIndex == null || measure < bottom) {
+                bottomIndex = i
+                bottom = measure
+            }
+        }
+    }
+    return bottomIndex
+}
+
 // around 1x-1.5x times faster than built-in chain calls mapIndexed, sortedBy, etc on asSequence()
 inline fun <reified T> List<T>.top2IndicesBy(
     crossinline measurer: (T) -> Double,
     crossinline condition: (index: Int, element: T, measure: Double) -> Boolean = { _, _, _ -> true },
 ): List<Int> {
-    var top1: Double = Double.POSITIVE_INFINITY
-    var top2: Double = Double.POSITIVE_INFINITY
+    var top1: Double = Double.NEGATIVE_INFINITY
+    var top2: Double = Double.NEGATIVE_INFINITY
     var top1Index: Int? = null
     var top2Index: Int? = null
     for (i in this.indices) {
@@ -218,7 +234,7 @@ inline fun <reified T> List<T>.top2IndicesBy(
                 top1Index = i
                 top1 = measure
             } else if (top2Index == null || measure > top2) {
-                if (measure >= top1) {
+                if (measure >= top1) { // non-strict allows 2 duplicate top-2
                     top2Index = top1Index
                     top2 = top1
                     top1Index = i
@@ -234,6 +250,42 @@ inline fun <reified T> List<T>.top2IndicesBy(
         top1Index == null -> emptyList()
         top2Index == null -> listOf(top1Index)
         else -> listOf(top1Index, top2Index)
+    }
+}
+
+// around 1x-1.5x times faster than built-in chain calls mapIndexed, sortedBy, etc on asSequence()
+inline fun <reified T> List<T>.bottom2IndicesBy(
+    crossinline measurer: (T) -> Double,
+    crossinline condition: (index: Int, element: T, measure: Double) -> Boolean = { _, _, _ -> true },
+): List<Int> {
+    var bottom1: Double = Double.POSITIVE_INFINITY
+    var bottom2: Double = Double.POSITIVE_INFINITY
+    var bottom1Index: Int? = null
+    var bottom2Index: Int? = null
+    for (i in this.indices) {
+        val element = this[i]
+        val measure = measurer(element)
+        if (condition(i, element, measure)) {
+            if (bottom1Index == null) {
+                bottom1Index = i
+                bottom1 = measure
+            } else if (bottom2Index == null || measure < bottom2) {
+                if (measure <= bottom1) { // non-strict allows 2 duplicate bottom-2
+                    bottom2Index = bottom1Index
+                    bottom2 = bottom1
+                    bottom1Index = i
+                    bottom1 = measure
+                } else {
+                    bottom2Index = i
+                    bottom2 = measure
+                }
+            }
+        }
+    }
+    return when {
+        bottom1Index == null -> emptyList()
+        bottom2Index == null -> listOf(bottom1Index)
+        else -> listOf(bottom1Index, bottom2Index)
     }
 }
 

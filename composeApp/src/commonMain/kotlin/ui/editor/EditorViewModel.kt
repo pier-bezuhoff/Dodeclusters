@@ -2560,15 +2560,6 @@ class EditorViewModel : ViewModel() {
             ).result
             transformWhatWeCan(listOf(ix), translation = newPoint.toOffset() - (objects[ix] as Point).toOffset())
         }
-        if (ix == 0) { // TMP
-            val point = objectModel.objects[ix] as Point
-            val arcPathIndex = 0
-            val projectedPointIndex = 1
-            val (arcIndex, projectedPoint, arcPercentage) = concreteArcPaths[arcPathIndex]!!.project(point)
-            println("$point -> arc#$arcIndex ${(100.0*arcPercentage).formatDecimals(4)}% = $projectedPoint")
-            objectModel.setObject(projectedPointIndex, projectedPoint)
-            objectModel.invalidatePositions()
-        }
     }
 
     // special case that is not handled by transformWhatWeCan()

@@ -305,15 +305,14 @@ data class Line(
         fun coerceOrder(order: Double, startOrder: Double, endOrder: Double): Double {
             return if (startOrder <= endOrder)
                 order.coerceIn(startOrder, endOrder)
-            else if (order <= endOrder) // segment contains infinity
-                order.coerceAtMost(endOrder)
-            else if (startOrder <= order)
-                order.coerceAtLeast(startOrder)
-            else // endOrder < order < startOrder
-                if (order - endOrder <= startOrder - order)
-                    endOrder
-                else
-                    startOrder
+            else // segment contains infinity
+                if (order <= endOrder || startOrder <= order)
+                    order
+                else // endOrder < order < startOrder
+                    if (order - endOrder < startOrder - order)
+                        endOrder
+                    else
+                        startOrder
         }
     }
 }
