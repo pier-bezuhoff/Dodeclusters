@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.GCircle
+import core.geometry.Line
 import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
@@ -134,6 +135,56 @@ data class ConcreteArcPath(
             }
         }
         return distance
+    }
+
+    /**
+     * @return (arcIndex, projectedPoint, arcPercentage)
+     */
+    fun project(point: Point): Triple<Int, Point, Double> {
+        var index = 0
+        var projectedPoint = vertices.first()
+        var arcPercentage = 0.0
+        var distance = Double.POSITIVE_INFINITY
+        for (arcIndex in arcs.indices) {
+            val arc = arcs[arcIndex]
+            when (val circleOrLine = arc.circleOrLine) {
+                is Circle -> {
+                    if (arc.sweepAngle == 0.0)
+                        continue
+                    val onCirclePoint = circleOrLine.project(point)
+                    val angle = circleOrLine.calculateStartAngle(onCirclePoint)
+                    val closestOnArcAngle = Circle.coerceAngle(angle, arc.startAngle, arc.sweepAngle)
+                    val onArcPoint = circleOrLine.angle2point(closestOnArcAngle)
+                    val d = point.distanceFrom(onArcPoint)
+                    if (d < distance) {
+                        index = arcIndex
+                        distance = d
+                        projectedPoint = onArcPoint
+                        arcPercentage = (closestOnArcAngle - arc.startAngle)/arc.sweepAngle
+                    }
+                }
+                is Line -> {
+                    val onLineOrder = circleOrLine.point2order(point)
+                    val startOrder = circleOrLine.point2order(vertices[arcIndex])
+                    val endOrder = circleOrLine.point2order(vertices[
+                        (arcIndex + 1).mod(vertices.size)
+                    ])
+                    if (startOrder == endOrder)
+                        continue
+                    val closestOrder = Line.coerceOrder(onLineOrder, startOrder, endOrder)
+                    val onArcPoint = circleOrLine.order2point(closestOrder)
+                    val d = point.distanceFrom(onArcPoint)
+                    if (d < distance) {
+                        index = arcIndex
+                        distance = d
+                        projectedPoint = onArcPoint
+                        arcPercentage = (closestOrder - startOrder)/(endOrder - startOrder)
+                    }
+                }
+                null -> {}
+            }
+        }
+        return Triple(index, projectedPoint, arcPercentage)
     }
 }
 

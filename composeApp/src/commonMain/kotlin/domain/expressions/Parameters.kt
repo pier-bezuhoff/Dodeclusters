@@ -105,3 +105,17 @@ data class RotationParameters(
     val angle: Float,
     val nSteps: Int,
 ) : Parameters
+
+/**
+ * @param[arcIndex] index within arcPath.arcs of arcPath @[arcPathIndex]
+ * @param[arcPercenteage] [[0;1]] percentage within the arc length.
+ *
+ * Arc-start being 0%, arc-end - 100% and arc-midpoint - 50%
+ */
+@Immutable
+@Serializable
+data class ArcPathIncidenceParameters(
+    val arcPathIndex: Int,
+    val arcIndex: Int,
+    val arcPercenteage: Double,
+) : Parameters

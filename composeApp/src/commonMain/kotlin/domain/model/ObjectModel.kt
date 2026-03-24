@@ -94,7 +94,7 @@ sealed class ObjectModel<R : Any> {
     }
 
     /** Don't forget to [invalidatePositions] post factum */
-    private fun setObject(ix: Ix, newObject: R?) {
+    fun setObject(ix: Ix, newObject: R?) {
         objects[ix] = newObject
         downscaledObjects[ix] = newObject?.downscale()
         objectChangedAt(ix)

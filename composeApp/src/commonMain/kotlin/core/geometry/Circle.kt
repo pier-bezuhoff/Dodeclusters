@@ -21,6 +21,8 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -482,6 +484,14 @@ data class Circle(
             angle1
     }
 
+    /** Path.drawArc-style start-[angle] in radians -> point on the circle,
+     * inverse of [calculateStartAngle] */
+    fun angle2point(angle: Double): Point {
+        val dx = radius*cos(angle)
+        val dy = radius*sin(angle)
+        return Point(x + dx, y + dy)
+    }
+
     companion object {
         /** `Circle.point2order(Point.CONFORMAL_INFINITY)` */
         const val ORDER_OF_CONFORMAL_INFINITY = 0.0
@@ -781,6 +791,41 @@ data class Circle(
                     listOf(px, py, qx, qy)
                 else
                     listOf(qx, qy, px, py)
+            }
+        }
+
+        /**
+         * @param[angle] in `[0; TAU)`
+         * @param[startAngle] in `[0; TAU)`
+         * @param[sweepAngle] in `(-2*TAU; 2*TAU)`
+         * @return clamped on-arc angle in `[0; TAU)`
+         */
+        fun coerceAngle(angle: Double, startAngle: Double, sweepAngle: Double): Double {
+            val endAngle = startAngle + sweepAngle // (-TAU; 2*TAU)
+            return if (sweepAngle >= 0) {
+                if (endAngle < TAU) {
+                    angle.coerceIn(startAngle, endAngle)
+                } else {
+                    val cappedEndAngle = endAngle - TAU
+                    if (angle <= cappedEndAngle || startAngle <= angle)
+                        angle
+                    else if (angle - cappedEndAngle < startAngle - angle)
+                        cappedEndAngle
+                    else
+                        startAngle
+                }
+            } else {
+                if (endAngle >= 0) {
+                    angle.coerceIn(endAngle, startAngle)
+                } else {
+                    val cappedEndAngle = endAngle + TAU
+                    if (cappedEndAngle <= angle || angle <= startAngle)
+                        angle
+                    else if (cappedEndAngle - angle < angle - startAngle)
+                        cappedEndAngle
+                    else
+                        startAngle
+                }
             }
         }
     }

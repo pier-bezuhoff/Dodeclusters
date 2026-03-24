@@ -8,6 +8,7 @@ import core.geometry.conformal.GeneralizedCircle
 import core.geometry.Line
 import core.geometry.Point
 import core.geometry.RegionPointLocation
+import domain.model.ConcreteArcPath
 import domain.squareSum
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -209,3 +210,38 @@ fun computeTangentialCircle(
     anotherPoint: Point,
 ): CircleOrLine? =
     computeCircleByPencilAndPoint(carrier, pointOnCarrier, anotherPoint) as? CircleOrLine
+
+/**
+ * @return (arcIndex, arcPercentage)
+ */
+fun computeArcPathIncidenceOrder(
+    concreteArcPath: ConcreteArcPath,
+    point: Point,
+): Pair<Int, Double> {
+    val (arcIndex, _, arcPercentage) = concreteArcPath.project(point)
+    return Pair(arcIndex, arcPercentage)
+}
+
+fun computeArcPathIncidence(
+    params: ArcPathIncidenceParameters,
+    concreteArcPath: ConcreteArcPath,
+): Point? {
+    val arc = concreteArcPath.arcs.getOrNull(params.arcIndex)
+    return when (val circleOrLine = arc?.circleOrLine) {
+        is Circle -> {
+            val angle = arc.startAngle + arc.sweepAngle*params.arcPercenteage
+            circleOrLine.angle2point(angle)
+        }
+        is Line -> {
+            val arcStart = concreteArcPath.vertices[params.arcIndex]
+            val arcEnd = concreteArcPath.vertices[
+                (params.arcIndex + 1).mod(concreteArcPath.vertices.size)
+            ]
+            val startOrder = circleOrLine.point2order(arcStart)
+            val endOrder = circleOrLine.point2order(arcEnd)
+            val order = startOrder + (endOrder - startOrder)*params.arcPercenteage
+            circleOrLine.order2point(order)
+        }
+        null -> null
+    }
+}

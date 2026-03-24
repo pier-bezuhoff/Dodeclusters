@@ -147,10 +147,13 @@ data class Line(
     override fun order2point(order: Double): Point {
         if (order.isInfinite())
             return Point.CONFORMAL_INFINITY
-        val p0 = project(Point(0.0, 0.0))
+//        val (p0x, p0y) = project(Point(0.0, 0.0))
+        val k = -c/(norm*norm)
+        val p0x = k*a
+        val p0y = k*b
         return Point(
-            p0.x + directionX*order,
-            p0.y + directionY*order
+            p0x + directionX*order,
+            p0y + directionY*order
         )
     }
 
@@ -297,6 +300,20 @@ data class Line(
             val dy = p2.y - p1.y
             val c = p1.x*dy - p1.y*dx
             return Line(-dy, dx, c).normalized()
+        }
+
+        fun coerceOrder(order: Double, startOrder: Double, endOrder: Double): Double {
+            return if (startOrder <= endOrder)
+                order.coerceIn(startOrder, endOrder)
+            else if (order <= endOrder) // segment contains infinity
+                order.coerceAtMost(endOrder)
+            else if (startOrder <= order)
+                order.coerceAtLeast(startOrder)
+            else // endOrder < order < startOrder
+                if (order - endOrder <= startOrder - order)
+                    endOrder
+                else
+                    startOrder
         }
     }
 }
