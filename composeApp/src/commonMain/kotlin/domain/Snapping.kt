@@ -73,6 +73,9 @@ sealed interface PointSnapResult {
         val y: Double,
     ) : PointAlignment
 
+    val isFree: Boolean get() =
+        this is Free
+
     fun toArgPoint(): Arg.Point = when (this) {
         is Eq -> Arg.PointIndex(this.pointIndex)
         is Free -> Arg.PointXY(this.result)
@@ -151,7 +154,7 @@ object Snapping {
     ): PointSnapResult.PointToPoint {
         val closestPointIndex = points.bottomIndexBy(
             measurer = { point.distanceFrom(it) },
-            condition = { _, d -> d <= snapDistance },
+            measureFilter = { it <= snapDistance },
         )
         return if (closestPointIndex == null)
             PointSnapResult.Free(point)
@@ -179,7 +182,8 @@ object Snapping {
                 else
                     Double.POSITIVE_INFINITY
             },
-            condition = { i, _, d -> d <= snapDistance && i !in excludedIndices },
+            indexFilter = { it !in excludedIndices },
+            measureFilter = { it <= snapDistance },
         ) // get 2 closest circles
         return if (closestCircles.isEmpty()) {
             PointSnapResult.Free(point)
@@ -226,12 +230,15 @@ object Snapping {
         point: Point,
         concreteArcPaths: List<ConcreteArcPath?>,
         snapDistance: Double,
+        excludedIndices: Set<Int> = emptySet(),
     ): PointSnapResult.PointToArcPath {
         var arcPathIndex: Int? = null
         var distance: Double = Double.POSITIVE_INFINITY
         var snappedPoint = point
         var snappedArcIndex = 0
         for (i in concreteArcPaths.indices) {
+            if (i in excludedIndices)
+                continue
             val concreteArcPath = concreteArcPaths[i] ?: continue
             val (arcIndex, projectedPoint, _) = concreteArcPath.project(point)
             val d = point.distanceFrom(projectedPoint)
@@ -261,11 +268,11 @@ object Snapping {
     ): PointSnapResult.PointAlignment {
         val closestHorizontalPointIndex = points.bottomIndexBy(
             measurer = { p -> abs(point.x - p.x) },
-            condition = { _, d -> d <= snapDistance }
+            measureFilter = { it <= snapDistance }
         )
         val closestVerticalPointIndex = points.bottomIndexBy(
             measurer = { p -> abs(point.y - p.y) },
-            condition = { _, d -> d <= snapDistance }
+            measureFilter = { it <= snapDistance }
         )
         val x1 = closestHorizontalPointIndex?.let { points[it].x }
         val y1 = closestVerticalPointIndex?.let { points[it].y }
@@ -302,12 +309,14 @@ object Snapping {
                 else
                     Double.POSITIVE_INFINITY
             },
-            condition = { i, o, d ->
-                d <= snapDistance && o is CircleOrLineOrPoint && i !in excludedIndices &&
+            indexFilter = { it !in excludedIndices },
+            elementFilter = { o ->
+                o is CircleOrLineOrPoint &&
                     (visibleRect == null || visibleRect.contains(
                         circle.closestPerpendicularPoint(o).toOffset()
                     ))
-            }
+            },
+            measureFilter = { it <= snapDistance },
         ) // get 2 closest circles
         return when {
             closestCircles.isEmpty() -> {

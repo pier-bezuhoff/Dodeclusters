@@ -139,7 +139,7 @@ data class ConcreteArcPath(
     }
 
     /**
-     * assumes at least 1 vertex
+     * assumes [vertices]`.size >= 1`
      * @return (arcIndex, projectedPoint, arcPercentage)
      */
     fun project(point: Point): Triple<Int, Point, Double> {

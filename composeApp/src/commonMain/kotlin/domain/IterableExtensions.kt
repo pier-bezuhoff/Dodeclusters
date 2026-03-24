@@ -181,14 +181,14 @@ inline fun <T> List<List<T>>.transpose(filler: T? = null): List<List<T?>> {
 
 inline fun <reified T> List<T>.topIndexBy(
     crossinline measurer: (element: T) -> Double,
-    crossinline condition: (element: T, measure: Double) -> Boolean = { _, _ -> true },
+    crossinline measureFilter: (measure: Double) -> Boolean = { true },
 ): Int? {
     var top: Double = Double.NEGATIVE_INFINITY
     var topIndex: Int? = null
     for (i in this.indices) {
         val element = this[i]
         val measure = measurer(element)
-        if (condition(element, measure)) {
+        if (measureFilter(measure)) {
             if (topIndex == null || measure > top) {
                 topIndex = i
                 top = measure
@@ -200,14 +200,14 @@ inline fun <reified T> List<T>.topIndexBy(
 
 inline fun <reified T> List<T>.bottomIndexBy(
     crossinline measurer: (element: T) -> Double,
-    crossinline condition: (element: T, measure: Double) -> Boolean = { _, _ -> true },
+    crossinline measureFilter: (measure: Double) -> Boolean = { true },
 ): Int? {
     var bottom: Double = Double.POSITIVE_INFINITY
     var bottomIndex: Int? = null
     for (i in this.indices) {
         val element = this[i]
         val measure = measurer(element)
-        if (condition(element, measure)) {
+        if (measureFilter(measure)) {
             if (bottomIndex == null || measure < bottom) {
                 bottomIndex = i
                 bottom = measure
@@ -218,67 +218,37 @@ inline fun <reified T> List<T>.bottomIndexBy(
 }
 
 // around 1x-1.5x times faster than built-in chain calls mapIndexed, sortedBy, etc on asSequence()
-inline fun <reified T> List<T>.top2IndicesBy(
-    crossinline measurer: (T) -> Double,
-    crossinline condition: (index: Int, element: T, measure: Double) -> Boolean = { _, _, _ -> true },
-): List<Int> {
-    var top1: Double = Double.NEGATIVE_INFINITY
-    var top2: Double = Double.NEGATIVE_INFINITY
-    var top1Index: Int? = null
-    var top2Index: Int? = null
-    for (i in this.indices) {
-        val element = this[i]
-        val measure = measurer(element)
-        if (condition(i, element, measure)) {
-            if (top1Index == null) {
-                top1Index = i
-                top1 = measure
-            } else if (top2Index == null || measure > top2) {
-                if (measure >= top1) { // non-strict allows 2 duplicate top-2
-                    top2Index = top1Index
-                    top2 = top1
-                    top1Index = i
-                    top1 = measure
-                } else {
-                    top2Index = i
-                    top2 = measure
-                }
-            }
-        }
-    }
-    return when {
-        top1Index == null -> emptyList()
-        top2Index == null -> listOf(top1Index)
-        else -> listOf(top1Index, top2Index)
-    }
-}
-
-// around 1x-1.5x times faster than built-in chain calls mapIndexed, sortedBy, etc on asSequence()
 inline fun <reified T> List<T>.bottom2IndicesBy(
     crossinline measurer: (T) -> Double,
-    crossinline condition: (index: Int, element: T, measure: Double) -> Boolean = { _, _, _ -> true },
+    crossinline indexFilter: (index: Int) -> Boolean = { true },
+    crossinline elementFilter: (element: T) -> Boolean = { true },
+    crossinline measureFilter: (measure: Double) -> Boolean = { true },
 ): List<Int> {
     var bottom1: Double = Double.POSITIVE_INFINITY
     var bottom2: Double = Double.POSITIVE_INFINITY
     var bottom1Index: Int? = null
     var bottom2Index: Int? = null
     for (i in this.indices) {
+        if (!indexFilter(i))
+            continue
         val element = this[i]
+        if (!elementFilter(element))
+            continue
         val measure = measurer(element)
-        if (condition(i, element, measure)) {
-            if (bottom1Index == null) {
+        if (!measureFilter(measure))
+            continue
+        if (bottom1Index == null) {
+            bottom1Index = i
+            bottom1 = measure
+        } else if (bottom2Index == null || measure < bottom2) {
+            if (measure < bottom1) {
+                bottom2Index = bottom1Index
+                bottom2 = bottom1
                 bottom1Index = i
                 bottom1 = measure
-            } else if (bottom2Index == null || measure < bottom2) {
-                if (measure <= bottom1) { // non-strict allows 2 duplicate bottom-2
-                    bottom2Index = bottom1Index
-                    bottom2 = bottom1
-                    bottom1Index = i
-                    bottom1 = measure
-                } else {
-                    bottom2Index = i
-                    bottom2 = measure
-                }
+            } else {
+                bottom2Index = i
+                bottom2 = measure
             }
         }
     }

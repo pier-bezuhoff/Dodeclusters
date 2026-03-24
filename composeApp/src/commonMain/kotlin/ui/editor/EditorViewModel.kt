@@ -66,7 +66,6 @@ import domain.expressions.computeLineBy2Points
 import domain.expressions.computeSagittaRatio
 import domain.expressions.copyWithNewParameters
 import domain.filterIndices
-import domain.formatDecimals
 import domain.hug
 import domain.indicesSortedBy
 import domain.io.DdcV1
@@ -1245,28 +1244,37 @@ class EditorViewModel : ViewModel() {
         absolutePosition: Offset,
         excludePoints: Boolean = false,
         excludedCircles: Set<Ix> = emptySet(),
+        excludedArcPaths: Set<Int> = emptySet(),
     ): PointSnapResult {
         val snapDistance = tapRadius.toDouble()
         val point = Point.fromOffset(absolutePosition)
-        val point2pointSnapping = !excludePoints && mode != ToolMode.POINT
-        if (point2pointSnapping) {
-            val p2pResult = Snapping.snapPointToPoints(point, objects,
+        val toPoints = !excludePoints && mode != ToolMode.POINT
+        if (toPoints) {
+            val snap = Snapping.snapPointToPoints(point, objects,
                 snapDistance = snapDistance,
                 excludedIndices = if (showPhantomObjects) emptySet() else phantoms
             )
-            if (p2pResult is PointSnapResult.Eq)
-                return p2pResult
+            if (snap is PointSnapResult.Eq)
+                return snap
         }
-        val point2circleSnapping = showCircles
-        if (!point2circleSnapping) // no snapping to invisibles
-            return PointSnapResult.Free(point)
-        val p2cResult = Snapping.snapPointToCircles(point, objects,
+        val toCircles = showCircles // no snapping to invisibles
+        if (toCircles) {
+            val snap = Snapping.snapPointToCircles(point, objects,
+                snapDistance = snapDistance,
+                excludedIndices =
+                    if (showPhantomObjects) excludedCircles
+                    else excludedCircles.union(phantoms)
+            )
+            if (!snap.isFree)
+                return snap
+        }
+        val snap = Snapping.snapPointToArcPaths(point, concreteArcPaths,
             snapDistance = snapDistance,
-            excludedIndices =
-                if (showPhantomObjects) excludedCircles
-                else excludedCircles.union(phantoms)
+            excludedIndices = excludedArcPaths,
         )
-        return p2cResult
+        if (snap is PointSnapResult.ArcPathIncidence)
+            return snap
+        return PointSnapResult.Free(point)
     }
 
     /** Adds a new point(s) with expression defined by [snapResult] when non-free
@@ -2546,6 +2554,9 @@ class EditorViewModel : ViewModel() {
 
     private fun dragPoint(absoluteCentroid: Offset) {
         val ix = objectSelection.first()
+        val point = objects[ix] as Point
+        if (point.isInfinite)
+            return
         val expr = exprOf(ix)
         if (expr is Expr.Incidence) {
             slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, absolutePointerPosition = absoluteCentroid)
@@ -2555,10 +2566,16 @@ class EditorViewModel : ViewModel() {
                 .toSet()
             // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
             val parents = objectModel.expressions.getAllParents(listOf(ix))
+            val childArcPaths = arcPaths
+                .filterIndices { it != null && ix in it.dependencies }
+                .toSet()
+            // NOTE: snap-exclusion calculation when dragging a point seem excessive tbh
             val newPoint = snapped(absoluteCentroid,
-                excludePoints = true, excludedCircles = childCircles + parents
+                excludePoints = true,
+                excludedCircles = childCircles + parents,
+                excludedArcPaths = childArcPaths,
             ).result
-            transformWhatWeCan(listOf(ix), translation = newPoint.toOffset() - (objects[ix] as Point).toOffset())
+            transformWhatWeCan(listOf(ix), translation = newPoint.toOffset() - point.toOffset())
         }
     }
 
@@ -3972,7 +3989,9 @@ class EditorViewModel : ViewModel() {
         if (arg0 is Arg.PointXY) {
             val newPoint = arg0.toPoint()
             pinStateForHistory()
-            createNewFreePoint(newPoint)
+            val ix = createNewFreePoint(newPoint)
+            selection = Selection(objects = listOf(ix))
+            history.accumulateChangedLocations(selection = true)
             history.recordAccumulatedChanges()
         } // it could have already done it with realized PSR.Eq, which results in Arg.Point.Index
         partialArgList = argList.copyEmpty()
