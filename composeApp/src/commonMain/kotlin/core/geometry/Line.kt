@@ -157,41 +157,11 @@ data class Line(
         )
     }
 
-    override fun orderInBetween(order1: Double, order2: Double): Double {
-        val order1IsFinite = order1.isFinite()
-        val order2IsFinite = order2.isFinite()
-        return if (order1IsFinite) {
-            if (order2IsFinite) {
-                if (order2 > order1)
-                    order1 + (order2 - order1) / 2.0
-                else if (order2 == order1)
-                    order1 + 50.0 // idk, w/e
-                else // order2 < order1
-                    order1 - (order1 - order2) / 2.0
-            } else { // finite & infinite
-                order1 + 50.0
-            }
-        } else if (order2IsFinite) { // infinite & finite
-            order2 - 50.0
-        } else { // infinite & infinite
-            0.0
-        }
-    }
+    override fun orderInBetween(order1: Double, order2: Double): Double =
+        Line.orderInBetween(order1, order2)
 
-    override fun orderIsInBetween(startOrder: Double, order: Double, endOrder: Double): Boolean {
-        return if (startOrder <= endOrder)
-            order in startOrder..endOrder
-        else order <= endOrder || startOrder <= order // segment contains infinity
-    }
-
-    /** direction-independent */
-    fun pointIsInBetweenUndirected(p1: Point, p2: Point, p3: Point): Boolean {
-        val ax = p2.x - p1.x
-        val ay = p2.y - p1.y
-        val bx = p2.x - p3.x
-        val by = p2.y - p3.y
-        return ax*bx + ay*by <= 0.0
-    }
+    override fun agreesWithOrientation(startOrder: Double, middleOrder: Double, endOrder: Double): Boolean =
+        Line.orderIsInBetween(startOrder, middleOrder, endOrder)
 
     override fun translated(vector: Offset): Line =
        copy(c = c - (a*vector.x + b*vector.y))
@@ -302,6 +272,33 @@ data class Line(
             return Line(-dy, dx, c).normalized()
         }
 
+        fun orderIsInBetween(startOrder: Double, order: Double, endOrder: Double): Boolean {
+            return if (startOrder <= endOrder)
+                order in startOrder..endOrder
+            else order <= endOrder || startOrder <= order // segment contains infinity
+        }
+
+        fun orderInBetween(order1: Double, order2: Double): Double {
+            val order1IsFinite = order1.isFinite()
+            val order2IsFinite = order2.isFinite()
+            return if (order1IsFinite) {
+                if (order2IsFinite) {
+                    if (order2 > order1)
+                        order1 + (order2 - order1) / 2.0
+                    else if (order2 == order1)
+                        order1 + 50.0 // idk, w/e
+                    else // order2 < order1
+                        order1 - (order1 - order2) / 2.0
+                } else { // finite & infinite
+                    order1 + 50.0
+                }
+            } else if (order2IsFinite) { // infinite & finite
+                order2 - 50.0
+            } else { // infinite & infinite
+                0.0
+            }
+        }
+
         fun coerceOrder(order: Double, startOrder: Double, endOrder: Double): Double {
             return if (startOrder <= endOrder)
                 order.coerceIn(startOrder, endOrder)
@@ -313,6 +310,14 @@ data class Line(
                         endOrder
                     else
                         startOrder
+        }
+
+        fun pointIsInBetweenUndirected(p1: Point, p2: Point, p3: Point): Boolean {
+            val ax = p2.x - p1.x
+            val ay = p2.y - p1.y
+            val bx = p2.x - p3.x
+            val by = p2.y - p3.y
+            return ax*bx + ay*by <= 0.0
         }
     }
 }

@@ -21,8 +21,6 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -202,14 +200,11 @@ data class Circle(
     }
 
     override fun orderInBetween(order1: Double, order2: Double): Double =
-        if (order2 > order1)
-            order1 + (order2 - order1)/2.0
-        else // includes order1 == order2 case
-            order1 + (TAU - (order1 - order2))/2.0
-//        val half = (order2 - order1).mod(2*PI)/2.0
+        Circle.orderInBetween(order1, order2)
 
-    override fun orderIsInBetween(startOrder: Double, order: Double, endOrder: Double): Boolean {
-        val o = (order + TAU) % TAU
+    override fun agreesWithOrientation(startOrder: Double, middleOrder: Double, endOrder: Double): Boolean {
+        // FIX: ts wrong
+        val o = (middleOrder + TAU) % TAU
         val start = (startOrder + TAU) % TAU
         val end = (endOrder + TAU) % TAU
         return if (start <= end) {
@@ -219,9 +214,10 @@ data class Circle(
         }
     }
 
-    override fun pointIsInBetween(startPoint: Point, point: Point, endPoint: Point): Boolean {
+    override fun agreesWithOrientation(startPoint: Point, middlePoint: Point, endPoint: Point): Boolean {
         // -startToPoint x startToEnd
-        val cross = (point.x - startPoint.x)*(endPoint.y - startPoint.y) - (point.y - startPoint.y)*(endPoint.x - startPoint.x)
+        val cross = (middlePoint.x - startPoint.x)*(endPoint.y - startPoint.y) -
+            (middlePoint.y - startPoint.y)*(endPoint.x - startPoint.x)
         if (abs(cross) < EPSILON)
             return true
         return (cross < 0) == isCCW
@@ -796,6 +792,13 @@ data class Circle(
                     listOf(qx, qy, px, py)
             }
         }
+
+        fun orderInBetween(order1: Double, order2: Double): Double =
+            if (order2 > order1)
+                order1 + (order2 - order1)/2.0
+            else // includes order1 == order2 case
+                order1 + (TAU - (order1 - order2))/2.0
+//        val half = (order2 - order1).mod(2*PI)/2.0
 
         /**
          * @param[angle] in `[0; TAU)`

@@ -2,6 +2,7 @@ package domain.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.geometry.Rect
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.GCircle
@@ -17,6 +18,7 @@ import domain.filterIndices
 import domain.updated
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.math.max
 import kotlin.math.min
 
 @Immutable
@@ -88,6 +90,7 @@ sealed interface ArcPath {
     }
 }
 
+// MAYBE: use Offsets and Floats atp
 /** [ArcPath] representation for calculation */
 @Immutable
 @Serializable
@@ -114,6 +117,43 @@ data class ConcreteArcPath(
         val freeMidpoint: Point? = null,
     )
 
+    fun toRect(): Rect {
+        var left = Float.POSITIVE_INFINITY
+        var right = Float.NEGATIVE_INFINITY
+        var top = Float.POSITIVE_INFINITY
+        var bottom = Float.NEGATIVE_INFINITY
+        for (point in vertices) {
+            val x = point.x.toFloat()
+            val y = point.y.toFloat()
+            left = min(left, x)
+            right = max(right, x)
+            top = min(top, y)
+            bottom = max(bottom, y)
+        }
+        arcs.forEachIndexed { i, arc ->
+            when (val circle = arc.circleOrLine) {
+                is Circle -> {
+                    val start = vertices[i]
+                    val end = vertices[(i + 1).mod(vertices.size)]
+                    val circleLeft = Point(circle.x - circle.radius, circle.y)
+                    val circleRight = Point(circle.x + circle.radius, circle.y)
+                    val circleTop = Point(circle.x, circle.y - circle.radius)
+                    val circleBottom = Point(circle.x, circle.y + circle.radius)
+                    if (circle.agreesWithOrientation(start, circleLeft, end))
+                        left = min(left, circleLeft.x.toFloat())
+                    if (circle.agreesWithOrientation(start, circleRight, end))
+                        right = max(right, circleRight.x.toFloat())
+                    if (circle.agreesWithOrientation(start, circleTop, end))
+                        top = min(top, circleTop.y.toFloat())
+                    if (circle.agreesWithOrientation(start, circleBottom, end))
+                        bottom = max(bottom, circleBottom.y.toFloat())
+                }
+                else -> {}
+            }
+        }
+        return Rect(left, top, right, bottom)
+    }
+
     fun distanceFrom(point: Point): Double {
         var distance = vertices.minOfOrNull {
             it.distanceFrom(point)
@@ -126,7 +166,7 @@ data class ConcreteArcPath(
                     val closest = circle.project(point)
                     // another projection onto the circle is always farther than both of the arc ends
                     val onTheArc =
-                        circle.pointIsInBetween(start, closest, end)
+                        circle.agreesWithOrientation(start, closest, end)
                     if (onTheArc) {
                         val d = point.distanceFrom(closest)
                         distance = min(distance, d)

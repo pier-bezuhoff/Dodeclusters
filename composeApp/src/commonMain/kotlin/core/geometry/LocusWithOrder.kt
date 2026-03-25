@@ -15,11 +15,15 @@ sealed interface LocusWithOrder {
     fun point2order(point: Point): Double
     fun order2point(order: Double): Point
     fun orderInBetween(order1: Double, order2: Double): Double
-    fun orderIsInBetween(startOrder: Double, order: Double, endOrder: Double): Boolean
+    fun agreesWithOrientation(startOrder: Double, middleOrder: Double, endOrder: Double): Boolean
 
-    /** assumes all of them lie on `this` object */
-    fun pointIsInBetween(startPoint: Point, point: Point, endPoint: Point): Boolean =
-        orderIsInBetween(point2order(startPoint), point2order(point), point2order(endPoint))
+    /** Whether 3-point orientation agrees with this object's orientation
+     * (assuming all 3 points lie on `this` object).
+     *
+     * Alternatively: whether [middlePoint] lies on an arc [startPoint]->[endPoint]
+     * along the direction of this object */
+    fun agreesWithOrientation(startPoint: Point, middlePoint: Point, endPoint: Point): Boolean =
+        agreesWithOrientation(point2order(startPoint), point2order(middlePoint), point2order(endPoint))
 
     fun orderPoints(points: Collection<Point>): List<Point> =
         points.sortedBy { point2order(it) }

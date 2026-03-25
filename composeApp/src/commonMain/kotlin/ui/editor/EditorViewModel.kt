@@ -1176,15 +1176,11 @@ class EditorViewModel : ViewModel() {
 
     /** @return [Rect] using absolute positions */
     fun calculateSelectionRect(): Rect? {
-        // MAYBE: use arc-paths
-        val indices = selection.objects.plus(
-            selection.arcPaths.flatMap { arcPaths[it]?.dependencies ?: emptySet() }
-        ).toSet()
         var left = Float.POSITIVE_INFINITY
         var right = Float.NEGATIVE_INFINITY
         var top = Float.POSITIVE_INFINITY
         var bottom = Float.NEGATIVE_INFINITY
-        for (ix in indices) {
+        for (ix in selection.objects) {
             when (val o = objects[ix]) {
                 is Circle -> {
                     left = min(left, (o.x - o.radius).toFloat())
@@ -1201,6 +1197,13 @@ class EditorViewModel : ViewModel() {
                 is Line -> return null
                 else -> {}
             }
+        }
+        for (i in selection.arcPaths) {
+            val (left1, top1, right1, bottom1) = concreteArcPaths[i]?.toRect() ?: continue
+            left = min(left, left1)
+            right = max(right, right1)
+            top = min(top, top1)
+            bottom = max(bottom, bottom1)
         }
         if (left.isInfinite() || right.isInfinite() || top.isInfinite() || bottom.isInfinite())
             return null
@@ -2523,6 +2526,7 @@ class EditorViewModel : ViewModel() {
     ) {
         val selectedIndex = objectSelection.single()
         if (ENABLE_TANGENT_SNAPPING) {
+            // TODO: snap to arc-path arcs
             val circle = objects[selectedIndex] as CircleOrLine
             val result0 = circle.transformed(translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
                 as CircleOrLine
@@ -2552,7 +2556,10 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun dragPoint(absoluteCentroid: Offset) {
+    private fun dragPoint(
+        absoluteCentroid: Offset,
+        translation: Offset
+    ) {
         val ix = objectSelection.first()
         val point = objects[ix] as Point
         if (point.isInfinite)
@@ -2575,7 +2582,7 @@ class EditorViewModel : ViewModel() {
                 excludedCircles = childCircles + parents,
                 excludedArcPaths = childArcPaths,
             ).result
-            transformWhatWeCan(listOf(ix), translation = newPoint.toOffset() - point.toOffset())
+            transformWhatWeCan(listOf(ix), translation = translation)
         }
     }
 
@@ -2883,6 +2890,7 @@ class EditorViewModel : ViewModel() {
             history.accumulateChangedLocations(
                 objectIndices = changedIndices,
                 expressionIndices = changedIndices,
+                arcPaths = arcPaths.indices.toSet(),
                 center = true,
             )
         }
@@ -2926,7 +2934,7 @@ class EditorViewModel : ViewModel() {
                 SelectionMode.Drag if selectedCircles.isNotEmpty() && showCircles ->
                     dragCircle(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                 SelectionMode.Drag if selectedPoints.isNotEmpty() && showCircles ->
-                    dragPoint(absoluteCentroid = absoluteCentroid)
+                    dragPoint(absoluteCentroid = absoluteCentroid, translation = pan)
                 SelectionMode.Drag if selection.arcPaths.isNotEmpty() ->
                     dragArcPaths(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                 SelectionMode.Multiselect if (
@@ -4406,7 +4414,7 @@ class EditorViewModel : ViewModel() {
         const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = false //true
-        const val ENABLE_TANGENT_SNAPPING = false
+        const val ENABLE_TANGENT_SNAPPING = true
         /** try aligning PartialArcPath vertices horizontally or
          * vertically to each other */
         const val ENABLE_ALIGNMENT_SNAPPING = true
