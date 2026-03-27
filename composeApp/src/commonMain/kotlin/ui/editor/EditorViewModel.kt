@@ -1130,7 +1130,7 @@ class EditorViewModel : ViewModel() {
 
     // NOTE: region boundaries get messed up when we alter a big structure like spiral
     /** @return (compressed region, verbose region involving all circles) surrounding clicked position */
-    private fun selectRegionAt(
+    private fun getRegionAround(
         visiblePosition: Offset,
         boundingCircles: List<Ix>? = null
     ): Pair<LogicalRegion, LogicalRegion> {
@@ -1162,7 +1162,7 @@ class EditorViewModel : ViewModel() {
         setSelectionToRegionBounds: Boolean = false
     ) {
         val shouldUpdateSelection = setSelectionToRegionBounds && !restrictRegionsToSelection
-        val (compressedRegion, uncompressedRegion) = selectRegionAt(visiblePosition, boundingCircles)
+        val (compressedRegion, uncompressedRegion) = getRegionAround(visiblePosition, boundingCircles)
         regions = RegionManipulationStrategy.updateRegionsAfterReselection(
             compressedRegion = compressedRegion,
             uncompressedRegion = uncompressedRegion,
@@ -1987,14 +1987,14 @@ class EditorViewModel : ViewModel() {
                         }
                     }
                     is SubMode.FlowSelect -> { // doesn't work with arc paths
-                        val (_, qualifiedRegion) = selectRegionAt(position)
+                        val (_, qualifiedRegion) = getRegionAround(position)
                         submode = SubMode.FlowSelect(qualifiedRegion)
                     }
                     else -> {}
                 }
                 SelectionMode.Region -> when (submode) {
                     is SubMode.FlowFill -> {
-                        val (_, qualifiedRegion) = selectRegionAt(position)
+                        val (_, qualifiedRegion) = getRegionAround(position)
                         submode = SubMode.FlowFill(qualifiedRegion)
                         val selectedCircles = objectSelection.filter { objects[it] is CircleOrLine }
                         if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
@@ -2315,7 +2315,7 @@ class EditorViewModel : ViewModel() {
                         arcPaths = selection.arcPaths.xor(selectedArcPathIndex)
                     )
                 } else { // try to select bounding circles of the selected region
-                    val (region, region0) = selectRegionAt(visiblePosition)
+                    val (region, region0) = getRegionAround(visiblePosition)
                     // TODO: also try selecting insides of closed arc-paths
                     if (region0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
                         toggleSelectAll()
@@ -2776,7 +2776,7 @@ class EditorViewModel : ViewModel() {
 
     private fun updateFlowSelect(visiblePosition: Offset, sm: SubMode.FlowSelect) {
         val qualifiedRegion = sm.lastQualifiedRegion
-        val (_, newQualifiedRegion) = selectRegionAt(visiblePosition)
+        val (_, newQualifiedRegion) = getRegionAround(visiblePosition)
         if (qualifiedRegion == null) {
             submode = SubMode.FlowSelect(newQualifiedRegion)
         } else {
@@ -2795,7 +2795,7 @@ class EditorViewModel : ViewModel() {
 
     private fun updateFlowFill(visiblePosition: Offset, selectedCircles: List<Ix>, sm: SubMode.FlowFill) {
         val qualifiedRegion = sm.lastQualifiedRegion
-        val (_, newQualifiedRegion) = selectRegionAt(visiblePosition)
+        val (_, newQualifiedRegion) = getRegionAround(visiblePosition)
         if (qualifiedRegion == null) {
             submode = SubMode.FlowFill(newQualifiedRegion)
         } else if (qualifiedRegion != newQualifiedRegion) {

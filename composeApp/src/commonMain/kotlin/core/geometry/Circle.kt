@@ -1,5 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
 package core.geometry
 
 import androidx.compose.runtime.Immutable
@@ -25,9 +23,12 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+/** 10^-6 */
 const val EPSILON: Double = 1e-6
+/** 10^-12 */
 const val EPSILON2: Double = EPSILON*EPSILON
 
+// MAYBE: attach point-triplet when this circle or its children has incident points
 /**
  * Circle with center ([x], [y]) and [radius]
  * @param[radius] `> 0`
@@ -46,15 +47,14 @@ data class Circle(
     override val y: Double,
     override val radius: Double,
     val isCCW: Boolean = true,
-    // MAYBE: fixedPoint: Point = default(x,y,R) for consistent locus ordering
 ) : UndirectedCircle {
-    inline val center: Offset get() =
+    val center: Offset get() =
         Offset(x.toFloat(), y.toFloat())
 
-    inline val centerPoint: Point get() =
+    val centerPoint: Point get() =
         Point(x, y)
 
-    inline val r2: Double get() =
+    val r2: Double get() =
         radius * radius
 
     init {
@@ -95,7 +95,7 @@ data class Circle(
             Double.POSITIVE_INFINITY
         else abs(hypot(point.x - x, point.y - y) - radius)
 
-    inline fun distanceBetweenCenters(circle: Circle): Double =
+    fun distanceBetweenCenters(circle: Circle): Double =
         hypot(x - circle.x, y - circle.y)
 
     override fun calculateLocation(point: Offset): RegionPointLocation {
@@ -140,7 +140,7 @@ data class Circle(
         return distance < radius == isCCW
     }
 
-    inline fun hasInside(px: Double, py: Double): Boolean {
+    fun hasInside(px: Double, py: Double): Boolean {
         val distance = hypot(x - px, y - py)
         return distance < radius == isCCW
     }
@@ -174,7 +174,7 @@ data class Circle(
     }
 
     /** CCW order in [-[PI]; +[PI]] starting from the East: ENWS */
-    inline fun point2order(px: Double, py: Double): Double {
+    fun point2order(px: Double, py: Double): Double {
         // NOTE: atan2 uses CCW y-top, x-right coordinates
         //  so we negate y for CCW direction
         val order = atan2(-py + y, px - x)
@@ -189,12 +189,12 @@ data class Circle(
         )
     }
 
-    inline fun order2pointX(order: Double): Double {
+    fun order2pointX(order: Double): Double {
         val o = if (isCCW) order else -order
         return x + radius * cos(o)
     }
 
-    inline fun order2pointY(order: Double): Double {
+    fun order2pointY(order: Double): Double {
         val o = if (isCCW) order else -order
         return y - radius * sin(o)
     }

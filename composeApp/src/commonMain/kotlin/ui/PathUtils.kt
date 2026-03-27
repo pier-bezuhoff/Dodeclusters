@@ -129,7 +129,11 @@ fun circle2cubicPath(
     val screenCenter = visibleRect.center
     // visible rect is contained in this circle
     val outerRadius = visibleRect.maxDimension + VISIBLE_RECT_INDENT
-    val outerCircle = Circle(screenCenter, outerRadius)
+    val outerCircle = Circle(
+        screenCenter.x.toDouble(),
+        screenCenter.y.toDouble(),
+        outerRadius.toDouble(),
+    )
     val intersectionCoordinates = Circle.calculateIntersectionCoordinates(circle, outerCircle)
     if (intersectionCoordinates.size == 4) { // all 2 intersections present
         // normal case, CCW order of points (wrt $circle)

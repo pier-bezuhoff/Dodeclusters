@@ -32,13 +32,13 @@ object RectangleCollider {
             }
             is Line -> {
                 testHorizontalSegmentLineIntersection(rect.top, rect.left, rect.right, obj) ||
-                        testHorizontalSegmentLineIntersection(rect.bottom, rect.left, rect.right, obj) ||
-                        testVerticalSegmentLineIntersection(rect.left, rect.top, rect.bottom, obj) ||
-                        testVerticalSegmentLineIntersection(rect.right, rect.top, rect.bottom, obj)
+                testHorizontalSegmentLineIntersection(rect.bottom, rect.left, rect.right, obj) ||
+                testVerticalSegmentLineIntersection(rect.left, rect.top, rect.bottom, obj) ||
+                testVerticalSegmentLineIntersection(rect.right, rect.top, rect.bottom, obj)
             }
             is Point ->
                 obj.x in rect.left .. rect.right &&
-                        obj.y in rect.top .. rect.bottom
+                obj.y in rect.top .. rect.bottom
             is ImaginaryCircle -> false
         }
 }
@@ -50,12 +50,106 @@ fun Rect.Companion.fromCorners(corner1: Offset, corner2: Offset): Rect {
     return Rect(topLeft, bottomRight)
 }
 
+// for inclusion test prepend
+// rect.contains(arcStart.toOffset()) || rect.contains(arcEnd.toOffset()) ||
 private fun arcRectangleCollisionTest(
     arcStart: Point, arcEnd: Point,
-    circleOrLine: CircleOrLine,
+    circleOrLine: CircleOrLine?,
     rect: Rect,
 ): Boolean {
-    TODO()
+    return when (circleOrLine) {
+        is Circle -> {
+            // find circle-rect intersections
+            // test if any are on-arc
+            TODO()
+        }
+        else -> segmentRectIntersectionTest(arcStart, arcEnd, rect)
+    }
+}
+
+// Liang–Barsky algorithm
+private fun segmentRectIntersectionTest(
+    start: Point, end: Point,
+    rect: Rect,
+): Boolean {
+    val dx = end.x - start.x
+    val dy = end.y - start.y
+    var t: Double
+    var t0 = 0.0
+    var t1 = 1.0
+    // left edge
+    var p = -dx
+    var q = start.x - rect.left
+    if (p == 0.0) {
+        if (q < 0.0)
+            return false
+    } else {
+        t = q / p
+        if (p < 0.0) {
+            if (t > t0)
+                t0 = t
+        } else {
+            if (t < t1)
+                t1 = t
+        }
+        if (t0 > t1)
+            return false
+    }
+    // right edge
+    p = dx
+    q = rect.right - start.x
+    if (p == 0.0) {
+        if (q < 0.0)
+            return false
+    } else {
+        t = q / p
+        if (p < 0.0) {
+            if (t > t0)
+                t0 = t
+        } else {
+            if (t < t1)
+                t1 = t
+        }
+        if (t0 > t1)
+            return false
+    }
+    // bottom edge
+    p = -dy
+    q = start.y - rect.top
+    if (p == 0.0) {
+        if (q < 0.0)
+            return false
+    } else {
+        t = q / p
+        if (p < 0.0) {
+            if (t > t0)
+                t0 = t
+        } else {
+            if (t < t1)
+                t1 = t
+        }
+        if (t0 > t1)
+            return false
+    }
+    // top edge
+    p = dy
+    q = rect.bottom - start.y
+    if (p == 0.0) {
+        if (q < 0.0)
+            return false
+    } else {
+        t = q / p
+        if (p < 0.0) {
+            if (t > t0)
+                t0 = t
+        } else {
+            if (t < t1)
+                t1 = t
+        }
+        if (t0 > t1)
+            return false
+    }
+    return true
 }
 
 private fun calculateRectangleCircleIntersectionContour(rect: Rect, circle: Circle): List<Offset> {
@@ -89,7 +183,6 @@ private fun circleRectCollisionTestEveryEdge(circle: Circle, rect: Rect): Boolea
     // we know there is no intersections at this point
     rect.contains(circle.center) && 2*circle.radius <= rect.minDimension
 
-// wrong farthest calc (?)
 /** Only counts contour intersections OR if the [circle] is fully inside the [rect] */
 private fun circleRectCollisionTest(circle: Circle, rect: Rect): Boolean {
     val cx = circle.x.toFloat()
