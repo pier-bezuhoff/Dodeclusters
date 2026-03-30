@@ -9,6 +9,8 @@ import core.geometry.Point
 import core.geometry.scaled00
 import domain.Ix
 import domain.cluster.Constellation
+import domain.expressions.ArcPath
+import core.geometry.GCircleOrConcreteAcPath
 import domain.expressions.ConformalExpressions
 import domain.expressions.ObjectConstruct
 import kotlin.collections.component1
@@ -21,74 +23,48 @@ import kotlin.collections.set
  * Purports to encapsulate & manage all objects ([GCircle]s) and object-related properties.
  * Very mutable, track [invalidationsState]/[invalidations] for changes and use with care.
  */
-class ConformalObjectModel : ObjectModel<GCircle>() {
-
-    private val _arcPaths: MutableList<ArcPath?> = mutableListOf()
-    val arcPaths: List<ArcPath?> = _arcPaths
-    private val _concreteArcPaths: MutableList<ConcreteArcPath?> = mutableListOf()
-    val concreteArcPaths: List<ConcreteArcPath?> = _concreteArcPaths
+class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcreteAcPath>() {
 
     override var expressions: ConformalExpressions =
         ConformalExpressions(emptyMap(), mutableListOf())
 
-    val object2arcPathDependencies: Map<Ix, Set<Int>> = pathCache.dependencies
-
     fun getInfinityIndex(): Ix? {
-        val infinityIndex = objects.indexOfFirst { it == Point.CONFORMAL_INFINITY }
+        val infinityIndex = displayObjects.indexOfFirst { it == Point.CONFORMAL_INFINITY }
         return if (infinityIndex == -1) {
             null
         } else infinityIndex
     }
 
-    fun getDependentArcPaths(objectIx: Ix): Set<Int> =
-        object2arcPathDependencies[objectIx] ?: emptySet()
-
-    fun addArcPath(arcPath: ArcPath?) {
-        _arcPaths.add(arcPath)
-        _concreteArcPaths.add(arcPath?.toConcrete(objects))
-        pathCache.addDependent(arcPath?.dependencies ?: emptySet())
+    fun addArcPath(arcPath: ArcPath?): Ix {
+        val concreteArcPath =
+            if (arcPath == null)
+                null
+            else
+                expressions.addSoloExpr(arcPath)
+        val newIndex = addDisplayObject(concreteArcPath)
+        return newIndex
     }
 
-    fun modifyArcPath(arcPathIndex: Int, arcPath: ArcPath) {
-        _arcPaths[arcPathIndex] = arcPath
-        _concreteArcPaths[arcPathIndex] = arcPath.toConcrete(objects)
-        pathCache.updateDependent(arcPathIndex, arcPath.dependencies)
-    }
-
-    fun removeArcPathAt(arcPathIndex: Int) {
-        _arcPaths[arcPathIndex] = null
-        _concreteArcPaths[arcPathIndex] = null
-        pathCache.removeDependent(arcPathIndex)
-    }
-
-    override fun objectChangedAt(ix: Ix) {
-        // a bit iffy to rely on path cache dependency mechanism
-        val dependents = object2arcPathDependencies[ix]
-        super.objectChangedAt(ix)
-        if (dependents != null) {
-            for (arcPathIndex in dependents) {
-                _concreteArcPaths[arcPathIndex] = arcPaths[arcPathIndex]?.toConcrete(objects)
-            }
+    fun modifyArcPath(index: Ix, arcPath: ArcPath) {
+        val dependents = changeExpr(index, arcPath)
+        for (dependent in dependents) {
+            pathCache.invalidateObjectPathAt(dependent)
         }
     }
 
-    override fun removeObjectAt(ix: Ix) {
-        objects[ix] = null
-        downscaledObjects[ix] = null
-        objectColors.remove(ix)
-        phantomObjectIndices.remove(ix)
-        val dependents = object2arcPathDependencies[ix]
-        pathCache.removeObjectAt(ix)
-        if (dependents != null) {
-            for (arcPathIndex in dependents) {
-                val updatedArcPath = arcPaths[arcPathIndex]?.withoutPointsAt(setOf(ix))
-                if (updatedArcPath == null) {
-                    removeArcPathAt(arcPathIndex)
-                } else {
-                    modifyArcPath(arcPathIndex, updatedArcPath)
-                }
-            }
-        }
+    fun removeArcPathAt(index: Ix) {
+        val deleted = expressions.deleteNodes(listOf(index))
+        removeObjectsAt(deleted.toList())
+    }
+
+    override fun removeObjectAt(index: Ix) {
+        displayObjects[index] = null
+        downscaledObjects[index] = null
+        borderColors.remove(index)
+        fillColors.remove(index)
+        phantomObjectIndices.remove(index)
+        pathCache.removeObjectAt(index)
+        expressions.updateObjectTypeAt(index)
     }
 
     // NOTE: handling of incident points on non-glued dependent objects is off
@@ -106,22 +82,22 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
         val requiresRotation = rotationAngle != 0f
         if (requiresZoom || requiresRotation) {
             for (ix in targets) {
-                val o = objects[ix]
-                objects[ix] = o?.transformed(translation, focus, zoom, rotationAngle)
+                val o = displayObjects[ix] as? GCircle ?: continue
+                displayObjects[ix] = o.transformed(translation, focus, zoom, rotationAngle)
             }
         } else { // translation only
             // we assume the transformation is not Id
             for (ix in targets) {
-                val o = objects[ix]
-                objects[ix] = o?.translated(translation)
+                val o = displayObjects[ix] as? GCircle ?: continue
+                displayObjects[ix] = o.translated(translation)
             }
         }
         val gluedIncidentPoints = expressions.getGluedIncidentPoints(targetsSet)
 //        println("glued to $targets: $gluedIncidentPoints")
         for (j in gluedIncidentPoints) {
-            val p0 = objects[j] as? Point
-            val p = p0?.transformed(translation, focus, zoom, rotationAngle)
-            downscaledObjects[j] = p?.downscale()
+            val p0 = displayObjects[j] as? Point ?: continue
+            val p = p0.transformed(translation, focus, zoom, rotationAngle)
+            downscaledObjects[j] = p.downscale()
             // objects are synced later with syncObjects(updatedIndices)
         }
         syncDownscaledObjects(targets)
@@ -142,7 +118,7 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
                 is ObjectConstruct.ConcretePoint -> objectConstruct.point
                 is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
             }
-            addObject(o)
+            addDisplayObject(o)
         }
         expressions = ConformalExpressions(
             initialExpressions = constellation.toExpressionMap(),
@@ -153,10 +129,10 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
 //        expressions.update(
 //            expressions.scaleLineIncidenceExpressions(DOWNSCALING_FACTOR)
 //        )
-        val objectSize = objects.size
+        val objectSize = displayObjects.size
         for ((ix, color) in constellation.objectColors) {
             if (ix < objectSize) {
-                objectColors[ix] = color
+                borderColors[ix] = color
             }
         }
         for (phantomIndex in constellation.phantoms) {
@@ -167,22 +143,26 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
     }
 
     override fun clearObjects() {
-        _arcPaths.clear()
-        _concreteArcPaths.clear()
         super.clearObjects()
+        expressions = ConformalExpressions(mapOf(), mutableListOf())
     }
 
     fun loadState(state: SaveState) {
         clearObjects()
-        addObjects(state.objects)
+        addDisplayObjects(state.objects)
         expressions = ConformalExpressions(
             initialExpressions = state.expressions,
             objects = downscaledObjects,
         )
-        val objectSize = objects.size
-        for ((ix, color) in state.objectColors) {
+        val objectSize = displayObjects.size
+        for ((ix, color) in state.borderColors) {
             if (ix < objectSize) {
-                objectColors[ix] = color
+                borderColors[ix] = color
+            }
+        }
+        for ((ix, color) in state.fillColors) {
+            if (ix < objectSize) {
+                fillColors[ix] = color
             }
         }
         for (phantomIndex in state.phantoms) {
@@ -190,15 +170,24 @@ class ConformalObjectModel : ObjectModel<GCircle>() {
                 phantomObjectIndices.add(phantomIndex)
             }
         }
-        for (arcPath in state.arcPaths) {
-            addArcPath(arcPath)
-        }
     }
 
-    override fun GCircle.downscale(): GCircle =
+    override fun GCircleOrConcreteAcPath.downscale(): GCircleOrConcreteAcPath =
+        if (this is GCircle)
+            this.downscale()
+        else
+            this
+
+    override fun GCircleOrConcreteAcPath.upscale(): GCircleOrConcreteAcPath =
+        if (this is GCircle)
+            this.upscale()
+        else
+            this
+
+    fun GCircle.downscale(): GCircle =
         scaled00(DOWNSCALING_FACTOR)
 
-    override fun GCircle.upscale(
+    fun GCircle.upscale(
 //            screenCenter: Offset = Offset.Zero
     ): GCircle =
         when (this) {

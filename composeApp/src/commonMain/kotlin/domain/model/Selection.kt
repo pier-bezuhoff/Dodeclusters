@@ -8,14 +8,16 @@ import kotlinx.serialization.Serializable
 @Immutable
 @Serializable
 data class Selection(
-    val objects: List<Ix> = emptyList(),
-    val arcPaths: List<Int> = emptyList(),
+    val gCircles: List<Ix> = emptyList(),
+    val arcPaths: List<Ix> = emptyList(),
+    // MAYBE: separate CLI from points cuz it's used in context-action logic
 ) {
-    val size: Int get() = objects.size + arcPaths.size
+    val indices: List<Ix> get() = gCircles + arcPaths
+    inline val size: Int get() = gCircles.size + arcPaths.size
 
     fun isEmpty(): Boolean =
-        objects.isEmpty() && arcPaths.isEmpty()
+        gCircles.isEmpty() && arcPaths.isEmpty()
 
     fun isNotEmpty(): Boolean =
-        objects.isNotEmpty() || arcPaths.isNotEmpty()
+        gCircles.isNotEmpty() || arcPaths.isNotEmpty()
 }

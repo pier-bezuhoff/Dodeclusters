@@ -37,7 +37,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -439,7 +438,7 @@ fun EditorScreen(
         DialogType.LABEL_INPUT -> {
             LabelInputDialog(
                 previousLabel = viewModel.objectSelection
-                    .firstNotNullOfOrNull { viewModel.objectLabels[it] }
+                    .firstNotNullOfOrNull { viewModel.labels[it] }
                 ,
                 // for debug
 //                details = "expr[${viewModel.selection.firstOrNull()}] = ${

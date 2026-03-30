@@ -5,7 +5,7 @@ import core.geometry.projective.Conic
 import domain.Ix
 import domain.expressions.ProjectiveExpressions
 
-class ProjectiveObjectModel : ObjectModel<Conic>() {
+class ProjectiveObjectModel : ObjectModel<Conic, Conic>() {
 
     override val expressions: ProjectiveExpressions = ProjectiveExpressions(emptyMap(), mutableListOf())
 

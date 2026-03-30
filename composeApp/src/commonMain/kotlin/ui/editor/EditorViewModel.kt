@@ -24,7 +24,9 @@ import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrImaginaryCircle
 import core.geometry.CircleOrLineOrPoint
+import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
+import core.geometry.GCircleOrConcreteAcPath
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
 import core.geometry.Point
@@ -49,6 +51,7 @@ import domain.angleDeg
 import domain.cluster.Constellation
 import domain.compressConstraints
 import domain.entails
+import domain.expressions.ArcPath
 import domain.expressions.BiInversionParameters
 import domain.expressions.Expr
 import domain.expressions.ExprOutput
@@ -65,6 +68,8 @@ import domain.expressions.computeIntersection
 import domain.expressions.computeLineBy2Points
 import domain.expressions.computeSagittaRatio
 import domain.expressions.copyWithNewParameters
+import domain.expressions.moveArcMidpoint
+import domain.expressions.reIndex
 import domain.filterIndices
 import domain.hug
 import domain.indicesSortedBy
@@ -74,18 +79,13 @@ import domain.io.DdcV5
 import domain.io.SaveRequest
 import domain.io.saveStateAsSvg
 import domain.io.tryParseDdc
-import domain.model.Arc
-import domain.model.ArcPath
 import domain.model.ChangeHistory
 import domain.model.ChessboardPattern
-import domain.model.ConcreteArcPath
 import domain.model.ConformalObjectModel
 import domain.model.ContinuousChange
 import domain.model.LogicalRegion
 import domain.model.SaveState
 import domain.model.Selection
-import domain.model.moveArcMidpoint
-import domain.model.reIndex
 import domain.mostCommonOf
 import domain.settings.BlendModeType
 import domain.settings.InversionOfControl
@@ -126,13 +126,13 @@ import kotlin.time.Duration.Companion.seconds
 // MAYBE: timed autosave (cron-like), e.g. every 10min
 class EditorViewModel : ViewModel() {
     val objectModel: ConformalObjectModel = ConformalObjectModel()
-    val objects: List<GCircle?> = objectModel.objects
-    val arcPaths: List<ArcPath?> = objectModel.arcPaths
-    val concreteArcPaths: List<ConcreteArcPath?> = objectModel.concreteArcPaths
+    val objects: List<GCircleOrConcreteAcPath?> = objectModel.displayObjects
+    inline val expressions: Map<Ix, ExprOutput<Expr.Conformal>?> get() =
+        objectModel.expressions.expressions
     // alt name: ghost[ed] objects
     val phantoms: Set<Ix> = objectModel.phantomObjectIndices
     // not in objectModel cuz i want it to be state-backed for nicer caching
-    var objectLabels: Map<Ix, String> by mutableStateOf(mapOf())
+    var labels: Map<Ix, String> by mutableStateOf(mapOf())
     // MAYBE: encapsulate regions into ObjectModel
     /** Filled regions delimited by some objects from [objects] */
     var regions: List<LogicalRegion> by mutableStateOf(listOf())
@@ -148,13 +148,15 @@ class EditorViewModel : ViewModel() {
     /** indices of selected circles/lines/points & arc-paths */
     var selection: Selection by mutableStateOf(Selection())
         private set
-    /** Distinct selected object indices +
+    /** Distinct selected [GCircle]? indices +
      * indices of all vertices/midpoints of selected arc-paths */
     inline val selectedIndices: List<Ix> get() =
-        selection.objects.plus(
-            selection.arcPaths.flatMap { arcPaths[it]?.dependencies ?: emptySet() }
+        selection.gCircles.plus(
+            selection.arcPaths.flatMap {
+                (expressions[it] as? ArcPath)?.dependencies ?: emptySet()
+            }
         ).distinct()
-    inline val objectSelection: List<Ix> get() = selection.objects
+    inline val objectSelection: List<Ix> get() = selection.gCircles
 
     private val modeState: MutableState<Mode> = mutableStateOf(SelectionMode.Drag)
     /** Major editing mode */
@@ -220,9 +222,11 @@ class EditorViewModel : ViewModel() {
 
     // these are NG
     inline val showGenericSelectionContextActions: Boolean get() =
-        mode.isSelectingCircles() && showCircles && (selection.objects.any {
-            objects[it] is CircleOrLineOrImaginaryCircle
-        } || selection.arcPaths.isNotEmpty() && selection.objects.any { objects[it] is Point })
+        mode.isSelectingCircles() && showCircles &&
+            (selection.gCircles.any { objects[it] is CircleOrLineOrImaginaryCircle } ||
+                selection.arcPaths.isNotEmpty() &&
+                selection.gCircles.any { objects[it] is Point }
+            )
     inline val showPointContextActions: Boolean get() =
         showCircles && mode.isSelectingCircles() && objectSelection.any { objects[it] is Point }
     inline val showArcPathContextActions: Boolean get() =
@@ -231,7 +235,7 @@ class EditorViewModel : ViewModel() {
     val handleConfig: HandleConfig? get() =
         if (mode.isSelectingCircles())
             when {
-                selection.objects.size == 1 && selection.arcPaths.isEmpty() ->
+                selection.gCircles.size == 1 && selection.arcPaths.isEmpty() ->
                     HandleConfig.SINGLE_CIRCLE
                 selectedIndices.size > 1 ->
                     HandleConfig.SEVERAL_OBJECTS
@@ -256,7 +260,7 @@ class EditorViewModel : ViewModel() {
     val selectionIsLocked: Boolean get() {
         hug(selectionIsLockedTrigger, objectModel.invalidations)
         // NOTE: isFree depends on expressions, so propertyInvalidations is not enough
-        return selection.objects.all { objects[it] == null || !isFree(it) }
+        return selection.gCircles.all { objects[it] == null || !isFree(it) }
     }
 
     private lateinit var history: ChangeHistory
@@ -450,17 +454,17 @@ class EditorViewModel : ViewModel() {
     }
 
     fun showDebugInfo() {
-        val selectedObjectsString = selection.objects.joinToString { ix ->
+        val selectedObjectsString = selection.gCircles.joinToString { ix ->
             "$ix: " + objects[ix].toString()
         }
-        val selectedExpressionsString = selection.objects.joinToString { ix ->
+        val selectedExpressionsString = selection.gCircles.joinToString { ix ->
             "$ix: " + objectModel.expressions.expressions[ix].toString()
         }
-        val selectedArcPathsString = selection.arcPaths.joinToString { j ->
-            "$j: " + objectModel.arcPaths[j].toString()
+        val selectedConcreteArcPathsString = selection.arcPaths.joinToString { ix ->
+            "$ix: " + objects[ix].toString()
         }
-        val selectedConcreteArcPathsString = selection.arcPaths.joinToString { j ->
-            "$j: " + objectModel.concreteArcPaths[j].toString()
+        val selectedArcPathsString = selection.arcPaths.joinToString { ix ->
+            "$ix: " + objectModel.expressions.expressions[ix].toString()
         }
         println("mode = $mode, submode = $submode")
         println("partialArgList = $partialArgList")
@@ -470,8 +474,8 @@ class EditorViewModel : ViewModel() {
             "$ix: " + objectModel.downscaledObjects[ix].toString()
         })
         println("selected objects expressions = $selectedExpressionsString")
-        println("selected arc-paths = $selectedArcPathsString")
         println("selected concrete arc-paths = $selectedConcreteArcPathsString")
+        println("selected arc-paths = $selectedArcPathsString")
         println(
             "regions bounded by some of selected objects = " + regions.filter {
                 it.insides.any { ix -> ix in objectSelection } ||
@@ -485,8 +489,9 @@ class EditorViewModel : ViewModel() {
         if (selection.isNotEmpty()) {
             val s1 = if (selectedObjectsString.isEmpty()) "" else "$selectedObjectsString;\n"
             val s2 = if (selectedExpressionsString.isEmpty()) "" else "$selectedExpressionsString;\n"
+            val s3 = if (selectedArcPathsString.isEmpty()) "" else "$selectedArcPathsString;\n"
             queueSnackbarMessage(SnackbarMessage.PLACEHOLDER,
-                "$s1$s2$selectedArcPathsString"
+                "$s1$s2$s3"
             )
         }
     }
@@ -505,7 +510,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun loadConstellation(constellation: Constellation) {
-        objectLabels = emptyMap()
+        labels = emptyMap()
         regions = emptyList() // important, since draws are async (otherwise can crash)
         clearSelection()
         objectModel.loadConstellation(constellation)
@@ -516,7 +521,7 @@ class EditorViewModel : ViewModel() {
                 part.outsides.all { it in objectIndices }
             }
         backgroundColor = constellation.backgroundColor
-        objectLabels = constellation.objectLabels
+        labels = constellation.objectLabels
         objectModel.invalidate()
     }
 
@@ -570,20 +575,20 @@ class EditorViewModel : ViewModel() {
 
     private fun loadState(state: SaveState) {
         submode = null
-        objectLabels = emptyMap()
+        labels = emptyMap()
         regions = emptyList() // important, since draws are async (otherwise can crash)
         clearSelection()
         objectModel.loadState(state)
         regions = state.regions
         backgroundColor = state.backgroundColor
-        objectLabels = state.objectLabels
+        labels = state.labels
         objectModel.invalidate()
         val validSelection = state.selection.copy(
             // just in case
-            objects = state.selection.objects.filter { it in objects.indices },
-            arcPaths = state.selection.arcPaths.filter { it in arcPaths.indices },
+            gCircles = state.selection.gCircles.filter { it in objects.indices },
+            arcPaths = state.selection.arcPaths.filter { it in objects.indices }
         )
-        val switchToMultiselect = objectSelection.size <= 1 && validSelection.objects.size > 1
+        val switchToMultiselect = objectSelection.size <= 1 && validSelection.gCircles.size > 1
         selection = validSelection
         if (state.center.isSpecified)
             centerizeTo(state.center.x, state.center.y)
@@ -611,10 +616,10 @@ class EditorViewModel : ViewModel() {
     ) {
         val newIndices = objects.size until objects.size + newGCircles.size
         val validNewGCircles = newGCircles.filterNotNull()
-        objectModel.addObjects(newGCircles)
+        objectModel.addDisplayObjects(newGCircles)
         if (validNewGCircles.isNotEmpty()) {
             showCircles = true
-            selection = Selection(objects = newIndices.filter { objects[it] != null })
+            selection = Selection(gCircles = newIndices.filter { objects[it] != null })
             viewModelScope.launch {
                 animations.emit(
                     CircleAnimation.Entrance(validNewGCircles.filterIsInstance<CircleOrLine>())
@@ -633,8 +638,8 @@ class EditorViewModel : ViewModel() {
     }
 
     fun createNewFreePoint(point: Point): Ix {
-        objectModel.addObject(point)
         val newIx = objectModel.expressions.addFree()
+        objectModel.addDisplayObject(point)
         objectModel.invalidate()
         require(newIx == objects.size - 1) { "Incorrect index retrieved from expression.addFree() during createNewFreePoint()" }
         history.accumulateNewObjects(
@@ -664,11 +669,11 @@ class EditorViewModel : ViewModel() {
     ) {
         val oldSize = objects.size
         val newObjects = sourceIndex2NewTrajectory.flatMap { it.second }
-        objectModel.addObjects(newObjects) // row-column order
+        objectModel.addDisplayObjects(newObjects) // row-column order
         objectModel.copySourceColorsOntoTrajectories(sourceIndex2NewTrajectory, oldSize)
         copySourceRegionsOntoTrajectories(sourceIndex2NewTrajectory, oldSize, flipRegionsInAndOut)
         selection = Selection(
-            objects = (oldSize until objects.size).filter { ix ->
+            gCircles = (oldSize until objects.size).filter { ix ->
                 objects[ix] is CircleOrLine || objects[ix] is Point
             }
         )
@@ -780,11 +785,11 @@ class EditorViewModel : ViewModel() {
                 as List<Pair<Ix, CircleOrLine>>
         val sourceIndicesOfNewCircles = ix2circle.map { it.first }
         val oldSize = objects.size
-        objectModel.addObjects(sourceIndex2NewObject.map { it.second })
+        objectModel.addDisplayObjects(sourceIndex2NewObject.map { it.second })
         for ((i, sourceIndex) in sourceIndices.withIndex()) {
-            objectModel.objectColors[sourceIndex]?.let { color ->
+            objectModel.borderColors[sourceIndex]?.let { color ->
                 val correspondingIx = oldSize + i
-                objectModel.objectColors[correspondingIx] = color
+                objectModel.borderColors[correspondingIx] = color
             }
         }
         val newIndicesOfCircles = sourceIndex2NewObject
@@ -796,7 +801,7 @@ class EditorViewModel : ViewModel() {
             flipInAndOut = flipRegionsInAndOut
         )
         selection = Selection(
-            objects = (oldSize until objects.size).filter { ix ->
+            gCircles = (oldSize until objects.size).filter { ix ->
                 objects[ix] is CircleOrLine || objects[ix] is Point
             }
         )
@@ -809,37 +814,55 @@ class EditorViewModel : ViewModel() {
 
     fun duplicateSelection() {
         if (mode.isSelectingCircles()) {
-            val objectsToCopy = selection.objects.filter { objects[it] is CircleOrLineOrPoint }
-            val copiedArcPaths = selection.arcPaths
-            val deps = copiedArcPaths.flatMap { arcPaths[it]?.dependencies ?: emptySet() }.toSet()
+            val gCirclesToCopy = selection.gCircles
+            val arcPathsToCopy = objectModel.expressions.sortedByTier(selection.arcPaths)
+            val deps = arcPathsToCopy.flatMap {
+                (expressions[it] as? ArcPath)?.dependencies ?: emptySet()
+            }.toSet()
             // pre-sorting is mandatory for expression copying to work properly
-            val copiedObjects = objectModel.expressions.sortedByTier(
-                (objectsToCopy.toSet() + deps).sorted()
+            val allGCirclesToCopy = objectModel.expressions.sortedByTier(
+                (gCirclesToCopy.toSet() + deps).sorted()
             )
-            if (copiedObjects.isNotEmpty()) {
+            if (allGCirclesToCopy.isNotEmpty()) {
                 pinStateForHistory()
-                val newIndices = (objects.size until (objects.size + copiedObjects.size)).toList()
-                val newArcPathIndices = (arcPaths.size until (arcPaths.size + copiedArcPaths.size)).toList()
+                val newGCircleIndices = (objects.size until (objects.size + allGCirclesToCopy.size)).toList()
                 // TODO: arc-path duplication animation
                 // NOTE: alters selection
-                copyRegionsAndStyles(copiedObjects.map { it to objects[it] }) { circles ->
+                copyRegionsAndStyles(allGCirclesToCopy.mapNotNull { ix ->
+                    ix to (objects[ix] as? GCircle ?: return@mapNotNull null)
+                }) { circles ->
                     CircleAnimation.ReEntrance(circles)
                 }
-                objectModel.expressions.copyExpressionsWithDependencies(copiedObjects)
-                val old2new = copiedObjects.zip(newIndices).associate { it }
-                for (arcPathIndex in copiedArcPaths) {
-                    objectModel.addArcPath(
-                        arcPaths[arcPathIndex]?.reIndex { oldIndex -> old2new[oldIndex]!! }
+                // FIX: points depending on acr-paths are copied before the arc-paths
+                objectModel.expressions.copyExpressionsWithDependencies(allGCirclesToCopy)
+                val old2new = allGCirclesToCopy.zip(newGCircleIndices).associate { it }
+                val newArcPathIndices = mutableListOf<Ix>()
+                for (ix in arcPathsToCopy) {
+                    val newIx = objectModel.addArcPath(
+                        // FIX: e[ix] is never ArcPath (ExprOutput.Just)
+                        (expressions[ix] as? ArcPath)?.reIndex { oldIndex ->
+                            old2new[oldIndex]!!
+                        }
                     )
+                    objectModel.borderColors[ix]?.also {
+                        objectModel.borderColors[newIx] = it
+                    }
+                    objectModel.fillColors[ix]?.also {
+                        objectModel.fillColors[newIx] = it
+                    }
+                    newArcPathIndices.add(newIx)
                 }
+                val newIndices = newGCircleIndices + newArcPathIndices
                 selection = if (mode == SelectionMode.Drag) {
-                    if (objectsToCopy.isNotEmpty())
-                        Selection(objects = newIndices.take(1))
-                    else
+                    if (gCirclesToCopy.isNotEmpty())
+                        Selection(gCircles = newGCircleIndices.take(1))
+                    else if (newArcPathIndices.isNotEmpty())
                         Selection(arcPaths = newArcPathIndices.take(1))
+                    else
+                        Selection(gCircles = newIndices.take(1))
                 } else {
                     Selection(
-                        objects = newIndices,
+                        gCircles = newGCircleIndices,
                         arcPaths = newArcPathIndices,
                     )
                 }
@@ -847,9 +870,9 @@ class EditorViewModel : ViewModel() {
                 val newIndicesSet = newIndices.toSet()
                 history.accumulateChangedLocations(
                     objectIndices = newIndicesSet,
-                    objectColorIndices = newIndicesSet,
+                    borderColorIndices = newIndicesSet,
+                    fillColorIndices = newIndicesSet,
                     expressionIndices = newIndicesSet,
-                    arcPaths = newArcPathIndices.toSet(),
                     regions = true,
                     selection = true,
                 )
@@ -896,34 +919,30 @@ class EditorViewModel : ViewModel() {
     }
 
     fun deleteSelection() {
-        val deletedObjects = selection.objects
-        val deletedArcPaths = selection.arcPaths
-        if ((showCircles && deletedObjects.isNotEmpty() || deletedArcPaths.isNotEmpty()) &&
+        val gCirclesToDelete = selection.gCircles
+        val arcPathsToDelete = selection.arcPaths
+        if ((showCircles && gCirclesToDelete.isNotEmpty() || arcPathsToDelete.isNotEmpty()) &&
             (mode.isSelectingCircles() || mode == ToolMode.ARC_PATH)
         ) {
             pinStateForHistory()
             clearSelection()
-            val deletedArcPathPointIndices = mutableListOf<Ix>()
-            for (arcPathIndex in deletedArcPaths) {
-                val arcPath = arcPaths[arcPathIndex]
+            val arcPathPointsToDelete = mutableListOf<Ix>()
+            for (ix in arcPathsToDelete) {
+                val arcPath = expressions[ix] as? ArcPath
                 if (arcPath != null) {
-                    deletedArcPathPointIndices += arcPath.dependencies.filter { ix ->
+                    arcPathPointsToDelete += arcPath.dependencies.filter { ix ->
                         val hasNoChildren = objectModel.expressions.children[ix].isNullOrEmpty()
-                        val dependentArcPaths = objectModel.object2arcPathDependencies[ix]
-                        // dependentArcPaths is guaranteed to contain arcPathIndex
-                        val hasNoOtherDependentArcPaths =
-                            dependentArcPaths.isNullOrEmpty() || dependentArcPaths.size == 1
-                        isFree(ix) && hasNoChildren && hasNoOtherDependentArcPaths
+                        isFree(ix) && hasNoChildren
                     }
                 }
                 // TODO: arc-path entrance/exit animations
-                objectModel.removeArcPathAt(arcPathIndex)
+                objectModel.removeArcPathAt(ix)
             }
             deleteObjectsWithDependenciesColorsAndRegions(
-                deletedObjects + deletedArcPathPointIndices
+                gCirclesToDelete + arcPathPointsToDelete
             )
             history.accumulateChangedLocations(
-                arcPaths = deletedArcPaths.toSet(),
+                objectIndices = arcPathsToDelete.toSet(),
                 selection = true,
             )
             history.recordAccumulatedChanges()
@@ -973,24 +992,21 @@ class EditorViewModel : ViewModel() {
             }
         }
         val indices = toBeDeleted.toList()
-        val changedArcPathIndices = mutableSetOf<Int>()
-        for (ix in indices) // hacky
-            changedArcPathIndices.addAll(objectModel.getDependentArcPaths(ix))
         objectModel.removeObjectsAt(indices)
         objectModel.invalidate()
         history.accumulateChangedLocations(
             objectIndices = toBeDeleted,
-            objectColorIndices = toBeDeleted,
-            objectLabelIndices = toBeDeleted,
+            borderColorIndices = toBeDeleted,
+            fillColorIndices = toBeDeleted,
+            labelIndices = toBeDeleted,
             expressionIndices = toBeDeleted,
-            arcPaths = changedArcPathIndices,
             selection = true,
         )
     }
 
     fun getArg(arg: Arg): GCircle? =
         when (arg) {
-            is Arg.Index -> objects[arg.index]
+            is Arg.Index -> objects[arg.index] as? GCircle
             is Arg.PointXY -> arg.toPoint()
             is Arg.Indices -> null
             is Arg.InfinitePoint -> Point.CONFORMAL_INFINITY
@@ -1042,7 +1058,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun getPointsAround(
-        targets: List<GCircle?>,
+        targets: List<GCircleOrConcreteAcPath?>,
         visiblePosition: Offset,
         priorityTargets: Set<Int> = emptySet(),
     ): List<Int> {
@@ -1068,6 +1084,7 @@ class EditorViewModel : ViewModel() {
 
     /** [getPointsAround] around [visiblePosition] while prioritizing free points */
     fun getPreferablyFreePointsAround(visiblePosition: Offset): List<Ix> {
+        // TODO: use objectModel.expressions.pointIndices
         val closePoints = getPointsAround(objects, visiblePosition,
             priorityTargets = objectModel.expressions.freeObjectsIndices
         )
@@ -1078,7 +1095,7 @@ class EditorViewModel : ViewModel() {
      * @param[targets] to select from, [ImaginaryCircle]s are converted to real [Circle]s
      */
     private fun getCirclesAround(
-        targets: List<GCircle?>,
+        targets: List<GCircleOrConcreteAcPath?>,
         visiblePosition: Offset,
         priorityTargets: Set<Int> = emptySet(),
     ): List<Int> {
@@ -1115,8 +1132,10 @@ class EditorViewModel : ViewModel() {
 
     fun getArcPathsAround(visiblePosition: Offset): List<Int> {
         val position = Point.fromOffset(absolute(visiblePosition))
-        return objectModel.concreteArcPaths.indicesSortedBy(
-            measurer = { it?.distanceFrom(position) ?: Double.POSITIVE_INFINITY },
+        return objects.indicesSortedBy(
+            measurer = {
+                (it as? ConcreteArcPath)?.distanceFrom(position) ?: Double.POSITIVE_INFINITY
+            },
             condition = { _, distance -> distance <= tapRadius },
         )
     }
@@ -1169,7 +1188,7 @@ class EditorViewModel : ViewModel() {
             allRegions = regions,
             regionManipulationStrategy = regionManipulationStrategy,
             shouldUpdateSelection = shouldUpdateSelection,
-            setSelection = { selection = Selection(objects = it) },
+            setSelection = { selection = Selection(gCircles = it) },
         )
         history.accumulateChangedLocations(regions = true)
     }
@@ -1180,7 +1199,7 @@ class EditorViewModel : ViewModel() {
         var right = Float.NEGATIVE_INFINITY
         var top = Float.POSITIVE_INFINITY
         var bottom = Float.NEGATIVE_INFINITY
-        for (ix in selection.objects) {
+        for (ix in selection.indices) {
             when (val o = objects[ix]) {
                 is Circle -> {
                     left = min(left, (o.x - o.radius).toFloat())
@@ -1195,15 +1214,15 @@ class EditorViewModel : ViewModel() {
                     bottom = max(bottom, o.y.toFloat())
                 }
                 is Line -> return null
+                is ConcreteArcPath -> {
+                    val (left1, top1, right1, bottom1) = o.toRect()
+                    left = min(left, left1)
+                    right = max(right, right1)
+                    top = min(top, top1)
+                    bottom = max(bottom, bottom1)
+                }
                 else -> {}
             }
-        }
-        for (i in selection.arcPaths) {
-            val (left1, top1, right1, bottom1) = concreteArcPaths[i]?.toRect() ?: continue
-            left = min(left, left1)
-            right = max(right, right1)
-            top = min(top, top1)
-            bottom = max(bottom, bottom1)
         }
         if (left.isInfinite() || right.isInfinite() || top.isInfinite() || bottom.isInfinite())
             return null
@@ -1227,15 +1246,14 @@ class EditorViewModel : ViewModel() {
         hug(objectModel.propertyInvalidations)
         val regionBorderColors = regions.mapNotNull { it.borderColor }
         val regionFillColors = regions.map { it.fillColor }
-        val objectColors = objectModel.objectColors.values
-        val arcPathBorderColors = arcPaths.mapNotNull { it?.borderColor }
-        val arcPathFillColors = arcPaths.mapNotNull { (it as? ArcPath.Closed)?.fillColor }
+        val borderColors = objectModel.borderColors.values
+        val fillColors = objectModel.fillColors.values
         val chessboardColors =
             if (chessboardPattern == ChessboardPattern.NONE)
                 emptyList()
             else
                 listOf(chessboardColor)
-        return (regionBorderColors + regionFillColors + objectColors + arcPathBorderColors + arcPathFillColors + chessboardColors)
+        return (regionBorderColors + regionFillColors + borderColors + fillColors + chessboardColors)
             .sortedByFrequency()
     }
 
@@ -1253,6 +1271,7 @@ class EditorViewModel : ViewModel() {
         val point = Point.fromOffset(absolutePosition)
         val toPoints = !excludePoints && mode != ToolMode.POINT
         if (toPoints) {
+            // TODO: use oM.e.pointIndices etc
             val snap = Snapping.snapPointToPoints(point, objects,
                 snapDistance = snapDistance,
                 excludedIndices = if (showPhantomObjects) emptySet() else phantoms
@@ -1271,7 +1290,7 @@ class EditorViewModel : ViewModel() {
             if (!snap.isFree)
                 return snap
         }
-        val snap = Snapping.snapPointToArcPaths(point, concreteArcPaths,
+        val snap = Snapping.snapPointToArcPaths(point, objects,
             snapDistance = snapDistance,
             excludedIndices = excludedArcPaths,
         )
@@ -1385,15 +1404,16 @@ class EditorViewModel : ViewModel() {
         switchToMode(SelectionMode.Multiselect)
         showCircles = true
         val allCLPIndices = objects.filterIndices { it is CircleOrLineOrPoint }
+        val allArcPathIndices = objectModel.expressions.arcPathIndices.filter { objects[it] is ConcreteArcPath }
         val everythingIsSelected = objectSelection.containsAll(allCLPIndices)
         selection =
             if (everythingIsSelected)
                 Selection()
             else
                 Selection(
-                    // maybe select Imaginary's and nulls too
-                    objects = allCLPIndices,
-                    arcPaths = arcPaths.indices.toList(),
+                    // maybe select imaginary too
+                    gCircles = allCLPIndices,
+                    arcPaths = allArcPathIndices,
                 )
         history.accumulateChangedLocations(selection = true)
     }
@@ -1483,26 +1503,14 @@ class EditorViewModel : ViewModel() {
     fun concludeBorderColorPicker(colorPickerParameters: ColorPickerParameters) {
         pinStateForHistory()
         val color = colorPickerParameters.currentColor
-        for (ix in selection.objects) {
-            objectModel.objectColors[ix] = color
-        }
-        for (i in selection.arcPaths) {
-            when (val arcPath = arcPaths[i]) {
-                is ArcPath.Closed -> objectModel.modifyArcPath(i,
-                    arcPath.copy(borderColor = color)
-                )
-                is ArcPath.Open -> objectModel.modifyArcPath(i,
-                    arcPath.copy(borderColor = color)
-                )
-                null -> {}
-            }
+        for (ix in selection.indices) {
+            objectModel.borderColors[ix] = color
         }
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
         objectModel.invalidate()
         history.accumulateChangedLocations(
-            objectColorIndices = objectSelection.toSet(),
-            arcPaths = selection.arcPaths.toSet(),
+            borderColorIndices = selection.indices.toSet(),
         )
         history.recordAccumulatedChanges()
     }
@@ -1510,19 +1518,16 @@ class EditorViewModel : ViewModel() {
     fun concludeFillColorPicker(colorPickerParameters: ColorPickerParameters) {
         pinStateForHistory()
         val color = colorPickerParameters.currentColor
-        for (j in selection.arcPaths) {
-            when (val arcPath = arcPaths[j]) {
-                is ArcPath.Closed ->
-                    objectModel.modifyArcPath(j, arcPath.copy(fillColor = color))
-                is ArcPath.Open -> {}
-                null -> {}
+        for (ix in selection.arcPaths) {
+            if (objects[ix] is ConcreteArcPath) {
+                objectModel.borderColors[ix] = color
             }
         }
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
         objectModel.invalidate()
         history.accumulateChangedLocations(
-            arcPaths = selection.arcPaths.toSet(),
+            fillColorIndices = selection.arcPaths.toSet(),
         )
         history.recordAccumulatedChanges()
     }
@@ -1557,19 +1562,15 @@ class EditorViewModel : ViewModel() {
 
     fun getMostCommonBorderColorInSelection(): Color? {
         hug(objectModel.propertyInvalidations)
-        return selection.objects
-            .map { objectModel.objectColors[it] }
-            .plus(selection.arcPaths.map {
-                // null arc-paths are never selected in the first place
-                objectModel.arcPaths[it]?.borderColor
-            })
+        return selection.indices
+            .map { objectModel.borderColors[it] }
             .mostCommonOf { it }
     }
 
     fun getMostCommonFillColorInSelection(): Color? {
         hug(objectModel.propertyInvalidations)
         return selection.arcPaths
-            .mapNotNull { (arcPaths[it] as? ArcPath.Closed)?.fillColor }
+            .map { objectModel.fillColors[it] }
             .mostCommonOf { it }
     }
 
@@ -1628,12 +1629,12 @@ class EditorViewModel : ViewModel() {
         )
         pinStateForHistory()
         showCircles = true
+        objectModel.expressions.addFree()
+        objectModel.expressions.addFree()
         createNewGCircles(listOf(horizontalLine, verticalLine))
-        objectModel.expressions.addFree()
-        objectModel.expressions.addFree()
         switchToMode(SelectionMode.Multiselect)
         val indices = listOf(objects.size - 2, objects.size - 1)
-        selection = Selection(objects = indices)
+        selection = Selection(gCircles = indices)
         history.accumulateChangedLocations(
             objectIndices = indices.toSet(),
             expressionIndices = indices.toSet(),
@@ -1653,7 +1654,7 @@ class EditorViewModel : ViewModel() {
                 pinStateForHistory()
             }
             if (mode.isSelectingCircles() &&
-                (showCircles && selection.objects.isNotEmpty() || selection.arcPaths.isNotEmpty())
+                (showCircles && selection.gCircles.isNotEmpty() || selection.arcPaths.isNotEmpty())
             ) {
                 val rect = calculateSelectionRect()
                 val focus =
@@ -1696,7 +1697,7 @@ class EditorViewModel : ViewModel() {
 
     fun setLabel(label: String?) {
         pinStateForHistory()
-        val labels = objectLabels.toMutableMap()
+        val labels = labels.toMutableMap()
         if (label == null) {
             labels -= objectSelection.toSet()
         } else {
@@ -1704,15 +1705,15 @@ class EditorViewModel : ViewModel() {
                 labels[ix] = label
             }
         }
-        objectLabels = labels.toMap()
+        this@EditorViewModel.labels = labels.toMap()
         openedDialog = null
-        history.accumulateChangedLocations(objectLabelIndices = objectSelection.toSet())
+        history.accumulateChangedLocations(labelIndices = objectSelection.toSet())
         history.recordAccumulatedChanges()
     }
 
     private fun markSelectedObjectsAsPhantoms() {
         objectModel.phantomObjectIndices.addAll(objectSelection)
-        // selection = emptyList() // being able to instantly undo is prob better ux
+        // being able to instantly undo is prob better ux
         // showPhantomObjects = false // i think this behavior is confuzzling
         objectModel.invalidate()
         history.accumulateChangedLocations(phantoms = true)
@@ -1726,17 +1727,17 @@ class EditorViewModel : ViewModel() {
 
     private fun swapOrientationsInSelection() {
         // TODO: swap arc-path orientations
-        val targets = selection.objects.filter { ix ->
+        val targets = selection.gCircles.filter { ix ->
             objects[ix] is CircleOrLine && isFree(ix)
         }
         if (targets.isEmpty()) {
-            if (selection.objects.size == 1)
+            if (selection.gCircles.size == 1)
                 queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
-            else if (selection.objects.size > 1)
+            else if (selection.gCircles.size > 1)
                 queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
             pinStateForHistory()
-            objectModel.setObjectsWithConsequences(
+            objectModel.setDisplayObjectsWithConsequences(
                 targets.associateWith { ix ->
                     val obj0 = objects[ix] as CircleOrLine
                     obj0.reversed()
@@ -1793,8 +1794,8 @@ class EditorViewModel : ViewModel() {
                         tool.signature,
                         tool.nonEqualityConditions,
                         args = listOf(
-                            Arg.IndexOf(expr.startCircle, objects[expr.startCircle]!!),
-                            Arg.IndexOf(expr.endCircle, objects[expr.endCircle]!!)
+                            Arg.IndexOf(expr.startCircle, objects[expr.startCircle] as GCircle),
+                            Arg.IndexOf(expr.endCircle, objects[expr.endCircle] as GCircle)
                         )
                     )
                 is Expr.PointInterpolation ->
@@ -1821,8 +1822,8 @@ class EditorViewModel : ViewModel() {
                         tool.nonEqualityConditions,
                         args = listOf(
                             Arg.Indices(listOf(expr.target)),
-                            Arg.IndexOf(expr.engine1, objects[expr.engine1]!!),
-                            Arg.IndexOf(expr.engine2, objects[expr.engine2]!!),
+                            Arg.IndexOf(expr.engine1, objects[expr.engine1] as GCircle),
+                            Arg.IndexOf(expr.engine2, objects[expr.engine2] as GCircle),
                         )
                     )
                 is Expr.LoxodromicMotion ->
@@ -1869,7 +1870,7 @@ class EditorViewModel : ViewModel() {
             if (familyMembers.size > 1 && mode == SelectionMode.Drag) {
                 switchToMode(SelectionMode.Multiselect)
             }
-            selection = Selection(objects = familyMembers)
+            selection = Selection(gCircles = familyMembers)
             history.accumulateChangedLocations(selection = true)
         }
     }
@@ -1886,7 +1887,7 @@ class EditorViewModel : ViewModel() {
             if (mode == SelectionMode.Drag && siblings.size > 1) {
                 switchToMode(SelectionMode.Multiselect)
             }
-            selection = Selection(objects = siblings)
+            selection = Selection(gCircles = siblings)
             history.accumulateChangedLocations(selection = true)
         }
     }
@@ -1901,7 +1902,7 @@ class EditorViewModel : ViewModel() {
         if (showCircles) {
             when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE -> {
-                    val circle = objects[selection.objects.single()]
+                    val circle = objects[selection.gCircles.single()]
                     if (circle is Circle) {
                         val radiusHandlePosition = circle.center + Offset(circle.radius.toFloat(), 0f)
                         when {
@@ -1926,12 +1927,12 @@ class EditorViewModel : ViewModel() {
                 else -> {}
             }
             if (submode == null) { // try grabbing arc midpoint
-                for (arcPathIndex in selection.arcPaths) {
-                    val concreteArcPath = concreteArcPaths[arcPathIndex] ?: continue
+                for (ix in selection.gCircles) {
+                    val concreteArcPath = objects[ix] as? ConcreteArcPath ?: continue
                     for (arcIndex in concreteArcPath.arcs.indices) {
                         concreteArcPath.arcs[arcIndex].freeMidpoint?.let { midpoint ->
                             if (isCloseEnoughToSelect(midpoint.toOffset(), position, lowAccuracy = true)) {
-                                submode = SubMode.GrabbedArcMidpoint(arcPathIndex, arcIndex)
+                                submode = SubMode.GrabbedArcMidpoint(ix, arcIndex)
                             }
                         }
                     }
@@ -1957,11 +1958,11 @@ class EditorViewModel : ViewModel() {
                 SelectionMode.Drag -> if (submode == null) { // select point > circle > arcpath
                     val selectedPointIndex = getPreferablyFreePointsAround(position).firstOrNull()
                     selection = if (selectedPointIndex != null) {
-                        Selection(objects = listOf(selectedPointIndex))
+                        Selection(gCircles = listOf(selectedPointIndex))
                     } else {
                         val selectedCircleIndex = getPreferablyFreeCirclesAround(position).firstOrNull()
                         if (selectedCircleIndex != null) {
-                            Selection(objects = listOf(selectedCircleIndex))
+                            Selection(gCircles = listOf(selectedCircleIndex))
                         } else {
                             val selectedArcPathIndex = getArcPathsAround(position).firstOrNull()
                             if (selectedArcPathIndex != null) {
@@ -2086,7 +2087,7 @@ class EditorViewModel : ViewModel() {
                         }
                     }
                     getCirclesAround(selectableObjects, visiblePosition).firstOrNull()?.let { ix ->
-                        val newArg = Arg.IndexOf(ix, objects[ix]!!)
+                        val newArg = Arg.IndexOf(ix, objects[ix] as GCircle)
                         // test non-equality conditions
                         if (argList.validateNewArg(newArg)) {
                             val confirm = !inInterpolationMode
@@ -2182,7 +2183,7 @@ class EditorViewModel : ViewModel() {
             val expr = exprOf(ix)
             if (expr == null) {
                 val changedIndices =
-                    objectModel.setObjectWithConsequences(ix, Point.CONFORMAL_INFINITY)
+                    objectModel.setDisplayObjectWithConsequences(ix, Point.CONFORMAL_INFINITY)
                 history.accumulateChangedLocations(objectIndices = changedIndices.toSet())
             } else if (expr is Expr.Incidence && objects[expr.carrier] is Line) {
                 objectModel.changeExpr(
@@ -2235,9 +2236,9 @@ class EditorViewModel : ViewModel() {
             val selectableArcPaths = getArcPathsAround(visiblePosition)
             when {
                 selectablePoints.isNotEmpty() ->
-                    selection = Selection(objects = selectablePoints.take(1))
+                    selection = Selection(gCircles = selectablePoints.take(1))
                 selectableCircles.isNotEmpty() -> {
-                    selection = Selection(objects = selectableCircles.take(1))
+                    selection = Selection(gCircles = selectableCircles.take(1))
                     highlightSelectionParents()
                 }
                 selectableArcPaths.isNotEmpty() ->
@@ -2247,22 +2248,21 @@ class EditorViewModel : ViewModel() {
             }
             // selecting a point over circles/paths is unambiguous
             val selectionIsAmbiguous = selectablePoints.size != 1 &&
-                    selectablePoints.size + selectableCircles.size + selectableArcPaths.size > 1
+                selectablePoints.size + selectableCircles.size + selectableArcPaths.size > 1
             if (selectionIsAmbiguous) {
                 submode = SubMode.SelectionChoices(
                     (selectablePoints + selectableCircles).mapNotNull { ix ->
-                        val obj = objects[ix] ?: return@mapNotNull null
-                        val color = objectModel.objectColors[ix]
+                        val obj = (objects[ix] as? GCircle) ?: return@mapNotNull null
+                        val color = objectModel.borderColors[ix]
                         SubMode.SelectionChoices.Choice(
                             index = ix, objectOrArcPath = obj,
                             borderColor = color, fillColor = color,
                         )
-                    } + selectableArcPaths.mapNotNull { arcPathIndex ->
-                        val arcPath = arcPaths[arcPathIndex] ?: return@mapNotNull null
-                        val borderColor = arcPath.borderColor
-                        val fillColor = (arcPath as? ArcPath.Closed)?.fillColor
+                    } + selectableArcPaths.map { ix ->
+                        val borderColor = objectModel.borderColors[ix]
+                        val fillColor = objectModel.fillColors[ix]
                         SubMode.SelectionChoices.Choice(
-                            index = arcPathIndex, objectOrArcPath = null,
+                            index = ix, objectOrArcPath = null,
                             borderColor = borderColor, fillColor = fillColor,
                         )
                     }
@@ -2271,11 +2271,11 @@ class EditorViewModel : ViewModel() {
         } else { // no selection choices
             val selectedPointIndex = getPreferablyFreePointsAround(visiblePosition).firstOrNull()
             if (selectedPointIndex != null) {
-                selection = Selection(objects = listOf(selectedPointIndex))
+                selection = Selection(gCircles = listOf(selectedPointIndex))
             } else {
                 val selectedCircleIndex = getPreferablyFreeCirclesAround(visiblePosition).firstOrNull()
                 if (selectedCircleIndex != null) {
-                    selection = Selection(objects = listOf(selectedCircleIndex))
+                    selection = Selection(gCircles = listOf(selectedCircleIndex))
                     highlightSelectionParents()
                 } else {
                     val selectedArcPathIndex = getArcPathsAround(visiblePosition).firstOrNull()
@@ -2293,19 +2293,19 @@ class EditorViewModel : ViewModel() {
     private fun tapDuringMultiselect(visiblePosition: Offset) {
         val selectedPointIndex = getPreferablyFreePointsAround(visiblePosition).firstOrNull()
         if (selectedPointIndex != null) {
-            if (selectedPointIndex in selection.objects) {
-                selection = selection.copy(objects = selection.objects - selectedPointIndex)
+            if (selectedPointIndex in selection.gCircles) {
+                selection = selection.copy(gCircles = selection.gCircles - selectedPointIndex)
             } else {
-                selection = selection.copy(objects = selection.objects + selectedPointIndex)
+                selection = selection.copy(gCircles = selection.gCircles + selectedPointIndex)
                 highlightSelectionParents()
             }
         } else {
             val selectedCircleIndex = getPreferablyFreeCirclesAround(visiblePosition).firstOrNull()
             if (selectedCircleIndex != null) {
-                if (selectedCircleIndex in selection.objects) {
-                    selection = selection.copy(objects = selection.objects - selectedCircleIndex)
+                if (selectedCircleIndex in selection.gCircles) {
+                    selection = selection.copy(gCircles = selection.gCircles - selectedCircleIndex)
                 } else {
-                    selection = selection.copy(objects = selection.objects + selectedCircleIndex)
+                    selection = selection.copy(gCircles = selection.gCircles + selectedCircleIndex)
                     highlightSelectionParents()
                 }
             } else {
@@ -2320,7 +2320,7 @@ class EditorViewModel : ViewModel() {
                     if (region0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
                         toggleSelectAll()
                         if (!showPhantomObjects) {
-                            selection = Selection(objects = objectSelection.filter { it !in phantoms })
+                            selection = Selection(gCircles = objectSelection.filter { it !in phantoms })
                         }
                     } else {
                         val selectedCircles = objectSelection.filter { objects[it] is CircleOrLine }
@@ -2331,7 +2331,7 @@ class EditorViewModel : ViewModel() {
                             println("bounds of $region")
                             val bounds: Set<Ix> = region.insides + region.outsides
                             if (bounds != selectedCircles.toSet()) {
-                                selection = Selection(objects = bounds.toList())
+                                selection = Selection(gCircles = bounds.toList())
                                 highlightSelectionParents()
                             } else {
                                 clearSelection()
@@ -2340,7 +2340,7 @@ class EditorViewModel : ViewModel() {
                             println("existing bound of $largestInnerRegion")
                             val bounds: Set<Ix> = largestInnerRegion.insides + largestInnerRegion.outsides
                             if (bounds != selectedCircles.toSet()) {
-                                selection = Selection(objects = bounds.toList())
+                                selection = Selection(gCircles = bounds.toList())
                                 highlightSelectionParents()
                             } else {
                                 clearSelection()
@@ -2413,7 +2413,7 @@ class EditorViewModel : ViewModel() {
                     null ->
                         Selection(arcPaths = listOf(newChoice.index))
                     else ->
-                        Selection(objects = listOf(newChoice.index))
+                        Selection(gCircles = listOf(newChoice.index))
                 }
                 history.accumulateChangedLocations(selection = true)
             }
@@ -2573,16 +2573,16 @@ class EditorViewModel : ViewModel() {
                 .toSet()
             // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
             val parents = objectModel.expressions.getAllParents(listOf(ix))
-            val childArcPaths = arcPaths
-                .filterIndices { it != null && ix in it.dependencies }
-                .toSet()
+            val childArcPaths = objectModel.expressions.children[ix]
+                ?.filterIndices { expressions[it] is ArcPath }
+                ?.toSet() ?: emptySet()
             // NOTE: snap-exclusion calculation when dragging a point seem excessive tbh
             val newPoint = snapped(absoluteCentroid,
                 excludePoints = true,
                 excludedCircles = childCircles + parents,
                 excludedArcPaths = childArcPaths,
             ).result
-            transformWhatWeCan(listOf(ix), translation = translation)
+            transformWhatWeCan(listOf(ix), translation = newPoint.toOffset() - absoluteCentroid)
         }
     }
 
@@ -2609,10 +2609,10 @@ class EditorViewModel : ViewModel() {
         translation: Offset, zoom: Float, rotationAngle: Float
     ) {
         val targets = selection.arcPaths
-            .flatMap { arcPaths[it]?.dependencies ?: emptySet() }
+            .flatMap { (expressions[it] as? ArcPath)?.dependencies ?: emptySet() }
             .filter { objects[it] is Point }
             .distinct()
-        history.accumulateChangedLocations(arcPaths = targets.toSet())
+        history.accumulateChangedLocations(objectIndices = targets.toSet())
         transformWhatWeCan(targets, translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
     }
 
@@ -2622,15 +2622,15 @@ class EditorViewModel : ViewModel() {
         zoom: Float,
         rotationAngle: Float,
     ) {
-        val targets = selection.objects.filter {
+        val targets = selection.gCircles.filter {
             val obj = objects[it]
             obj is CircleOrLine || obj is Point
         }.plus(
             selection.arcPaths
-                .flatMap { arcPaths[it]?.dependencies ?: emptySet() }
+                .flatMap { (expressions[it] as? ArcPath)?.dependencies ?: emptySet() }
                 .filter { objects[it] is Point }
         ).distinct()
-        history.accumulateChangedLocations(arcPaths = targets.toSet())
+        history.accumulateChangedLocations(objectIndices = targets.toSet())
         transformWhatWeCan(targets, translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
     }
 
@@ -2638,7 +2638,7 @@ class EditorViewModel : ViewModel() {
         absoluteCentroid: Offset,
         sm: SubMode.GrabbedArcMidpoint,
     ) {
-        val arcPath = arcPaths[sm.arcPathIndex] ?: return
+        val arcPath = (expressions[sm.arcPathIndex] as? ArcPath) ?: return
         objectModel.modifyArcPath(
             sm.arcPathIndex,
             arcPath.moveArcMidpoint(
@@ -2646,7 +2646,7 @@ class EditorViewModel : ViewModel() {
             )
         )
         objectModel.invalidatePositions()
-        history.accumulateChangedLocations(arcPaths = setOf(sm.arcPathIndex))
+        history.accumulateChangedLocations(objectIndices = setOf(sm.arcPathIndex))
     }
 
     // NOTE: polar lines and line-by-2 transform weirdly:
@@ -2675,7 +2675,7 @@ class EditorViewModel : ViewModel() {
             val bivector = bivector0 * 0.5
             val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
             for (ix in objectModel.downscaledObjects.indices) {
-                val o = objectModel.downscaledObjects[ix]
+                val o = objectModel.downscaledObjects[ix] as? GCircle
                 if (o != null) {
                     val newObject = rotor.applyTo(GeneralizedCircle.fromGCircle(o)).toGCircleAs(o)
                     objectModel.setDownscaledObject(ix, newObject)
@@ -2765,10 +2765,11 @@ class EditorViewModel : ViewModel() {
         val corner1 = sm.corner1
         val rect = Rect.fromCorners(corner1 ?: absolutePosition, absolutePosition)
         val selectables = objects.mapIndexed { ix, o ->
-            if (showPhantomObjects || ix !in phantoms) o else null
+            if (o is GCircle && (showPhantomObjects || ix !in phantoms)) o
+            else null
         }
         selection = Selection( // TODO: select arc-paths too
-            objects = RectangleCollider.selectWithRectangle(selectables, rect)
+            gCircles = RectangleCollider.selectWithRectangle(selectables, rect)
         )
         submode = SubMode.RectangularSelect(corner1, absolutePosition)
         history.accumulateChangedLocations(selection = true)
@@ -2782,12 +2783,12 @@ class EditorViewModel : ViewModel() {
         } else {
             val diff =
                 (qualifiedRegion.insides - newQualifiedRegion.insides) union
-                        (newQualifiedRegion.insides - qualifiedRegion.insides) union
-                        (qualifiedRegion.outsides - newQualifiedRegion.outsides) union
-                        (newQualifiedRegion.outsides - qualifiedRegion.outsides)
-            selection = Selection(objects =
-                selection.objects +
-                        diff.filter { it !in objectSelection && (showPhantomObjects || it !in phantoms) }
+                (newQualifiedRegion.insides - qualifiedRegion.insides) union
+                (qualifiedRegion.outsides - newQualifiedRegion.outsides) union
+                (newQualifiedRegion.outsides - qualifiedRegion.outsides)
+            selection = Selection(gCircles =
+                selection.gCircles +
+                    diff.filter { it !in objectSelection && (showPhantomObjects || it !in phantoms) }
             )
             history.accumulateChangedLocations(selection = true)
         }
@@ -2888,9 +2889,8 @@ class EditorViewModel : ViewModel() {
                     rotationAngle = rotationAngle,
                 )
             history.accumulateChangedLocations(
-                objectIndices = changedIndices,
+                objectIndices = changedIndices + objectModel.expressions.arcPathIndices,
                 expressionIndices = changedIndices,
-                arcPaths = arcPaths.indices.toSet(),
                 center = true,
             )
         }
@@ -2908,14 +2908,14 @@ class EditorViewModel : ViewModel() {
         when (val sm = submode) {
             is SubMode.Scale -> when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
-                    scaleSingleCircle(ix = selection.objects.single(), absoluteCentroid = absoluteCentroid, zoom = zoom, sm = sm)
+                    scaleSingleCircle(ix = selection.gCircles.single(), absoluteCentroid = absoluteCentroid, zoom = zoom, sm = sm)
                 HandleConfig.SEVERAL_OBJECTS ->
                     scaleSeveralCircles(targets = selectedIndices, pan = pan)
                 null -> {}
             }
             is SubMode.Rotate -> when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
-                    rotateSingleCircle(ix = selection.objects.single(), pan = pan, absoluteCentroid = absoluteCentroid, sm = sm)
+                    rotateSingleCircle(ix = selection.gCircles.single(), pan = pan, absoluteCentroid = absoluteCentroid, sm = sm)
                 HandleConfig.SEVERAL_OBJECTS ->
                     rotateSeveralCircles(targets = selectedIndices, absoluteCentroid = absoluteCentroid, pan = pan, sm = sm)
                 null -> {}
@@ -3045,7 +3045,7 @@ class EditorViewModel : ViewModel() {
                 .also {
                     println("rectangle selection -> $it")
                 }
-            selection = Selection(objects = rectSelection)
+            selection = Selection(gCircles = rectSelection)
             submode = SubMode.RectangularSelect(corner1, corner2)
             history.accumulateChangedLocations(selection = true)
         }
@@ -3058,7 +3058,7 @@ class EditorViewModel : ViewModel() {
         when (mode) {
             SelectionMode.Drag -> {
                 // MAYBE: try to re-attach free points / new pinning/sticky mode
-                if (movementAfterDown && submode == null && selection.objects.none { isFree(it) })
+                if (movementAfterDown && submode == null && selection.gCircles.none { isFree(it) })
                     highlightSelectionParents()
             }
             SelectionMode.Multiselect -> {
@@ -3069,7 +3069,7 @@ class EditorViewModel : ViewModel() {
                         println("flow-select -> $objectSelection")
                         toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
                     }
-                    null -> if (movementAfterDown && selection.objects.none { isFree(it) })
+                    null -> if (movementAfterDown && selection.gCircles.none { isFree(it) })
                         highlightSelectionParents()
                     else -> {}
                 }
@@ -3144,11 +3144,14 @@ class EditorViewModel : ViewModel() {
 
     /** Signals locked state to the user with animation & snackbar message */
     private fun highlightSelectionParents() {
-        val allParents = objectSelection.flatMap { selectedIndex ->
-            if (isConstrained(selectedIndex)) emptyList() // exclude semi-free Expr.Incidence
-            else objectModel.expressions.getImmediateParents(selectedIndex)
+        val allParents = selection.indices.flatMap { ix ->
+            if (isConstrained(ix)) emptyList() // exclude semi-free Expr.Incidence
+            else objectModel.expressions.getImmediateParents(ix)
                 .minus(objectSelection.toSet())
-        }.distinct().mapNotNull { objects[it] }
+        }
+            .distinct()
+            // TODO: highlight parent arc-paths
+            .mapNotNull { objects[it] as? GCircle }
         if (allParents.isNotEmpty()) {
             viewModelScope.launch {
                 animations.emit(HighlightAnimation(allParents))
@@ -3259,7 +3262,7 @@ class EditorViewModel : ViewModel() {
                         if (ix < objects.size) {
                             objectModel.removeObjectAt(ix)
                         } else {
-                            objectModel.addObject(null)
+                            objectModel.addDisplayObject(null)
                         }
                     }
                     for (i in newIndices.indices) {
@@ -3292,16 +3295,16 @@ class EditorViewModel : ViewModel() {
                         }
                         for (ix in (newReservedIndices - reservedIndices.toSet())) {
                             if (ix >= objects.size) {
-                                objectModel.addObject(null) // pad with nulls
+                                objectModel.addDisplayObject(null) // pad with nulls
                             }
                         }
-                        objectModel.objectColors -= outputIndices.toSet()
-                        val sourceColor = objectModel.objectColors[sourceIndex]
+                        objectModel.borderColors -= outputIndices.toSet()
+                        val sourceColor = objectModel.borderColors[sourceIndex]
                         for (i in newIndices.indices) {
                             val ix = newIndices[i]
                             objectModel.setDownscaledObject(ix, newObjects[i])
                             sourceColor?.also {
-                                objectModel.objectColors[ix] = it
+                                objectModel.borderColors[ix] = it
                             }
                         }
                         newAdjustables.add(
@@ -3383,8 +3386,8 @@ class EditorViewModel : ViewModel() {
                 val indices = sm.adjustables.flatMap { it.reservedIndices }.toSet()
                 history.accumulateChangedLocations(
                     objectIndices = indices,
-                    objectColorIndices = indices,
-                    objectLabelIndices = indices,
+                    borderColorIndices = indices,
+                    labelIndices = indices,
                     expressionIndices = indices,
                     regions = true,
                 )
@@ -3421,8 +3424,8 @@ class EditorViewModel : ViewModel() {
                         val indices = sm.adjustables.flatMap { it.reservedIndices }.toSet()
                         history.accumulateChangedLocations(
                             objectIndices = indices,
-                            objectColorIndices = indices,
-                            objectLabelIndices = indices,
+                            borderColorIndices = indices,
+                            labelIndices = indices,
                             expressionIndices = indices,
                             regions = true,
                         )
@@ -3480,8 +3483,8 @@ class EditorViewModel : ViewModel() {
                 center = (args[0] as Arg.PointXY).toPoint().downscale(),
                 radiusPoint = (args[1] as Arg.PointXY).toPoint().downscale(),
             )?.upscale()
-            objectModel.expressions.addFree()
             createNewGCircle(newCircle)
+            objectModel.expressions.addFree()
         } else {
             val realized = args.map { arg ->
                 when (arg) {
@@ -3525,7 +3528,7 @@ class EditorViewModel : ViewModel() {
                     object2 = realized[1],
                     object3 = realized[2],
                 ),
-            )
+            ) as? GCircle
             createNewGCircle(newGCircle?.upscale())
             if (newGCircle is ImaginaryCircle) {
                 queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
@@ -3559,7 +3562,7 @@ class EditorViewModel : ViewModel() {
                     pencilObject2 = realized[1],
                     perpendicularObject = realized[2],
                 ),
-            )
+            ) as? GCircle
             createNewGCircle(newGCircle?.upscale())
             if (newGCircle is ImaginaryCircle) {
                 queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
@@ -3594,7 +3597,7 @@ class EditorViewModel : ViewModel() {
                     object2 = realized[1],
                     object3 = infinityIndex,
                 ),
-            )
+            ) as? GCircle
             createNewGCircle(newGCircle?.upscale())
         }
         partialArgList = argList.copyEmpty()
@@ -3624,7 +3627,7 @@ class EditorViewModel : ViewModel() {
                 )
             }
         }
-        val newGCircle = objectModel.expressions.addSoloExpr(newExpr)
+        val newGCircle = objectModel.expressions.addSoloExpr(newExpr) as? GCircle
         createNewGCircle(newGCircle?.upscale())
         partialArgList = argList.copyEmpty()
         history.recordAccumulatedChanges()
@@ -3636,9 +3639,10 @@ class EditorViewModel : ViewModel() {
         val invertingCircleIndex = (argList.args[1] as Arg.CLI).index
         pinStateForHistory()
         val newIndexedGCircles = targetIxs.map { ix ->
-            ix to objectModel.expressions.addSoloExpr(
+            val newGCircle = objectModel.expressions.addSoloExpr(
                 Expr.CircleInversion(ix, invertingCircleIndex),
-            )?.upscale()
+            ) as? GCircle
+            ix to newGCircle?.upscale()
         }
         copyRegionsAndStyles(newIndexedGCircles, flipRegionsInAndOut = true) {
             CircleAnimation.Entrance(it)
@@ -3648,7 +3652,7 @@ class EditorViewModel : ViewModel() {
         val indices = newIndexedGCircles.map { it.first }.toSet()
         history.accumulateChangedLocations(
             objectIndices = indices,
-            objectColorIndices = indices,
+            borderColorIndices = indices,
             expressionIndices = indices,
             regions = true,
             selection = true,
@@ -3663,8 +3667,8 @@ class EditorViewModel : ViewModel() {
             pinStateForHistory()
             interpolateCircles = true
             val scalarProduct =
-                GeneralizedCircle.fromGCircle(objects[startArg.index]!!) scalarProduct
-                GeneralizedCircle.fromGCircle(objects[endArg.index]!!)
+                GeneralizedCircle.fromGCircle(objects[startArg.index] as CircleOrLineOrImaginaryCircle) scalarProduct
+                GeneralizedCircle.fromGCircle(objects[endArg.index] as CircleOrLineOrImaginaryCircle)
             circlesAreCoDirected = scalarProduct >= 0.0
             val expr = Expr.CircleInterpolation(
                 defaultInterpolationParameters.params.let {
@@ -3676,8 +3680,8 @@ class EditorViewModel : ViewModel() {
             )
             val oldSize = objects.size
             val newGCircles = objectModel.expressions.addMultiExpr(expr)
-            val newCircles = newGCircles.map { it?.upscale() }
-            objectModel.addObjects(newCircles)
+            val newCircles = newGCircles.map { (it as? GCircle)?.upscale() }
+            objectModel.addDisplayObjects(newCircles)
             val outputRange = (oldSize until objects.size).toList()
             submode = SubMode.ExprAdjustment(listOf(
                 AdjustableExpr(expr, outputRange, outputRange)
@@ -3697,8 +3701,8 @@ class EditorViewModel : ViewModel() {
             interpolateCircles = false
             val oldSize = objects.size
             val newGCircles = objectModel.expressions.addMultiExpr(expr)
-            val newPoints = newGCircles.map { it?.upscale() as? Point }
-            objectModel.addObjects(newPoints)
+            val newPoints = newGCircles.map { (it as? Point)?.upscale() }
+            objectModel.addDisplayObjects(newPoints)
             val outputRange = (oldSize until objects.size).toList()
             submode = SubMode.ExprAdjustment(listOf(
                 AdjustableExpr(expr, outputRange, outputRange)
@@ -3717,7 +3721,7 @@ class EditorViewModel : ViewModel() {
         val endCircleIx = (argList.args[1] as Arg.CLI).index
         val newGCircles = objectModel.expressions.addMultiExpr(
             Expr.CircleExtrapolation(params, startCircleIx, endCircleIx),
-        ).map { it?.upscale() }
+        ).map { (it as? GCircle)?.upscale() }
         createNewGCircles(newGCircles)
         partialArgList = argList.copyEmpty()
         defaultExtrapolationParameters = DefaultExtrapolationParameters(params)
@@ -3751,7 +3755,7 @@ class EditorViewModel : ViewModel() {
             val expr = Expr.Rotation(params0, pivotPointIndex, targetIndex)
             val result = objectModel.expressions
                 .addMultiExpr(expr)
-                .map { it?.upscale() } // multi expression creates a whole trajectory at a time
+                .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
             val outputRange = (outputIndex until (outputIndex + result.size)).toList()
             adjustables.add(
                 AdjustableExpr(expr, outputRange, outputRange)
@@ -3760,7 +3764,7 @@ class EditorViewModel : ViewModel() {
             return@map targetIndex to result
         }
         val newObjects = source2trajectory.flatMap { it.second }
-        objectModel.addObjects(newObjects) // row-column order
+        objectModel.addDisplayObjects(newObjects) // row-column order
         objectModel.copySourceColorsOntoTrajectories(source2trajectory, oldSize)
         val regions = copySourceRegionsOntoTrajectories(
             source2trajectory, oldSize,
@@ -3776,8 +3780,8 @@ class EditorViewModel : ViewModel() {
         val objArg = args[0] as Arg.Indices
         val engine1 = (args[1] as Arg.CLI).index
         val engine2 = (args[2] as Arg.CLI).index
-        val engine1GC = GeneralizedCircle.fromGCircle(objects[engine1]!!)
-        val engine2GC0 = GeneralizedCircle.fromGCircle(objects[engine2]!!)
+        val engine1GC = GeneralizedCircle.fromGCircle(objects[engine1] as CircleOrLineOrImaginaryCircle)
+        val engine2GC0 = GeneralizedCircle.fromGCircle(objects[engine2] as CircleOrLineOrImaginaryCircle)
         val reverseSecondEngine = engine1GC scalarProduct engine2GC0 < 0 // anti-parallel
         pinStateForHistory()
         defaultBiInversionParameters = defaultBiInversionParameters.copy(
@@ -3792,7 +3796,7 @@ class EditorViewModel : ViewModel() {
             val expr = Expr.BiInversion(params0, engine1, engine2, targetIndex)
             val result = objectModel.expressions
                 .addMultiExpr(expr)
-                .map { it?.upscale() } // multi expression creates a whole trajectory at a time
+                .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
             val outputRange = (outputIndex until (outputIndex + result.size)).toList()
             adjustables.add(
                 AdjustableExpr(expr, outputRange, outputRange)
@@ -3801,7 +3805,7 @@ class EditorViewModel : ViewModel() {
             return@map targetIndex to result
         }
         val newObjects = source2trajectory.flatMap { it.second }
-        objectModel.addObjects(newObjects) // row-column order
+        objectModel.addDisplayObjects(newObjects) // row-column order
         objectModel.copySourceColorsOntoTrajectories(source2trajectory, oldSize)
         val regions = copySourceRegionsOntoTrajectories(
             source2trajectory, oldSize,
@@ -3853,7 +3857,7 @@ class EditorViewModel : ViewModel() {
                 )
                 val result = objectModel.expressions
                     .addMultiExpr(expr)
-                    .map { it?.upscale() } // multi expression creates a whole trajectory at a time
+                    .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
                 // result.size == spiralSize
                 val outputRange = (outputIndex until (outputIndex + result.size)).toList()
                 adjustables.add(
@@ -3874,7 +3878,7 @@ class EditorViewModel : ViewModel() {
                 )
                 val result = objectModel.expressions
                     .addMultiExpr(expr)
-                    .map { it?.upscale() } // multi expression creates a whole trajectory at a time
+                    .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
                 val outputRange = (outputIndex until (outputIndex + result.size)).toList()
                 adjustables.add(
                     AdjustableExpr(expr, outputRange, outputRange)
@@ -3884,7 +3888,7 @@ class EditorViewModel : ViewModel() {
             }
             val source2trajectory = source2trajectory1 + source2trajectory2
             val newObjects = source2trajectory.flatMap { it.second }
-            objectModel.addObjects(newObjects) // row-column order
+            objectModel.addDisplayObjects(newObjects) // row-column order
             objectModel.copySourceColorsOntoTrajectories(source2trajectory1, startIndex = oldSize)
             objectModel.copySourceColorsOntoTrajectories(source2trajectory2, startIndex = interimSize)
             val regions = copySourceRegionsOntoTrajectories(
@@ -3903,7 +3907,7 @@ class EditorViewModel : ViewModel() {
                 val expr = Expr.LoxodromicMotion(params0, divergencePointIndex, convergencePointIndex, targetIndex)
                 val result = objectModel.expressions
                     .addMultiExpr(expr)
-                    .map { it?.upscale() } // multi expression creates a whole trajectory at a time
+                    .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
                 val outputRange = (outputIndex until (outputIndex + result.size)).toList()
                 adjustables.add(
                     AdjustableExpr(expr, outputRange, outputRange)
@@ -3912,7 +3916,7 @@ class EditorViewModel : ViewModel() {
                 return@map targetIndex to result
             }
             val newObjects = source2trajectory.flatMap { it.second }
-            objectModel.addObjects(newObjects) // row-column order
+            objectModel.addDisplayObjects(newObjects) // row-column order
             objectModel.copySourceColorsOntoTrajectories(source2trajectory, startIndex = oldSize)
             val regions = copySourceRegionsOntoTrajectories(
                 source2trajectory,
@@ -3957,7 +3961,7 @@ class EditorViewModel : ViewModel() {
             val arcs = pArcPath.arcs.mapIndexed { arcIndex, arc ->
                 when (val p2p = realizePointSnap(arc.snap, pinAndRecordHistory = false)) {
                     is PointSnapResult.Free -> {
-                        Arc.By2Points(sagittaRatio =
+                        ArcPath.Arc.By2Points(sagittaRatio =
                             if (arc.circle == null)
                                 0.0 // straight line
                             else
@@ -3969,19 +3973,20 @@ class EditorViewModel : ViewModel() {
                         )
                     }
                     is PointSnapResult.Eq -> {
-                        Arc.By3Points(middlePointIndex = p2p.pointIndex)
+                        ArcPath.Arc.By3Points(middlePointIndex = p2p.pointIndex)
                     }
                 }
             }
-            objectModel.addArcPath(
+            val ix = objectModel.addArcPath(
                 if (pArcPath.isClosed)
                     ArcPath.Closed(vertices = vertexIndices, arcs = arcs)
                 else
                     ArcPath.Open(vertices = vertexIndices, arcs = arcs)
             )
-            selection = Selection(arcPaths = listOf(arcPaths.lastIndex))
+            selection = Selection(arcPaths = listOf(ix))
             history.accumulateChangedLocations(
-                arcPaths = setOf(arcPaths.lastIndex),
+                objectIndices = setOf(ix),
+                expressionIndices = setOf(ix),
                 selection = true,
             )
             history.recordAccumulatedChanges()
@@ -3998,7 +4003,7 @@ class EditorViewModel : ViewModel() {
             val newPoint = arg0.toPoint()
             pinStateForHistory()
             val ix = createNewFreePoint(newPoint)
-            selection = Selection(objects = listOf(ix))
+            selection = Selection(gCircles = listOf(ix))
             history.accumulateChangedLocations(selection = true)
             history.recordAccumulatedChanges()
         } // it could have already done it with realized PSR.Eq, which results in Arg.Point.Index
@@ -4210,11 +4215,10 @@ class EditorViewModel : ViewModel() {
         val center = computeAbsoluteCenter() ?: Offset.Zero
         // NOTE: it's important to copy mutable collections
         return SaveState(
-            objects = objectModel.objects.toList(),
-            objectColors = objectModel.objectColors.toMap(),
-            objectLabels = objectLabels.toMap(),
+            objects = objectModel.displayObjects.toList(),
+            borderColors = objectModel.borderColors.toMap(),
+            labels = labels.toMap(),
             expressions = objectModel.expressions.expressions.toMap(),
-            arcPaths = objectModel.arcPaths.toList(),
             regions = regions,
             backgroundColor = backgroundColor,
             chessboardPattern = chessboardPattern,
@@ -4305,7 +4309,7 @@ class EditorViewModel : ViewModel() {
         loadNewConstellation(state.constellation)
         centerizeTo(state.centerX, state.centerY)
         val switchToMultiselect = state.selection.size > 1 && objectSelection.size <= 1
-        selection = Selection(objects = state.selection)
+        selection = Selection(gCircles = state.selection)
         state.regionColor?.let {
             regionColor = it
         }

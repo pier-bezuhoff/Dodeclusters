@@ -105,8 +105,8 @@ fun saveStateAsSvg(
             if (ix !in saveState.phantoms) {
                 val color = when {
                     o is Point -> pointColor // points cant be colored for now
-                    ix in freeObjectIndices -> saveState.objectColors[ix] ?: freeCircleColor
-                    else -> saveState.objectColors[ix] ?: circleColor
+                    ix in freeObjectIndices -> saveState.borderColors[ix] ?: freeCircleColor
+                    else -> saveState.borderColors[ix] ?: circleColor
                 }
                 val colorString = Json.encodeToString(ColorCssSerializer, color).trim('"')
                 when (o) {

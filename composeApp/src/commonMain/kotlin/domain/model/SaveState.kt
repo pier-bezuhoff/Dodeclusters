@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
-import core.geometry.GCircle
+import core.geometry.GCircleOrConcreteAcPath
 import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
@@ -19,17 +19,17 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /** EditorViewModel's save-state for history.
- * [objects].indices must span all of [objectColors].keys and [objectLabels].keys.
+ * [objects].indices must span all of [borderColors].keys and [labels].keys.
  * And [objects].indices == [expressions].keys */
 @Immutable
 @Serializable
 @SerialName("SaveState")
 data class SaveState(
-    val objects: List<GCircle?>,
-    val objectColors: Map<Ix, ColorAsCss> = emptyMap(),
-    val objectLabels: Map<Ix, String> = emptyMap(),
+    val objects: List<GCircleOrConcreteAcPath?>,
     val expressions: Map<Ix, ConformalExprOutput?>,
-    val arcPaths: List<ArcPath?> = emptyList(),
+    val borderColors: Map<Ix, ColorAsCss> = emptyMap(),
+    val fillColors: Map<Ix, ColorAsCss> = emptyMap(),
+    val labels: Map<Ix, String> = emptyMap(),
     val regions: List<LogicalRegion> = emptyList(),
     val backgroundColor: ColorAsCss?,
     val chessboardPattern: ChessboardPattern,
@@ -52,13 +52,13 @@ data class SaveState(
             @Serializable
             data class Objects(val indices: Set<Ix>) : Location
             @Serializable
-            data class ObjectColors(val indices: Set<Ix>) : Location
-            @Serializable
-            data class ObjectLabels(val indices: Set<Ix>) : Location
-            @Serializable
             data class Expressions(val indices: Set<Ix>) : Location
             @Serializable
-            data class ArcPaths(val indices: Set<Int>) : Location
+            data class BorderColors(val indices: Set<Ix>) : Location
+            @Serializable
+            data class FillColors(val indices: Set<Ix>) : Location
+            @Serializable
+            data class Labels(val indices: Set<Ix>) : Location
             @Serializable
             data object Regions : Location
             @Serializable
@@ -81,10 +81,10 @@ data class SaveState(
         @Serializable
         data class Locations(
             val objectIndices: Set<Ix> = emptySet(),
-            val objectColorIndices: Set<Ix> = emptySet(),
-            val objectLabelIndices: Set<Ix> = emptySet(),
             val expressionIndices: Set<Ix> = emptySet(),
-            val arcPaths: Set<Int> = emptySet(),
+            val borderColorIndices: Set<Ix> = emptySet(),
+            val fillColorIndices: Set<Ix> = emptySet(),
+            val labelIndices: Set<Ix> = emptySet(),
             val regions: Boolean = false,
             val backgroundColor: Boolean = false,
             val chessboardPattern: Boolean = false,
@@ -96,14 +96,14 @@ data class SaveState(
         ) {
             inline val objectsLocation: Location.Objects? get() =
                 if (objectIndices.isEmpty()) null else Location.Objects(objectIndices)
-            inline val objectColorsLocation: Location.ObjectColors? get() =
-                if (objectColorIndices.isEmpty()) null else Location.ObjectColors(objectColorIndices)
-            inline val objectLabelsLocation: Location.ObjectLabels? get() =
-                if (objectLabelIndices.isEmpty()) null else Location.ObjectLabels(objectLabelIndices)
             inline val expressionsLocation: Location.Expressions? get() =
                 if (expressionIndices.isEmpty()) null else Location.Expressions(expressionIndices)
-            inline val arcPathsLocation: Location.ArcPaths? get() =
-                if (arcPaths.isEmpty()) null else Location.ArcPaths(arcPaths)
+            inline val borderColorsLocation: Location.BorderColors? get() =
+                if (borderColorIndices.isEmpty()) null else Location.BorderColors(borderColorIndices)
+            inline val fillColorsLocation: Location.FillColors? get() =
+                if (fillColorIndices.isEmpty()) null else Location.FillColors(fillColorIndices)
+            inline val labelsLocation: Location.Labels? get() =
+                if (labelIndices.isEmpty()) null else Location.Labels(labelIndices)
             inline val regionsLocation: Location.Regions? get() =
                 if (regions) Location.Regions else null
             inline val backgroundColorLocation: Location.BackgroundColor? get() =
@@ -124,10 +124,10 @@ data class SaveState(
             fun accumulate(locations: Locations): Locations =
                 Locations(
                     objectIndices = objectIndices.union(locations.objectIndices),
-                    objectColorIndices = objectColorIndices.union(locations.objectColorIndices),
-                    objectLabelIndices = objectLabelIndices.union(locations.objectLabelIndices),
                     expressionIndices = expressionIndices.union(locations.expressionIndices),
-                    arcPaths = arcPaths.union(locations.arcPaths),
+                    borderColorIndices = borderColorIndices.union(locations.borderColorIndices),
+                    fillColorIndices = fillColorIndices.union(locations.fillColorIndices),
+                    labelIndices = labelIndices.union(locations.labelIndices),
                     regions = regions || locations.regions,
                     backgroundColor = backgroundColor || locations.backgroundColor,
                     chessboardPattern = chessboardPattern || locations.chessboardPattern,
@@ -149,21 +149,19 @@ data class SaveState(
         sealed interface Replacement : Change
         @Serializable
         @SerialName("Objects")
-        data class Objects(val objects: Map<Ix, GCircle?>) : Update
-        @Serializable
-        @SerialName("ObjectColors")
-        data class ObjectColors(val colors: Map<Ix, ColorAsCss?>) : Update
-        @Serializable
-        @SerialName("ObjectLabels")
-        data class ObjectLabels(val labels: Map<Ix, String?>) : Update
+        data class Objects(val objects: Map<Ix, GCircleOrConcreteAcPath?>) : Update
         @Serializable
         @SerialName("Expressions")
         data class Expressions(val expressions: Map<Ix, ConformalExprOutput?>) : Update
-        // arcPaths cannot be a Map<Int, _> since same-index changes are possible
-        /** @property[arcPaths] should be in the execution/increasing index order */
         @Serializable
-        @SerialName("ArcPaths")
-        data class ArcPaths(val arcPaths: Map<Int, ArcPath?>) : Update
+        @SerialName("BorderColors")
+        data class BorderColors(val colors: Map<Ix, ColorAsCss?>) : Update
+        @Serializable
+        @SerialName("FillColors")
+        data class FillColors(val colors: Map<Ix, ColorAsCss?>) : Update
+        @Serializable
+        @SerialName("Labels")
+        data class Labels(val labels: Map<Ix, String?>) : Update
         @Serializable
         @SerialName("Regions")
         data class Regions(val regions: List<LogicalRegion>) : Replacement
@@ -195,10 +193,10 @@ data class SaveState(
     @Serializable
     data class Changes(
         val objects: Change.Objects? = null,
-        val objectColors: Change.ObjectColors? = null,
-        val objectLabels: Change.ObjectLabels? = null,
         val expressions: Change.Expressions? = null,
-        val arcPaths: Change.ArcPaths? = null,
+        val borderColors: Change.BorderColors? = null,
+        val fillColors: Change.FillColors? = null,
+        val labels: Change.Labels? = null,
         val regions: Change.Regions? = null,
         val backgroundColor: Change.BackgroundColor? = null,
         val chessboardPattern: Change.ChessboardPattern? = null,
@@ -209,14 +207,14 @@ data class SaveState(
         val regionColor: Change.RegionColor? = null,
     ) {
         val changes: List<Change> get() = listOfNotNull(
-            objects, objectColors, objectLabels, expressions, arcPaths, regions, backgroundColor, chessboardPattern, chessboardColor, phantoms, selection, center, regionColor,
+            objects, expressions, borderColors, fillColors, labels, regions, backgroundColor, chessboardPattern, chessboardColor, phantoms, selection, center, regionColor,
         )
         val locations: Change.Locations get() = Change.Locations(
             objectIndices = objects?.objects?.keys ?: emptySet(),
-            objectColorIndices = objectColors?.colors?.keys ?: emptySet(),
-            objectLabelIndices = objectLabels?.labels?.keys ?: emptySet(),
             expressionIndices = expressions?.expressions?.keys ?: emptySet(),
-            arcPaths = arcPaths?.arcPaths?.keys ?: emptySet(),
+            borderColorIndices = borderColors?.colors?.keys ?: emptySet(),
+            fillColorIndices = fillColors?.colors?.keys ?: emptySet(),
+            labelIndices = labels?.labels?.keys ?: emptySet(),
             regions = regions != null,
             backgroundColor = backgroundColor != null,
             chessboardPattern = chessboardPattern != null,
@@ -232,17 +230,17 @@ data class SaveState(
                 objects = combineNullables(objects, changes.objects) { a, b ->
                     Change.Objects(a.objects + b.objects)
                 },
-                objectColors = combineNullables(objectColors, changes.objectColors) { a, b ->
-                    Change.ObjectColors(a.colors + b.colors)
-                },
-                objectLabels = combineNullables(objectLabels, changes.objectLabels) { a, b ->
-                    Change.ObjectLabels(a.labels + b.labels)
-                },
                 expressions = combineNullables(expressions, changes.expressions) { a, b ->
                     Change.Expressions(a.expressions + b.expressions)
                 },
-                arcPaths = combineNullables(arcPaths, changes.arcPaths) { a, b ->
-                    Change.ArcPaths(a.arcPaths + b.arcPaths)
+                borderColors = combineNullables(borderColors, changes.borderColors) { a, b ->
+                    Change.BorderColors(a.colors + b.colors)
+                },
+                fillColors = combineNullables(fillColors, changes.fillColors) { a, b ->
+                    Change.FillColors(a.colors + b.colors)
+                },
+                labels = combineNullables(labels, changes.labels) { a, b ->
+                    Change.Labels(a.labels + b.labels)
                 },
                 regions = changes.regions ?: regions,
                 backgroundColor = changes.backgroundColor ?: backgroundColor,
@@ -264,17 +262,17 @@ data class SaveState(
             objects = locations.objectsLocation?.let { changeLocation ->
                 Change.Objects(changeLocation.indices.associateWith { ix -> objects.getOrNull(ix) })
             },
-            objectColors = locations.objectColorsLocation?.let { changeLocation ->
-                Change.ObjectColors(changeLocation.indices.associateWith { ix -> objectColors[ix] })
-            },
-            objectLabels = locations.objectLabelsLocation?.let { changeLocation ->
-                Change.ObjectLabels(changeLocation.indices.associateWith { ix -> objectLabels[ix] })
-            },
             expressions = locations.expressionsLocation?.let { changeLocation ->
                 Change.Expressions(changeLocation.indices.associateWith { ix -> expressions[ix] })
             },
-            arcPaths = locations.arcPathsLocation?.let { changeLocation ->
-                Change.ArcPaths(changeLocation.indices.associateWith { i -> arcPaths.getOrNull(i) })
+            borderColors = locations.borderColorsLocation?.let { changeLocation ->
+                Change.BorderColors(changeLocation.indices.associateWith { ix -> this@SaveState.borderColors[ix] })
+            },
+            fillColors = locations.fillColorsLocation?.let { changeLocation ->
+                Change.FillColors(changeLocation.indices.associateWith { ix -> this@SaveState.fillColors[ix] })
+            },
+            labels = locations.labelsLocation?.let { changeLocation ->
+                Change.Labels(changeLocation.indices.associateWith { ix -> this@SaveState.labels[ix] })
             },
             regions =
                 if (locations.regions) Change.Regions(regions) else null,
@@ -298,14 +296,14 @@ data class SaveState(
         when (change) {
             is Change.Objects ->
                 Change.Objects(change.objects.mapValues { (ix, _) -> objects.getOrNull(ix) })
-            is Change.ObjectColors ->
-                Change.ObjectColors(change.colors.mapValues { (ix, _) -> objectColors[ix] })
-            is Change.ObjectLabels ->
-                Change.ObjectLabels(change.labels.mapValues { (ix, _) -> objectLabels[ix] })
             is Change.Expressions ->
                 Change.Expressions(change.expressions.mapValues { (ix, _) -> expressions[ix] })
-            is Change.ArcPaths ->
-                Change.ArcPaths(change.arcPaths.mapValues { (i, _) -> arcPaths.getOrNull(i) })
+            is Change.BorderColors ->
+                Change.BorderColors(change.colors.mapValues { (ix, _) -> this@SaveState.borderColors[ix] })
+            is Change.FillColors ->
+                Change.FillColors(change.colors.mapValues { (ix, _) -> this@SaveState.fillColors[ix] })
+            is Change.Labels ->
+                Change.Labels(change.labels.mapValues { (ix, _) -> this@SaveState.labels[ix] })
             is Change.Regions ->
                 Change.Regions(regions)
             is Change.BackgroundColor ->
@@ -328,11 +326,11 @@ data class SaveState(
      * @param[changes] are applied in order
      */
     fun applyChanges(changes: List<Change>): SaveState {
-        val objects: MutableList<GCircle?> = this.objects.toMutableList()
-        val objectColors: MutableMap<Ix, ColorAsCss> = this.objectColors.toMutableMap()
-        val objectLabels: MutableMap<Ix, String> = this.objectLabels.toMutableMap()
+        val objects: MutableList<GCircleOrConcreteAcPath?> = this.objects.toMutableList()
         val expressions: MutableMap<Ix, ConformalExprOutput?> = this.expressions.toMutableMap()
-        val arcPaths: MutableList<ArcPath?> = this.arcPaths.toMutableList()
+        val borderColors: MutableMap<Ix, ColorAsCss> = this.borderColors.toMutableMap()
+        val fillColors: MutableMap<Ix, ColorAsCss> = this.fillColors.toMutableMap()
+        val labels: MutableMap<Ix, String> = this.labels.toMutableMap()
         var regions: List<LogicalRegion> = this.regions
         var backgroundColor: Color? = this.backgroundColor
         var chessboardPattern: ChessboardPattern = this.chessboardPattern
@@ -357,38 +355,33 @@ data class SaveState(
                         }
                     }
                 }
-                is Change.ObjectColors -> {
-                    for ((ix, color) in change.colors) {
-                        if (color == null) {
-                            objectColors.remove(ix)
-                        } else {
-                            objectColors[ix] = color
-                        }
-                    }
-                }
-                is Change.ObjectLabels -> {
-                    for ((ix, label) in change.labels) {
-                        if (label == null) {
-                            objectLabels.remove(ix)
-                        } else {
-                            objectLabels[ix] = label
-                        }
-                    }
-                }
                 is Change.Expressions -> {
                     expressions.putAll(change.expressions)
                 }
-                is Change.ArcPaths -> {
-                    for (i in change.arcPaths.keys.sorted()) {
-                        val arcPath = change.arcPaths[i]
-                        val overshoot = i - arcPaths.size
-                        if (overshoot >= 0) {
-                            repeat(overshoot) {
-                                arcPaths.add(null)
-                            }
-                            arcPaths.add(arcPath)
+                is Change.BorderColors -> {
+                    for ((ix, color) in change.colors) {
+                        if (color == null) {
+                            borderColors.remove(ix)
                         } else {
-                            arcPaths[i] = arcPath
+                            borderColors[ix] = color
+                        }
+                    }
+                }
+                is Change.FillColors -> {
+                    for ((ix, color) in change.colors) {
+                        if (color == null) {
+                            fillColors.remove(ix)
+                        } else {
+                            fillColors[ix] = color
+                        }
+                    }
+                }
+                is Change.Labels -> {
+                    for ((ix, label) in change.labels) {
+                        if (label == null) {
+                            labels.remove(ix)
+                        } else {
+                            labels[ix] = label
                         }
                     }
                 }
@@ -404,10 +397,10 @@ data class SaveState(
         }
         return SaveState(
             objects = objects,
-            objectColors = objectColors,
-            objectLabels = objectLabels,
             expressions = expressions,
-            arcPaths = arcPaths,
+            borderColors = borderColors,
+            fillColors = fillColors,
+            labels = labels,
             regions = regions,
             backgroundColor = backgroundColor,
             chessboardPattern = chessboardPattern,
@@ -437,26 +430,6 @@ data class SaveState(
                         Change.Objects(changedIndices.associateWith { objects[it] })
                 }
             ,
-            objectColors =
-                if (objectColors == earlierState.objectColors) null
-                else {
-                    val indices: Set<Ix> = objectColors.keys + earlierState.objectColors.keys
-                    val changedIndices = indices.filter { objectColors[it] != earlierState.objectColors[it] }
-                    if (changedIndices.isEmpty())
-                        null
-                    else
-                        Change.ObjectColors(changedIndices.associateWith { objectColors[it] })
-                },
-            objectLabels =
-                if (objectLabels == earlierState.objectLabels) null
-                else {
-                    val indices: Set<Ix> = objectLabels.keys + earlierState.objectLabels.keys
-                    val changedIndices = indices.filter { objectLabels[it] != earlierState.objectLabels[it] }
-                    if (changedIndices.isEmpty())
-                        null
-                    else
-                        Change.ObjectLabels(changedIndices.associateWith { objectLabels[it] })
-                },
             expressions =
                 if (expressions == earlierState.expressions) null
                 else {
@@ -471,19 +444,35 @@ data class SaveState(
                     else
                         Change.Expressions(changedIndices.associateWith { expressions[it] })
                 },
-            arcPaths =
-                if (arcPaths == earlierState.arcPaths) null
+            borderColors =
+                if (this@SaveState.borderColors == earlierState.borderColors) null
                 else {
-                    val size0 = earlierState.arcPaths.size
-                    val size = arcPaths.size
-                    require(size0 <= size) { "arcPaths.size of an earlier state must not be greater, $earlierState vs $this" }
-                    val changedIndices = (0 until size0)
-                        .filter { arcPaths[it] != earlierState.arcPaths[it] }
-                        .plus(size0 until size)
+                    val indices: Set<Ix> = this@SaveState.borderColors.keys + earlierState.borderColors.keys
+                    val changedIndices = indices.filter { this@SaveState.borderColors[it] != earlierState.borderColors[it] }
                     if (changedIndices.isEmpty())
                         null
                     else
-                        Change.ArcPaths(changedIndices.associateWith { arcPaths[it] })
+                        Change.BorderColors(changedIndices.associateWith { this@SaveState.borderColors[it] })
+                },
+            fillColors =
+                if (this@SaveState.fillColors == earlierState.fillColors) null
+                else {
+                    val indices: Set<Ix> = this@SaveState.fillColors.keys + earlierState.fillColors.keys
+                    val changedIndices = indices.filter { this@SaveState.fillColors[it] != earlierState.fillColors[it] }
+                    if (changedIndices.isEmpty())
+                        null
+                    else
+                        Change.FillColors(changedIndices.associateWith { this@SaveState.fillColors[it] })
+                },
+            labels =
+                if (this@SaveState.labels == earlierState.labels) null
+                else {
+                    val indices: Set<Ix> = this@SaveState.labels.keys + earlierState.labels.keys
+                    val changedIndices = indices.filter { this@SaveState.labels[it] != earlierState.labels[it] }
+                    if (changedIndices.isEmpty())
+                        null
+                    else
+                        Change.Labels(changedIndices.associateWith { this@SaveState.labels[it] })
                 },
             regions =
                 if (regions == earlierState.regions) null
@@ -526,50 +515,22 @@ data class SaveState(
         )
         return copy(
             objects = objects.filterIndexed { ix, _ -> ix !in deleted },
-            objectColors = objectColors
-                .mapNotNull { (ix, color) ->
-                    reindexing[ix]?.let { ix to color }
-                }.toMap(),
-            objectLabels = objectLabels
-                .mapNotNull { (ix, label) ->
-                    reindexing[ix]?.let { ix to label }
-                }.toMap(),
             expressions = expressions
                 .mapNotNull { (ix, expression) ->
                     reindexing[ix]?.let { ix to expression }
                 }.toMap(),
-            arcPaths = arcPaths.mapNotNull { arcPath ->
-                when (arcPath) {
-                    // Q: what if a vertex/arc-middle is cleared?
-                    is ArcPath.Closed -> arcPath.copy(
-                        vertices = arcPath.vertices.map {
-                            reindexing[it] ?: return@mapNotNull null
-                        },
-                        arcs = arcPath.arcs.map { arc ->
-                            when (arc) {
-                                is Arc.By2Points -> arc
-                                is Arc.By3Points -> arc.copy(middlePointIndex =
-                                    reindexing[arc.middlePointIndex] ?: return@mapNotNull null
-                                )
-                            }
-                        }
-                    )
-                    is ArcPath.Open -> arcPath.copy(
-                        vertices = arcPath.vertices.map {
-                            reindexing[it] ?: return@mapNotNull null
-                        },
-                        arcs = arcPath.arcs.map { arc ->
-                            when (arc) {
-                                is Arc.By2Points -> arc
-                                is Arc.By3Points -> arc.copy(middlePointIndex =
-                                    reindexing[arc.middlePointIndex] ?: return@mapNotNull null
-                                )
-                            }
-                        }
-                    )
-                    null -> null
-                }
-            },
+            borderColors = this@SaveState.borderColors
+                .mapNotNull { (ix, color) ->
+                    reindexing[ix]?.let { ix to color }
+                }.toMap(),
+            fillColors = this@SaveState.fillColors
+                .mapNotNull { (ix, color) ->
+                    reindexing[ix]?.let { ix to color }
+                }.toMap(),
+            labels = this@SaveState.labels
+                .mapNotNull { (ix, label) ->
+                    reindexing[ix]?.let { ix to label }
+                }.toMap(),
             regions = regions
                 .mapNotNull { region ->
                     val insides = region.insides.mapNotNull { reindexing[it] }.toSet()
@@ -582,7 +543,7 @@ data class SaveState(
             ,
             phantoms = phantoms.mapNotNull { reindexing[it] }.toSet(),
             selection = selection.copy(
-                objects = selection.objects.mapNotNull { reindexing[it] },
+                gCircles = selection.gCircles.mapNotNull { reindexing[it] },
                 // we assume null-vertices arc-paths are deleted upon deleting the last vertex
                 arcPaths = selection.arcPaths,
             ),
@@ -625,10 +586,10 @@ data class SaveState(
             }
             SaveState(
                 objects = objects,
-                objectColors = emptyMap(),
-                objectLabels = emptyMap(),
                 expressions = expressions,
-                arcPaths = emptyList(),
+                borderColors = emptyMap(),
+                fillColors = emptyMap(),
+                labels = emptyMap(),
                 regions = emptyList(),
                 backgroundColor = null,
                 chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT,

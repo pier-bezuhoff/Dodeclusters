@@ -11,16 +11,10 @@ import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.EPSILON2
 import core.geometry.Line
-import core.geometry.Point
 import domain.PartialArcPath
 import domain.PathCache
-import domain.model.Arc
-import domain.model.ArcPath
 import domain.model.LogicalRegion
-import domain.expressions.SagittaRatioParameters
-import domain.expressions.computeCircleBy2PointsAndSagittaRatio
-import domain.expressions.computeCircleBy3Points
-import domain.model.ConcreteArcPath
+import core.geometry.ConcreteArcPath
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow

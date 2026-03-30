@@ -83,7 +83,7 @@ import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
-import domain.model.ArcPath
+import domain.expressions.ArcPath
 import domain.mostCommonOf
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -364,7 +364,9 @@ fun BoxScope.PointContextActions(
 
 @Composable
 fun BoxScope.ArcPathContextActions(
-    arcPaths: List<ArcPath>,
+    someAreClosed: Boolean,
+    mostCommonBorderColor: Color?,
+    mostCommonFillColor: Color?,
     toolAction: (Tool) -> Unit,
     // grabbed midpoint <- submode
 ) {
@@ -386,28 +388,19 @@ fun BoxScope.ArcPathContextActions(
         Column(
             verticalArrangement = Arrangement.Center,
         ) {
-            val borderColor = remember(arcPaths) {
-                arcPaths.mostCommonOf { it.borderColor } ?: defaultBorderColor
-            }
+            val borderColor = mostCommonBorderColor ?: defaultBorderColor
             SimpleToolButtonWithTooltip(
                 Tool.BorderColor,
                 buttonModifier,
                 contentColor = borderColor,
                 onClick = toolAction
             )
-            val someAreClosed = remember(arcPaths) {
-                arcPaths.any { it is ArcPath.Closed }
-            }
-            val fillColor = remember(arcPaths) {
-                arcPaths
-                    .filterIsInstance<ArcPath.Closed>()
-                    .mostCommonOf { it.fillColor }
-            }
+            val fillColor = mostCommonFillColor ?: defaultFillColor
             if (someAreClosed) {
                 SimpleToolButtonWithTooltip(
                     Tool.FillColor,
                     buttonModifier,
-                    contentColor = fillColor ?: defaultFillColor,
+                    contentColor = fillColor,
                     onClick = toolAction
                 )
             }

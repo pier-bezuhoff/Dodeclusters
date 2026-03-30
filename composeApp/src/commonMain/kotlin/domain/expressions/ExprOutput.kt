@@ -12,16 +12,13 @@ typealias ProjectiveExprOutput = ExprOutput<Expr.Projective>
 @Immutable
 @Serializable
 sealed interface ExprOutput<out EXPR> where EXPR : Expr {
-    val expr: EXPR
+    // all one-to-one expr
 
-    @Serializable
-    @SerialName("Just")
-    data class Just<out EXPR>(override val expr: EXPR) : ExprOutput<EXPR> where EXPR : Expr.OneToOne
-
+    @Immutable
     @Serializable
     @SerialName("OneOf")
     data class OneOf<out EXPR>(
-        override val expr: EXPR,
+        val expr: EXPR,
         val outputIndex: Ix
     ) : ExprOutput<EXPR> where EXPR : Expr.OneToMany
 }
@@ -31,9 +28,8 @@ inline fun <reified EXPR : Expr> ExprOutput<EXPR>.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
 ): ExprOutput<EXPR> =
     when (this) {
-        is ExprOutput.Just -> copy(
-            expr = expr.reIndex { reIndexer(it) }
-        )
+        is Expr.OneToOne ->
+            (this as Expr).reIndex { reIndexer(it) } as ExprOutput<EXPR>
         is ExprOutput.OneOf -> copy(
             expr = expr.reIndex { reIndexer(it) }
         )

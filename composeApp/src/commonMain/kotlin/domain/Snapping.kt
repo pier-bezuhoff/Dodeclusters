@@ -12,7 +12,8 @@ import core.geometry.Point
 import core.geometry.closestPerpendicularPoint
 import core.geometry.perpendicularDistance
 import core.geometry.translatedUntilTangency
-import domain.model.ConcreteArcPath
+import core.geometry.ConcreteArcPath
+import core.geometry.GCircleOrConcreteAcPath
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
@@ -126,7 +127,7 @@ object Snapping {
     /** additionally chooses first closest point within epsilon-vicinity of the minimum */
     fun snapPointToPoints(
         point: Point,
-        allObjects: List<GCircle?>,
+        allObjects: List<*>,
         snapDistance: Double,
         excludedIndices: Set<Ix> = emptySet(),
     ): PointSnapResult.PointToPoint {
@@ -170,7 +171,7 @@ object Snapping {
      * */
     fun snapPointToCircles(
         point: Point,
-        allObjects: List<GCircle?>,
+        allObjects: List<*>,
         snapDistance: Double,
         intersectionTolerance: Double = 1.5,
         excludedIndices: Set<Ix> = emptySet(),
@@ -228,7 +229,7 @@ object Snapping {
 
     fun snapPointToArcPaths(
         point: Point,
-        concreteArcPaths: List<ConcreteArcPath?>,
+        allObjects: List<*>,
         snapDistance: Double,
         excludedIndices: Set<Int> = emptySet(),
     ): PointSnapResult.PointToArcPath {
@@ -236,10 +237,10 @@ object Snapping {
         var distance: Double = Double.POSITIVE_INFINITY
         var snappedPoint = point
         var snappedArcIndex = 0
-        for (i in concreteArcPaths.indices) {
+        for (i in allObjects.indices) {
             if (i in excludedIndices)
                 continue
-            val concreteArcPath = concreteArcPaths[i] ?: continue
+            val concreteArcPath = allObjects[i] as? ConcreteArcPath ?: continue
             val (arcIndex, projectedPoint, _) = concreteArcPath.project(point)
             val d = point.distanceFrom(projectedPoint)
             if (d < snapDistance) {
@@ -296,7 +297,7 @@ object Snapping {
     // NOTE: dont forget to exclude [circle], its immediate parents and all children from snappanbles
     fun snapCircleToCircles(
         circle: CircleOrLine,
-        allObjects: List<GCircle?>,
+        allObjects: List<*>,
         snapDistance: Double,
         bitangentTolerance: Double = 1.2,
         visibleRect: Rect? = null,

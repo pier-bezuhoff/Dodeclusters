@@ -4,11 +4,15 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
 
+@Immutable
+@Serializable
+sealed interface GCircleOrConcreteAcPath
+
 /** Conformal geometry generalization of a circle.
  * Unifies circles, lines, imaginary circles and points (CLIP for short) */
 @Immutable
 @Serializable
-sealed interface GCircle {
+sealed interface GCircle : GCircleOrConcreteAcPath {
     fun translated(vector: Offset): GCircle
     fun translated(dx: Double, dy: Double): GCircle
     fun scaled(focusX: Double, focusY: Double, zoom: Double): GCircle

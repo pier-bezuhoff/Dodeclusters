@@ -2,13 +2,13 @@ package domain.expressions
 
 import core.geometry.Circle
 import core.geometry.CircleOrLine
+import core.geometry.ConcreteArcPath
 import core.geometry.EPSILON
 import core.geometry.GCircle
 import core.geometry.conformal.GeneralizedCircle
 import core.geometry.Line
 import core.geometry.Point
 import core.geometry.RegionPointLocation
-import domain.model.ConcreteArcPath
 import domain.squareSum
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -229,7 +229,7 @@ fun computeArcPathIncidence(
     val arc = concreteArcPath.arcs.getOrNull(params.arcIndex)
     return when (val circleOrLine = arc?.circleOrLine) {
         is Circle -> {
-            val angle = arc.startAngle + arc.sweepAngle*params.arcPercenteage
+            val angle = arc.startAngle + arc.sweepAngle*params.arcPercentage
             circleOrLine.angle2point(angle)
         }
         is Line -> {
@@ -239,8 +239,29 @@ fun computeArcPathIncidence(
             ]
             val startOrder = circleOrLine.point2order(arcStart)
             val endOrder = circleOrLine.point2order(arcEnd)
-            val order = startOrder + (endOrder - startOrder)*params.arcPercenteage
+            val order = startOrder + (endOrder - startOrder)*params.arcPercentage
             circleOrLine.order2point(order)
+        }
+        null -> null
+    }
+}
+
+fun computeArcPathArcMidpoint(
+    params: ArcPathArcMidpointParameters,
+    concreteArcPath: ConcreteArcPath,
+): Point? {
+    val arc = concreteArcPath.arcs.getOrNull(params.arcIndex)
+    return when (val circleOrLine = arc?.circleOrLine) {
+        is Circle -> {
+            val angle = arc.startAngle + arc.sweepAngle*0.5
+            circleOrLine.angle2point(angle)
+        }
+        is Line -> {
+            val arcStart = concreteArcPath.vertices[params.arcIndex]
+            val arcEnd = concreteArcPath.vertices[
+                (params.arcIndex + 1).mod(concreteArcPath.vertices.size)
+            ]
+            arcStart.middle(arcEnd)
         }
         null -> null
     }

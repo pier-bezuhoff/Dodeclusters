@@ -260,12 +260,13 @@ inline fun <reified T> List<T>.bottom2IndicesBy(
 }
 
 inline fun <reified T> List<T>.indicesSortedBy(
+    indices: List<Int> = this.indices.toList(),
     crossinline measurer: (element: T) -> Double,
     crossinline condition: (index: Int, measure: Double) -> Boolean = { _, _ -> true },
     crossinline sortingPriority: (index: Int, measure: Double) -> Double = { _, m -> m },
-): List<Int> = this
+): List<Int> = indices
     .asSequence()
-    .mapIndexed { index, element -> index to measurer(element) }
+    .map { index -> index to measurer(this[index]) }
     .filter { (index, m) -> condition(index, m) }
     .sortedBy { (index, m) -> sortingPriority(index, m) }
     .map { (index, _) -> index }

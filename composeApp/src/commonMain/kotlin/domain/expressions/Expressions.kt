@@ -29,7 +29,7 @@ internal const val ABANDONED_TIER: Tier = -2
  * @param[EXPR] [Expr] subtype (eg [Expr.Conformal])
  * @param[EXPR_ONE_TO_ONE] [EXPR_ONE_TO_ONE] : [Expr.OneToOne], [EXPR_ONE_TO_ONE] : [EXPR] (eg [Expr.Conformal.OneToOne])
  * @param[EXPR_ONE_TO_MANY] [EXPR_ONE_TO_MANY] : [Expr.OneToMany], [EXPR_ONE_TO_MANY] : [EXPR] (eg [Expr.Conformal.OneToMany])
- * @param[R] object type & expression result type (eg [core.geometry.GCircle])
+ * @param[R] core object type & expression result type (downscaled, eg [core.geometry.GCircle])
  */
 @Suppress("UNCHECKED_CAST")
 sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_TO_MANY : Expr.OneToMany, R : Any>(
@@ -40,6 +40,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
 
     // for the VM.objects list nulls correspond to unrealized outputs of multi-functions
     // here nulls correspond to free objects
+    // MAYBE: make it mutable list
     /**
      * object index -> its expression, `null` meaning "free" object
      *
@@ -92,6 +93,11 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
                 }
             }
     }
+
+    inline operator fun get(index: Ix): ExprOutput<EXPR>? =
+        expressions[index]
+
+    abstract fun updateObjectTypeAt(index: Ix)
 
     protected abstract fun EXPR.evaluate(
         objects: List<R?>
@@ -148,6 +154,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         parents2gluedIncidentPoints.clear()
         val result = (expr as EXPR).evaluate(objects)
         println("$ix -> $expr -> $result")
+        updateObjectTypeAt(ix)
         return result.firstOrNull()
     }
 
@@ -169,6 +176,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         }
         parents2gluedIncidentPoints.clear()
         println("$ix -> $exprOutput -> $result")
+        updateObjectTypeAt(ix)
         return result
     }
 
@@ -195,6 +203,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             } else { // no hopping over tiers, we good
                 tier2ixs.add(setOf(ix))
             }
+            updateObjectTypeAt(ix)
         }
         parents2gluedIncidentPoints.clear()
         println("$ix0:${ix0+result.size} -> $expr -> $result")
@@ -228,6 +237,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             ix2tier[index] = FREE_TIER
             recomputeChildrenTiers(index)
             parents2gluedIncidentPoints.clear()
+            updateObjectTypeAt(index)
         }
     }
 
@@ -256,6 +266,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         parents2gluedIncidentPoints.clear()
         val result = (newExpr as EXPR).evaluate(objects)
 //        println("change $ix -> $newExpr -> $result")
+        updateObjectTypeAt(index)
         return result.firstOrNull()
     }
 

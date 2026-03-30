@@ -5,8 +5,7 @@ import androidx.compose.ui.graphics.Color
 import core.geometry.CircleOrLine
 import core.geometry.GCircle
 import domain.ColorAsCss
-import domain.model.ConcreteArcPath
-import domain.model.SaveState
+import core.geometry.ConcreteArcPath
 import kotlinx.serialization.Serializable
 import ui.theme.DodeclustersColors
 

@@ -113,10 +113,10 @@ class ChangeHistory(
 
     fun accumulateChangedLocations(
         objectIndices: Set<Ix> = emptySet(),
-        objectColorIndices: Set<Ix> = emptySet(),
-        objectLabelIndices: Set<Ix> = emptySet(),
         expressionIndices: Set<Ix> = emptySet(),
-        arcPaths: Set<Int> = emptySet(),
+        borderColorIndices: Set<Ix> = emptySet(),
+        fillColorIndices: Set<Ix> = emptySet(),
+        labelIndices: Set<Ix> = emptySet(),
         regions: Boolean = false,
         backgroundColor: Boolean = false,
         chessboardPattern: Boolean = false,
@@ -131,10 +131,10 @@ class ChangeHistory(
         accumulatedChangedLocations = accumulatedChangedLocations.accumulate(
             SaveState.Change.Locations(
                 objectIndices = objectIndices,
-                objectColorIndices = objectColorIndices,
-                objectLabelIndices = objectLabelIndices,
                 expressionIndices = expressionIndices,
-                arcPaths = arcPaths,
+                borderColorIndices = borderColorIndices,
+                fillColorIndices = fillColorIndices,
+                labelIndices = labelIndices,
                 regions = regions,
                 backgroundColor = backgroundColor,
                 chessboardPattern = chessboardPattern,

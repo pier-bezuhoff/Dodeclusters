@@ -10,31 +10,32 @@ import domain.PathCache
 import domain.expressions.Expr
 import domain.expressions.Expressions
 
-// TODO: separate param types for underlying objects (used in computations) and
-//  display objects (fast & easy to draw)
 /**
- * Purports to encapsulate & manage [objects] and object-related properties.
+ * Purports to encapsulate & manage [displayObjects] and object-related properties.
  *
  * Very mutable, track [invalidationsState]/[invalidations] for changes and use with care.
- * @param[R] object type (eg [GCircle])
+ * @param[R] core object type, used in calculations (downscaled, eg [GCircle])
+ * @param[D] display object type
  */
-sealed class ObjectModel<R : Any> {
+sealed class ObjectModel<R : Any, D : Any> {
     /**
      * All existing objects; `null`s correspond either to unrealized outputs of
      * [domain.expressions.Expr.OneToMany], or to forever deleted objects (they have `null` `VM.expressions`),
      * or (rarely) to mismatching type casts.
      *
-     * NOTE: don't forget to sync changes to [objects] with [downscaledObjects]
+     * NOTE: don't forget to sync changes to [displayObjects] with [downscaledObjects]
      */
-    val objects: MutableList<R?> = mutableListOf()
+    val displayObjects: MutableList<D?> = mutableListOf()
     /**
-     * Same as [objects] but additionally downscaled (optimal for calculations).
+     * Same as [displayObjects] but additionally downscaled (optimal for calculations).
      *
      * NOTE: u are responsible for MANUALLY sync-ing them
      */
     val downscaledObjects: MutableList<R?> = mutableListOf()
-    val objectColors: MutableMap<Ix, Color> = mutableMapOf()
-    // alt name: ghost[ed] objects
+    /** [displayObjects] border colors */
+    val borderColors: MutableMap<Ix, Color> = mutableMapOf()
+    /** [displayObjects] fill colors */
+    val fillColors: MutableMap<Ix, Color> = mutableMapOf()
     val phantomObjectIndices: MutableSet<Int> = mutableSetOf()
 
     abstract val expressions: Expressions<*, *, *, R>
@@ -89,43 +90,43 @@ sealed class ObjectModel<R : Any> {
     }
 
     /** called each time an object changes */
-    protected open fun objectChangedAt(ix: Ix) {
-        pathCache.invalidateObjectPathAt(ix)
+    protected open fun objectChangedAt(index: Ix) {
+        pathCache.invalidateObjectPathAt(index)
     }
 
     /** Don't forget to [invalidatePositions] post factum */
-    fun setObject(ix: Ix, newObject: R?) {
-        objects[ix] = newObject
-        downscaledObjects[ix] = newObject?.downscale()
-        objectChangedAt(ix)
+    fun setDisplayObject(index: Ix, newObject: D?) {
+        displayObjects[index] = newObject
+        downscaledObjects[index] = newObject?.downscale()
+        objectChangedAt(index)
     }
 
     /** Don't forget to [invalidatePositions] post factum */
-    fun setDownscaledObject(ix: Ix, newDownscaledObject: R?) {
-        objects[ix] = newDownscaledObject?.upscale()
-        downscaledObjects[ix] = newDownscaledObject
-        objectChangedAt(ix)
+    fun setDownscaledObject(index: Ix, newDownscaledObject: R?) {
+        displayObjects[index] = newDownscaledObject?.upscale()
+        downscaledObjects[index] = newDownscaledObject
+        objectChangedAt(index)
     }
 
     /** Don't forget to [invalidate] post factum */
-    fun addObject(newObject: R?): Ix {
-        objects.add(newObject)
+    fun addDisplayObject(newObject: D?): Ix {
+        displayObjects.add(newObject)
         downscaledObjects.add(newObject?.downscale())
         pathCache.addObject()
-        return objects.size - 1
+        return displayObjects.size - 1
     }
 
     /** Don't forget to [invalidate] post factum */
     fun addDownscaledObject(newDownscaledObject: R?): Ix {
-        objects.add(newDownscaledObject?.upscale())
+        displayObjects.add(newDownscaledObject?.upscale())
         downscaledObjects.add(newDownscaledObject)
         pathCache.addObject()
-        return objects.size - 1
+        return displayObjects.size - 1
     }
 
     /** Don't forget to [invalidate] post factum */
-    fun addObjects(newObjects: List<R?>) {
-        objects.addAll(newObjects)
+    fun addDisplayObjects(newObjects: List<D?>) {
+        displayObjects.addAll(newObjects)
         for (o in newObjects) {
             downscaledObjects.add(o?.downscale())
         }
@@ -135,33 +136,36 @@ sealed class ObjectModel<R : Any> {
     /** Don't forget to [invalidate] post factum */
     fun addDownscaledObjects(newObjects: List<R?>) {
         for (o in newObjects) {
-            objects.add(o?.upscale())
+            displayObjects.add(o?.upscale())
         }
         downscaledObjects.addAll(newObjects)
         pathCache.addObjects(newObjects.size)
     }
 
-    /** Don't forget to [invalidate] post factum */
-    open fun removeObjectAt(ix: Ix) {
-        objects[ix] = null
-        downscaledObjects[ix] = null
-        objectColors.remove(ix)
-        phantomObjectIndices.remove(ix)
-        pathCache.removeObjectAt(ix)
+    /** Don't forget to [expressions].deleteNodes beforehand and [invalidate] post factum */
+    open fun removeObjectAt(index: Ix) {
+        displayObjects[index] = null
+        downscaledObjects[index] = null
+        borderColors.remove(index)
+        fillColors.remove(index)
+        phantomObjectIndices.remove(index)
+        pathCache.removeObjectAt(index)
+        expressions.updateObjectTypeAt(index)
     }
 
-    /** Don't forget to [invalidate] post factum */
-    fun removeObjectsAt(ixs: List<Ix>) {
-        for (ix in ixs) {
+    /** Don't forget to [expressions].deleteNodes beforehand and [invalidate] post factum */
+    fun removeObjectsAt(indices: List<Ix>) {
+        for (ix in indices) {
             removeObjectAt(ix)
         }
     }
 
-    /** Don't forget to [invalidate] post factum */
+    /** Don't forget to [invalidate] post factum, doesn't clear [expressions] */
     open fun clearObjects() {
-        objects.clear()
+        displayObjects.clear()
         downscaledObjects.clear()
-        objectColors.clear()
+        borderColors.clear()
+        fillColors.clear()
         phantomObjectIndices.clear()
         pathCache.clear()
     }
@@ -169,21 +173,21 @@ sealed class ObjectModel<R : Any> {
     /** Don't forget to [invalidatePositions] post factum */
     fun syncObjects(indices: Iterable<Ix> = downscaledObjects.indices) {
         for (ix in indices) {
-            objects[ix] = downscaledObjects[ix]?.upscale()
+            displayObjects[ix] = downscaledObjects[ix]?.upscale()
             objectChangedAt(ix)
         }
     }
 
     /** Don't forget to [invalidatePositions] post factum */
-    fun syncDownscaledObjects(indices: Iterable<Ix> = objects.indices) {
+    fun syncDownscaledObjects(indices: Iterable<Ix> = displayObjects.indices) {
         for (ix in indices) {
-            downscaledObjects[ix] = objects[ix]?.downscale()
+            downscaledObjects[ix] = displayObjects[ix]?.downscale()
             objectChangedAt(ix)
         }
     }
 
     /**
-     * Copy [objectColors] from source indices onto trajectories specified
+     * Copy [borderColors] from source indices onto trajectories specified
      * by [sourceIndex2NewTrajectory]. Trajectory objects are assumed to be laid out in
      * row-column order of [sourceIndex2NewTrajectory]`.flatten` starting from [startIndex]
      * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`
@@ -196,34 +200,20 @@ sealed class ObjectModel<R : Any> {
     ) {
         var outputIndex = startIndex
         sourceIndex2NewTrajectory.forEach { (sourceIndex, trajectory) ->
-            val sourceColor = objectColors[sourceIndex]
-            if (sourceColor != null) {
+            val sourceColor = borderColors[sourceIndex]
+            val sourceFillColor = fillColors[sourceIndex]
+            if (sourceColor != null || sourceFillColor != null) {
                 trajectory.forEach { _ ->
-                    objectColors[outputIndex] = sourceColor
+                    sourceColor?.let {
+                        borderColors[outputIndex] = sourceColor
+                    }
+                    sourceFillColor?.let {
+                        fillColors[outputIndex] = sourceFillColor
+                    }
                     outputIndex += 1
                 }
             } else {
                 outputIndex += trajectory.size
-            }
-        }
-    }
-
-    /**
-     * Copy [objectColors] from source indices onto trajectories specified
-     * by [sourceIndex2TrajectoryOfIndices].
-     * @param[sourceIndex2TrajectoryOfIndices] `[(original index ~ style source, [trajectory of indices of objects])]`,
-     *
-     * Don't forget to [invalidate] post factum
-     */
-    fun copySourceColorsOntoTrajectories(
-        sourceIndex2TrajectoryOfIndices: List<Pair<Ix, List<Ix>>>,
-    ) {
-        sourceIndex2TrajectoryOfIndices.forEach { (sourceIndex, trajectory) ->
-            val sourceColor = objectColors[sourceIndex]
-            if (sourceColor != null) {
-                trajectory.forEach { ix ->
-                    objectColors[ix] = sourceColor
-                }
             }
         }
     }
@@ -233,22 +223,22 @@ sealed class ObjectModel<R : Any> {
      * @return indices of updated dependent objects, sorted by tiers */
     @Suppress("UNCHECKED_CAST")
     fun <EXPR_ONE_TO_ONE : Expr.OneToOne> changeExpr(
-        ix: Ix,
+        index: Ix,
         newExpr: EXPR_ONE_TO_ONE,
     ): List<Ix> {
         val newObject = (expressions as Expressions<*, EXPR_ONE_TO_ONE, *, R>)
-            .changeExpr(ix, newExpr)
-        setDownscaledObject(ix, newObject)
-        val toBeUpdated = expressions.update(setOf(ix))
+            .changeExpr(index, newExpr)
+        setDownscaledObject(index, newObject)
+        val toBeUpdated = expressions.update(setOf(index))
         syncObjects(toBeUpdated)
         invalidatePositions()
         return toBeUpdated
     }
 
     /** Already includes [invalidatePositions] */
-    fun setObjectsWithConsequences(changes: Map<Ix, R?>) {
+    fun setDisplayObjectsWithConsequences(changes: Map<Ix, D?>) {
         for ((ix, newObject) in changes) {
-            setObject(ix, newObject)
+            setDisplayObject(ix, newObject)
         }
         val updatedIndices = expressions.update(changes.keys)
         syncObjects(updatedIndices)
@@ -256,16 +246,16 @@ sealed class ObjectModel<R : Any> {
     }
 
     /** Already includes [invalidatePositions]
-     * @return all indices of changed objects (including [ix]) */
-    fun setObjectWithConsequences(
-        ix: Ix,
-        newObject: R?
+     * @return all indices of changed objects (including [index]) */
+    fun setDisplayObjectWithConsequences(
+        index: Ix,
+        newObject: D?
     ): List<Ix> {
-        setObject(ix, newObject)
-        val updatedIndices = expressions.update(setOf(ix))
+        setDisplayObject(index, newObject)
+        val updatedIndices = expressions.update(setOf(index))
         syncObjects(updatedIndices)
         invalidatePositions()
-        return updatedIndices + ix
+        return updatedIndices + index
     }
 
     // NOTE: idk, handling of incident points is messy
@@ -287,6 +277,6 @@ sealed class ObjectModel<R : Any> {
         rotationAngle: Float = 0f,
     ): Set<Ix>
 
-    abstract fun R.downscale(): R
-    abstract fun R.upscale(): R
+    abstract fun D.downscale(): R
+    abstract fun R.upscale(): D
 }

@@ -3,7 +3,9 @@ package domain.expressions
 import androidx.compose.runtime.Immutable
 import core.geometry.Circle
 import core.geometry.CircleOrLine
+import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
+import core.geometry.GCircleOrConcreteAcPath
 import core.geometry.Line
 import core.geometry.Point
 import domain.Ix
@@ -21,19 +23,17 @@ import domain.expressions.Expr.Incidence
 import domain.expressions.Expr.Intersection
 import domain.expressions.Expr.LineBy2Points
 import domain.expressions.Expr.LoxodromicMotion
-import domain.expressions.Expr.OneToOne
 import domain.expressions.Expr.PointInterpolation
 import domain.expressions.Expr.PolarLine
 import domain.expressions.Expr.PolarLineByCircleAndPoint
 import domain.expressions.Expr.Pole
 import domain.expressions.Expr.PoleByCircleAndLine
 import domain.expressions.Expr.Rotation
-import domain.never
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
-typealias ConformalExprResult = List<GCircle?>
+typealias ConformalExprResult = List<GCircleOrConcreteAcPath?>
 
 /**
  * Raw expression that can have one or several outputs:
@@ -47,7 +47,7 @@ typealias ConformalExprResult = List<GCircle?>
 sealed interface Expr {
 
     @Serializable
-    sealed interface OneToOne : Expr
+    sealed interface OneToOne : Expr, ExprOutput<Expr>
     @Serializable
     sealed interface OneToMany : Expr
 
@@ -81,6 +81,15 @@ sealed interface Expr {
 
     // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr
     //  p' = f(Δ(f⁻¹(p)), where point p on dependent carrier f(<free>) moves to p' when <free> is affected by Δ
+
+    enum class ResultType {
+        CIRCLE, POINT, IMAGINARY_CIRCLE, LINE,
+        ARC_PATH,
+        ;
+        companion object {
+            val CLIPs: Set<ResultType> = setOf(CIRCLE, LINE, IMAGINARY_CIRCLE, POINT)
+        }
+    }
 
     // Conformal //
 
@@ -117,9 +126,9 @@ sealed interface Expr {
     @Serializable
     @SerialName("IncidentPoint")
     data class Incidence(
-        val parameters: IncidenceParameters,
+        override val parameters: IncidenceParameters,
         val carrier: Ix,
-    ) : Conformal.OneToOne, Projective.OneToOne
+    ) : Conformal.OneToOne, Projective.OneToOne, HasParameters
 
     @Serializable
     @SerialName("CircleBy2ObjectsFromItsPencilAndPerpendicularObject")
@@ -231,6 +240,13 @@ sealed interface Expr {
         override val nSteps: Int = parameters.nSteps
     }
 
+    @Serializable
+    @SerialName("ArcPathArcMidpoint")
+    data class ArcPathArcMidpoint(
+        override val parameters: ArcPathArcMidpointParameters,
+        val arcPath: Ix,
+    ) : Conformal.OneToOne, HasParameters
+
     // Projective
 
     @Serializable
@@ -267,6 +283,7 @@ sealed interface Expr {
     // each arg can in turn be computed as an expression, making up Forest-like data structure
     val args: List<Ix> get() =
         when (this) {
+            // conformal
             is Intersection -> listOf(circle1, circle2)
             is CircleByCenterAndRadius -> listOf(center, radiusPoint)
             is CircleBy3Points -> listOf(object1, object2, object3)
@@ -283,11 +300,39 @@ sealed interface Expr {
             is Rotation -> listOf(pivot, target)
             is BiInversion -> listOf(engine1, engine2, target)
             is LoxodromicMotion -> listOf(divergencePoint, convergencePoint, target)
+            is ArcPath -> dependencies.toList()
+            // projective
+            is ArcPathArcMidpoint -> listOf(arcPath)
             is ConicIntersection -> listOf(conic1, conic2)
             is ConicBy5 -> listOf(conic1, conic2, conic3, conic4, conic5)
             is PolarLine -> listOf(conic, pole)
             is Pole -> listOf(conic, polarLine)
         }
+
+    val resultTypes: Set<ResultType> get() = when (this) {
+        is Intersection -> setOf(ResultType.POINT)
+        is CircleByCenterAndRadius -> setOf(ResultType.CIRCLE)
+        is CircleBy3Points -> ResultType.CLIPs
+        is LineBy2Points -> setOf(ResultType.LINE)
+        is Incidence -> setOf(ResultType.POINT)
+        is CircleByPencilAndPoint -> ResultType.CLIPs
+        is PolarLineByCircleAndPoint -> setOf(ResultType.LINE)
+        is PoleByCircleAndLine -> setOf(ResultType.POINT)
+        is CircleInversion -> ResultType.CLIPs
+        is CircleBy2PointsAndSagittaRatio -> setOf(ResultType.CIRCLE, ResultType.LINE)
+        is CircleInterpolation -> setOf(ResultType.CIRCLE, ResultType.LINE, ResultType.IMAGINARY_CIRCLE) // no points
+        is PointInterpolation -> setOf(ResultType.POINT)
+        is CircleExtrapolation -> setOf(ResultType.CIRCLE, ResultType.LINE)
+        is Rotation -> ResultType.CLIPs
+        is BiInversion -> ResultType.CLIPs
+        is LoxodromicMotion -> ResultType.CLIPs
+        is ArcPath -> setOf(ResultType.ARC_PATH)
+        is ArcPathArcMidpoint -> setOf(ResultType.POINT)
+        is ConicIntersection -> setOf()
+        is ConicBy5 -> setOf()
+        is PolarLine -> setOf()
+        is Pole -> setOf()
+    }
 }
 
 // performance-wise variations between:
@@ -297,117 +342,10 @@ sealed interface Expr {
 // BUT using direct access objects is much much faster (without downscale)
 // with array+downscale there is also not much difference
 // SO downscale is a bottleneck
-// MAYBE: keep VM.objects downscaled and only upscale them for draw
-inline fun Expr.Conformal.eval(
-    crossinline get: (Ix) -> GCircle?,
-): ConformalExprResult {
-    val g = { ix: Ix ->
-        get(ix) ?: throw NullPointerException() // i miss MonadError
-    }
-    val c = { ix: Ix ->
-        get(ix) as? CircleOrLine ?: throw NullPointerException()
-    }
-    val p = { ix: Ix ->
-        get(ix) as? Point ?: throw NullPointerException()
-    }
-    try {
-        // idt it's worth to do normal polymorphism
-        return when (this) {
-            is OneToOne -> {
-                val result = when (this) {
-                    is Incidence -> computeIncidence(
-                        parameters,
-                        c(carrier)
-                    )
-                    is CircleByCenterAndRadius -> computeCircleByCenterAndRadius(
-                        p(center),
-                        p(radiusPoint)
-                    )
-                    is CircleBy3Points -> computeCircleBy3Points(
-                        g(object1),
-                        g(object2),
-                        g(object3)
-                    )
-                    is LineBy2Points -> computeLineBy2Points(
-                        g(object1),
-                        g(object2)
-                    )
-                    is CircleByPencilAndPoint -> computeCircleByPencilAndPoint(
-                        g(pencilObject1),
-                        g(pencilObject2),
-                        g(perpendicularObject),
-                    )
-                    is PolarLineByCircleAndPoint -> computePolarLine(
-                        c(circle),
-                        p(point),
-                    )
-                    is PoleByCircleAndLine -> computePole(
-                        get(circle) as? Circle ?: throw NullPointerException(),
-                        get(line) as? Line ?: throw NullPointerException(),
-                    )
-                    is CircleInversion -> computeCircleInversion(
-                        g(target),
-                        g(engine)
-                    )
-                    is CircleBy2PointsAndSagittaRatio -> computeCircleBy2PointsAndSagittaRatio(
-                        parameters,
-                        p(chordStartPoint),
-                        p(chordEndPoint),
-                    )
-                    is PolarLine -> TODO()
-                    is Pole -> TODO()
-                    else -> never(this.toString())
-                }
-                listOf(result)
-            }
-            is Intersection -> computeIntersection(
-                c(circle1),
-                c(circle2)
-            )
-            is CircleInterpolation -> computeCircleInterpolation(
-                parameters,
-                c(startCircle),
-                c(endCircle)
-            )
-            is PointInterpolation -> computePointInterpolation(
-                parameters,
-                p(startPoint),
-                p(endPoint)
-            )
-            is CircleExtrapolation -> computeCircleExtrapolation(
-                parameters,
-                c(startCircle),
-                c(endCircle)
-            )
-            is Rotation -> computeRotation(
-                parameters,
-                p(pivot),
-                g(target),
-            )
-            is BiInversion -> computeBiInversion(
-                parameters,
-                g(engine1),
-                g(engine2),
-                g(target),
-            )
-            is LoxodromicMotion -> computeLoxodromicMotion(
-                parameters,
-                p(divergencePoint),
-                p(convergencePoint),
-                g(target)
-            )
-        }
-    } catch (_: Exception) { // catches NullExceptions AND unforeseen cases (safety measure)
-        return emptyList()
-    }
-}
-
-// this eval is 4 times to 15 times faster (but lacks downscale)
-// BUT adding downscale completely cancels speed improvement
-fun Expr.Conformal.eval(objects: List<GCircle?>): ConformalExprResult {
+fun Expr.Conformal.eval(objects: List<GCircleOrConcreteAcPath?>): ConformalExprResult {
     return when (this) {
         // idt it's worth to polymorphism eval
-        is OneToOne -> {
+        is Expr.Conformal.OneToOne -> {
             val result = when (this) {
                 is Incidence -> computeIncidence(
                     parameters,
@@ -418,18 +356,18 @@ fun Expr.Conformal.eval(objects: List<GCircle?>): ConformalExprResult {
                     objects[radiusPoint] as? Point ?: return emptyList(),
                 )
                 is CircleBy3Points -> computeCircleBy3Points(
-                    objects[object1] ?: return emptyList(),
-                    objects[object2] ?: return emptyList(),
-                    objects[object3] ?: return emptyList(),
+                    objects[object1] as? GCircle ?: return emptyList(),
+                    objects[object2] as? GCircle ?: return emptyList(),
+                    objects[object3] as? GCircle ?: return emptyList(),
                 )
                 is CircleByPencilAndPoint -> computeCircleByPencilAndPoint(
-                    objects[pencilObject1] ?: return emptyList(),
-                    objects[pencilObject2] ?: return emptyList(),
-                    objects[perpendicularObject] ?: return emptyList(),
+                    objects[pencilObject1] as? GCircle ?: return emptyList(),
+                    objects[pencilObject2] as? GCircle ?: return emptyList(),
+                    objects[perpendicularObject] as? GCircle ?: return emptyList(),
                 )
                 is LineBy2Points -> computeLineBy2Points(
-                    objects[object1] ?: return emptyList(),
-                    objects[object2] ?: return emptyList(),
+                    objects[object1] as? GCircle ?: return emptyList(),
+                    objects[object2] as? GCircle ?: return emptyList(),
                 )
                 is PolarLineByCircleAndPoint -> computePolarLine(
                     objects[circle] as? CircleOrLine ?: return emptyList(),
@@ -440,17 +378,21 @@ fun Expr.Conformal.eval(objects: List<GCircle?>): ConformalExprResult {
                     objects[line] as? Line ?: return emptyList(),
                 )
                 is CircleInversion -> computeCircleInversion(
-                    objects[target] ?: return emptyList(),
-                    objects[engine] ?: return emptyList(),
+                    objects[target] as? GCircle ?: return emptyList(),
+                    objects[engine] as? GCircle ?: return emptyList(),
                 )
                 is CircleBy2PointsAndSagittaRatio -> computeCircleBy2PointsAndSagittaRatio(
                     parameters,
                     objects[chordStartPoint] as? Point ?: return emptyList(),
                     objects[chordEndPoint] as? Point ?: return emptyList(),
                 )
+                is ArcPath -> this.toConcreteArcPath(objects)
+                is Expr.ArcPathArcMidpoint -> computeArcPathArcMidpoint(
+                    parameters,
+                    objects[arcPath] as? ConcreteArcPath ?: return emptyList(),
+                )
                 is PolarLine -> TODO()
                 is Pole -> TODO()
-                else -> never(this.toString())
             }
             listOf(result)
         }
@@ -476,19 +418,19 @@ fun Expr.Conformal.eval(objects: List<GCircle?>): ConformalExprResult {
         is Rotation -> computeRotation(
             parameters,
             objects[pivot] as? Point ?: return emptyList(),
-            objects[target] ?: return emptyList(),
+            objects[target] as? GCircle ?: return emptyList(),
         )
         is BiInversion -> computeBiInversion(
             parameters,
-            objects[engine1] ?: return emptyList(),
-            objects[engine2] ?: return emptyList(),
-            objects[target] ?: return emptyList(),
+            objects[engine1] as? GCircle ?: return emptyList(),
+            objects[engine2] as? GCircle ?: return emptyList(),
+            objects[target] as? GCircle ?: return emptyList(),
         )
         is LoxodromicMotion -> computeLoxodromicMotion(
             parameters,
             objects[divergencePoint] as? Point ?: return emptyList(),
             objects[convergencePoint] as? Point ?: return emptyList(),
-            objects[target] ?: return emptyList(),
+            objects[target] as? GCircle ?: return emptyList(),
         )
     }
 }
@@ -567,6 +509,10 @@ inline fun <EXPR : Expr> EXPR.reIndex(
             target = reIndexer(target),
             otherHalfStart = otherHalfStart?.let { reIndexer(it) },
         )
+        is ArcPath -> this.reIndex(reIndexer)
+        is Expr.ArcPathArcMidpoint -> copy(
+            arcPath = reIndexer(arcPath),
+        )
         is ConicBy5 -> copy(
             conic1 = reIndexer(conic1),
             conic2 = reIndexer(conic2),
@@ -592,41 +538,34 @@ inline fun <EXPR : Expr> EXPR.reIndex(
 inline fun <reified EXPR : Expr> EXPR.copyWithNewParameters(
     newParameters: Parameters
 ): EXPR =
-    when (this) {
-        is Incidence -> copy(
-            parameters = newParameters as IncidenceParameters
-        )
-        is CircleByCenterAndRadius -> this
-        is CircleBy3Points -> this
-        is CircleByPencilAndPoint -> this
-        is LineBy2Points -> this
-        is PolarLineByCircleAndPoint -> this
-        is PoleByCircleAndLine -> this
-        is CircleInversion -> this
-        is CircleBy2PointsAndSagittaRatio -> copy(
-            parameters = newParameters as SagittaRatioParameters
-        )
-        is Intersection -> this
-        is CircleInterpolation -> copy(
-            parameters = newParameters as InterpolationParameters
-        )
-        is PointInterpolation -> copy(
-            parameters = newParameters as InterpolationParameters
-        )
-        is CircleExtrapolation -> copy(
-            parameters = newParameters as ExtrapolationParameters
-        )
-        is Rotation -> copy(
-            parameters = newParameters as RotationParameters
-        )
-        is BiInversion -> copy(
-            parameters = newParameters as BiInversionParameters
-        )
-        is LoxodromicMotion -> copy(
-            parameters = newParameters as LoxodromicMotionParameters
-        )
-        is ConicBy5 -> this
-        is ConicIntersection -> this
-        is PolarLine -> this
-        is Pole -> this
-    } as EXPR
+    if (this is Expr.HasParameters) {
+        when (this) {
+            is Incidence -> copy(
+                parameters = newParameters as IncidenceParameters
+            )
+            is CircleBy2PointsAndSagittaRatio -> copy(
+                parameters = newParameters as SagittaRatioParameters
+            )
+            is CircleInterpolation -> copy(
+                parameters = newParameters as InterpolationParameters
+            )
+            is PointInterpolation -> copy(
+                parameters = newParameters as InterpolationParameters
+            )
+            is CircleExtrapolation -> copy(
+                parameters = newParameters as ExtrapolationParameters
+            )
+            is Rotation -> copy(
+                parameters = newParameters as RotationParameters
+            )
+            is BiInversion -> copy(
+                parameters = newParameters as BiInversionParameters
+            )
+            is LoxodromicMotion -> copy(
+                parameters = newParameters as LoxodromicMotionParameters
+            )
+            is Expr.ArcPathArcMidpoint -> copy(
+                parameters = newParameters as ArcPathArcMidpointParameters
+            )
+        } as EXPR
+    } else this

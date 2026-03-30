@@ -10,9 +10,10 @@ import com.charleskorn.kaml.YamlConfiguration
 import core.geometry.GCircle
 import domain.ColorAsCss
 import domain.Ix
-import domain.model.ArcPath
+import domain.expressions.ArcPath
 import domain.model.LogicalRegion
 import domain.expressions.ConformalExprOutput
+import domain.expressions.ExprOutput
 import domain.model.SaveState
 import domain.model.ChessboardPattern
 import kotlinx.serialization.Serializable
@@ -36,18 +37,29 @@ data class DdcV5(
      * since we use [mutableMapOf] underneath, the index order is preserved */
     val objects: Map<Ix, ObjectToken>,
     val regions: List<LogicalRegion> = emptyList(),
-    val arcPaths: List<ArcPath> = emptyList(),
 ) {
     @Immutable
     @Serializable
-    data class ObjectToken(
+    sealed interface ObjectToken
+
+    @Immutable
+    @Serializable
+    data class GCircleToken(
         // discriminates DdcV4.Token.Object
         val representation: GCircle?,
         val expression: ConformalExprOutput? = null,
         val label: String? = null,
         val color: ColorAsCss? = null,
         val isPhantom: Boolean = false,
-    )
+    ) : ObjectToken
+
+    @Immutable
+    @Serializable
+    data class ArcPathToken(
+        val arcPath: ArcPath,
+        val borderColor: ColorAsCss? = null,
+        val fillColor: ColorAsCss? = null,
+    ) : ObjectToken
 
     init {
         require(objects.keys == (0 until objects.size).toSet()) { "Bad object indices" }
@@ -56,27 +68,40 @@ data class DdcV5(
     fun toSaveState(): SaveState {
         val objs = mutableListOf<GCircle?>()
         val expressions = mutableMapOf<Ix, ConformalExprOutput?>()
-        val objectColors = mutableMapOf<Ix, Color>()
-        val objectLabels = mutableMapOf<Ix, String>()
+        val borderColors = mutableMapOf<Ix, Color>()
+        val fillColors = mutableMapOf<Ix, Color>()
+        val labels = mutableMapOf<Ix, String>()
         val phantoms = mutableSetOf<Ix>()
         objects.entries
             .sortedBy { (ix, _) -> ix }
-            .forEach { (ix, objectToken) ->
-                objs.add(objectToken.representation)
-                expressions[ix] = objectToken.expression
-                if (objectToken.color != null)
-                    objectColors[ix] = objectToken.color
-                if (objectToken.label != null)
-                    objectLabels[ix] = objectToken.label
-                if (objectToken.isPhantom)
-                    phantoms.add(ix)
+            .forEach { (ix, token) ->
+                when (token) {
+                    is GCircleToken -> {
+                        objs.add(token.representation)
+                        expressions[ix] = token.expression
+                        if (token.color != null)
+                            borderColors[ix] = token.color
+                        if (token.label != null)
+                            labels[ix] = token.label
+                        if (token.isPhantom)
+                            phantoms.add(ix)
+                    }
+                    is ArcPathToken -> {
+                        objs.add(null) // concrete path needs to be reEval'd given full context
+                        expressions[ix] = ExprOutput.Just(token.arcPath)
+                        if (token.borderColor != null)
+                            borderColors[ix] = token.borderColor
+                        if (token.fillColor != null)
+                            fillColors[ix] = token.fillColor
+                    }
+                }
             }
         return SaveState(
             objects = objs,
-            objectColors = objectColors,
-            objectLabels = objectLabels,
             expressions = expressions,
-            arcPaths = arcPaths,
+            borderColors = borderColors,
+            fillColors = fillColors,
+            labels = labels,
             regions = regions,
             backgroundColor = backgroundColor,
             chessboardPattern =
@@ -125,16 +150,22 @@ data class DdcV5(
                         chessboardPattern != ChessboardPattern.STARTS_TRANSPARENT,
                     chessboardColor = chessboardColor,
                     objects = objects.withIndex().associate { (ix, obj) ->
-                        ix to ObjectToken(
-                            representation = obj,
-                            expression = expressions[ix],
-                            label = objectLabels[ix],
-                            color = objectColors[ix],
-                            isPhantom = ix in phantoms,
-                        )
+                        ix to when (val expression = expressions[ix]) {
+                            is ArcPath -> ArcPathToken(
+                                arcPath = expression,
+                                borderColor = this.borderColors[ix],
+                                fillColor = this.fillColors[ix],
+                            )
+                            else -> GCircleToken(
+                                representation = obj as? GCircle,
+                                expression = expressions[ix],
+                                label = this.labels[ix],
+                                color = this.borderColors[ix],
+                                isPhantom = ix in phantoms,
+                            )
+                        }
                     },
                     regions = regions,
-                    arcPaths = arcPaths.filterNotNull(),
                 )
             }
         }

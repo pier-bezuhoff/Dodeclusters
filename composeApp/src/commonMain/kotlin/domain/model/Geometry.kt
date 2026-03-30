@@ -5,7 +5,7 @@ import domain.expressions.Expressions
 import domain.expressions.ProjectiveExpressions
 
 sealed interface Geometry {
-    val objectModel: ObjectModel<*>
+    val objectModel: ObjectModel<*, *>
     val expressions: Expressions<*, *, *, *>
 
     data class Conformal(

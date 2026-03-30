@@ -50,7 +50,7 @@ sealed interface SubMode {
         /** @property[objectOrArcPath] null means arc-path */
         @Immutable
         data class Choice(
-            val index: Int,
+            val index: Ix,
             val objectOrArcPath: GCircle?,
             val borderColor: Color?,
             val fillColor: Color?,
@@ -110,7 +110,7 @@ sealed interface SubMode {
     }
 
     data class GrabbedArcMidpoint(
-        val arcPathIndex: Int,
+        val arcPathIndex: Ix,
         val arcIndex: Int,
     ) : SubMode
 }

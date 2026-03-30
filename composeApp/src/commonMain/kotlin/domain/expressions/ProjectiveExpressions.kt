@@ -9,6 +9,10 @@ class ProjectiveExpressions(
 ) : Expressions<Expr.Projective, Expr.Projective.OneToOne, Expr.Projective.OneToMany, Conic>(
     initialExpressions, objects
 ) {
+    override fun updateObjectTypeAt(index: Ix) {
+        TODO("not implemented")
+    }
+
     override fun Expr.Projective.evaluate(objects: List<Conic?>): List<Conic?> {
         TODO("not implemented")
     }

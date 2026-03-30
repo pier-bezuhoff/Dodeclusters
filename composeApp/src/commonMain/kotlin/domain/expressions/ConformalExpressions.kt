@@ -1,7 +1,10 @@
 package domain.expressions
 
+import core.geometry.Circle
 import core.geometry.CircleOrLine
-import core.geometry.GCircle
+import core.geometry.ConcreteArcPath
+import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.ImaginaryCircle
 import core.geometry.Line
 import core.geometry.Point
 import domain.Ix
@@ -15,13 +18,53 @@ import kotlin.math.abs
  */
 class ConformalExpressions(
     initialExpressions: Map<Ix, ConformalExprOutput?>,
-    objects: MutableList<GCircle?>,
-) : Expressions<Expr.Conformal, Expr.Conformal.OneToOne, Expr.Conformal.OneToMany, GCircle>(
+    objects: MutableList<GCircleOrConcreteAcPath?>,
+) : Expressions<Expr.Conformal, Expr.Conformal.OneToOne, Expr.Conformal.OneToMany, GCircleOrConcreteAcPath>(
     initialExpressions, objects
 ) {
+    val circleIndices = mutableSetOf<Ix>()
+    val lineIndices = mutableSetOf<Ix>()
+    val imaginaryCircleIndices = mutableSetOf<Ix>()
+    val pointIndices = mutableSetOf<Ix>()
+    val arcPathIndices = mutableSetOf<Ix>()
+
+    init {
+        for (ix in objects.indices)
+            updateObjectTypeAt(ix)
+    }
+
+    override fun updateObjectTypeAt(index: Ix) {
+        circleIndices.remove(index)
+        lineIndices.remove(index)
+        imaginaryCircleIndices.remove(index)
+        pointIndices.remove(index)
+        arcPathIndices.remove(index)
+        val expression = expressions[index]
+        if (expression == null) {
+            when (objects[index]) {
+                is Circle -> circleIndices.add(index)
+                is Line -> lineIndices.add(index)
+                is ImaginaryCircle -> imaginaryCircleIndices.add(index)
+                is Point -> pointIndices.add(index)
+                is ConcreteArcPath -> arcPathIndices.add(index)
+                null -> {}
+            }
+        } else {
+            for (resultType in expression.expr.resultTypes) {
+                when (resultType) {
+                    Expr.ResultType.CIRCLE -> circleIndices.add(index)
+                    Expr.ResultType.LINE -> lineIndices.add(index)
+                    Expr.ResultType.IMAGINARY_CIRCLE -> imaginaryCircleIndices.add(index)
+                    Expr.ResultType.POINT -> pointIndices.add(index)
+                    Expr.ResultType.ARC_PATH -> arcPathIndices.add(index)
+                }
+            }
+        }
+    }
+
     override fun Expr.Conformal.evaluate(
-        objects: List<GCircle?>
-    ): List<GCircle?> = eval(objects)
+        objects: List<GCircleOrConcreteAcPath?>
+    ): List<GCircleOrConcreteAcPath?> = eval(objects)
 
     override fun isExprPeriodic(expr: Expr.Conformal.OneToMany): Boolean =
         expr is Expr.LoxodromicMotion &&
@@ -61,9 +104,9 @@ class ConformalExpressions(
             val expr = e?.expr
             if (expr is Expr.Incidence && objects[expr.carrier] is Line) {
                 expressions[ix] = ExprOutput.Just(
-                    expr.copy(IncidenceParameters(
-                        order = zoom * expr.parameters.order
-                    ))
+                    expr.copy(
+                        parameters = IncidenceParameters(order = zoom * expr.parameters.order)
+                    )
                 )
                 changedIxs.add(ix)
             }

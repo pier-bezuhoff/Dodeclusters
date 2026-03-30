@@ -13,12 +13,12 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 object RectangleCollider {
-    fun selectWithRectangle(objects: List<GCircle?>, rect: Rect): List<Int> =
+    fun selectWithRectangle(objects: List<*>, rect: Rect): List<Int> =
         objects.filterIndices { o ->
-            if (o == null)
-                false
-            else
+            if (o is GCircle)
                 objectRectangleCollisionTest(o, rect)
+            else
+                false
         }
 
     /** Rectangle collider.
