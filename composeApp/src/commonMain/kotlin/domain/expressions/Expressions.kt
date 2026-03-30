@@ -19,7 +19,7 @@ internal const val UNCALCULATED_TIER: Tier = -1
 /** stub tier for forever-deleted object index */
 internal const val ABANDONED_TIER: Tier = -2
 
-// kotlin disallows E1 : E & F where E is generic
+// kotlin disallows type intersection E1 : E & F where E is generic
 // hence this type mess
 // see https://discuss.kotlinlang.org/t/current-intersection-type-options-in-kotlin/20903
 /**
@@ -97,7 +97,10 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     inline operator fun get(index: Ix): ExprOutput<EXPR>? =
         expressions[index]
 
-    abstract fun updateObjectTypeAt(index: Ix)
+    /**
+     * Updates object classification index-lists, based on expression, or if it's null, type
+     */
+    abstract fun updateObjectTypeAt(index: Ix, obj: R? = null)
 
     protected abstract fun EXPR.evaluate(
         objects: List<R?>

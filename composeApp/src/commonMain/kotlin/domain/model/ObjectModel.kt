@@ -110,36 +110,36 @@ sealed class ObjectModel<R : Any, D : Any> {
 
     /** Don't forget to [invalidate] post factum */
     fun addDisplayObject(newObject: D?): Ix {
+        val ix = displayObjects.size
         displayObjects.add(newObject)
-        downscaledObjects.add(newObject?.downscale())
+        val downscaled = newObject?.downscale()
+        downscaledObjects.add(downscaled)
         pathCache.addObject()
-        return displayObjects.size - 1
+        expressions.updateObjectTypeAt(ix, downscaled)
+        return ix
     }
 
     /** Don't forget to [invalidate] post factum */
     fun addDownscaledObject(newDownscaledObject: R?): Ix {
+        val ix = displayObjects.size
         displayObjects.add(newDownscaledObject?.upscale())
         downscaledObjects.add(newDownscaledObject)
         pathCache.addObject()
-        return displayObjects.size - 1
+        expressions.updateObjectTypeAt(ix, newDownscaledObject)
+        return ix
     }
 
     /** Don't forget to [invalidate] post factum */
     fun addDisplayObjects(newObjects: List<D?>) {
-        displayObjects.addAll(newObjects)
-        for (o in newObjects) {
-            downscaledObjects.add(o?.downscale())
-        }
-        pathCache.addObjects(newObjects.size)
+        for (o in newObjects)
+            addDisplayObject(o)
     }
 
     /** Don't forget to [invalidate] post factum */
     fun addDownscaledObjects(newObjects: List<R?>) {
         for (o in newObjects) {
-            displayObjects.add(o?.upscale())
+            addDownscaledObject(o)
         }
-        downscaledObjects.addAll(newObjects)
-        pathCache.addObjects(newObjects.size)
     }
 
     /** Don't forget to [expressions].deleteNodes beforehand and [invalidate] post factum */

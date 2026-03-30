@@ -53,6 +53,7 @@ import domain.compressConstraints
 import domain.entails
 import domain.expressions.ArcPath
 import domain.expressions.BiInversionParameters
+import domain.expressions.ConformalExpressions
 import domain.expressions.Expr
 import domain.expressions.ExprOutput
 import domain.expressions.ExtrapolationParameters
@@ -127,12 +128,16 @@ import kotlin.time.Duration.Companion.seconds
 class EditorViewModel : ViewModel() {
     val objectModel: ConformalObjectModel = ConformalObjectModel()
     val objects: List<GCircleOrConcreteAcPath?> = objectModel.displayObjects
-    inline val expressions: Map<Ix, ExprOutput<Expr.Conformal>?> get() =
-        objectModel.expressions.expressions
-    // alt name: ghost[ed] objects
-    val phantoms: Set<Ix> = objectModel.phantomObjectIndices
+    inline val expressions: ConformalExpressions get() =
+        objectModel.expressions
+    inline val borderColors: Map<Ix, Color> get() =
+        objectModel.borderColors
+    inline val fillColors: Map<Ix, Color> get() =
+        objectModel.fillColors
     // not in objectModel cuz i want it to be state-backed for nicer caching
     var labels: Map<Ix, String> by mutableStateOf(mapOf())
+    // alt name: ghost[ed] objects
+    val phantoms: Set<Ix> = objectModel.phantomObjectIndices
     // MAYBE: encapsulate regions into ObjectModel
     /** Filled regions delimited by some objects from [objects] */
     var regions: List<LogicalRegion> by mutableStateOf(listOf())
@@ -153,7 +158,7 @@ class EditorViewModel : ViewModel() {
     inline val selectedIndices: List<Ix> get() =
         selection.gCircles.plus(
             selection.arcPaths.flatMap {
-                (expressions[it] as? ArcPath)?.dependencies ?: emptySet()
+                objectModel.getArcPath(it)?.dependencies ?: emptySet()
             }
         ).distinct()
     inline val objectSelection: List<Ix> get() = selection.gCircles
@@ -228,7 +233,7 @@ class EditorViewModel : ViewModel() {
                 selection.gCircles.any { objects[it] is Point }
             )
     inline val showPointContextActions: Boolean get() =
-        showCircles && mode.isSelectingCircles() && objectSelection.any { objects[it] is Point }
+        showCircles && mode.isSelectingCircles() && selection.gCircles.any { objects[it] is Point }
     inline val showArcPathContextActions: Boolean get() =
         mode.isSelectingCircles() && selection.arcPaths.isNotEmpty()
 
@@ -263,9 +268,14 @@ class EditorViewModel : ViewModel() {
         return selection.gCircles.all { objects[it] == null || !isFree(it) }
     }
 
-    private lateinit var history: ChangeHistory
     val undoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
     val redoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
+    private var history: ChangeHistory =
+        ChangeHistory( // stub
+            initialState = SaveState.SAMPLE,
+            undoIsEnabled = undoIsEnabled,
+            redoIsEnabled = redoIsEnabled,
+        )
 
     var colorPickerParameters = ColorPickerParameters(Color.Unspecified, emptyList())
     // so.. why aren't these States?
@@ -468,7 +478,7 @@ class EditorViewModel : ViewModel() {
         }
         println("mode = $mode, submode = $submode")
         println("partialArgList = $partialArgList")
-        println("selection = $objectSelection")
+        println("selection = $selection")
         println("selected objects = $selectedObjectsString")
         println("selected objects downscaled = " + objectSelection.joinToString { ix ->
             "$ix: " + objectModel.downscaledObjects[ix].toString()
@@ -817,7 +827,7 @@ class EditorViewModel : ViewModel() {
             val gCirclesToCopy = selection.gCircles
             val arcPathsToCopy = objectModel.expressions.sortedByTier(selection.arcPaths)
             val deps = arcPathsToCopy.flatMap {
-                (expressions[it] as? ArcPath)?.dependencies ?: emptySet()
+                objectModel.getArcPath(it)?.dependencies ?: emptySet()
             }.toSet()
             // pre-sorting is mandatory for expression copying to work properly
             val allGCirclesToCopy = objectModel.expressions.sortedByTier(
@@ -839,8 +849,7 @@ class EditorViewModel : ViewModel() {
                 val newArcPathIndices = mutableListOf<Ix>()
                 for (ix in arcPathsToCopy) {
                     val newIx = objectModel.addArcPath(
-                        // FIX: e[ix] is never ArcPath (ExprOutput.Just)
-                        (expressions[ix] as? ArcPath)?.reIndex { oldIndex ->
+                        objectModel.getArcPath(ix)?.reIndex { oldIndex ->
                             old2new[oldIndex]!!
                         }
                     )
@@ -928,7 +937,7 @@ class EditorViewModel : ViewModel() {
             clearSelection()
             val arcPathPointsToDelete = mutableListOf<Ix>()
             for (ix in arcPathsToDelete) {
-                val arcPath = expressions[ix] as? ArcPath
+                val arcPath = objectModel.getArcPath(ix)
                 if (arcPath != null) {
                     arcPathPointsToDelete += arcPath.dependencies.filter { ix ->
                         val hasNoChildren = objectModel.expressions.children[ix].isNullOrEmpty()
@@ -1229,14 +1238,14 @@ class EditorViewModel : ViewModel() {
         return Rect(left, top, right, bottom)
     }
 
-    fun exprOf(index: Ix): Expr.Conformal? =
-        objectModel.expressions.expressions[index]?.expr
+    inline fun exprOf(index: Ix): Expr.Conformal? =
+        expressions[index]?.expr
 
-    fun isFree(index: Ix): Boolean =
-        objectModel.expressions.expressions[index] == null
+    inline fun isFree(index: Ix): Boolean =
+        expressions[index] == null
 
-    fun isConstrained(index: Ix): Boolean =
-        objectModel.expressions.expressions[index]?.expr is Expr.Incidence
+    inline fun isConstrained(index: Ix): Boolean =
+        expressions[index]?.expr is Expr.Incidence
 
     // MAYBE: wrap into state that depends only on
     //  [regions, objectColors, chessboardPattern, chessboardColor] for caching
@@ -1520,7 +1529,7 @@ class EditorViewModel : ViewModel() {
         val color = colorPickerParameters.currentColor
         for (ix in selection.arcPaths) {
             if (objects[ix] is ConcreteArcPath) {
-                objectModel.borderColors[ix] = color
+                objectModel.fillColors[ix] = color
             }
         }
         openedDialog = null
@@ -1927,7 +1936,7 @@ class EditorViewModel : ViewModel() {
                 else -> {}
             }
             if (submode == null) { // try grabbing arc midpoint
-                for (ix in selection.gCircles) {
+                for (ix in selection.arcPaths) {
                     val concreteArcPath = objects[ix] as? ConcreteArcPath ?: continue
                     for (arcIndex in concreteArcPath.arcs.indices) {
                         concreteArcPath.arcs[arcIndex].freeMidpoint?.let { midpoint ->
@@ -2582,7 +2591,9 @@ class EditorViewModel : ViewModel() {
                 excludedCircles = childCircles + parents,
                 excludedArcPaths = childArcPaths,
             ).result
-            transformWhatWeCan(listOf(ix), translation = newPoint.toOffset() - absoluteCentroid)
+            // Q: y?
+            val actualTranslation = newPoint.toOffset() - absoluteCentroid
+            transformWhatWeCan(listOf(ix), translation = translation)
         }
     }
 
@@ -2609,10 +2620,9 @@ class EditorViewModel : ViewModel() {
         translation: Offset, zoom: Float, rotationAngle: Float
     ) {
         val targets = selection.arcPaths
-            .flatMap { (expressions[it] as? ArcPath)?.dependencies ?: emptySet() }
+            .flatMap { objectModel.getArcPath(it)?.dependencies ?: emptySet() }
             .filter { objects[it] is Point }
             .distinct()
-        history.accumulateChangedLocations(objectIndices = targets.toSet())
         transformWhatWeCan(targets, translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
     }
 
@@ -2627,7 +2637,7 @@ class EditorViewModel : ViewModel() {
             obj is CircleOrLine || obj is Point
         }.plus(
             selection.arcPaths
-                .flatMap { (expressions[it] as? ArcPath)?.dependencies ?: emptySet() }
+                .flatMap { objectModel.getArcPath(it)?.dependencies ?: emptySet() }
                 .filter { objects[it] is Point }
         ).distinct()
         history.accumulateChangedLocations(objectIndices = targets.toSet())
@@ -2638,7 +2648,7 @@ class EditorViewModel : ViewModel() {
         absoluteCentroid: Offset,
         sm: SubMode.GrabbedArcMidpoint,
     ) {
-        val arcPath = (expressions[sm.arcPathIndex] as? ArcPath) ?: return
+        val arcPath = objectModel.getArcPath(sm.arcPathIndex) ?: return
         objectModel.modifyArcPath(
             sm.arcPathIndex,
             arcPath.moveArcMidpoint(

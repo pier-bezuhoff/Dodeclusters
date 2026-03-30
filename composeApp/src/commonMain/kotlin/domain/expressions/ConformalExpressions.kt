@@ -3,6 +3,7 @@ package domain.expressions
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.ConcreteArcPath
+import core.geometry.GCircle
 import core.geometry.GCircleOrConcreteAcPath
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
@@ -26,6 +27,7 @@ class ConformalExpressions(
     val lineIndices = mutableSetOf<Ix>()
     val imaginaryCircleIndices = mutableSetOf<Ix>()
     val pointIndices = mutableSetOf<Ix>()
+    val gCircleIndices = mutableSetOf<Ix>()
     val arcPathIndices = mutableSetOf<Ix>()
 
     init {
@@ -33,7 +35,8 @@ class ConformalExpressions(
             updateObjectTypeAt(ix)
     }
 
-    override fun updateObjectTypeAt(index: Ix) {
+    override fun updateObjectTypeAt(index: Ix, obj: GCircleOrConcreteAcPath?) {
+        gCircleIndices.remove(index)
         circleIndices.remove(index)
         lineIndices.remove(index)
         imaginaryCircleIndices.remove(index)
@@ -41,7 +44,8 @@ class ConformalExpressions(
         arcPathIndices.remove(index)
         val expression = expressions[index]
         if (expression == null) {
-            when (objects[index]) {
+            val obj = obj ?: objects[index]
+            when (obj) {
                 is Circle -> circleIndices.add(index)
                 is Line -> lineIndices.add(index)
                 is ImaginaryCircle -> imaginaryCircleIndices.add(index)
@@ -49,14 +53,31 @@ class ConformalExpressions(
                 is ConcreteArcPath -> arcPathIndices.add(index)
                 null -> {}
             }
+            if (obj is GCircle) {
+                gCircleIndices.add(index)
+            }
         } else {
             for (resultType in expression.expr.resultTypes) {
                 when (resultType) {
-                    Expr.ResultType.CIRCLE -> circleIndices.add(index)
-                    Expr.ResultType.LINE -> lineIndices.add(index)
-                    Expr.ResultType.IMAGINARY_CIRCLE -> imaginaryCircleIndices.add(index)
-                    Expr.ResultType.POINT -> pointIndices.add(index)
-                    Expr.ResultType.ARC_PATH -> arcPathIndices.add(index)
+                    Expr.ResultType.CIRCLE -> {
+                        circleIndices.add(index)
+                        gCircleIndices.add(index)
+                    }
+                    Expr.ResultType.LINE -> {
+                        lineIndices.add(index)
+                        gCircleIndices.add(index)
+                    }
+                    Expr.ResultType.IMAGINARY_CIRCLE -> {
+                        imaginaryCircleIndices.add(index)
+                        gCircleIndices.add(index)
+                    }
+                    Expr.ResultType.POINT -> {
+                        pointIndices.add(index)
+                        gCircleIndices.add(index)
+                    }
+                    Expr.ResultType.ARC_PATH -> {
+                        arcPathIndices.add(index)
+                    }
                 }
             }
         }

@@ -8,28 +8,33 @@ import kotlinx.serialization.Serializable
 typealias ConformalExprOutput = ExprOutput<Expr.Conformal>
 typealias ProjectiveExprOutput = ExprOutput<Expr.Projective>
 
-/** Single-value expression result of [expr]. ([Expr] in general has multi-value results) */
+/** Single-output of an [Expr.OneToOne] or [Expr.OneToMany]. */
 @Immutable
 @Serializable
 sealed interface ExprOutput<out EXPR> where EXPR : Expr {
-    // all one-to-one expr
+    val expr: EXPR
 
-    @Immutable
+    @Serializable
+    @SerialName("Just")
+    data class Just<out EXPR>(
+        override val expr: EXPR
+    ) : ExprOutput<EXPR> where EXPR : Expr.OneToOne
+
     @Serializable
     @SerialName("OneOf")
     data class OneOf<out EXPR>(
-        val expr: EXPR,
+        override val expr: EXPR,
         val outputIndex: Ix
     ) : ExprOutput<EXPR> where EXPR : Expr.OneToMany
 }
 
-@Suppress("UNCHECKED_CAST")
 inline fun <reified EXPR : Expr> ExprOutput<EXPR>.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
 ): ExprOutput<EXPR> =
     when (this) {
-        is Expr.OneToOne ->
-            (this as Expr).reIndex { reIndexer(it) } as ExprOutput<EXPR>
+        is ExprOutput.Just -> copy(
+            expr = expr.reIndex { reIndexer(it) }
+        )
         is ExprOutput.OneOf -> copy(
             expr = expr.reIndex { reIndexer(it) }
         )

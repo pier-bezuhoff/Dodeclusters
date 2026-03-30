@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
+import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
 import domain.ColorAsCss
 import domain.Ix
@@ -16,6 +17,7 @@ import domain.expressions.ConformalExprOutput
 import domain.expressions.ExprOutput
 import domain.model.SaveState
 import domain.model.ChessboardPattern
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 // unsolved: smoother evolution of expressions/parameters
@@ -44,6 +46,7 @@ data class DdcV5(
 
     @Immutable
     @Serializable
+    @SerialName("GCircleToken")
     data class GCircleToken(
         // discriminates DdcV4.Token.Object
         val representation: GCircle?,
@@ -55,6 +58,7 @@ data class DdcV5(
 
     @Immutable
     @Serializable
+    @SerialName("ArcPathToken")
     data class ArcPathToken(
         val arcPath: ArcPath,
         val borderColor: ColorAsCss? = null,
@@ -150,9 +154,9 @@ data class DdcV5(
                         chessboardPattern != ChessboardPattern.STARTS_TRANSPARENT,
                     chessboardColor = chessboardColor,
                     objects = objects.withIndex().associate { (ix, obj) ->
-                        ix to when (val expression = expressions[ix]) {
-                            is ArcPath -> ArcPathToken(
-                                arcPath = expression,
+                        ix to when (obj) {
+                            is ConcreteArcPath -> ArcPathToken(
+                                arcPath = expressions[ix]?.expr as ArcPath,
                                 borderColor = this.borderColors[ix],
                                 fillColor = this.fillColors[ix],
                             )

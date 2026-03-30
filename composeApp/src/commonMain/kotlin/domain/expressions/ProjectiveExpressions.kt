@@ -9,7 +9,7 @@ class ProjectiveExpressions(
 ) : Expressions<Expr.Projective, Expr.Projective.OneToOne, Expr.Projective.OneToMany, Conic>(
     initialExpressions, objects
 ) {
-    override fun updateObjectTypeAt(index: Ix) {
+    override fun updateObjectTypeAt(index: Ix, obj: Conic?) {
         TODO("not implemented")
     }
 

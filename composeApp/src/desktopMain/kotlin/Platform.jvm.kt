@@ -26,6 +26,7 @@ object JVMPlatform: Platform {
     override val minCircleToCubicApproximationRadius: Float = 10_000f
     override val minCircleToLineApproximationRadius: Float = 100_000f
 
+    // on Linux this is ~/.local/share/Dodeclusters
     private val dataDir: Path by lazy { getAppDataDir() }
 
     @Deprecated("Migrate to SaveState")

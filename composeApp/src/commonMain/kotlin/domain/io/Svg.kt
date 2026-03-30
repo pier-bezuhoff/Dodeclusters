@@ -119,6 +119,7 @@ fun saveStateAsSvg(
                     is Point -> appendLine(
                         """<circle ${highlightClassString}cx="${o.x}" cy="${o.y}" r="$pointRadius" fill="$colorString"/>"""
                     )
+                    // arc-path
                     else -> {}
                 }
             }

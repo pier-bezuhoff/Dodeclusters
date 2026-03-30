@@ -2,6 +2,7 @@ package domain.model
 
 import androidx.compose.ui.geometry.Offset
 import core.geometry.Circle
+import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
@@ -35,13 +36,16 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
         } else infinityIndex
     }
 
+    inline fun getArcPath(index: Ix): ArcPath? =
+        expressions.expressions[index]?.expr as? ArcPath
+
     fun addArcPath(arcPath: ArcPath?): Ix {
         val concreteArcPath =
             if (arcPath == null)
                 null
             else
                 expressions.addSoloExpr(arcPath)
-        val newIndex = addDisplayObject(concreteArcPath)
+        val newIndex = addDownscaledObject(concreteArcPath)
         return newIndex
     }
 
@@ -118,7 +122,13 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
                 is ObjectConstruct.ConcretePoint -> objectConstruct.point
                 is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
             }
-            addDisplayObject(o)
+            // cannot use generic addDisplayObject cuz expressions were
+            // not yet initialized, but each addDisplayObject calls
+            // expressions.updateObjectTypeAt
+            displayObjects.add(o)
+            val downscaled = o?.downscale()
+            downscaledObjects.add(downscaled)
+            pathCache.addObject()
         }
         expressions = ConformalExpressions(
             initialExpressions = constellation.toExpressionMap(),
@@ -149,7 +159,14 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
 
     fun loadState(state: SaveState) {
         clearObjects()
-        addDisplayObjects(state.objects)
+        for (o in state.objects) {
+            // cannot use generic addDisplayObjects cuz expressions were
+            // not yet initialized, but each addDisplayObject calls
+            // expressions.updateObjectTypeAt
+            displayObjects.add(o)
+            downscaledObjects.add(o?.downscale())
+            pathCache.addObject()
+        }
         expressions = ConformalExpressions(
             initialExpressions = state.expressions,
             objects = downscaledObjects,
@@ -173,16 +190,22 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
     }
 
     override fun GCircleOrConcreteAcPath.downscale(): GCircleOrConcreteAcPath =
-        if (this is GCircle)
-            this.downscale()
-        else
-            this
+        when (this) {
+            is GCircle ->
+                this.downscale()
+            is ConcreteArcPath ->
+                this.downscale()
+        }
 
     override fun GCircleOrConcreteAcPath.upscale(): GCircleOrConcreteAcPath =
-        if (this is GCircle)
-            this.upscale()
-        else
-            this
+        when (this) {
+            is GCircle ->
+                this.upscale()
+            // tbh it'd be better if concrete arc-path were constructed from upscaled points
+            // to begin with
+            is ConcreteArcPath ->
+                this.upscale()
+        }
 
     fun GCircle.downscale(): GCircle =
         scaled00(DOWNSCALING_FACTOR)
@@ -190,21 +213,19 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
     fun GCircle.upscale(
 //            screenCenter: Offset = Offset.Zero
     ): GCircle =
-        when (this) {
-            is Circle -> {
+        this.scaled00(UPSCALING_FACTOR)
                 // this introduces visual errors
 //                    val upscaledCircle =
 //                        copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
 //                    if (upscaledCircle.radius >= MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS)
 //                        upscaledCircle.approximateToLine(Offset.Zero)
 //                    else upscaledCircle
-                copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
-            }
-            is Line -> copy(c = UPSCALING_FACTOR * c)
-            is Point -> copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y)
-            is ImaginaryCircle ->
-                copy(x = UPSCALING_FACTOR * x, y = UPSCALING_FACTOR * y, radius = UPSCALING_FACTOR * radius)
-        }
+
+    fun ConcreteArcPath.downscale(): ConcreteArcPath =
+        scaled00(DOWNSCALING_FACTOR)
+
+    fun ConcreteArcPath.upscale(): ConcreteArcPath =
+        scaled00(UPSCALING_FACTOR)
 
     companion object {
         const val UPSCALING_FACTOR = 2_000.0

@@ -47,7 +47,7 @@ typealias ConformalExprResult = List<GCircleOrConcreteAcPath?>
 sealed interface Expr {
 
     @Serializable
-    sealed interface OneToOne : Expr, ExprOutput<Expr>
+    sealed interface OneToOne : Expr //, ExprOutput<Expr>
     @Serializable
     sealed interface OneToMany : Expr
 

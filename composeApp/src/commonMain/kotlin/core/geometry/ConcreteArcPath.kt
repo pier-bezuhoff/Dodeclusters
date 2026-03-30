@@ -2,7 +2,6 @@ package core.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Rect
-import domain.ColorAsCss
 import kotlinx.serialization.Serializable
 import kotlin.math.max
 import kotlin.math.min
@@ -143,4 +142,14 @@ data class ConcreteArcPath(
         }
         return Triple(index, projectedPoint, arcPercentage)
     }
+
+    fun scaled00(zoom: Double): ConcreteArcPath = copy(
+        vertices = vertices.map { it.scaled00(zoom) },
+        arcs = arcs.map { arc ->
+            arc.copy(
+                circleOrLine = arc.circleOrLine?.scaled00(zoom),
+                freeMidpoint = arc.freeMidpoint?.scaled00(zoom),
+            )
+        }
+    )
 }
