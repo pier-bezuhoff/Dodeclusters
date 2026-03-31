@@ -187,6 +187,7 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
                 phantomObjectIndices.add(phantomIndex)
             }
         }
+        expressions.reEval()
     }
 
     override fun GCircleOrConcreteAcPath.downscale(): GCircleOrConcreteAcPath =

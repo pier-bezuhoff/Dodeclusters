@@ -21,9 +21,9 @@ data class LogicalRegion(
     val insides: Set<Ix>,
     /** indices of bounding complementary circles */
     val outsides: Set<Ix>,
-    val fillColor: ColorAsCss = DdcV2.Companion.DEFAULT_CLUSTER_FILL_COLOR,
+    val fillColor: ColorAsCss = DdcV2.DEFAULT_CLUSTER_FILL_COLOR,
     // its use is debatable
-    val borderColor: ColorAsCss? = DdcV2.Companion.DEFAULT_CLUSTER_BORDER_COLOR,
+    val borderColor: ColorAsCss? = DdcV2.DEFAULT_CLUSTER_BORDER_COLOR,
 ) {
     override fun toString(): String =
         """LogicalRegion(in = [${insides.joinToString()}], out = [${outsides.joinToString()}], fillColor = ${fillColor.toCssString()}, borderColor = ${borderColor?.toCssString()})"""

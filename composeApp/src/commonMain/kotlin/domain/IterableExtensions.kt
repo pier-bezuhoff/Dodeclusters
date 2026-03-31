@@ -142,6 +142,16 @@ fun <T> List<T>.indexOfOrNull(element: T): Int? {
 fun <T> Iterable<T>.collectionSizeOrDefault(default: Int): Int =
     if (this is Collection<*>) this.size else default
 
+inline fun <reified T> List<T>.zipForEach(
+    anotherList: List<T>,
+    crossinline action: (T, T) -> Unit,
+) {
+    require(this.size == anotherList.size) { "List sizes must be the same" }
+    for (i in 0 until this.size) {
+        action(this[i], anotherList[i])
+    }
+}
+
 /**
  * Returns a list of values built from the elements of `this` collection,
  * the [other] and [another] collections with the same index

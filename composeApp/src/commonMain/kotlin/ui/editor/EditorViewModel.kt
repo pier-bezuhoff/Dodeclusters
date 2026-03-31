@@ -70,7 +70,6 @@ import domain.expressions.computeLineBy2Points
 import domain.expressions.computeSagittaRatio
 import domain.expressions.copyWithNewParameters
 import domain.expressions.moveArcMidpoint
-import domain.expressions.reIndex
 import domain.filterIndices
 import domain.hug
 import domain.indicesSortedBy
@@ -339,6 +338,7 @@ class EditorViewModel : ViewModel() {
 
     fun clearSelection() { // better for autocomplete
         selection = Selection()
+        history.accumulateChangedLocations(selection = true)
     }
 
     fun changeCanvasSize(newCanvasSize: IntSize) {
@@ -770,98 +770,40 @@ class EditorViewModel : ViewModel() {
         return newRegionIndices
     }
 
-    /** Add objects from [sourceIndex2NewObject] to [objects], while
-     * copying regions (for [CircleOrLine]s) and `objectColors` from original
-     * indices specified in [sourceIndex2NewObject].
-     * We assume that appropriate expressions were/will be created separately and
-     * that those expressions follow the order of [sourceIndex2NewObject], but
-     * the objects themselves are yet to be added to [objects]. In addition set
-     * new objects that are circles/lines/points as [selection].
-     * @param[sourceIndex2NewObject] `[(original index ~ style source, new object)]`, note that
-     * original indices CAN repeat (tho its regions will be copied only once even for the repeats).
-     * @param[circleAnimationInit] given list of circles/lines queue [CircleAnimation]
-     * constructed by this block. Use `{ null }` if no animation is required.
-     * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
-     */
-    private inline fun copyRegionsAndStyles(
-        sourceIndex2NewObject: List<Pair<Ix, GCircle?>>,
-        flipRegionsInAndOut: Boolean = false,
-        crossinline circleAnimationInit: (List<CircleOrLine>) -> CircleAnimation? = { null },
-    ) {
-        val sourceIndices = sourceIndex2NewObject.map { it.first }
-        @Suppress("UNCHECKED_CAST")
-        val ix2circle: List<Pair<Ix, CircleOrLine>> = sourceIndex2NewObject
-            .filter { it.second is CircleOrLine } // filterIsInstance doesn't work on Pair<*, *> (Java type erasure)
-                as List<Pair<Ix, CircleOrLine>>
-        val sourceIndicesOfNewCircles = ix2circle.map { it.first }
-        val oldSize = objects.size
-        objectModel.addDisplayObjects(sourceIndex2NewObject.map { it.second })
-        for ((i, sourceIndex) in sourceIndices.withIndex()) {
-            objectModel.borderColors[sourceIndex]?.let { color ->
-                val correspondingIx = oldSize + i
-                objectModel.borderColors[correspondingIx] = color
-            }
-        }
-        val newIndicesOfCircles = sourceIndex2NewObject
-            .filterIndices { (_, o) -> o is CircleOrLine }
-            .map { oldSize + it }
-        copyRegions(
-            oldIndices = sourceIndicesOfNewCircles,
-            newIndices = newIndicesOfCircles,
-            flipInAndOut = flipRegionsInAndOut
-        )
-        selection = Selection(
-            gCircles = (oldSize until objects.size).filter { ix ->
-                objects[ix] is CircleOrLine || objects[ix] is Point
-            }
-        )
-        circleAnimationInit(ix2circle.map { it.second })?.let { circleAnimation ->
-            viewModelScope.launch {
-                animations.emit(circleAnimation)
-            }
-        }
-    }
-
     fun duplicateSelection() {
         if (mode.isSelectingCircles()) {
             val gCirclesToCopy = selection.gCircles
-            val arcPathsToCopy = objectModel.expressions.sortedByTier(selection.arcPaths)
+            val arcPathsToCopy = expressions.sortedByTier(selection.arcPaths)
             val deps = arcPathsToCopy.flatMap {
                 objectModel.getArcPath(it)?.dependencies ?: emptySet()
             }.toSet()
             // pre-sorting is mandatory for expression copying to work properly
-            val allGCirclesToCopy = objectModel.expressions.sortedByTier(
+            val allGCirclesToCopy = expressions.sortedByTier(
                 (gCirclesToCopy.toSet() + deps).sorted()
             )
-            if (allGCirclesToCopy.isNotEmpty()) {
+            val allObjectsToCopy = expressions.sortedByTier(
+                (allGCirclesToCopy + arcPathsToCopy).sorted()
+            )
+            if (allGCirclesToCopy.isNotEmpty()) { // empty GCircles => empty arc-paths
                 pinStateForHistory()
-                val newGCircleIndices = (objects.size until (objects.size + allGCirclesToCopy.size)).toList()
-                // TODO: arc-path duplication animation
-                // NOTE: alters selection
-                copyRegionsAndStyles(allGCirclesToCopy.mapNotNull { ix ->
-                    ix to (objects[ix] as? GCircle ?: return@mapNotNull null)
-                }) { circles ->
-                    CircleAnimation.ReEntrance(circles)
-                }
-                // FIX: points depending on acr-paths are copied before the arc-paths
-                objectModel.expressions.copyExpressionsWithDependencies(allGCirclesToCopy)
-                val old2new = allGCirclesToCopy.zip(newGCircleIndices).associate { it }
-                val newArcPathIndices = mutableListOf<Ix>()
-                for (ix in arcPathsToCopy) {
-                    val newIx = objectModel.addArcPath(
-                        objectModel.getArcPath(ix)?.reIndex { oldIndex ->
-                            old2new[oldIndex]!!
-                        }
+                val oldSize = objects.size
+                for (ix in allObjectsToCopy) {
+                    val newIndex = objectModel.addDownscaledObject(
+                        objectModel.downscaledObjects[ix]
                     )
-                    objectModel.borderColors[ix]?.also {
-                        objectModel.borderColors[newIx] = it
+                    objectModel.borderColors[ix]?.let { borderColor ->
+                        objectModel.borderColors[newIndex] = borderColor
                     }
-                    objectModel.fillColors[ix]?.also {
-                        objectModel.fillColors[newIx] = it
+                    objectModel.fillColors[ix]?.let { fillColor ->
+                        objectModel.fillColors[newIndex] = fillColor
                     }
-                    newArcPathIndices.add(newIx)
                 }
-                val newIndices = newGCircleIndices + newArcPathIndices
+                expressions.copyExpressionsWithDependencies(allObjectsToCopy)
+                val newIndices = (oldSize until objects.size).toList()
+                copyRegions(allObjectsToCopy, newIndices, flipInAndOut = false)
+                // TODO: arc-path duplication animation
+                val newGCircleIndices = newIndices.filter { objects[it] is GCircle }
+                val newArcPathIndices = newIndices.filter { objects[it] is ConcreteArcPath }
                 selection = if (mode == SelectionMode.Drag) {
                     if (gCirclesToCopy.isNotEmpty())
                         Selection(gCircles = newGCircleIndices.take(1))
@@ -874,6 +816,14 @@ class EditorViewModel : ViewModel() {
                         gCircles = newGCircleIndices,
                         arcPaths = newArcPathIndices,
                     )
+                }
+                viewModelScope.launch {
+                    animations.emit(CircleAnimation.ReEntrance(
+                        allObjectsToCopy
+                            .map { objects[it] }
+                            .filterIsInstance<CircleOrLine>()
+                            .map { it.upscale() }
+                    ))
                 }
                 objectModel.invalidate()
                 val newIndicesSet = newIndices.toSet()
@@ -931,29 +881,10 @@ class EditorViewModel : ViewModel() {
         val gCirclesToDelete = selection.gCircles
         val arcPathsToDelete = selection.arcPaths
         if ((showCircles && gCirclesToDelete.isNotEmpty() || arcPathsToDelete.isNotEmpty()) &&
-            (mode.isSelectingCircles() || mode == ToolMode.ARC_PATH)
+            (mode.isSelectingCircles() || mode == ToolMode.ARC_PATH) // allow instant arc-path deletion
         ) {
             pinStateForHistory()
-            clearSelection()
-            val arcPathPointsToDelete = mutableListOf<Ix>()
-            for (ix in arcPathsToDelete) {
-                val arcPath = objectModel.getArcPath(ix)
-                if (arcPath != null) {
-                    arcPathPointsToDelete += arcPath.dependencies.filter { ix ->
-                        val hasNoChildren = objectModel.expressions.children[ix].isNullOrEmpty()
-                        isFree(ix) && hasNoChildren
-                    }
-                }
-                // TODO: arc-path entrance/exit animations
-                objectModel.removeArcPathAt(ix)
-            }
-            deleteObjectsWithDependenciesColorsAndRegions(
-                gCirclesToDelete + arcPathPointsToDelete
-            )
-            history.accumulateChangedLocations(
-                objectIndices = arcPathsToDelete.toSet(),
-                selection = true,
-            )
+            deleteObjectsWithDependenciesColorsAndRegions(selection.indices)
             history.recordAccumulatedChanges()
         }
     }
@@ -964,37 +895,29 @@ class EditorViewModel : ViewModel() {
             CircleAnimation.Exit(deletedCircles)
         },
     ) {
-        val toBeDeleted = objectModel.expressions.deleteNodes(indicesToDelete)
-        val deletedCircleIndices = toBeDeleted
-            .filter { objects[it] is CircleOrLine }
-            .toSet()
-        if (deletedCircleIndices.isNotEmpty()) {
-            val everythingIsDeleted = deletedCircleIndices.containsAll(
-                objects.filterIndices { it is CircleOrLine }
-            )
-            val oldRegions = regions.toList()
-            regions = emptyList()
-            if (everythingIsDeleted) {
-                if (chessboardPattern == ChessboardPattern.STARTS_COLORED) {
-                    chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
+        clearSelection()
+        val indicesToDeleteSet = indicesToDelete.toSet()
+        val arcPathsToDelete = indicesToDelete.filter { objects[it] is ConcreteArcPath }
+        val arcPathPointsToDelete = mutableListOf<Ix>()
+        for (ix in arcPathsToDelete) {
+            // this misses free points of second-order dependent arc-paths
+            // that only come up after expressions.deleteNodes
+            val arcPath = objectModel.getArcPath(ix)
+            if (arcPath != null) {
+                arcPathPointsToDelete += arcPath.dependencies.filter { ix ->
+                    val children = expressions.children[ix]
+                    isFree(ix) &&
+                        (children == null || indicesToDeleteSet.containsAll(children))
                 }
-            } else { // not everything
-                regions = oldRegions
-                    // to avoid stray chessboard selections
-                    .filterNot { (ins, _, _) ->
-                        ins.isNotEmpty() && ins.minus(deletedCircleIndices).isEmpty()
-                    }
-                    .map { (ins, outs, fillColor) ->
-                        LogicalRegion(
-                            insides = ins.minus(deletedCircleIndices),
-                            outsides = outs.minus(deletedCircleIndices),
-                            fillColor = fillColor
-                        )
-                    }
-                    .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
             }
-            val deletedCircles = deletedCircleIndices.mapNotNull { objects[it] as? CircleOrLine }
-            circleAnimationInit(deletedCircles)?.let { circleAnimation ->
+        }
+        val toBeDeleted = expressions.deleteNodes(indicesToDelete + arcPathPointsToDelete)
+        val deletedCircleIndices = toBeDeleted.filter { objects[it] is CircleOrLine }
+        if (deletedCircleIndices.isNotEmpty()) {
+            deleteRegionsBoundBy(deletedCircleIndices)
+            val deletedCirclesOrLines = deletedCircleIndices
+                .mapNotNull { objects[it] as? CircleOrLine }
+            circleAnimationInit(deletedCirclesOrLines)?.let { circleAnimation ->
                 viewModelScope.launch {
                     animations.emit(circleAnimation)
                 }
@@ -1005,12 +928,47 @@ class EditorViewModel : ViewModel() {
         objectModel.invalidate()
         history.accumulateChangedLocations(
             objectIndices = toBeDeleted,
+            expressionIndices = toBeDeleted,
             borderColorIndices = toBeDeleted,
             fillColorIndices = toBeDeleted,
             labelIndices = toBeDeleted,
-            expressionIndices = toBeDeleted,
-            selection = true,
         )
+    }
+
+    private fun deleteRegionsBoundBy(indices: List<Ix>) {
+        val circleOrLineIndices = indices
+            .filter { objects[it] is CircleOrLine }
+            .toSet()
+        if (circleOrLineIndices.isNotEmpty()) {
+            val everyBound = circleOrLineIndices.containsAll(
+                objects.filterIndices { it is CircleOrLine }
+            )
+            val oldRegions = regions.toList()
+            regions = emptyList()
+            if (everyBound) {
+                if (chessboardPattern == ChessboardPattern.STARTS_COLORED) {
+                    chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
+                }
+            } else { // not everything
+                regions = oldRegions
+                    // to avoid stray chessboard selections
+                    .filterNot { (ins, _, _) ->
+                        ins.isNotEmpty() && ins.minus(circleOrLineIndices).isEmpty()
+                    }
+                    .map { (ins, outs, fillColor) ->
+                        LogicalRegion(
+                            insides = ins.minus(circleOrLineIndices),
+                            outsides = outs.minus(circleOrLineIndices),
+                            fillColor = fillColor
+                        )
+                    }
+                    .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
+            }
+            history.accumulateChangedLocations(
+                chessboardPattern = true,
+                regions = true,
+            )
+        }
     }
 
     fun getArg(arg: Arg): GCircle? =
@@ -2821,45 +2779,7 @@ class EditorViewModel : ViewModel() {
 
     private fun updatePartialArcPathFocus(absolutePosition: Offset) {
         val snap = snapped(absolutePosition)
-        val pArcPath = partialArcPath
-        partialArcPath = if (
-            pArcPath != null && snap is PointSnapResult.Free &&
-            pArcPath.focus is PartialArcPath.Focus.Vertex
-        ) { // try snapping to vertices & midpoints
-            val point = snap.result // free
-            val vertexPoints = pArcPath.vertices
-                .withoutElementAt(pArcPath.focus.vertexIndex)
-                .map { it.point }
-            val snapToVertices = Snapping.snapPointToPointsSimple(
-                point, vertexPoints,
-                snapDistance = tapRadius.toDouble(),
-            )
-            if (snapToVertices !is PointSnapResult.Free) {
-                pArcPath.moveFocused(PointSnapResult.Free(snapToVertices.result))
-            } else {
-                val snapToMidpoints = Snapping.snapPointToPointsSimple(
-                    point, pArcPath.arcs.map { it.middlePoint },
-                    snapDistance = tapRadius.toDouble(),
-                )
-                if (snapToMidpoints !is PointSnapResult.Free) {
-                    pArcPath.moveFocused(PointSnapResult.Free(snapToMidpoints.result))
-                } else if (ENABLE_ALIGNMENT_SNAPPING) {
-                    val alignmentSnap = Snapping.snapAlignPointToPointsVerticallyOrHorizontally(
-                        point, vertexPoints,
-                        snapDistance = tapRadius.toDouble(),
-                    )
-                    // MAYBE: display alignment line for clarity
-                    if (alignmentSnap !is PointSnapResult.Free)
-                        pArcPath.moveFocused(PointSnapResult.Free(alignmentSnap.result))
-                    else
-                        pArcPath.moveFocused(snap)
-                } else {
-                    pArcPath.moveFocused(snap)
-                }
-            }
-        } else {
-            pArcPath?.moveFocused(snap)
-        }
+        partialArcPath = partialArcPath?.moveFocus(snap, snapDistance = tapRadius.toDouble())
     }
 
     /** @return whether a tool arg is actually updated */
@@ -3477,7 +3397,6 @@ class EditorViewModel : ViewModel() {
                     outputs,
                     circleAnimationInit = { null },
                 )
-                clearSelection()
             }
             else -> {}
         }
@@ -3645,25 +3564,43 @@ class EditorViewModel : ViewModel() {
 
     private fun completeCircleInversion() {
         val argList = partialArgList!!
-        val targetIxs = (argList.args[0] as Arg.Indices).indices
+        val targetIndices = expressions.sortedByTier(
+            (argList.args[0] as Arg.Indices).indices
+        )
         val invertingCircleIndex = (argList.args[1] as Arg.CLI).index
         pinStateForHistory()
-        val newIndexedGCircles = targetIxs.map { ix ->
-            val newGCircle = objectModel.expressions.addSoloExpr(
+        val oldSize = objects.size
+        val circlesOrLines = mutableListOf<CircleOrLine>()
+        for (ix in targetIndices) {
+            val newGCircle = expressions.addSoloExpr(
                 Expr.CircleInversion(ix, invertingCircleIndex),
             ) as? GCircle
-            ix to newGCircle?.upscale()
+            val newIndex = objectModel.addDownscaledObject(newGCircle)
+            objectModel.borderColors[ix]?.let { color ->
+                objectModel.borderColors[newIndex] = color
+            }
+            if (newGCircle is CircleOrLine) {
+                circlesOrLines.add(newGCircle.upscale())
+            }
         }
-        copyRegionsAndStyles(newIndexedGCircles, flipRegionsInAndOut = true) {
-            CircleAnimation.Entrance(it)
-        }
+        val newIndices = oldSize until objects.size
+        copyRegions(
+            targetIndices, newIndices.toList(),
+            flipInAndOut = true
+        )
+        selection = Selection(
+            gCircles = newIndices.filter { objects[it] is GCircle },
+        )
         partialArgList = argList.copyEmpty()
+        viewModelScope.launch {
+            animations.emit(CircleAnimation.Entrance(circlesOrLines))
+        }
         objectModel.invalidate()
-        val indices = newIndexedGCircles.map { it.first }.toSet()
+        val newIndicesSet = newIndices.toSet()
         history.accumulateChangedLocations(
-            objectIndices = indices,
-            borderColorIndices = indices,
-            expressionIndices = indices,
+            objectIndices = newIndicesSet,
+            borderColorIndices = newIndicesSet,
+            expressionIndices = newIndicesSet,
             regions = true,
             selection = true,
         )
@@ -3969,7 +3906,7 @@ class EditorViewModel : ViewModel() {
                 }
             }
             val arcs = pArcPath.arcs.mapIndexed { arcIndex, arc ->
-                when (val p2p = realizePointSnap(arc.snap, pinAndRecordHistory = false)) {
+                when (val p2p = realizePointSnap(arc.midpointSnap, pinAndRecordHistory = false)) {
                     is PointSnapResult.Free -> {
                         ArcPath.Arc.By2Points(sagittaRatio =
                             if (arc.circle == null)
@@ -3987,12 +3924,13 @@ class EditorViewModel : ViewModel() {
                     }
                 }
             }
-            val ix = objectModel.addArcPath(
+            val concreteArcPath = expressions.addSoloExpr(
                 if (pArcPath.isClosed)
                     ArcPath.Closed(vertices = vertexIndices, arcs = arcs)
                 else
                     ArcPath.Open(vertices = vertexIndices, arcs = arcs)
             )
+            val ix = objectModel.addDownscaledObject(concreteArcPath)
             selection = Selection(arcPaths = listOf(ix))
             history.accumulateChangedLocations(
                 objectIndices = setOf(ix),
@@ -4224,17 +4162,31 @@ class EditorViewModel : ViewModel() {
     private fun saveState(): SaveState {
         val center = computeAbsoluteCenter() ?: Offset.Zero
         // NOTE: it's important to copy mutable collections
+        val size = min(objects.size, expressions.expressions.size)
         return SaveState(
-            objects = objectModel.displayObjects.toList(),
-            borderColors = objectModel.borderColors.toMap(),
-            labels = labels.toMap(),
-            expressions = objectModel.expressions.expressions.toMap(),
-            regions = regions,
+            objects = objectModel.displayObjects.take(size).toList(),
+            borderColors = objectModel.borderColors.filterKeys { it < size }.toMap(),
+            labels = labels.filterKeys { it < size }.toMap(),
+            expressions = objectModel.expressions.expressions.filterKeys { it < size }.toMap(),
+            regions = regions.mapNotNull { region ->
+                val insides = region.insides.filter { it < size }.toSet()
+                val outsides = region.outsides.filter { it < size }.toSet()
+                if (insides.isEmpty() && outsides.isEmpty())
+                    null
+                else
+                    region.copy(
+                        insides = insides,
+                        outsides = outsides,
+                    )
+            },
             backgroundColor = backgroundColor,
             chessboardPattern = chessboardPattern,
             chessboardColor = chessboardColor,
-            phantoms = objectModel.phantomObjectIndices.toSet(),
-            selection = selection,
+            phantoms = objectModel.phantomObjectIndices.filter { it < size }.toSet(),
+            selection = selection.copy(
+                gCircles = selection.gCircles.filter { it < size },
+                arcPaths = selection.arcPaths.filter { it < size },
+            ),
             center = center,
             regionColor = regionColor,
         )

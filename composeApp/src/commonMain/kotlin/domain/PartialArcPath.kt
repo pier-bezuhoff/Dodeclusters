@@ -10,14 +10,19 @@ import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeSagittaRatio
 import kotlin.math.hypot
 
+sealed interface AlignmentLine {
+    data class Horizontal(val x: Double) : AlignmentLine
+    data class Vertical(val y: Double) : AlignmentLine
+}
+
 @Immutable
 data class PartialArcPath(
     val vertices: List<Vertex> = emptyList(),
     val arcs: List<Arc> = emptyList(),
     val isClosed: Boolean = false,
-
     /** Grabbed node: any vertex or midpoint */
     val focus: Focus? = null,
+    val alignmentLines: List<AlignmentLine> = emptyList(),
 ) {
     @Immutable
     data class Vertex(val snap: PointSnapResult) {
@@ -30,12 +35,12 @@ data class PartialArcPath(
 
     /**
      * @property[circle] `null` corresponds to a [core.geometry.Line]
-     * @property[snap] snap of the arc's middle point
+     * @property[midpointSnap] snap of the arc's middle point
      */
     @Immutable
     data class Arc(
         val circle: Circle?,
-        val snap: PointSnapResult,
+        val midpointSnap: PointSnapResult,
         val startAngle: Double = 0.0,
         val sweepAngle: Double = 0.0,
     ) {
@@ -46,7 +51,7 @@ data class PartialArcPath(
             sweepAngle: Double = 0.0,
         ) : this(circle, PointSnapResult.Free(middlePoint), startAngle, sweepAngle)
 
-        val middlePoint: Point get() = snap.result
+        val middlePoint: Point get() = midpointSnap.result
     }
 
     /** A type of the grabbed node */
@@ -84,10 +89,77 @@ data class PartialArcPath(
         focus = Focus.Vertex(vertices.size),
     )
 
+    fun moveFocus(
+        snap: PointSnapResult,
+        snapDistance: Double,
+    ): PartialArcPath = when (focus) {
+        is Focus.Vertex -> {
+            when (snap) {
+                is PointSnapResult.Free -> {
+                    val point = snap.result // free
+                    val vertexPoints = vertices
+                        .withoutElementAt(focus.vertexIndex)
+                        .map { it.point }
+                    val snapToVertices = Snapping.snapPointToPointsSimple(
+                        point, vertexPoints,
+                        snapDistance = snapDistance,
+                    )
+                    when (snapToVertices) {
+                        is PointSnapResult.Free if (ENABLE_ALIGNMENT_SNAPPING) -> {
+                            val alignmentSnap = Snapping.snapAlignPointToPointsVerticallyOrHorizontally(
+                                point, vertexPoints,
+                                snapDistance = snapDistance,
+                            )
+                            when (alignmentSnap) {
+                                is PointSnapResult.HorizontalAlignment ->
+                                    updateVertex(focus.vertexIndex, alignmentSnap.toFree())
+                                        .copy(alignmentLines = listOf(
+                                            AlignmentLine.Horizontal(alignmentSnap.x)
+                                        ))
+                                is PointSnapResult.VerticalAlignment ->
+                                    updateVertex(focus.vertexIndex, alignmentSnap.toFree())
+                                        .copy(alignmentLines = listOf(
+                                            AlignmentLine.Vertical(alignmentSnap.y)
+                                        ))
+                                is PointSnapResult.HorizontalAndVerticalAlignment ->
+                                    updateVertex(focus.vertexIndex, alignmentSnap.toFree())
+                                        .copy(alignmentLines = listOf(
+                                            AlignmentLine.Horizontal(alignmentSnap.x),
+                                            AlignmentLine.Vertical(alignmentSnap.y)
+                                        ))
+                                is PointSnapResult.Free ->
+                                    updateVertex(focus.vertexIndex, snap)
+                                        .copy(alignmentLines = emptyList())
+                            }
+                        }
+                        else -> {
+                            updateVertex(focus.vertexIndex, snapToVertices.toFree())
+                                .copy(alignmentLines = emptyList())
+                        }
+                    }
+                }
+                else -> {
+                    updateVertex(focus.vertexIndex, snap)
+                        .copy(alignmentLines = emptyList())
+                }
+            }
+        }
+        is Focus.MidPoint -> {
+            updateMidpoint(focus.arcIndex, snap)
+                .copy(alignmentLines = emptyList())
+        }
+        null -> this
+    }
+
     // TODO: snap to other arc-paths' arcs
     // MAYBE: dont move midpoint if it's Eq-snapped
-    fun updateVertex(vertexIndex: Int, newVertex: Vertex): PartialArcPath =
-        when {
+    // MAYBE: snap midpoint so it can stay onto its carrier
+    fun updateVertex(
+        vertexIndex: Int,
+        vertexSnap: PointSnapResult,
+    ): PartialArcPath {
+        val newVertex = Vertex(vertexSnap)
+        return when {
             vertices.size == 1 -> {
                 require(vertexIndex == 0)
                 copy(vertices = listOf(newVertex))
@@ -100,13 +172,14 @@ data class PartialArcPath(
                 val newMidpoint =
                     updateMidpointFromMovingEnd(point, nextPoint, arcs[0].middlePoint, newPoint)
                 val newNextCircle =
-                    circleByChordEndsAndMidArc(newPoint, nextPoint, newMidpoint)
-    //                computeCircleBy3Points(newPoint, newMidpoint, nextPoint) as? Circle
+                    //                    circleByChordEndsAndMidArc(newPoint, nextPoint, newMidpoint)
+                    computeCircleBy3Points(newPoint, newMidpoint, nextPoint) as? Circle
                 val newNextStartAngle =
                     newNextCircle?.calculateStartAngle(newPoint) ?: 0.0
                 copy(
                     vertices = vertices.updated(0, newVertex),
-                    arcs = arcs.updated(0,
+                    arcs = arcs.updated(
+                        0,
                         Arc(
                             circle = newNextCircle,
                             middlePoint = newMidpoint,
@@ -123,27 +196,35 @@ data class PartialArcPath(
                 val previousPoint = previousVertex(vertexIndex).point
                 val previousArcIndex = arcs.lastIndex
                 val newMidpoint =
-                    updateMidpointFromMovingEnd(point, previousPoint, arcs[previousArcIndex].middlePoint, newPoint)
+                    updateMidpointFromMovingEnd(
+                        point,
+                        previousPoint,
+                        arcs[previousArcIndex].middlePoint,
+                        newPoint
+                    )
                 val newPreviousCircle =
-                    circleByChordEndsAndMidArc(previousPoint, newPoint, newMidpoint)
-    //                computeCircleBy3Points(previousPoint, newMidpoint, newPoint) as? Circle
+                    //                    circleByChordEndsAndMidArc(previousPoint, newPoint, newMidpoint)
+                    computeCircleBy3Points(previousPoint, newMidpoint, newPoint) as? Circle
                 val newPreviousStartAngle =
                     if (newPreviousCircle is Circle)
                         newPreviousCircle.calculateStartAngle(previousPoint)
                     else 0.0
                 copy(
                     vertices = vertices.updated(vertexIndex, newVertex),
-                    arcs = arcs.updated(previousArcIndex, Arc(
-                        circle = newPreviousCircle,
-                        middlePoint = newMidpoint,
-                        startAngle = newPreviousStartAngle,
-                        sweepAngle = arcs[previousArcIndex].sweepAngle
-                    )),
+                    arcs = arcs.updated(
+                        previousArcIndex, Arc(
+                            circle = newPreviousCircle,
+                            middlePoint = newMidpoint,
+                            startAngle = newPreviousStartAngle,
+                            sweepAngle = arcs[previousArcIndex].sweepAngle
+                        )
+                    ),
                 )
             }
             else -> { // backward + forward, move within the chain
                 val newPoint = newVertex.point
-                val previousArcIndex = (vertexIndex - 1).mod(arcs.size) // not the last arc with free end
+                val previousArcIndex =
+                    (vertexIndex - 1).mod(arcs.size) // not the last arc with free end
                 require(vertexIndex < arcs.size) { "this case should have been handled within detached end" }
                 val nextArcIndex = vertexIndex // not the first arc with free start
                 val point = vertices[vertexIndex].point
@@ -153,15 +234,20 @@ data class PartialArcPath(
                     point, previousPoint, arcs[previousArcIndex].middlePoint, newPoint
                 )
                 val newPreviousCircle =
-                    circleByChordEndsAndMidArc(previousPoint, newPoint, newPreviousMidpoint)
-    //                computeCircleBy3Points(previousPoint, newPreviousMidpoint, newPoint) as? Circle
+                    //                    circleByChordEndsAndMidArc(previousPoint, newPoint, newPreviousMidpoint)
+                    computeCircleBy3Points(previousPoint, newPreviousMidpoint, newPoint) as? Circle
                 val newPreviousStartAngle =
                     newPreviousCircle?.calculateStartAngle(previousPoint) ?: 0.0
                 val newNextMidpoint =
-                    updateMidpointFromMovingEnd(point, nextPoint, arcs[nextArcIndex].middlePoint, newPoint)
+                    updateMidpointFromMovingEnd(
+                        point,
+                        nextPoint,
+                        arcs[nextArcIndex].middlePoint,
+                        newPoint
+                    )
                 val newNextCircle =
-                    circleByChordEndsAndMidArc(newPoint, nextPoint, newNextMidpoint)
-    //                computeCircleBy3Points(newPoint, newNextMidpoint, nextPoint) as? Circle
+                    //                    circleByChordEndsAndMidArc(newPoint, nextPoint, newNextMidpoint)
+                    computeCircleBy3Points(newPoint, newNextMidpoint, nextPoint) as? Circle
                 val newNextStartAngle =
                     if (newNextCircle is Circle)
                         newNextCircle.calculateStartAngle(newPoint)
@@ -185,10 +271,14 @@ data class PartialArcPath(
                 )
             }
         }
+    }
 
     // TODO: snap to line and to smooth-start and smooth-end (tangential touch)
-    fun updateMidpoint(arcIndex: Int, snap: PointSnapResult): PartialArcPath {
-        val newMidpoint = snap.result
+    fun updateMidpoint(
+        arcIndex: Int,
+        midpointSnap: PointSnapResult
+    ): PartialArcPath {
+        val newMidpoint = midpointSnap.result
         val start = arcIndex2startVertex(arcIndex).point
         val end = arcIndex2endVertex(arcIndex).point
         val newCircle =
@@ -201,7 +291,7 @@ data class PartialArcPath(
             arcs = arcs.updated(arcIndex,
                 Arc(
                     circle = newCircle,
-                    snap = snap,
+                    midpointSnap = midpointSnap,
                     startAngle = newStartAngle,
                     sweepAngle = newSweepAngle,
                 )
@@ -209,16 +299,9 @@ data class PartialArcPath(
         )
     }
 
-    fun moveFocused(snap: PointSnapResult): PartialArcPath =
-        when (focus) {
-            is Focus.Vertex -> updateVertex(focus.vertexIndex, Vertex(snap))
-            is Focus.MidPoint -> updateMidpoint(focus.arcIndex, snap)
-            null -> this
-        }
-
     fun realignGrabbedMidpoint(): PartialArcPath = copy(
         arcs =
-            if (focus is Focus.MidPoint && arcs[focus.arcIndex].snap is PointSnapResult.Free) {
+            if (focus is Focus.MidPoint && arcs[focus.arcIndex].midpointSnap is PointSnapResult.Free) {
                 val arcIndex = focus.arcIndex
                 val start = arcIndex2startVertex(arcIndex).point
                 val end = arcIndex2endVertex(arcIndex).point
@@ -235,10 +318,12 @@ data class PartialArcPath(
                 )
             } else arcs
         ,
+        alignmentLines = emptyList(),
     )
 
     fun unFocus(): PartialArcPath = copy(
         focus = null,
+        alignmentLines = emptyList(),
     )
 
     /** fuse vertex `firstVertexIndex+1` into [firstVertexIndex] */
@@ -261,7 +346,7 @@ data class PartialArcPath(
             val nextArcStart = arcIndex2startVertex(arcIndex).point
             val oldNextArcEnd = arcIndex2startVertex(arcIndex + 1).point
             val nextArcEnd = arcIndex2endVertex(arcIndex + 1).point
-            val newNextArc = when (val snap = nextArc.snap) {
+            val newNextArc = when (val snap = nextArc.midpointSnap) {
                 is PointSnapResult.Free -> if (nextArc.circle == null) {
                     Arc(circle = null, middlePoint = nextArcStart.middle(nextArcEnd))
                 } else {
@@ -275,7 +360,7 @@ data class PartialArcPath(
                     val newSweepAngle =
                         newCircle?.calculateSweepAngle(nextArcStart, snap.result, nextArcEnd) ?: 0.0
                     Arc(
-                        circle = newCircle, snap = snap,
+                        circle = newCircle, midpointSnap = snap,
                         startAngle = newStartAngle, sweepAngle = newSweepAngle
                     )
                 }
@@ -287,7 +372,7 @@ data class PartialArcPath(
                     val newSweepAngle =
                         newCircle?.calculateSweepAngle(nextArcStart, snap.result, nextArcEnd) ?: 0.0
                     Arc(
-                        circle = newCircle, snap = snap,
+                        circle = newCircle, midpointSnap = snap,
                         startAngle = newStartAngle, sweepAngle = newSweepAngle
                     )
                 }
@@ -347,6 +432,10 @@ data class PartialArcPath(
                 ) + arcs.drop(vertexIndex + 1),
             )
         }
+    }
+
+    companion object {
+        const val ENABLE_ALIGNMENT_SNAPPING = true
     }
 }
 

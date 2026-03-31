@@ -350,7 +350,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         indices.sortedBy { ix2tier[it] }
 
     /** Copies those expressions whose dependencies are also in [sourceIndices].
-     * REQUIRES all used object to had been added already. Additionally requires
+     * REQUIRES all used object to have been added already. Additionally requires
      * [sourceIndices] to be SORTED in a way that a parent comes before its
      * child (e.g. via [sortedByTier]) */
     fun copyExpressionsWithDependencies(sourceIndices: List<Ix>) {
@@ -361,13 +361,14 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         }.toMap()
         for (sourceIndex in sourceIndices) {
             val e = expressions[sourceIndex]
+            // copy an expression if all its dependencies/parents are also copied
             if (e != null && e.expr.args.all { it in sources }) {
                 val newExpr = e.expr.reIndex { oldIx -> source2new[oldIx]!! }
                 when (e) {
-                    is ExprOutput.Just -> addSoloExpr(newExpr as EXPR_ONE_TO_ONE)
-                    is ExprOutput.OneOf -> addMultiExpression(
-                        ExprOutput.OneOf(newExpr as EXPR_ONE_TO_MANY, e.outputIndex)
-                    )
+                    is ExprOutput.Just ->
+                        addSoloExpr(newExpr as EXPR_ONE_TO_ONE)
+                    is ExprOutput.OneOf ->
+                        addMultiExpression(ExprOutput.OneOf(newExpr as EXPR_ONE_TO_MANY, e.outputIndex))
                 }
             } else {
                 addFree()

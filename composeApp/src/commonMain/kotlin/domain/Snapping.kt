@@ -82,6 +82,9 @@ sealed interface PointSnapResult {
         is Free -> Arg.PointXY(this.result)
         else -> Arg.PointXY(this.result)
     }
+
+    fun toFree(): Free =
+        Free(result)
 }
 
 // MAYBE: fuse with PointSnapResult
