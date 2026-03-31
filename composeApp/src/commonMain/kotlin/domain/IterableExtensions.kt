@@ -30,7 +30,8 @@ inline fun <T> List<T>.withoutElementAt(index: Int): List<T> {
 
 fun <T> List<T>.withoutElementsAt(indices: List<Ix>): List<T> {
     val list = this.toMutableList()
-    for (ix in indices.sortedDescending()) {
+    val sortedIndices = indices.filter { it in list.indices }.sortedDescending()
+    for (ix in sortedIndices) {
         list.removeAt(ix)
     }
     return list

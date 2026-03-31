@@ -3905,6 +3905,7 @@ class EditorViewModel : ViewModel() {
                     is PointSnapResult.Free -> createNewFreePoint(p2p.result)
                 }
             }
+            // FIX: midpoint incidence snaps vanish
             val arcs = pArcPath.arcs.mapIndexed { arcIndex, arc ->
                 when (val p2p = realizePointSnap(arc.midpointSnap, pinAndRecordHistory = false)) {
                     is PointSnapResult.Free -> {

@@ -10,8 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ui.isCompact
@@ -105,9 +108,23 @@ fun DodeclustersTheme(
                 MaterialTheme.typography.labelLarge
         ,
     )
+    val defaultViewConfiguration = LocalViewConfiguration.current
+    val viewConfiguration = remember(defaultViewConfiguration) {
+        object : ViewConfiguration {
+            override val longPressTimeoutMillis: Long =
+                defaultViewConfiguration.longPressTimeoutMillis
+            override val doubleTapTimeoutMillis: Long =
+                defaultViewConfiguration.doubleTapTimeoutMillis
+            override val doubleTapMinTimeMillis: Long =
+                defaultViewConfiguration.doubleTapMinTimeMillis
+            override val touchSlop: Float =
+                defaultViewConfiguration.touchSlop
+        }
+    }
     CompositionLocalProvider(
         LocalExtendedColors provides extendedScheme,
         LocalAdaptiveTypography provides adaptiveTypography,
+        LocalViewConfiguration provides viewConfiguration,
     ) {
         MaterialTheme(
             colorScheme = scheme,

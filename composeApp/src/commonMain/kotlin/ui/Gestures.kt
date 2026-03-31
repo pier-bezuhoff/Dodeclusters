@@ -2,12 +2,14 @@ package ui
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 
+// NOTE: use  LocalViewConfiguration.current to control touch slop, delays, etc
 inline fun Modifier.reactiveCanvas(
     vararg keys: Any?,
     crossinline onVerticalScroll: (yDelta: Float) -> Unit = { },

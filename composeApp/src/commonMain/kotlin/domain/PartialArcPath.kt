@@ -97,15 +97,23 @@ data class PartialArcPath(
             when (snap) {
                 is PointSnapResult.Free -> {
                     val point = snap.result // free
-                    val vertexPoints = vertices
-                        .withoutElementAt(focus.vertexIndex)
+                    val neighborhood = listOf(
+                        (focus.vertexIndex - 1).mod(vertices.size),
+                        focus.vertexIndex,
+                        (focus.vertexIndex + 1).mod(vertices.size),
+                    ).toSet()
+                    val snappableVertexPoints = vertices
+                        .filterIndexed { vertexIndex, _ -> vertexIndex !in neighborhood }
                         .map { it.point }
                     val snapToVertices = Snapping.snapPointToPointsSimple(
-                        point, vertexPoints,
+                        point, snappableVertexPoints,
                         snapDistance = snapDistance,
                     )
                     when (snapToVertices) {
                         is PointSnapResult.Free if (ENABLE_ALIGNMENT_SNAPPING) -> {
+                            val vertexPoints = vertices
+                                .withoutElementAt(focus.vertexIndex)
+                                .map { it.point }
                             val alignmentSnap = Snapping.snapAlignPointToPointsVerticallyOrHorizontally(
                                 point, vertexPoints,
                                 snapDistance = snapDistance,
@@ -172,10 +180,11 @@ data class PartialArcPath(
                 val newMidpoint =
                     updateMidpointFromMovingEnd(point, nextPoint, arcs[0].middlePoint, newPoint)
                 val newNextCircle =
-                    //                    circleByChordEndsAndMidArc(newPoint, nextPoint, newMidpoint)
                     computeCircleBy3Points(newPoint, newMidpoint, nextPoint) as? Circle
                 val newNextStartAngle =
                     newNextCircle?.calculateStartAngle(newPoint) ?: 0.0
+                val newNextSweepAngle =
+                    newNextCircle?.calculateSweepAngle(newPoint, newMidpoint, newPoint) ?: 0.0
                 copy(
                     vertices = vertices.updated(0, newVertex),
                     arcs = arcs.updated(
@@ -184,7 +193,7 @@ data class PartialArcPath(
                             circle = newNextCircle,
                             middlePoint = newMidpoint,
                             startAngle = newNextStartAngle,
-                            sweepAngle = arcs[0].sweepAngle,
+                            sweepAngle = newNextSweepAngle,
                         )
                     ),
                 )
@@ -203,12 +212,11 @@ data class PartialArcPath(
                         newPoint
                     )
                 val newPreviousCircle =
-                    //                    circleByChordEndsAndMidArc(previousPoint, newPoint, newMidpoint)
                     computeCircleBy3Points(previousPoint, newMidpoint, newPoint) as? Circle
                 val newPreviousStartAngle =
-                    if (newPreviousCircle is Circle)
-                        newPreviousCircle.calculateStartAngle(previousPoint)
-                    else 0.0
+                    newPreviousCircle?.calculateStartAngle(previousPoint) ?: 0.0
+                val newPreviousSweepAngle =
+                    newPreviousCircle?.calculateSweepAngle(previousPoint, newMidpoint, newPoint) ?: 0.0
                 copy(
                     vertices = vertices.updated(vertexIndex, newVertex),
                     arcs = arcs.updated(
@@ -216,7 +224,7 @@ data class PartialArcPath(
                             circle = newPreviousCircle,
                             middlePoint = newMidpoint,
                             startAngle = newPreviousStartAngle,
-                            sweepAngle = arcs[previousArcIndex].sweepAngle
+                            sweepAngle = newPreviousSweepAngle,
                         )
                     ),
                 )
@@ -234,10 +242,11 @@ data class PartialArcPath(
                     point, previousPoint, arcs[previousArcIndex].middlePoint, newPoint
                 )
                 val newPreviousCircle =
-                    //                    circleByChordEndsAndMidArc(previousPoint, newPoint, newPreviousMidpoint)
                     computeCircleBy3Points(previousPoint, newPreviousMidpoint, newPoint) as? Circle
                 val newPreviousStartAngle =
                     newPreviousCircle?.calculateStartAngle(previousPoint) ?: 0.0
+                val newPreviousSweepAngle =
+                    newPreviousCircle?.calculateSweepAngle(previousPoint, newPreviousMidpoint, newPoint) ?: 0.0
                 val newNextMidpoint =
                     updateMidpointFromMovingEnd(
                         point,
@@ -246,12 +255,11 @@ data class PartialArcPath(
                         newPoint
                     )
                 val newNextCircle =
-                    //                    circleByChordEndsAndMidArc(newPoint, nextPoint, newNextMidpoint)
                     computeCircleBy3Points(newPoint, newNextMidpoint, nextPoint) as? Circle
                 val newNextStartAngle =
-                    if (newNextCircle is Circle)
-                        newNextCircle.calculateStartAngle(newPoint)
-                    else 0.0
+                    newNextCircle?.calculateStartAngle(newPoint) ?: 0.0
+                val newNextSweepAngle =
+                    newNextCircle?.calculateSweepAngle(newPoint, newNextMidpoint, nextPoint) ?: 0.0
                 copy(
                     vertices = vertices.updated(vertexIndex, newVertex),
                     arcs = arcs.updated(
@@ -259,13 +267,13 @@ data class PartialArcPath(
                             circle = newPreviousCircle,
                             middlePoint = newPreviousMidpoint,
                             startAngle = newPreviousStartAngle,
-                            sweepAngle = arcs[previousArcIndex].sweepAngle,
+                            sweepAngle = newPreviousSweepAngle,
                         ),
                         nextArcIndex to Arc(
                             circle = newNextCircle,
                             middlePoint = newNextMidpoint,
                             startAngle = newNextStartAngle,
-                            sweepAngle = arcs[nextArcIndex].sweepAngle,
+                            sweepAngle = newNextSweepAngle,
                         )
                     ),
                 )
