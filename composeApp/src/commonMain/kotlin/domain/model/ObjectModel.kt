@@ -220,7 +220,7 @@ sealed class ObjectModel<R : Any, D : Any> {
 
     /** Already includes [invalidatePositions]. [EXPR_ONE_TO_ONE] must be compatible with
      * the second type parameter of [expressions]
-     * @return indices of updated dependent objects, sorted by tiers */
+     * @return indices of all updated objects, sorted by tiers (including [index]) */
     @Suppress("UNCHECKED_CAST")
     fun <EXPR_ONE_TO_ONE : Expr.OneToOne> changeExpr(
         index: Ix,
@@ -230,19 +230,24 @@ sealed class ObjectModel<R : Any, D : Any> {
             .changeExpr(index, newExpr)
         setDownscaledObject(index, newObject)
         val toBeUpdated = expressions.update(setOf(index))
-        syncObjects(toBeUpdated)
+        val changed = listOf(index) + toBeUpdated
+        syncObjects(changed)
         invalidatePositions()
-        return toBeUpdated
+        return changed
     }
 
-    /** Already includes [invalidatePositions] */
-    fun setDisplayObjectsWithConsequences(changes: Map<Ix, D?>) {
+    /** Already includes [invalidatePositions]
+     * @return all changed indices
+     */
+    fun setDisplayObjectsWithConsequences(changes: Map<Ix, D?>): List<Ix> {
         for ((ix, newObject) in changes) {
             setDisplayObject(ix, newObject)
         }
-        val updatedIndices = expressions.update(changes.keys)
+        val changeIndices = changes.keys
+        val updatedIndices = expressions.update(changeIndices)
         syncObjects(updatedIndices)
         invalidatePositions()
+        return changeIndices.toList() + updatedIndices
     }
 
     /** Already includes [invalidatePositions]

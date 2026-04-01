@@ -35,7 +35,7 @@ data class SaveState(
     val chessboardPattern: ChessboardPattern,
     val chessboardColor: ColorAsCss?,
     val phantoms: Set<Ix> = emptySet(),
-    @SerialName("selections") // TMP: for backwards compat
+    @SerialName("selections") // TMP: for backwards compat, diff name cuz the type changed
     val selection: Selection = Selection(),
     val center: SerializableOffset,
     val regionColor: ColorAsCss? = null,
@@ -225,6 +225,7 @@ data class SaveState(
             regionColor = regionColor != null,
         )
 
+        /** fuse `this` earlier changes, with later [changes] */
         fun fuseLater(changes: Changes): Changes =
             Changes(
                 objects = combineNullables(objects, changes.objects) { a, b ->

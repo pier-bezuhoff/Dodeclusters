@@ -282,18 +282,22 @@ object Snapping {
         val y1 = closestVerticalPointIndex?.let { points[it].y }
         return when (x1) {
             null ->
-                if (y1 == null)
-                    PointSnapResult.Free(point)
-                else
-                    PointSnapResult.VerticalAlignment(point.copy(y = y1), y1)
+                when (y1) {
+                    null -> PointSnapResult.Free(point)
+                    else -> PointSnapResult.VerticalAlignment(point.copy(y = y1), y1)
+                }
             else ->
-                if (y1 == null)
-                    PointSnapResult.HorizontalAlignment(point.copy(x = x1), x1)
-                else
-                    PointSnapResult.HorizontalAndVerticalAlignment(
-                        point.copy(x = x1, y = y1),
-                        x = x1, y = y1,
-                    )
+                when (y1) {
+                    null -> PointSnapResult.HorizontalAlignment(point.copy(x = x1), x1)
+                    else ->
+                        if (closestHorizontalPointIndex != closestVerticalPointIndex)
+                            PointSnapResult.HorizontalAndVerticalAlignment(
+                                point.copy(x = x1, y = y1),
+                                x = x1, y = y1,
+                            )
+                        else // reject full point-to-point snaps
+                            PointSnapResult.Free(point)
+                }
         }
     }
 

@@ -95,15 +95,19 @@ data class PartialArcPath(
     ): PartialArcPath = when (focus) {
         is Focus.Vertex -> {
             when (snap) {
-                is PointSnapResult.Free -> {
+                is PointSnapResult.Free if (ENABLE_VERTEX_SNAPPING) -> {
                     val point = snap.result // free
-                    val neighborhood = listOf(
-                        (focus.vertexIndex - 1).mod(vertices.size),
+                    val neighborhood = setOfNotNull(
+                        (focus.vertexIndex - 1).mod(vertices.size)
+                            .takeUnless { !isClosed && focus.vertexIndex == 0 }
+                        ,
                         focus.vertexIndex,
-                        (focus.vertexIndex + 1).mod(vertices.size),
-                    ).toSet()
+                        (focus.vertexIndex + 1).mod(vertices.size)
+                            .takeUnless { !isClosed && focus.vertexIndex == vertices.lastIndex }
+                        ,
+                    )
                     val snappableVertexPoints = vertices
-                        .filterIndexed { vertexIndex, _ -> vertexIndex !in neighborhood }
+                        .withoutElementsAt(neighborhood)
                         .map { it.point }
                     val snapToVertices = Snapping.snapPointToPointsSimple(
                         point, snappableVertexPoints,
@@ -153,8 +157,24 @@ data class PartialArcPath(
             }
         }
         is Focus.MidPoint -> {
-            updateMidpoint(focus.arcIndex, snap)
-                .copy(alignmentLines = emptyList())
+            when (snap) {
+                is PointSnapResult.Free if (ENABLE_ALIGNMENT_SNAPPING) -> {
+                    val arcStart = arcIndex2startVertex(focus.arcIndex).point
+                    val arcEnd = arcIndex2endVertex(focus.arcIndex).point
+                    val onSegment = projectPointOnSegment(snap.result, arcStart, arcEnd)
+                    if (snap.result.distanceFrom(onSegment) <= snapDistance) {
+                        straightenArc(focus.arcIndex, onSegment)
+                            .copy(alignmentLines = emptyList())
+                    } else {
+                        updateMidpoint(focus.arcIndex, snap)
+                            .copy(alignmentLines = emptyList())
+                    }
+                }
+                else -> {
+                    updateMidpoint(focus.arcIndex, snap)
+                        .copy(alignmentLines = emptyList())
+                }
+            }
         }
         null -> this
     }
@@ -281,7 +301,7 @@ data class PartialArcPath(
         }
     }
 
-    // TODO: snap to line and to smooth-start and smooth-end (tangential touch)
+    // TODO: snap to smooth-start and smooth-end (tangential touch)
     fun updateMidpoint(
         arcIndex: Int,
         midpointSnap: PointSnapResult
@@ -306,6 +326,18 @@ data class PartialArcPath(
             ),
         )
     }
+
+    fun straightenArc(
+        arcIndex: Int,
+        middlePoint: Point,
+    ): PartialArcPath = copy(
+        arcs = arcs.updated(arcIndex,
+            Arc(
+                circle = null,
+                middlePoint = middlePoint,
+            )
+        )
+    )
 
     fun realignGrabbedMidpoint(): PartialArcPath = copy(
         arcs =
@@ -341,6 +373,7 @@ data class PartialArcPath(
         else
             collapseArc(firstVertexIndex)
 
+    // BUG: every straight arc becomes bent
     /** fuse arc-end vertex into arc-start */
     fun collapseArc(arcIndex: Int): PartialArcPath {
         val nextVertexIndex = (arcIndex + 1).mod(vertices.size)
@@ -392,13 +425,16 @@ data class PartialArcPath(
         }
     }
 
-    fun connectLastToFirst(): PartialArcPath = copy(
-        arcs = arcs + Arc(
-            circle = null,
-            middlePoint = vertices.last().point.middle(vertices.first().point)
-        ),
-        isClosed = true,
-    )
+    fun connectLastToFirst(): PartialArcPath {
+        require(!isClosed)
+        return copy(
+            arcs = arcs + Arc(
+                circle = null,
+                middlePoint = vertices.last().point.middle(vertices.first().point)
+            ),
+            isClosed = true,
+        )
+    }
 
     fun removeVertex(vertexIndex: Int): PartialArcPath {
         require(vertices.size > 1) { "Cannot remove the last vertex" }
@@ -443,7 +479,9 @@ data class PartialArcPath(
     }
 
     companion object {
+        const val ENABLE_VERTEX_SNAPPING = true
         const val ENABLE_ALIGNMENT_SNAPPING = true
+        const val FIX_SNAPPED_MIDPOINTS_WHEN_MOVING_VERTEX = true
     }
 }
 
@@ -495,5 +533,23 @@ private fun circleByChordEndsAndMidArc(chordStart: Point, chordEnd: Point, midAr
     return Circle(
         ox, oy, r,
         isCCW = Point.calculateOrientation(chordStart, midArc, chordEnd),
+    )
+}
+
+@Suppress("LocalVariableName")
+private fun projectPointOnSegment(point: Point, start: Point, end: Point): Point {
+    val ABx = end.x - start.x
+    val ABy = end.y - start.y
+    val AB2 = squareSum(ABx, ABy)
+//    val AB = hypot(ABx, ABy)
+    val APx = point.x - start.x
+    val APy = point.y - start.y
+    val projection = (ABx*APx + ABy*APy)/AB2
+    val onSegmentProjection = projection.coerceIn(0.0, 1.0)
+    val AQx = ABx * onSegmentProjection
+    val AQy = ABy * onSegmentProjection
+    return Point(
+        start.x + AQx,
+        start.y + AQy,
     )
 }

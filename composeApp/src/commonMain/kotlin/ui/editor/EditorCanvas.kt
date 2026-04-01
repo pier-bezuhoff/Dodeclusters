@@ -85,6 +85,7 @@ import domain.expressions.computeLineBy2Points
 import domain.hug
 import domain.model.ChessboardPattern
 import core.geometry.ConcreteArcPath
+import domain.AlignmentLine
 import domain.expressions.ArcPath
 import domain.model.LogicalRegion
 import domain.mostCommonOf
@@ -248,7 +249,7 @@ fun BoxScope.EditorCanvas(
                 drawArcPaths(allObjects = viewModel.objects, indices = nonSelectedArcPathIndices, borderColors = viewModel.objectModel.borderColors, fillColors = viewModel.objectModel.fillColors, pathCache = viewModel.objectModel.pathCache, defaultArcPathColor = defaultArcPathColor, arcPathFillOpacity = viewModel.regionsOpacity, arcPathStroke = pathStroke)
                 drawSelectedArcPaths(allObjects = viewModel.objects, indices = viewModel.selection.arcPaths, borderColors = viewModel.objectModel.borderColors, fillColors = viewModel.objectModel.fillColors, pathCache = viewModel.objectModel.pathCache, arcPathFillOpacity = viewModel.regionsOpacity, arcPathStroke = pathStroke, defaultSelectedArcPathColor = defaultSelectionColor, thiccSelectedPathAlpha = thiccSelectedPathAlpha, thiccSelectedPathStroke = thiccPathStroke, arcMiddlePointColor = arcMiddlePointColor, arcMiddlePointRadius = arcMiddlePointRadius)
             }
-            drawPartialConstructs(allObjects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke)
+            drawPartialConstructs(allObjects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke, alignmentLineColor = selectionMarkingsColor)
             drawGrids(visibleRect = visibleRect, submode = viewModel.submode, stereographicGridColor = stereographicGridColor, stereographicGridStroke = circleStroke, southPointRadius = handleRadius)
             drawLabels(objects = viewModel.objects, objectColors = viewModel.objectModel.borderColors, objectLabelLayouts = objectLabelLayouts, freePointColor = defaultFreePointColor)
             drawHandles(objects = viewModel.objects, selection = viewModel.selectedIndices, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.calculateSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
@@ -1141,6 +1142,7 @@ private inline fun DrawScope.drawPartialConstructs(
     circleStroke: Stroke,
     imaginaryCircleStroke: Stroke,
     creationPointRadius: Float = handleRadius * 3/4,
+    alignmentLineColor: Color = Color.Gray,
     selectedArgColor: Color = DodeclustersColors.green, //pureSecondary,
     creationPrototypeColor: Color = DodeclustersColors.green.copy(alpha = 0.7f),
 ) {
@@ -1260,10 +1262,26 @@ private inline fun DrawScope.drawPartialConstructs(
                     )
             }
         }
-        ToolMode.ARC_PATH -> partialArcPath?.let { arcPath ->
-            val path = arcPath.toPath()
-            for (arcIndex in arcPath.arcs.indices) { // for each arc: draw start & mid-point
-                val point = arcPath.vertices[arcIndex].point.toOffset()
+        ToolMode.ARC_PATH -> partialArcPath?.let { pArcPath ->
+            val path = pArcPath.toPath()
+            for (alignmentLine in pArcPath.alignmentLines) {
+                when (alignmentLine) {
+                    is AlignmentLine.Horizontal ->
+                        drawLine(
+                            color = alignmentLineColor,
+                            start = Offset(alignmentLine.x.toFloat(), visibleRect.top - 10),
+                            end = Offset(alignmentLine.x.toFloat(), visibleRect.bottom + 10),
+                        )
+                    is AlignmentLine.Vertical ->
+                        drawLine(
+                            color = alignmentLineColor,
+                            start = Offset(visibleRect.left - 10, alignmentLine.y.toFloat()),
+                            end = Offset(visibleRect.right + 10, alignmentLine.y.toFloat()),
+                        )
+                }
+            }
+            for (arcIndex in pArcPath.arcs.indices) { // for each arc: draw start & mid-point
+                val point = pArcPath.vertices[arcIndex].point.toOffset()
                 drawCircle(
                     color = creationPrototypeColor,
                     radius = creationPointRadius,
@@ -1272,11 +1290,11 @@ private inline fun DrawScope.drawPartialConstructs(
                 drawCircle(
                     color = creationPrototypeColor.copy(alpha = 0.4f),
                     radius = creationPointRadius,
-                    center = arcPath.arcs[arcIndex].middlePoint.toOffset()
+                    center = pArcPath.arcs[arcIndex].middlePoint.toOffset()
                 )
             }
-            if (!arcPath.isClosed) {
-                val last = arcPath.vertices.last().point.toOffset()
+            if (!pArcPath.isClosed) {
+                val last = pArcPath.vertices.last().point.toOffset()
                 drawCircle(
                     color = creationPrototypeColor,
                     radius = creationPointRadius,

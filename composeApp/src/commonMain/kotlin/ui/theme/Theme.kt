@@ -31,28 +31,28 @@ enum class ColorTheme {
     @Composable
     fun isLight(): Boolean =
         when (this) {
-            ColorTheme.LIGHT -> true
-            ColorTheme.HIGH_CONTRAST -> true
-            ColorTheme.DARK -> false
-            ColorTheme.AUTO -> !isSystemInDarkTheme()
+            LIGHT -> true
+            HIGH_CONTRAST -> true
+            DARK -> false
+            AUTO -> !isSystemInDarkTheme()
         }
 
     @Composable
     fun isDark(): Boolean =
         when (this) {
-            ColorTheme.LIGHT -> false
-            ColorTheme.HIGH_CONTRAST -> false
-            ColorTheme.DARK -> true
-            ColorTheme.AUTO -> isSystemInDarkTheme()
+            LIGHT -> false
+            HIGH_CONTRAST -> false
+            DARK -> true
+            AUTO -> isSystemInDarkTheme()
         }
 
     @Composable
     fun toColorScheme(): ColorScheme {
         val isLight = when (this) {
-            ColorTheme.LIGHT -> true
-            ColorTheme.HIGH_CONTRAST -> true // TODO: custom colors
-            ColorTheme.DARK -> false
-            ColorTheme.AUTO -> !isSystemInDarkTheme()
+            LIGHT -> true
+            HIGH_CONTRAST -> true // TODO: custom colors
+            DARK -> false
+            AUTO -> !isSystemInDarkTheme()
         }
         val scheme =
             if (isLight) DodeclustersColors.lightScheme
@@ -111,14 +111,18 @@ fun DodeclustersTheme(
     val defaultViewConfiguration = LocalViewConfiguration.current
     val viewConfiguration = remember(defaultViewConfiguration) {
         object : ViewConfiguration {
-            override val longPressTimeoutMillis: Long =
-                defaultViewConfiguration.longPressTimeoutMillis
-            override val doubleTapTimeoutMillis: Long =
+            override val longPressTimeoutMillis: Long = // desktop/web: 500ms, android: 400ms
+                defaultViewConfiguration.longPressTimeoutMillis // quite long
+            override val doubleTapTimeoutMillis: Long = // 300ms
                 defaultViewConfiguration.doubleTapTimeoutMillis
-            override val doubleTapMinTimeMillis: Long =
+            override val doubleTapMinTimeMillis: Long = // 40ms
                 defaultViewConfiguration.doubleTapMinTimeMillis
-            override val touchSlop: Float =
-                defaultViewConfiguration.touchSlop
+            override val touchSlop: Float = // min drag length for dragging to register
+                // defaults (might depend on screen sizes/densities):
+                // 18 on desktop
+                // 24.75 on web
+                // 16 on my android tablet
+                defaultViewConfiguration.touchSlop * 0.5f
         }
     }
     CompositionLocalProvider(

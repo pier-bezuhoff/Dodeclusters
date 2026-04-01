@@ -28,14 +28,8 @@ inline fun <T> List<T>.withoutElementAt(index: Int): List<T> {
     return list
 }
 
-fun <T> List<T>.withoutElementsAt(indices: List<Ix>): List<T> {
-    val list = this.toMutableList()
-    val sortedIndices = indices.filter { it in list.indices }.sortedDescending()
-    for (ix in sortedIndices) {
-        list.removeAt(ix)
-    }
-    return list
-}
+fun <T> List<T>.withoutElementsAt(indices: Set<Ix>): List<T> =
+    filterIndexed { index, _ -> index !in indices }
 
 /** remove [element] if it's in, add it otherwise */
 fun <T> List<T>.xor(element: T): List<T> =

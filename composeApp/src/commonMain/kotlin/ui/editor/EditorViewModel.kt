@@ -92,7 +92,6 @@ import domain.settings.InversionOfControl
 import domain.settings.Settings
 import domain.sortedByFrequency
 import domain.transpose
-import domain.withoutElementAt
 import domain.withoutElementsAt
 import domain.xor
 import getPlatform
@@ -639,10 +638,8 @@ class EditorViewModel : ViewModel() {
             clearSelection()
         }
         objectModel.invalidate()
-        val indices = newIndices.toSet()
         history.accumulateChangedLocations(
-            objectIndices = indices,
-            expressionIndices = indices,
+            newIndices = newIndices.toSet(),
             selection = true,
         )
     }
@@ -652,9 +649,8 @@ class EditorViewModel : ViewModel() {
         objectModel.addDisplayObject(point)
         objectModel.invalidate()
         require(newIx == objects.size - 1) { "Incorrect index retrieved from expression.addFree() during createNewFreePoint()" }
-        history.accumulateNewObjects(
-            objectsSize = objects.size,
-            count = 1,
+        history.accumulateChangedLocations(
+            newIndices = setOf(newIx),
         )
         return newIx
     }
@@ -927,11 +923,7 @@ class EditorViewModel : ViewModel() {
         objectModel.removeObjectsAt(indices)
         objectModel.invalidate()
         history.accumulateChangedLocations(
-            objectIndices = toBeDeleted,
-            expressionIndices = toBeDeleted,
-            borderColorIndices = toBeDeleted,
-            fillColorIndices = toBeDeleted,
-            labelIndices = toBeDeleted,
+            allIndices = toBeDeleted,
         )
     }
 
@@ -1370,9 +1362,9 @@ class EditorViewModel : ViewModel() {
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
         showCircles = true
-        val allCLPIndices = objects.filterIndices { it is CircleOrLineOrPoint }
-        val allArcPathIndices = objectModel.expressions.arcPathIndices.filter { objects[it] is ConcreteArcPath }
-        val everythingIsSelected = objectSelection.containsAll(allCLPIndices)
+        val allCLPIndices = expressions.gCircleIndices.filter { objects[it] is CircleOrLineOrPoint }
+        val allArcPathIndices = expressions.arcPathIndices.filter { objects[it] is ConcreteArcPath }
+        val everythingIsSelected = selection.gCircles.containsAll(allCLPIndices)
         selection =
             if (everythingIsSelected)
                 Selection()
@@ -1486,9 +1478,7 @@ class EditorViewModel : ViewModel() {
         pinStateForHistory()
         val color = colorPickerParameters.currentColor
         for (ix in selection.arcPaths) {
-            if (objects[ix] is ConcreteArcPath) {
-                objectModel.fillColors[ix] = color
-            }
+            objectModel.fillColors[ix] = color
         }
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
@@ -1603,8 +1593,7 @@ class EditorViewModel : ViewModel() {
         val indices = listOf(objects.size - 2, objects.size - 1)
         selection = Selection(gCircles = indices)
         history.accumulateChangedLocations(
-            objectIndices = indices.toSet(),
-            expressionIndices = indices.toSet(),
+            newIndices = indices.toSet(),
             selection = true,
         )
         history.recordAccumulatedChanges()
@@ -1636,9 +1625,12 @@ class EditorViewModel : ViewModel() {
                 val targets = objects.indices.toList()
                 val center = computeAbsoluteCenter() ?: Offset.Zero
                 val changedIndices = objectModel.transform(targets, focus = center, zoom = zoom)
+                // zooming ignores concrete-arc-paths
+                expressions.reEval() // overboard but w/e
+                objectModel.syncObjects(objects.indices)
                 history.accumulateChangedLocations(
                     objectIndices = changedIndices,
-                    // theoretically total zoom only can affect incident points to lines
+                    // zoom affects point-line incidence
                     expressionIndices = changedIndices,
                     continuousChange = ContinuousChange.ZOOM
                 )
@@ -1693,7 +1685,6 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun swapOrientationsInSelection() {
-        // TODO: swap arc-path orientations
         val targets = selection.gCircles.filter { ix ->
             objects[ix] is CircleOrLine && isFree(ix)
         }
@@ -1704,13 +1695,15 @@ class EditorViewModel : ViewModel() {
                 queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
             pinStateForHistory()
-            objectModel.setDisplayObjectsWithConsequences(
+            val changedIndices = objectModel.setDisplayObjectsWithConsequences(
                 targets.associateWith { ix ->
                     val obj0 = objects[ix] as CircleOrLine
                     obj0.reversed()
                 }
+            ).toSet()
+            history.accumulateChangedLocations(
+                objectIndices = changedIndices,
             )
-            history.accumulateChangedLocations(objectIndices = targets.toSet())
             history.recordAccumulatedChanges()
         }
     }
@@ -1823,7 +1816,6 @@ class EditorViewModel : ViewModel() {
                 } else adjustables
             submode = SubMode.ExprAdjustment(allAdjustables)
             clearSelection() // clear selection to hide selection HUD
-            history.accumulateChangedLocations(selection = true)
         }
     }
 
@@ -1978,7 +1970,6 @@ class EditorViewModel : ViewModel() {
                     if (submode == null) { // we might have grabbed an arc midpoint
                         clearSelection()
                         downArcPathPoint(position)
-                        history.accumulateChangedLocations(selection = true)
                     }
                 }
                 is ToolMode -> if (partialArgList?.isFull != true)
@@ -2145,22 +2136,25 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun movePointToInfinity() {
-        objectSelection.singleOrNull()?.let { ix ->
+        selection.gCircles.singleOrNull()?.let { ix ->
             pinStateForHistory()
             val expr = exprOf(ix)
             if (expr == null) {
                 val changedIndices =
                     objectModel.setDisplayObjectWithConsequences(ix, Point.CONFORMAL_INFINITY)
-                history.accumulateChangedLocations(objectIndices = changedIndices.toSet())
+                        .toSet()
+                history.accumulateChangedLocations(
+                    objectIndices = changedIndices,
+                )
             } else if (expr is Expr.Incidence && objects[expr.carrier] is Line) {
-                objectModel.changeExpr(
+                val changedIndices = objectModel.changeExpr(
                     ix,
                     expr.copy(parameters =
                         expr.parameters.copy(order = Line.ORDER_OF_CONFORMAL_INFINITY)
                     )
-                )
+                ).toSet()
                 history.accumulateChangedLocations(
-                    objectIndices = setOf(ix),
+                    objectIndices = changedIndices,
                     expressionIndices = setOf(ix),
                 )
             }
@@ -2287,7 +2281,9 @@ class EditorViewModel : ViewModel() {
                     if (region0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
                         toggleSelectAll()
                         if (!showPhantomObjects) {
-                            selection = Selection(gCircles = objectSelection.filter { it !in phantoms })
+                            selection = selection.copy(
+                                gCircles = selection.gCircles.filter { it !in phantoms },
+                            )
                         }
                     } else {
                         val selectedCircles = objectSelection.filter { objects[it] is CircleOrLine }
@@ -2566,10 +2562,10 @@ class EditorViewModel : ViewModel() {
         val newPoint = carrier.project(pointer)
         val order = carrier.point2order(newPoint)
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
-        val changedIndices = setOf(pointIndex) + objectModel.changeExpr(pointIndex, newExpr)
+        val changedIndices = objectModel.changeExpr(pointIndex, newExpr).toSet()
         history.accumulateChangedLocations(
             objectIndices = changedIndices,
-            expressionIndices = changedIndices,
+            expressionIndices = setOf(pointIndex),
         )
     }
 
@@ -2607,14 +2603,17 @@ class EditorViewModel : ViewModel() {
         sm: SubMode.GrabbedArcMidpoint,
     ) {
         val arcPath = objectModel.getArcPath(sm.arcPathIndex) ?: return
-        objectModel.modifyArcPath(
+        val changedIndices = objectModel.modifyArcPath(
             sm.arcPathIndex,
             arcPath.moveArcMidpoint(
                objects,  sm.arcIndex, Point.fromOffset(absoluteCentroid)
             )
-        )
+        ).toSet()
         objectModel.invalidatePositions()
-        history.accumulateChangedLocations(objectIndices = setOf(sm.arcPathIndex))
+        history.accumulateChangedLocations(
+            objectIndices = changedIndices,
+            expressionIndices = setOf(sm.arcPathIndex),
+        )
     }
 
     // NOTE: polar lines and line-by-2 transform weirdly:
@@ -2723,6 +2722,7 @@ class EditorViewModel : ViewModel() {
                 objectModel.transform(actualTargets, translation, focus, zoom, rotationAngle)
             history.accumulateChangedLocations(
                 objectIndices = changedIndices,
+                // zoom can change point-line incidence
                 expressionIndices = changedIndices,
                 continuousChange = continuousChange,
             )
@@ -2819,7 +2819,8 @@ class EditorViewModel : ViewModel() {
                     rotationAngle = rotationAngle,
                 )
             history.accumulateChangedLocations(
-                objectIndices = changedIndices + objectModel.expressions.arcPathIndices,
+                objectIndices = changedIndices,
+                // zoom can change point-line incidence
                 expressionIndices = changedIndices,
                 center = true,
             )
@@ -3207,7 +3208,7 @@ class EditorViewModel : ViewModel() {
                 is RotationParameters,
                 is BiInversionParameters,
                 is LoxodromicMotionParameters -> {
-                    regions = regions.withoutElementsAt(sm.regions)
+                    regions = regions.withoutElementsAt(sm.regions.toSet())
                     val newAdjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
                     val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
                     for ((expr, outputIndices, reservedIndices) in sm.adjustables) {
@@ -3315,10 +3316,7 @@ class EditorViewModel : ViewModel() {
                 }
                 val indices = sm.adjustables.flatMap { it.reservedIndices }.toSet()
                 history.accumulateChangedLocations(
-                    objectIndices = indices,
-                    borderColorIndices = indices,
-                    labelIndices = indices,
-                    expressionIndices = indices,
+                    allIndices = indices,
                     regions = true,
                 )
             }
@@ -3353,10 +3351,7 @@ class EditorViewModel : ViewModel() {
                     is SubMode.ExprAdjustment<*> -> {
                         val indices = sm.adjustables.flatMap { it.reservedIndices }.toSet()
                         history.accumulateChangedLocations(
-                            objectIndices = indices,
-                            borderColorIndices = indices,
-                            labelIndices = indices,
-                            expressionIndices = indices,
+                            allIndices = indices,
                             regions = true,
                         )
                         history.recordAccumulatedChanges()
@@ -3598,9 +3593,8 @@ class EditorViewModel : ViewModel() {
         objectModel.invalidate()
         val newIndicesSet = newIndices.toSet()
         history.accumulateChangedLocations(
-            objectIndices = newIndicesSet,
+            newIndices = newIndicesSet,
             borderColorIndices = newIndicesSet,
-            expressionIndices = newIndicesSet,
             regions = true,
             selection = true,
         )
@@ -3883,7 +3877,7 @@ class EditorViewModel : ViewModel() {
                     defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters.copy(
                         bidirectional = bidirectional,
                     )
-                    regions = regions.withoutElementsAt(sm.regions)
+                    regions = regions.withoutElementsAt(sm.regions.toSet())
                     deleteObjectsWithDependenciesColorsAndRegions(
                         indicesToDelete = sm.adjustables.flatMap { it.outputIndices },
                         circleAnimationInit = { null },
@@ -3899,6 +3893,7 @@ class EditorViewModel : ViewModel() {
         partialArcPath?.let { pArcPath ->
 //            println(pArcPath.toString())
             pinStateForHistory()
+            val oldSize = objects.size
             val vertexIndices: List<Ix> = pArcPath.vertices.map { vertex ->
                 when (val p2p = realizePointSnap(vertex.snap, pinAndRecordHistory = false)) {
                     is PointSnapResult.Eq -> p2p.pointIndex
@@ -3932,14 +3927,14 @@ class EditorViewModel : ViewModel() {
                     ArcPath.Open(vertices = vertexIndices, arcs = arcs)
             )
             val ix = objectModel.addDownscaledObject(concreteArcPath)
+            val newIndices = oldSize until objects.size // includes realized snaps
             selection = Selection(arcPaths = listOf(ix))
+            objectModel.invalidate()
             history.accumulateChangedLocations(
-                objectIndices = setOf(ix),
-                expressionIndices = setOf(ix),
+                newIndices = newIndices.toSet(),
                 selection = true,
             )
             history.recordAccumulatedChanges()
-            objectModel.invalidate()
         }
         partialArcPath = null
     }
@@ -4166,9 +4161,10 @@ class EditorViewModel : ViewModel() {
         val size = min(objects.size, expressions.expressions.size)
         return SaveState(
             objects = objectModel.displayObjects.take(size).toList(),
-            borderColors = objectModel.borderColors.filterKeys { it < size }.toMap(),
-            labels = labels.filterKeys { it < size }.toMap(),
             expressions = objectModel.expressions.expressions.filterKeys { it < size }.toMap(),
+            borderColors = objectModel.borderColors.filterKeys { it < size }.toMap(),
+            fillColors = objectModel.fillColors.filterKeys { it < size }.toMap(),
+            labels = labels.filterKeys { it < size }.toMap(),
             regions = regions.mapNotNull { region ->
                 val insides = region.insides.filter { it < size }.toSet()
                 val outsides = region.outsides.filter { it < size }.toSet()

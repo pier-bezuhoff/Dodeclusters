@@ -1,11 +1,8 @@
 package domain.model
 
 import androidx.compose.ui.geometry.Offset
-import core.geometry.Circle
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
-import core.geometry.ImaginaryCircle
-import core.geometry.Line
 import core.geometry.Point
 import core.geometry.scaled00
 import domain.Ix
@@ -49,11 +46,13 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
         return newIndex
     }
 
-    fun modifyArcPath(index: Ix, arcPath: ArcPath) {
-        val dependents = changeExpr(index, arcPath)
-        for (dependent in dependents) {
-            pathCache.invalidateObjectPathAt(dependent)
+    /** @return all changed indices */
+    fun modifyArcPath(index: Ix, arcPath: ArcPath): List<Ix> {
+        val changedIndices = changeExpr(index, arcPath)
+        for (ix in changedIndices) {
+            pathCache.invalidateObjectPathAt(ix)
         }
+        return changedIndices
     }
 
     fun removeArcPathAt(index: Ix) {
