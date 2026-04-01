@@ -52,6 +52,7 @@ import domain.cluster.Constellation
 import domain.compressConstraints
 import domain.entails
 import domain.expressions.ArcPath
+import domain.expressions.ArcPathIncidenceParameters
 import domain.expressions.BiInversionParameters
 import domain.expressions.ConformalExpressions
 import domain.expressions.Expr
@@ -62,6 +63,7 @@ import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.Parameters
 import domain.expressions.RotationParameters
+import domain.expressions.computeArcPathIncidenceOrder
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeCircleByPencilAndPoint
@@ -467,13 +469,13 @@ class EditorViewModel : ViewModel() {
             "$ix: " + objects[ix].toString()
         }
         val selectedExpressionsString = selection.gCircles.joinToString { ix ->
-            "$ix: " + objectModel.expressions.expressions[ix].toString()
+            "$ix: " + expressions[ix].toString()
         }
         val selectedConcreteArcPathsString = selection.arcPaths.joinToString { ix ->
             "$ix: " + objects[ix].toString()
         }
         val selectedArcPathsString = selection.arcPaths.joinToString { ix ->
-            "$ix: " + objectModel.expressions.expressions[ix].toString()
+            "$ix: " + expressions[ix].toString()
         }
         println("mode = $mode, submode = $submode")
         println("partialArgList = $partialArgList")
@@ -616,19 +618,29 @@ class EditorViewModel : ViewModel() {
         submode = null
     }
 
-    fun createNewGCircle(newGCircle: GCircle?) =
-        createNewGCircles(listOf(newGCircle))
+    /** Append (upscaled) [newGCircle] to [objects], set it as [selection], invalidate,
+     * accumulate history and queue circle entrance animation
+     * @return its index
+     */
+    fun createNewGCircle(newGCircle: GCircle?): Ix {
+        return createNewGCircles(listOf(newGCircle)).last
+    }
 
-    /** Append [newGCircles] to [objects] and queue circle entrance animation */
+    /** Append (upscaled) [newGCircles] to [objects],
+     * set them as [selection], invalidate, accumulate history and
+     * queue circle entrance animation
+     * @return their index range
+     */
     fun createNewGCircles(
         newGCircles: List<GCircle?>,
-    ) {
-        val newIndices = objects.size until objects.size + newGCircles.size
+    ): IntRange {
+        val oldSize = objects.size
         val validNewGCircles = newGCircles.filterNotNull()
         objectModel.addDisplayObjects(newGCircles)
+        val newIndices = oldSize until objects.size
         if (validNewGCircles.isNotEmpty()) {
             showCircles = true
-            selection = Selection(gCircles = newIndices.filter { objects[it] != null })
+            selection = Selection(gCircles = newIndices.filter { objects[it] is GCircle })
             viewModelScope.launch {
                 animations.emit(
                     CircleAnimation.Entrance(validNewGCircles.filterIsInstance<CircleOrLine>())
@@ -642,13 +654,17 @@ class EditorViewModel : ViewModel() {
             newIndices = newIndices.toSet(),
             selection = true,
         )
+        return newIndices
     }
 
+    /** add new free [point] to [objects], invalidate and accumulate history
+     * @return its new index
+     */
     fun createNewFreePoint(point: Point): Ix {
-        val newIx = objectModel.expressions.addFree()
+        val newIx = expressions.addFree()
         objectModel.addDisplayObject(point)
         objectModel.invalidate()
-        require(newIx == objects.size - 1) { "Incorrect index retrieved from expression.addFree() during createNewFreePoint()" }
+        require(newIx == objects.lastIndex) { "Incorrect index retrieved from expression.addFree() during createNewFreePoint()" }
         history.accumulateChangedLocations(
             newIndices = setOf(newIx),
         )
@@ -1043,9 +1059,9 @@ class EditorViewModel : ViewModel() {
 
     /** [getPointsAround] around [visiblePosition] while prioritizing free points */
     fun getPreferablyFreePointsAround(visiblePosition: Offset): List<Ix> {
-        // TODO: use objectModel.expressions.pointIndices
+        // TODO: use expressions.pointIndices
         val closePoints = getPointsAround(objects, visiblePosition,
-            priorityTargets = objectModel.expressions.freeObjectsIndices
+            priorityTargets = expressions.freeObjectsIndices
         )
         return closePoints
     }
@@ -1084,7 +1100,7 @@ class EditorViewModel : ViewModel() {
     /** [getCirclesAround] around [visiblePosition] while prioritizing free circles */
     fun getPreferablyFreeCirclesAround(visiblePosition: Offset): List<Ix> {
         val closeCircles = getCirclesAround(objects, visiblePosition,
-            priorityTargets = objectModel.expressions.freeObjectsIndices
+            priorityTargets = expressions.freeObjectsIndices
         )
         return closeCircles
     }
@@ -1102,7 +1118,7 @@ class EditorViewModel : ViewModel() {
     private fun findSiblingsAndParents(ix: Ix): List<Ix> {
         val expr = exprOf(ix) ?: return emptyList()
         val parents = expr.args
-        val siblings = objectModel.expressions.findExpr(expr)
+        val siblings = expressions.findExpr(expr)
         return siblings + parents
     }
 
@@ -1264,33 +1280,32 @@ class EditorViewModel : ViewModel() {
     private fun realizePointSnap(
         snapResult: PointSnapResult,
         pinAndRecordHistory: Boolean = true,
-    ): PointSnapResult.PointToPoint =
-        when (snapResult) {
+    ): PointSnapResult.PointToPoint {
+        return when (snapResult) {
             is PointSnapResult.Free -> snapResult
             is PointSnapResult.Eq -> snapResult
             is PointSnapResult.Incidence -> {
-                val circle = objects[snapResult.circleIndex] as CircleOrLine
+                val circle = objectModel.downscaledObjects[snapResult.circleIndex] as CircleOrLine
                 // NOTE: we have to downscale to measure order for lines properly
-                val order = circle.downscale().point2order(snapResult.result.downscale())
+                val order = circle.point2order(snapResult.result.downscale())
                 val expr = Expr.Incidence(
                     IncidenceParameters(order),
                     snapResult.circleIndex
                 )
                 if (pinAndRecordHistory)
                     pinStateForHistory()
-                val newIx = objects.size
-                val newPoint = (objectModel.expressions.addSoloExpr(expr) as Point).upscale()
-                createNewGCircle(newPoint)
+                val newPoint = (expressions.addSoloExpr(expr) as Point).upscale()
+                val ix = createNewGCircle(newPoint)
                 if (pinAndRecordHistory)
                     history.recordAccumulatedChanges()
-                PointSnapResult.Eq(newPoint, newIx)
+                PointSnapResult.Eq(newPoint, ix)
             }
             is PointSnapResult.Intersection -> {
                 val point = snapResult.result
                 val (ix1, ix2) = listOf(snapResult.circle1Index, snapResult.circle2index)
                 val expr = Expr.Intersection(ix1, ix2)
                 val possibleExistingIntersections =
-                    objectModel.expressions.findExistingIntersectionIndices(ix1, ix2)
+                    expressions.findExistingIntersectionIndices(ix1, ix2)
                         .filter { objects[it] is Point }
                 val closestIndex = possibleExistingIntersections.minByOrNull {
                     val p = objects[it] as Point
@@ -1313,25 +1328,58 @@ class EditorViewModel : ViewModel() {
                         p?.let { point.distanceFrom(p) } ?: Double.POSITIVE_INFINITY
                     }.index
                     if (closestIndex != null) { // far intersection already exists
-                        val p = objectModel.expressions.addMultiExpression(
+                        val p = expressions.addMultiExpression(
                             ExprOutput.OneOf(expr, intersectionOutputIndex)
                         ) as Point
-                        createNewGCircle(p.upscale())
+                        val ix = createNewGCircle(p.upscale())
                         if (pinAndRecordHistory)
                             history.recordAccumulatedChanges()
-                        PointSnapResult.Eq(snapResult.result, oldSize)
+                        PointSnapResult.Eq(snapResult.result, ix)
                     } else {
-                        val ps = objectModel.expressions.addMultiExpr(expr)
-                            .map { it as? Point }
-                        createNewGCircles(ps.map { it?.upscale() })
+                        val points = expressions.addMultiExpr(expr)
+                            .map { (it as? Point)?.upscale() }
+                        createNewGCircles(points)
+                        val ix = oldSize + intersectionOutputIndex
                         if (pinAndRecordHistory)
                             history.recordAccumulatedChanges()
-                        PointSnapResult.Eq(snapResult.result, oldSize + intersectionOutputIndex)
+                        PointSnapResult.Eq(snapResult.result, ix)
                     }
                 }
             }
-            else -> PointSnapResult.Free(snapResult.result)
+            is PointSnapResult.ArcPathIncidence -> {
+                val concreteArcPath = objectModel.downscaledObjects[snapResult.arcPathIndex]
+                    as? ConcreteArcPath ?: return snapResult.toFree()
+                val (arcIndex, order) = computeArcPathIncidenceOrder(
+                    concreteArcPath,
+                    snapResult.result.downscale(),
+                )
+                if (arcIndex != snapResult.arcIndex)
+                    return snapResult.toFree()
+                if (pinAndRecordHistory)
+                    pinStateForHistory()
+                val expr = Expr.ArcPathIncidence(
+                    parameters = ArcPathIncidenceParameters(
+                        arcIndex = snapResult.arcIndex,
+                        arcPercentage = order,
+                    ),
+                    arcPath = snapResult.arcPathIndex,
+                )
+                val result = expressions.addSoloExpr(expr) as? Point
+                val incidentPoint = result?.upscale()
+                val ix = createNewGCircle(incidentPoint)
+                if (pinAndRecordHistory)
+                    history.recordAccumulatedChanges()
+                if (incidentPoint == null)
+                    snapResult.toFree()
+                else
+                    PointSnapResult.Eq(
+                        result = incidentPoint,
+                        pointIndex = ix,
+                    )
+            }
+            else -> snapResult.toFree()
         }
+    }
 
     fun activateRectangularSelect() {
         switchToMode(SelectionMode.Multiselect)
@@ -1586,8 +1634,8 @@ class EditorViewModel : ViewModel() {
         )
         pinStateForHistory()
         showCircles = true
-        objectModel.expressions.addFree()
-        objectModel.expressions.addFree()
+        expressions.addFree()
+        expressions.addFree()
         createNewGCircles(listOf(horizontalLine, verticalLine))
         switchToMode(SelectionMode.Multiselect)
         val indices = listOf(objects.size - 2, objects.size - 1)
@@ -1647,7 +1695,7 @@ class EditorViewModel : ViewModel() {
     private fun detachEverySelectedObject() {
         pinStateForHistory()
         for (ix in objectSelection) {
-            objectModel.expressions.changeToFree(ix)
+            expressions.changeToFree(ix)
         }
         selectionIsLockedTrigger = !selectionIsLockedTrigger
         history.accumulateChangedLocations(expressionIndices = objectSelection.toSet())
@@ -1725,7 +1773,7 @@ class EditorViewModel : ViewModel() {
         if (expr !is Expr.HasParameters) {
             return
         }
-        val outputIndices = objectModel.expressions.findExpr(expr)
+        val outputIndices = expressions.findExpr(expr)
         val tool = when (expr) {
             is Expr.CircleInterpolation -> Tool.CircleOrPointInterpolation
             is Expr.PointInterpolation -> Tool.CircleOrPointInterpolation
@@ -1805,7 +1853,7 @@ class EditorViewModel : ViewModel() {
                     expr.otherHalfStart != null
                 ) {
                     exprOf(expr.otherHalfStart)?.let { otherExpr ->
-                        val otherOutputIndices = objectModel.expressions.findExpr(otherExpr)
+                        val otherOutputIndices = expressions.findExpr(otherExpr)
                         val otherAdjustables = listOf(AdjustableExpr(otherExpr, otherOutputIndices, otherOutputIndices))
                         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
                             expr.parameters,
@@ -1841,7 +1889,7 @@ class EditorViewModel : ViewModel() {
                 .map { exprOf(it) }
                 .distinct()
                 .flatMap { expr ->
-                    objectModel.expressions.findExpr(expr)
+                    expressions.findExpr(expr)
                 }
             if (mode == SelectionMode.Drag && siblings.size > 1) {
                 switchToMode(SelectionMode.Multiselect)
@@ -2497,8 +2545,8 @@ class EditorViewModel : ViewModel() {
             val excludedIndices =
                 setOf(selectedIndex) +
                 (if (showPhantomObjects) emptySet() else phantoms) +
-                objectModel.expressions.getAllChildren(selectedIndex) +
-                objectModel.expressions.getAllParents(listOf(selectedIndex))
+                expressions.getAllChildren(selectedIndex) +
+                expressions.getAllParents(listOf(selectedIndex))
             val center = computeAbsoluteCenter()
             val absoluteVisibilityRect =
                 if (center != null && canvasSize != IntSize.Zero)
@@ -2523,45 +2571,78 @@ class EditorViewModel : ViewModel() {
         absoluteCentroid: Offset,
         translation: Offset
     ) {
-        val ix = objectSelection.first()
+        val ix = selection.gCircles.first()
         val point = objects[ix] as Point
         if (point.isInfinite)
             return
-        val expr = exprOf(ix)
-        if (expr is Expr.Incidence) {
-            slidePointAcrossCarrier(pointIndex = ix, carrierIndex = expr.carrier, absolutePointerPosition = absoluteCentroid)
-        } else {
-            val childCircles = objectModel.expressions.getAllChildren(ix)
-                .filter { objects[it] is CircleOrLine }
-                .toSet()
-            // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
-            val parents = objectModel.expressions.getAllParents(listOf(ix))
-            val childArcPaths = objectModel.expressions.children[ix]
-                ?.filterIndices { expressions[it] is ArcPath }
-                ?.toSet() ?: emptySet()
-            // NOTE: snap-exclusion calculation when dragging a point seem excessive tbh
-            val newPoint = snapped(absoluteCentroid,
-                excludePoints = true,
-                excludedCircles = childCircles + parents,
-                excludedArcPaths = childArcPaths,
-            ).result
-            // Q: y?
-            val actualTranslation = newPoint.toOffset() - absoluteCentroid
-            transformWhatWeCan(listOf(ix), translation = translation)
+        when (val expr = exprOf(ix)) {
+            is Expr.Incidence -> {
+                slidePointAcrossCarrier(
+                    pointIndex = ix,
+                    carrierIndex = expr.carrier,
+                    absolutePointerPosition = absoluteCentroid
+                )
+            }
+            is Expr.ArcPathIncidence -> {
+                slidePointAcrossArcPath(
+                    pointIndex = ix,
+                    arcPathIndex = expr.arcPath,
+                    absolutePointerPosition = absoluteCentroid,
+                )
+            }
+            else -> {
+                val childCircles = expressions.getAllChildren(ix)
+                    .filter { objects[it] is CircleOrLine }
+                    .toSet()
+                // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
+                val parents = expressions.getAllParents(listOf(ix))
+                val childArcPaths = expressions.children[ix]
+                    ?.filterIndices { expressions[it] is ArcPath }
+                    ?.toSet() ?: emptySet()
+                // NOTE: snap-exclusion calculation when dragging a point seem excessive tbh
+                val newPoint = snapped(
+                    absoluteCentroid,
+                    excludePoints = true,
+                    excludedCircles = childCircles + parents,
+                    excludedArcPaths = childArcPaths,
+                ).result
+                val actualTranslation = newPoint.toOffset() - point.toOffset()
+                transformWhatWeCan(listOf(ix), translation = actualTranslation)
+            }
         }
     }
 
     // special case that is not handled by transformWhatWeCan()
     // MAYBE: instead transform then snap/project onto carrier and transform by snap-delta again
     private fun slidePointAcrossCarrier(
-        pointIndex: Ix, carrierIndex: Ix,
-        absolutePointerPosition: Offset
+        pointIndex: Ix,
+        carrierIndex: Ix,
+        absolutePointerPosition: Offset,
     ) {
-        val carrier = objectModel.downscaledObjects[carrierIndex] as CircleOrLine
-        val pointer = Point.fromOffset(absolutePointerPosition).downscale()
-        val newPoint = carrier.project(pointer)
+        val carrier = objectModel.downscaledObjects[carrierIndex] as? CircleOrLine ?: return
+        val point = Point.fromOffset(absolutePointerPosition).downscale()
+        val newPoint = carrier.project(point)
         val order = carrier.point2order(newPoint)
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
+        val changedIndices = objectModel.changeExpr(pointIndex, newExpr).toSet()
+        history.accumulateChangedLocations(
+            objectIndices = changedIndices,
+            expressionIndices = setOf(pointIndex),
+        )
+    }
+
+    private fun slidePointAcrossArcPath(
+        pointIndex: Ix,
+        arcPathIndex: Ix,
+        absolutePointerPosition: Offset,
+    ) {
+        val carrier = objectModel.downscaledObjects[arcPathIndex] as? ConcreteArcPath ?: return
+        val point = Point.fromOffset(absolutePointerPosition).downscale()
+        val (arcIndex, newPoint, arcPercentage) = carrier.project(point)
+        val newExpr = Expr.ArcPathIncidence(
+            ArcPathIncidenceParameters(arcIndex, arcPercentage),
+            arcPathIndex,
+        )
         val changedIndices = objectModel.changeExpr(pointIndex, newExpr).toSet()
         history.accumulateChangedLocations(
             objectIndices = changedIndices,
@@ -2648,7 +2729,7 @@ class EditorViewModel : ViewModel() {
                     objectModel.setDownscaledObject(ix, newObject)
                 }
             }
-            objectModel.expressions.adjustIncidentPointExpressions()
+            expressions.adjustIncidentPointExpressions()
             val newSouth = (rotor.applyTo(GeneralizedCircle.fromGCircle(
                 sm.south.downscale()
             )).toGCircleAs(sm.south) as? Point)
@@ -2701,7 +2782,7 @@ class EditorViewModel : ViewModel() {
                         if (isFree(targetIx)) {
                             listOf(targetIx)
                         } else {
-                            val parents = objectModel.expressions.getImmediateParents(targetIx)
+                            val parents = expressions.getImmediateParents(targetIx)
                             if (parents.all { isFree(it) })
                                 parents
                             else emptyList()
@@ -2709,7 +2790,7 @@ class EditorViewModel : ViewModel() {
                     }.distinct()
                 }
                 InversionOfControl.LEVEL_INFINITY -> {
-                    (targets.toSet() + objectModel.expressions.getAllParents(targets)).distinct()
+                    (targets.toSet() + expressions.getAllParents(targets)).distinct()
                 }
             }
         if (actualTargets.isEmpty()) {
@@ -3008,7 +3089,7 @@ class EditorViewModel : ViewModel() {
             ViewMode.StereographicRotation -> {
                 // MAYBE: normalize line-only-output expressions (e.g. polar line)
                 // fixes incident points for line->circle and circle->line transitions
-                objectModel.expressions.adjustIncidentPointExpressions()
+                expressions.adjustIncidentPointExpressions()
                 history.accumulateChangedLocations(
                     expressionIndices = objects.indices.toSet(),
                 )
@@ -3077,7 +3158,7 @@ class EditorViewModel : ViewModel() {
     private fun highlightSelectionParents() {
         val allParents = selection.indices.flatMap { ix ->
             if (isConstrained(ix)) emptyList() // exclude semi-free Expr.Incidence
-            else objectModel.expressions.getImmediateParents(ix)
+            else expressions.getImmediateParents(ix)
                 .minus(objectSelection.toSet())
         }
             .distinct()
@@ -3184,7 +3265,7 @@ class EditorViewModel : ViewModel() {
                 is InterpolationParameters -> { // single adjustable expr case
                     val (expr, outputIndices, reservedIndices) = sm.adjustables[0]
                     val newExpr = expr.copyWithNewParameters(parameters) as Expr.Conformal.OneToMany
-                    val (newIndices, newReservedIndices, newObjects) = objectModel.expressions.adjustMultiExpr(
+                    val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
                         newExpr = newExpr,
                         targetIndices = outputIndices,
                         reservedIndices = reservedIndices,
@@ -3214,7 +3295,7 @@ class EditorViewModel : ViewModel() {
                     for ((expr, outputIndices, reservedIndices) in sm.adjustables) {
                         val sourceIndex = (expr as Expr.TransformLike).target
                         val newExpr = expr.copyWithNewParameters(parameters) as Expr.Conformal.OneToMany
-                        val (newIndices, newReservedIndices, newObjects) = objectModel.expressions.adjustMultiExpr(
+                        val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
                             newExpr = newExpr,
                             targetIndices = outputIndices,
                             reservedIndices = reservedIndices,
@@ -3408,7 +3489,7 @@ class EditorViewModel : ViewModel() {
                 radiusPoint = (args[1] as Arg.PointXY).toPoint().downscale(),
             )?.upscale()
             createNewGCircle(newCircle)
-            objectModel.expressions.addFree()
+            expressions.addFree()
         } else {
             val realized = args.map { arg ->
                 when (arg) {
@@ -3416,7 +3497,7 @@ class EditorViewModel : ViewModel() {
                     is Arg.FixedPoint -> createNewFreePoint(arg.toPoint())
                 }
             }
-            val newCircle = objectModel.expressions.addSoloExpr(
+            val newCircle = expressions.addSoloExpr(
                 Expr.CircleByCenterAndRadius(
                     center = realized[0],
                     radiusPoint = realized[1]
@@ -3437,7 +3518,7 @@ class EditorViewModel : ViewModel() {
                 (it as Arg.PointXY).toPoint().downscale()
             }
             val newCircle = computeCircleBy3Points(p1, p2, p3)
-            objectModel.expressions.addFree()
+            expressions.addFree()
             createNewGCircle(newCircle?.upscale())
         } else {
             val realized = args.map {
@@ -3446,7 +3527,7 @@ class EditorViewModel : ViewModel() {
                     is Arg.FixedPoint -> createNewFreePoint(it.toPoint())
                 }
             }
-            val newGCircle = objectModel.expressions.addSoloExpr(
+            val newGCircle = expressions.addSoloExpr(
                 Expr.CircleBy3Points(
                     object1 = realized[0],
                     object2 = realized[1],
@@ -3471,7 +3552,7 @@ class EditorViewModel : ViewModel() {
                 (it as Arg.PointXY).toPoint().downscale()
             }
             val newCircle = computeCircleByPencilAndPoint(p1, p2, p3)
-            objectModel.expressions.addFree()
+            expressions.addFree()
             createNewGCircle(newCircle?.upscale())
         } else {
             val realized = args.map {
@@ -3480,7 +3561,7 @@ class EditorViewModel : ViewModel() {
                     is Arg.FixedPoint -> createNewFreePoint(it.toPoint())
                 }
             }
-            val newGCircle = objectModel.expressions.addSoloExpr(
+            val newGCircle = expressions.addSoloExpr(
                 Expr.CircleByPencilAndPoint(
                     pencilObject1 = realized[0],
                     pencilObject2 = realized[1],
@@ -3505,7 +3586,7 @@ class EditorViewModel : ViewModel() {
                 (it as Arg.PointXY).toPoint().downscale()
             }
             val newGCircle = computeLineBy2Points(p1, p2)
-            objectModel.expressions.addFree()
+            expressions.addFree()
             createNewGCircle(newGCircle?.upscale())
         } else {
             val realized = args.map {
@@ -3515,7 +3596,7 @@ class EditorViewModel : ViewModel() {
                 }
             }
             val infinityIndex = objectModel.getInfinityIndex() ?: createNewFreePoint(Point.CONFORMAL_INFINITY)
-            val newGCircle = objectModel.expressions.addSoloExpr(
+            val newGCircle = expressions.addSoloExpr(
                 Expr.CircleBy3Points(
                     object1 = realized[0],
                     object2 = realized[1],
@@ -3551,7 +3632,7 @@ class EditorViewModel : ViewModel() {
                 )
             }
         }
-        val newGCircle = objectModel.expressions.addSoloExpr(newExpr) as? GCircle
+        val newGCircle = expressions.addSoloExpr(newExpr) as? GCircle
         createNewGCircle(newGCircle?.upscale())
         partialArgList = argList.copyEmpty()
         history.recordAccumulatedChanges()
@@ -3620,7 +3701,7 @@ class EditorViewModel : ViewModel() {
                 startArg.index, endArg.index
             )
             val oldSize = objects.size
-            val newGCircles = objectModel.expressions.addMultiExpr(expr)
+            val newGCircles = expressions.addMultiExpr(expr)
             val newCircles = newGCircles.map { (it as? GCircle)?.upscale() }
             objectModel.addDisplayObjects(newCircles)
             val outputRange = (oldSize until objects.size).toList()
@@ -3641,7 +3722,7 @@ class EditorViewModel : ViewModel() {
             val expr = Expr.PointInterpolation(defaultInterpolationParameters.params, startPointIx, endPointIx)
             interpolateCircles = false
             val oldSize = objects.size
-            val newGCircles = objectModel.expressions.addMultiExpr(expr)
+            val newGCircles = expressions.addMultiExpr(expr)
             val newPoints = newGCircles.map { (it as? Point)?.upscale() }
             objectModel.addDisplayObjects(newPoints)
             val outputRange = (oldSize until objects.size).toList()
@@ -3660,7 +3741,7 @@ class EditorViewModel : ViewModel() {
         val argList = partialArgList!!
         val startCircleIx = (argList.args[0] as Arg.CLI).index
         val endCircleIx = (argList.args[1] as Arg.CLI).index
-        val newGCircles = objectModel.expressions.addMultiExpr(
+        val newGCircles = expressions.addMultiExpr(
             Expr.CircleExtrapolation(params, startCircleIx, endCircleIx),
         ).map { (it as? GCircle)?.upscale() }
         createNewGCircles(newGCircles)
@@ -3694,7 +3775,7 @@ class EditorViewModel : ViewModel() {
         var outputIndex = oldSize
         val source2trajectory = targetIndices.map { targetIndex ->
             val expr = Expr.Rotation(params0, pivotPointIndex, targetIndex)
-            val result = objectModel.expressions
+            val result = expressions
                 .addMultiExpr(expr)
                 .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
             val outputRange = (outputIndex until (outputIndex + result.size)).toList()
@@ -3735,7 +3816,7 @@ class EditorViewModel : ViewModel() {
         var outputIndex = oldSize
         val source2trajectory = targetIndices.map { targetIndex ->
             val expr = Expr.BiInversion(params0, engine1, engine2, targetIndex)
-            val result = objectModel.expressions
+            val result = expressions
                 .addMultiExpr(expr)
                 .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
             val outputRange = (outputIndex until (outputIndex + result.size)).toList()
@@ -3796,7 +3877,7 @@ class EditorViewModel : ViewModel() {
                     // NOTE: complementary half indices rely on contiguous layout of trajectories
                     otherHalfStart = secondHalfStart + i * spiralSize,
                 )
-                val result = objectModel.expressions
+                val result = expressions
                     .addMultiExpr(expr)
                     .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
                 // result.size == spiralSize
@@ -3817,7 +3898,7 @@ class EditorViewModel : ViewModel() {
                     target = targetIndex,
                     otherHalfStart = firstHalfStart + i * spiralSize,
                 )
-                val result = objectModel.expressions
+                val result = expressions
                     .addMultiExpr(expr)
                     .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
                 val outputRange = (outputIndex until (outputIndex + result.size)).toList()
@@ -3846,7 +3927,7 @@ class EditorViewModel : ViewModel() {
         } else {
             val source2trajectory = targetIndices.map { targetIndex ->
                 val expr = Expr.LoxodromicMotion(params0, divergencePointIndex, convergencePointIndex, targetIndex)
-                val result = objectModel.expressions
+                val result = expressions
                     .addMultiExpr(expr)
                     .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
                 val outputRange = (outputIndex until (outputIndex + result.size)).toList()
@@ -3891,7 +3972,7 @@ class EditorViewModel : ViewModel() {
 
     fun completeArcPath() {
         partialArcPath?.let { pArcPath ->
-//            println(pArcPath.toString())
+//            println(pArcPath)
             pinStateForHistory()
             val oldSize = objects.size
             val vertexIndices: List<Ix> = pArcPath.vertices.map { vertex ->
@@ -3900,7 +3981,6 @@ class EditorViewModel : ViewModel() {
                     is PointSnapResult.Free -> createNewFreePoint(p2p.result)
                 }
             }
-            // FIX: midpoint incidence snaps vanish
             val arcs = pArcPath.arcs.mapIndexed { arcIndex, arc ->
                 when (val p2p = realizePointSnap(arc.midpointSnap, pinAndRecordHistory = false)) {
                     is PointSnapResult.Free -> {
@@ -3940,7 +4020,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun completePoint() {
-        val argList = partialArgList!!
+        val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.Point }
         val arg0 = args[0]
         if (arg0 is Arg.PointXY) {
@@ -4161,7 +4241,7 @@ class EditorViewModel : ViewModel() {
         val size = min(objects.size, expressions.expressions.size)
         return SaveState(
             objects = objectModel.displayObjects.take(size).toList(),
-            expressions = objectModel.expressions.expressions.filterKeys { it < size }.toMap(),
+            expressions = expressions.expressions.filterKeys { it < size }.toMap(),
             borderColors = objectModel.borderColors.filterKeys { it < size }.toMap(),
             fillColors = objectModel.fillColors.filterKeys { it < size }.toMap(),
             labels = labels.filterKeys { it < size }.toMap(),

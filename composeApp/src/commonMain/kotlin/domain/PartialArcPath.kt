@@ -373,7 +373,7 @@ data class PartialArcPath(
         else
             collapseArc(firstVertexIndex)
 
-    // BUG: every straight arc becomes bent
+    // BUG: sometimes every straight arc becomes bent
     /** fuse arc-end vertex into arc-start */
     fun collapseArc(arcIndex: Int): PartialArcPath {
         val nextVertexIndex = (arcIndex + 1).mod(vertices.size)

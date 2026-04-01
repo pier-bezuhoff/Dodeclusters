@@ -226,6 +226,9 @@ fun computeArcPathIncidence(
     params: ArcPathIncidenceParameters,
     concreteArcPath: ConcreteArcPath,
 ): Point? {
+    // NOTE: null vertex might collapse ArcPath.Arc into nothing
+    //  so the arcIndex within concreteArcPath would point to a
+    //  diff arc
     val arc = concreteArcPath.arcs.getOrNull(params.arcIndex)
     return when (val circleOrLine = arc?.circleOrLine) {
         is Circle -> {
@@ -241,27 +244,6 @@ fun computeArcPathIncidence(
             val endOrder = circleOrLine.point2order(arcEnd)
             val order = startOrder + (endOrder - startOrder)*params.arcPercentage
             circleOrLine.order2point(order)
-        }
-        null -> null
-    }
-}
-
-fun computeArcPathArcMidpoint(
-    params: ArcPathArcMidpointParameters,
-    concreteArcPath: ConcreteArcPath,
-): Point? {
-    val arc = concreteArcPath.arcs.getOrNull(params.arcIndex)
-    return when (val circleOrLine = arc?.circleOrLine) {
-        is Circle -> {
-            val angle = arc.startAngle + arc.sweepAngle*0.5
-            circleOrLine.angle2point(angle)
-        }
-        is Line -> {
-            val arcStart = concreteArcPath.vertices[params.arcIndex]
-            val arcEnd = concreteArcPath.vertices[
-                (params.arcIndex + 1).mod(concreteArcPath.vertices.size)
-            ]
-            arcStart.middle(arcEnd)
         }
         null -> null
     }

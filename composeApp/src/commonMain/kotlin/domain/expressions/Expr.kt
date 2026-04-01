@@ -241,9 +241,9 @@ sealed interface Expr {
     }
 
     @Serializable
-    @SerialName("ArcPathArcMidpoint")
-    data class ArcPathArcMidpoint(
-        override val parameters: ArcPathArcMidpointParameters,
+    @SerialName("ArcPathIncidence")
+    data class ArcPathIncidence(
+        override val parameters: ArcPathIncidenceParameters,
         val arcPath: Ix,
     ) : Conformal.OneToOne, HasParameters
 
@@ -301,8 +301,8 @@ sealed interface Expr {
             is BiInversion -> listOf(engine1, engine2, target)
             is LoxodromicMotion -> listOf(divergencePoint, convergencePoint, target)
             is ArcPath -> dependencies.toList()
+            is ArcPathIncidence -> listOf(arcPath)
             // projective
-            is ArcPathArcMidpoint -> listOf(arcPath)
             is ConicIntersection -> listOf(conic1, conic2)
             is ConicBy5 -> listOf(conic1, conic2, conic3, conic4, conic5)
             is PolarLine -> listOf(conic, pole)
@@ -327,7 +327,8 @@ sealed interface Expr {
         is BiInversion -> ResultType.CLIPs
         is LoxodromicMotion -> ResultType.CLIPs
         is ArcPath -> setOf(ResultType.ARC_PATH)
-        is ArcPathArcMidpoint -> setOf(ResultType.POINT)
+        is ArcPathIncidence -> setOf(ResultType.POINT)
+        // projective
         is ConicIntersection -> setOf()
         is ConicBy5 -> setOf()
         is PolarLine -> setOf()
@@ -387,7 +388,7 @@ fun Expr.Conformal.eval(objects: List<GCircleOrConcreteAcPath?>): ConformalExprR
                     objects[chordEndPoint] as? Point ?: return emptyList(),
                 )
                 is ArcPath -> this.toConcreteArcPath(objects)
-                is Expr.ArcPathArcMidpoint -> computeArcPathArcMidpoint(
+                is Expr.ArcPathIncidence -> computeArcPathIncidence(
                     parameters,
                     objects[arcPath] as? ConcreteArcPath ?: return emptyList(),
                 )
@@ -510,7 +511,7 @@ inline fun <EXPR : Expr> EXPR.reIndex(
             otherHalfStart = otherHalfStart?.let { reIndexer(it) },
         )
         is ArcPath -> this.reIndex(reIndexer)
-        is Expr.ArcPathArcMidpoint -> copy(
+        is Expr.ArcPathIncidence -> copy(
             arcPath = reIndexer(arcPath),
         )
         is ConicBy5 -> copy(
@@ -564,8 +565,8 @@ inline fun <reified EXPR : Expr> EXPR.copyWithNewParameters(
             is LoxodromicMotion -> copy(
                 parameters = newParameters as LoxodromicMotionParameters
             )
-            is Expr.ArcPathArcMidpoint -> copy(
-                parameters = newParameters as ArcPathArcMidpointParameters
+            is Expr.ArcPathIncidence -> copy(
+                parameters = newParameters as ArcPathIncidenceParameters
             )
         } as EXPR
     } else this

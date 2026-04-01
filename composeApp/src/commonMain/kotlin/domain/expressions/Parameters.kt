@@ -122,8 +122,10 @@ data class ArcPathIncidenceParameters(
 /**
  * @param[arcIndex] index within arcPath.arcs of arcPath
  */
-@Immutable
-@Serializable
-data class ArcPathArcMidpointParameters(
-    val arcIndex: Int,
-) : Parameters
+fun ArcPathArcMidpointParameters(
+    arcIndex: Int,
+): ArcPathIncidenceParameters =
+    ArcPathIncidenceParameters(
+        arcIndex = arcIndex,
+        arcPercentage = 0.5,
+    )
