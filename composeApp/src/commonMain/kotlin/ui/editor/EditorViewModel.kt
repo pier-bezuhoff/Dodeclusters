@@ -2597,7 +2597,7 @@ class EditorViewModel : ViewModel() {
                 // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
                 val parents = expressions.getAllParents(listOf(ix))
                 val childArcPaths = expressions.children[ix]
-                    ?.filterIndices { expressions[it] is ArcPath }
+                    ?.filter { objects[it] is ConcreteArcPath }
                     ?.toSet() ?: emptySet()
                 // NOTE: snap-exclusion calculation when dragging a point seem excessive tbh
                 val newPoint = snapped(
