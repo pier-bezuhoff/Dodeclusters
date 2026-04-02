@@ -360,6 +360,8 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         return toBeUpdated
     }
 
+    /** Force update [indices] and their dependents
+     * @return all updated/changed indices, including [indices] */
     fun forceUpdate(indices: Set<Ix>): List<Ix> {
         val toBeUpdated = indices.sortedBy { ix2tier[it] }
         val cache: MutableMap<EXPR_ONE_TO_MANY, List<R?>> = mutableMapOf()

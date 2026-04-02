@@ -8,6 +8,13 @@ class PathCache {
     val objectPaths: MutableList<Path?> = mutableListOf()
     var objectPathValidity = BooleanArray(0)
 
+    operator fun get(index: Ix): Path? =
+        objectPaths.getOrNull(index)
+
+    operator fun set(index: Ix, path: Path) {
+        cacheObjectPath(index, path)
+    }
+
     fun addObject() {
         val previousSize = objectPathValidity.size
         objectPaths.add(null)
@@ -22,17 +29,17 @@ class PathCache {
         objectPathValidity = objectPathValidity.copyOf(previousSize + sizeIncrement)
     }
 
-    fun invalidateObjectPathAt(objectIndex: Ix) {
-        objectPathValidity[objectIndex] = false
+    fun invalidateObjectPathAt(index: Ix) {
+        objectPathValidity[index] = false
         // rewind could be bad when circle<->cubic<->line change verb/point counts
         // reset seems to be a bit faster than rewind (during stereographic rotation)
 //        cachedObjectPaths[objectIndex]?.rewind()
-        objectPaths[objectIndex]?.reset()
+        objectPaths[index]?.reset()
     }
 
-    fun removeObjectAt(objectIndex: Ix) {
-        objectPaths[objectIndex] = null
-        invalidateObjectPathAt(objectIndex)
+    fun removeObjectAt(index: Ix) {
+        objectPaths[index] = null
+        invalidateObjectPathAt(index)
     }
 
     fun clear() {
@@ -46,8 +53,8 @@ class PathCache {
         }
     }
 
-    fun cacheObjectPath(objectIndex: Ix, path: Path) {
-        objectPaths[objectIndex] = path
-        objectPathValidity[objectIndex] = true
+    fun cacheObjectPath(index: Ix, path: Path) {
+        objectPaths[index] = path
+        objectPathValidity[index] = true
     }
 }

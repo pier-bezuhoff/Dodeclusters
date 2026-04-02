@@ -1,8 +1,8 @@
 package ui.tools
 
 import androidx.compose.ui.graphics.Color
-import domain.NonEqualityCondition
-import domain.Signature
+import domain.model.NonEqualityCondition
+import domain.model.Signature
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
 import org.jetbrains.compose.resources.StringResource

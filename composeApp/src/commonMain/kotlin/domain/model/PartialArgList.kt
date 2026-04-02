@@ -1,6 +1,7 @@
-package domain
+package domain.model
 
 import androidx.compose.runtime.Immutable
+import domain.PointSnapResult
 
 @Immutable
 data class PartialArgList(

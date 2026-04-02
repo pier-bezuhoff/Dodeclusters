@@ -1,8 +1,8 @@
 package ui.editor
 
 import androidx.compose.runtime.Immutable
-import domain.NonEqualityCondition
-import domain.Signature
+import domain.model.NonEqualityCondition
+import domain.model.Signature
 import kotlinx.serialization.Serializable
 import ui.tools.Tool
 import kotlin.jvm.Transient

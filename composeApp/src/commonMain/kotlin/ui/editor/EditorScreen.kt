@@ -85,7 +85,7 @@ import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
 import domain.LoadingState
-import domain.PartialArgList
+import domain.model.PartialArgList
 import domain.ProgressState
 import domain.io.DdcSharing
 import domain.io.LookupData

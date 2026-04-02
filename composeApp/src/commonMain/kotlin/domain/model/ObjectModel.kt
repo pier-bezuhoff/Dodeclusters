@@ -32,9 +32,9 @@ sealed class ObjectModel<R : Any, D : Any> {
      * NOTE: u are responsible for MANUALLY sync-ing them
      */
     val downscaledObjects: MutableList<R?> = mutableListOf()
-    /** [displayObjects] border colors */
+    /** [displayObjects] border colors (for points, circles, lines, etc) */
     val borderColors: MutableMap<Ix, Color> = mutableMapOf()
-    /** [displayObjects] fill colors */
+    /** [displayObjects] fill colors (only for arc-paths) */
     val fillColors: MutableMap<Ix, Color> = mutableMapOf()
     val phantomObjectIndices: MutableSet<Int> = mutableSetOf()
 

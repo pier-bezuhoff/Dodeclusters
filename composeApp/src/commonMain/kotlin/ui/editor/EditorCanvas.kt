@@ -69,10 +69,10 @@ import core.geometry.fromCorners
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
-import domain.Arg
+import domain.model.Arg
 import domain.Ix
 import domain.model.PartialArcPath
-import domain.PartialArgList
+import domain.model.PartialArgList
 import domain.PathCache
 import domain.angleDeg
 import domain.expressions.BiInversionParameters

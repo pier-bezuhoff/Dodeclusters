@@ -1,9 +1,10 @@
-package domain
+package domain.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import core.geometry.GCircle
 import core.geometry.Point
+import domain.Ix
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -110,7 +111,7 @@ sealed interface Arg {
 
     companion object {
         @Suppress("FunctionName")
-        fun IndexOf(index: Ix, obj: GCircle): Arg.Index =
+        fun IndexOf(index: Ix, obj: GCircle): Index =
             when (obj) {
                 is core.geometry.Circle -> CircleIndex(index)
                 is core.geometry.Line -> LineIndex(index)

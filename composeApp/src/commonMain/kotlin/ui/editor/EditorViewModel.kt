@@ -38,12 +38,12 @@ import core.geometry.conformal.generateSphereGrid
 import core.geometry.fromCorners
 import core.geometry.scaled00
 import core.geometry.translationDelta
-import domain.Arg
-import domain.ArgType
+import domain.model.Arg
+import domain.model.ArgType
 import domain.ColorAsCss
 import domain.Ix
 import domain.model.PartialArcPath
-import domain.PartialArgList
+import domain.model.PartialArgList
 import domain.PointSnapResult
 import domain.ProgressState
 import domain.Snapping
@@ -52,6 +52,7 @@ import domain.cluster.Constellation
 import domain.compressConstraints
 import domain.entails
 import domain.expressions.ArcPath
+import domain.expressions.ArcPathArcMidpointParameters
 import domain.expressions.ArcPathIncidenceParameters
 import domain.expressions.BiInversionParameters
 import domain.expressions.ConformalExpressions
@@ -935,7 +936,7 @@ class EditorViewModel : ViewModel() {
         }
         objectModel.removeObjectsAt(deletedIndices)
         // cuz we might've deleted some arc-path vertices
-        val changedArcPathIndices = objectModel.recalculateConcreteArcPaths(changedIndices)
+        val changedArcPathIndices = objectModel.forceUpdate(changedIndices)
         objectModel.invalidate()
         history.accumulateChangedLocations(
             allIndices = deletedIndices,
@@ -3477,6 +3478,82 @@ class EditorViewModel : ViewModel() {
             else -> {}
         }
         submode = null
+    }
+
+    private inline fun copyArcPath(
+        sourceIndex: Ix,
+        crossinline mkExpr: (pointIndex: Ix) -> Expr.Conformal.OneToOne,
+    ) {
+        val sourceArcPath = objectModel.getArcPath(sourceIndex) ?: return
+        val oldSize = objects.size
+        val copiedVertices = sourceArcPath.vertices.map { vertexIndex ->
+            val expr = mkExpr(vertexIndex)
+            val result = expressions.addSoloExpr(expr) as? Point
+            val ix = objectModel.addDownscaledObject(result)
+            objectModel.borderColors[vertexIndex]?.let { color ->
+                objectModel.borderColors[ix] = color
+                history.accumulateChangedLocations(borderColorIndices = setOf(ix))
+            }
+            ix
+        }
+        val copiedArcs = sourceArcPath.arcs.mapIndexed { arcIndex, arc ->
+            when (arc) {
+                is ArcPath.Arc.By3Points -> {
+                    val expr = mkExpr(arc.middlePointIndex)
+                    val result = expressions.addSoloExpr(expr) as? Point
+                    val ix = objectModel.addDownscaledObject(result)
+                    objectModel.borderColors[arc.middlePointIndex]?.let { color ->
+                        objectModel.borderColors[ix] = color
+                        history.accumulateChangedLocations(borderColorIndices = setOf(ix))
+                    }
+                    ArcPath.Arc.By3Points(middlePointIndex = ix)
+                }
+                is ArcPath.Arc.By2Points -> {
+                    val sourceMidpointExpr = Expr.ArcPathArcMidpoint(
+                        ArcPathArcMidpointParameters(arcIndex),
+                        sourceIndex,
+                    )
+                    val existingSourceMidpointIndex = expressions.findExpr(sourceMidpointExpr).firstOrNull()
+                    val sourceMidpointIndex = if (existingSourceMidpointIndex == null) {
+                        val sourceMidpoint = expressions.addSoloExpr(sourceMidpointExpr) as? Point
+                         objectModel.addDownscaledObject(sourceMidpoint)
+                    } else existingSourceMidpointIndex
+                    val expr = mkExpr(sourceMidpointIndex)
+                    val result = expressions.addSoloExpr(expr) as? Point
+                    val ix = objectModel.addDownscaledObject(result)
+                    if (existingSourceMidpointIndex != null) {
+                        objectModel.borderColors[existingSourceMidpointIndex]?.let { color ->
+                            objectModel.borderColors[ix] = color
+                            history.accumulateChangedLocations(borderColorIndices = setOf(ix))
+                        }
+                    }
+                    ArcPath.Arc.By3Points(middlePointIndex = ix)
+                }
+            }
+        }
+        val concreteArcPath = expressions.addSoloExpr(
+            when (sourceArcPath) {
+                is ArcPath.Closed -> ArcPath.Closed(
+                    vertices = copiedVertices,
+                    arcs = copiedArcs,
+                )
+                is ArcPath.Open -> ArcPath.Open(
+                    vertices = copiedVertices,
+                    arcs = copiedArcs,
+                )
+            }
+        )
+        val copiedArcPathIndex = objectModel.addDownscaledObject(concreteArcPath)
+        val newIndices = oldSize until objects.size
+        objectModel.borderColors[sourceIndex]?.let { color ->
+            objectModel.borderColors[copiedArcPathIndex] = color
+            history.accumulateChangedLocations(borderColorIndices = setOf(copiedArcPathIndex))
+        }
+        objectModel.fillColors[sourceIndex]?.let { color ->
+            objectModel.fillColors[copiedArcPathIndex] = color
+            history.accumulateChangedLocations(fillColorIndices = setOf(copiedArcPathIndex))
+        }
+        history.accumulateChangedLocations(newIndices = newIndices.toSet())
     }
 
     private fun completeCircleByCenterAndRadius() {

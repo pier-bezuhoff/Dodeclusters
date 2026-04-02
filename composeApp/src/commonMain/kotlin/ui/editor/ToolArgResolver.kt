@@ -4,10 +4,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.State
-import domain.Arg
+import domain.model.Arg
 import domain.Ix
 import domain.model.PartialArcPath
-import domain.PartialArgList
+import domain.model.PartialArgList
 
 // trying to extract tool-arg manip from VM
 class ToolArgResolver(

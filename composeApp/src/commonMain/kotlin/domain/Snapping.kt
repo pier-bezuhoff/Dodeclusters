@@ -6,14 +6,13 @@ import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrPoint
 import core.geometry.EPSILON
-import core.geometry.GCircle
 import core.geometry.Line
 import core.geometry.Point
 import core.geometry.closestPerpendicularPoint
 import core.geometry.perpendicularDistance
 import core.geometry.translatedUntilTangency
 import core.geometry.ConcreteArcPath
-import core.geometry.GCircleOrConcreteAcPath
+import domain.model.Arg
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max

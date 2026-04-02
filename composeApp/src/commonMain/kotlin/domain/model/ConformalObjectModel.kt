@@ -36,16 +36,6 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
     inline fun getArcPath(index: Ix): ArcPath? =
         expressions.expressions[index]?.expr as? ArcPath
 
-    fun addArcPath(arcPath: ArcPath?): Ix {
-        val concreteArcPath =
-            if (arcPath == null)
-                null
-            else
-                expressions.addSoloExpr(arcPath)
-        val newIndex = addDownscaledObject(concreteArcPath)
-        return newIndex
-    }
-
     /** @return all changed indices */
     fun modifyArcPath(index: Ix, arcPath: ArcPath): List<Ix> {
         val changedIndices = changeExpr(index, arcPath)
@@ -56,8 +46,8 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
     }
 
     /** Call after expressions.deleteNodes
-     * @return changed arc-path indices + (other dependents of [changedIndices]) */
-    fun recalculateConcreteArcPaths(changedIndices: Set<Ix>): List<Ix> {
+     * @return all updated indices, including [changedIndices] */
+    fun forceUpdate(changedIndices: Set<Ix>): List<Ix> {
         val updatedIndices = expressions.forceUpdate(changedIndices)
         syncDisplayObjects(updatedIndices)
         return updatedIndices
