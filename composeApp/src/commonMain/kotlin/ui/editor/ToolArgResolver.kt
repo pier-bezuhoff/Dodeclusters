@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.State
 import domain.Arg
 import domain.Ix
-import domain.PartialArcPath
+import domain.model.PartialArcPath
 import domain.PartialArgList
 
 // trying to extract tool-arg manip from VM

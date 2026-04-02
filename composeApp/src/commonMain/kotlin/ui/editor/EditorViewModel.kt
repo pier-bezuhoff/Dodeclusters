@@ -42,7 +42,7 @@ import domain.Arg
 import domain.ArgType
 import domain.ColorAsCss
 import domain.Ix
-import domain.PartialArcPath
+import domain.model.PartialArcPath
 import domain.PartialArgList
 import domain.PointSnapResult
 import domain.ProgressState
@@ -593,7 +593,6 @@ class EditorViewModel : ViewModel() {
         regions = state.regions
         backgroundColor = state.backgroundColor
         labels = state.labels
-        objectModel.invalidate()
         val validSelection = state.selection.copy(
             // just in case
             gCircles = state.selection.gCircles.filter { it in objects.indices },
@@ -608,6 +607,7 @@ class EditorViewModel : ViewModel() {
         chessboardPattern = state.chessboardPattern
         regionColor = state.regionColor ?: regionColor
         chessboardColor = state.chessboardColor ?: regionColor
+        objectModel.invalidate()
         if (switchToMultiselect) {
             switchToMode(SelectionMode.Multiselect)
         }
@@ -809,6 +809,7 @@ class EditorViewModel : ViewModel() {
                     objectModel.fillColors[ix]?.let { fillColor ->
                         objectModel.fillColors[newIndex] = fillColor
                     }
+                    // we don't copy labels
                 }
                 expressions.copyExpressionsWithDependencies(allObjectsToCopy)
                 val newIndices = (oldSize until objects.size).toList()
@@ -838,12 +839,8 @@ class EditorViewModel : ViewModel() {
                     ))
                 }
                 objectModel.invalidate()
-                val newIndicesSet = newIndices.toSet()
                 history.accumulateChangedLocations(
-                    objectIndices = newIndicesSet,
-                    borderColorIndices = newIndicesSet,
-                    fillColorIndices = newIndicesSet,
-                    expressionIndices = newIndicesSet,
+                    allIndices = newIndices.toSet(),
                     regions = true,
                     selection = true,
                 )
@@ -917,14 +914,15 @@ class EditorViewModel : ViewModel() {
             val arcPath = objectModel.getArcPath(ix)
             if (arcPath != null) {
                 arcPathPointsToDelete += arcPath.dependencies.filter { ix ->
-                    val children = expressions.children[ix]
+                    val childs = expressions.children[ix]
                     isFree(ix) &&
-                        (children == null || indicesToDeleteSet.containsAll(children))
+                        (childs == null || indicesToDeleteSet.containsAll(childs))
                 }
             }
         }
-        val toBeDeleted = expressions.deleteNodes(indicesToDelete + arcPathPointsToDelete)
-        val deletedCircleIndices = toBeDeleted.filter { objects[it] is CircleOrLine }
+        val toDelete = indicesToDeleteSet + arcPathPointsToDelete
+        val (deletedIndices, changedIndices) = expressions.deleteNodes(toDelete.toList())
+        val deletedCircleIndices = deletedIndices.filter { objects[it] is CircleOrLine }
         if (deletedCircleIndices.isNotEmpty()) {
             deleteRegionsBoundBy(deletedCircleIndices)
             val deletedCirclesOrLines = deletedCircleIndices
@@ -935,11 +933,13 @@ class EditorViewModel : ViewModel() {
                 }
             }
         }
-        val indices = toBeDeleted.toList()
-        objectModel.removeObjectsAt(indices)
+        objectModel.removeObjectsAt(deletedIndices)
+        // cuz we might've deleted some arc-path vertices
+        val changedArcPathIndices = objectModel.recalculateConcreteArcPaths(changedIndices)
         objectModel.invalidate()
         history.accumulateChangedLocations(
-            allIndices = toBeDeleted,
+            allIndices = deletedIndices,
+            objectIndices = changedArcPathIndices.toSet(),
         )
     }
 
@@ -1675,7 +1675,7 @@ class EditorViewModel : ViewModel() {
                 val changedIndices = objectModel.transform(targets, focus = center, zoom = zoom)
                 // zooming ignores concrete-arc-paths
                 expressions.reEval() // overboard but w/e
-                objectModel.syncObjects(objects.indices)
+                objectModel.syncDisplayObjects(objects.indices)
                 history.accumulateChangedLocations(
                     objectIndices = changedIndices,
                     // zoom affects point-line incidence
@@ -2599,7 +2599,7 @@ class EditorViewModel : ViewModel() {
                 val childArcPaths = expressions.children[ix]
                     ?.filter { objects[it] is ConcreteArcPath }
                     ?.toSet() ?: emptySet()
-                // NOTE: snap-exclusion calculation when dragging a point seem excessive tbh
+                // NOTE: snap-exclusion calculation when dragging a point seems excessive tbh
                 val newPoint = snapped(
                     absoluteCentroid,
                     excludePoints = true,

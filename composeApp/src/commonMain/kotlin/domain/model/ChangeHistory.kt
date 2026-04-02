@@ -11,6 +11,8 @@ import kotlinx.serialization.json.Json
  * It is assumed that all grouped changes are 'perpendicular' */
 typealias RedoGroup = List<SaveState.Change>
 
+// MAYBE: instead of gradual accumulations
+//  just diff most recent state with last recorded state
 /**
  * `initialState <1:1< <1:2< <2:1< <3:1< NOW >4:1> >4:2> >4:3> >5:1>`
  *

@@ -71,7 +71,7 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Arg
 import domain.Ix
-import domain.PartialArcPath
+import domain.model.PartialArcPath
 import domain.PartialArgList
 import domain.PathCache
 import domain.angleDeg
@@ -85,7 +85,7 @@ import domain.expressions.computeLineBy2Points
 import domain.hug
 import domain.model.ChessboardPattern
 import core.geometry.ConcreteArcPath
-import domain.AlignmentLine
+import domain.model.AlignmentLine
 import domain.expressions.ArcPath
 import domain.model.LogicalRegion
 import domain.mostCommonOf

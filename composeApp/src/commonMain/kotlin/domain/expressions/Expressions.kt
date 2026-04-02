@@ -25,7 +25,7 @@ internal const val ABANDONED_TIER: Tier = -2
 /**
  * Class for managing expressions (~ AST controller)
  * @param[initialExpressions] pls include all possible [objects].indices as keys
- * @param[objects] reference to shared, *downscaled* mutable mirror-list of VM.objects
+ * @param[objects] reference to shared, *downscaled* mutable mirror-list of displayObjects
  * @param[EXPR] [Expr] subtype (eg [Expr.Conformal])
  * @param[EXPR_ONE_TO_ONE] [EXPR_ONE_TO_ONE] : [Expr.OneToOne], [EXPR_ONE_TO_ONE] : [EXPR] (eg [Expr.Conformal.OneToOne])
  * @param[EXPR_ONE_TO_MANY] [EXPR_ONE_TO_MANY] : [Expr.OneToMany], [EXPR_ONE_TO_MANY] : [EXPR] (eg [Expr.Conformal.OneToMany])
@@ -38,7 +38,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
 ) {
 //    typealias ExprResult = List<R?>
 
-    // for the VM.objects list nulls correspond to unrealized outputs of multi-functions
+    // for the [objects] nulls correspond to unrealized outputs of multi-functions
     // here nulls correspond to free objects
     // MAYBE: make it mutable list
     /**
@@ -101,6 +101,8 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
      * Updates object classification index-lists, based on expression, or if it's null, type
      */
     abstract fun updateObjectTypeAt(index: Ix, obj: R? = null)
+
+    abstract fun objectDeletedAt(index: Ix)
 
     protected abstract fun EXPR.evaluate(
         objects: List<R?>
@@ -275,35 +277,64 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
 
     /**
      * Delete [indices] nodes and all of their children from the [ConformalExpressions] by
-     * setting [expressions]`[...] = null` and clearing [children], [ix2tier], [tier2ixs]
-     * @return all the deleted nodes indices
+     * setting [expressions]`[...] = null` and clearing [children], [ix2tier], [tier2ixs].
+     *
+     * [forceUpdate] changedIndices (these are altered arc-paths with >=2 vertices left)
+     * @return (all the deleted nodes indices, all changed indices (arc-paths))
      * */
-    fun deleteNodes(indices: List<Ix>): Set<Ix> {
+    fun deleteNodes(indices: List<Ix>): Pair<Set<Ix>, Set<Ix>> {
         val deleted = indices.toMutableSet()
-        var lvl = indices
+        val changed = mutableSetOf<Ix>()
+        var lvl = indices.toSet()
+        // transitive children-of lvl expansion
         while (lvl.isNotEmpty()) {
-            lvl = lvl.flatMap { children[it] ?: emptySet() }
+            val newLvl = mutableSetOf<Ix>()
+            for (deletedIndex in lvl) {
+                val childrenOfDeleted = children[deletedIndex]
+                if (childrenOfDeleted != null) {
+                    for (childIndex in childrenOfDeleted) {
+                        // hardcoding ts is faux pas
+                        when (val expr = expressions[childIndex]?.expr) {
+                            // an arc-path is deleted only when it has less than 2 vertices left
+                            is ArcPath if (
+                                expr.vertices
+                                    .filter {
+                                        // deleted contains lvl
+                                        it !in deleted && objects[it] != null
+                                    }
+                                    .size >= 2
+                            ) ->
+                                changed.add(childIndex)
+                            else ->
+                                newLvl.add(childIndex)
+                        }
+                    }
+                }
+            }
+            lvl = newLvl
             deleted += lvl
         }
-        for (d in deleted) {
-            expressions[d] = null // do not delete it since we want to keep indices (keys) in sync with VM.circles
-            children.remove(d)
-            ix2tier[d] = ABANDONED_TIER
+        for (deletedIndex in deleted) {
+            expressions[deletedIndex] = null // we methodically :=null instead of deletion
+            children.remove(deletedIndex)
+            ix2tier[deletedIndex] = ABANDONED_TIER
+            objectDeletedAt(deletedIndex)
         }
         for ((parentIx, childIxs) in children) {
             children[parentIx] = childIxs - deleted
         }
-        for ((tier, tiered) in tier2ixs.withIndex())
+        tier2ixs.forEachIndexed { tier, tiered ->
             tier2ixs[tier] = tiered - deleted
+        }
         parents2gluedIncidentPoints.clear()
-        return deleted
+        return Pair(deleted, changed)
     }
 
     /**
      * Recursively re-evaluates expressions given that [changed]/parents have changed
      * and updates [objects] (except [excluded])
      *
-     * NOTE: don't forget to sync `VM.objects` with [objects] at returned indices
+     * NOTE: don't forget to sync `displayObjects` with [objects] at returned indices
      * @return all affected/child indices that were altered by [update] (excluding [changed]),
      * sorted by tier
      */
@@ -329,10 +360,31 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         return toBeUpdated
     }
 
+    fun forceUpdate(indices: Set<Ix>): List<Ix> {
+        val toBeUpdated = indices.sortedBy { ix2tier[it] }
+        val cache: MutableMap<EXPR_ONE_TO_MANY, List<R?>> = mutableMapOf()
+        for (ix in toBeUpdated) {
+            // children always have non-null expressions
+            objects[ix] = expressions[ix]?.evaluateWithCache(cache)
+        }
+        val changedDependents = update(indices)
+        return toBeUpdated + changedDependents
+    }
+
+    fun getAllChildren(parents: Set<Ix>): Set<Ix> {
+        val allChildren = mutableSetOf<Ix>()
+        var lvl = parents.toList()
+        while (lvl.isNotEmpty()) {
+            lvl = lvl.flatMap { children[it] ?: emptySet() }
+            allChildren += lvl
+        }
+        return allChildren - parents
+    }
+
     /**
      * Re-evaluates all expressions and write them to [objects]
      *
-     * NOTE: don't forget to sync all `VM.objects` with [objects]
+     * NOTE: don't forget to sync all `displayObjects` with [objects]
      */
     fun reEval() {
         val cache = mutableMapOf<EXPR_ONE_TO_MANY, List<R?>>()

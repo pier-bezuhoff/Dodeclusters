@@ -11,11 +11,11 @@ import core.geometry.Point
 import domain.Ix
 import kotlin.math.abs
 
-// MAYBE: cache carrier->incident points lookup (since it's called on every VM.transform)
+// MAYBE: cache carrier->incident points lookup (since it's called on every transform)
 /**
  * Class for managing expressions (~ AST controller)
  * @param[initialExpressions] pls include all possible indices as keys
- * @param[objects] reference to shared, *downscaled* mutable mirror-list of VM.objects
+ * @param[objects] reference to shared, *downscaled* mutable mirror-list of displayObjects
  */
 class ConformalExpressions(
     initialExpressions: Map<Ix, ConformalExprOutput?>,
@@ -81,6 +81,15 @@ class ConformalExpressions(
                 }
             }
         }
+    }
+
+    override fun objectDeletedAt(index: Ix) {
+        gCircleIndices.remove(index)
+        circleIndices.remove(index)
+        lineIndices.remove(index)
+        imaginaryCircleIndices.remove(index)
+        pointIndices.remove(index)
+        arcPathIndices.remove(index)
     }
 
     override fun Expr.Conformal.evaluate(

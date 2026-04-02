@@ -11,7 +11,7 @@ import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.EPSILON2
 import core.geometry.Line
-import domain.PartialArcPath
+import domain.model.PartialArcPath
 import domain.PathCache
 import domain.model.LogicalRegion
 import core.geometry.ConcreteArcPath

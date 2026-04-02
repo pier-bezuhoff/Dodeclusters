@@ -154,14 +154,15 @@ sealed class ObjectModel<R : Any, D : Any> {
     }
 
     /** Don't forget to [expressions].deleteNodes beforehand and [invalidate] post factum */
-    fun removeObjectsAt(indices: List<Ix>) {
+    fun removeObjectsAt(indices: Collection<Ix>) {
         for (ix in indices) {
             removeObjectAt(ix)
         }
     }
 
-    /** Don't forget to [invalidate] post factum, doesn't clear [expressions] */
-    open fun clearObjects() {
+    /** Clears everything BUT [expressions].
+     *  Don't forget to [invalidate] post factum */
+    open fun clear() {
         displayObjects.clear()
         downscaledObjects.clear()
         borderColors.clear()
@@ -171,7 +172,7 @@ sealed class ObjectModel<R : Any, D : Any> {
     }
 
     /** Don't forget to [invalidatePositions] post factum */
-    fun syncObjects(indices: Iterable<Ix> = downscaledObjects.indices) {
+    fun syncDisplayObjects(indices: Iterable<Ix> = downscaledObjects.indices) {
         for (ix in indices) {
             displayObjects[ix] = downscaledObjects[ix]?.upscale()
             objectChangedAt(ix)
@@ -231,7 +232,7 @@ sealed class ObjectModel<R : Any, D : Any> {
         setDownscaledObject(index, newObject)
         val toBeUpdated = expressions.update(setOf(index))
         val changed = listOf(index) + toBeUpdated
-        syncObjects(changed)
+        syncDisplayObjects(changed)
         invalidatePositions()
         return changed
     }
@@ -245,7 +246,7 @@ sealed class ObjectModel<R : Any, D : Any> {
         }
         val changeIndices = changes.keys
         val updatedIndices = expressions.update(changeIndices)
-        syncObjects(updatedIndices)
+        syncDisplayObjects(updatedIndices)
         invalidatePositions()
         return changeIndices.toList() + updatedIndices
     }
@@ -258,7 +259,7 @@ sealed class ObjectModel<R : Any, D : Any> {
     ): List<Ix> {
         setDisplayObject(index, newObject)
         val updatedIndices = expressions.update(setOf(index))
-        syncObjects(updatedIndices)
+        syncDisplayObjects(updatedIndices)
         invalidatePositions()
         return updatedIndices + index
     }

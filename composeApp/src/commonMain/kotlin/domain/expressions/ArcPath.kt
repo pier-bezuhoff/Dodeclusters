@@ -125,6 +125,7 @@ fun ArcPath.moveArcMidpoint(allObjects: List<*>, arcIndex: Int, midpoint: Point)
 fun ArcPath.toConcreteArcPath(objects: List<GCircleOrConcreteAcPath?>): ConcreteArcPath {
     val realVertices = mutableListOf<Point>()
     val realArcs = mutableListOf<ConcreteArcPath.Arc>()
+    // NOTE: null-null collapsed arcs are still present in concrete arc-paths
     when (this) {
         is ArcPath.Closed -> {
             var arcStart: Point? = null

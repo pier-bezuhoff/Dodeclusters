@@ -226,9 +226,7 @@ fun computeArcPathIncidence(
     params: ArcPathIncidenceParameters,
     concreteArcPath: ConcreteArcPath,
 ): Point? {
-    // NOTE: null vertex might collapse ArcPath.Arc into nothing
-    //  so the arcIndex within concreteArcPath would point to a
-    //  diff arc
+    // NOTE: null vertex might collapse ArcPath.Arc
     val arc = concreteArcPath.arcs.getOrNull(params.arcIndex)
     return when (val circleOrLine = arc?.circleOrLine) {
         is Circle -> {
@@ -247,4 +245,17 @@ fun computeArcPathIncidence(
         }
         null -> null
     }
+}
+
+fun computeArcPathArcMidpoint(
+    params: ArcPathArcMidpointParameters,
+    concreteArcPath: ConcreteArcPath,
+): Point? {
+    return computeArcPathIncidence(
+        params = ArcPathIncidenceParameters(
+            arcIndex = params.arcIndex,
+            arcPercentage = 0.5,
+        ),
+        concreteArcPath = concreteArcPath,
+    )
 }

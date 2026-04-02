@@ -50,14 +50,17 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
     fun modifyArcPath(index: Ix, arcPath: ArcPath): List<Ix> {
         val changedIndices = changeExpr(index, arcPath)
         for (ix in changedIndices) {
-            pathCache.invalidateObjectPathAt(ix)
+            objectChangedAt(ix)
         }
         return changedIndices
     }
 
-    fun removeArcPathAt(index: Ix) {
-        val deleted = expressions.deleteNodes(listOf(index))
-        removeObjectsAt(deleted.toList())
+    /** Call after expressions.deleteNodes
+     * @return changed arc-path indices + (other dependents of [changedIndices]) */
+    fun recalculateConcreteArcPaths(changedIndices: Set<Ix>): List<Ix> {
+        val updatedIndices = expressions.forceUpdate(changedIndices)
+        syncDisplayObjects(updatedIndices)
+        return updatedIndices
     }
 
     override fun removeObjectAt(index: Ix) {
@@ -107,13 +110,13 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
         val updatedIndices = gluedIncidentPoints + expressions.update(targetsSet, excluded = gluedIncidentPoints)
         expressions.adjustIncidentPointExpressions(gluedIncidentPoints)
         // MAYBE: it's better to recalc glued atp (we transformed them, then adjusted the order)
-        syncObjects(updatedIndices)
+        syncDisplayObjects(updatedIndices)
         invalidatePositions()
         return targetsSet + updatedIndices
     }
 
     fun loadConstellation(constellation: Constellation) {
-        clearObjects()
+        clear()
         for (objectConstruct in constellation.objects) {
             val o = when (objectConstruct) {
                 is ObjectConstruct.ConcreteCircle -> objectConstruct.circle
@@ -134,7 +137,7 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
             objects = downscaledObjects,
         )
         expressions.reEval() // calculates all dependent objects
-        syncObjects()
+        syncDisplayObjects()
 //        expressions.update(
 //            expressions.scaleLineIncidenceExpressions(DOWNSCALING_FACTOR)
 //        )
@@ -151,13 +154,13 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
         }
     }
 
-    override fun clearObjects() {
-        super.clearObjects()
+    override fun clear() {
+        super.clear()
         expressions = ConformalExpressions(mapOf(), mutableListOf())
     }
 
     fun loadState(state: SaveState) {
-        clearObjects()
+        clear()
         for (o in state.objects) {
             // cannot use generic addDisplayObjects cuz expressions were
             // not yet initialized, but each addDisplayObject calls
@@ -187,6 +190,7 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
             }
         }
         expressions.reEval()
+        syncDisplayObjects(displayObjects.indices)
     }
 
     override fun GCircleOrConcreteAcPath.downscale(): GCircleOrConcreteAcPath =

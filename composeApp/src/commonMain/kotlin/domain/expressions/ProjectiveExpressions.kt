@@ -13,6 +13,10 @@ class ProjectiveExpressions(
         TODO("not implemented")
     }
 
+    override fun objectDeletedAt(index: Ix) {
+        TODO("not implemented")
+    }
+
     override fun Expr.Projective.evaluate(objects: List<Conic?>): List<Conic?> {
         TODO("not implemented")
     }

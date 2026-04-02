@@ -1,13 +1,20 @@
-package domain
+package domain.model
 
 import androidx.compose.runtime.Immutable
 import core.geometry.Circle
 import core.geometry.EPSILON
 import core.geometry.Point
+import domain.PointSnapResult
+import domain.Snapping
 import domain.expressions.SagittaRatioParameters
 import domain.expressions.computeCircleBy2PointsAndSagittaRatio
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeSagittaRatio
+import domain.signNonZero
+import domain.squareSum
+import domain.updated
+import domain.withoutElementAt
+import domain.withoutElementsAt
 import kotlin.math.hypot
 
 sealed interface AlignmentLine {
@@ -504,7 +511,7 @@ private fun updateMidpointFromMovingEnd(
     val vLength = hypot(vx, vy)
     if (vLength == 0.0)
         return newStart.middle(end)
-    val left = signNonZero(-vy*hx + vx*hy)
+    val left = signNonZero(-vy * hx + vx * hy)
     val h = left * hypot(hx, hy)
     val k = h/vLength
     val newVx = end.x - newStart.x

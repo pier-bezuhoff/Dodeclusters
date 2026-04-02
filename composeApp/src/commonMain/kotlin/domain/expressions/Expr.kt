@@ -247,6 +247,15 @@ sealed interface Expr {
         val arcPath: Ix,
     ) : Conformal.OneToOne, HasParameters
 
+    // really a subcase of ArcPathIncidence(percentage=0.5)
+    // but we keep it separate for on-arc-path actions
+    @Serializable
+    @SerialName("ArcPathArcMidpoint")
+    data class ArcPathArcMidpoint(
+        override val parameters: ArcPathArcMidpointParameters,
+        val arcPath: Ix,
+    ) : Conformal.OneToOne, HasParameters
+
     // Projective
 
     @Serializable
@@ -302,6 +311,7 @@ sealed interface Expr {
             is LoxodromicMotion -> listOf(divergencePoint, convergencePoint, target)
             is ArcPath -> dependencies.toList()
             is ArcPathIncidence -> listOf(arcPath)
+            is ArcPathArcMidpoint -> listOf(arcPath)
             // projective
             is ConicIntersection -> listOf(conic1, conic2)
             is ConicBy5 -> listOf(conic1, conic2, conic3, conic4, conic5)
@@ -328,6 +338,7 @@ sealed interface Expr {
         is LoxodromicMotion -> ResultType.CLIPs
         is ArcPath -> setOf(ResultType.ARC_PATH)
         is ArcPathIncidence -> setOf(ResultType.POINT)
+        is ArcPathArcMidpoint -> setOf(ResultType.POINT)
         // projective
         is ConicIntersection -> setOf()
         is ConicBy5 -> setOf()
@@ -389,6 +400,10 @@ fun Expr.Conformal.eval(objects: List<GCircleOrConcreteAcPath?>): ConformalExprR
                 )
                 is ArcPath -> this.toConcreteArcPath(objects)
                 is Expr.ArcPathIncidence -> computeArcPathIncidence(
+                    parameters,
+                    objects[arcPath] as? ConcreteArcPath ?: return emptyList(),
+                )
+                is Expr.ArcPathArcMidpoint -> computeArcPathArcMidpoint(
                     parameters,
                     objects[arcPath] as? ConcreteArcPath ?: return emptyList(),
                 )
@@ -514,6 +529,9 @@ inline fun <EXPR : Expr> EXPR.reIndex(
         is Expr.ArcPathIncidence -> copy(
             arcPath = reIndexer(arcPath),
         )
+        is Expr.ArcPathArcMidpoint -> copy(
+            arcPath = reIndexer(arcPath),
+        )
         is ConicBy5 -> copy(
             conic1 = reIndexer(conic1),
             conic2 = reIndexer(conic2),
@@ -567,6 +585,9 @@ inline fun <reified EXPR : Expr> EXPR.copyWithNewParameters(
             )
             is Expr.ArcPathIncidence -> copy(
                 parameters = newParameters as ArcPathIncidenceParameters
+            )
+            is Expr.ArcPathArcMidpoint -> copy(
+                parameters = newParameters as ArcPathArcMidpointParameters
             )
         } as EXPR
     } else this
