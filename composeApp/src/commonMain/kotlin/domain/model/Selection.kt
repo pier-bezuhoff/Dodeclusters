@@ -12,6 +12,7 @@ data class Selection(
     val arcPaths: List<Ix> = emptyList(),
     // MAYBE: separate CLI from points cuz it's used in context-action logic
 ) {
+    /** [gCircles] + [arcPaths] */
     val indices: List<Ix> get() = gCircles + arcPaths
     inline val size: Int get() = gCircles.size + arcPaths.size
 

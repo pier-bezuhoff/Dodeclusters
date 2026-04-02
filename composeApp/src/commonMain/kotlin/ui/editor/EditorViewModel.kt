@@ -260,11 +260,9 @@ class EditorViewModel : ViewModel() {
                 sm.angle.toFloat()
             else 0f
         }
-    /** when changing expressions, flip this to forcibly recalculate [selectionIsLocked] */
-    private var selectionIsLockedTrigger: Boolean by mutableStateOf(false)
     // MAYBE: show quick prompt/popup instead of a button
     val selectionIsLocked: Boolean get() {
-        hug(selectionIsLockedTrigger, objectModel.invalidations)
+        hug(objectModel.propertyInvalidations)
         // NOTE: isFree depends on expressions, so propertyInvalidations is not enough
         return selection.gCircles.all { objects[it] == null || !isFree(it) }
     }
@@ -995,9 +993,7 @@ class EditorViewModel : ViewModel() {
         }
         showPromptToSetActiveSelectionAsToolArg = false
         if (newMode is ToolMode) {
-            if (objectSelection.size > 1 &&
-                newMode.signature.argTypes.first() == ArgType.INDICES
-            ) {
+            if (selection.isNotEmpty() && newMode.signature.argTypes.first() == ArgType.INDICES) {
                 showPromptToSetActiveSelectionAsToolArg = true
             } else {
                 // keep selection for a bit in case we now switch to another mode that
@@ -1600,7 +1596,6 @@ class EditorViewModel : ViewModel() {
         if (showPromptToSetActiveSelectionAsToolArg) {
             showPromptToSetActiveSelectionAsToolArg = false
             clearSelection()
-            history.accumulateChangedLocations(selection = true)
         }
     }
 
@@ -1609,11 +1604,11 @@ class EditorViewModel : ViewModel() {
             require(
                 tool is Tool.MultiArg &&
                 tool.signature.argTypes.first() == ArgType.INDICES &&
-                objectSelection.isNotEmpty()
-            ) { "Illegal state in setActiveSelectionAsToolArg(): tool = $tool, selection == $objectSelection" }
+                selection.isNotEmpty()
+            ) { "Illegal state in setActiveSelectionAsToolArg(): tool = $tool, selection == $selection" }
         }
         partialArgList = partialArgList!!.addArg(
-            Arg.Indices(objectSelection.filter { objects[it] != null }),
+            Arg.Indices(selection.indices.filter { objects[it] != null }),
             confirmThisArg = true
         )
         cancelSelectionAsToolArgPrompt()
@@ -1698,7 +1693,7 @@ class EditorViewModel : ViewModel() {
         for (ix in objectSelection) {
             expressions.changeToFree(ix)
         }
-        selectionIsLockedTrigger = !selectionIsLockedTrigger
+        objectModel.invalidate()
         history.accumulateChangedLocations(expressionIndices = objectSelection.toSet())
         history.recordAccumulatedChanges()
     }
@@ -3557,7 +3552,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun completeCircleByCenterAndRadius() {
-        val argList = partialArgList!!
+        val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.Point }
         pinStateForHistory()
         if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.PointXY }) {
@@ -3587,7 +3582,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun completeCircleBy3Points() {
-        val argList = partialArgList!!
+        val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.CLIP }
         pinStateForHistory()
         if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.PointXY }) {
@@ -3621,7 +3616,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun completeCircleByPencilAndPoint() {
-        val argList = partialArgList!!
+        val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.CLIP }
         pinStateForHistory()
         if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.PointXY }) {
@@ -3655,7 +3650,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun completeLineBy2Points() {
-        val argList = partialArgList!!
+        val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.CLIP }
         pinStateForHistory()
         if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.PointXY }) {
@@ -3687,7 +3682,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun completePolarityByCircleAndLineOrPoint() {
-        val argList = partialArgList!!
+        val argList = partialArgList ?: return
         val circleArg = argList.args[0] as Arg.CircleIndex
         val lineOrPointArg = argList.args[1] as Arg.LP
         pinStateForHistory()
@@ -3716,15 +3711,17 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun completeCircleInversion() {
-        val argList = partialArgList!!
+        val argList = partialArgList ?: return
         val targetIndices = expressions.sortedByTier(
             (argList.args[0] as Arg.Indices).indices
         )
+        val targetGCircleIndices = targetIndices.filter { objects[it] is GCircle }
+        val targetArcPathIndices = targetIndices.filter { objects[it] is ConcreteArcPath }
         val invertingCircleIndex = (argList.args[1] as Arg.CLI).index
         pinStateForHistory()
         val oldSize = objects.size
         val circlesOrLines = mutableListOf<CircleOrLine>()
-        for (ix in targetIndices) {
+        for (ix in targetGCircleIndices) {
             val newGCircle = expressions.addSoloExpr(
                 Expr.CircleInversion(ix, invertingCircleIndex),
             ) as? GCircle
@@ -3736,13 +3733,20 @@ class EditorViewModel : ViewModel() {
                 circlesOrLines.add(newGCircle.upscale())
             }
         }
+        val newIndices1 = oldSize until objects.size
+        for (ix in targetArcPathIndices) {
+            copyArcPath(ix) { pointIndex ->
+                Expr.CircleInversion(pointIndex, invertingCircleIndex)
+            }
+        }
         val newIndices = oldSize until objects.size
         copyRegions(
-            targetIndices, newIndices.toList(),
+            targetGCircleIndices, newIndices1.toList(),
             flipInAndOut = true
         )
         selection = Selection(
             gCircles = newIndices.filter { objects[it] is GCircle },
+            arcPaths = newIndices.filter { objects[it] is ConcreteArcPath },
         )
         partialArgList = argList.copyEmpty()
         viewModelScope.launch {
@@ -3760,7 +3764,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun startCircleOrPointInterpolationParameterAdjustment() {
-        val argList = partialArgList!!
+        val argList = partialArgList ?: return
         val (startArg, endArg) = argList.args.map { it as Arg.CLIP }
         if (startArg is Arg.CLI && endArg is Arg.CLI) {
             pinStateForHistory()
@@ -3845,7 +3849,7 @@ class EditorViewModel : ViewModel() {
             is Arg.PointIndex -> pointArg.index
             is Arg.FixedPoint -> createNewFreePoint(pointArg.toPoint())
         }
-        val targetIndices = objArg.indices
+        val targetIndices = objArg.indices.filter { objects[it] is GCircle }
         val adjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
         val params0 = defaultRotationParameters.params
         val oldSize = objects.size
@@ -3874,7 +3878,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun startBiInversionParameterAdjustment() {
-        val argList = partialArgList!!
+        val argList = partialArgList ?: return
         val args = argList.args
         val objArg = args[0] as Arg.Indices
         val engine1 = (args[1] as Arg.CLI).index
@@ -3886,7 +3890,7 @@ class EditorViewModel : ViewModel() {
         defaultBiInversionParameters = defaultBiInversionParameters.copy(
             reverseSecondEngine = reverseSecondEngine
         )
-        val targetIndices = objArg.indices
+        val targetIndices = objArg.indices.filter { objects[it] is GCircle }
         val adjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
         val params0 = defaultBiInversionParameters.params
         val oldSize = objects.size
@@ -3936,7 +3940,7 @@ class EditorViewModel : ViewModel() {
                 objArg, Arg.PointIndex(divergencePointIndex), Arg.PointIndex(convergencePointIndex)
             ),
         )
-        val targetIndices = objArg.indices
+        val targetIndices = objArg.indices.filter { objects[it] is GCircle }
         val adjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
         val params0 = defaultLoxodromicMotionParameters.params
         val oldSize = objects.size
@@ -4048,51 +4052,50 @@ class EditorViewModel : ViewModel() {
     }
 
     fun completeArcPath() {
-        partialArcPath?.let { pArcPath ->
-//            println(pArcPath)
-            pinStateForHistory()
-            val oldSize = objects.size
-            val vertexIndices: List<Ix> = pArcPath.vertices.map { vertex ->
-                when (val p2p = realizePointSnap(vertex.snap, pinAndRecordHistory = false)) {
-                    is PointSnapResult.Eq -> p2p.pointIndex
-                    is PointSnapResult.Free -> createNewFreePoint(p2p.result)
-                }
+        val pArcPath = partialArcPath ?: return
+//        println(pArcPath)
+        pinStateForHistory()
+        val oldSize = objects.size
+        val vertexIndices: List<Ix> = pArcPath.vertices.map { vertex ->
+            when (val p2p = realizePointSnap(vertex.snap, pinAndRecordHistory = false)) {
+                is PointSnapResult.Eq -> p2p.pointIndex
+                is PointSnapResult.Free -> createNewFreePoint(p2p.result)
             }
-            val arcs = pArcPath.arcs.mapIndexed { arcIndex, arc ->
-                when (val p2p = realizePointSnap(arc.midpointSnap, pinAndRecordHistory = false)) {
-                    is PointSnapResult.Free -> {
-                        ArcPath.Arc.By2Points(sagittaRatio =
-                            if (arc.circle == null)
-                                0.0 // straight line
-                            else
-                                computeSagittaRatio(
-                                    circle = arc.circle,
-                                    chordStart = pArcPath.arcIndex2startVertex(arcIndex).point,
-                                    chordEnd = pArcPath.arcIndex2endVertex(arcIndex).point,
-                                )
-                        )
-                    }
-                    is PointSnapResult.Eq -> {
-                        ArcPath.Arc.By3Points(middlePointIndex = p2p.pointIndex)
-                    }
-                }
-            }
-            val concreteArcPath = expressions.addSoloExpr(
-                if (pArcPath.isClosed)
-                    ArcPath.Closed(vertices = vertexIndices, arcs = arcs)
-                else
-                    ArcPath.Open(vertices = vertexIndices, arcs = arcs)
-            )
-            val ix = objectModel.addDownscaledObject(concreteArcPath)
-            val newIndices = oldSize until objects.size // includes realized snaps
-            selection = Selection(arcPaths = listOf(ix))
-            objectModel.invalidate()
-            history.accumulateChangedLocations(
-                newIndices = newIndices.toSet(),
-                selection = true,
-            )
-            history.recordAccumulatedChanges()
         }
+        val arcs = pArcPath.arcs.mapIndexed { arcIndex, arc ->
+            when (val p2p = realizePointSnap(arc.midpointSnap, pinAndRecordHistory = false)) {
+                is PointSnapResult.Free -> {
+                    ArcPath.Arc.By2Points(sagittaRatio =
+                        if (arc.circle == null)
+                            0.0 // straight line
+                        else
+                            computeSagittaRatio(
+                                circle = arc.circle,
+                                chordStart = pArcPath.arcIndex2startVertex(arcIndex).point,
+                                chordEnd = pArcPath.arcIndex2endVertex(arcIndex).point,
+                            )
+                    )
+                }
+                is PointSnapResult.Eq -> {
+                    ArcPath.Arc.By3Points(middlePointIndex = p2p.pointIndex)
+                }
+            }
+        }
+        val concreteArcPath = expressions.addSoloExpr(
+            if (pArcPath.isClosed)
+                ArcPath.Closed(vertices = vertexIndices, arcs = arcs)
+            else
+                ArcPath.Open(vertices = vertexIndices, arcs = arcs)
+        )
+        val ix = objectModel.addDownscaledObject(concreteArcPath)
+        val newIndices = oldSize until objects.size // includes realized snaps
+        selection = Selection(arcPaths = listOf(ix))
+        objectModel.invalidate()
+        history.accumulateChangedLocations(
+            newIndices = newIndices.toSet(),
+            selection = true,
+        )
+        history.recordAccumulatedChanges()
         partialArcPath = null
     }
 
