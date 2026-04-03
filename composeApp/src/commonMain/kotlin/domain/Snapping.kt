@@ -126,7 +126,9 @@ object Snapping {
         }
     }
 
-    /** additionally chooses first closest point within epsilon-vicinity of the minimum */
+    /** additionally chooses first closest point within epsilon-vicinity of the minimum
+     * @param[allObjects] we care only about [Point]s
+     */
     fun snapPointToPoints(
         point: Point,
         allObjects: List<*>,
@@ -167,7 +169,7 @@ object Snapping {
 
     /** Project [point] onto the closest circle/line among [allObjects] that
      * are closer than [snapDistance] from it.
-     *
+     * @param[allObjects] we care only about [CircleOrLine]s
      * @param[intersectionTolerance] how much easier it is to snap to an intersection than
      * to an individual circle
      * */
@@ -229,6 +231,9 @@ object Snapping {
         }
     }
 
+    /**
+     * @param[allObjects] we care only about [ConcreteArcPath]s
+     */
     fun snapPointToArcPaths(
         point: Point,
         allObjects: List<*>,
@@ -300,7 +305,10 @@ object Snapping {
         }
     }
 
-    // NOTE: dont forget to exclude [circle], its immediate parents and all children from snappanbles
+    /**
+     * NOTE: dont forget to exclude [circle], its immediate parents and all children from snappanbles
+     * @param[allObjects] we care only about [CircleOrLineOrPoint]s
+     */
     fun snapCircleToCircles(
         circle: CircleOrLine,
         allObjects: List<*>,

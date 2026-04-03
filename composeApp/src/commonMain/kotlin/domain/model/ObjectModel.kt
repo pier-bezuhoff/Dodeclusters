@@ -110,10 +110,10 @@ sealed class ObjectModel<R : Any, D : Any> {
 
     /** Don't forget to [invalidate] post factum */
     fun addDisplayObject(newObject: D?): Ix {
-        val ix = displayObjects.size
         displayObjects.add(newObject)
         val downscaled = newObject?.downscale()
         downscaledObjects.add(downscaled)
+        val ix = displayObjects.lastIndex
         pathCache.addObject()
         expressions.updateObjectTypeAt(ix, downscaled)
         return ix
@@ -121,25 +121,30 @@ sealed class ObjectModel<R : Any, D : Any> {
 
     /** Don't forget to [invalidate] post factum */
     fun addDownscaledObject(newDownscaledObject: R?): Ix {
-        val ix = displayObjects.size
         displayObjects.add(newDownscaledObject?.upscale())
         downscaledObjects.add(newDownscaledObject)
+        val ix = downscaledObjects.lastIndex
         pathCache.addObject()
         expressions.updateObjectTypeAt(ix, newDownscaledObject)
         return ix
     }
 
     /** Don't forget to [invalidate] post factum */
-    fun addDisplayObjects(newObjects: List<D?>) {
-        for (o in newObjects)
+    fun addDisplayObjects(newObjects: List<D?>): IntRange {
+        val oldSize = displayObjects.size
+        for (o in newObjects) {
             addDisplayObject(o)
+        }
+        return oldSize until displayObjects.size
     }
 
     /** Don't forget to [invalidate] post factum */
-    fun addDownscaledObjects(newObjects: List<R?>) {
-        for (o in newObjects) {
-            addDownscaledObject(o)
+    fun addDownscaledObjects(newObjects: List<R?>): IntRange {
+        val oldSize = downscaledObjects.size
+        for (obj in newObjects) {
+            addDownscaledObject(obj)
         }
+        return oldSize until downscaledObjects.size
     }
 
     /** Don't forget to [expressions].deleteNodes beforehand and [invalidate] post factum */

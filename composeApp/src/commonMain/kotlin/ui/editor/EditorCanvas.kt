@@ -329,7 +329,7 @@ fun BoxScope.EditorCanvas(
                             interpolateCircles = viewModel.interpolateCircles,
                             circlesAreCoDirected = viewModel.circlesAreCoDirected,
                             defaults = viewModel.defaultInterpolationParameters,
-                            updateParameters = viewModel::updateParameters,
+                            updateParameters = viewModel::adjustExprParameters,
                             openDetailsDialog = viewModel::openDetailsDialog,
                             confirmParameters = viewModel::confirmAdjustedParameters,
                         )
@@ -337,7 +337,7 @@ fun BoxScope.EditorCanvas(
                         RotationInterface(
                             concretePositions = concretePositions,
                             defaults = viewModel.defaultRotationParameters,
-                            updateParameters = viewModel::updateParameters,
+                            updateParameters = viewModel::adjustExprParameters,
                             openDetailsDialog = viewModel::openDetailsDialog,
                             confirmParameters = viewModel::confirmAdjustedParameters,
                         )
@@ -345,7 +345,7 @@ fun BoxScope.EditorCanvas(
                         BiInversionInterface(
                             concretePositions = concretePositions,
                             defaults = viewModel.defaultBiInversionParameters,
-                            updateParameters = viewModel::updateParameters,
+                            updateParameters = viewModel::adjustExprParameters,
                             openDetailsDialog = viewModel::openDetailsDialog,
                             confirmParameters = viewModel::confirmAdjustedParameters,
                         )
@@ -353,7 +353,7 @@ fun BoxScope.EditorCanvas(
                         LoxodromicMotionInterface(
                             concretePositions = concretePositions,
                             defaults = viewModel.defaultLoxodromicMotionParameters,
-                            updateParameters = viewModel::updateParameters,
+                            updateParameters = viewModel::adjustExprParameters,
                             updateBidirectionality = viewModel::updateLoxodromicBidirectionality,
                             openDetailsDialog = viewModel::openDetailsDialog,
                             confirmParameters = viewModel::confirmAdjustedParameters,

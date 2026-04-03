@@ -87,24 +87,26 @@ sealed interface SubMode {
      * All expressions must be of the same type.
      * @property[adjustables] non-empty list of [Expr]s together with occupied and
      * reserved output indices for each
+     * @property[arcPaths] indices of arc-paths resulted from the [adjustables] expressions, this
+     * number is generally divisible by the n-steps parameter
      * @property[regions] indices of regions resulted from the [adjustables] expressions, this
      * number is generally divisible by the n-steps parameter
-     * @property[parameters] should be the same for all [adjustables]
+     * @property[parameters] should be shared by all [adjustables]
      */
     data class ExprAdjustment<EXPR : Expr>(
         val adjustables: List<AdjustableExpr<EXPR>>, // non-empty
+        val arcPaths: List<Ix> = emptyList(),
         val regions: List<Ix> = emptyList(),
-    ) : SubMode { // allow it in Drag mode
+    ) : SubMode {
 
         @Transient
         val parameters = (adjustables[0].expr as? Expr.HasParameters)?.parameters
 
         init {
             require(
-                adjustables.isNotEmpty() &&
-                adjustables[0].expr.let { expr0 ->
+                adjustables.isNotEmpty() /* && adjustables[0].expr.let { expr0 ->
                     adjustables.all { expr0::class == it.expr::class }
-                }
+                } */
             ) { "Invalid adjustables $adjustables" }
         }
     }
