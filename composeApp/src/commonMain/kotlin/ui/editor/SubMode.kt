@@ -95,6 +95,7 @@ sealed interface SubMode {
      */
     data class ExprAdjustment<EXPR : Expr>(
         val adjustables: List<AdjustableExpr<EXPR>>, // non-empty
+        val sourceArcPaths: List<Ix> = emptyList(),
         val arcPaths: List<Ix> = emptyList(),
         val regions: List<Ix> = emptyList(),
     ) : SubMode {

@@ -413,12 +413,12 @@ data class SaveState(
         )
     }
 
+    /** [earlierState] -> `this` state changes */
     fun diff(earlierState: SaveState): Changes =
         Changes(
             objects =
                 if (objects == earlierState.objects) null
                 else {
-                    // realistically the earlier state must have smaller or equal size
                     val size0 = earlierState.objects.size
                     val size = objects.size
                     require(size0 <= size) { "objects.size of an earlier state must not be greater, $earlierState vs $this" }

@@ -11,18 +11,17 @@ import kotlinx.serialization.json.Json
  * It is assumed that all grouped changes are 'perpendicular' */
 typealias RedoGroup = List<SaveState.Change>
 
-// MAYBE: instead of gradual accumulations
-//  just diff most recent state with last recorded state
 /**
  * `initialState <1:1< <1:2< <2:1< <3:1< NOW >4:1> >4:2> >4:3> >5:1>`
  *
- * Usage: [pinState] -> [accumulateChangedLocations] -> [recordAccumulatedChanges]
+ * Usage: maybe [accumulateChangedLocations] -> [recordDiff].
+ * When a change is not followed by recording, accumulate it for proper undo.
  *
  * Use [State] for serialization.
  */
 class ChangeHistory(
     private val initialState: SaveState,
-    private var pinnedState: SaveState = initialState,
+    private var lastRecordedState: SaveState = initialState,
     pastHistory: List<RedoGroup> = emptyList(),
     futureHistory: List<RedoGroup> = emptyList(),
     private val undoIsEnabled: MutableState<Boolean>? = null,
@@ -35,12 +34,16 @@ class ChangeHistory(
     @SerialName("HistoryState")
     data class State(
         @Serializable
+        @SerialName("initialState")
         val initialState: SaveState,
         @Serializable
-        val pinnedState: SaveState,
+        @SerialName("lastRecordedState")
+        val lastRecordedState: SaveState,
         @Serializable
+        @SerialName("past")
         val past: List<RedoGroup>,
         @Serializable
+        @SerialName("future")
         val future: List<RedoGroup>,
     ) {
         fun load(
@@ -49,7 +52,7 @@ class ChangeHistory(
         ): ChangeHistory =
             ChangeHistory(
                 initialState = initialState,
-                pinnedState = pinnedState,
+                lastRecordedState = lastRecordedState,
                 pastHistory = past,
                 futureHistory = future,
                 undoIsEnabled = undoIsEnabled,
@@ -69,20 +72,11 @@ class ChangeHistory(
     private val past: ArrayDeque<RedoGroup> = ArrayDeque(HISTORY_SIZE)
     private val future: ArrayDeque<RedoGroup> = ArrayDeque(HISTORY_SIZE)
 
-    /** Locations, changed after most recent [pinState] */
+    /** Locations, changed after most recent [lastRecordedState] */
     private var accumulatedChangedLocations: SaveState.Change.Locations =
         SaveState.Change.Locations.EMPTY
-    /**
-     * `[latest pin -> last unrecorded pin]` changes.
-     *
-     * Locations from `pin1->locations->pin2` are reverted via `pin1` to `[pin2->pin1]` changes.
-     * [accumulatedChangedLocations] get converted here if they were NOT recorded, but
-     * rather pin-pin squished.
-     *
-     * [accumulatedUnrecordedChanges] > [pinnedState] > [accumulatedChangedLocations] > now
-     */
-    private var accumulatedUnrecordedChanges: SaveState.Changes = SaveState.Changes.EMPTY
-    /** primarily used for continuous actions without clearly defined start or end */
+    /** Ongoing continuous change type,
+     * primarily used for continuous actions without clearly defined start or end */
     private var continuousChange: ContinuousChange? = null
 
     private val undoIsPossible: Boolean get() =
@@ -112,22 +106,8 @@ class ChangeHistory(
         return isFirstChange
     }
 
-    /** Save the present [state] as [pinnedState] to be used in later [record]s */
-    fun pinState(state: SaveState) {
-        // pin1->accumulate1->pin2->accumulate2->pin3
-        // after pin2:
-        //   accumulatedChanges := pin1.revert(accumulateChangedLocations[pin1->pin2] =
-        //   = [pin2->pin1]
-        // after pin3: [pin3->pin2].fuseLater[pin2->pin1] = [pin3->pin1]
-        accumulatedUnrecordedChanges = pinnedState.revert(accumulatedChangedLocations)
-            .fuseLater(accumulatedUnrecordedChanges) // later <-> earlier cuz we reverse for undo
-        accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
-        pinnedState = state
-    }
-
     /**
      * @param[newIndices] shorthand for [objectIndices] + [expressionIndices]
-     * @param[changedIndices] shorthand for [objectIndices] + [expressionIndices]
      * @param[allIndices] shorthand for [objectIndices] + [expressionIndices] +
      * [borderColorIndices] + [fillColorIndices] + [labelIndices]
      */
@@ -171,57 +151,37 @@ class ChangeHistory(
         this.continuousChange = continuousChange
     }
 
-    /**
-     * [record] locations created thru [accumulateChangedLocations] with the state from [pinState]
-     * Usage:
-     * 1. Save the present [SaveState] using [pinState] (to [pinnedState])
-     * 2. Apply changes
-     * 3. Accumulate the changes by providing their location data to [accumulateChangedLocations]
-     * 4. Commit them via [recordAccumulatedChanges]
-     */
-    fun recordAccumulatedChanges() {
-        record(accumulatedChangedLocations, pinnedState)
-    }
-
-    // subsequent continuous (same-target) actions don't change the history
-    // only append them after conclusion
-    /**
-     * @param[locations] locations of the actions have been performed on the [state]
-     */
-    private fun record(locations: SaveState.Change.Locations, state: SaveState = pinnedState) {
-        if (locations == SaveState.Change.Locations.EMPTY) {
-//            println("record: skipped recording: no changed locations")
-//            println("accumulated skipped changes: " + accumulatedChanges.changes.joinToString())
-            // accumulatedChanges remain as-is
-            return
-        }
-        // last recording > accumulatedChanged > pinnedState > laterChanges
-        val laterChanges = state.revert(locations)
-        val undoChanges = laterChanges
-            .fuseLater(accumulatedUnrecordedChanges) // later <-> earlier cuz we reverse for undo
-        val undoStep = undoChanges.changes.reversed()
+    fun recordDiff(
+        newRecordedState: SaveState,
+    ) {
+        val accumulatedChanges = lastRecordedState.revert(accumulatedChangedLocations)
+        val diffChanges = lastRecordedState.revert(
+            newRecordedState.diff(lastRecordedState).locations
+        )
+        val undoChanges = diffChanges
+            .fuseLater(accumulatedChanges) // later <-> earlier cuz we reverse for undo
+        val undoStep = undoChanges.changes
 //        println("record: undoStep = " + undoStep.joinToString(", "))
-        if (!areChangesWorthRecording(undoChanges) || undoStep.isEmpty()) {
-            accumulatedUnrecordedChanges = undoChanges
+        if (areChangesWorthRecording(undoChanges)) {
+            if (past.size == HISTORY_SIZE) {
+                past.removeFirst()
+            }
+            past.addLast(undoStep)
+            future.clear()
             accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
-//            println("record: skipped recording: no changes worth recording")
-//            println("accumulated skipped changes: " + accumulatedChanges.changes.joinToString())
-            return
+            // we dont reset continuousChange here
+            refreshUndoRedoStates()
+//            println(
+//                "past = " + past.joinToString(";\n", prefix = "[\n", postfix = "\n]") { group ->
+//                    group.joinToString(", ")
+//                }
+//            )
+            lastRecordedState = newRecordedState
+        } else {
+            accumulatedChangedLocations = diffChanges.locations
+            println("record: skipped recording: no changes worth recording")
+            println("accumulated skipped changes: " + diffChanges.changes.joinToString())
         }
-        if (past.size == HISTORY_SIZE) {
-            past.removeFirst()
-        }
-        past.addLast(undoStep)
-        future.clear()
-        accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
-        accumulatedUnrecordedChanges = SaveState.Changes.EMPTY
-        // we dont reset continuousChange here
-        refreshUndoRedoStates()
-//        println(
-//            "past = " + past.joinToString(";\n", prefix = "[\n", postfix = "\n]") { group ->
-//                group.joinToString(", ")
-//            }
-//        )
     }
 
     // not just selection, center and regionColor have changed
@@ -234,60 +194,55 @@ class ChangeHistory(
 
     // MAYBE: restore most recent selection after undo
     /**
-     * @param[state] the present state
      * @return the previous state, the one before applying the most recent [RedoGroup]
      */
-    fun undo(state: SaveState): SaveState {
+    fun undo(presentState: SaveState): SaveState {
         require(undoIsPossible)
-        val undoStep = past.removeLast()
-        val unrecordedChangesRedo = accumulatedUnrecordedChanges
-            .fuseLater(state.revert(accumulatedChangedLocations))
         val newState: SaveState
         val redoStep: RedoGroup
         if (past.isEmpty()) {
-            redoStep = state.diff(initialState).changes
-            // since we diff with the present state, no need to count unrecordedChanges
+            redoStep = presentState.diff(initialState).changes
+            // since we diff with the present state, no need to count unrecorded changes
             newState = initialState
         } else {
+            val unrecordedBacktrack = lastRecordedState.revert(accumulatedChangedLocations)
+            val undoStep = unrecordedBacktrack.changes + past.removeLast()
             redoStep = undoStep
                 .reversed()
-                .map { state.revert(it) }
-                .plus(unrecordedChangesRedo.changes)
-            newState = state.applyChanges(undoStep)
+                .map { presentState.revert(it) }
+            newState = presentState.applyChanges(undoStep)
         }
         if (future.size == HISTORY_SIZE) {
             future.removeLast()
         }
         future.addFirst(redoStep)
-        pinnedState = newState
+        lastRecordedState = newState
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
-        accumulatedUnrecordedChanges = SaveState.Changes.EMPTY
         continuousChange = null
         refreshUndoRedoStates()
 //        println("undo: undoStep = $undoStep")
         return newState
     }
 
-    /** @return the 'next' state in the undo/redo dequeue, the one we undone from
-     * @param[state] the present state */
-    fun redo(state: SaveState): SaveState {
+    /**
+     * @return the 'next' state in the undo/redo dequeue, the one we undone from
+     */
+    fun redo(presentState: SaveState): SaveState {
         require(redoIsPossible)
-        val unrecordedChangesUndo = pinnedState.revert(accumulatedChangedLocations)
-            .fuseLater(accumulatedUnrecordedChanges)
+        val unrecordedBacktrack = lastRecordedState.revert(accumulatedChangedLocations)
         // we don't update undoStep with unrecorded changes
         // so that undo->redo-> can be repeated indefinitely with no surprises
         val redoStep = future.removeFirst()
         val undoStep = redoStep
             .reversed()
-            .map { state.revert(it) }
+            .map { presentState.revert(it) }
         if (past.size == HISTORY_SIZE) {
             past.removeFirst()
         }
         past.addLast(undoStep)
-        val newState = state.applyChanges(unrecordedChangesUndo.changes + redoStep)
-        pinnedState = newState
+        val newState = presentState.applyChanges(unrecordedBacktrack.changes + redoStep)
+        lastRecordedState = newState
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
-        accumulatedUnrecordedChanges = SaveState.Changes.EMPTY
         continuousChange = null
         refreshUndoRedoStates()
 //        println("redo: redoStep = $redoStep")
@@ -297,7 +252,7 @@ class ChangeHistory(
     fun save(): State =
         State(
             initialState = initialState,
-            pinnedState = pinnedState,
+            lastRecordedState = this@ChangeHistory.lastRecordedState,
             past = past.toList(),
             future = future.toList(),
         )
