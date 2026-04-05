@@ -53,16 +53,6 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
         return updatedIndices
     }
 
-    override fun removeObjectAt(index: Ix) {
-        displayObjects[index] = null
-        downscaledObjects[index] = null
-        borderColors.remove(index)
-        fillColors.remove(index)
-        phantomObjectIndices.remove(index)
-        pathCache.removeObjectAt(index)
-        expressions.updateObjectTypeAt(index)
-    }
-
     // NOTE: handling of incident points on non-glued dependent objects is off
     override fun transform(
         targets: List<Ix>,

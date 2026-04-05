@@ -38,12 +38,8 @@ import core.geometry.conformal.generateSphereGrid
 import core.geometry.fromCorners
 import core.geometry.scaled00
 import core.geometry.translationDelta
-import domain.model.Arg
-import domain.model.ArgType
 import domain.ColorAsCss
 import domain.Ix
-import domain.model.PartialArcPath
-import domain.model.PartialArgList
 import domain.PointSnapResult
 import domain.ProgressState
 import domain.Snapping
@@ -82,11 +78,15 @@ import domain.io.DdcV5
 import domain.io.SaveRequest
 import domain.io.saveStateAsSvg
 import domain.io.tryParseDdc
+import domain.model.Arg
+import domain.model.ArgType
 import domain.model.ChangeHistory
 import domain.model.ChessboardPattern
 import domain.model.ConformalObjectModel
 import domain.model.ContinuousChange
 import domain.model.LogicalRegion
+import domain.model.PartialArcPath
+import domain.model.PartialArgList
 import domain.model.SaveState
 import domain.model.Selection
 import domain.mostCommonOf
@@ -98,7 +98,6 @@ import domain.sortedByFrequency
 import domain.transpose
 import domain.withoutElementsAt
 import domain.xor
-import domain.zipForEach
 import getPlatform
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -342,7 +341,6 @@ class EditorViewModel : ViewModel() {
 
     fun clearSelection() { // better for autocomplete
         selection = Selection()
-        history.accumulateChangedLocations(selection = true)
     }
 
     fun changeCanvasSize(newCanvasSize: IntSize) {
@@ -547,6 +545,8 @@ class EditorViewModel : ViewModel() {
         )
     }
 
+    /** saves present state, diffs it with [history]`.lastRecordedState` and
+     * records changes to [history]`.past`, enabling [undo]s */
     private fun recordHistory() {
         history.recordDiff(saveState())
     }
@@ -652,10 +652,6 @@ class EditorViewModel : ViewModel() {
             clearSelection()
         }
         objectModel.invalidate()
-        history.accumulateChangedLocations(
-            newIndices = newIndices.toSet(),
-            selection = true,
-        )
         return newIndices
     }
 
@@ -667,120 +663,37 @@ class EditorViewModel : ViewModel() {
         objectModel.addDisplayObject(point)
         objectModel.invalidate()
         require(newIx == objects.lastIndex) { "Incorrect index retrieved from expression.addFree() during createNewFreePoint()" }
-        history.accumulateChangedLocations(
-            newIndices = setOf(newIx),
-        )
         return newIx
     }
 
-    /** Add objects from [sourceIndex2NewTrajectory] to [objects], while
-     * copying regions (for [CircleOrLine]s) and `objectColors` from original
-     * indices specified in [sourceIndex2NewTrajectory].
-     * We assume that appropriate expressions were/will be created and
-     * that those expressions follow the order of [sourceIndex2NewTrajectory]`.flatten()`, but
-     * the objects themselves are yet to be added to [objects]. In addition, set
-     * new objects that are circles/lines/points as [objectSelection].
-     * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`,
-     * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
-     * @param[circleAnimationInit] given list of circles/lines queue [CircleAnimation]
-     * constructed by this block. Use `{ null }` if no animation is required.
-     * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
-     */
-    private inline fun copyRegionsAndStylesOntoNewTrajectories(
-        sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
-        flipRegionsInAndOut: Boolean = false,
-        crossinline circleAnimationInit: (List<CircleOrLine>) -> CircleAnimation? = { null },
-    ) {
-        val oldSize = objects.size
-        val newObjects = sourceIndex2NewTrajectory.flatMap { it.second }
-        objectModel.addDisplayObjects(newObjects) // row-column order
-        objectModel.copySourceColorsOntoTrajectories(sourceIndex2NewTrajectory, oldSize)
-        copySourceRegionsOntoTrajectories(sourceIndex2NewTrajectory, oldSize, flipRegionsInAndOut)
-        selection = Selection(
-            gCircles = (oldSize until objects.size).filter { ix ->
-                objects[ix] is CircleOrLine || objects[ix] is Point
-            }
-        )
-        objectModel.invalidate()
-        circleAnimationInit(newObjects.filterIsInstance<CircleOrLine>())?.let { circleAnimation ->
-            viewModelScope.launch {
-                animations.emit(circleAnimation)
-            }
-        }
-    }
-
     /**
      * Copy [regions] from source indices onto trajectories specified
-     * by [sourceIndex2NewTrajectory]. Trajectory objects are assumed to be laid out in
-     * row-column order of [sourceIndex2NewTrajectory]`.flatten` starting from [startIndex]
-     * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`,
+     * by [source2trajectory].
+     * @param[source2trajectory] `[(original index ~ style source, [trajectory of indices of objects])]`,
      * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
-     * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
-     * @return indices of copied regions within [regions]
+     * @return indices of copied regions within [regions], flattened trajectory of regions
      */
     private fun copySourceRegionsOntoTrajectories(
-        sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
-        startIndex: Ix,
-        flipRegionsInAndOut: Boolean = false,
+        source2trajectory: List<Pair<Ix, List<Ix>>>,
     ): List<Int> {
-        val newRegionIndices = mutableListOf<Int>()
-        var outputIndex = startIndex - 1 // -1 offsets pre-increment
-        sourceIndex2NewTrajectory.map { (ix, trajectory) ->
-            trajectory.map { o ->
-                outputIndex += 1
-                if (o is CircleOrLine)
-                    Pair(ix, outputIndex)
-                else
-                    null
-            } // Column<Row<(OG Ix, new Ix)?>>
-        }.transpose().forEach { trajectoryStageSlice ->
-            // Column<(OG Ix, new Ix)>
-            val nonNullSlice = trajectoryStageSlice.filterNotNull()
-            // for each stage in the trajectory we try to copy regions
-            if (nonNullSlice.isNotEmpty()) {
-                newRegionIndices.addAll(
+        val newRegionIndices = source2trajectory
+            .map { (sourceIndex, trajectory) ->
+                trajectory.map { outputIndex ->
+                    sourceIndex to outputIndex
+                } // Column<Row<(OG Ix, new Ix)?>>
+            }.transpose()
+            .flatMap { trajectoryStageSlice ->
+                // Column<(OG Ix, new Ix)>
+                val nonNullSlice = trajectoryStageSlice.filterNotNull()
+                // for each stage in the trajectory we try to copy regions
+                if (nonNullSlice.isNotEmpty()) {
                     copyRegions(
                         oldIndices = nonNullSlice.map { it.first },
                         newIndices = nonNullSlice.map { it.second },
-                        flipInAndOut = flipRegionsInAndOut
+                        flipInAndOut = false,
                     )
-                )
+                } else emptyList()
             }
-        }
-        return newRegionIndices
-    }
-
-    /**
-     * Copy [regions] from source indices onto trajectories specified
-     * by [sourceIndex2TrajectoryOfIndices].
-     * @param[sourceIndex2TrajectoryOfIndices] `[(original index ~ style source, [trajectory of indices of objects])]`,
-     * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
-     * @param[flipRegionsInAndOut] set to `true` for odd number of inversions (non-continuous)
-     * @return indices of copied regions within [regions]
-     */
-    private fun copySourceRegionsOntoTrajectories(
-        sourceIndex2TrajectoryOfIndices: List<Pair<Ix, List<Ix>>>,
-        flipRegionsInAndOut: Boolean = false,
-    ): List<Int> {
-        val newRegionIndices = mutableListOf<Int>()
-        sourceIndex2TrajectoryOfIndices.map { (sourceIndex, trajectory) ->
-            trajectory.map { outputIndex ->
-                sourceIndex to outputIndex
-            } // Column<Row<(OG Ix, new Ix)?>>
-        }.transpose().forEach { trajectoryStageSlice ->
-            // Column<(OG Ix, new Ix)>
-            val nonNullSlice = trajectoryStageSlice.filterNotNull()
-            // for each stage in the trajectory we try to copy regions
-            if (nonNullSlice.isNotEmpty()) {
-                newRegionIndices.addAll(
-                    copyRegions(
-                        oldIndices = nonNullSlice.map { it.first },
-                        newIndices = nonNullSlice.map { it.second },
-                        flipInAndOut = flipRegionsInAndOut
-                    )
-                )
-            }
-        }
         return newRegionIndices
     }
 
@@ -847,9 +760,6 @@ class EditorViewModel : ViewModel() {
     ) {
         objectModel.borderColors[sourceIndex]?.let { color ->
             objectModel.borderColors[destinationIndex] = color
-            history.accumulateChangedLocations(
-                borderColorIndices = setOf(destinationIndex)
-            )
         }
     }
 
@@ -859,9 +769,6 @@ class EditorViewModel : ViewModel() {
     ) {
         objectModel.fillColors[sourceIndex]?.let { color ->
             objectModel.fillColors[destinationIndex] = color
-            history.accumulateChangedLocations(
-                fillColorIndices = setOf(destinationIndex)
-            )
         }
     }
 
@@ -897,9 +804,9 @@ class EditorViewModel : ViewModel() {
                 fillColor = region.fillColor
             )
         }
-        val oldSize = regions.size
+        val startIndex = regions.size
         regions += newRegions
-        return oldSize until regions.size
+        return startIndex until regions.size
     }
 
     fun deleteSelection() {
@@ -950,12 +857,8 @@ class EditorViewModel : ViewModel() {
         }
         objectModel.removeObjectsAt(deletedIndices)
         // cuz we might've deleted some arc-path vertices
-        val changedArcPathIndices = objectModel.forceUpdate(changedIndices)
+        objectModel.forceUpdate(changedIndices)
         objectModel.invalidate()
-        history.accumulateChangedLocations(
-            allIndices = deletedIndices,
-            objectIndices = changedArcPathIndices.toSet(),
-        )
     }
 
     private fun deleteRegionsBoundBy(indices: List<Ix>) {
@@ -987,10 +890,6 @@ class EditorViewModel : ViewModel() {
                     }
                     .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
             }
-            history.accumulateChangedLocations(
-                chessboardPattern = true,
-                regions = true,
-            )
         }
     }
 
@@ -1178,7 +1077,6 @@ class EditorViewModel : ViewModel() {
             shouldUpdateSelection = shouldUpdateSelection,
             setSelection = { selection = Selection(gCircles = it) },
         )
-        history.accumulateChangedLocations(regions = true)
     }
 
     /** @return [Rect] using absolute positions */
@@ -1429,7 +1327,6 @@ class EditorViewModel : ViewModel() {
                     gCircles = allCLPIndices,
                     arcPaths = allArcPathIndices,
                 )
-        history.accumulateChangedLocations(selection = true)
     }
 
     fun toggleShowCircles() {
@@ -1505,7 +1402,6 @@ class EditorViewModel : ViewModel() {
         regionColor = colorPickerParameters.currentColor
         this.colorPickerParameters = colorPickerParameters
         switchToCategory(Category.Region)
-        history.accumulateChangedLocations(regions = true)
     }
 
     fun concludeBorderColorPicker(colorPickerParameters: ColorPickerParameters) {
@@ -1541,7 +1437,6 @@ class EditorViewModel : ViewModel() {
         openedDialog = null
         regionColor = color
         switchToCategory(Category.Region)
-        history.accumulateChangedLocations(regions = true)
     }
 
     fun dismissRegionColorPicker() {
@@ -1694,13 +1589,11 @@ class EditorViewModel : ViewModel() {
         // being able to instantly undo is prob better ux
         // showPhantomObjects = false // i think this behavior is confuzzling
         objectModel.invalidate()
-        history.accumulateChangedLocations(phantoms = true)
     }
 
     private fun unmarkSelectedObjectsAsPhantoms() {
         objectModel.phantomObjectIndices.removeAll(objectSelection.toSet())
         objectModel.invalidate()
-        history.accumulateChangedLocations(phantoms = true)
     }
 
     private fun swapOrientationsInSelection() {
@@ -1736,7 +1629,8 @@ class EditorViewModel : ViewModel() {
     }
 
     fun adjustExpr() {
-        val expr = exprOf(objectSelection[0])
+        val firstSelected = selection.gCircles.firstOrNull() ?: return
+        val expr = exprOf(firstSelected)
         if (expr !is Expr.HasParameters) {
             return
         }
@@ -1812,15 +1706,16 @@ class EditorViewModel : ViewModel() {
                     )
                 else -> null
             }
-            val adjustables = listOf(AdjustableExpr(expr, outputIndices, outputIndices))
+            val adjustables = listOf(AdjustableExpr(
+                expr, firstSelected, outputIndices, outputIndices
+            ))
             val allAdjustables: List<AdjustableExpr<Expr>> =
-                if (
-                    expr is Expr.LoxodromicMotion &&
-                    expr.otherHalfStart != null
-                ) {
+                if (expr is Expr.LoxodromicMotion && expr.otherHalfStart != null) {
                     exprOf(expr.otherHalfStart)?.let { otherExpr ->
                         val otherOutputIndices = expressions.findExpr(otherExpr)
-                        val otherAdjustables = listOf(AdjustableExpr(otherExpr, otherOutputIndices, otherOutputIndices))
+                        val otherAdjustables = listOf(AdjustableExpr(
+                            otherExpr, expr.otherHalfStart, otherOutputIndices, otherOutputIndices
+                        ))
                         defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
                             expr.parameters,
                             bidirectional = true
@@ -1844,7 +1739,6 @@ class EditorViewModel : ViewModel() {
                 switchToMode(SelectionMode.Multiselect)
             }
             selection = Selection(gCircles = familyMembers)
-            history.accumulateChangedLocations(selection = true)
         }
     }
 
@@ -1861,7 +1755,6 @@ class EditorViewModel : ViewModel() {
                 switchToMode(SelectionMode.Multiselect)
             }
             selection = Selection(gCircles = siblings)
-            history.accumulateChangedLocations(selection = true)
         }
     }
 
@@ -1931,7 +1824,6 @@ class EditorViewModel : ViewModel() {
                             }
                         }
                     }
-                    history.accumulateChangedLocations(selection = true)
                 }
                 SelectionMode.Multiselect -> when (submode) {
                     is SubMode.RectangularSelect -> { // TODO: rect select for arc-paths
@@ -2236,7 +2128,6 @@ class EditorViewModel : ViewModel() {
                 }
             }
         }
-        history.accumulateChangedLocations(selection = true)
     }
 
     private fun tapDuringMultiselect(visiblePosition: Offset) {
@@ -2301,7 +2192,6 @@ class EditorViewModel : ViewModel() {
                 }
             }
         }
-        history.accumulateChangedLocations(selection = true)
     }
 
     private fun tapDuringRegions(visiblePosition: Offset) {
@@ -2365,7 +2255,6 @@ class EditorViewModel : ViewModel() {
                     else ->
                         Selection(gCircles = listOf(newChoice.index))
                 }
-                history.accumulateChangedLocations(selection = true)
             }
         }
         submode = null
@@ -2679,11 +2568,6 @@ class EditorViewModel : ViewModel() {
                 grid = newGrid,
             )
             objectModel.invalidatePositions()
-            val indices = objects.indices.toSet()
-            history.accumulateChangedLocations(
-                objectIndices = indices,
-                expressionIndices = indices,
-            )
         }
     }
 
@@ -2754,7 +2638,6 @@ class EditorViewModel : ViewModel() {
             gCircles = RectangleCollider.selectWithRectangle(selectables, rect)
         )
         submode = SubMode.RectangularSelect(corner1, absolutePosition)
-        history.accumulateChangedLocations(selection = true)
     }
 
     private fun updateFlowSelect(visiblePosition: Offset, sm: SubMode.FlowSelect) {
@@ -2772,7 +2655,6 @@ class EditorViewModel : ViewModel() {
                 selection.gCircles +
                     diff.filter { it !in objectSelection && (showPhantomObjects || it !in phantoms) }
             )
-            history.accumulateChangedLocations(selection = true)
         }
     }
 
@@ -2992,7 +2874,6 @@ class EditorViewModel : ViewModel() {
                 }
             selection = Selection(gCircles = rectSelection)
             submode = SubMode.RectangularSelect(corner1, corner2)
-            history.accumulateChangedLocations(selection = true)
         }
     }
 
@@ -3196,7 +3077,7 @@ class EditorViewModel : ViewModel() {
         if (sm is SubMode.ExprAdjustment<*> && parameters != sm.parameters) {
             submode = when (sm.parameters) {
                 is InterpolationParameters -> { // single adjustable expr case
-                    val (expr, outputIndices, reservedIndices) = sm.adjustables[0]
+                    val (expr, sourceIndex, outputIndices, reservedIndices) = sm.adjustables[0]
                     val newExpr = expr.copyWithNewParameters(parameters) as Expr.Conformal.OneToMany
                     val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
                         newExpr = newExpr,
@@ -3206,7 +3087,7 @@ class EditorViewModel : ViewModel() {
                     for (ix in newReservedIndices) { // we have to cleanup abandoned but reserved indices
                         if (ix < objects.size) {
                             objectModel.removeObjectAt(ix)
-                        } else {
+                        } else { // padding
                             objectModel.addDownscaledObject(null)
                         }
                     }
@@ -3215,18 +3096,19 @@ class EditorViewModel : ViewModel() {
                         objectModel.setDownscaledObject(ix, newObjects[i])
                     }
                     SubMode.ExprAdjustment(listOf(
-                        AdjustableExpr(newExpr, newIndices, newReservedIndices)
+                        AdjustableExpr(newExpr, sourceIndex, newIndices, newReservedIndices)
                     ))
                 }
                 // multiple adjustable exprs
                 is RotationParameters,
                 is BiInversionParameters,
                 is LoxodromicMotionParameters -> {
+                    for (arcPathAdjustable in sm.arcPathAdjustables)
+                        objectModel.removeObjectsAt(arcPathAdjustable.outputIndices)
                     regions = regions.withoutElementsAt(sm.regions.toSet())
                     val newAdjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
                     val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
-                    for ((expr, outputIndices, reservedIndices) in sm.adjustables) {
-                        val sourceIndex = (expr as Expr.TransformLike).target
+                    for ((expr, sourceIndex, outputIndices, reservedIndices) in sm.adjustables) {
                         val newExpr = expr.copyWithNewParameters(parameters) as Expr.Conformal.OneToMany
                         val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
                             newExpr = newExpr,
@@ -3253,7 +3135,7 @@ class EditorViewModel : ViewModel() {
                             }
                         }
                         newAdjustables.add(
-                            AdjustableExpr(newExpr, newIndices, newReservedIndices)
+                            AdjustableExpr(newExpr, sourceIndex, newIndices, newReservedIndices)
                         )
                         source2trajectory.add(
                             sourceIndex to newIndices
@@ -3278,12 +3160,10 @@ class EditorViewModel : ViewModel() {
                             }
                         affectedRegions = copySourceRegionsOntoTrajectories(
                             foldedSource2trajectory,
-                            flipRegionsInAndOut = false
                         )
                     } else {
                         affectedRegions = copySourceRegionsOntoTrajectories(
                             source2trajectory,
-                            flipRegionsInAndOut = false
                         )
                     }
                     SubMode.ExprAdjustment(newAdjustables, regions = affectedRegions)
@@ -3407,7 +3287,6 @@ class EditorViewModel : ViewModel() {
 
     private fun realizeArcPathMidpoints(arcPathIndex: Ix): ArcPath {
         val arcPath = objectModel.getArcPath(arcPathIndex)!!
-        val oldSize = objects.size
         val arcs = arcPath.arcs.mapIndexed { arcIndex, arc ->
             when (arc) {
                 is ArcPath.Arc.By3Points -> arc
@@ -3427,11 +3306,6 @@ class EditorViewModel : ViewModel() {
                 }
             }
         }
-        val newIndices = oldSize until objects.size
-        history.accumulateChangedLocations(
-            newIndices = newIndices.toSet(),
-            phantoms = true,
-        )
         return when (arcPath) {
             is ArcPath.Closed -> arcPath.copy(arcs = arcs)
             is ArcPath.Open -> arcPath.copy(arcs = arcs)
@@ -3474,23 +3348,20 @@ class EditorViewModel : ViewModel() {
             }
         )
         val copiedArcPathIndex = objectModel.addDownscaledObject(concreteArcPath)
-        val newIndices = oldSize until objects.size
         copyBorderColor(sourceArcPathIndex, copiedArcPathIndex)
         copyFillColor(sourceArcPathIndex, copiedArcPathIndex)
-        history.accumulateChangedLocations(
-            newIndices = newIndices.toSet(),
-            phantoms = true,
-        )
     }
 
+    /**
+     * @return (trajectory of copied arc-paths, point adjustables)
+     */
     private inline fun <reified EXPR : Expr.Conformal.OneToMany> copyArcPathToMany(
         sourceArcPathIndex: Ix,
         crossinline mkExpr: (pointIndex: Ix) -> EXPR,
-    ): List<AdjustableExpr<EXPR>> {
+    ): Pair<List<Ix>, List<AdjustableExpr<EXPR>>> {
         require(objectModel.getArcPath(sourceArcPathIndex) is ArcPath)
         val sourceArcPath = realizeArcPathMidpoints(sourceArcPathIndex)
         val adjustables = mutableListOf<AdjustableExpr<EXPR>>()
-        val oldSize = objects.size
         /** trajectory stage index -> arc-path vertices on this stage */
         val trajectoryOfVertices = sourceArcPath.vertices.map { vertexIndex ->
             // vertexIndex -> trajectory of vertices
@@ -3500,7 +3371,10 @@ class EditorViewModel : ViewModel() {
             for (newIndex in newIndices) {
                 copyBorderColor(vertexIndex, newIndex)
             }
-            adjustables.add(AdjustableExpr(expr, newIndices, newIndices))
+            adjustables.add(AdjustableExpr(expr,
+                vertexIndex,
+                newIndices, newIndices
+            ))
             newIndices
         }.transpose()
         /** trajectory stage index -> arc-path arcs on this stage */
@@ -3508,15 +3382,19 @@ class EditorViewModel : ViewModel() {
             // arcIndex -> trajectory of arcs
             when (arc) {
                 is ArcPath.Arc.By3Points -> {
-                    val expr = mkExpr(arc.middlePointIndex)
+                    val sourceIndex = arc.middlePointIndex
+                    val expr = mkExpr(sourceIndex)
                     val result = expressions.addMultiExpr(expr)
                     val newIndices = objectModel.addDownscaledObjects(result).toList()
                     for (newIndex in newIndices) {
-                        copyBorderColor(arc.middlePointIndex, newIndex)
-                        if (arc.middlePointIndex in phantoms)
+                        copyBorderColor(sourceIndex, newIndex)
+                        if (sourceIndex in phantoms)
                             objectModel.phantomObjectIndices.add(newIndex)
                     }
-                    adjustables.add(AdjustableExpr(expr, newIndices, newIndices))
+                    adjustables.add(AdjustableExpr(expr,
+                        sourceIndex,
+                        newIndices, newIndices
+                    ))
                     newIndices.map { newIndex ->
                         ArcPath.Arc.By3Points(middlePointIndex = newIndex)
                     }
@@ -3525,7 +3403,8 @@ class EditorViewModel : ViewModel() {
                     never("arc-path $sourceArcPath should have no 2-point arcs after realizeArcPathMidpoints")
             }
         }.transpose()
-        trajectoryOfVertices.zipForEach(trajectoryOfArcs) { nullableVertices, nullableArcs ->
+        // trajectory of arc-paths
+        val copiedArcPathIndices = trajectoryOfVertices.zip(trajectoryOfArcs) { nullableVertices, nullableArcs ->
             val vertices = nullableVertices.map { it as Ix }
             val arcs = nullableArcs.map { it as ArcPath.Arc }
             val concreteArcPath = expressions.addSoloExpr(
@@ -3537,13 +3416,9 @@ class EditorViewModel : ViewModel() {
             val copiedArcPathIndex = objectModel.addDownscaledObject(concreteArcPath)
             copyBorderColor(sourceArcPathIndex, copiedArcPathIndex)
             copyFillColor(sourceArcPathIndex, copiedArcPathIndex)
+            copiedArcPathIndex
         }
-        val newIndices = oldSize until objects.size
-        history.accumulateChangedLocations(
-            newIndices = newIndices.toSet(),
-            phantoms = true,
-        )
-        return adjustables
+        return Pair(copiedArcPathIndices, adjustables)
     }
 
     private fun completeCircleByCenterAndRadius() {
@@ -3766,19 +3641,25 @@ class EditorViewModel : ViewModel() {
             objectModel.addDisplayObjects(newCircles)
             val outputRange = (oldSize until objects.size).toList()
             submode = SubMode.ExprAdjustment(listOf(
-                AdjustableExpr(expr, outputRange, outputRange)
+                // here sourceIndex is less meaningful
+                AdjustableExpr(expr,
+                    sourceIndex = startArg.index,
+                    outputRange, outputRange
+                )
             ))
             if (newGCircles.any { it is ImaginaryCircle }) {
                 queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
             }
         } else if (startArg is Arg.Point && endArg is Arg.Point) {
-            val (startPointIx, endPointIx) = listOf(startArg, endArg).map { pointArg ->
+            val (startPointIndex, endPointIndex) = listOf(startArg, endArg).map { pointArg ->
                 when (pointArg) {
                     is Arg.PointIndex -> pointArg.index
                     is Arg.FixedPoint -> createNewFreePoint(pointArg.toPoint())
                 }
             }
-            val expr = Expr.PointInterpolation(defaultInterpolationParameters.params, startPointIx, endPointIx)
+            val expr = Expr.PointInterpolation(defaultInterpolationParameters.params,
+                startPointIndex, endPointIndex
+            )
             interpolateCircles = false
             val oldSize = objects.size
             val newGCircles = expressions.addMultiExpr(expr)
@@ -3786,7 +3667,10 @@ class EditorViewModel : ViewModel() {
             objectModel.addDisplayObjects(newPoints)
             val outputRange = (oldSize until objects.size).toList()
             submode = SubMode.ExprAdjustment(listOf(
-                AdjustableExpr(expr, outputRange, outputRange)
+                AdjustableExpr(expr,
+                    sourceIndex = startPointIndex,
+                    outputRange, outputRange
+                )
             ))
         }
         objectModel.invalidate()
@@ -3817,39 +3701,40 @@ class EditorViewModel : ViewModel() {
         )
     }
 
-    private inline fun startParameterAdjustment(
+    private inline fun startExprParameterAdjustment(
         inputIndices: List<Ix>,
-        crossinline mkExpr: (pointIndex: Ix) -> Expr.Conformal.OneToMany,
+        crossinline mkExpr: (gCircleIndex: Ix) -> Expr.Conformal.OneToMany,
     ) {
-        val sources = inputIndices.filter { objects[it] is GCircle }
+        val gCircleSources = inputIndices.filter { objects[it] is GCircle }
+        val arcPathSources = inputIndices.filter { objects[it] is ConcreteArcPath }
         val adjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
-        val oldSize = objects.size
-        // row/trajectory - column/simul-slice order
-        val source2trajectory = sources.map { ix ->
-            val expr = mkExpr(ix)
+        val source2trajectory = gCircleSources.map { sourceIndex ->
+            // row/trajectory - column/simul-slice order
+            val expr = mkExpr(sourceIndex)
             val result = expressions
                 .addMultiExpr(expr)
                 .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
             val outputIndices = objectModel.addDisplayObjects(result).toList()
-            adjustables.add(AdjustableExpr(expr, outputIndices, outputIndices))
-            return@map ix to result
+            for (outputIndex in outputIndices) {
+                copyBorderColor(sourceIndex, outputIndex)
+            }
+            adjustables.add(AdjustableExpr(expr, sourceIndex, outputIndices, outputIndices))
+            sourceIndex to outputIndices
         }
-        val newIndices = (oldSize until objects.size).toSet()
-        objectModel.copySourceColorsOntoTrajectories(
+        val trajectoriesOfArcPaths = mutableListOf<Ix>()
+        for (sourceArcPathIndex in arcPathSources) {
+            val (trajectoryOfArcPath, arcPathAdjustables) = copyArcPathToMany(sourceArcPathIndex, mkExpr)
+            trajectoriesOfArcPaths.addAll(trajectoryOfArcPath)
+            adjustables.addAll(arcPathAdjustables)
+        }
+        val copiedRegions = copySourceRegionsOntoTrajectories(
             source2trajectory,
-            startIndex = oldSize
         )
-        val regions = copySourceRegionsOntoTrajectories(
-            source2trajectory,
-            startIndex = oldSize,
-            flipRegionsInAndOut = false
+        // TODO: blueprint arc-path adjustables
+        submode = SubMode.ExprAdjustment(adjustables,
+            regions = copiedRegions,
         )
-        submode = SubMode.ExprAdjustment(adjustables, regions = regions)
         objectModel.invalidate()
-        history.accumulateChangedLocations(
-            allIndices = newIndices,
-            regions = true,
-        )
     }
 
     // NOTE: witnessed abnormal index skipping whe rotating lines, observing closely...
@@ -3862,7 +3747,7 @@ class EditorViewModel : ViewModel() {
             is Arg.FixedPoint -> createNewFreePoint(pointArg.toPoint())
         }
         val params = defaultRotationParameters.params
-        startParameterAdjustment(objArg.indices) { ix ->
+        startExprParameterAdjustment(objArg.indices) { ix ->
             Expr.Rotation(params, pivotPointIndex, ix)
         }
     }
@@ -3880,7 +3765,7 @@ class EditorViewModel : ViewModel() {
             reverseSecondEngine = reverseSecondEngine
         )
         val params = defaultBiInversionParameters.params
-        startParameterAdjustment(objArg.indices) { ix ->
+        startExprParameterAdjustment(objArg.indices) { ix ->
             Expr.BiInversion(params, engine1, engine2, ix)
         }
     }
@@ -3908,67 +3793,67 @@ class EditorViewModel : ViewModel() {
         )
         val params = defaultLoxodromicMotionParameters.params
         if (bidirectional) { // 2 interdependent spiral halves
-            val sources = objArg.indices.filter { objects[it] is GCircle }
+            val gCircleSources = objArg.indices.filter { objects[it] is GCircle }
             val adjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
             val spiralSize = params.nTotalSteps
             val firstHalfStart = objects.size
-            val secondHalfStart = firstHalfStart + sources.size * spiralSize
-            val source2trajectory1 = sources.mapIndexed { i, ix ->
+            val secondHalfStart = firstHalfStart + gCircleSources.size * spiralSize
+            val source2trajectory1 = gCircleSources.mapIndexed { i, sourceIndex ->
                 val expr = Expr.LoxodromicMotion(
                     parameters = params,
                     divergencePoint = divergencePointIndex,
                     convergencePoint = convergencePointIndex,
-                    target = ix,
+                    target = sourceIndex,
                     // NOTE: complementary half indices rely on contiguous layout of trajectories
                     otherHalfStart = secondHalfStart + i * spiralSize,
                 )
                 val result = expressions
                     .addMultiExpr(expr)
                     .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
-                val outputIndices = objectModel.addDisplayObjects(result).toList()
                 // result.size == spiralSize
-                adjustables.add(AdjustableExpr(expr, outputIndices, outputIndices))
-                return@mapIndexed ix to result
+                val outputIndices = objectModel.addDisplayObjects(result).toList()
+                for (outputIndex in outputIndices) {
+                    copyBorderColor(sourceIndex, outputIndex)
+                }
+                adjustables.add(AdjustableExpr(expr,
+                    sourceIndex,
+                    outputIndices, outputIndices
+                ))
+                sourceIndex to outputIndices
             }
-            val interimSize = objects.size - firstHalfStart
             // reversing convergence-divergence for 2nd trajectory
-            val source2trajectory2 = sources.mapIndexed { i, ix ->
+            val source2trajectory2 = gCircleSources.mapIndexed { i, sourceIndex ->
                 val expr = Expr.LoxodromicMotion(
                     parameters = params,
                     divergencePoint = convergencePointIndex,
                     convergencePoint = divergencePointIndex,
-                    target = ix,
+                    target = sourceIndex,
                     otherHalfStart = firstHalfStart + i * spiralSize,
                 )
                 val result = expressions
                     .addMultiExpr(expr)
                     .map { (it as? GCircle)?.upscale() }
                 val outputIndices = objectModel.addDisplayObjects(result).toList()
-                adjustables.add(AdjustableExpr(expr, outputIndices, outputIndices))
-                return@mapIndexed ix to result
+                for (outputIndex in outputIndices) {
+                    copyBorderColor(sourceIndex, outputIndex)
+                }
+                adjustables.add(AdjustableExpr(expr,
+                    sourceIndex,
+                    outputIndices, outputIndices
+                ))
+                sourceIndex to outputIndices
             }
-            objectModel.copySourceColorsOntoTrajectories(
+            val copiedRegions = copySourceRegionsOntoTrajectories(
                 source2trajectory1,
-                startIndex = firstHalfStart
-            )
-            objectModel.copySourceColorsOntoTrajectories(
-                source2trajectory2,
-                startIndex = interimSize
-            )
-            val regions = copySourceRegionsOntoTrajectories(
-                source2trajectory1,
-                startIndex = firstHalfStart,
-                flipRegionsInAndOut = false
             ) + copySourceRegionsOntoTrajectories(
                 source2trajectory2,
-                startIndex = interimSize,
-                flipRegionsInAndOut = false
             )
+            // TODO: copy arc-paths
             // 2 * nTargets adjustables
-            submode = SubMode.ExprAdjustment(adjustables, regions = regions)
+            submode = SubMode.ExprAdjustment(adjustables, regions = copiedRegions)
             objectModel.invalidate()
         } else { // half-spiral
-            startParameterAdjustment(objArg.indices) { ix ->
+            startExprParameterAdjustment(objArg.indices) { ix ->
                 Expr.LoxodromicMotion(params,
                     divergencePointIndex, convergencePointIndex, ix
                 )
@@ -3999,7 +3884,6 @@ class EditorViewModel : ViewModel() {
     fun completeArcPath() {
         val pArcPath = partialArcPath ?: return
 //        println(pArcPath)
-        val oldSize = objects.size
         val vertexIndices: List<Ix> = pArcPath.vertices.map { vertex ->
             when (val p2p = realizePointSnap(vertex.snap, recordHistory = false)) {
                 is PointSnapResult.Eq -> p2p.pointIndex

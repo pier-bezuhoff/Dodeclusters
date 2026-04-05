@@ -107,6 +107,7 @@ class ChangeHistory(
     }
 
     /**
+     * Optionally use for not-yet-recorded changes
      * @param[newIndices] shorthand for [objectIndices] + [expressionIndices]
      * @param[allIndices] shorthand for [objectIndices] + [expressionIndices] +
      * [borderColorIndices] + [fillColorIndices] + [labelIndices]
@@ -158,28 +159,21 @@ class ChangeHistory(
         val diffChanges = lastRecordedState.revert(
             newRecordedState.diff(lastRecordedState).locations
         )
-        val undoChanges = diffChanges
-            .fuseLater(accumulatedChanges) // later <-> earlier cuz we reverse for undo
-        val undoStep = undoChanges.changes
-//        println("record: undoStep = " + undoStep.joinToString(", "))
+        val undoChanges = diffChanges.fuseLater(accumulatedChanges) // reversing order for undo
         if (areChangesWorthRecording(undoChanges)) {
             if (past.size == HISTORY_SIZE) {
                 past.removeFirst()
             }
+            val undoStep = undoChanges.changes
             past.addLast(undoStep)
             future.clear()
             accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
             // we dont reset continuousChange here
             refreshUndoRedoStates()
-//            println(
-//                "past = " + past.joinToString(";\n", prefix = "[\n", postfix = "\n]") { group ->
-//                    group.joinToString(", ")
-//                }
-//            )
             lastRecordedState = newRecordedState
         } else {
             accumulatedChangedLocations = diffChanges.locations
-            println("record: skipped recording: no changes worth recording")
+            println("recordDiff: skipped recording: no changes worth recording")
             println("accumulated skipped changes: " + diffChanges.changes.joinToString())
         }
     }
@@ -194,6 +188,8 @@ class ChangeHistory(
 
     // MAYBE: restore most recent selection after undo
     /**
+     * We backtrack to a past state, saving ([presentState] - past state) as `redoStep` to [future]
+     * @param[presentState] [lastRecordedState] + alpha (unrecorded [accumulatedChangedLocations])
      * @return the previous state, the one before applying the most recent [RedoGroup]
      */
     fun undo(presentState: SaveState): SaveState {
@@ -205,14 +201,16 @@ class ChangeHistory(
             // since we diff with the present state, no need to count unrecorded changes
             newState = initialState
         } else {
-            val unrecordedBacktrack = lastRecordedState.revert(accumulatedChangedLocations)
-            val undoStep = unrecordedBacktrack.changes + past.removeLast()
-            redoStep = undoStep
+            /** [presentState] - [lastRecordedState] */
+            val unrecordedChanges = presentState.revert(accumulatedChangedLocations)
+            val undoStep = past.removeLast()
+            redoStep = undoStep // past state -> presentState
                 .reversed()
-                .map { presentState.revert(it) }
-            newState = presentState.applyChanges(undoStep)
+                .map { presentState.revert(it) } // lastRecordedState - past state
+                .plus(unrecordedChanges.changes) // presentState - lastRecordedState
+            newState = lastRecordedState.applyChanges(undoStep)
         }
-        if (future.size == HISTORY_SIZE) {
+        if (future.size == HISTORY_SIZE) { // shouldn't be possible
             future.removeLast()
         }
         future.addFirst(redoStep)
@@ -220,32 +218,31 @@ class ChangeHistory(
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         continuousChange = null
         refreshUndoRedoStates()
-//        println("undo: undoStep = $undoStep")
         return newState
     }
 
     /**
-     * @return the 'next' state in the undo/redo dequeue, the one we undone from
+     * We ignore [presentState] and unrecorded alpha and simply start at
+     * [lastRecordedState], then jump to the future state, saving this jump as `undoStep` to [past]
+     * @param[presentState] [lastRecordedState] + alpha (unrecorded [accumulatedChangedLocations])
+     * @return the 'next'/future state in the undo/redo dequeue, the one we undone from before
      */
     fun redo(presentState: SaveState): SaveState {
         require(redoIsPossible)
-        val unrecordedBacktrack = lastRecordedState.revert(accumulatedChangedLocations)
-        // we don't update undoStep with unrecorded changes
-        // so that undo->redo-> can be repeated indefinitely with no surprises
         val redoStep = future.removeFirst()
+        // we simply discard unrecorded accumulatedChangedLocations
         val undoStep = redoStep
             .reversed()
-            .map { presentState.revert(it) }
+            .map { lastRecordedState.revert(it) }
         if (past.size == HISTORY_SIZE) {
             past.removeFirst()
         }
         past.addLast(undoStep)
-        val newState = presentState.applyChanges(unrecordedBacktrack.changes + redoStep)
+        val newState = lastRecordedState.applyChanges(redoStep)
         lastRecordedState = newState
         accumulatedChangedLocations = SaveState.Change.Locations.EMPTY
         continuousChange = null
         refreshUndoRedoStates()
-//        println("redo: redoStep = $redoStep")
         return newState
     }
 

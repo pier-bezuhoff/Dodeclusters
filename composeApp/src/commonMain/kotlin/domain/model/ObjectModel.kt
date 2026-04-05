@@ -148,7 +148,7 @@ sealed class ObjectModel<R : Any, D : Any> {
     }
 
     /** Don't forget to [expressions].deleteNodes beforehand and [invalidate] post factum */
-    open fun removeObjectAt(index: Ix) {
+    fun removeObjectAt(index: Ix) {
         displayObjects[index] = null
         downscaledObjects[index] = null
         borderColors.remove(index)

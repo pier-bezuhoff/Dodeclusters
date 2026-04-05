@@ -7,6 +7,7 @@ import core.geometry.CircleOrLine
 import core.geometry.GCircle
 import core.geometry.Point
 import domain.Ix
+import domain.expressions.ArcPath
 import domain.model.LogicalRegion
 import domain.expressions.Expr
 import kotlinx.serialization.Serializable
@@ -87,17 +88,16 @@ sealed interface SubMode {
      * All expressions must be of the same type.
      * @property[adjustables] non-empty list of [Expr]s together with occupied and
      * reserved output indices for each
-     * @property[arcPaths] indices of arc-paths resulted from the [adjustables] expressions, this
-     * number is generally divisible by the n-steps parameter
-     * @property[regions] indices of regions resulted from the [adjustables] expressions, this
-     * number is generally divisible by the n-steps parameter
+     * @property[arcPathAdjustables] `adjustable.expr` here is a blueprint source arc-path,
+     * with vertex/midpoint indices within [adjustables] point trajectories
+     * @property[regions] indices of regions resulted from the
+     * [adjustables] expressions, this number is generally divisible by the n-steps parameter
      * @property[parameters] should be shared by all [adjustables]
      */
     data class ExprAdjustment<EXPR : Expr>(
         val adjustables: List<AdjustableExpr<EXPR>>, // non-empty
-        val sourceArcPaths: List<Ix> = emptyList(),
-        val arcPaths: List<Ix> = emptyList(),
-        val regions: List<Ix> = emptyList(),
+        val arcPathAdjustables: List<AdjustableExpr<ArcPath>> = emptyList(),
+        val regions: List<Int> = emptyList(),
     ) : SubMode {
 
         @Transient
@@ -127,6 +127,10 @@ sealed interface SubMode {
 @Immutable
 data class AdjustableExpr<out EXPR : Expr>(
     val expr: EXPR,
+    val sourceIndex: Ix,
     val outputIndices: List<Ix>,
     val reservedIndices: List<Ix>,
-)
+) {
+    val size: Int get() = outputIndices.size
+    val maxSize: Int get() = reservedIndices.size
+}

@@ -443,12 +443,13 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         targetIndices: List<Ix>,
         reservedIndices: List<Ix>,
     ): Triple<List<Ix>, List<Ix>, List<R?>> {
+        // TODO: decopule length adj from reuslt.size
         if (targetIndices.isEmpty()) // idk why it can happen but i had witnessed it
             return Triple(targetIndices, reservedIndices, emptyList())
         val i0 = targetIndices.first()
         val oldExpr = expressions[i0]!!.expr
         require(oldExpr.args == newExpr.args && targetIndices.all { expressions[it]?.expr == oldExpr }) {
-            "adjustMultiExpr($targetIndices, $reservedIndices, $newExpr)"
+            "invalid adjustMultiExpr($targetIndices, $reservedIndices, $newExpr)"
         }
         val tier = ix2tier[i0]!!
         var newMaxRange = reservedIndices
