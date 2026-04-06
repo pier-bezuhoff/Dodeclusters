@@ -38,12 +38,19 @@ fun computeCircleBy3Points(
     point1: GCircle,
     point2: GCircle,
     point3: GCircle,
-): GCircle? =
-    GeneralizedCircle.perp3(
+): GCircle? {
+    val perp3 = GeneralizedCircle.perp3(
         GeneralizedCircle.fromGCircle(point1),
         GeneralizedCircle.fromGCircle(point2),
         GeneralizedCircle.fromGCircle(point3),
-    )?.times(-1)?.toGCircle() // -1 for proper direction (left-hand xOy coordinates)
+    )
+    // we reverse orientation for circles because of left-hand xOy
+    // but it doesn't affect lines
+    return when (val gCircle = perp3?.toGCircle()) {
+        is Circle -> gCircle.reversed()
+        else -> gCircle
+    }
+}
 
 fun computeCircleByPencilAndPoint(
     circle1: GCircle,

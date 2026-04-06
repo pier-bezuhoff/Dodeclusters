@@ -10,6 +10,7 @@ import domain.Ix
 import domain.expressions.ArcPath
 import domain.model.LogicalRegion
 import domain.expressions.Expr
+import domain.model.PartialArgList
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -111,6 +112,12 @@ sealed interface SubMode {
             ) { "Invalid adjustables $adjustables" }
         }
     }
+
+    /** Temporary leave tool mode to choose a selection argument and then go back */
+    data class ToolSelectionInput(
+        val toolMode: ToolMode,
+        val partialArgList: PartialArgList,
+    )
 
     data class GrabbedArcMidpoint(
         val arcPathIndex: Ix,

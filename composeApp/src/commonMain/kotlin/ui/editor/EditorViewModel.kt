@@ -67,8 +67,10 @@ import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeIntersection
 import domain.expressions.computeLineBy2Points
 import domain.expressions.computeSagittaRatio
+import domain.expressions.copy
 import domain.expressions.copyWithNewParameters
 import domain.expressions.moveArcMidpoint
+import domain.expressions.reIndex
 import domain.filterIndices
 import domain.hug
 import domain.indicesSortedBy
@@ -130,12 +132,10 @@ import kotlin.time.Duration.Companion.seconds
 class EditorViewModel : ViewModel() {
     val objectModel: ConformalObjectModel = ConformalObjectModel()
     val objects: List<GCircleOrConcreteAcPath?> = objectModel.displayObjects
-    inline val expressions: ConformalExpressions get() =
+    val expressions: ConformalExpressions get() =
         objectModel.expressions
-    inline val borderColors: Map<Ix, Color> get() =
-        objectModel.borderColors
-    inline val fillColors: Map<Ix, Color> get() =
-        objectModel.fillColors
+    val borderColors: Map<Ix, Color> = objectModel.borderColors
+    val fillColors: Map<Ix, Color> = objectModel.fillColors
     // not in objectModel cuz i want it to be state-backed for nicer caching
     var labels: Map<Ix, String> by mutableStateOf(mapOf())
     // alt name: ghost[ed] objects
@@ -772,6 +772,16 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    private fun copyStyle(
+        sourceIndex: Ix,
+        destinationIndex: Ix,
+    ) {
+        copyBorderColor(sourceIndex, destinationIndex)
+        copyFillColor(sourceIndex, destinationIndex)
+        if (sourceIndex in objectModel.phantomObjectIndices)
+            objectModel.phantomObjectIndices.add(destinationIndex)
+    }
+
     /**
      * Copy [LogicalRegion]s defined by [oldIndices] onto [newIndices].
      * [oldIndices].size must be [newIndices].size
@@ -856,6 +866,8 @@ class EditorViewModel : ViewModel() {
             }
         }
         objectModel.removeObjectsAt(deletedIndices)
+        // NOTE: changedIndices are ArcPaths with null-ed vertices
+        //  it may be sensible to remove those non-existent vertices altoghether now
         // cuz we might've deleted some arc-path vertices
         objectModel.forceUpdate(changedIndices)
         objectModel.invalidate()
@@ -1017,7 +1029,7 @@ class EditorViewModel : ViewModel() {
         return closeCircles
     }
 
-    fun getArcPathsAround(visiblePosition: Offset): List<Int> {
+    fun getArcPathsAround(visiblePosition: Offset): List<Ix> {
         val position = Point.fromOffset(absolute(visiblePosition))
         return objects.indicesSortedBy(
             measurer = {
@@ -1975,16 +1987,17 @@ class EditorViewModel : ViewModel() {
             if (!found && Arg.Indices in nextType.possibleTypes) {
                 val selectedPointIndex = getPointsAround(objects, visiblePosition).firstOrNull()
                 if (selectedPointIndex == null) {
-                    val circles = objects.map { o ->
-                        when (o) {
-                            is Circle -> o
-                            is Line -> o
-                            is ImaginaryCircle -> o.toRealCircle()
-                            else -> null
+                    val selectedCircleIndex = getCirclesAround(objects, visiblePosition).firstOrNull()
+                    if (selectedCircleIndex == null) {
+                        val selectedArcPathIndex = getArcPathsAround(visiblePosition).firstOrNull()
+                        if (selectedArcPathIndex != null) {
+                            val newArg = Arg.Indices(listOf(selectedArcPathIndex))
+                            if (argList.validateNewArg(newArg)) {
+                                partialArgList = argList.addArg(newArg, confirmThisArg = true)
+                            }
+                            found = true
                         }
-                    }
-                    val selectedCircleIndex = getCirclesAround(circles, visiblePosition).firstOrNull()
-                    if (selectedCircleIndex != null) {
+                    } else {
                         val newArg = Arg.Indices(listOf(selectedCircleIndex))
                         if (argList.validateNewArg(newArg)) {
                             partialArgList = argList.addArg(newArg, confirmThisArg = true)
@@ -3070,153 +3083,6 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    /** When in [SubMode.ExprAdjustment], changes [submode]'s [Expr]s' parameters to
-     * [parameters] and updates corresponding [objects] */
-    fun adjustExprParameters(parameters: Parameters) {
-        val sm = submode
-        if (sm is SubMode.ExprAdjustment<*> && parameters != sm.parameters) {
-            submode = when (sm.parameters) {
-                is InterpolationParameters -> { // single adjustable expr case
-                    val (expr, sourceIndex, outputIndices, reservedIndices) = sm.adjustables[0]
-                    val newExpr = expr.copyWithNewParameters(parameters) as Expr.Conformal.OneToMany
-                    val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
-                        newExpr = newExpr,
-                        targetIndices = outputIndices,
-                        reservedIndices = reservedIndices,
-                    )
-                    for (ix in newReservedIndices) { // we have to cleanup abandoned but reserved indices
-                        if (ix < objects.size) {
-                            objectModel.removeObjectAt(ix)
-                        } else { // padding
-                            objectModel.addDownscaledObject(null)
-                        }
-                    }
-                    for (i in newIndices.indices) {
-                        val ix = newIndices[i]
-                        objectModel.setDownscaledObject(ix, newObjects[i])
-                    }
-                    SubMode.ExprAdjustment(listOf(
-                        AdjustableExpr(newExpr, sourceIndex, newIndices, newReservedIndices)
-                    ))
-                }
-                // multiple adjustable exprs
-                is RotationParameters,
-                is BiInversionParameters,
-                is LoxodromicMotionParameters -> {
-                    for (arcPathAdjustable in sm.arcPathAdjustables)
-                        objectModel.removeObjectsAt(arcPathAdjustable.outputIndices)
-                    regions = regions.withoutElementsAt(sm.regions.toSet())
-                    val newAdjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
-                    val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
-                    for ((expr, sourceIndex, outputIndices, reservedIndices) in sm.adjustables) {
-                        val newExpr = expr.copyWithNewParameters(parameters) as Expr.Conformal.OneToMany
-                        val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
-                            newExpr = newExpr,
-                            targetIndices = outputIndices,
-                            reservedIndices = reservedIndices,
-                        )
-                        // NOTE: reserved indices will be generally non-contiguous
-                        // we have to cleanup abandoned indices
-                        for (ix in (outputIndices - newIndices.toSet())) {
-                            objectModel.removeObjectAt(ix)
-                        }
-                        for (ix in (newReservedIndices - reservedIndices.toSet())) {
-                            if (ix >= objects.size) {
-                                objectModel.addDisplayObject(null) // pad with nulls
-                            }
-                        }
-                        objectModel.borderColors -= outputIndices.toSet()
-                        val sourceColor = objectModel.borderColors[sourceIndex]
-                        for (i in newIndices.indices) {
-                            val ix = newIndices[i]
-                            objectModel.setDownscaledObject(ix, newObjects[i])
-                            sourceColor?.also {
-                                objectModel.borderColors[ix] = it
-                            }
-                        }
-                        newAdjustables.add(
-                            AdjustableExpr(newExpr, sourceIndex, newIndices, newReservedIndices)
-                        )
-                        source2trajectory.add(
-                            sourceIndex to newIndices
-                        )
-                    }
-                    val affectedRegions: List<Int>
-                    if (sm.parameters is LoxodromicMotionParameters &&
-                        defaultLoxodromicMotionParameters.bidirectional &&
-                        source2trajectory.size >= 2
-                    ) {
-                        // NOTE: assumption: bidirectional spiral adjustables must be laid out as {t^i}; {t^-i}
-                        // s2t structure is
-                        // t1^+1 .. t1^+n; t2^+1 .. t2^+n; ... tm^+1 .. tm^+n;
-                        // t1^-1 .. t1^-n; t2^-1 .. t2^-n; ... tm^-1 .. tm^-n;
-                        val size = source2trajectory.size.div(2)
-                        // Q: is it an optimization, or a necessary step
-                        val foldedSource2trajectory = source2trajectory
-                            .take(size)
-                            .mapIndexed { i, (sourceIndex, forwardTrajectory) ->
-                                val backwardTrajectory = source2trajectory[size + i].second
-                                sourceIndex to (backwardTrajectory + forwardTrajectory)
-                            }
-                        affectedRegions = copySourceRegionsOntoTrajectories(
-                            foldedSource2trajectory,
-                        )
-                    } else {
-                        affectedRegions = copySourceRegionsOntoTrajectories(
-                            source2trajectory,
-                        )
-                    }
-                    SubMode.ExprAdjustment(newAdjustables, regions = affectedRegions)
-                }
-                else -> sm
-            }
-            when (parameters) { // upd defaults for dialog, not sure it's sensible
-                is InterpolationParameters ->
-                    defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
-                is RotationParameters ->
-                    defaultRotationParameters = DefaultRotationParameters(parameters)
-                is BiInversionParameters ->
-                    defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
-                is LoxodromicMotionParameters ->
-                    defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters,
-                        bidirectional = defaultLoxodromicMotionParameters.bidirectional
-                    )
-                else -> {}
-            }
-            objectModel.invalidate()
-        }
-    }
-
-    // completes tool modes with adjustable paramters
-    fun confirmAdjustedParameters() {
-        partialArgList = if (mode is ToolMode) {
-            partialArgList?.copyEmpty()
-        } else { // when adjusting in drag/multiselect
-            null
-        }
-        when (val sm = submode) {
-            is SubMode.ExprAdjustment<*> -> {
-                when (val parameters = sm.parameters) {
-                    is InterpolationParameters ->
-                        defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
-                    is RotationParameters ->
-                        defaultRotationParameters = DefaultRotationParameters(parameters)
-                    is BiInversionParameters ->
-                        defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
-                    is LoxodromicMotionParameters ->
-                        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters,
-                            bidirectional = defaultLoxodromicMotionParameters.bidirectional
-                        )
-                    else -> {}
-                }
-                val indices = sm.adjustables.flatMap { it.reservedIndices }.toSet()
-            }
-            else -> {}
-        }
-        submode = null
-        recordHistory()
-    }
-
     fun cancelOngoingActions() {
         when (mode) { // reset mode
             is ToolMode -> {
@@ -3271,20 +3137,6 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    fun cancelExprAdjustment() {
-        when (val sm = submode) {
-            is SubMode.ExprAdjustment<*> -> {
-                val outputs = sm.adjustables.flatMap { it.outputIndices }
-                deleteObjectsWithDependenciesColorsAndRegions(
-                    outputs,
-                    circleAnimationInit = { null },
-                )
-            }
-            else -> {}
-        }
-        submode = null
-    }
-
     private fun realizeArcPathMidpoints(arcPathIndex: Ix): ArcPath {
         val arcPath = objectModel.getArcPath(arcPathIndex)!!
         val arcs = arcPath.arcs.mapIndexed { arcIndex, arc ->
@@ -3318,23 +3170,21 @@ class EditorViewModel : ViewModel() {
     ) {
         require(objectModel.getArcPath(sourceArcPathIndex) is ArcPath)
         val sourceArcPath = realizeArcPathMidpoints(sourceArcPathIndex)
-        val oldSize = objects.size
         val copiedVertices = sourceArcPath.vertices.map { vertexIndex ->
             val expr = mkExpr(vertexIndex)
             val result = expressions.addSoloExpr(expr) as? Point
             val newIndex = objectModel.addDownscaledObject(result)
-            copyBorderColor(vertexIndex, newIndex)
+            copyStyle(vertexIndex, newIndex)
             newIndex
         }
         val copiedArcs = sourceArcPath.arcs.map { arc ->
             when (arc) {
                 is ArcPath.Arc.By3Points -> {
-                    val expr = mkExpr(arc.middlePointIndex)
+                    val sourceIndex = arc.middlePointIndex
+                    val expr = mkExpr(sourceIndex)
                     val result = expressions.addSoloExpr(expr) as? Point
                     val newIndex = objectModel.addDownscaledObject(result)
-                    copyBorderColor(arc.middlePointIndex, newIndex)
-                    if (arc.middlePointIndex in phantoms)
-                        objectModel.phantomObjectIndices.add(newIndex)
+                    copyStyle(sourceIndex, newIndex)
                     ArcPath.Arc.By3Points(middlePointIndex = newIndex)
                 }
                 is ArcPath.Arc.By2Points ->
@@ -3348,17 +3198,16 @@ class EditorViewModel : ViewModel() {
             }
         )
         val copiedArcPathIndex = objectModel.addDownscaledObject(concreteArcPath)
-        copyBorderColor(sourceArcPathIndex, copiedArcPathIndex)
-        copyFillColor(sourceArcPathIndex, copiedArcPathIndex)
+        copyStyle(sourceArcPathIndex, copiedArcPathIndex)
     }
 
     /**
-     * @return (trajectory of copied arc-paths, point adjustables)
+     * @return (adjustable trajectory of copied arc-paths, point adjustables)
      */
     private inline fun <reified EXPR : Expr.Conformal.OneToMany> copyArcPathToMany(
         sourceArcPathIndex: Ix,
         crossinline mkExpr: (pointIndex: Ix) -> EXPR,
-    ): Pair<List<Ix>, List<AdjustableExpr<EXPR>>> {
+    ): Pair<AdjustableExpr<ArcPath>, List<AdjustableExpr<EXPR>>> {
         require(objectModel.getArcPath(sourceArcPathIndex) is ArcPath)
         val sourceArcPath = realizeArcPathMidpoints(sourceArcPathIndex)
         val adjustables = mutableListOf<AdjustableExpr<EXPR>>()
@@ -3369,7 +3218,7 @@ class EditorViewModel : ViewModel() {
             val result = expressions.addMultiExpr(expr)
             val newIndices = objectModel.addDownscaledObjects(result).toList()
             for (newIndex in newIndices) {
-                copyBorderColor(vertexIndex, newIndex)
+                copyStyle(vertexIndex, newIndex)
             }
             adjustables.add(AdjustableExpr(expr,
                 vertexIndex,
@@ -3387,9 +3236,7 @@ class EditorViewModel : ViewModel() {
                     val result = expressions.addMultiExpr(expr)
                     val newIndices = objectModel.addDownscaledObjects(result).toList()
                     for (newIndex in newIndices) {
-                        copyBorderColor(sourceIndex, newIndex)
-                        if (sourceIndex in phantoms)
-                            objectModel.phantomObjectIndices.add(newIndex)
+                        copyStyle(sourceIndex, newIndex)
                     }
                     adjustables.add(AdjustableExpr(expr,
                         sourceIndex,
@@ -3408,17 +3255,23 @@ class EditorViewModel : ViewModel() {
             val vertices = nullableVertices.map { it as Ix }
             val arcs = nullableArcs.map { it as ArcPath.Arc }
             val concreteArcPath = expressions.addSoloExpr(
-                when (sourceArcPath) {
-                    is ArcPath.Closed -> ArcPath.Closed(vertices = vertices, arcs = arcs)
-                    is ArcPath.Open -> ArcPath.Open(vertices = vertices, arcs = arcs)
-                }
+                sourceArcPath.copy(vertices = vertices, arcs = arcs)
             )
             val copiedArcPathIndex = objectModel.addDownscaledObject(concreteArcPath)
-            copyBorderColor(sourceArcPathIndex, copiedArcPathIndex)
-            copyFillColor(sourceArcPathIndex, copiedArcPathIndex)
+            copyStyle(sourceArcPathIndex, copiedArcPathIndex)
             copiedArcPathIndex
         }
-        return Pair(copiedArcPathIndices, adjustables)
+        val arcPathAdjustable = AdjustableExpr(
+            sourceArcPath.copy( // blueprint arc-path
+                vertices = sourceArcPath.vertices.indices.toList(),
+                arcs = List(sourceArcPath.arcs.size) { arcIndex ->
+                    ArcPath.Arc.By3Points(sourceArcPath.vertices.size + arcIndex)
+                }
+            ),
+            sourceArcPathIndex,
+            copiedArcPathIndices, copiedArcPathIndices,
+        )
+        return Pair(arcPathAdjustable, adjustables)
     }
 
     private fun completeCircleByCenterAndRadius() {
@@ -3585,12 +3438,12 @@ class EditorViewModel : ViewModel() {
         val invertingCircleIndex = (argList.args[1] as Arg.CLI).index
         val oldSize = objects.size
         val circlesOrLines = mutableListOf<CircleOrLine>()
-        for (ix in gCircleSources) {
+        for (sourceIndex in gCircleSources) {
             val newGCircle = expressions.addSoloExpr(
-                Expr.CircleInversion(ix, invertingCircleIndex),
+                Expr.CircleInversion(sourceIndex, invertingCircleIndex),
             ) as? GCircle
             val newIndex = objectModel.addDownscaledObject(newGCircle)
-            copyBorderColor(ix, newIndex)
+            copyStyle(sourceIndex, newIndex)
             if (newGCircle is CircleOrLine) {
                 circlesOrLines.add(newGCircle.upscale())
             }
@@ -3716,25 +3569,218 @@ class EditorViewModel : ViewModel() {
                 .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
             val outputIndices = objectModel.addDisplayObjects(result).toList()
             for (outputIndex in outputIndices) {
-                copyBorderColor(sourceIndex, outputIndex)
+                copyStyle(sourceIndex, outputIndex)
             }
-            adjustables.add(AdjustableExpr(expr, sourceIndex, outputIndices, outputIndices))
+            adjustables.add(AdjustableExpr(expr,
+                sourceIndex,
+                outputIndices, outputIndices
+            ))
             sourceIndex to outputIndices
         }
-        val trajectoriesOfArcPaths = mutableListOf<Ix>()
+        val arcPathAdjustables = mutableListOf<AdjustableExpr<ArcPath>>()
         for (sourceArcPathIndex in arcPathSources) {
-            val (trajectoryOfArcPath, arcPathAdjustables) = copyArcPathToMany(sourceArcPathIndex, mkExpr)
-            trajectoriesOfArcPaths.addAll(trajectoryOfArcPath)
-            adjustables.addAll(arcPathAdjustables)
+            val (arcPathAdjustable, arcPathPointsAdjustables) =
+                copyArcPathToMany(sourceArcPathIndex, mkExpr)
+            val startIndex = adjustables.size
+            adjustables.addAll(arcPathPointsAdjustables)
+            val blueprintArcPath = arcPathAdjustable.expr
+            arcPathAdjustables.add(
+                arcPathAdjustable.copy(
+                    expr = blueprintArcPath.reIndex { startIndex + it }
+                )
+            )
         }
-        val copiedRegions = copySourceRegionsOntoTrajectories(
-            source2trajectory,
-        )
-        // TODO: blueprint arc-path adjustables
-        submode = SubMode.ExprAdjustment(adjustables,
+        val copiedRegions = copySourceRegionsOntoTrajectories(source2trajectory)
+        submode = SubMode.ExprAdjustment(
+            adjustables = adjustables,
+            arcPathAdjustables = arcPathAdjustables,
             regions = copiedRegions,
         )
         objectModel.invalidate()
+    }
+
+    /** When in [SubMode.ExprAdjustment], changes [submode]'s [Expr]s' parameters to
+     * [parameters] and updates corresponding [objects] */
+    fun adjustExprParameters(parameters: Parameters) {
+        val sm = submode
+        if (sm is SubMode.ExprAdjustment<*> && parameters != sm.parameters) {
+            submode = when (sm.parameters) {
+                is InterpolationParameters -> { // single adjustable expr case
+                    val (expr, sourceIndex, outputIndices, reservedIndices) = sm.adjustables[0]
+                    val newExpr = expr.copyWithNewParameters(parameters) as Expr.Conformal.OneToMany
+                    val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
+                        newExpr = newExpr,
+                        occupiedIndices = outputIndices,
+                        reservedIndices = reservedIndices,
+                    )
+                    for (ix in newReservedIndices) { // we have to cleanup abandoned but reserved indices
+                        if (ix < objects.size) {
+                            objectModel.removeObjectAt(ix)
+                        } else { // padding
+                            objectModel.addDownscaledObject(null)
+                        }
+                    }
+                    for (i in newIndices.indices) {
+                        val ix = newIndices[i]
+                        objectModel.setDownscaledObject(ix, newObjects[i])
+                        copyStyle(sourceIndex, ix)
+                    }
+                    SubMode.ExprAdjustment(listOf(
+                        AdjustableExpr(newExpr, sourceIndex, newIndices, newReservedIndices)
+                    ))
+                }
+                // multiple adjustable exprs
+                is RotationParameters,
+                is BiInversionParameters,
+                is LoxodromicMotionParameters -> {
+                    for (arcPathAdjustable in sm.arcPathAdjustables)
+                        objectModel.removeObjectsAt(arcPathAdjustable.outputIndices)
+                    regions = regions.withoutElementsAt(sm.regions.toSet())
+                    val newAdjustables = mutableListOf<AdjustableExpr<Expr.Conformal>>()
+                    val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
+                    for ((expr, sourceIndex, outputIndices, reservedIndices) in sm.adjustables) {
+                        val newExpr = expr.copyWithNewParameters(parameters) as Expr.Conformal.OneToMany
+                        val (newIndices, newReservedIndices, newObjects) = expressions.adjustMultiExpr(
+                            newExpr = newExpr,
+                            occupiedIndices = outputIndices,
+                            reservedIndices = reservedIndices,
+                        )
+                        // NOTE: reserved indices will be generally non-contiguous
+                        // we have to cleanup abandoned indices
+                        for (ix in (outputIndices - newIndices.toSet())) {
+                            objectModel.removeObjectAt(ix)
+                        }
+                        for (ix in (newReservedIndices - reservedIndices.toSet())) {
+                            if (ix >= objects.size) {
+                                objectModel.addDownscaledObject(null) // pad with nulls
+                            }
+                        }
+                        objectModel.borderColors -= outputIndices.toSet()
+                        for (i in newIndices.indices) {
+                            val ix = newIndices[i]
+                            objectModel.setDownscaledObject(ix, newObjects[i])
+                            copyStyle(sourceIndex, ix)
+                        }
+                        newAdjustables.add(
+                            AdjustableExpr(newExpr, sourceIndex, newIndices, newReservedIndices)
+                        )
+                        source2trajectory.add(
+                            sourceIndex to newIndices
+                        )
+                    }
+                    val newTrajectorySize = newAdjustables.first().size
+                    // NOTE: children of the source arc-path are handled properly still, they become
+                    //  dependent on source children, not on children of the trajectory arc-paths
+                    for ((arcPathBlueprint, sourceArcPathIndex, outputIndices, reservedIndices) in sm.arcPathAdjustables) {
+                        val newArcPaths = (0 until newTrajectorySize).map { trajectoryStage ->
+                            arcPathBlueprint.reIndex { adjustableIndex ->
+                                newAdjustables[adjustableIndex].outputIndices[trajectoryStage]
+                            }
+                        }
+                        val (newIndices, newReservedIndices, newObjects) = expressions.adjustArcPathBlueprint(
+                            newArcPaths,
+                            outputIndices, reservedIndices
+                        )
+                        val abandonedIndices = outputIndices.toSet() - newIndices.toSet()
+                        for (ix in abandonedIndices) {
+                            objectModel.removeObjectAt(ix)
+                        }
+                        for (ix in (newReservedIndices - reservedIndices.toSet())) {
+                            if (ix >= objects.size) {
+                                objectModel.addDownscaledObject(null) // pad with nulls
+                            }
+                        }
+                        objectModel.borderColors -= abandonedIndices
+                        objectModel.fillColors -= abandonedIndices
+                        for (i in newIndices.indices) {
+                            val ix = newIndices[i]
+                            objectModel.setDownscaledObject(ix, newObjects[i])
+                            copyStyle(sourceArcPathIndex, ix)
+                        }
+                    }
+                    val affectedRegions: List<Int> =
+                        if (sm.parameters is LoxodromicMotionParameters &&
+                            defaultLoxodromicMotionParameters.bidirectional &&
+                            source2trajectory.size >= 2
+                        ) {
+                            // NOTE: assumption: bidirectional spiral adjustables must be laid out as {t^i}; {t^-i}
+                            // s2t structure is
+                            // t1^+1 .. t1^+n; t2^+1 .. t2^+n; ... tm^+1 .. tm^+n;
+                            // t1^-1 .. t1^-n; t2^-1 .. t2^-n; ... tm^-1 .. tm^-n;
+                            val size = source2trajectory.size.div(2)
+                            //  we have to do this to copy regions properly both forward and backward
+                            val foldedSource2trajectory = source2trajectory
+                                .take(size)
+                                .mapIndexed { i, (sourceIndex, forwardTrajectory) ->
+                                    val backwardTrajectory = source2trajectory[size + i].second
+                                    sourceIndex to (backwardTrajectory + forwardTrajectory)
+                                }
+                            copySourceRegionsOntoTrajectories(foldedSource2trajectory)
+                        } else {
+                            copySourceRegionsOntoTrajectories(source2trajectory)
+                        }
+                    SubMode.ExprAdjustment(newAdjustables, regions = affectedRegions)
+                }
+                else -> sm
+            }
+            when (parameters) { // upd defaults for dialog, not sure it's sensible
+                is InterpolationParameters ->
+                    defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
+                is RotationParameters ->
+                    defaultRotationParameters = DefaultRotationParameters(parameters)
+                is BiInversionParameters ->
+                    defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
+                is LoxodromicMotionParameters ->
+                    defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters,
+                        bidirectional = defaultLoxodromicMotionParameters.bidirectional
+                    )
+                else -> {}
+            }
+            objectModel.invalidate()
+        }
+    }
+
+    // completes tool modes with adjustable parameters
+    fun confirmAdjustedParameters() {
+        partialArgList = if (mode is ToolMode) {
+            partialArgList?.copyEmpty()
+        } else { // when adjusting in drag/multiselect
+            null
+        }
+        when (val sm = submode) {
+            is SubMode.ExprAdjustment<*> -> {
+                when (val parameters = sm.parameters) {
+                    is InterpolationParameters ->
+                        defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
+                    is RotationParameters ->
+                        defaultRotationParameters = DefaultRotationParameters(parameters)
+                    is BiInversionParameters ->
+                        defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
+                    is LoxodromicMotionParameters ->
+                        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters,
+                            bidirectional = defaultLoxodromicMotionParameters.bidirectional
+                        )
+                    else -> {}
+                }
+            }
+            else -> {}
+        }
+        submode = null
+        recordHistory()
+    }
+
+    fun cancelExprAdjustment() {
+        when (val sm = submode) {
+            is SubMode.ExprAdjustment<*> -> {
+                val outputs = sm.adjustables.flatMap { it.outputIndices }
+                deleteObjectsWithDependenciesColorsAndRegions(
+                    outputs,
+                    circleAnimationInit = { null },
+                )
+            }
+            else -> {}
+        }
+        submode = null
     }
 
     // NOTE: witnessed abnormal index skipping whe rotating lines, observing closely...

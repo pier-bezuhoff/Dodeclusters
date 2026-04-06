@@ -23,6 +23,9 @@ import kotlin.collections.set
  */
 class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcreteAcPath>() {
 
+    // layer order
+    private val arcPathLayering: MutableList<Ix> = mutableListOf()
+
     override var expressions: ConformalExpressions =
         ConformalExpressions(emptyMap(), mutableListOf())
 

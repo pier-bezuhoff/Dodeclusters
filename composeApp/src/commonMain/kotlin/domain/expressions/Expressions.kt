@@ -142,20 +142,28 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         return ix
     }
 
+    protected fun setChildren(index: Ix, expr: Expr) {
+        expr.args.forEach { parentIx ->
+            children[parentIx] = children.getOrElse(parentIx) { emptySet() } + index
+        }
+    }
+
+    protected fun setTier(index: Ix, tier: Tier) {
+        ix2tier[index] = tier
+        if (tier < tier2ixs.size) {
+            tier2ixs[tier] = tier2ixs[tier] + index
+        } else { // no hopping over tiers, we good
+            tier2ixs.add(setOf(index))
+        }
+    }
+
     /** don't forget to upscale the result afterwards! */
     fun addSoloExpr(expr: EXPR_ONE_TO_ONE): R? {
         val ix = calculateNextIndex()
         expressions[ix] = ExprOutput.Just(expr as Expr.OneToOne) as ExprOutput<EXPR>
-        expr.args.forEach { parentIx ->
-            children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
-        }
+        setChildren(ix, expr)
         val tier = computeTier(ix, expr as EXPR)
-        ix2tier[ix] = tier
-        if (tier < tier2ixs.size) {
-            tier2ixs[tier] = tier2ixs[tier] + ix
-        } else { // no hopping over tiers, we good
-            tier2ixs.add(setOf(ix))
-        }
+        setTier(ix, tier)
         parents2gluedIncidentPoints.clear()
         val result = (expr as EXPR).evaluate(objects)
         println("$ix -> $expr -> $result")
@@ -170,15 +178,8 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         val ix = calculateNextIndex()
         val tier = computeTier(ix, expr)
         expressions[ix] = exprOutput as ExprOutput<EXPR>
-        expr.args.forEach { parentIx ->
-            children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
-        }
-        ix2tier[ix] = tier
-        if (tier < tier2ixs.size) {
-            tier2ixs[tier] = tier2ixs[tier] + ix
-        } else { // no hopping over tiers, we good
-            tier2ixs.add(setOf(ix))
-        }
+        setChildren(ix, expr)
+        setTier(ix, tier)
         parents2gluedIncidentPoints.clear()
         println("$ix -> $exprOutput -> $result")
         updateObjectTypeAt(ix)
@@ -199,15 +200,8 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         repeat(resultSize) { outputIndex ->
             val ix = ix0 + outputIndex
             expressions[ix] = ExprOutput.OneOf(expr, outputIndex)
-            expr.args.forEach { parentIx ->
-                children[parentIx] = children.getOrElse(parentIx) { emptySet() } + ix
-            }
-            ix2tier[ix] = tier
-            if (tier < tier2ixs.size) {
-                tier2ixs[tier] = tier2ixs[tier] + ix
-            } else { // no hopping over tiers, we good
-                tier2ixs.add(setOf(ix))
-            }
+            setChildren(ix, expr)
+            setTier(ix, tier)
             updateObjectTypeAt(ix)
         }
         parents2gluedIncidentPoints.clear()
@@ -257,16 +251,9 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         tier2ixs[previousTier] = tier2ixs[previousTier] - index
         ix2tier[index] = UNCALCULATED_TIER
         expressions[index] = ExprOutput.Just(newExpr) as ExprOutput<EXPR>
-        newExpr.args.forEach { parentIx ->
-            children[parentIx] = children.getOrElse(parentIx) { emptySet() } + index
-        }
+        setChildren(index, newExpr)
         val tier = computeTier(index)
-        ix2tier[index] = tier
-        if (tier < tier2ixs.size) {
-            tier2ixs[tier] = tier2ixs[tier] + index
-        } else { // no hopping over tiers, we good
-            tier2ixs.add(setOf(index))
-        }
+        setTier(index, tier)
         recomputeChildrenTiers(index)
         parents2gluedIncidentPoints.clear()
         val result = (newExpr as EXPR).evaluate(objects)
@@ -275,17 +262,13 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         return result.firstOrNull()
     }
 
-    /**
-     * Delete [indices] nodes and all of their children from the [ConformalExpressions] by
-     * setting [expressions]`[...] = null` and clearing [children], [ix2tier], [tier2ixs].
-     *
-     * [forceUpdate] changedIndices (these are altered arc-paths with >=2 vertices left)
-     * @return (all the deleted nodes indices, all changed indices (arc-paths))
-     * */
-    fun deleteNodes(indices: List<Ix>): Pair<Set<Ix>, Set<Ix>> {
-        val deleted = indices.toMutableSet()
+    /** @return (all deleted indices, indices changed as the result of this deletion) */
+    private fun expandDeletionToChildren(
+        indicesToBeDeleted: List<Ix>
+    ): Pair<Set<Ix>, Set<Ix>> {
+        val deleted = indicesToBeDeleted.toMutableSet()
         val changed = mutableSetOf<Ix>()
-        var lvl = indices.toSet()
+        var lvl = indicesToBeDeleted.toSet()
         // transitive children-of lvl expansion
         while (lvl.isNotEmpty()) {
             val newLvl = mutableSetOf<Ix>()
@@ -297,13 +280,13 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
                         when (val expr = expressions[childIndex]?.expr) {
                             // an arc-path is deleted only when it has less than 2 vertices left
                             is ArcPath if (
-                                expr.vertices
-                                    .filter {
-                                        // deleted contains lvl
-                                        it !in deleted && objects[it] != null
-                                    }
-                                    .size >= 2
-                            ) ->
+                                    expr.vertices
+                                        .filter {
+                                            // deleted contains lvl
+                                            it !in deleted && objects[it] != null
+                                        }
+                                        .size >= 2
+                                    ) ->
                                 changed.add(childIndex)
                             else ->
                                 newLvl.add(childIndex)
@@ -314,6 +297,18 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             lvl = newLvl
             deleted += lvl
         }
+        return Pair(deleted, changed)
+    }
+
+    /**
+     * Delete [indices] nodes and all of their children from the [ConformalExpressions] by
+     * setting [expressions]`[...] = null` and clearing [children], [ix2tier], [tier2ixs].
+     *
+     * [forceUpdate] changedIndices (these are altered arc-paths with >=2 vertices left)
+     * @return (all the deleted nodes indices, all changed indices (arc-paths))
+     * */
+    fun deleteNodes(indices: List<Ix>): Pair<Set<Ix>, Set<Ix>> {
+        val (deleted, changed) = expandDeletionToChildren(indices)
         for (deletedIndex in deleted) {
             expressions[deletedIndex] = null // we methodically :=null instead of deletion
             children.remove(deletedIndex)
@@ -433,60 +428,63 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     /**
      * Change [Parameters] of all outputs of a given [Expr.OneToMany] to the one in [newExpr].
      * Assumption: old expr and [newExpr] are of the same type.
-     * @param[targetIndices] indices of all [ExprOutput.OneOf] of the given expression
+     * @param[occupiedIndices] indices of all [ExprOutput.OneOf] of the given expression
      * @param[reservedIndices] all indices that were ever used to hold results of the expr. They
-     * must start with [targetIndices], and then potentially contain `null`-ed indices.
-     * @return updated ([targetIndices], [reservedIndices], updated objects at new target indices (to be set))
-     * */
+     * must start with [occupiedIndices], and then potentially contain `null`-ed indices.
+     * @return updated ([occupiedIndices], [reservedIndices], updated objects at new
+     * occupied indices (to be set))
+     */
     fun adjustMultiExpr(
         newExpr: EXPR_ONE_TO_MANY,
-        targetIndices: List<Ix>,
+        occupiedIndices: List<Ix>,
         reservedIndices: List<Ix>,
     ): Triple<List<Ix>, List<Ix>, List<R?>> {
-        // TODO: decopule length adj from reuslt.size
-        if (targetIndices.isEmpty()) // idk why it can happen but i had witnessed it
-            return Triple(targetIndices, reservedIndices, emptyList())
-        val i0 = targetIndices.first()
+        if (occupiedIndices.isEmpty()) // idk why it can happen but i had witnessed it
+            return Triple(emptyList(), reservedIndices, emptyList())
+        val i0 = occupiedIndices.first()
         val oldExpr = expressions[i0]!!.expr
-        require(oldExpr.args == newExpr.args && targetIndices.all { expressions[it]?.expr == oldExpr }) {
-            "invalid adjustMultiExpr($targetIndices, $reservedIndices, $newExpr)"
+        require(oldExpr.args == newExpr.args && occupiedIndices.all { expressions[it]?.expr == oldExpr }) {
+            "invalid adjustMultiExpr($occupiedIndices, $reservedIndices, $newExpr)"
         }
         val tier = ix2tier[i0]!!
-        var newMaxRange = reservedIndices
+        var newReservedIndices = reservedIndices
         val result0 = (newExpr as EXPR).evaluate(objects)
         val isPeriodic = isExprPeriodic(newExpr)
         val result = // small hack to avoid duplicating the original object
             if (isPeriodic && result0.isNotEmpty())
                 result0.dropLast(1)
             else result0
-        val sizeIncrease = result.size - targetIndices.size
-        val newTargetIndices: List<Ix>
+        val newSize = result.size
+        val sizeIncrease = newSize - occupiedIndices.size
+        val newOccupiedIndices: List<Ix>
         if (sizeIncrease > 0) {
-            val sizeOverflow = result.size - reservedIndices.size
+            val sizeOverflow = newSize - reservedIndices.size
             if (sizeOverflow > 0) {
-                newMaxRange = newMaxRange + (expressions.size until expressions.size + sizeOverflow)
+                newReservedIndices = newReservedIndices +
+                    (expressions.size until (expressions.size + sizeOverflow))
             }
-            val addedIndices = newMaxRange.take(result.size).drop(targetIndices.size)
+            val addedIndices = newReservedIndices.take(newSize).drop(occupiedIndices.size)
             for (parentIx in newExpr.args) {
                 children[parentIx] = (children[parentIx] ?: emptySet()) + addedIndices
             }
             tier2ixs[tier] = tier2ixs[tier] + addedIndices
             for (ix in addedIndices)
                 ix2tier[ix] = tier
-            newTargetIndices = targetIndices + addedIndices
+            newOccupiedIndices = occupiedIndices + addedIndices
         } else if (sizeIncrease == 0) {
-            newTargetIndices = targetIndices
+            newOccupiedIndices = occupiedIndices
         } else {
-            val excessIndices = targetIndices.drop(result.size)
+            val excessIndices = occupiedIndices.drop(newSize)
             deleteNodes(excessIndices)
-            newTargetIndices = targetIndices.take(result.size)
+            newOccupiedIndices = occupiedIndices.take(newSize)
         }
         for (i in result.indices) {
-            val ix = newTargetIndices[i]
+            val ix = newOccupiedIndices[i]
             expressions[ix] = ExprOutput.OneOf(newExpr, outputIndex = i)
+            updateObjectTypeAt(ix)
         }
         parents2gluedIncidentPoints.clear()
-        return Triple(newTargetIndices, newMaxRange, result)
+        return Triple(newOccupiedIndices, newReservedIndices, result)
     }
 
     /**
@@ -506,7 +504,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     /**
      * You must either supply [expr0] or set `expressions[ix]` BEFORE calling this
      */
-    private fun computeTier(ix: Ix, expr0: EXPR? = null): Tier {
+    protected fun computeTier(ix: Ix, expr0: EXPR? = null): Tier {
         val expr: EXPR? = expr0 ?: expressions[ix]?.expr
         return if (expr == null) {
             FREE_TIER

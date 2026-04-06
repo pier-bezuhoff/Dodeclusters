@@ -220,11 +220,19 @@ fun ArcPath.toConcreteArcPath(objects: List<GCircleOrConcreteAcPath?>): Concrete
     }
 }
 
+fun ArcPath.copy(
+    vertices: List<Ix>,
+    arcs: List<ArcPath.Arc>,
+): ArcPath = when (this) {
+    is ArcPath.Closed -> copy(vertices = vertices, arcs = arcs)
+    is ArcPath.Open -> copy(vertices = vertices, arcs = arcs)
+}
+
 inline fun ArcPath.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
 ): ArcPath = when (this) {
     is ArcPath.Closed -> copy(
-        vertices = vertices.map { reIndexer(it) },
+        vertices = vertices.map(reIndexer),
         arcs = arcs.map { arc ->
             when (arc) {
                 is ArcPath.Arc.By2Points -> arc
@@ -235,7 +243,7 @@ inline fun ArcPath.reIndex(
         }
     )
     is ArcPath.Open -> copy(
-        vertices = vertices.map { reIndexer(it) },
+        vertices = vertices.map(reIndexer),
         arcs = arcs.map { arc ->
             when (arc) {
                 is ArcPath.Arc.By2Points -> arc

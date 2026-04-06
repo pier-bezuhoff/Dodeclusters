@@ -120,6 +120,55 @@ class ConformalExpressions(
         }
     }
 
+    /**
+     * Reallocate arc-path trajectory
+     * NOTE: requires that [newArcPaths] trajectory dependencies are already added
+     * @param[newArcPaths] new arc-path trajectory, possibly larger or smaller than [occupiedIndices]
+     * @param[occupiedIndices] previously occupied indices of the old arc-path trajectory
+     * @param[reservedIndices] all indices that were ever used to hold results of the trajectory. They
+     * must start with [occupiedIndices], and then potentially contain `null`-ed indices.
+     * @return updated ([occupiedIndices], [reservedIndices], updated concrete arc-paths
+     * at new occupied indices (to be set))
+     * */
+    fun adjustArcPathBlueprint(
+        newArcPaths: List<ArcPath>,
+        occupiedIndices: List<Ix>,
+        reservedIndices: List<Ix>,
+    ): Triple<List<Ix>, List<Ix>, List<ConcreteArcPath?>> {
+        var newReservedIndices = reservedIndices
+        val trajectoryOfConcreteArcPaths = newArcPaths.map { arcPath ->
+            arcPath.eval(objects).firstOrNull() as? ConcreteArcPath
+        }
+        val newSize = newArcPaths.size
+        val sizeIncrease = newSize - occupiedIndices.size
+        val newOccupiedIndices: List<Ix>
+        if (sizeIncrease > 0) {
+            val sizeOverflow = newSize - reservedIndices.size
+            if (sizeOverflow > 0) {
+                newReservedIndices = newReservedIndices +
+                    (expressions.size until (expressions.size + sizeOverflow))
+            }
+            val addedIndices = newReservedIndices.take(newSize).drop(occupiedIndices.size)
+            newArcPaths
+                .drop(occupiedIndices.size)
+                .zip(addedIndices) { arcPath, newIndex ->
+                    expressions[newIndex] = ExprOutput.Just(arcPath)
+                    setChildren(newIndex, arcPath)
+                    setTier(newIndex, computeTier(newIndex, arcPath))
+                    updateObjectTypeAt(newIndex)
+                }
+            newOccupiedIndices = occupiedIndices + addedIndices
+        } else if (sizeIncrease == 0) {
+            newOccupiedIndices = occupiedIndices
+        } else {
+            val excessIndices = occupiedIndices.drop(newSize)
+            deleteNodes(excessIndices)
+            newOccupiedIndices = occupiedIndices.take(newSize)
+        }
+        parents2gluedIncidentPoints.clear()
+        return Triple(newOccupiedIndices, newReservedIndices, trajectoryOfConcreteArcPaths)
+    }
+
     // FIX: NG, maybe bc of translation, idk
     /**
      * Adjust parameters of all points incident to lines,

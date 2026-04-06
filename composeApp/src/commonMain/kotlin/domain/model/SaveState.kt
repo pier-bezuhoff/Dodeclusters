@@ -9,10 +9,13 @@ import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
 import domain.SerializableOffset
+import domain.expressions.ArcPath
 import domain.expressions.ConformalExprOutput
 import domain.expressions.Expr
 import domain.expressions.ExprOutput
 import domain.expressions.LoxodromicMotionParameters
+import domain.expressions.reIndex
+import domain.expressions.withoutPointsAt
 import domain.reindexingMap
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -515,22 +518,38 @@ data class SaveState(
             deletedIndices = deleted,
         )
         return copy(
-            objects = objects.filterIndexed { ix, _ -> ix !in deleted },
+            objects = objects.filterIndexed { oldIndex, _ -> oldIndex !in deleted },
             expressions = expressions
-                .mapNotNull { (ix, expression) ->
-                    reindexing[ix]?.let { ix to expression }
+                .mapNotNull { (oldIndex, expression) ->
+                    reindexing[oldIndex]?.let { newIndex ->
+                        if (expression?.expr?.args?.any { it in deleted } == true) {
+                            when (val arcPath = expression.expr) {
+                                is ArcPath -> {
+                                    newIndex to arcPath.withoutPointsAt(deleted)
+                                        ?.reIndex { reindexing[it]!! }
+                                }
+                                else -> {
+                                    println("W: SaveState.compressFreeIndices deleted some $expression arguments")
+                                    newIndex to null
+                                }
+                            }
+                            println("W: SaveState.compressFreeIndices deleted some $expression arguments")
+                            newIndex to null
+                        } else
+                            newIndex to expression?.reIndex { reindexing[it]!! }
+                    }
                 }.toMap(),
             borderColors = this@SaveState.borderColors
-                .mapNotNull { (ix, color) ->
-                    reindexing[ix]?.let { ix to color }
+                .mapNotNull { (oldIndex, color) ->
+                    reindexing[oldIndex]?.let { it to color }
                 }.toMap(),
             fillColors = this@SaveState.fillColors
-                .mapNotNull { (ix, color) ->
-                    reindexing[ix]?.let { ix to color }
+                .mapNotNull { (oldIndex, color) ->
+                    reindexing[oldIndex]?.let { it to color }
                 }.toMap(),
             labels = this@SaveState.labels
-                .mapNotNull { (ix, label) ->
-                    reindexing[ix]?.let { ix to label }
+                .mapNotNull { (oldIndex, label) ->
+                    reindexing[oldIndex]?.let { it to label }
                 }.toMap(),
             regions = regions
                 .mapNotNull { region ->
@@ -545,8 +564,7 @@ data class SaveState(
             phantoms = phantoms.mapNotNull { reindexing[it] }.toSet(),
             selection = selection.copy(
                 gCircles = selection.gCircles.mapNotNull { reindexing[it] },
-                // we assume null-vertices arc-paths are deleted upon deleting the last vertex
-                arcPaths = selection.arcPaths,
+                arcPaths = selection.arcPaths.mapNotNull { reindexing[it] },
             ),
         )
     }

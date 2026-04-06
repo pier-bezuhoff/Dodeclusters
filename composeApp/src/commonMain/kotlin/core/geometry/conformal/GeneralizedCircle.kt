@@ -394,6 +394,8 @@ data class GeneralizedCircle(
 //            if (abs(z) > EPSILON && abs(x/z) < EPSILON && abs(y/z) < EPSILON) { // more accurate, less efficient
             if (abs(x) < EPSILON && abs(y) < EPSILON) // implies z > EPSILON
                 Point.CONFORMAL_INFINITY
+            else if (w < 0)
+                Line(-x, -y, z)
             else
                 Line(x, y, -z)
         } else {

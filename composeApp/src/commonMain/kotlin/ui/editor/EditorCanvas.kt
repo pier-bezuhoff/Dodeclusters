@@ -249,7 +249,7 @@ fun BoxScope.EditorCanvas(
                 drawArcPaths(allObjects = viewModel.objects, indices = nonSelectedArcPathIndices, borderColors = viewModel.objectModel.borderColors, fillColors = viewModel.objectModel.fillColors, pathCache = viewModel.objectModel.pathCache, defaultArcPathColor = defaultArcPathColor, arcPathFillOpacity = viewModel.regionsOpacity, arcPathStroke = pathStroke)
                 drawSelectedArcPaths(allObjects = viewModel.objects, indices = viewModel.selection.arcPaths, borderColors = viewModel.objectModel.borderColors, fillColors = viewModel.objectModel.fillColors, pathCache = viewModel.objectModel.pathCache, arcPathFillOpacity = viewModel.regionsOpacity, arcPathStroke = pathStroke, defaultSelectedArcPathColor = defaultSelectionColor, thiccSelectedPathAlpha = thiccSelectedPathAlpha, thiccSelectedPathStroke = thiccPathStroke, arcMiddlePointColor = arcMiddlePointColor, arcMiddlePointRadius = arcMiddlePointRadius)
             }
-            drawPartialConstructs(allObjects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke, alignmentLineColor = selectionMarkingsColor)
+            drawPartialConstructs(allObjects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke, arcPathStroke = pathStroke, alignmentLineColor = selectionMarkingsColor)
             drawGrids(visibleRect = visibleRect, submode = viewModel.submode, stereographicGridColor = stereographicGridColor, stereographicGridStroke = circleStroke, southPointRadius = handleRadius)
             drawLabels(objects = viewModel.objects, objectColors = viewModel.objectModel.borderColors, objectLabelLayouts = objectLabelLayouts, freePointColor = defaultFreePointColor)
             drawHandles(objects = viewModel.objects, selection = viewModel.selectedIndices, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.calculateSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
@@ -275,7 +275,7 @@ fun BoxScope.EditorCanvas(
                             defaultFreeCircleColor
                 ,
                 showAdjustExprButton = viewModel.showAdjustExprButton,
-                showOrientationToggle = viewModel.showDirectionArrows,
+                showOrientationToggle = viewModel.showDirectionArrows && !viewModel.selectionIsLocked,
                 isLocked = viewModel.selectionIsLocked,
                 toolAction = viewModel::toolAction,
                 toolPredicate = viewModel::toolPredicate,
@@ -1043,11 +1043,11 @@ private fun DrawScope.drawSelectedArcPaths(
             )
         }
         val borderColor = borderColors[ix] ?: defaultSelectedArcPathColor
-//        drawPath(
-//            path = path,
-//            color = borderColor,
-//            style = Stroke(width = arcPathStroke.width, pathEffect = ARROWED_PATH_EFFECT),
-//        )
+        drawPath(
+            path = path,
+            color = borderColor,
+            style = Stroke(width = arcPathStroke.width, pathEffect = ARROWED_PATH_EFFECT),
+        )
         drawPath(
             path = path,
             color = borderColor,
@@ -1141,6 +1141,7 @@ private inline fun DrawScope.drawPartialConstructs(
     handleRadius: Float,
     circleStroke: Stroke,
     imaginaryCircleStroke: Stroke,
+    arcPathStroke: Stroke,
     creationPointRadius: Float = handleRadius * 3/4,
     alignmentLineColor: Color = Color.Gray,
     selectedArgColor: Color = DodeclustersColors.green, //pureSecondary,
@@ -1195,6 +1196,13 @@ private inline fun DrawScope.drawPartialConstructs(
                                     radius = creationPointRadius,
                                     center = o.toOffset()
                                 )
+                            is ConcreteArcPath -> {
+                                drawPath(
+                                    path = o.toPath(),
+                                    color = selectedArgColor,
+                                    style = arcPathStroke,
+                                )
+                            }
                             else -> {}
                         }
                     }
