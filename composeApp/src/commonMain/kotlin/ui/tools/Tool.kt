@@ -208,7 +208,7 @@ import domain.model.SIGNATURE_2_FINITE_POINTS
 import domain.model.SIGNATURE_3_GENERALIZED_CIRCLE
 import domain.model.SIGNATURE_INDICES_AND_2_CIRCLES
 import domain.model.SIGNATURE_INDICES_AND_2_POINTS
-import domain.model.SIGNATURE_INDICES_AND_CIRCLE
+import domain.model.SIGNATURE_INDICES_OR_INFINITY_AND_CIRCLE
 import domain.model.SIGNATURE_INDICES_AND_FINITE_POINT
 import domain.model.SIGNATURE_N_POINTS_PLACEHOLDER
 import domain.model.SIGNATURE_REAL_CIRCLE_AND_LINE_OR_FINITE_POINT
@@ -438,7 +438,7 @@ sealed class Tool(
         description = Res.string.circle_inversion_description,
         argDescriptions = Res.array.circle_inversion_arg_descriptions,
         icon = Res.drawable.circle_inversion,
-        signature = SIGNATURE_INDICES_AND_CIRCLE,
+        signature = SIGNATURE_INDICES_OR_INFINITY_AND_CIRCLE,
         nonEqualityConditions = nonEqualityConditionsOf(0 to 1),
     )
     data object CircleOrPointInterpolation : MultiArg(

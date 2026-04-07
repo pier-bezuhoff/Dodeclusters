@@ -1082,5 +1082,6 @@ fun BoxScope.InfinitePointInput(
         contentColor =
             MaterialTheme.colorScheme.surface
         ,
-    ) { toolAction(Tool.InfinitePoint) }
+        onClick = toolAction,
+    )
 }

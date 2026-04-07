@@ -10,6 +10,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.io.IOException
 import kotlinx.io.files.Path
 import kotlinx.serialization.Serializable
@@ -56,8 +57,18 @@ object AndroidPlatform : Platform {
 
     // reference: https://stackoverflow.com/a/75734381/7143065
     @OptIn(DelicateCoroutinesApi::class)
-    private inline fun <reified T : @Serializable Any> KStore<T>.save(value: T) {
+    private inline fun <reified T : @Serializable Any> KStore<T>.launchSave(value: T) {
         GlobalScope.launch(Dispatchers.IO) {
+            try {
+                this@launchSave.set(value)
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private inline fun <reified T : @Serializable Any> KStore<T>.save(value: T) {
+        runBlocking(Dispatchers.IO) {
             try {
                 this@save.set(value)
             } catch (e: IOException) {

@@ -55,7 +55,7 @@ object WasmPlatform: Platform {
 
     @OptIn(DelicateCoroutinesApi::class)
     private inline fun <reified T : @Serializable Any> KStore<T>.save(value: T) {
-        GlobalScope.launch(Dispatchers.Default) { // MAYBE: another dispatcher is better
+        GlobalScope.launch(Dispatchers.Main.immediate) {
             this@save.set(value)
         }
     }

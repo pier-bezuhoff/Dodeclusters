@@ -157,6 +157,7 @@ data class ArgType(
         val FINITE_POINT = ArgType(Arg.PointIndex, Arg.PointXY)
         val POINT = ArgType(Arg.PointIndex, Arg.InfinitePoint, Arg.PointXY)
         val INDICES = ArgType(Arg.Indices)
+        val INDICES_OR_INFINITE_POINT = ArgType(Arg.InfinitePoint, Arg.Indices)
         /** Circle, Line, Imaginary circle or Point */
         val CLIP = ArgType(
             Arg.PointIndex,
@@ -202,7 +203,7 @@ val SIGNATURE_2_GENERALIZED_FINITE_CIRCLES = Signature(ArgType.CLIFP, ArgType.CL
 val SIGNATURE_2_GENERALIZED_CIRCLES = Signature(ArgType.CLIP, ArgType.CLIP)
 val SIGNATURE_3_GENERALIZED_CIRCLE = Signature(ArgType.CLIP, ArgType.CLIP, ArgType.CLIP)
 val SIGNATURE_REAL_CIRCLE_AND_LINE_OR_FINITE_POINT = Signature(ArgType.CIRCLE, ArgType.LFP)
-val SIGNATURE_INDICES_AND_CIRCLE = Signature(ArgType.INDICES, ArgType.CLI)
+val SIGNATURE_INDICES_OR_INFINITY_AND_CIRCLE = Signature(ArgType.INDICES_OR_INFINITE_POINT, ArgType.CLI)
 val SIGNATURE_INDICES_AND_FINITE_POINT = Signature(ArgType.INDICES, ArgType.FINITE_POINT)
 val SIGNATURE_INDICES_AND_2_CIRCLES = Signature(ArgType.INDICES, ArgType.CLI, ArgType.CLI)
 val SIGNATURE_INDICES_AND_2_POINTS = Signature(ArgType.INDICES, ArgType.POINT, ArgType.POINT)

@@ -10,12 +10,16 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.icon_256
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.painterResource
+import ui.LifecycleEvent
 import ui.editor.KeyboardAction
 import ui.editor.KeyboardActionMapping
+import kotlin.time.Duration.Companion.milliseconds
 
 fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
@@ -31,9 +35,17 @@ fun main() = application {
             keyboardActions.emit(action)
         }
     }
+    val lifecycleEvents: MutableSharedFlow<LifecycleEvent> = MutableSharedFlow(replay = 1)
     Window(
+        onCloseRequest = {
+            runBlocking {
+                lifecycleEvents.emit(LifecycleEvent.SaveUIState)
+                // we forcefully allot some time to save state
+                delay(100.milliseconds)
+            }
+            exitApplication()
+        },
         state = windowState,
-        onCloseRequest = ::exitApplication,
         title = title,
         icon = icon,
         onPreviewKeyEvent = keyEventHandler,
@@ -41,6 +53,7 @@ fun main() = application {
         App(
             titleFlow = titleFlow,
             keyboardActions = keyboardActions,
+            lifecycleEvents = lifecycleEvents,
         )
     }
 }

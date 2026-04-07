@@ -441,12 +441,6 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     ): Triple<List<Ix>, List<Ix>, List<R?>> {
         if (occupiedIndices.isEmpty()) // idk why it can happen but i had witnessed it
             return Triple(emptyList(), reservedIndices, emptyList())
-        val i0 = occupiedIndices.first()
-        val oldExpr = expressions[i0]!!.expr
-        require(oldExpr.args == newExpr.args && occupiedIndices.all { expressions[it]?.expr == oldExpr }) {
-            "invalid adjustMultiExpr($occupiedIndices, $reservedIndices, $newExpr)"
-        }
-        val tier = ix2tier[i0]!!
         var newReservedIndices = reservedIndices
         val result0 = (newExpr as EXPR).evaluate(objects)
         val isPeriodic = isExprPeriodic(newExpr)
@@ -467,6 +461,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             for (parentIx in newExpr.args) {
                 children[parentIx] = (children[parentIx] ?: emptySet()) + addedIndices
             }
+            val tier = ix2tier[occupiedIndices.first()]!!
             tier2ixs[tier] = tier2ixs[tier] + addedIndices
             for (ix in addedIndices)
                 ix2tier[ix] = tier

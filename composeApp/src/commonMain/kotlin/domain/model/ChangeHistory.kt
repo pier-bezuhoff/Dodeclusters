@@ -165,6 +165,7 @@ class ChangeHistory(
                 past.removeFirst()
             }
             val undoStep = undoChanges.changes
+//            println("recorded undoStep = $undoStep")
             past.addLast(undoStep)
             future.clear()
             accumulatedChangedLocations = SaveState.Change.Locations.EMPTY

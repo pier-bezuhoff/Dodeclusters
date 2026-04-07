@@ -1,15 +1,16 @@
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.ClipEntry
-import domain.settings.Settings
 import domain.io.getAppDataDir
 import domain.model.ChangeHistory
 import domain.model.SaveState
+import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.io.IOException
 import kotlinx.io.files.Path
 import kotlinx.serialization.Serializable
@@ -55,10 +56,22 @@ object JVMPlatform: Platform {
         )
     }
 
+    // NOTE: these save jobs can be forcefully cut by
+    //  application shutdown
     // reference: https://stackoverflow.com/a/75734381/7143065
     @OptIn(DelicateCoroutinesApi::class)
-    private inline fun <reified T : @Serializable Any> KStore<T>.save(value: T) {
+    private inline fun <reified T : @Serializable Any> KStore<T>.launchSave(value: T) {
         GlobalScope.launch(Dispatchers.IO) {
+            try {
+                this@launchSave.set(value)
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private inline fun <reified T : @Serializable Any> KStore<T>.save(value: T) {
+        runBlocking(Dispatchers.IO) {
             try {
                 this@save.set(value)
             } catch (e: IOException) {

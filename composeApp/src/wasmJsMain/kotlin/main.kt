@@ -103,7 +103,7 @@ fun main() {
             isA11YEnabled = false // for performance
         }
     ) {
-        val sharedDdcContent: LoadingState<String>? by produceState<LoadingState<String>?>(
+        val sharedDdcContent: LoadingState<String>? by produceState(
             initialValue = null,
             key1 = sharedId,
         ) {

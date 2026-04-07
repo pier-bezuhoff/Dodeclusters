@@ -510,11 +510,10 @@ class EditorViewModel : ViewModel() {
 
     fun loadNewConstellation(constellation: Constellation) {
         val updatedConstellation = constellation.updated()
-        showPromptToSetActiveSelectionAsToolArg = false
+        resetTransients()
         chessboardPattern = ChessboardPattern.NONE
         translation = Offset.Zero
         loadConstellation(updatedConstellation)
-        resetTransients()
         println("loaded new constellation")
         if (!mode.isSelectingCircles()) {
             selectTool(Tool.Drag)
@@ -920,7 +919,10 @@ class EditorViewModel : ViewModel() {
         }
         showPromptToSetActiveSelectionAsToolArg = false
         if (newMode is ToolMode) {
-            if (selection.isNotEmpty() && newMode.signature.argTypes.first() == ArgType.INDICES) {
+            if (newMode.signature.argTypes.first() == ArgType.INDICES &&
+                // we don't prompt to accept a singular GCircle
+                (selection.arcPaths.isNotEmpty() || selection.gCircles.size > 1)
+            ) {
                 showPromptToSetActiveSelectionAsToolArg = true
             } else {
                 // keep selection for a bit in case we now switch to another mode that
@@ -2020,8 +2022,7 @@ class EditorViewModel : ViewModel() {
         require(
             argList != null && !argList.isFull &&
             argList.nextArgType?.let { nextArgType ->
-                Arg.InfinitePoint in nextArgType.possibleTypes ||
-                Arg.Indices in nextArgType.possibleTypes
+                Arg.InfinitePoint in nextArgType.possibleTypes
             } == true
         )
         val infinityIndex = objectModel.getInfinityIndex() ?: createNewFreePoint(Point.CONFORMAL_INFINITY)
@@ -3620,9 +3621,8 @@ class EditorViewModel : ViewModel() {
                             objectModel.addDownscaledObject(null)
                         }
                     }
-                    for (i in newIndices.indices) {
-                        val ix = newIndices[i]
-                        objectModel.setDownscaledObject(ix, newObjects[i])
+                    newIndices.zip(newObjects) { ix, o ->
+                        objectModel.setDownscaledObject(ix, o)
                         copyStyle(sourceIndex, ix)
                     }
                     SubMode.ExprAdjustment(listOf(
@@ -3647,23 +3647,24 @@ class EditorViewModel : ViewModel() {
                         )
                         // NOTE: reserved indices will be generally non-contiguous
                         // we have to cleanup abandoned indices
-                        for (ix in (outputIndices - newIndices.toSet())) {
+                        val abandonedIndices = outputIndices.toSet() - newIndices.toSet()
+                        for (ix in abandonedIndices) {
                             objectModel.removeObjectAt(ix)
                         }
-                        for (ix in (newReservedIndices - reservedIndices.toSet())) {
-                            if (ix >= objects.size) {
-                                objectModel.addDownscaledObject(null) // pad with nulls
+                        for (ix in newReservedIndices) {
+                            if (ix >= objects.size) { // pad with nulls
+                                objectModel.addDownscaledObject(null)
                             }
                         }
-                        objectModel.borderColors -= outputIndices.toSet()
                         for (i in newIndices.indices) {
                             val ix = newIndices[i]
                             objectModel.setDownscaledObject(ix, newObjects[i])
                             copyStyle(sourceIndex, ix)
                         }
-                        newAdjustables.add(
-                            AdjustableExpr(newExpr, sourceIndex, newIndices, newReservedIndices)
-                        )
+                        newAdjustables.add(AdjustableExpr(newExpr,
+                            sourceIndex,
+                            newIndices, newReservedIndices
+                        ))
                         source2trajectory.add(
                             sourceIndex to newIndices
                         )
@@ -3671,8 +3672,9 @@ class EditorViewModel : ViewModel() {
                     val newTrajectorySize = newAdjustables.first().size
                     // NOTE: children of the source arc-path are handled properly still, they become
                     //  dependent on source children, not on children of the trajectory arc-paths
+                    val newArcPathAdjustables = mutableListOf<AdjustableExpr<ArcPath>>()
                     for ((arcPathBlueprint, sourceArcPathIndex, outputIndices, reservedIndices) in sm.arcPathAdjustables) {
-                        val newArcPaths = (0 until newTrajectorySize).map { trajectoryStage ->
+                        val newArcPaths = List(newTrajectorySize) { trajectoryStage ->
                             arcPathBlueprint.reIndex { adjustableIndex ->
                                 newAdjustables[adjustableIndex].outputIndices[trajectoryStage]
                             }
@@ -3685,18 +3687,19 @@ class EditorViewModel : ViewModel() {
                         for (ix in abandonedIndices) {
                             objectModel.removeObjectAt(ix)
                         }
-                        for (ix in (newReservedIndices - reservedIndices.toSet())) {
-                            if (ix >= objects.size) {
-                                objectModel.addDownscaledObject(null) // pad with nulls
+                        for (ix in newReservedIndices) {
+                            if (ix >= objects.size) { // pad with nulls
+                                objectModel.addDownscaledObject(null)
                             }
                         }
-                        objectModel.borderColors -= abandonedIndices
-                        objectModel.fillColors -= abandonedIndices
-                        for (i in newIndices.indices) {
-                            val ix = newIndices[i]
-                            objectModel.setDownscaledObject(ix, newObjects[i])
+                        newIndices.zip(newObjects) { ix, concreteArcPath ->
+                            objectModel.setDownscaledObject(ix, concreteArcPath)
                             copyStyle(sourceArcPathIndex, ix)
                         }
+                        newArcPathAdjustables.add(AdjustableExpr(arcPathBlueprint,
+                            sourceArcPathIndex,
+                            newIndices, newReservedIndices
+                        ))
                     }
                     val affectedRegions: List<Int> =
                         if (sm.parameters is LoxodromicMotionParameters &&
@@ -3719,7 +3722,11 @@ class EditorViewModel : ViewModel() {
                         } else {
                             copySourceRegionsOntoTrajectories(source2trajectory)
                         }
-                    SubMode.ExprAdjustment(newAdjustables, regions = affectedRegions)
+                    SubMode.ExprAdjustment(
+                        adjustables = newAdjustables,
+                        arcPathAdjustables = newArcPathAdjustables,
+                        regions = affectedRegions
+                    )
                 }
                 else -> sm
             }
@@ -4139,7 +4146,7 @@ class EditorViewModel : ViewModel() {
                     argList.nextArgType?.let { nextArgType ->
                         val acceptsInfinitePoint = Arg.InfinitePoint in nextArgType.possibleTypes
                         val acceptsIndices = Arg.Indices in nextArgType.possibleTypes
-                        (acceptsInfinitePoint || acceptsIndices) &&
+                        acceptsInfinitePoint &&
                                 objectModel.getInfinityIndex()?.let { ix ->
                                     val potentialNewArg = if (acceptsIndices)
                                         Arg.Indices(listOf(ix))
@@ -4315,7 +4322,9 @@ class EditorViewModel : ViewModel() {
             cachingInProgress.update { true }
             println("caching VM state...")
             val platform = getPlatform()
-            platform.saveState(saveState())
+            val presentState = saveState()
+//            println("caching state ${presentState.expressions}")
+            platform.saveState(presentState)
             platform.saveSettings(getCurrentSettings())
             platform.saveHistory(history.save())
             cachingInProgress.update { false }
