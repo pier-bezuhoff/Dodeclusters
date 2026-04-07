@@ -1,6 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
@@ -18,7 +19,7 @@ kotlin {
         browser {
             commonWebpackConfig {
                 outputFileName = "composeApp.js"
-//                // source maps for wasm are WIP: https://kotlinlang.org/docs/wasm-debugging.html
+                // source maps for wasm are WIP: https://kotlinlang.org/docs/wasm-debugging.html
 //                devtool = "source-map" // not working aside from live localhost testing
 //                sourceMaps = true
 //                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {

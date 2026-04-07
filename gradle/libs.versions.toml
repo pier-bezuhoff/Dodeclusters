@@ -1,29 +1,29 @@
 [versions]
-dodeclusters-version = "0.5.1"
+dodeclusters-version = "0.5.2"
 dodeclusters-android-versionCode = "10"
 dodeclusters-desktop-packageVersion = "1.0.5" # cannot start with 0 it seems
 android-compileSdk = "36"
 android-minSdk = "24" # = Android 7.0 Nougat
 android-targetSdk = "36" # = Android 16
 
-kotlin = "2.2.21"
+kotlin = "2.3.20"
 # consult kmp-agp compatibility table:
 # https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility
 #noinspection AndroidGradlePluginVersion
 agp = "8.10.1"
-compose-multiplatform = "1.10.1"
+compose-multiplatform = "1.10.3"
 # check compose-multiplatform/release for version compatibility:
 # https://github.com/JetBrains/compose-multiplatform/releases/latest
 #noinspection GradleDependency
-jetpack-compose = "1.10.2"
+jetpack-compose = "1.10.5"
 material3 = "1.10.0-alpha05"
-androidx-lifecycle = "2.10.0-alpha06"
-kotlinx-serialization = "1.9.0" # 1.10 is based on kt 2.3
+androidx-lifecycle = "2.10.0"
+kotlinx-serialization = "1.10.0"
 # ^ depend on compose-multiplatform
 kotlinx-coroutines = "1.10.2"
-compose-activity = "1.12.4"
+compose-activity = "1.13.0"
 material-icons = "1.7.3"
-androidx-core-ktx = "1.17.0"
+androidx-core-ktx = "1.18.0"
 window-size-klass = "0.5.0"
 colormath = "3.6.1"
 kaml = "0.104.0" # the repo is archived

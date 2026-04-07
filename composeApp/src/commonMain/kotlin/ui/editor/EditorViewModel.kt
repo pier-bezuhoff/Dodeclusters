@@ -110,6 +110,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
 import ui.editor.EditorViewModel.Companion.INVERSION_OF_CONTROL
 import ui.editor.dialogs.ColorPickerParameters
 import ui.editor.dialogs.DefaultBiInversionParameters
@@ -457,11 +458,26 @@ class EditorViewModel : ViewModel() {
 
     // TODO: prompt save
     fun openNewBlankConstellation() {
-        loadNewConstellation(Constellation(
-            objects = emptyList(),
-            parts = emptyList(),
-            backgroundColor = backgroundColor,
-        ))
+//        val s = saveState()
+//        println("prepared state")
+//        // BUG: on wasm this breaks while attempting to convert every Expr to Int
+//        val str = SaveState.JSON_FORMAT.encodeToString(
+//            serializer = SaveState.JSON_FORMAT.serializersModule.serializer(),
+//            value = s
+//        )
+////        getPlatform().saveState(s)
+//        println("saved state: $str")
+//        return
+        loadState(
+            SaveState(
+                objects = emptyList(),
+                expressions = emptyMap(),
+                backgroundColor = backgroundColor,
+                chessboardPattern = ChessboardPattern.NONE,
+                chessboardColor = null,
+                center = Offset.Zero,
+            )
+        )
         resetHistory()
     }
 
@@ -586,7 +602,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun loadState(state: SaveState) {
-        submode = null
+        resetTransients()
         labels = emptyMap()
         regions = emptyList() // important, since draws are async (otherwise can crash)
         clearSelection()
