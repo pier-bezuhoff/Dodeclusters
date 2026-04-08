@@ -176,7 +176,7 @@ fun SaveOptionsDialog(
                                 uri = lastSaveResult?.uri,
                                 otherDisplayedExtensions = Tool.SaveCluster.otherDisplayedExtensions,
                                 mimeType = Tool.SaveCluster.MIME_TYPE,
-                                prepareContent = saveAsYaml
+                                prepareContent = saveAsYaml,
                             ),
                             buttonContent = {
                                 Row(

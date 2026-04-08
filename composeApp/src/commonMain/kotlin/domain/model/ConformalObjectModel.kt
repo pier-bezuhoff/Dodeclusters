@@ -138,6 +138,7 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
     }
 
     override fun clear() {
+        expressions.clear()
         super.clear()
         expressions = ConformalExpressions(mapOf(), mutableListOf())
     }

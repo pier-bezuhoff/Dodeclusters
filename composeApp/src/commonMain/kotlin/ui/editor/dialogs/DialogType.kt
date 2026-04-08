@@ -18,4 +18,5 @@ enum class DialogType {
     SAVE_OPTIONS,
     BLEND_SETTINGS,
     LABEL_INPUT,
+    SAVE_PROMPT,
 }

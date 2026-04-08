@@ -17,7 +17,7 @@ class ProjectiveExpressions(
         TODO("not implemented")
     }
 
-    override fun Expr.Projective.evaluate(objects: List<Conic?>): List<Conic?> {
+    override fun Expr.evaluate(objects: List<Conic?>): List<Conic?> {
         TODO("not implemented")
     }
 

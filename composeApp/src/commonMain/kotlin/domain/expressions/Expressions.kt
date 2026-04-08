@@ -33,20 +33,20 @@ internal const val ABANDONED_TIER: Tier = -2
  */
 @Suppress("UNCHECKED_CAST")
 sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_TO_MANY : Expr.OneToMany, R : Any>(
-    initialExpressions: Map<Ix, ExprOutput<EXPR>?>, // pls include all possible indices
+    initialExpressions: Map<Ix, ExprOutput?>, // pls include all possible indices
     protected val objects: MutableList<R?>,
 ) {
 //    typealias ExprResult = List<R?>
 
     // for the [objects] nulls correspond to unrealized outputs of multi-functions
     // here nulls correspond to free objects
-    // MAYBE: make it mutable list
+    // TODO: make it mutable list
     /**
      * object index -> its expression, `null` meaning "free" object
      *
      * `expressions.keys` == `objects.indices`
      */
-    val expressions: MutableMap<Ix, ExprOutput<EXPR>?> = initialExpressions.toMutableMap()
+    val expressions: MutableMap<Ix, ExprOutput?> = initialExpressions.toMutableMap()
     /**
      * parent index -> set of all its children with *direct* dependency, inversion of [Expr.args]
      *
@@ -94,7 +94,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             }
     }
 
-    inline operator fun get(index: Ix): ExprOutput<EXPR>? =
+    inline operator fun get(index: Ix): ExprOutput? =
         expressions[index]
 
     /**
@@ -104,7 +104,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
 
     abstract fun objectDeletedAt(index: Ix)
 
-    protected abstract fun EXPR.evaluate(
+    protected abstract fun Expr.evaluate(
         objects: List<R?>
     ): List<R?>
 
@@ -112,7 +112,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
      * @param[multiExpressionCache] cache used to store multi-output `List<R?>`
      * of [Expr.OneToMany]
      */
-    protected fun ExprOutput<EXPR>.evaluateWithCache(
+    protected fun ExprOutput.evaluateWithCache(
         multiExpressionCache: MutableMap<EXPR_ONE_TO_MANY, List<R?>>
     ): R? = when (this) {
         is ExprOutput.Just ->
@@ -160,7 +160,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     /** don't forget to upscale the result afterwards! */
     fun addSoloExpr(expr: EXPR_ONE_TO_ONE): R? {
         val ix = calculateNextIndex()
-        expressions[ix] = ExprOutput.Just(expr as Expr.OneToOne) as ExprOutput<EXPR>
+        expressions[ix] = ExprOutput.Just(expr as Expr.OneToOne) as ExprOutput
         setChildren(ix, expr)
         val tier = computeTier(ix, expr as EXPR)
         setTier(ix, tier)
@@ -172,12 +172,12 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     }
 
     /** don't forget to upscale the result afterwards! */
-    fun addMultiExpression(exprOutput: ExprOutput.OneOf<EXPR_ONE_TO_MANY>): R? {
+    fun addMultiExpression(exprOutput: ExprOutput.OneOf): R? {
         val expr = exprOutput.expr
         val result = (expr as EXPR).evaluate(objects)[exprOutput.outputIndex]
         val ix = calculateNextIndex()
         val tier = computeTier(ix, expr)
-        expressions[ix] = exprOutput as ExprOutput<EXPR>
+        expressions[ix] = exprOutput as ExprOutput
         setChildren(ix, expr)
         setTier(ix, tier)
         parents2gluedIncidentPoints.clear()
@@ -250,7 +250,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         val previousTier = ix2tier[index]!!
         tier2ixs[previousTier] = tier2ixs[previousTier] - index
         ix2tier[index] = UNCALCULATED_TIER
-        expressions[index] = ExprOutput.Just(newExpr) as ExprOutput<EXPR>
+        expressions[index] = ExprOutput.Just(newExpr) as ExprOutput
         setChildren(index, newExpr)
         val tier = computeTier(index)
         setTier(index, tier)
@@ -500,7 +500,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
      * You must either supply [expr0] or set `expressions[ix]` BEFORE calling this
      */
     protected fun computeTier(ix: Ix, expr0: EXPR? = null): Tier {
-        val expr: EXPR? = expr0 ?: expressions[ix]?.expr
+        val expr: EXPR? = expr0 ?: expressions[ix]?.expr as? EXPR
         return if (expr == null) {
             FREE_TIER
         } else {

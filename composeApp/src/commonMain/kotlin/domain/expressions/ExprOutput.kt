@@ -5,33 +5,34 @@ import domain.Ix
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-typealias ConformalExprOutput = ExprOutput<Expr.Conformal>
-typealias ProjectiveExprOutput = ExprOutput<Expr.Projective>
+typealias ConformalExprOutput = ExprOutput
+typealias ProjectiveExprOutput = ExprOutput
 
+// NOTE: removed generic type arg, cuz it causes serialization bug https://github.com/Kotlin/kotlinx.serialization/issues/3177
 /** Single-output of an [Expr.OneToOne] or [Expr.OneToMany]. */
 @Immutable
 @Serializable
-sealed interface ExprOutput<out EXPR> where EXPR : Expr {
+sealed interface ExprOutput {
     @Serializable
-    val expr: EXPR
+    val expr: Expr
 
     @Serializable
     @SerialName("Just")
-    data class Just<out EXPR>(
-        override val expr: EXPR
-    ) : ExprOutput<EXPR> where EXPR : Expr.OneToOne
+    data class Just(
+        override val expr: Expr.OneToOne
+    ) : ExprOutput
 
     @Serializable
     @SerialName("OneOf")
-    data class OneOf<out EXPR>(
-        override val expr: EXPR,
+    data class OneOf(
+        override val expr: Expr.OneToMany,
         val outputIndex: Ix
-    ) : ExprOutput<EXPR> where EXPR : Expr.OneToMany
+    ) : ExprOutput
 }
 
-inline fun <reified EXPR : Expr> ExprOutput<EXPR>.reIndex(
+inline fun ExprOutput.reIndex(
     crossinline reIndexer: (Ix) -> Ix,
-): ExprOutput<EXPR> =
+): ExprOutput =
     when (this) {
         is ExprOutput.Just -> copy(
             expr = expr.reIndex { reIndexer(it) }

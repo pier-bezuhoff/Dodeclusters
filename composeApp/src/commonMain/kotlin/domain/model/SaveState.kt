@@ -580,17 +580,17 @@ data class SaveState(
     companion object {
         @OptIn(ExperimentalSerializationApi::class)
         private val SERIALIZERS_MODULE = SerializersModule {
-            polymorphic(GCircleOrConcreteAcPath::class) {
-                subclass(Circle::class)
-                subclass(Line::class)
-                subclass(ImaginaryCircle::class)
-                subclass(Point::class)
-                subclass(ConcreteArcPath::class)
-            }
-            polymorphic(ExprOutput::class) {
-                subclass(ExprOutput.Just.serializer(PolymorphicSerializer(Expr::class)))
-                subclass(ExprOutput.OneOf.serializer(PolymorphicSerializer(Expr::class)))
-            }
+//            polymorphic(GCircleOrConcreteAcPath::class) {
+//                subclass(Circle::class)
+//                subclass(Line::class)
+//                subclass(ImaginaryCircle::class)
+//                subclass(Point::class)
+//                subclass(ConcreteArcPath::class)
+//            }
+//            polymorphic(ExprOutput::class) {
+//                subclass(ExprOutput.Just.serializer(PolymorphicSerializer(Any::class)))
+//                subclass(ExprOutput.OneOf.serializer(PolymorphicSerializer(Any::class)))
+//            }
 //            polymorphic(Expr.Conformal::class) {
 //                subclassesOfSealed<ArcPath>()
 //                subclassesOfSealed<Expr.Conformal.OneToOne>()

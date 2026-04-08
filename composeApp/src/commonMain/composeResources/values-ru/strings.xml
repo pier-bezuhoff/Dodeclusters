@@ -229,6 +229,11 @@
     <string name="overwrite_shared_progress">Загрузка и перезапись кластера...</string>
     <string name="overwrite_shared_done">Перезапись успешна.</string>
     <string name="overwrite_shared_error">Перезапись не удалась.</string>
+    <!-- save prompt -->
+    <string name="save_prompt_title">Сохранить?</string>
+    <string name="save_prompt_after_blank_description">Сохранить перед открытием нового пустого файла?</string>
+    <string name="dont_save">Не сохранять</string>
+    <string name="save">Сохранить</string>
     <!-- loading shared -->
     <string name="fetching_shared_progress">Скачивание кластера по ссылке "%1$s"...</string>
     <string name="fetching_shared_error">Не удалось скачать "%1$s".</string>

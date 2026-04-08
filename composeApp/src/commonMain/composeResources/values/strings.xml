@@ -232,6 +232,11 @@
     <string name="overwrite_shared_progress">Uploading and overwriting shared cluster...</string>
     <string name="overwrite_shared_done">Successfully overwritten.</string>
     <string name="overwrite_shared_error">Failed to overwrite.</string>
+    <!-- save prompt -->
+    <string name="save_prompt_title">Save?</string>
+    <string name="save_prompt_after_blank_description">Should we save before opening a new blank file?</string>
+    <string name="dont_save">Don't save</string>
+    <string name="save">Save</string>
     <!-- loading shared -->
     <string name="fetching_shared_progress">Loading shared cluster "%1$s"...</string>
     <string name="fetching_shared_error">Fetching shared resource "%1$s" failed.</string>

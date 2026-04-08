@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import core.geometry.Circle
 import core.geometry.CircleOrLine
+import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
@@ -69,12 +70,10 @@ import core.geometry.fromCorners
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.zoom_in
-import domain.model.Arg
 import domain.Ix
-import domain.model.PartialArcPath
-import domain.model.PartialArgList
 import domain.PathCache
 import domain.angleDeg
+import domain.expressions.ArcPath
 import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
@@ -83,11 +82,12 @@ import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeLineBy2Points
 import domain.hug
-import domain.model.ChessboardPattern
-import core.geometry.ConcreteArcPath
 import domain.model.AlignmentLine
-import domain.expressions.ArcPath
+import domain.model.Arg
+import domain.model.ChessboardPattern
 import domain.model.LogicalRegion
+import domain.model.PartialArcPath
+import domain.model.PartialArgList
 import domain.mostCommonOf
 import domain.rotateBy
 import domain.rotateByAround
@@ -100,7 +100,6 @@ import ui.circle2path
 import ui.halfPlanePath
 import ui.reactiveCanvas
 import ui.region2pathWithCache
-import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
 import ui.toPath
 import ui.tools.Tool
@@ -116,7 +115,9 @@ fun BoxScope.EditorCanvas(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-    val strokeWidth = with (density) { 2.dp.toPx() }
+    val strokeWidth = remember(density) {
+        with (density) { 2.dp.toPx() }
+    }
     val circleStroke = remember(strokeWidth) { Stroke(width = strokeWidth) }
     val thiccCircleStroke = remember(strokeWidth) { Stroke(width = 2 * strokeWidth) }
     val dottedStroke = remember(strokeWidth) { Stroke(
@@ -134,8 +135,10 @@ fun BoxScope.EditorCanvas(
     val pointRadius = 2.5f * strokeWidth
     val scaleIcon = painterResource(Res.drawable.zoom_in)
     val scaleIconColor = MaterialTheme.colorScheme.secondary
-    val scaleIndicatorColor = DodeclustersColors.skyBlue
-    val iconDim = with (density) { 24.dp.toPx() }
+    val scaleIndicatorColor = MaterialTheme.extendedColorScheme.highlightColor
+    val iconDim = remember(density) {
+        with (density) { 24.dp.toPx() }
+    }
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
     val rotateIconColor = MaterialTheme.colorScheme.secondary
     val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
@@ -145,13 +148,18 @@ fun BoxScope.EditorCanvas(
     val defaultCircleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
     val defaultFreeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
     val defaultPointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
-    val defaultFreePointColor = defaultFreeCircleColor
-    val defaultSelectionColor = DodeclustersColors.strongSalad
-    val imaginaryCircleColor = DodeclustersColors.fadedRed
-    val selectionMarkingsColor = DodeclustersColors.gray // center-radius line / bounding rect of selection
+    val defaultSelectionColor = MaterialTheme.extendedColorScheme.selectionColor
+    val imaginaryCircleColor = MaterialTheme.extendedColorScheme.imaginaryCircleColor
+    val selectionMarkingsColor = MaterialTheme.colorScheme.outline // center-radius line / bounding rect of selection
     val stereographicGridColor = MaterialTheme.colorScheme.secondary
     val defaultArcPathColor = MaterialTheme.extendedColorScheme.highAccentColor
     val arcMiddlePointColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
+    val creationColor = MaterialTheme.extendedColorScheme.creationColor
+    val copyingColor = MaterialTheme.extendedColorScheme.copyingColor
+    val deletionColor = MaterialTheme.extendedColorScheme.deletionColor
+    val highlightColor = MaterialTheme.extendedColorScheme.highlightColor
+    val defaultFreePointColor = defaultFreeCircleColor
+    val selectedArgColor = creationColor
     val arcMiddlePointRadius = pointRadius
     val thiccSelectedCircleAlpha = 0.9f
     val thiccSelectedPathAlpha = 0.5f
@@ -168,7 +176,7 @@ fun BoxScope.EditorCanvas(
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableStateMapOf() }
     val coroutineScope = rememberCoroutineScope()
-    coroutineScope.launch { // listen to circle animations
+    coroutineScope.launch { // listen to animations
         viewModel.animations.collect { event ->
             when (event) {
                 is ColoredContourAnimation -> launch { // parallel multiplexer structure
@@ -234,7 +242,7 @@ fun BoxScope.EditorCanvas(
             hug(viewModel.objectModel.invalidations)
             val visibleRect = size.toRect().translate(-viewModel.translation)
             drawRegions(objects = viewModel.objects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = viewModel.objectModel.pathCache, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, visibleRect = visibleRect, regionsOpacity = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
-            drawAnimation(animations = animations, visibleRect = visibleRect, strokeWidth = strokeWidth)
+            drawAnimation(animations = animations, creationColor = creationColor, copyingColor = copyingColor, deletionColor = deletionColor, highlightColor = highlightColor, visibleRect = visibleRect, strokeWidth = strokeWidth)
             // Q: the layering is debatable
             //  should the selected be layered at the top?
             //  even it's inside? what about rise/lower layer controls?
@@ -249,7 +257,7 @@ fun BoxScope.EditorCanvas(
                 drawArcPaths(allObjects = viewModel.objects, indices = nonSelectedArcPathIndices, borderColors = viewModel.objectModel.borderColors, fillColors = viewModel.objectModel.fillColors, pathCache = viewModel.objectModel.pathCache, defaultArcPathColor = defaultArcPathColor, arcPathFillOpacity = viewModel.regionsOpacity, arcPathStroke = pathStroke)
                 drawSelectedArcPaths(allObjects = viewModel.objects, indices = viewModel.selection.arcPaths, borderColors = viewModel.objectModel.borderColors, fillColors = viewModel.objectModel.fillColors, pathCache = viewModel.objectModel.pathCache, arcPathFillOpacity = viewModel.regionsOpacity, arcPathStroke = pathStroke, defaultSelectedArcPathColor = defaultSelectionColor, thiccSelectedPathAlpha = thiccSelectedPathAlpha, thiccSelectedPathStroke = thiccPathStroke, arcMiddlePointColor = arcMiddlePointColor, arcMiddlePointRadius = arcMiddlePointRadius)
             }
-            drawPartialConstructs(allObjects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke, arcPathStroke = pathStroke, alignmentLineColor = selectionMarkingsColor)
+            drawPartialConstructs(allObjects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = circleStroke, imaginaryCircleStroke = dottedStroke, arcPathStroke = pathStroke, alignmentLineColor = selectionMarkingsColor, selectedArgColor = selectedArgColor, creationPrototypeColor = creationColor.copy(alpha = 0.7f))
             drawGrids(visibleRect = visibleRect, submode = viewModel.submode, stereographicGridColor = stereographicGridColor, stereographicGridStroke = circleStroke, southPointRadius = handleRadius)
             drawLabels(objects = viewModel.objects, objectColors = viewModel.objectModel.borderColors, objectLabelLayouts = objectLabelLayouts, freePointColor = defaultFreePointColor)
             drawHandles(objects = viewModel.objects, selection = viewModel.selectedIndices, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.calculateSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
@@ -302,12 +310,10 @@ fun BoxScope.EditorCanvas(
                 }
             }
             val mostCommonBorderColor = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
-                viewModel.selection.arcPaths
-                    .mostCommonOf { viewModel.borderColors[it] }
+                viewModel.selection.arcPaths.mostCommonOf { viewModel.borderColors[it] }
             }
             val mostCommonFillColor = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
-                viewModel.selection.arcPaths
-                    .mostCommonOf { viewModel.fillColors[it] }
+                viewModel.selection.arcPaths.mostCommonOf { viewModel.fillColors[it] }
             }
             ArcPathContextActions(
                 someAreClosed = someAreClosed,
@@ -416,11 +422,11 @@ fun ScreenshotableCanvas(
     val defaultCircleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
     val defaultFreeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
     val defaultPointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
-    val defaultFreePointColor = defaultFreeCircleColor
-    val defaultSelectionColor = DodeclustersColors.strongSalad
-    val imaginaryCircleColor = DodeclustersColors.fadedRed
+    val defaultSelectionColor = MaterialTheme.extendedColorScheme.selectionColor
+    val imaginaryCircleColor = MaterialTheme.extendedColorScheme.imaginaryCircleColor
     val defaultArcPathColor = MaterialTheme.extendedColorScheme.highAccentColor
     val arcMiddlePointColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
+    val defaultFreePointColor = defaultFreeCircleColor
     val arcMiddlePointRadius = pointRadius
     val thiccSelectedCircleAlpha = 0.9f
     val thiccSelectedPathAlpha = 0.5f
@@ -816,6 +822,10 @@ private fun DrawScope.drawArrowsPatchedForAndroid(
 
 private fun DrawScope.drawAnimation(
     animations: Map<ColoredContourAnimation, Animatable<Float, AnimationVector1D>>,
+    creationColor: Color,
+    copyingColor: Color,
+    deletionColor: Color,
+    highlightColor: Color,
     visibleRect: Rect,
     strokeWidth: Float,
 ) {
@@ -826,7 +836,12 @@ private fun DrawScope.drawAnimation(
     }
     for ((animation, alpha) in animations) {
         for (circle in animation.objects) {
-            val color = animation.color
+            val color = when (animation) {
+                is CircleAnimation.Entrance -> creationColor
+                is CircleAnimation.ReEntrance -> copyingColor
+                is CircleAnimation.Exit -> deletionColor
+                is HighlightAnimation -> highlightColor
+            }
             when (circle) {
                 is Circle -> {
                     val path = circle2path(circle, visibleRect)
@@ -1143,9 +1158,9 @@ private inline fun DrawScope.drawPartialConstructs(
     imaginaryCircleStroke: Stroke,
     arcPathStroke: Stroke,
     creationPointRadius: Float = handleRadius * 3/4,
-    alignmentLineColor: Color = Color.Gray,
-    selectedArgColor: Color = DodeclustersColors.green, //pureSecondary,
-    creationPrototypeColor: Color = DodeclustersColors.green.copy(alpha = 0.7f),
+    alignmentLineColor: Color,
+    selectedArgColor: Color,
+    creationPrototypeColor: Color,
 ) {
     // generic display for selected tool args
     partialArgList?.args?.let { args ->

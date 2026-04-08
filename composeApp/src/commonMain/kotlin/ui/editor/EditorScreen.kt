@@ -80,7 +80,9 @@ import dodeclusters.composeapp.generated.resources.new_document
 import dodeclusters.composeapp.generated.resources.ok
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save_name
+import dodeclusters.composeapp.generated.resources.save_prompt_after_blank_description
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
+import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
@@ -120,6 +122,7 @@ import ui.editor.dialogs.LabelInputDialog
 import ui.editor.dialogs.LoxodromicMotionDialog
 import ui.editor.dialogs.RotationDialog
 import ui.editor.dialogs.SaveOptionsDialog
+import ui.editor.dialogs.SavePromptDialog
 import ui.isCompact
 import ui.isLandscape
 import ui.theme.DodeclustersColors
@@ -229,7 +232,7 @@ fun EditorScreen(
                         undoIsEnabled = viewModel.undoIsEnabled.value,
                         redoIsEnabled = viewModel.redoIsEnabled.value,
                         showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
-                        openNewBlank = viewModel::openNewBlankConstellation,
+                        openNewBlank = viewModel::newBlank,
                         loadFromYaml = { content, filename ->
                             content?.let {
                                 viewModel.loadDdc(content, filename)
@@ -402,28 +405,18 @@ fun EditorScreen(
                 onConfirm = viewModel::closeDialog,
                 onSaved = { saveResult ->
                     lastSaveResult = saveResult
-                    when (saveResult) {
-                        is SaveResult.Success ->
-                            viewModel.queueSnackbarMessage(
-                                SnackbarMessage.SUCCESSFUL_SAVE,
-                                saveResult.filename,
-                            )
-                        is SaveResult.Failure -> {
-                            val errorMessage =
-                                if (saveResult.error == null) ""
-                                else "; error: \"${saveResult.error}\""
-
-                            viewModel.queueSnackbarMessage(
-                                SnackbarMessage.FAILED_SAVE,
-                                saveResult.filename ?: "-",
-                                errorMessage
-                            )
-                        }
-                        is SaveResult.Cancelled -> {}
-                    }
+                    viewModel.onSavingFinished(saveResult)
                 },
                 lastSaveResult = lastSaveResult,
                 dialogActions = dialogActions,
+            )
+        }
+        DialogType.SAVE_PROMPT -> {
+            SavePromptDialog(
+                description = stringResource(Res.string.save_prompt_after_blank_description),
+                onCancel = viewModel::closeDialog,
+                onDontSave = viewModel::openNewBlank,
+                onSave = { viewModel.toolAction(Tool.SaveCluster) },
             )
         }
         DialogType.BLEND_SETTINGS -> {

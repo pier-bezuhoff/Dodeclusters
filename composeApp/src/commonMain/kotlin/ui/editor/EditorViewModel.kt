@@ -78,6 +78,7 @@ import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV5
 import domain.io.SaveRequest
+import domain.io.SaveResult
 import domain.io.saveStateAsSvg
 import domain.io.tryParseDdc
 import domain.model.Arg
@@ -132,7 +133,7 @@ import kotlin.time.Duration.Companion.seconds
 class EditorViewModel : ViewModel() {
     val objectModel: ConformalObjectModel = ConformalObjectModel()
     val objects: List<GCircleOrConcreteAcPath?> = objectModel.displayObjects
-    val expressions: ConformalExpressions get() =
+    inline val expressions: ConformalExpressions get() =
         objectModel.expressions
     val borderColors: Map<Ix, Color> = objectModel.borderColors
     val fillColors: Map<Ix, Color> = objectModel.fillColors
@@ -226,6 +227,7 @@ class EditorViewModel : ViewModel() {
 
     var openedDialog: DialogType? by mutableStateOf(null)
         private set
+    private var queuedAction: Action? by mutableStateOf(null)
 
     // these are NG
     inline val showGenericSelectionContextActions: Boolean get() =
@@ -455,8 +457,7 @@ class EditorViewModel : ViewModel() {
         )
     }
 
-    // TODO: prompt save
-    fun openNewBlankConstellation() {
+    fun openNewBlank() {
 //        val presentState = saveState()
 //        val expr = ArcPath.Closed(vertices = listOf(1,2), arcs = listOf(ArcPath.Arc.LineSegment, ArcPath.Arc.LineSegment))
 //        val exprOutput = ExprOutput.Just(expr)
@@ -471,6 +472,7 @@ class EditorViewModel : ViewModel() {
 //        getPlatform().saveState(s)
 //        println("encoded: $str")
 //        return
+        closeDialog()
         loadState(
             SaveState(
                 objects = emptyList(),
@@ -1146,13 +1148,15 @@ class EditorViewModel : ViewModel() {
     }
 
     inline fun exprOf(index: Ix): Expr.Conformal? =
-        expressions[index]?.expr
+        expressions[index]?.expr as? Expr.Conformal
 
     inline fun isFree(index: Ix): Boolean =
         expressions[index] == null
 
-    inline fun isConstrained(index: Ix): Boolean =
-        expressions[index]?.expr is Expr.Incidence
+    inline fun isConstrained(index: Ix): Boolean {
+        val expr = exprOf(index)
+        return expr is Expr.Incidence || expr is Expr.ArcPathIncidence
+    }
 
     // MAYBE: wrap into state that depends only on
     //  [regions, objectColors, chessboardPattern, chessboardColor] for caching
@@ -1425,6 +1429,11 @@ class EditorViewModel : ViewModel() {
             chessboardColor = regionColor
         }
         recordHistory()
+    }
+
+    fun newBlank() {
+        openedDialog = DialogType.SAVE_PROMPT
+        queuedAction = Action.NEW_BLANK
     }
 
     fun concludeRegionColorPicker(colorPickerParameters: ColorPickerParameters) {
@@ -3001,12 +3010,13 @@ class EditorViewModel : ViewModel() {
     /** Signals locked state to the user with animation & snackbar message */
     private fun highlightSelectionParents() {
         val allParents = selection.indices.flatMap { ix ->
-            if (isConstrained(ix)) emptyList() // exclude semi-free Expr.Incidence
+            if (isConstrained(ix)) emptyList() // exclude semi-free incident points
             else expressions.getImmediateParents(ix)
-                .minus(objectSelection.toSet())
+                .minus(selection.indices.toSet())
         }
             .distinct()
             // TODO: highlight parent arc-paths
+            // for traj arc-path: custom parent arc-path highlight
             .mapNotNull { objects[it] as? GCircle }
         if (allParents.isNotEmpty()) {
             viewModelScope.launch {
@@ -3068,7 +3078,7 @@ class EditorViewModel : ViewModel() {
                 KeyboardAction.OPEN -> openFileRequests.tryEmit(Unit)
                 KeyboardAction.SAVE -> toolAction(Tool.SaveCluster)
                 KeyboardAction.CONFIRM -> confirmCurrentAction()
-                KeyboardAction.NEW_DOCUMENT -> openNewBlankConstellation()
+                KeyboardAction.NEW_DOCUMENT -> newBlank()
                 KeyboardAction.HELP -> { // temporarily hijacked for debugging
                     showDebugInfo()
                 }
@@ -4028,8 +4038,38 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    fun onSavingFinished(saveResult: SaveResult) {
+        when (saveResult) {
+            is SaveResult.Success -> {
+                queueSnackbarMessage(
+                    SnackbarMessage.SUCCESSFUL_SAVE,
+                    saveResult.filename,
+                )
+                when (queuedAction) {
+                    Action.NEW_BLANK ->
+                        openNewBlank()
+                    else -> {}
+                }
+            }
+            is SaveResult.Failure -> {
+                val errorMessage =
+                    if (saveResult.error == null) ""
+                    else "; error: \"${saveResult.error}\""
+
+                queueSnackbarMessage(
+                    SnackbarMessage.FAILED_SAVE,
+                    saveResult.filename ?: "-",
+                    errorMessage
+                )
+            }
+            is SaveResult.Cancelled -> {}
+        }
+        queuedAction = null
+    }
+
     fun closeDialog() {
         openedDialog = null
+        queuedAction = null
     }
 
     fun setBlendSettings(newRegionsOpacity: Float, newRegionsBlendModeType: BlendModeType) {

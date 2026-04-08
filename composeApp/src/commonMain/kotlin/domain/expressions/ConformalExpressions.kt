@@ -35,6 +35,15 @@ class ConformalExpressions(
             updateObjectTypeAt(ix)
     }
 
+    fun clear() {
+        circleIndices.clear()
+        lineIndices.clear()
+        imaginaryCircleIndices.clear()
+        pointIndices.clear()
+        gCircleIndices.clear()
+        arcPathIndices.clear()
+    }
+
     override fun updateObjectTypeAt(index: Ix, obj: GCircleOrConcreteAcPath?) {
         gCircleIndices.remove(index)
         circleIndices.remove(index)
@@ -92,7 +101,11 @@ class ConformalExpressions(
         arcPathIndices.remove(index)
     }
 
-    override fun Expr.Conformal.evaluate(
+    override fun Expr.evaluate(
+        objects: List<GCircleOrConcreteAcPath?>
+    ): List<GCircleOrConcreteAcPath?> = (this as Expr.Conformal).eval(objects)
+
+    private fun Expr.Conformal.evaluate(
         objects: List<GCircleOrConcreteAcPath?>
     ): List<GCircleOrConcreteAcPath?> = eval(objects)
 
