@@ -47,7 +47,7 @@ typealias ConformalExprResult = List<GCircleOrConcreteAcPath?>
 sealed interface Expr {
 
     @Serializable
-    sealed interface OneToOne : Expr //, ExprOutput<Expr>
+    sealed interface OneToOne : Expr
     @Serializable
     sealed interface OneToMany : Expr
 
@@ -55,13 +55,17 @@ sealed interface Expr {
     @Serializable
     sealed interface Conformal : Expr {
         // hand-made intersection types
+        @Serializable
         sealed interface OneToOne : Conformal, Expr.OneToOne
+        @Serializable
         sealed interface OneToMany : Conformal, Expr. OneToMany
     }
     @Immutable
     @Serializable
     sealed interface Projective : Expr {
+        @Serializable
         sealed interface OneToOne : Projective, Expr.OneToOne
+        @Serializable
         sealed interface OneToMany : Projective, Expr. OneToMany
     }
 

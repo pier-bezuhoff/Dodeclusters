@@ -1,12 +1,12 @@
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @Serializable
-sealed class A(
+private sealed class A(
     @Transient
     open val x: Int = 0
 ) {
@@ -18,17 +18,17 @@ sealed class A(
 
 // my workaround:
 // we separate all parent classes into empty serializable interface + value holding unserialized interface
-interface HasX {
+private interface HasX {
     val x: Int
 }
 
-data class WithX(override val x: Int) : HasX
+private data class WithX(override val x: Int) : HasX
 
 @Serializable
-sealed interface AA : HasX
+private sealed interface AA : HasX
 
 @Serializable
-data class BB(
+private data class BB(
     val y: Int
 ): AA, HasX by WithX(y)
 
@@ -56,7 +56,7 @@ class TransientFieldOfSealedClassSerializationTest {
         val bb1 = Json.decodeFromString<AA>(s)
         println(bb1)
         println(bb1.x)
-        assertTrue(bb1.x == 2)
+        assertEquals(bb1.x, 2)
     }
 }
 

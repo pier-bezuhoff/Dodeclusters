@@ -5,10 +5,8 @@ import androidx.compose.runtime.Stable
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.ConcreteArcPath
-import core.geometry.GCircle
 import core.geometry.GCircleOrConcreteAcPath
 import core.geometry.Point
-import domain.ColorAsCss
 import domain.Ix
 import domain.filterIndices
 import domain.updated

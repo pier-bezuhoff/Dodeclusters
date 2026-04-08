@@ -4,7 +4,10 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
+import core.geometry.ConcreteArcPath
 import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.ImaginaryCircle
+import core.geometry.Line
 import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
@@ -17,9 +20,14 @@ import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.reIndex
 import domain.expressions.withoutPointsAt
 import domain.reindexingMap
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 
 /** EditorViewModel's save-state for history.
  * [objects].indices must span all of [borderColors].keys and [labels].keys.
@@ -34,13 +42,13 @@ data class SaveState(
     val fillColors: Map<Ix, ColorAsCss> = emptyMap(),
     val labels: Map<Ix, String> = emptyMap(),
     val regions: List<LogicalRegion> = emptyList(),
-    val backgroundColor: ColorAsCss?,
-    val chessboardPattern: ChessboardPattern,
-    val chessboardColor: ColorAsCss?,
+    val backgroundColor: ColorAsCss? = null,
+    val chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
+    val chessboardColor: ColorAsCss? = null,
     val phantoms: Set<Ix> = emptySet(),
     @SerialName("selections") // TMP: for backwards compat, diff name cuz the type changed
     val selection: Selection = Selection(),
-    val center: SerializableOffset,
+    val center: SerializableOffset = Offset.Zero,
     val regionColor: ColorAsCss? = null,
 ) {
     // since we generate save-state every undo-able action, i think it's prudent to
@@ -570,11 +578,39 @@ data class SaveState(
     }
 
     companion object {
+        @OptIn(ExperimentalSerializationApi::class)
+        private val SERIALIZERS_MODULE = SerializersModule {
+            polymorphic(GCircleOrConcreteAcPath::class) {
+                subclass(Circle::class)
+                subclass(Line::class)
+                subclass(ImaginaryCircle::class)
+                subclass(Point::class)
+                subclass(ConcreteArcPath::class)
+            }
+            polymorphic(ExprOutput::class) {
+                subclass(ExprOutput.Just.serializer(PolymorphicSerializer(Expr::class)))
+                subclass(ExprOutput.OneOf.serializer(PolymorphicSerializer(Expr::class)))
+            }
+//            polymorphic(Expr.Conformal::class) {
+//                subclassesOfSealed<ArcPath>()
+//                subclassesOfSealed<Expr.Conformal.OneToOne>()
+//                subclassesOfSealed<Expr.Conformal.OneToMany>()
+//            }
+//            polymorphic(Expr.OneToOne::class) {
+//                subclassesOfSealed<Expr.Conformal.OneToOne>()
+//                subclassesOfSealed<Expr.Projective.OneToOne>()
+//            }
+//            polymorphic(Expr.OneToMany::class) {
+//                subclassesOfSealed<Expr.Conformal.OneToMany>()
+//                subclassesOfSealed<Expr.Projective.OneToMany>()
+//            }
+        }
         val JSON_FORMAT = Json {
             ignoreUnknownKeys = true
             encodeDefaults = true
             // support Infinity for Points
             allowSpecialFloatingPointValues = true
+            serializersModule = SERIALIZERS_MODULE
         }
         /** nice symmetric spiral */
         val SAMPLE = run {

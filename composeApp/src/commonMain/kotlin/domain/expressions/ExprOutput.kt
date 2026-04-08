@@ -12,6 +12,7 @@ typealias ProjectiveExprOutput = ExprOutput<Expr.Projective>
 @Immutable
 @Serializable
 sealed interface ExprOutput<out EXPR> where EXPR : Expr {
+    @Serializable
     val expr: EXPR
 
     @Serializable

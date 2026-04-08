@@ -110,7 +110,6 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
 import ui.editor.EditorViewModel.Companion.INVERSION_OF_CONTROL
 import ui.editor.dialogs.ColorPickerParameters
 import ui.editor.dialogs.DefaultBiInversionParameters
@@ -458,24 +457,25 @@ class EditorViewModel : ViewModel() {
 
     // TODO: prompt save
     fun openNewBlankConstellation() {
-//        val s = saveState()
+//        val presentState = saveState()
+//        val expr = ArcPath.Closed(vertices = listOf(1,2), arcs = listOf(ArcPath.Arc.LineSegment, ArcPath.Arc.LineSegment))
+//        val exprOutput = ExprOutput.Just(expr)
+//        val exprs: Map<Int, ExprOutput<ArcPath.Closed>> = mapOf(0 to exprOutput) //, 1 to null)
 //        println("prepared state")
-//        // BUG: on wasm this breaks while attempting to convert every Expr to Int
-//        val str = SaveState.JSON_FORMAT.encodeToString(
-//            serializer = SaveState.JSON_FORMAT.serializersModule.serializer(),
-//            value = s
+        // BUG: on wasm SaveState encoding breaks (while state.expressions enc doesn't)
+        // issue: https://github.com/Kotlin/kotlinx.serialization/issues/3177
+//        val str = Choices.JSON_FORMAT.encodeToString(
+//            value =
+//                Choices(mapOf(0 to Choice.One(A)))
 //        )
-////        getPlatform().saveState(s)
-//        println("saved state: $str")
+//        getPlatform().saveState(s)
+//        println("encoded: $str")
 //        return
         loadState(
             SaveState(
                 objects = emptyList(),
                 expressions = emptyMap(),
                 backgroundColor = backgroundColor,
-                chessboardPattern = ChessboardPattern.NONE,
-                chessboardColor = null,
-                center = Offset.Zero,
             )
         )
         resetHistory()
