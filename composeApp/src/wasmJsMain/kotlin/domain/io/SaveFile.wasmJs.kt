@@ -45,13 +45,13 @@ import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.name
 import dodeclusters.composeapp.generated.resources.ok
 import kotlinx.browser.document
-import kotlinx.browser.window
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.w3c.dom.HTMLAnchorElement
-import org.w3c.dom.events.Event
 import org.w3c.dom.url.URL
 import org.w3c.files.Blob
 import org.w3c.files.BlobPropertyBag
@@ -75,12 +75,14 @@ actual fun SaveFileButton(
     )) }
     val textFieldFocusRequester = remember { FocusRequester() }
 
-    fun onConfirm() {
-        dialogIsOpen = false
+    fun tryToDownload() {
         coroutineScope.launch {
             val data = saveData.copy(name = ddcName.text)
             try {
-                downloadTextFile3(data.filename, data.prepareContent(ddcName.text))
+                val content = withContext(Dispatchers.Default) {
+                    data.prepareContent(ddcName.text)
+                }
+                downloadTextFileAsBlob(data.filename, content)
                 onSaved(SaveResult.Success(
                     filename = data.filename,
                 ))
@@ -91,6 +93,7 @@ actual fun SaveFileButton(
                 ))
             }
         }
+        dialogIsOpen = false
     }
 
     Button(
@@ -133,19 +136,19 @@ actual fun SaveFileButton(
                             imeAction = ImeAction.Done
                         ),
                         keyboardActions = KeyboardActions(
-                            onDone = { onConfirm() }
+                            onDone = { tryToDownload() }
                         ),
                         modifier = Modifier
                             .padding(24.dp)
                             .onKeyEvent {
                             if (it.key == Key.Enter) {
-                                onConfirm()
+                                tryToDownload()
                                 true
                             } else false
                         }.focusRequester(textFieldFocusRequester),
                     )
                     Button(
-                        onClick = ::onConfirm,
+                        onClick = { tryToDownload() },
                         modifier = modifier.padding(8.dp).align(Alignment.End),
                         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
@@ -166,39 +169,28 @@ actual fun SaveFileButton(
     }
     LaunchedEffect(saveRequests) {
         saveRequests?.collect { saveRequest ->
-            // TODO: distinguish saveRequest types
-            dialogIsOpen = true
+            when (saveRequest) {
+                SaveRequest.SAVE_AS -> {
+                    dialogIsOpen = true
+                }
+                SaveRequest.QUICK_SAVE -> {
+                    tryToDownload()
+                }
+            }
         }
     }
 }
 
 // showSaveFilePicker() is still experimental, cmon js bros...
 
-// global js function
-external fun encodeURIComponent(str: String): String
-
-// saves as "download"
-fun downloadTextFile1(content: String) {
-    val contentType = "data:application/octet-stream"
-    val uriContent = contentType + "," + encodeURIComponent(content)
-    val newWindow = window.open(uriContent, "New document")
-}
-
-// saves as "download"
-fun downloadTextFile2(content: String) {
-    val contentType = "data:application/octet-stream"
-    val uriContent = contentType + "," + encodeURIComponent(content)
-    window.location.href = uriContent
-}
-
 // saves properly with given filename
-fun downloadTextFile3(filename: String, content: String) {
+fun downloadTextFileAsBlob(filename: String, content: String) {
     val blobContent = JsArray<JsAny?>()
     blobContent[0] = content.toJsString()
     // Q: why text/plain and not yaml mime or smth else?
     val file = Blob(blobContent, BlobPropertyBag("text/plain"))
     val a = document.createElement("a") as HTMLAnchorElement
-    val url = URL.Companion.createObjectURL(file)
+    val url = URL.createObjectURL(file)
     a.href = url
     a.download = filename
     document.body?.appendChild(a) // append/remove is required for firefox (allegedly)
@@ -207,17 +199,18 @@ fun downloadTextFile3(filename: String, content: String) {
     URL.revokeObjectURL(url)
 }
 
+// global js function
+external fun encodeURIComponent(str: String): String
+
 // saves properly with given filename
-fun downloadTextFile4(filename: String, content: String) {
+private fun downloadTextFileAsUri(filename: String, content: String) {
     val contentType = "data:application/octet-stream"
     val uriContent = contentType + ";charset=utf-8," + encodeURIComponent(content)
     val a = document.createElement("a") as HTMLAnchorElement
     a.href = uriContent
     a.download = filename
-    (document.createEvent("MouseEvent") as? Event)?.let { event ->
+    document.createEvent("MouseEvent").let { event ->
         event.initEvent("click", bubbles = true, cancelable = true)
         a.dispatchEvent(event)
-    } ?: run {
-        a.click()
     }
 }

@@ -11,7 +11,7 @@ data class SaveData<T>(
     val name: String,
     /** no leading dot, empty string if no extension */
     val extension: String,
-    val lastDir: String? = null,
+    val lastDirectory: String? = null,
     /** used for overwriting on Android */
     val uri: String? = null,
     val otherDisplayedExtensions: Set<String> = emptySet(),
@@ -30,7 +30,7 @@ data class SaveData<T>(
     ) : this(
         name = filename.substringBeforeLast('.', missingDelimiterValue = filename),
         extension = extension ?: filename.substringAfterLast('.', missingDelimiterValue = ""),
-        lastDir = lastDir,
+        lastDirectory = lastDir,
         uri = uri,
         otherDisplayedExtensions = otherDisplayedExtensions,
         mimeType = mimeType,

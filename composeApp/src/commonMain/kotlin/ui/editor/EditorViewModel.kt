@@ -126,6 +126,7 @@ import ui.tools.Tool
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 // this class is obviously too big
@@ -164,7 +165,8 @@ class EditorViewModel : ViewModel() {
                 objectModel.getArcPath(it)?.dependencies ?: emptySet()
             }
         ).distinct()
-    inline val objectSelection: List<Ix> get() = selection.gCircles
+    inline val objectSelection: List<Ix> get() =
+        selection.gCircles
 
     private val modeState: MutableState<Mode> = mutableStateOf(SelectionMode.Drag)
     /** Major editing mode */
@@ -300,13 +302,15 @@ class EditorViewModel : ViewModel() {
         MutableSharedFlow(
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
-    // TODO: shortcuts and quick-save logic is unimplemented
     /** Save file requests (quick save/overwrite or save as) that generally originate from
      * the keyboard events and are used in platform-dependent buttons */
     val saveFileRequests: MutableSharedFlow<SaveRequest> =
         MutableSharedFlow(
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
+    // TODO: persist this for UX
+    var lastSaveMetadata: SaveResult? by mutableStateOf(null)
+        private set
 
     val animations: MutableSharedFlow<ObjectAnimation> = MutableSharedFlow()
 
@@ -356,25 +360,26 @@ class EditorViewModel : ViewModel() {
 
     // TODO: save history (checkbox)
     fun saveAsYaml(name: String = DdcV5.DEFAULT_NAME): String {
-        return YamlEncoding.encodeToString(
+        val yamlString = YamlEncoding.encodeToString(
             DdcV5.fromSaveState(saveState())
                 .copy(name = name)
         )
+        return yamlString
     }
 
     fun exportAsSvg(
         name: String = DdcV5.DEFAULT_NAME,
         extendedColorScheme: ExtendedColorScheme = DodeclustersColors.extendedDarkScheme,
     ): String {
-        return saveStateAsSvg(
+        val svgString = saveStateAsSvg(
             saveState = saveState(),
             width = canvasSize.width.toFloat(),
             height = canvasSize.height.toFloat(),
             encodeCirclesAndPoints = showCircles,
             name = name,
-            accentColor = extendedColorScheme.accentColor,
-            highAccentColor = extendedColorScheme.highAccentColor,
+            extendedColorScheme = extendedColorScheme,
         )
+        return svgString
     }
 
     private fun computeAbsoluteCenter(): Offset? =
@@ -385,6 +390,17 @@ class EditorViewModel : ViewModel() {
             absolute(visibleCenter)
         }
 
+    private fun updateLastSaveMetadata(
+        filename: String?,
+    ) {
+        lastSaveMetadata =
+            if (filename == null) {
+                SaveResult.Cancelled(directory = lastSaveMetadata?.directory)
+            } else {
+                SaveResult.Success(filename = filename, directory = lastSaveMetadata?.directory)
+            }
+    }
+
     // i dont want to make it suspend tbh
     fun loadDdc(content: String, filename: String? = null) {
         tryParseDdc(
@@ -392,6 +408,7 @@ class EditorViewModel : ViewModel() {
             onDdc5 = { ddc5 ->
                 val state = ddc5.toSaveState()
                 loadState(state)
+                updateLastSaveMetadata(filename)
             },
             onDdc4 = { ddc4 ->
                 val constellation = ddc4.toConstellation()
@@ -404,6 +421,7 @@ class EditorViewModel : ViewModel() {
                 ddc4.chessboardColor?.let {
                     chessboardColor = it
                 }
+                updateLastSaveMetadata(filename)
             },
             onDdc3 = { ddc3 ->
                 val constellation = ddc3.toConstellation().toConstellation()
@@ -413,6 +431,7 @@ class EditorViewModel : ViewModel() {
                     if (!ddc3.chessboardPattern) ChessboardPattern.NONE
                     else if (ddc3.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
                     else ChessboardPattern.STARTS_TRANSPARENT
+                updateLastSaveMetadata(filename)
             },
             onDdc2 = { ddc2 ->
                 val cluster = ddc2.content
@@ -427,6 +446,7 @@ class EditorViewModel : ViewModel() {
                     if (!ddc2.chessboardPattern) ChessboardPattern.NONE
                     else if (ddc2.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
                     else ChessboardPattern.STARTS_TRANSPARENT
+                updateLastSaveMetadata(filename)
             },
             onDdc1 = { ddc1 ->
                 val cluster = ddc1.content
@@ -437,11 +457,13 @@ class EditorViewModel : ViewModel() {
                     cluster.toConstellation()
                 )
                 centerizeTo(ddc1.bestCenterX, ddc1.bestCenterY)
+                updateLastSaveMetadata(filename)
             },
             onClusterV1 = { cluster1 ->
                 loadNewConstellation(
                     cluster1.toCluster().toConstellation()
                 )
+                updateLastSaveMetadata(filename)
             },
             onFail = {
                 queueSnackbarMessage(SnackbarMessage.FAILED_OPEN, filename ?: "")
@@ -481,6 +503,7 @@ class EditorViewModel : ViewModel() {
             )
         )
         resetHistory()
+        lastSaveMetadata = SaveResult.Cancelled(directory = lastSaveMetadata?.directory)
     }
 
     fun showDebugInfo() {
@@ -1429,6 +1452,22 @@ class EditorViewModel : ViewModel() {
             chessboardColor = regionColor
         }
         recordHistory()
+    }
+
+    fun requestOpenFile() {
+        openFileRequests.tryEmit(Unit)
+    }
+
+    fun requestSaveFileAs() {
+        // we have to open SaveOptionsDialog first so that
+        // SaveFileButton starts listening to SaveRequests
+        openedDialog = DialogType.SAVE_OPTIONS
+        viewModelScope.launch {
+            // have to delay a bit for the dialog to open
+            delay(200.milliseconds)
+            // ts ugly tbh
+            saveFileRequests.emit(SaveRequest.SAVE_AS)
+        }
     }
 
     fun newBlank() {
@@ -3075,8 +3114,8 @@ class EditorViewModel : ViewModel() {
                 KeyboardAction.PALETTE -> toolAction(Tool.Palette)
                 KeyboardAction.TRANSFORM -> switchToCategory(Category.Transform)
                 KeyboardAction.CREATE -> switchToCategory(Category.Create)
-                KeyboardAction.OPEN -> openFileRequests.tryEmit(Unit)
-                KeyboardAction.SAVE -> toolAction(Tool.SaveCluster)
+                KeyboardAction.OPEN -> requestOpenFile()
+                KeyboardAction.SAVE -> requestSaveFileAs()
                 KeyboardAction.CONFIRM -> confirmCurrentAction()
                 KeyboardAction.NEW_DOCUMENT -> newBlank()
                 KeyboardAction.HELP -> { // temporarily hijacked for debugging
@@ -4038,9 +4077,11 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    fun onSavingFinished(saveResult: SaveResult) {
+    fun onSaveFinished(saveResult: SaveResult) {
+        openedDialog = null
         when (saveResult) {
             is SaveResult.Success -> {
+                lastSaveMetadata = saveResult
                 queueSnackbarMessage(
                     SnackbarMessage.SUCCESSFUL_SAVE,
                     saveResult.filename,

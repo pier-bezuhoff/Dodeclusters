@@ -18,6 +18,7 @@ import dodeclusters.composeapp.generated.resources.save_cluster_title
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import java.awt.FileDialog
 import java.awt.Frame
@@ -37,7 +38,39 @@ actual fun SaveFileButton(
 ) {
     val coroutineScope = rememberCoroutineScope()
     var dialogIsOpen by remember { mutableStateOf(false) }
-    var lastDir by remember { mutableStateOf<String?>(saveData.lastDir) }
+    var lastDirectory by remember { mutableStateOf(saveData.lastDirectory) }
+
+    suspend fun tryToSave(
+        filename: String?,
+        directory: String?,
+    ) {
+        if (filename != null) {
+            if (directory != null)
+                lastDirectory = directory
+            val file = File(directory, filename)
+            try {
+                withContext(Dispatchers.IO) {
+                    val content = saveData.prepareContent(file.nameWithoutExtension)
+                    saveTextFile(content, file)
+                }
+                onSaved(SaveResult.Success(
+                    filename = filename,
+                    directory = lastDirectory,
+                ))
+            } catch (e: IOException) {
+                onSaved(SaveResult.Failure(
+                    filename = filename,
+                    directory = lastDirectory,
+                    error = e.message,
+                ))
+            }
+        } else {
+            onSaved(SaveResult.Cancelled(
+                directory = lastDirectory,
+            ))
+        }
+    }
+
     Button(
         onClick = {
             dialogIsOpen = true
@@ -53,58 +86,56 @@ actual fun SaveFileButton(
     }
     if (dialogIsOpen) {
         SaveFileDialog(
-            defaultDir = lastDir,
+            defaultDir = lastDirectory,
             defaultFilename = saveData.filename,
             displayedExtensions = setOf(saveData.extension) + saveData.otherDisplayedExtensions
         ) { directory, filename ->
             dialogIsOpen = false
-            coroutineScope.launch(Dispatchers.IO) {
-                if (filename != null) {
-                    if (directory != null)
-                        lastDir = directory
-                    val file = File(directory, filename)
-                    try {
-                        saveTextFile(saveData.prepareContent(file.nameWithoutExtension), file)
-                        onSaved(SaveResult.Success(
-                            filename = filename,
-                            dir = lastDir,
-                        ))
-                    } catch (e: IOException) {
-                        onSaved(SaveResult.Failure(
-                            filename = filename,
-                            dir = lastDir,
-                            error = e.message,
-                        ))
-                    }
-                } else {
-                    onSaved(SaveResult.Cancelled(
-                        dir = lastDir,
-                    ))
-                }
+            coroutineScope.launch {
+                tryToSave(filename = filename, directory = directory)
             }
         }
     }
     LaunchedEffect(saveRequests) {
-        saveRequests?.collect {
-            dialogIsOpen = true
+        saveRequests?.collect { saveRequest ->
+            when (saveRequest) {
+                SaveRequest.SAVE_AS -> {
+                    dialogIsOpen = true
+                }
+                SaveRequest.QUICK_SAVE -> {
+                    // MAYBE: check if we have enough params
+                    //  and if not, open the dialog
+                    dialogIsOpen = false
+                    coroutineScope.launch {
+                        tryToSave(
+                            filename = saveData.filename,
+                            directory = lastDirectory,
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
+private fun addUniqueFilenameSuffix(originalFile: File): File {
+    val name = originalFile.nameWithoutExtension
+    val extension = if (originalFile.extension.isNotBlank()) "." + originalFile.extension else ""
+    var suffix: Int? = null
+    fun newFilename(): String =
+        name + (suffix ?: "") + extension
+    while (File(originalFile.parent, newFilename()).exists()) {
+        if (suffix == null)
+            suffix = 1
+        else
+            suffix += 1
+    }
+    val file = File(originalFile.parent, newFilename())
+    return file
+}
+
 fun saveTextFile(content: String, originalFile: File) {
     // NOTE: we want to allow overriding old files
-//    val name = originalFile.nameWithoutExtension
-//    val extension = if (originalFile.extension.isNotBlank()) "." + originalFile.extension else ""
-//    var suffix: Int? = null
-//    fun newFilename(): String =
-//        name + (suffix ?: "") + extension
-//    while (File(originalFile.parent, newFilename()).exists()) {
-//        if (suffix == null)
-//            suffix = 1
-//        else
-//            suffix += 1
-//    }
-//    val file = File(originalFile.parent, newFilename())
     val file = originalFile
     if (!file.exists())
         file.createNewFile()
@@ -133,7 +164,9 @@ fun SaveFileDialog(
                     directory = defaultDir
                     file = defaultFilename
                     setFilenameFilter { dir, name ->
-                        displayedExtensions.any { ext -> name.lowercase().endsWith(".$ext") }
+                        displayedExtensions.any { ext ->
+                            name.lowercase().endsWith(".$ext")
+                        }
                     }
                 }
 

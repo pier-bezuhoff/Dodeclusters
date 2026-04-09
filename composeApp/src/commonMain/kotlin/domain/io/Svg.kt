@@ -11,6 +11,7 @@ import domain.model.ChessboardPattern
 import domain.model.SaveState
 import kotlinx.serialization.json.Json
 import ui.region2path
+import ui.theme.ExtendedColorScheme
 import kotlin.math.hypot
 
 // MAYBE: implement https://stackoverflow.com/a/4756461/7143065
@@ -37,9 +38,10 @@ fun saveStateAsSvg(
     width: Float, height: Float,
     encodeCirclesAndPoints: Boolean = true,
     name: String? = null,
-    accentColor: Color,
-    highAccentColor: Color,
+    extendedColorScheme: ExtendedColorScheme,
 ): String = buildString {
+    val accentColor = extendedColorScheme.accentColor
+    val highAccentColor = extendedColorScheme.highAccentColor
     val visibleRect = Rect(0f, 0f, width, height)
     val inflatedVisibleRect = visibleRect.inflate(100f)
     appendLine(svgOpen(width, height))

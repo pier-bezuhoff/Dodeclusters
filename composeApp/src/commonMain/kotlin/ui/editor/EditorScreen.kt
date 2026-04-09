@@ -49,11 +49,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -82,7 +79,6 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.save_prompt_after_blank_description
 import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
@@ -92,7 +88,6 @@ import domain.ProgressState
 import domain.io.DdcSharing
 import domain.io.LookupData
 import domain.io.OpenFileButton
-import domain.io.SaveResult
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
@@ -159,9 +154,6 @@ fun EditorScreen(
     )
     val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
-    var lastSaveResult: SaveResult? by rememberSaveable {
-        mutableStateOf(null)
-    }
     Scaffold(
         // ig this may only be useful on android with kbd lol
         modifier = if (keyboardActions == null)
@@ -404,10 +396,10 @@ fun EditorScreen(
                 onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::closeDialog,
                 onSaved = { saveResult ->
-                    lastSaveResult = saveResult
-                    viewModel.onSavingFinished(saveResult)
+                    viewModel.onSaveFinished(saveResult)
                 },
-                lastSaveResult = lastSaveResult,
+                lastSaveResult = viewModel.lastSaveMetadata,
+                saveRequests = viewModel.saveFileRequests,
                 dialogActions = dialogActions,
             )
         }
@@ -416,7 +408,7 @@ fun EditorScreen(
                 description = stringResource(Res.string.save_prompt_after_blank_description),
                 onCancel = viewModel::closeDialog,
                 onDontSave = viewModel::openNewBlank,
-                onSave = { viewModel.toolAction(Tool.SaveCluster) },
+                onSave = viewModel::requestSaveFileAs,
             )
         }
         DialogType.BLEND_SETTINGS -> {

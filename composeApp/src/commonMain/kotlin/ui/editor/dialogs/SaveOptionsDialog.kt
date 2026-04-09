@@ -31,8 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -57,6 +55,7 @@ import domain.io.DdcV5
 import domain.io.SaveBitmapAsPngButton
 import domain.io.SaveData
 import domain.io.SaveFileButton
+import domain.io.SaveRequest
 import domain.io.SaveResult
 import domain.io.SharedId
 import domain.io.SharedIdAndOwnedStatus
@@ -85,8 +84,10 @@ fun SaveOptionsDialog(
     onConfirm: () -> Unit,
     onSaved: (SaveResult) -> Unit,
     lastSaveResult: SaveResult? = null,
+    saveRequests: SharedFlow<SaveRequest>? = null,
     dialogActions: SharedFlow<DialogAction>? = null,
 ) {
+    val lastName: String? = lastSaveResult?.filename?.substringBeforeLast('.')
     val coroutineScope = rememberCoroutineScope()
     var loadingShared: LoadingState<SharedIdAndOwnedStatus>? by remember { mutableStateOf(
         ddcSharing?.shared?.let { LoadingState.Completed(it) }
@@ -170,9 +171,9 @@ fun SaveOptionsDialog(
                         //  shown name-choosing dialog
                         SaveFileButton(
                             saveData = SaveData( // name.yml
-                                filename = lastSaveResult?.filename ?: Tool.SaveCluster.DEFAULT_FILENAME,
+                                name = lastName ?: Tool.SaveCluster.DEFAULT_NAME,
                                 extension = Tool.SaveCluster.EXTENSION,
-                                lastDir = lastSaveResult?.dir,
+                                lastDirectory = lastSaveResult?.directory,
                                 uri = lastSaveResult?.uri,
                                 otherDisplayedExtensions = Tool.SaveCluster.otherDisplayedExtensions,
                                 mimeType = Tool.SaveCluster.MIME_TYPE,
@@ -195,6 +196,7 @@ fun SaveOptionsDialog(
                             modifier = buttonModifier,
                             containerColor = containerColor,
                             contentColor = contentColor,
+                            saveRequests = saveRequests,
                         ) { saveResult ->
                             println(if (saveResult.isSuccess) "YAML saved" else "YAML not saved")
                             onSaved(saveResult)
@@ -205,9 +207,9 @@ fun SaveOptionsDialog(
                         SaveBitmapAsPngButton(
                             viewModel = viewModel,
                             saveData = SaveData(
-                                filename = lastSaveResult?.filename ?: Tool.PngExport.DEFAULT_FILENAME,
+                                name = lastName ?: Tool.PngExport.DEFAULT_NAME,
                                 extension = Tool.PngExport.EXTENSION,
-                                lastDir = lastSaveResult?.dir,
+                                lastDirectory = lastSaveResult?.directory,
                                 uri = lastSaveResult?.uri,
                                 mimeType = Tool.PngExport.MIME_TYPE,
                                 prepareContent = { }
@@ -232,9 +234,9 @@ fun SaveOptionsDialog(
                         }
                         SaveFileButton(
                             saveData = SaveData(
-                                filename = lastSaveResult?.filename ?: Tool.SvgExport.DEFAULT_FILENAME,
+                                name = lastName ?: Tool.SvgExport.DEFAULT_NAME,
                                 extension = Tool.SvgExport.EXTENSION,
-                                lastDir = lastSaveResult?.dir,
+                                lastDirectory = lastSaveResult?.directory,
                                 uri = lastSaveResult?.uri,
                                 mimeType = Tool.SvgExport.MIME_TYPE,
                                 prepareContent = exportAsSvg
