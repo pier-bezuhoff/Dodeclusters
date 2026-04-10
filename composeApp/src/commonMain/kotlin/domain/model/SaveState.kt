@@ -4,10 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
-import core.geometry.ConcreteArcPath
 import core.geometry.GCircleOrConcreteAcPath
-import core.geometry.ImaginaryCircle
-import core.geometry.Line
 import core.geometry.Point
 import domain.ColorAsCss
 import domain.Ix
@@ -21,13 +18,10 @@ import domain.expressions.reIndex
 import domain.expressions.withoutPointsAt
 import domain.reindexingMap
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 
 /** EditorViewModel's save-state for history.
  * [objects].indices must span all of [borderColors].keys and [labels].keys.

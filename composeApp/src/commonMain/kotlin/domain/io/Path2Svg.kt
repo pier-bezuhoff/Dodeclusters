@@ -29,7 +29,7 @@ fun Path.toCircularSvg() = buildString {
                     append("${points[2]} ${points[3]} ${points[4]} ${points[5]}")
                 }
                 PathSegment.Type.Conic ->
-                    append(conicSegment2arc(points))
+                    append(conicSegment2arc(points)) // !
                 PathSegment.Type.Cubic -> {
                     append(command(PathSegment.Type.Cubic, lastType))
                     append("${points[2]} ${points[3]} ")

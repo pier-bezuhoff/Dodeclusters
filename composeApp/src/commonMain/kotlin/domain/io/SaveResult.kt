@@ -36,4 +36,11 @@ sealed interface SaveResult {
     ) : SaveResult {
         override val uri: String? = null
     }
+
+    fun asSaveConfig(): SaveConfig =
+        SaveConfig(
+            name = filename?.substringBeforeLast('.'),
+            directory = directory,
+            uri = uri,
+        )
 }

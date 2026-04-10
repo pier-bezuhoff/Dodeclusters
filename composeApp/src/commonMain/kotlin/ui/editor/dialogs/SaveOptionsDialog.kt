@@ -53,6 +53,7 @@ import domain.LoadingState
 import domain.io.DdcSharing
 import domain.io.DdcV5
 import domain.io.SaveBitmapAsPngButton
+import domain.io.SaveConfig
 import domain.io.SaveData
 import domain.io.SaveFileButton
 import domain.io.SaveRequest
@@ -83,11 +84,10 @@ fun SaveOptionsDialog(
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
     onSaved: (SaveResult) -> Unit,
-    lastSaveResult: SaveResult? = null,
+    saveConfig: SaveConfig = SaveConfig(),
     saveRequests: SharedFlow<SaveRequest>? = null,
     dialogActions: SharedFlow<DialogAction>? = null,
 ) {
-    val lastName: String? = lastSaveResult?.filename?.substringBeforeLast('.')
     val coroutineScope = rememberCoroutineScope()
     var loadingShared: LoadingState<SharedIdAndOwnedStatus>? by remember { mutableStateOf(
         ddcSharing?.shared?.let { LoadingState.Completed(it) }
@@ -171,10 +171,10 @@ fun SaveOptionsDialog(
                         //  shown name-choosing dialog
                         SaveFileButton(
                             saveData = SaveData( // name.yml
-                                name = lastName ?: Tool.SaveCluster.DEFAULT_NAME,
+                                name = saveConfig.name ?: Tool.SaveCluster.DEFAULT_NAME,
                                 extension = Tool.SaveCluster.EXTENSION,
-                                lastDirectory = lastSaveResult?.directory,
-                                uri = lastSaveResult?.uri,
+                                lastDirectory = saveConfig.directory,
+                                uri = saveConfig.uri,
                                 otherDisplayedExtensions = Tool.SaveCluster.otherDisplayedExtensions,
                                 mimeType = Tool.SaveCluster.MIME_TYPE,
                                 prepareContent = saveAsYaml,
@@ -207,10 +207,10 @@ fun SaveOptionsDialog(
                         SaveBitmapAsPngButton(
                             viewModel = viewModel,
                             saveData = SaveData(
-                                name = lastName ?: Tool.PngExport.DEFAULT_NAME,
+                                name = saveConfig.name ?: Tool.PngExport.DEFAULT_NAME,
                                 extension = Tool.PngExport.EXTENSION,
-                                lastDirectory = lastSaveResult?.directory,
-                                uri = lastSaveResult?.uri,
+                                lastDirectory = saveConfig.directory,
+                                uri = saveConfig.uri,
                                 mimeType = Tool.PngExport.MIME_TYPE,
                                 prepareContent = { }
                             ),
@@ -234,10 +234,10 @@ fun SaveOptionsDialog(
                         }
                         SaveFileButton(
                             saveData = SaveData(
-                                name = lastName ?: Tool.SvgExport.DEFAULT_NAME,
+                                name = saveConfig.name ?: Tool.SvgExport.DEFAULT_NAME,
                                 extension = Tool.SvgExport.EXTENSION,
-                                lastDirectory = lastSaveResult?.directory,
-                                uri = lastSaveResult?.uri,
+                                lastDirectory = saveConfig.directory,
+                                uri = saveConfig.uri,
                                 mimeType = Tool.SvgExport.MIME_TYPE,
                                 prepareContent = exportAsSvg
                             ),

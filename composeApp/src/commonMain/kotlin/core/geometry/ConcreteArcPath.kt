@@ -1,6 +1,7 @@
 package core.geometry
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import kotlinx.serialization.Serializable
 import kotlin.math.max
@@ -149,6 +150,16 @@ data class ConcreteArcPath(
             arc.copy(
                 circleOrLine = arc.circleOrLine?.scaled00(zoom),
                 freeMidpoint = arc.freeMidpoint?.scaled00(zoom),
+            )
+        }
+    )
+
+    fun translated(vector: Offset): ConcreteArcPath = copy(
+        vertices = vertices.map { it.translated(vector) },
+        arcs = arcs.map { arc ->
+            arc.copy(
+                circleOrLine = arc.circleOrLine?.translated(vector),
+                freeMidpoint = arc.freeMidpoint?.translated(vector),
             )
         }
     )

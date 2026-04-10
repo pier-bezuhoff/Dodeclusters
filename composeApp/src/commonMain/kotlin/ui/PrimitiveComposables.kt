@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,7 +54,6 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -768,33 +766,6 @@ fun BoxScope.LoadingOverlay(
                 )
             }
             CircularProgressIndicator(Modifier)
-        }
-    }
-}
-
-private object HighlightMarkdown {
-    const val HIGHLIGHT_DELIMITER = "^"
-    val HIGHLIGHT_FONT_WEIGHT = FontWeight.Bold
-
-    fun parse(
-        textWithMarkdown: String,
-        highlightColor: Color,
-    ): AnnotatedString = buildAnnotatedString {
-        val style = SpanStyle(
-            color = highlightColor,
-            fontWeight = HIGHLIGHT_FONT_WEIGHT,
-        )
-        val parts = textWithMarkdown.splitToSequence(HIGHLIGHT_DELIMITER)
-        var delimited = false
-        for (part in parts) {
-            if (delimited) {
-                withStyle(style) {
-                    append(part)
-                }
-            } else {
-                append(part)
-            }
-            delimited = !delimited
         }
     }
 }

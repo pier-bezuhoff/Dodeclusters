@@ -77,6 +77,7 @@ import domain.indicesSortedBy
 import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV5
+import domain.io.SaveConfig
 import domain.io.SaveRequest
 import domain.io.SaveResult
 import domain.io.saveStateAsSvg
@@ -309,7 +310,7 @@ class EditorViewModel : ViewModel() {
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
     // TODO: persist this for UX
-    var lastSaveMetadata: SaveResult? by mutableStateOf(null)
+    var saveConfig: SaveConfig by mutableStateOf(SaveConfig())
         private set
 
     val animations: MutableSharedFlow<ObjectAnimation> = MutableSharedFlow()
@@ -390,15 +391,12 @@ class EditorViewModel : ViewModel() {
             absolute(visibleCenter)
         }
 
-    private fun updateLastSaveMetadata(
+    private fun updateSaveConfig(
         filename: String?,
     ) {
-        lastSaveMetadata =
-            if (filename == null) {
-                SaveResult.Cancelled(directory = lastSaveMetadata?.directory)
-            } else {
-                SaveResult.Success(filename = filename, directory = lastSaveMetadata?.directory)
-            }
+        saveConfig = saveConfig.copy(
+            name = filename?.substringBeforeLast('.') ?: saveConfig.name
+        )
     }
 
     // i dont want to make it suspend tbh
@@ -408,7 +406,7 @@ class EditorViewModel : ViewModel() {
             onDdc5 = { ddc5 ->
                 val state = ddc5.toSaveState()
                 loadState(state)
-                updateLastSaveMetadata(filename)
+                updateSaveConfig(filename)
             },
             onDdc4 = { ddc4 ->
                 val constellation = ddc4.toConstellation()
@@ -421,7 +419,7 @@ class EditorViewModel : ViewModel() {
                 ddc4.chessboardColor?.let {
                     chessboardColor = it
                 }
-                updateLastSaveMetadata(filename)
+                updateSaveConfig(filename)
             },
             onDdc3 = { ddc3 ->
                 val constellation = ddc3.toConstellation().toConstellation()
@@ -431,7 +429,7 @@ class EditorViewModel : ViewModel() {
                     if (!ddc3.chessboardPattern) ChessboardPattern.NONE
                     else if (ddc3.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
                     else ChessboardPattern.STARTS_TRANSPARENT
-                updateLastSaveMetadata(filename)
+                updateSaveConfig(filename)
             },
             onDdc2 = { ddc2 ->
                 val cluster = ddc2.content
@@ -446,7 +444,7 @@ class EditorViewModel : ViewModel() {
                     if (!ddc2.chessboardPattern) ChessboardPattern.NONE
                     else if (ddc2.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
                     else ChessboardPattern.STARTS_TRANSPARENT
-                updateLastSaveMetadata(filename)
+                updateSaveConfig(filename)
             },
             onDdc1 = { ddc1 ->
                 val cluster = ddc1.content
@@ -457,13 +455,13 @@ class EditorViewModel : ViewModel() {
                     cluster.toConstellation()
                 )
                 centerizeTo(ddc1.bestCenterX, ddc1.bestCenterY)
-                updateLastSaveMetadata(filename)
+                updateSaveConfig(filename)
             },
             onClusterV1 = { cluster1 ->
                 loadNewConstellation(
                     cluster1.toCluster().toConstellation()
                 )
-                updateLastSaveMetadata(filename)
+                updateSaveConfig(filename)
             },
             onFail = {
                 queueSnackbarMessage(SnackbarMessage.FAILED_OPEN, filename ?: "")
@@ -475,7 +473,7 @@ class EditorViewModel : ViewModel() {
     fun centerizeTo(centerX: Float?, centerY: Float?) {
         translation = -Offset(
             centerX?.let { it - canvasSize.width/2f } ?: 0f,
-            centerY?.let { it - canvasSize.height/2f } ?: 0f
+            centerY?.let { it - canvasSize.height/2f } ?: 0f,
         )
     }
 
@@ -503,7 +501,10 @@ class EditorViewModel : ViewModel() {
             )
         )
         resetHistory()
-        lastSaveMetadata = SaveResult.Cancelled(directory = lastSaveMetadata?.directory)
+        saveConfig = saveConfig.copy(
+            name = null,
+            uri = null,
+        )
     }
 
     fun showDebugInfo() {
@@ -567,11 +568,10 @@ class EditorViewModel : ViewModel() {
         clearSelection()
         objectModel.loadConstellation(constellation)
         val objectIndices = objects.indices.toSet()
-        regions = constellation.parts
-            .filter { part -> // region validation
-                part.insides.all { it in objectIndices } &&
-                part.outsides.all { it in objectIndices }
-            }
+        regions = constellation.parts.filter { part -> // region validation
+            part.insides.all { it in objectIndices } &&
+            part.outsides.all { it in objectIndices }
+        }
         backgroundColor = constellation.backgroundColor
         labels = constellation.objectLabels
         objectModel.invalidate()
@@ -585,7 +585,7 @@ class EditorViewModel : ViewModel() {
         )
     }
 
-    /** saves present state, diffs it with [history]`.lastRecordedState` and
+    /** Saves present state, diffs it with [history]`.lastRecordedState` and
      * records changes to [history]`.past`, enabling [undo]s */
     private fun recordHistory() {
         history.recordDiff(saveState())
@@ -635,10 +635,9 @@ class EditorViewModel : ViewModel() {
         regions = state.regions
         backgroundColor = state.backgroundColor
         labels = state.labels
-        val validSelection = state.selection.copy(
-            // just in case
+        val validSelection = state.selection.copy( // just in case
             gCircles = state.selection.gCircles.filter { it in objects.indices },
-            arcPaths = state.selection.arcPaths.filter { it in objects.indices }
+            arcPaths = state.selection.arcPaths.filter { it in objects.indices },
         )
         val switchToMultiselect = objectSelection.size <= 1 && validSelection.gCircles.size > 1
         selection = validSelection
@@ -1156,6 +1155,7 @@ class EditorViewModel : ViewModel() {
                 }
                 is Line -> return null
                 is ConcreteArcPath -> {
+//                    (objectModel.pathCache[ix] ?: o.toPath()).getBounds()
                     val (left1, top1, right1, bottom1) = o.toRect()
                     left = min(left, left1)
                     right = max(right, right1)
@@ -1405,6 +1405,7 @@ class EditorViewModel : ViewModel() {
             submode = null
             switchToCategory(Category.Drag)
         } else {
+            clearSelection()
             switchToMode(ViewMode.StereographicRotation)
             val sphereProjection = Circle(
                 computeAbsoluteCenter() ?: Offset.Zero,
@@ -2623,13 +2624,18 @@ class EditorViewModel : ViewModel() {
             val bivector = bivector0 * 0.5
             val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
             for (ix in objectModel.downscaledObjects.indices) {
-                val o = objectModel.downscaledObjects[ix] as? GCircle
-                if (o != null) {
-                    val newObject = rotor.applyTo(GeneralizedCircle.fromGCircle(o)).toGCircleAs(o)
-                    objectModel.setDownscaledObject(ix, newObject)
+                when (val o = objectModel.downscaledObjects[ix]) {
+                    is GCircle -> {
+                        val newObject = rotor.applyTo(GeneralizedCircle.fromGCircle(o))
+                            .toGCircleAs(o)
+                        objectModel.setDownscaledObject(ix, newObject)
+                    }
+                    else -> {}
                 }
             }
             expressions.adjustIncidentPointExpressions()
+            expressions.reEval()
+            objectModel.syncDisplayObjects(objects.indices)
             val newSouth = (rotor.applyTo(GeneralizedCircle.fromGCircle(
                 sm.south.downscale()
             )).toGCircleAs(sm.south) as? Point)
@@ -3041,9 +3047,6 @@ class EditorViewModel : ViewModel() {
 
     fun queueSnackbarMessage(snackbarMessage: SnackbarMessage, vararg formatArgs: Any) {
         snackbarMessages.tryEmit(snackbarMessage to formatArgs)
-//        viewModelScope.launch {
-//            snackbarMessages.emit(snackbarMessage)
-//        }
     }
 
     /** Signals locked state to the user with animation & snackbar message */
@@ -4081,7 +4084,7 @@ class EditorViewModel : ViewModel() {
         openedDialog = null
         when (saveResult) {
             is SaveResult.Success -> {
-                lastSaveMetadata = saveResult
+                saveConfig = saveResult.asSaveConfig()
                 queueSnackbarMessage(
                     SnackbarMessage.SUCCESSFUL_SAVE,
                     saveResult.filename,
@@ -4096,7 +4099,6 @@ class EditorViewModel : ViewModel() {
                 val errorMessage =
                     if (saveResult.error == null) ""
                     else "; error: \"${saveResult.error}\""
-
                 queueSnackbarMessage(
                     SnackbarMessage.FAILED_SAVE,
                     saveResult.filename ?: "-",
@@ -4126,18 +4128,16 @@ class EditorViewModel : ViewModel() {
             ToolMode.CIRCLE_EXTRAPOLATION -> DialogType.CIRCLE_EXTRAPOLATION
             ToolMode.BI_INVERSION -> DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> DialogType.LOXODROMIC_MOTION
-            else -> null
-        } ?: submode.let { sm ->
-            if (sm is SubMode.ExprAdjustment<*>) {
-                when (sm.parameters) {
-                    is InterpolationParameters -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
-                    is RotationParameters -> DialogType.ROTATION
-                    is BiInversionParameters -> DialogType.BI_INVERSION
-                    is LoxodromicMotionParameters -> DialogType.LOXODROMIC_MOTION
-                    else -> null
-                }
-            } else {
-                null
+            else -> when (val sm = submode) {
+                is SubMode.ExprAdjustment<*> ->
+                    when (sm.parameters) {
+                        is InterpolationParameters -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
+                        is RotationParameters -> DialogType.ROTATION
+                        is BiInversionParameters -> DialogType.BI_INVERSION
+                        is LoxodromicMotionParameters -> DialogType.LOXODROMIC_MOTION
+                        else -> null
+                    }
+                else -> null
             }
         }
     }
@@ -4200,7 +4200,7 @@ class EditorViewModel : ViewModel() {
 
     /** Is [tool] enabled? */
     fun toolPredicate(tool: Tool): Boolean =
-        when (tool) { // NOTE: i think this has to return State<Boolean> to work properly
+        when (tool) {
             Tool.Drag ->
                 mode == SelectionMode.Drag
             Tool.Multiselect ->

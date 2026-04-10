@@ -98,6 +98,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import ui.DisableableButton
+import ui.HighlightMarkdown
 import ui.LifecycleEvent
 import ui.LoadingOverlay
 import ui.OnOffButton
@@ -200,13 +201,11 @@ fun EditorScreen(
         floatingActionButtonPosition = FabPosition.End
     ) {
         Surface {
-            Box(Modifier
-                .drawBehind {
-                    viewModel.backgroundColor?.let { backgroundColor ->
-                        drawRect(backgroundColor, size = size)
-                    }
+            Box(Modifier.drawBehind {
+                viewModel.backgroundColor?.let { backgroundColor ->
+                    drawRect(backgroundColor, size = size)
                 }
-            ) {
+            }) {
                 EditorCanvas(viewModel)
                 if (viewModel.showUI) {
                     ToolDescription(
@@ -398,7 +397,7 @@ fun EditorScreen(
                 onSaved = { saveResult ->
                     viewModel.onSaveFinished(saveResult)
                 },
-                lastSaveResult = viewModel.lastSaveMetadata,
+                saveConfig = viewModel.saveConfig,
                 saveRequests = viewModel.saveFileRequests,
                 dialogActions = dialogActions,
             )
@@ -587,6 +586,10 @@ fun ToolDescription(
                         stringResource(currentTool.disabledDescription)
                 else -> stringResource(currentTool.description)
             }
+//            val descriptionAnnotatedString = HighlightMarkdown.parse(
+//                description,
+//                highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
+//            )
             Text(
                 description,
                 modifier
@@ -607,7 +610,6 @@ fun ToolDescription(
             )
         }
         val inputPrompt = stringResource(Res.string.tool_arg_input_prompt)
-        // TODO: highlight markdown for arg descriptions
         val argDescriptions = (tool as? Tool.MultiArg)?.let {
             stringArrayResource(it.argDescriptions)
         }
@@ -634,7 +636,17 @@ fun ToolDescription(
                     if (currentNumber == -1) null
                 else
                     argDescriptions[currentNumber]
-                val selectionAsArgPrompt = stringResource(Res.string.set_selection_as_tool_arg_prompt)
+                val argPrompt =
+                    if (currentNumber == -1)
+                        confirmParametersPrompt
+                    else
+                        "$inputPrompt: $argDescription"
+//                val argPromptAnnotatedString = HighlightMarkdown.parse(
+//                    argPrompt,
+//                    highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
+//                )
+                val setSelectionAsToolArgPrompt = stringResource(Res.string.set_selection_as_tool_arg_prompt)
+                val selectionAsArgPrompt = "$setSelectionAsToolArgPrompt: $argDescription?"
                 if (currentShowPrompt) {
                     Button(
                         onClick = setSelectionAsArg,
@@ -646,8 +658,7 @@ fun ToolDescription(
                             )
                     ) {
                         // NOTE: this functionality is non-obvious
-                        Text(
-                            "$selectionAsArgPrompt: $argDescription?",
+                        Text(selectionAsArgPrompt,
                             Modifier.padding(4.dp, 4.dp),
                             textDecoration = TextDecoration.Underline,
                             style = textStyle,
@@ -659,8 +670,7 @@ fun ToolDescription(
                         )
                     }
                 } else if (!compact) {
-                    Text(
-                        if (currentNumber == -1) confirmParametersPrompt else "$inputPrompt: $argDescription",
+                    Text(argPrompt,
                         Modifier.padding(24.dp, 4.dp),
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
                         textDecoration = TextDecoration.Underline,
