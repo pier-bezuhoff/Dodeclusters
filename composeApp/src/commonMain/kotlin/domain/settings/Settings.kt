@@ -33,6 +33,7 @@ data class Settings(
     val defaultBiInversionParameters: DefaultBiInversionParameters = DefaultBiInversionParameters(),
     val defaultLoxodromicMotionParameters: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
     val categoryDefaultIndices: List<Int?> = ToolbarState().categoryDefaultIndices,
+    val saveDirectory: String? = null,
 ) {
     companion object {
         val JSON_FORMAT = Json {

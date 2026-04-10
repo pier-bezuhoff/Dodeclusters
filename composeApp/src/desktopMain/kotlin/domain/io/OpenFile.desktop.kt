@@ -82,6 +82,7 @@ private fun LoadFileDialog(
         create = {
             object : FileDialog(parent, title, LOAD) {
                 init {
+                    directory = lookupData.directory
                     setFilenameFilter { dir, name ->
                         lookupData.extensions.any { extension ->
                             name.endsWith(".$extension")

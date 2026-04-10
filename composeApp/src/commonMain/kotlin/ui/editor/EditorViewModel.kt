@@ -309,7 +309,6 @@ class EditorViewModel : ViewModel() {
         MutableSharedFlow(
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
-    // TODO: persist this for UX
     var saveConfig: SaveConfig by mutableStateOf(SaveConfig())
         private set
 
@@ -4382,6 +4381,7 @@ class EditorViewModel : ViewModel() {
         defaultRotationParameters = settings.defaultRotationParameters
         defaultBiInversionParameters = settings.defaultBiInversionParameters
         defaultLoxodromicMotionParameters = settings.defaultLoxodromicMotionParameters
+        saveConfig = saveConfig.copy(directory = settings.saveDirectory)
         toolbarState = toolbarState.copy(categoryDefaultIndices = settings.categoryDefaultIndices)
         switchToCategory(toolbarState.activeCategory)
     }
@@ -4439,6 +4439,7 @@ class EditorViewModel : ViewModel() {
             defaultBiInversionParameters = defaultBiInversionParameters,
             defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters,
             categoryDefaultIndices = toolbarState.categoryDefaultIndices,
+            saveDirectory = saveConfig.directory,
         )
 
     // NOTE: i never seen this proc on Android or Wasm tbh, only on Desktop

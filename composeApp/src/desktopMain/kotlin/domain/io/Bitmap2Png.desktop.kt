@@ -67,7 +67,7 @@ actual fun SaveBitmapAsPngButton(
             }
         } else {
             SaveFileDialog(
-                defaultDir = lastDir,
+                defaultDirectory = lastDir,
                 defaultFilename = saveData.filename,
                 displayedExtensions = setOf(saveData.extension) + saveData.otherDisplayedExtensions
             ) { directory, filename ->

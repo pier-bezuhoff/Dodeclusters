@@ -86,7 +86,7 @@ actual fun SaveFileButton(
     }
     if (dialogIsOpen) {
         SaveFileDialog(
-            defaultDir = lastDirectory,
+            defaultDirectory = lastDirectory,
             defaultFilename = saveData.filename,
             displayedExtensions = setOf(saveData.extension) + saveData.otherDisplayedExtensions
         ) { directory, filename ->
@@ -150,7 +150,7 @@ fun saveTextFile(content: String, originalFile: File) {
 @Composable
 fun SaveFileDialog(
     parent: Frame? = null,
-    defaultDir: String? = null,
+    defaultDirectory: String? = null,
     defaultFilename: String,
     displayedExtensions: Set<String>,
     onCloseRequest: (directory: String?, filename: String?) -> Unit
@@ -161,7 +161,7 @@ fun SaveFileDialog(
             // MAYBE: use JFileChooser instead
             object : FileDialog(parent, title, SAVE) {
                 init {
-                    directory = defaultDir
+                    directory = defaultDirectory
                     file = defaultFilename
                     setFilenameFilter { dir, name ->
                         displayedExtensions.any { ext ->

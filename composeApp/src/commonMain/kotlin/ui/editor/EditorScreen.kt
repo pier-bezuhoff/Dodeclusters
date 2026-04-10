@@ -88,6 +88,7 @@ import domain.ProgressState
 import domain.io.DdcSharing
 import domain.io.LookupData
 import domain.io.OpenFileButton
+import domain.io.SaveConfig
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
@@ -231,6 +232,7 @@ fun EditorScreen(
                         },
                         undo = viewModel::undo,
                         redo = viewModel::redo,
+                        saveConfig = viewModel.saveConfig,
                         modifier = Modifier.align(Alignment.TopEnd),
                         openFileRequests = viewModel.openFileRequests,
                     )
@@ -692,6 +694,7 @@ fun EditorTopBar(
     loadFromYaml: (content: String?, filename: String?) -> Unit,
     undo: () -> Unit,
     redo: () -> Unit,
+    saveConfig: SaveConfig,
     modifier: Modifier = Modifier,
     openFileRequests: SharedFlow<Unit>? = null,
 ) {
@@ -753,7 +756,7 @@ fun EditorTopBar(
                 OpenFileButton(
                     painterResource(Tool.OpenFile.icon),
                     stringResource(Tool.OpenFile.name),
-                    LookupData.YAML,
+                    LookupData.YAML.copy(directory = saveConfig.directory),
                     modifier = iconModifier,
                     openRequests = openFileRequests,
                     onOpen = loadFromYaml,

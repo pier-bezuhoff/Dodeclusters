@@ -13,6 +13,7 @@ data class LookupData(
     val extensions: Set<String>, // used for desktop
     val htmlFileInputAccept: String, // accept attribute of <input>
     val androidMimeType: String,
+    val directory: String? = null,
 ) {
     companion object {
         val YAML = LookupData(
@@ -22,7 +23,7 @@ data class LookupData(
             // BUG: "application/*" does not accept *small* yaml files in
             //  *some* file pickers (e.g. MIUI's default one), it thinks they are text/* or smth...
             // NOTE: i know whom to blame, it only took 22 years... https://www.rfc-editor.org/rfc/rfc9512.html
-            androidMimeType = "application/*"
+            androidMimeType = "application/*",
         )
     }
 }
