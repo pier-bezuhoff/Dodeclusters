@@ -61,8 +61,10 @@ private fun setUrlSearchParam(key: String, value: String) {
 object WebDdcSharing : DdcSharing {
     override var shared: SharedIdAndOwnedStatus? by mutableStateOf(null)
 
-    private val NO_RESPONSE: Result<Nothing> = Result.failure(Error("null or unsuccessful response"))
-    private val NO_RESPONSE_JSON: Result<Nothing> = Result.failure(Error("null response.json()"))
+    private val NO_RESPONSE: Result<Nothing> =
+        Result.failure(Error("null or unsuccessful response"))
+    private val NO_RESPONSE_JSON: Result<Nothing> =
+        Result.failure(Error("null response.json()"))
 
     override fun formatLink(sharedId: SharedId): String {
         val link = URL(window.location.origin + window.location.pathname)

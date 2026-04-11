@@ -29,6 +29,9 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
     override var expressions: ConformalExpressions =
         ConformalExpressions(emptyMap(), mutableListOf())
 
+    inline val gCircleIndices: Set<Ix> get() = expressions.gCircleIndices
+    inline val arcPathIndices: Set<Ix> get() = expressions.arcPathIndices
+
     fun getInfinityIndex(): Ix? {
         val infinityIndex = displayObjects.indexOfFirst { it == Point.CONFORMAL_INFINITY }
         return if (infinityIndex == -1) {

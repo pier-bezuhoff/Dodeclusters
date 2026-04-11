@@ -1,58 +1,55 @@
 package ui.editor
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.graphics.Color
-import core.geometry.CircleOrLine
-import core.geometry.GCircle
-import domain.ColorAsCss
-import core.geometry.ConcreteArcPath
-import kotlinx.serialization.Serializable
-import ui.theme.DodeclustersColors
+import core.geometry.GCircleOrConcreteAcPath
+import domain.Ix
 
 @Immutable
-@Serializable
 sealed interface ObjectAnimation {
-    val objects: List<GCircle>
+    val objects: Map<Ix, GCircleOrConcreteAcPath>
 }
 
 /** Animation: alpha=0 .. alpha=[maxAlpha] .. alpha=0
  *
- * for colored object contour */
+ * for colored object contour
+ * @property[alpha01Duration] in milliseconds
+ * @property[alpha10Duration] in milliseconds
+ */
 @Immutable
-@Serializable
 sealed interface ColoredContourAnimation : ObjectAnimation {
     val maxAlpha: Float
-    val alpha01Duration: Int // in milliseconds
+    val alpha01Duration: Int
     val alpha10Duration: Int
-    val fillCircle: Boolean
 }
 
 @Immutable
-@Serializable
 data class HighlightAnimation(
-    override val objects: List<GCircle>,
+    override val objects: Map<Ix, GCircleOrConcreteAcPath>,
 ) : ColoredContourAnimation {
     override val maxAlpha: Float = 0.6f
     override val alpha01Duration: Int = 20
     override val alpha10Duration: Int = 500
-    override val fillCircle: Boolean = false
 }
 
 /** params for create/copy/delete animations */
 @Immutable
-@Serializable
-sealed class CircleAnimation(
-    override val objects: List<GCircle>,
+sealed class AppearanceAnimation(
+    override val objects: Map<Ix, GCircleOrConcreteAcPath>,
 ) : ColoredContourAnimation {
     override val maxAlpha: Float = 0.2f
     override val alpha01Duration: Int = 50
     override val alpha10Duration: Int = 1_500
-    override val fillCircle: Boolean = true
 
-    /** Animation for creating new circles */
-    data class Entrance(override val objects: List<CircleOrLine>) : CircleAnimation(objects)
-    /** Animation for duplicating circles */
-    data class ReEntrance(override val objects: List<CircleOrLine>) : CircleAnimation(objects)
-    /** Animation for deleting circles */
-    data class Exit(override val objects: List<CircleOrLine>) : CircleAnimation(objects)
+    /** Animation for creating new objects */
+    data class Entrance(
+        override val objects: Map<Ix, GCircleOrConcreteAcPath>
+    ) : AppearanceAnimation(objects)
+    /** Animation for duplicating objects */
+    data class ReEntrance(
+        override val objects: Map<Ix, GCircleOrConcreteAcPath>
+    ) : AppearanceAnimation(objects)
+    /** Animation for deleting objects */
+    data class Exit(
+        override val objects: Map<Ix, GCircleOrConcreteAcPath>
+    ) : AppearanceAnimation(objects)
 }

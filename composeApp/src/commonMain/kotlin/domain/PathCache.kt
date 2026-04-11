@@ -57,4 +57,19 @@ class PathCache {
         objectPaths[index] = path
         objectPathValidity[index] = true
     }
+
+    inline fun getOrSet(
+        index: Ix,
+        crossinline mkPath: (Path) -> Path,
+    ): Path {
+        val cachedPath: Path? = objectPaths[index]
+        return if (cachedPath == null || !objectPathValidity[index]) {
+            // if we don't call reset()/rewind() here but the color changes,
+            // first draw results in transparent fill (???)
+            cachedPath?.reset() // or rewind()
+            val newPath = mkPath(cachedPath ?: Path())
+            cacheObjectPath(index, newPath)
+            newPath
+        } else cachedPath
+    }
 }

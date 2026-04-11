@@ -595,3 +595,12 @@ inline fun <reified EXPR : Expr> EXPR.copyWithNewParameters(
             )
         } as EXPR
     } else this
+
+fun Expr.TransformLike.changeTarget(
+    newTarget: Ix
+): Expr.TransformLike = when (this) {
+    is CircleInversion -> copy(target = newTarget)
+    is Rotation -> copy(target = newTarget)
+    is BiInversion -> copy(target = newTarget)
+    is LoxodromicMotion -> copy(target = newTarget)
+}

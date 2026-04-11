@@ -223,10 +223,10 @@ fun _chessboardPath(
 }
 
 /**
- * @param[circles] all delimiters, `null`s are to be interpreted as ∅ empty sets
+ * @param[circlesOrLines] all delimiters, `null`s are to be interpreted as ∅ empty sets
  */
 fun region2pathWithCache(
-    circles: List<CircleOrLine?>,
+    circlesOrLines: List<CircleOrLine?>,
     region: LogicalRegion,
     pathCache: PathCache,
     visibleRect: Rect,
@@ -237,23 +237,19 @@ fun region2pathWithCache(
     }
     path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
     for (ix in region.insides) {
-        when (val circle = circles[ix]) {
+        when (val circleOrLine = circlesOrLines[ix]) {
             is Circle -> {
-                var p: Path? = pathCache.objectPaths[ix]
-                if (p == null || !pathCache.objectPathValidity[ix]) {
-                    p = circle2path(circle, visibleRect, p ?: Path())
-                    pathCache.cacheObjectPath(ix, p)
+                val p = pathCache.getOrSet(ix) {
+                    circle2path(circleOrLine, visibleRect, it)
                 }
                 path.op(path, p,
-                    if (circle.isCCW) PathOperation.Intersect
+                    if (circleOrLine.isCCW) PathOperation.Intersect
                     else PathOperation.Difference
                 )
             }
             is Line -> {
-                var p: Path? = pathCache.objectPaths[ix]
-                if (p == null || !pathCache.objectPathValidity[ix]) {
-                    p = halfPlanePath(circle, visibleRect, p ?: Path())
-                    pathCache.cacheObjectPath(ix, p)
+                val p = pathCache.getOrSet(ix) {
+                    halfPlanePath(circleOrLine, visibleRect, it)
                 }
                 path.op(path, p, PathOperation.Intersect)
             }
@@ -261,23 +257,19 @@ fun region2pathWithCache(
         }
     }
     for (ix in region.outsides) {
-        when (val circle = circles[ix]) {
+        when (val circleOrLine = circlesOrLines[ix]) {
             is Circle -> {
-                var p: Path? = pathCache.objectPaths[ix]
-                if (p == null || !pathCache.objectPathValidity[ix]) {
-                    p = circle2path(circle, visibleRect, p ?: Path())
-                    pathCache.cacheObjectPath(ix, p)
+                val p = pathCache.getOrSet(ix) {
+                    circle2path(circleOrLine, visibleRect, it)
                 }
                 path.op(path, p,
-                    if (circle.isCCW) PathOperation.Difference
+                    if (circleOrLine.isCCW) PathOperation.Difference
                     else PathOperation.Intersect
                 )
             }
             is Line -> {
-                var p: Path? = pathCache.objectPaths[ix]
-                if (p == null || !pathCache.objectPathValidity[ix]) {
-                    p = halfPlanePath(circle, visibleRect, p ?: Path())
-                    pathCache.cacheObjectPath(ix, p)
+                val p = pathCache.getOrSet(ix) {
+                    halfPlanePath(circleOrLine, visibleRect, it)
                 }
                 path.op(path, p, PathOperation.Difference)
             }

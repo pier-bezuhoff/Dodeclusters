@@ -158,12 +158,12 @@ object DodeclustersColors {
     val extendedLightScheme = ExtendedColorScheme(
         accentColor = accentLight,
         highAccentColor = highAccentLight,
-        selectionColor = DodeclustersColors.strongSalad,
+        selectionColor = strongSalad,
         creationColor = Color.Green,
         copyingColor = Color.Blue,
         deletionColor = Color.Red,
-        highlightColor = DodeclustersColors.skyBlue,
-        imaginaryCircleColor = DodeclustersColors.fadedRed,
+        highlightColor = skyBlue,
+        imaginaryCircleColor = fadedRed,
     )
 
     val darkScheme = darkColorScheme(
@@ -207,11 +207,11 @@ object DodeclustersColors {
     val extendedDarkScheme = ExtendedColorScheme(
         accentColor = accentDark,
         highAccentColor = highAccentDark,
-        selectionColor = DodeclustersColors.strongSalad,
+        selectionColor = strongSalad,
         creationColor = Color.Green,
         copyingColor = Color.Blue,
         deletionColor = Color.Red,
-        highlightColor = DodeclustersColors.skyBlue,
-        imaginaryCircleColor = DodeclustersColors.fadedRed,
+        highlightColor = skyBlue,
+        imaginaryCircleColor = fadedRed,
     )
 }

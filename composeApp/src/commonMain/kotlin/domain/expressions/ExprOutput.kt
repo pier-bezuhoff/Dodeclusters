@@ -28,6 +28,32 @@ sealed interface ExprOutput {
         override val expr: Expr.OneToMany,
         val outputIndex: Ix
     ) : ExprOutput
+
+    companion object {
+        fun testIfTrajectoryStage(outputs: List<ExprOutput>): Boolean {
+            val output0 = outputs.first()
+            val expr0 = output0.expr
+            if (expr0 !is Expr.TransformLike)
+                return false
+            when (output0) {
+                is Just -> {
+                    if (outputs.any { it is OneOf })
+                        return false
+                }
+                is OneOf -> {
+                    if (outputs.any {
+                        it is Just || (it as OneOf).outputIndex != output0.outputIndex
+                    })
+                        return false
+                }
+            }
+            // all are transforms with same output index and only differing targets
+            return outputs.all {
+                val expr = it.expr
+                expr is Expr.TransformLike && expr.changeTarget(expr0.target) == expr0
+            }
+        }
+    }
 }
 
 inline fun ExprOutput.reIndex(

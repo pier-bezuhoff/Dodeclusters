@@ -494,7 +494,7 @@ fun EditorScreen(
     }
     val colorScheme = MaterialTheme.colorScheme
     val isDarkTheme = MaterialTheme.isDarkTheme
-    LaunchedEffect(viewModel.backgroundColor, isDarkTheme) {
+    LaunchedEffect(viewModel.backgroundColor, isDarkTheme, colorScheme) {
         if (viewModel.backgroundColor == null ||
             isDarkTheme && viewModel.backgroundColor == DodeclustersColors.lightScheme.surface ||
             !isDarkTheme && viewModel.backgroundColor == DodeclustersColors.darkScheme.surface
