@@ -315,6 +315,7 @@ fun BoxScope.EditorCanvas(
             }
             ArcPathContextActions(
                 someAreClosed = someAreClosed,
+                showAdjustExprButton = viewModel.showAdjustExprButton,
                 mostCommonBorderColor = mostCommonBorderColor,
                 mostCommonFillColor = mostCommonFillColor,
                 toolAction = viewModel::toolAction,

@@ -365,6 +365,7 @@ fun BoxScope.PointContextActions(
 @Composable
 fun BoxScope.ArcPathContextActions(
     someAreClosed: Boolean,
+    showAdjustExprButton: Boolean,
     mostCommonBorderColor: Color?,
     mostCommonFillColor: Color?,
     toolAction: (Tool) -> Unit,
@@ -388,6 +389,14 @@ fun BoxScope.ArcPathContextActions(
         Column(
             verticalArrangement = Arrangement.Center,
         ) {
+            // TODO: this condition doesnt work
+            if (showAdjustExprButton) {
+                SimpleToolButtonWithTooltip(
+                    Tool.AdjustExpr,
+                    buttonModifier,
+                    onClick = toolAction
+                )
+            }
             val borderColor = mostCommonBorderColor ?: defaultBorderColor
             SimpleToolButtonWithTooltip(
                 Tool.BorderColor,

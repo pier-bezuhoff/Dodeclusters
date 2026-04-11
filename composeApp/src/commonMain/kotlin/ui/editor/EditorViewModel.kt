@@ -1698,7 +1698,7 @@ class EditorViewModel : ViewModel() {
     }
 
     inline val showAdjustExprButton: Boolean get() {
-        val sel = objectSelection
+        val sel = selection.gCircles
         return sel.isNotEmpty() && (exprOf(sel[0])?.let { expr0 ->
             (expr0 is Expr.CircleInterpolation ||
                 expr0 is Expr.PointInterpolation ||
@@ -1710,7 +1710,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun adjustExpr() {
-        val firstSelected = selection.gCircles.firstOrNull() ?: return
+        val firstSelected = selection.indices.firstOrNull() ?: return
         val expr = exprOf(firstSelected)
         if (expr !is Expr.HasParameters) {
             return
@@ -2157,14 +2157,18 @@ class EditorViewModel : ViewModel() {
             val selectableCircles = getPreferablyFreeCirclesAround(visiblePosition)
             val selectableArcPaths = getArcPathsAround(visiblePosition)
             when {
-                selectablePoints.isNotEmpty() ->
+                selectablePoints.isNotEmpty() -> {
                     selection = Selection(gCircles = selectablePoints.take(1))
+                    highlightSelectionParents()
+                }
                 selectableCircles.isNotEmpty() -> {
                     selection = Selection(gCircles = selectableCircles.take(1))
                     highlightSelectionParents()
                 }
-                selectableArcPaths.isNotEmpty() ->
+                selectableArcPaths.isNotEmpty() -> {
                     selection = Selection(arcPaths = selectableArcPaths.take(1))
+                    highlightSelectionParents()
+                }
                 else ->
                     clearSelection()
             }
@@ -2194,6 +2198,7 @@ class EditorViewModel : ViewModel() {
             val selectedPointIndex = getPreferablyFreePointsAround(visiblePosition).firstOrNull()
             if (selectedPointIndex != null) {
                 selection = Selection(gCircles = listOf(selectedPointIndex))
+                highlightSelectionParents()
             } else {
                 val selectedCircleIndex = getPreferablyFreeCirclesAround(visiblePosition).firstOrNull()
                 if (selectedCircleIndex != null) {
@@ -2201,11 +2206,12 @@ class EditorViewModel : ViewModel() {
                     highlightSelectionParents()
                 } else {
                     val selectedArcPathIndex = getArcPathsAround(visiblePosition).firstOrNull()
-                    if (selectedArcPathIndex != null)
+                    if (selectedArcPathIndex != null) {
                         selection = Selection(arcPaths = listOf(selectedArcPathIndex))
-                    else
+                        highlightSelectionParents()
+                    } else {
                         clearSelection()
-
+                    }
                 }
             }
         }
@@ -2235,6 +2241,7 @@ class EditorViewModel : ViewModel() {
                     selection = selection.copy(
                         arcPaths = selection.arcPaths.xor(selectedArcPathIndex)
                     )
+                    highlightSelectionParents()
                 } else { // try to select bounding circles of the selected region
                     val (region, region0) = getRegionAround(visiblePosition)
                     // TODO: also try selecting insides of closed arc-paths
@@ -3069,25 +3076,13 @@ class EditorViewModel : ViewModel() {
                     exprOf(ix) !is Expr.TransformLike
                 })
                     return@mapNotNull null
-//                val vertexPreimages = arcPath.vertices.mapNotNull { vertexIndex ->
-//                    (exprOf(vertexIndex) as? Expr.TransformLike)?.target
-//                }
-                // NOTE: doesn't apply to images of images of arc-paths, etc.
-                val midpointPreimages = arcPath.arcs.mapNotNull { arc ->
-                    (arc as? ArcPath.Arc.By3Points)?.middlePointIndex?.let { midpointIndex ->
-                        (exprOf(midpointIndex) as? Expr.TransformLike)?.target
-                    }
+                val vertexPreimages = arcPath.vertices.mapNotNull { vertexIndex ->
+                    (exprOf(vertexIndex) as? Expr.TransformLike)?.target
                 }
-                val m0 = midpointPreimages.firstOrNull() ?: return@mapNotNull null
-                val expr0 = exprOf(m0)
-                if (expr0 is Expr.ArcPathArcMidpoint &&
-                    midpointPreimages.all { m ->
-                        val expr = exprOf(m)
-                        expr is Expr.ArcPathArcMidpoint && expr.arcPath == expr0.arcPath
-                    }
-                ) {
-                    expr0.arcPath
-                } else return@mapNotNull null
+                vertexPreimages.mapNotNull { expressions.children[it] }
+                    // common children of vertices
+                    .reduceOrNull { a, b -> a.intersect(b) }
+                    ?.firstOrNull { exprOf(it) is ArcPath }
             }
             val ix2o = (allParents + arcPathPreimages)
                 .mapNotNull { ix ->
