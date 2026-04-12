@@ -169,7 +169,7 @@ data class PartialArcPath(
                     val arcStart = arcIndex2startVertex(focus.arcIndex).point
                     val arcEnd = arcIndex2endVertex(focus.arcIndex).point
                     val onSegment = projectPointOnSegment(snap.result, arcStart, arcEnd)
-                    if (snap.result.distanceFrom(onSegment) <= snapDistance) {
+                    if (snap.result.distanceFrom(onSegment) <= 0.5f*snapDistance) {
                         straightenArc(focus.arcIndex, onSegment)
                             .copy(alignmentLines = emptyList())
                     } else {
@@ -373,6 +373,7 @@ data class PartialArcPath(
         alignmentLines = emptyList(),
     )
 
+    // FIX: some weirdness is possible still
     /** fuse vertex `firstVertexIndex+1` into [firstVertexIndex] */
     fun fuseSubsequentVertices(firstVertexIndex: Int): PartialArcPath =
         if (!isClosed && firstVertexIndex > arcs.lastIndex)

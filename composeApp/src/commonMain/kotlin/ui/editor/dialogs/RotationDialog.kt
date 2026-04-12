@@ -72,6 +72,7 @@ data class DefaultRotationParameters(
     )
 }
 
+// TODO: rational (p/q*TAU) angle input for regular polygons
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun RotationDialog(

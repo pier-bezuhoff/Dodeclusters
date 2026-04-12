@@ -1499,6 +1499,11 @@ class EditorViewModel : ViewModel() {
     fun concludeFillColorPicker(colorPickerParameters: ColorPickerParameters) {
         val color = colorPickerParameters.currentColor
         for (ix in selection.arcPaths) {
+            val borderColor = objectModel.borderColors[ix]
+            // or if borderColor == null?
+            if (borderColor == objectModel.fillColors[ix]) {
+                objectModel.borderColors[ix] = color
+            }
             objectModel.fillColors[ix] = color
         }
         openedDialog = null
@@ -1603,7 +1608,6 @@ class EditorViewModel : ViewModel() {
 
     fun scaleSelection(zoom: Float) {
         if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
-//            arcPathUnderConstruction = arcPathUnderConstruction?.scale(zoom)
         } else {
             // weird history shenanigans... cuz we want to pin-record on the first zoom
             // action in a sequence
@@ -1697,6 +1701,7 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    // TODO: transformed arc-paths
     inline val showAdjustExprButton: Boolean get() {
         val sel = selection.gCircles
         return sel.isNotEmpty() && (exprOf(sel[0])?.let { expr0 ->
@@ -1846,7 +1851,7 @@ class EditorViewModel : ViewModel() {
         movementAfterDown = false
         if (submode is SubMode.SelectionChoices)
             submode = null
-        if (showCircles) {
+        if (showCircles) { // TODO: allow arc-path selection when no circles shown
             when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE -> {
                     val circle = objects[selection.gCircles.single()]
@@ -2389,8 +2394,10 @@ class EditorViewModel : ViewModel() {
         val sm = when (val sm0 = submode) {
             is SubMode.ScaleViaSlider -> sm0
             else -> {
-                val screenCenter = absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
-                SubMode.ScaleViaSlider(screenCenter)
+                val center =
+                    calculateSelectionRect()?.center ?:
+                    absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
+                SubMode.ScaleViaSlider(center)
             }
         }
         val scaleFactor = sliderPercentageDeltaToZoom(newSliderPercentage - sm.sliderPercentage)
@@ -2727,7 +2734,8 @@ class EditorViewModel : ViewModel() {
             if (o is GCircle && (showPhantomObjects || ix !in phantoms)) o
             else null
         }
-        selection = Selection( // TODO: select arc-paths too
+        // TODO: select arc-paths too
+        selection = Selection(
             gCircles = RectangleCollider.selectWithRectangle(selectables, rect)
         )
         submode = SubMode.RectangularSelect(corner1, absolutePosition)
@@ -2796,14 +2804,19 @@ class EditorViewModel : ViewModel() {
         return false
     }
 
-    private fun moveAroundCanvas(translation: Offset, zoom: Float, rotationAngle: Float) {
+    private fun moveAroundCanvas(
+        translation: Offset,
+        absoluteCentroid: Offset,
+        zoom: Float,
+        rotationAngle: Float,
+    ) {
         if (zoom != 1.0f || rotationAngle != 0.0f) {
             val targets = objects.indices.toList()
-            val center = computeAbsoluteCenter() ?: Offset.Zero
+//            val center = computeAbsoluteCenter() ?: Offset.Zero
             val changedIndices =
                 objectModel.transform(
                     targets,
-                    focus = center,
+                    focus = absoluteCentroid,
                     zoom = zoom,
                     rotationAngle = rotationAngle,
                 )
@@ -2815,7 +2828,10 @@ class EditorViewModel : ViewModel() {
             )
         }
         this.translation += translation // navigate canvas
+        objectModel.forceUpdate(objectModel.arcPathIndices)
+        // force-update arc-paths or recalc concrete arc-paths in objectModel.transform
         objectModel.pathCache.invalidateAll() // sadly have to do this cuz we use visibleRect in path construction
+        objectModel.invalidate()
     }
 
     // MAYBE: handle key arrows as panning
@@ -2866,7 +2882,7 @@ class EditorViewModel : ViewModel() {
                 else -> {
                     val toolArgIsUpdated = tryUpdatingToolArg(absoluteCentroid)
                     if (!toolArgIsUpdated) {
-                        moveAroundCanvas(translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+                        moveAroundCanvas(translation = pan, absoluteCentroid = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
                     }
                 }
             }
@@ -3128,6 +3144,8 @@ class EditorViewModel : ViewModel() {
 
     fun processKeyboardAction(action: KeyboardAction) {
 //        println("processing $action")
+        if (submode is SubMode.SelectionChoices)
+            submode = null
         if (openedDialog == null) {
             when (action) {
                 KeyboardAction.SELECT_ALL -> forceSelectAll()
@@ -3659,10 +3677,8 @@ class EditorViewModel : ViewModel() {
         val source2trajectory = gCircleSources.map { sourceIndex ->
             // row/trajectory - column/simul-slice order
             val expr = mkExpr(sourceIndex)
-            val result = expressions
-                .addMultiExpr(expr)
-                .map { (it as? GCircle)?.upscale() } // multi expression creates a whole trajectory at a time
-            val outputIndices = objectModel.addDisplayObjects(result).toList()
+            val result = expressions.addMultiExpr(expr) // multi expr creates a whole trajectory at a time
+            val outputIndices = objectModel.addDownscaledObjects(result).toList()
             for (outputIndex in outputIndices) {
                 copyStyle(sourceIndex, outputIndex)
             }
@@ -4018,7 +4034,10 @@ class EditorViewModel : ViewModel() {
                     )
                     regions = regions.withoutElementsAt(sm.regions.toSet())
                     deleteObjectsWithDependenciesColorsAndRegions(
-                        indicesToDelete = sm.adjustables.flatMap { it.outputIndices },
+                        indicesToDelete =
+                            sm.adjustables.flatMap { it.outputIndices } +
+                            sm.arcPathAdjustables.flatMap { it.outputIndices }
+                        ,
                         animationInit = { null },
                     )
                     setupLoxodromicSpiral(bidirectional)

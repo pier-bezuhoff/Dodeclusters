@@ -186,7 +186,9 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         return result
     }
 
-    /** don't forget to upscale the result afterwards! */
+    /** don't forget to upscale the result afterwards!
+     * @return trajectory of results
+     */
     fun addMultiExpr(expr: EXPR_ONE_TO_MANY): List<R?> {
         val result0 = (expr as EXPR).evaluate(objects)
         val isPeriodic = isExprPeriodic(expr)

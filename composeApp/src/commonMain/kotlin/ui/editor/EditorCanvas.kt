@@ -327,6 +327,7 @@ fun BoxScope.EditorCanvas(
             PartialArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
         } else {
             when (val sm = viewModel.submode) {
+                // TODO: confirm selection in rectangular-select
                 is SubMode.ExprAdjustment<*> -> when (sm.parameters) {
                     is InterpolationParameters ->
                         InterpolationInterface(
@@ -828,9 +829,6 @@ private fun DrawScope.drawAnimation(
     val borderStrokeWidth = 10*strokeWidth
     val stroke = Stroke(borderStrokeWidth)
     val pointRadius = 6*strokeWidth
-//    val visibleScreenPath = Path().apply {
-//        addRect(visibleRect.inflate(10*strokeWidth))
-//    }
     for ((animation, alphaAnimatable) in animations) {
         val alpha = alphaAnimatable.value
         for ((ix, o) in animation.objects) {
@@ -840,6 +838,7 @@ private fun DrawScope.drawAnimation(
                 is AppearanceAnimation.Exit -> deletionColor
                 is HighlightAnimation -> highlightColor
             }
+            // using pathCache to draw already deleted objects is uhh..
             when (o) {
                 is CircleOrLine -> {
                     drawCircleOrLineWithCache(o, ix, pathCache, visibleRect, color, alpha, stroke)
