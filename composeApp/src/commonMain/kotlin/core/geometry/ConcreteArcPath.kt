@@ -208,23 +208,28 @@ data class ConcreteArcPath(
                     }
                 }
                 else -> {
-                    if (startVertex.x < x && endVertex.x < x)
+                    // rect-based quick reject of eastward ray
+                    if (y < startVertex.y && y < endVertex.y ||
+                        startVertex.y < y && endVertex.y < y ||
+                        startVertex.x < x && endVertex.x < x
+                    )
                         continue
-                    if (startVertex.y <= y) {
-                        if (y < endVertex.y) { // upward crossing
-                            // start->end x start->point
-                            val cross = Point.cross(startVertex, endVertex, point)
-                            if (cross > 0) // left side
-                                windingNumber += 1
-                        }
-                    } else if (endVertex.y <= y) { // downward crossing
+                    if (startVertex.y < y) { // downward crossing
+                        // quick reject implies: startVertex.y < y <= endVertex.y
+                        // start->end x start->point
                         val cross = Point.cross(startVertex, endVertex, point)
                         if (cross < 0) // right side
                             windingNumber -= 1
+                    } else { // upward crossing
+                        // quick reject implies: endVertex.y <= y <= startVertex.y
+                        val cross = Point.cross(startVertex, endVertex, point)
+                        if (cross > 0) // left side
+                            windingNumber += 1
                     }
                 }
             }
         }
+        println("winding number = $windingNumber")
         return windingNumber.mod(2) == 1
     }
 
