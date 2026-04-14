@@ -202,8 +202,8 @@ data class Circle(
     override fun orderInBetween(order1: Double, order2: Double): Double =
         Circle.orderInBetween(order1, order2)
 
+    /** FIX: broken for CW */
     override fun agreesWithOrientation(startOrder: Double, middleOrder: Double, endOrder: Double): Boolean {
-        // FIX: ts wrong
         val o = (middleOrder + TAU) % TAU
         val start = (startOrder + TAU) % TAU
         val end = (endOrder + TAU) % TAU
@@ -215,12 +215,9 @@ data class Circle(
     }
 
     override fun agreesWithOrientation(startPoint: Point, middlePoint: Point, endPoint: Point): Boolean {
-        // -startToPoint x startToEnd
-        val cross = (middlePoint.x - startPoint.x)*(endPoint.y - startPoint.y) -
-            (middlePoint.y - startPoint.y)*(endPoint.x - startPoint.x)
-        if (abs(cross) < EPSILON)
-            return true
-        return (cross < 0) == isCCW
+        // startToMiddle x startToEnd
+        val cross = Point.cross(startPoint, middlePoint, endPoint)
+        return abs(cross) < EPSILON || (cross > 0) == isCCW
     }
 
     override fun translated(vector: Offset): Circle =
@@ -832,6 +829,33 @@ data class Circle(
                     else
                         startAngle
                 }
+            }
+        }
+
+        private fun calculateArcWindingNumber(
+            angle: Double,
+            startAngle: Double,
+            sweepAngle: Double,
+        ): Int {
+            val angle = angle.mod(TAU)
+            if (sweepAngle > 0) { // CCW
+                val endAngle =
+                    if (angle < startAngle)
+                        startAngle + sweepAngle - TAU
+                    else
+                        startAngle + sweepAngle
+                return if (angle < endAngle)
+                    1
+                else 0
+            } else { // CW
+                val endAngle =
+                    if (startAngle < angle)
+                        startAngle + sweepAngle + TAU
+                    else
+                        startAngle + sweepAngle
+                return if (endAngle <= angle)
+                    -1
+                else 0
             }
         }
     }

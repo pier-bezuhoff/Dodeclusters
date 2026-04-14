@@ -3,9 +3,11 @@ package core.geometry
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import domain.angleRad
 import kotlinx.serialization.Serializable
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 // MAYBE: use Offsets and Floats atp
 /** [domain.expressions.ArcPath] representation for calculation */
@@ -163,4 +165,103 @@ data class ConcreteArcPath(
             )
         }
     )
+
+    // algo based on https://web.archive.org/web/20130126163405/http://geomalgorithms.com/a03-_inclusion.html
+    // and https://stackoverflow.com/a/33974251/7143065
+    // more general algo: https://arxiv.org/abs/2403.17371
+    fun contains(point: Point): Boolean {
+        if (!isClosed)
+            return false
+        var windingNumber = 0
+        val (x, y) = point
+        for (arcIndex in arcs.indices) {
+            val arc = arcs[arcIndex]
+            val startVertex = vertices[arcIndex]
+            val endVertex = vertices[(arcIndex + 1).mod(vertices.size)]
+            when (val circle = arc.circleOrLine) {
+                is Circle -> { // there actually is a closed formula for arc winding number, tho it's not nice
+                    val (cx, cy, r) = circle
+                    // rect-based quick reject of eastward ray
+                    if (y < cy - r || cx + r < x || cy + r < y)
+                        continue
+                    val y0 = y - cy
+                    val discriminant = r*r - y0*y0
+                    if (discriminant <= 0) // horizontal intersection with the circle
+                        continue
+                    val x0 = x - cx
+                    /** intersection.x within the circle coordinate system */
+                    val ix = sqrt(discriminant)
+                    // we emit eastward ray from (x0,y0)
+                    if (ix < x0)
+                        continue
+                    val candidate1 = Point(cx + ix, y)
+                    if (circle.agreesWithOrientation(
+                        startVertex, candidate1, endVertex
+                    ))
+                        windingNumber += if (circle.isCCW) 1 else -1
+                    if (x0 < -ix) {
+                        val candidate2 = Point(cx - ix, y)
+                        if (circle.agreesWithOrientation(
+                            startVertex, candidate2, endVertex
+                        ))
+                            windingNumber -= if (circle.isCCW) 1 else -1
+                    }
+                }
+                else -> {
+                    if (startVertex.x < x && endVertex.x < x)
+                        continue
+                    if (startVertex.y <= y) {
+                        if (y < endVertex.y) { // upward crossing
+                            // start->end x start->point
+                            val cross = Point.cross(startVertex, endVertex, point)
+                            if (cross > 0) // left side
+                                windingNumber += 1
+                        }
+                    } else if (endVertex.y <= y) { // downward crossing
+                        val cross = Point.cross(startVertex, endVertex, point)
+                        if (cross < 0) // right side
+                            windingNumber -= 1
+                    }
+                }
+            }
+        }
+        return windingNumber.mod(2) == 1
+    }
+
+    // discriminates CCW vs CW
+    /** Cumulative vector turning angle in radians, as it's dragged along this path */
+    fun calculateWinding(): Double {
+        var angle = 0.0
+        arcs.forEachIndexed { arcIndex, arc ->
+            // arc angle + vertex angle
+            angle += arc.sweepAngle // need to ensure it's in [-PI; PI]
+            if (isClosed || arcIndex < arcs.lastIndex) {
+                val nextArcIndex = (arcIndex + 1).mod(arcs.size)
+                val vertex = vertices[arcIndex].toOffset()
+                val nextVertex = vertices[nextArcIndex].toOffset()
+                val incomingNormalVector = when (val circle = arc.circleOrLine) {
+                    is Circle ->
+                        vertex - circle.center
+                    else ->
+                        Offset(
+                            nextVertex.y - vertex.y,
+                            -(nextVertex.x - vertex.x)
+                        )
+                }
+                val outgoingNormalVector = when (val nextCircle = arcs[nextArcIndex].circleOrLine) {
+                    is Circle ->
+                        nextVertex - nextCircle.center
+                    else -> {
+                        val nextNextVertex = vertices[(nextArcIndex + 1).mod(vertices.size)].toOffset()
+                        Offset(
+                            nextNextVertex.y - nextVertex.y,
+                            -(nextNextVertex.x - nextVertex.x)
+                        )
+                    }
+                }
+                angle += outgoingNormalVector.angleRad(incomingNormalVector)
+            }
+        }
+        return angle
+    }
 }

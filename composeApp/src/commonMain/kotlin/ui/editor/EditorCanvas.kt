@@ -1002,7 +1002,7 @@ private fun DrawScope.drawArcPaths(
     }
 }
 
-private const val DISPLAY_ARROWS_ALONG_SELECTED_ARC_PATH = true
+private const val DISPLAY_ARROWS_ALONG_SELECTED_ARC_PATH = !true
 
 private fun DrawScope.drawSelectedArcPaths(
     allObjects: List<*>,
@@ -1069,8 +1069,8 @@ private fun DrawScope.drawSelectedArcPaths(
  */
 private fun DrawScope.drawRegions(
     // MAYBE: pass circle + line indices
-    allObjects: List<*>,
     regions: List<LogicalRegion>,
+    allObjects: List<*>,
     hiddenObjectIndices: Set<Ix>,
     pathCache: PathCache,
     chessboardPattern: ChessboardPattern,
@@ -1086,20 +1086,31 @@ private fun DrawScope.drawRegions(
         if (chessboardPattern == ChessboardPattern.STARTS_COLORED) {
             drawRect(chessboardColor, visibleRect.topLeft, visibleRect.size)
         }
-        for (ix in allObjects.indices) { // it used to work poorly but is good now for some reason
-            val o = allObjects[ix]
-            if (o is CircleOrLine && ix !in hiddenObjectIndices) {
-                drawCircleOrLineWithCache(o, ix, pathCache, visibleRect, chessboardColor,
-                    blendMode = BlendMode.Xor,
-                    drawHalfPlanesForLines = true
-                )
+        for (ix in allObjects.indices.minus(hiddenObjectIndices)) {
+            // it used to work poorly but is good now for some reason
+            when (val o = allObjects[ix]) {
+                is CircleOrLine ->
+                    drawCircleOrLineWithCache(o, ix,
+                        pathCache, visibleRect, chessboardColor,
+                        blendMode = BlendMode.Xor,
+                        drawHalfPlanesForLines = true,
+                    )
+                is ConcreteArcPath if (o.isClosed) -> {
+                    val path = pathCache.getOrSet(ix) { o.toPath(it) }
+                    drawPath(path,
+                        color = chessboardColor,
+                        style = Fill,
+                        blendMode = BlendMode.Xor,
+                    )
+                }
+                else -> {}
             }
         }
     }
     for (region in regions) {
         // idk, on Android cache slows things down (eps stereographic rotation)
-        val path = region2pathWithCache(
-            allObjects.map { it as? CircleOrLine }, region,
+        val path = region2pathWithCache(region,
+            allObjects,
             pathCache, visibleRect
         )
         // the diff between cache/no-cache doesn't seem that big

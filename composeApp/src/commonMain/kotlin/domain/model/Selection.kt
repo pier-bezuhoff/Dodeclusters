@@ -14,7 +14,7 @@ data class Selection(
 ) {
     /** [gCircles] + [arcPaths] */
     val indices: List<Ix> get() = gCircles + arcPaths
-    inline val size: Int get() = gCircles.size + arcPaths.size
+    val size: Int get() = gCircles.size + arcPaths.size
 
     fun isEmpty(): Boolean =
         gCircles.isEmpty() && arcPaths.isEmpty()

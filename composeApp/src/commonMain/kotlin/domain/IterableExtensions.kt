@@ -255,7 +255,7 @@ inline fun <reified T> List<T>.bottom2IndicesBy(
 }
 
 inline fun <reified T> List<T>.indicesSortedBy(
-    indices: List<Int> = this.indices.toList(),
+    indices: Iterable<Int> = this.indices,
     crossinline measurer: (element: T) -> Double,
     crossinline condition: (index: Int, measure: Double) -> Boolean = { _, _ -> true },
     crossinline sortingPriority: (index: Int, measure: Double) -> Double = { _, m -> m },

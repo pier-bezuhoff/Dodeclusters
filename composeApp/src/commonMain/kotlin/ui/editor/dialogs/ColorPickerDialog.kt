@@ -123,6 +123,7 @@ data class ColorPickerParameters(
     ),
 )
 
+// TODO: transparent option for fill color
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun ColorPickerDialog(

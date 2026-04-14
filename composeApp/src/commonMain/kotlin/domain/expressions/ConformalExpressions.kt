@@ -27,6 +27,7 @@ class ConformalExpressions(
     val lineIndices = mutableSetOf<Ix>()
     val imaginaryCircleIndices = mutableSetOf<Ix>()
     val pointIndices = mutableSetOf<Ix>()
+    val circleOrLineIndices = mutableSetOf<Ix>()
     val gCircleIndices = mutableSetOf<Ix>()
     val arcPathIndices = mutableSetOf<Ix>()
 
@@ -36,16 +37,18 @@ class ConformalExpressions(
     }
 
     fun clear() {
+        gCircleIndices.clear()
+        circleOrLineIndices.clear()
         circleIndices.clear()
         lineIndices.clear()
         imaginaryCircleIndices.clear()
         pointIndices.clear()
-        gCircleIndices.clear()
         arcPathIndices.clear()
     }
 
     override fun updateObjectTypeAt(index: Ix, obj: GCircleOrConcreteAcPath?) {
         gCircleIndices.remove(index)
+        circleOrLineIndices.remove(index)
         circleIndices.remove(index)
         lineIndices.remove(index)
         imaginaryCircleIndices.remove(index)
@@ -62,18 +65,21 @@ class ConformalExpressions(
                 is ConcreteArcPath -> arcPathIndices.add(index)
                 null -> {}
             }
-            if (obj is GCircle) {
+            if (obj is CircleOrLine)
+                circleOrLineIndices.add(index)
+            if (obj is GCircle)
                 gCircleIndices.add(index)
-            }
         } else {
             for (resultType in expression.expr.resultTypes) {
                 when (resultType) {
                     Expr.ResultType.CIRCLE -> {
                         circleIndices.add(index)
+                        circleOrLineIndices.add(index)
                         gCircleIndices.add(index)
                     }
                     Expr.ResultType.LINE -> {
                         lineIndices.add(index)
+                        circleOrLineIndices.add(index)
                         gCircleIndices.add(index)
                     }
                     Expr.ResultType.IMAGINARY_CIRCLE -> {
@@ -94,6 +100,7 @@ class ConformalExpressions(
 
     override fun objectDeletedAt(index: Ix) {
         gCircleIndices.remove(index)
+        circleOrLineIndices.remove(index)
         circleIndices.remove(index)
         lineIndices.remove(index)
         imaginaryCircleIndices.remove(index)

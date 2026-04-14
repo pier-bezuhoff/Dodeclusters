@@ -37,11 +37,19 @@ inline fun Offset.rotateBy(angle: Float): Offset {
 inline fun Offset.rotateByAround(angle: Float, pivot: Offset): Offset =
     (this - pivot).rotateBy(angle) + pivot
 
+/** `[-PI; PI]` */
+fun Offset.angleRad(other: Offset): Float =
+    atan2(
+        x*other.y - y*other.x,
+        x*other.x + y*other.y
+    )
+
+/** `[-180; 180]` */
 fun Offset.angleDeg(other: Offset): Float =
     (atan2(
         x*other.y - y*other.x,
         x*other.x + y*other.y
-    ) * 180/PI).toFloat()
+    ) * I80_DIVIDED_BY_PI).toFloat()
 
 /** B.angleDeg(A, C) measures angle ABC with A being the pivot */
 fun Offset.angleDeg(position1: Offset, position2: Offset): Float =
@@ -58,7 +66,7 @@ fun Offset.angleSin(other: Offset): Double {
 fun Offset.toComplex(): Complex =
     Complex(x, y)
 
-@JvmName("averageOfOffset")
+@JvmName("averageOfOffsets")
 fun Iterable<Offset>.average(): Offset {
     var n = 0
     var sumX = 0f

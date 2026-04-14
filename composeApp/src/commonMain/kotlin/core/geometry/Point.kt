@@ -194,9 +194,15 @@ data class Point(
             )
         }
 
+        /** cross product p1->p2 x p1->p3 */
+        inline fun cross(p1: Point, p2: Point, p3: Point): Double {
+            // we negate the usual `dx1*dy2 - dx2*dy1` formula cuz of left-hand-ness
+            return -(p2.x-p1.x)*(p3.y-p1.y) + (p2.y-p1.y)*(p3.x-p1.x)
+        }
+
         /** counterclockwise -> true, clockwise -> false */
         fun calculateOrientation(p1: Point, p2: Point, p3: Point): Boolean {
-            return (p2.x-p1.x)*(p3.y-p1.y) - (p2.y-p1.y)*(p3.x-p1.x) <= 0.0
+            return cross(p1, p2, p3) >= 0.0
         }
     }
 }

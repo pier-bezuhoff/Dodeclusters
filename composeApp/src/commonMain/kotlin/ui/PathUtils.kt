@@ -223,11 +223,11 @@ fun _chessboardPath(
 }
 
 /**
- * @param[circlesOrLines] all delimiters, `null`s are to be interpreted as ∅ empty sets
+ * @param[allObjects] all delimiters, `null`s are to be interpreted as ∅ empty sets
  */
 fun region2pathWithCache(
-    circlesOrLines: List<CircleOrLine?>,
     region: LogicalRegion,
+    allObjects: List<*>,
     pathCache: PathCache,
     visibleRect: Rect,
 ): Path {
@@ -237,7 +237,7 @@ fun region2pathWithCache(
     }
     path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
     for (ix in region.insides) {
-        when (val circleOrLine = circlesOrLines[ix]) {
+        when (val circleOrLine = allObjects[ix]) {
             is Circle -> {
                 val p = pathCache.getOrSet(ix) {
                     circle2path(circleOrLine, visibleRect, it)
@@ -253,11 +253,11 @@ fun region2pathWithCache(
                 }
                 path.op(path, p, PathOperation.Intersect)
             }
-            null -> {}
+            else -> {}
         }
     }
     for (ix in region.outsides) {
-        when (val circleOrLine = circlesOrLines[ix]) {
+        when (val circleOrLine = allObjects[ix]) {
             is Circle -> {
                 val p = pathCache.getOrSet(ix) {
                     circle2path(circleOrLine, visibleRect, it)
@@ -273,18 +273,18 @@ fun region2pathWithCache(
                 }
                 path.op(path, p, PathOperation.Difference)
             }
-            null -> {}
+            else -> {}
         }
     }
     return path
 }
 
 /**
- * @param[circles] all delimiters, `null`s are to be interpreted as ∅ empty sets
+ * @param[allObjects] all delimiters, `null`s are to be interpreted as ∅ empty sets
  */
 fun region2path(
-    circles: List<CircleOrLine?>,
     region: LogicalRegion,
+    allObjects: List<*>,
     visibleRect: Rect,
 ): Path {
     val path = Path()
@@ -293,35 +293,35 @@ fun region2path(
     }
     path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
     for (ix in region.insides) {
-        when (val circle = circles[ix]) {
+        when (val circleOrLine = allObjects[ix]) {
             is Circle -> {
-                val p = circle2path(circle, visibleRect)
+                val p = circle2path(circleOrLine, visibleRect)
                 path.op(path, p,
-                    if (circle.isCCW) PathOperation.Intersect
+                    if (circleOrLine.isCCW) PathOperation.Intersect
                     else PathOperation.Difference
                 )
             }
             is Line -> {
-                val p = halfPlanePath(circle, visibleRect)
+                val p = halfPlanePath(circleOrLine, visibleRect)
                 path.op(path, p, PathOperation.Intersect)
             }
-            null -> {}
+            else -> {}
         }
     }
     for (ix in region.outsides) {
-        when (val circle = circles[ix]) {
+        when (val circleOrLine = allObjects[ix]) {
             is Circle -> {
-                val p = circle2path(circle, visibleRect)
+                val p = circle2path(circleOrLine, visibleRect)
                 path.op(path, p,
-                    if (circle.isCCW) PathOperation.Difference
+                    if (circleOrLine.isCCW) PathOperation.Difference
                     else PathOperation.Intersect
                 )
             }
             is Line -> {
-                val p = halfPlanePath(circle, visibleRect)
+                val p = halfPlanePath(circleOrLine, visibleRect)
                 path.op(path, p, PathOperation.Difference)
             }
-            null -> {}
+            else -> {}
         }
     }
     return path

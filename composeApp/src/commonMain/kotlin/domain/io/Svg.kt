@@ -100,11 +100,10 @@ fun saveStateAsSvg(
             }
         }
     }
-    val circlesOrLines = translatedObjects.map { it as? CircleOrLine }
     saveState.regions.forEach { region ->
         val fillColorString = region.fillColor.asCssString()
 //        val strokeColorString = region.borderColor.asCssString()
-        val path = region2path(circlesOrLines, region, visibleRect)
+        val path = region2path(region, translatedObjects, visibleRect)
         // NOTE: path.toSvg is bugged for elliptic/circular arcs (not yet implemented)
         //  https://youtrack.jetbrains.com/issue/CMP-7418/Path.toSvg-is-completely-broken
         val pathData = path.toCircularSvg()
