@@ -219,8 +219,8 @@ fun ArcPath.toConcreteArcPath(objects: List<GCircleOrConcreteAcPath?>): Concrete
 }
 
 fun ArcPath.copy(
-    vertices: List<Ix>,
-    arcs: List<ArcPath.Arc>,
+    vertices: List<Ix> = this.vertices,
+    arcs: List<ArcPath.Arc> = this.arcs,
 ): ArcPath = when (this) {
     is ArcPath.Closed -> copy(vertices = vertices, arcs = arcs)
     is ArcPath.Open -> copy(vertices = vertices, arcs = arcs)

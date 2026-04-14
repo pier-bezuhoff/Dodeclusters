@@ -11,11 +11,8 @@ import domain.expressions.ArcPath
 import domain.model.LogicalRegion
 import domain.expressions.Expr
 import domain.model.PartialArgList
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 @Immutable
-@Serializable
 /** Additional mode accompanying [Mode] and
  * carrying [SubMode]-specific relevant data, also
  * they have specific behavior for VM.onPanZoom */
@@ -100,8 +97,6 @@ sealed interface SubMode {
         val arcPathAdjustables: List<AdjustableExpr<ArcPath>> = emptyList(),
         val regions: List<Int> = emptyList(),
     ) : SubMode {
-
-        @Transient
         val parameters = (adjustables[0].expr as? Expr.HasParameters)?.parameters
 
         init {
@@ -112,6 +107,12 @@ sealed interface SubMode {
             ) { "Invalid adjustables $adjustables" }
         }
     }
+
+    /** [SubMode] of a [ToolMode] after it emitted a result and we may temporarily
+     * want to drag it/change it properties */
+    data class ToolResultPostprocessing(
+        val resultIndices: List<Ix>,
+    ) : SubMode
 
     /** Temporary leave tool mode to choose a selection argument and then go back */
     data class ToolSelectionInput(
@@ -126,18 +127,19 @@ sealed interface SubMode {
 }
 
 /** Adjustable [expr] with indices that are occupied by its outputs.
- * @property[outputIndices] indices containing outputs of the multi [expr] we are adjusting
- * @property[reservedIndices] all indices reserved for the [expr],
- * including [outputIndices] and additional `null`ed indices that
+ * @param[sourceIndex] index from which the style is copied onto the trajectory,
+ * the original transformation target
+ * @param[occupiedIndices] indices containing outputs of the multi [expr] we are adjusting
+ * @param[reservedIndices] all indices reserved for the [expr],
+ * including [occupiedIndices] and additional `null`ed indices that
  * were previously allocated for this multi [expr]
  */
 @Immutable
 data class AdjustableExpr<out EXPR : Expr>(
     val expr: EXPR,
     val sourceIndex: Ix,
-    val outputIndices: List<Ix>,
+    val occupiedIndices: List<Ix>,
     val reservedIndices: List<Ix>,
 ) {
-    val size: Int get() = outputIndices.size
-    val maxSize: Int get() = reservedIndices.size
+    val size: Int get() = occupiedIndices.size
 }

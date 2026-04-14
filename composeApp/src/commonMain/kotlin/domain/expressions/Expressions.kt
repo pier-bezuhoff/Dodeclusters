@@ -36,7 +36,22 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     initialExpressions: Map<Ix, ExprOutput?>, // pls include all possible indices
     protected val objects: MutableList<R?>,
 ) {
-//    typealias ExprResult = List<R?>
+    /** @param[changedIndices] indices of arc-paths, changed as a result of deletion */
+    data class DeletionResult(
+        val allDeletedIndices: Set<Ix>,
+        val changedIndices: Set<Ix> = emptySet(),
+    )
+    /**
+     * @param[accidentallyDeletedIndices] indices of dependent objects, whose parents were removed
+     * @param[accidentallyChangedIndices] indices of dependent arc-paths, whose points were removed
+     */
+    data class ExprAdjustmentResult<R>(
+        val occupiedIndices: List<Ix>,
+        val reservedIndices: List<Ix>,
+        val results: List<R?>,
+        val accidentallyDeletedIndices: Set<Ix> = emptySet(),
+        val accidentallyChangedIndices: Set<Ix> = emptySet(),
+    )
 
     // for the [objects] nulls correspond to unrealized outputs of multi-functions
     // here nulls correspond to free objects
@@ -309,7 +324,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
      * [forceUpdate] changedIndices (these are altered arc-paths with >=2 vertices left)
      * @return (all the deleted nodes indices, all changed indices (arc-paths))
      * */
-    fun deleteNodes(indices: List<Ix>): Pair<Set<Ix>, Set<Ix>> {
+    fun deleteNodes(indices: List<Ix>): DeletionResult {
         val (deleted, changed) = expandDeletionToChildren(indices)
         for (deletedIndex in deleted) {
             expressions[deletedIndex] = null // we methodically :=null instead of deletion
@@ -324,7 +339,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             tier2ixs[tier] = tiered - deleted
         }
         parents2gluedIncidentPoints.clear()
-        return Pair(deleted, changed)
+        return DeletionResult(deleted, changed)
     }
 
     /**
@@ -440,18 +455,20 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         newExpr: EXPR_ONE_TO_MANY,
         occupiedIndices: List<Ix>,
         reservedIndices: List<Ix>,
-    ): Triple<List<Ix>, List<Ix>, List<R?>> {
+    ): ExprAdjustmentResult<R> {
         if (occupiedIndices.isEmpty()) // idk why it can happen but i had witnessed it
-            return Triple(emptyList(), reservedIndices, emptyList())
+            return ExprAdjustmentResult(emptyList(), reservedIndices, emptyList())
         var newReservedIndices = reservedIndices
-        val result0 = (newExpr as EXPR).evaluate(objects)
+        val results0 = (newExpr as EXPR).evaluate(objects)
         val isPeriodic = isExprPeriodic(newExpr)
-        val result = // small hack to avoid duplicating the original object
-            if (isPeriodic && result0.isNotEmpty())
-                result0.dropLast(1)
-            else result0
-        val newSize = result.size
+        val results = // small hack to avoid duplicating the original object
+            if (isPeriodic && results0.isNotEmpty())
+                results0.dropLast(1)
+            else results0
+        val newSize = results.size
         val sizeIncrease = newSize - occupiedIndices.size
+        var accidentallyDeleted = emptySet<Ix>()
+        var accidentallyChanged = emptySet<Ix>()
         val newOccupiedIndices: List<Ix>
         if (sizeIncrease > 0) {
             val sizeOverflow = newSize - reservedIndices.size
@@ -472,16 +489,22 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             newOccupiedIndices = occupiedIndices
         } else {
             val excessIndices = occupiedIndices.drop(newSize)
-            deleteNodes(excessIndices)
+            val accidents = deleteNodes(excessIndices)
+            accidentallyDeleted = accidents.allDeletedIndices - excessIndices.toSet()
+            accidentallyChanged = accidents.changedIndices
             newOccupiedIndices = occupiedIndices.take(newSize)
         }
-        for (i in result.indices) {
+        for (i in results.indices) {
             val ix = newOccupiedIndices[i]
             expressions[ix] = ExprOutput.OneOf(newExpr, outputIndex = i)
             updateObjectTypeAt(ix)
         }
         parents2gluedIncidentPoints.clear()
-        return Triple(newOccupiedIndices, newReservedIndices, result)
+        return ExprAdjustmentResult(
+            newOccupiedIndices, newReservedIndices, results,
+            accidentallyDeletedIndices = accidentallyDeleted,
+            accidentallyChangedIndices = accidentallyChanged,
+        )
     }
 
     /**

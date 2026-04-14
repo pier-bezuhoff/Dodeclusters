@@ -15,6 +15,7 @@ import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.iterator
 import kotlin.collections.set
+import kotlin.math.exp
 
 // MAYBE: additionally store GeneralizedCircle representations
 /**
@@ -24,7 +25,7 @@ import kotlin.collections.set
 class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcreteAcPath>() {
 
     // layer order
-    private val arcPathLayering: MutableList<Ix> = mutableListOf()
+    private val layering: MutableList<Ix> = mutableListOf()
 
     override var expressions: ConformalExpressions =
         ConformalExpressions(emptyMap(), mutableListOf())
@@ -49,6 +50,12 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
             objectChangedAt(ix)
         }
         return changedIndices
+    }
+
+    fun update(changedIndices: Set<Ix>): List<Ix> {
+        val updatedIndices = expressions.update(changedIndices)
+        syncDisplayObjects(updatedIndices)
+        return updatedIndices
     }
 
     /** Call after expressions.deleteNodes

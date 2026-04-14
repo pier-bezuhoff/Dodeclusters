@@ -229,7 +229,9 @@ sealed interface Expr {
      * the one going backwards (with reversed convergence-divergence points).
      * Stored to alter their parameters simultaneously for better UX.
      * It is expected to point to an object with the complementary [Expr].
-     * Can get stale (eg deleted or null-ed).
+     * Can get stale (eg deleted or null-ed). Doesn't care how subsequent results of the
+     * complementary [Expr] are laid out, only that this index holds [ExprOutput] of the
+     * complementary [Expr].
      */
     @Serializable
     @SerialName("LoxodromicMotion")

@@ -147,13 +147,15 @@ class ConformalExpressions(
         newArcPaths: List<ArcPath>,
         occupiedIndices: List<Ix>,
         reservedIndices: List<Ix>,
-    ): Triple<List<Ix>, List<Ix>, List<ConcreteArcPath?>> {
+    ): ExprAdjustmentResult<ConcreteArcPath> {
         var newReservedIndices = reservedIndices
         val trajectoryOfConcreteArcPaths = newArcPaths.map { arcPath ->
             arcPath.eval(objects).firstOrNull() as? ConcreteArcPath
         }
         val newSize = newArcPaths.size
         val sizeIncrease = newSize - occupiedIndices.size
+        var accidentallyDeleted = emptySet<Ix>()
+        var accidentallyChanged = emptySet<Ix>()
         val newOccupiedIndices: List<Ix>
         if (sizeIncrease > 0) {
             val sizeOverflow = newSize - reservedIndices.size
@@ -175,11 +177,17 @@ class ConformalExpressions(
             newOccupiedIndices = occupiedIndices
         } else {
             val excessIndices = occupiedIndices.drop(newSize)
-            deleteNodes(excessIndices)
+            val accidents = deleteNodes(excessIndices)
+            accidentallyDeleted = accidents.allDeletedIndices - excessIndices.toSet()
+            accidentallyChanged = accidents.changedIndices
             newOccupiedIndices = occupiedIndices.take(newSize)
         }
         parents2gluedIncidentPoints.clear()
-        return Triple(newOccupiedIndices, newReservedIndices, trajectoryOfConcreteArcPaths)
+        return ExprAdjustmentResult(
+            newOccupiedIndices, newReservedIndices, trajectoryOfConcreteArcPaths,
+            accidentallyDeletedIndices = accidentallyDeleted,
+            accidentallyChangedIndices = accidentallyChanged,
+        )
     }
 
     // FIX: NG, maybe bc of translation, idk

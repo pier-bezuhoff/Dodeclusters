@@ -379,6 +379,7 @@ private fun OverwriteSharedButton(
     }
 }
 
+// FIX: looks horrid on small-width phones
 @Composable
 private fun ColumnScope.SharedLink(
     link: String,
