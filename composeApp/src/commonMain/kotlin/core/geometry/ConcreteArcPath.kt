@@ -185,14 +185,14 @@ data class ConcreteArcPath(
                     if (y < cy - r || cx + r < x || cy + r < y)
                         continue
                     val y0 = y - cy
-                    val discriminant = r*r - y0*y0
-                    if (discriminant <= 0) // horizontal intersection with the circle
+                    val discriminant = r*r - y0*y0 // eastward ray - circle intersection
+                    // we don't consider y=x^3 -like ray intersection with a vertex
+                    if (discriminant <= 0)
                         continue
                     val x0 = x - cx
-                    /** intersection.x within the circle coordinate system */
+                    /** intersection.x within the circle-centered coordinate system */
                     val ix = sqrt(discriminant)
-                    // we emit eastward ray from (x0,y0)
-                    if (ix < x0)
+                    if (ix < x0) // eastmost intersection should be easter than (x0,y0)
                         continue
                     val candidate1 = Point(cx + ix, y)
                     if (circle.agreesWithOrientation(
@@ -229,7 +229,7 @@ data class ConcreteArcPath(
                 }
             }
         }
-        println("winding number = $windingNumber")
+//        println("winding number = $windingNumber")
         return windingNumber.mod(2) == 1
     }
 
