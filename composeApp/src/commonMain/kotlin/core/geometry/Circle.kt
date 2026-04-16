@@ -439,7 +439,7 @@ data class Circle(
             }
     }
 
-    /** From the East, clockwise, in `[0; 2*PI]` */
+    /** From the East, clockwise, in `[0; 2*PI)` */
     fun calculateStartAngle(start: Point): Double {
         if (start.isInfinite)
             return 0.0

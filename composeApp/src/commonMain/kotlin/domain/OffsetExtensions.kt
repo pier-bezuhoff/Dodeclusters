@@ -37,14 +37,14 @@ inline fun Offset.rotateBy(angle: Float): Offset {
 inline fun Offset.rotateByAround(angle: Float, pivot: Offset): Offset =
     (this - pivot).rotateBy(angle) + pivot
 
-/** `[-PI; PI]` */
+/** CW angle in `[-PI; PI]` */
 fun Offset.angleRad(other: Offset): Float =
     atan2(
         x*other.y - y*other.x,
         x*other.x + y*other.y
     )
 
-/** `[-180; 180]` */
+/** CW angle in `[-180; 180]` */
 fun Offset.angleDeg(other: Offset): Float =
     (atan2(
         x*other.y - y*other.x,

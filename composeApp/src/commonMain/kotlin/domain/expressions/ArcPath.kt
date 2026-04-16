@@ -81,7 +81,7 @@ sealed interface ArcPath : Expr.Conformal.OneToOne {
 fun ArcPath.Arc.toCircleOrLine(
     start: Point,
     end: Point,
-    objects: List<GCircleOrConcreteAcPath?>,
+    objects: List<*>,
 ): CircleOrLine? = when(this) {
     // works for infinite points
     is ArcPath.Arc.By2Points -> {
@@ -120,7 +120,7 @@ fun ArcPath.moveArcMidpoint(allObjects: List<*>, arcIndex: Int, midpoint: Point)
     }
 }
 
-fun ArcPath.toConcreteArcPath(objects: List<GCircleOrConcreteAcPath?>): ConcreteArcPath {
+fun ArcPath.toConcreteArcPath(objects: List<*>): ConcreteArcPath {
     val realVertices = mutableListOf<Point>()
     val realArcs = mutableListOf<ConcreteArcPath.Arc>()
     // NOTE: null-null collapsed arcs are still present in concrete arc-paths
@@ -146,8 +146,7 @@ fun ArcPath.toConcreteArcPath(objects: List<GCircleOrConcreteAcPath?>): Concrete
                                 val arc = arcs[i]
                                 val circleOrLine = arc.toCircleOrLine(vertex, nextVertex, objects)
                                 val circle = circleOrLine as? Circle
-                                realArcs.add(
-                                    ConcreteArcPath.Arc(
+                                realArcs.add(ConcreteArcPath.Arc(
                                     arcIndex = i,
                                     circleOrLine = circleOrLine,
                                     startAngle = circle?.calculateStartAngle(vertex) ?: 0.0,
@@ -193,16 +192,15 @@ fun ArcPath.toConcreteArcPath(objects: List<GCircleOrConcreteAcPath?>): Concrete
                                 val arc = arcs[i]
                                 val circleOrLine = arc.toCircleOrLine(vertex, nextVertex, objects)
                                 val circle = circleOrLine as? Circle
-                                realArcs.add(
-                                    ConcreteArcPath.Arc(
-                                        arcIndex = i,
-                                        circleOrLine = circleOrLine,
-                                        startAngle = circle?.calculateStartAngle(vertex) ?: 0.0,
-                                        sweepAngle = circle?.calculateSweepAngle(vertex, nextVertex) ?: 0.0,
-                                        freeMidpoint =
-                                            if (arc is ArcPath.Arc.By2Points && circleOrLine is CircleOrLine)
-                                                circleOrLine.pointInBetween(vertex, nextVertex)
-                                            else null,
+                                realArcs.add(ConcreteArcPath.Arc(
+                                    arcIndex = i,
+                                    circleOrLine = circleOrLine,
+                                    startAngle = circle?.calculateStartAngle(vertex) ?: 0.0,
+                                    sweepAngle = circle?.calculateSweepAngle(vertex, nextVertex) ?: 0.0,
+                                    freeMidpoint =
+                                        if (arc is ArcPath.Arc.By2Points && circleOrLine is CircleOrLine)
+                                            circleOrLine.pointInBetween(vertex, nextVertex)
+                                        else null,
                                 ))
                             }
                         }

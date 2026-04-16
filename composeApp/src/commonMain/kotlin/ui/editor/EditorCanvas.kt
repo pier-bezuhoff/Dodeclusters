@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StampedPathEffectStyle
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -127,7 +128,10 @@ fun BoxScope.EditorCanvas(
         pathEffect = DOTTED_PATH_EFFECT,
     ) }
     val pathStroke = remember(strokeWidth) { Stroke(width = 2 * strokeWidth) }
-    val thiccPathStroke = remember(strokeWidth) { Stroke(width = 5 * strokeWidth) }
+    val thiccPathStroke = remember(strokeWidth) { Stroke(
+        width = 5 * strokeWidth,
+        join = StrokeJoin.Round,
+    ) }
     // handles stuff
     val handleRadius = 8f // with (density) { 8.dp.toPx() }
     val pointRadius = 2.5f * strokeWidth
@@ -1002,7 +1006,7 @@ private fun DrawScope.drawArcPaths(
     }
 }
 
-private const val DISPLAY_ARROWS_ALONG_SELECTED_ARC_PATH = !true
+private const val DISPLAY_ARROWS_ALONG_SELECTED_ARC_PATH = true
 
 private fun DrawScope.drawSelectedArcPaths(
     allObjects: List<*>,

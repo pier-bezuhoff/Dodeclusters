@@ -225,7 +225,7 @@ fun computeArcPathIncidenceOrder(
     concreteArcPath: ConcreteArcPath,
     point: Point,
 ): Pair<Int, Double> {
-    val (arcIndex, _, arcPercentage) = concreteArcPath.project(point)
+    val (_, arcIndex, arcPercentage) = concreteArcPath.project(point)
     return Pair(arcIndex, arcPercentage)
 }
 

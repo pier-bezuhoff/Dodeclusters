@@ -248,7 +248,7 @@ object Snapping {
             if (i in excludedIndices)
                 continue
             val concreteArcPath = allObjects[i] as? ConcreteArcPath ?: continue
-            val (arcIndex, projectedPoint, _) = concreteArcPath.project(point)
+            val (projectedPoint, arcIndex, _) = concreteArcPath.project(point)
             val d = point.distanceFrom(projectedPoint)
             if (d < snapDistance) {
                 if (arcPathIndex == null || d < distance) {

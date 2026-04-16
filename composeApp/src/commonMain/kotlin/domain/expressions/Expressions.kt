@@ -36,23 +36,6 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
     initialExpressions: Map<Ix, ExprOutput?>, // pls include all possible indices
     protected val objects: MutableList<R?>,
 ) {
-    /** @param[changedIndices] indices of arc-paths, changed as a result of deletion */
-    data class DeletionResult(
-        val allDeletedIndices: Set<Ix>,
-        val changedIndices: Set<Ix> = emptySet(),
-    )
-    /**
-     * @param[accidentallyDeletedIndices] indices of dependent objects, whose parents were removed
-     * @param[accidentallyChangedIndices] indices of dependent arc-paths, whose points were removed
-     */
-    data class ExprAdjustmentResult<R>(
-        val occupiedIndices: List<Ix>,
-        val reservedIndices: List<Ix>,
-        val results: List<R?>,
-        val accidentallyDeletedIndices: Set<Ix> = emptySet(),
-        val accidentallyChangedIndices: Set<Ix> = emptySet(),
-    )
-
     // for the [objects] nulls correspond to unrealized outputs of multi-functions
     // here nulls correspond to free objects
     // TODO: make it mutable list
@@ -317,6 +300,12 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         return Pair(deleted, changed)
     }
 
+    /** @param[changedIndices] indices of arc-paths, changed as a result of deletion */
+    data class DeletionResult(
+        val allDeletedIndices: Set<Ix>,
+        val changedIndices: Set<Ix> = emptySet(),
+    )
+
     /**
      * Delete [indices] nodes and all of their children from the [ConformalExpressions] by
      * setting [expressions]`[...] = null` and clearing [children], [ix2tier], [tier2ixs].
@@ -441,6 +430,18 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             }
         }
     }
+
+    /**
+     * @param[accidentallyDeletedIndices] indices of dependent objects, whose parents were removed
+     * @param[accidentallyChangedIndices] indices of dependent arc-paths, whose points were removed
+     */
+    data class ExprAdjustmentResult<R>(
+        val occupiedIndices: List<Ix>,
+        val reservedIndices: List<Ix>,
+        val results: List<R?>,
+        val accidentallyDeletedIndices: Set<Ix> = emptySet(),
+        val accidentallyChangedIndices: Set<Ix> = emptySet(),
+    )
 
     /**
      * Change [Parameters] of all outputs of a given [Expr.OneToMany] to the one in [newExpr].

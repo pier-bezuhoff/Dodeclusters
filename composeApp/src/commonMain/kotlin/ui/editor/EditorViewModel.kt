@@ -111,6 +111,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import ui.colorpicker.toDegree
 import ui.editor.EditorViewModel.Companion.INVERSION_OF_CONTROL
 import ui.editor.dialogs.ColorPickerParameters
 import ui.editor.dialogs.DefaultBiInversionParameters
@@ -544,12 +545,15 @@ class EditorViewModel : ViewModel() {
                 "propertyInvalidation #${objectModel.propertyInvalidations}"
         )
         if (selection.isNotEmpty()) {
-            val s1 = if (selectedObjectsString.isEmpty()) "" else "$selectedObjectsString;\n"
-            val s2 = if (selectedExpressionsString.isEmpty()) "" else "$selectedExpressionsString;\n"
-            val s3 = if (selectedArcPathsString.isEmpty()) "" else "$selectedArcPathsString;\n"
-            queueSnackbarMessage(SnackbarMessage.PLACEHOLDER,
-                "$s1$s2$s3"
-            )
+            val message = buildString {
+                if (selectedObjectsString.isNotEmpty())
+                    appendLine("$selectedObjectsString;")
+                if (selectedExpressionsString.isNotEmpty())
+                    appendLine("$selectedExpressionsString;")
+                if (selectedArcPathsString.isNotEmpty())
+                    appendLine("$selectedArcPathsString;")
+            }
+            queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
         }
     }
 
@@ -1639,6 +1643,7 @@ class EditorViewModel : ViewModel() {
         if (submode is SubMode.SelectionChoices)
             submode = null
         if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
+            // scale pArcPath? not sure
         } else {
             // weird history shenanigans... cuz we want to pin-record on the first zoom
             // action in a sequence
@@ -1653,7 +1658,7 @@ class EditorViewModel : ViewModel() {
                     else rect.center
                 transformWhatWeCan(selectedIndices,
                     focus = focus, zoom = zoom,
-                    continuousChange = ContinuousChange.ZOOM,
+                    continuousChange = ContinuousChange.ZOOM
                 )
             } else { // zoom everything
                 val targets = objects.indices.toList()
@@ -2582,7 +2587,7 @@ class EditorViewModel : ViewModel() {
     ) {
         val carrier = objectModel.downscaledObjects[arcPathIndex] as? ConcreteArcPath ?: return
         val point = Point.fromOffset(absolutePointerPosition).downscale()
-        val (arcIndex, newPoint, arcPercentage) = carrier.project(point)
+        val (_, arcIndex, arcPercentage) = carrier.project(point)
         val newExpr = Expr.ArcPathIncidence(
             ArcPathIncidenceParameters(arcIndex, arcPercentage),
             arcPathIndex,

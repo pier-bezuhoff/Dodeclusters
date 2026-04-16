@@ -108,7 +108,7 @@ private fun LabelTextField(
     OutlinedTextField(
         labelTFV,
         onValueChange = { newTextFieldValue ->
-            println(newTextFieldValue)
+//            println(newTextFieldValue)
             labelTFV = newTextFieldValue
             val newLabel = newTextFieldValue.text
             if (newLabel != label) {

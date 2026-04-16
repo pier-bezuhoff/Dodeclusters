@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import domain.angleRad
 import kotlinx.serialization.Serializable
+import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -19,10 +20,12 @@ data class ConcreteArcPath(
     val isClosed: Boolean,
 ) : GCircleOrConcreteAcPath {
     /**
-     * @property[arcIndex] index within [domain.expressions.ArcPath.arcs], `null` means several arcs are fused
-     * because of `null` vertices
-     * @property[circleOrLine] `null` means line
-     * @property[freeMidpoint] for sagitta-defined arcs
+     * @param[arcIndex] index within [domain.expressions.ArcPath.arcs], `null` means
+     * several arcs were fused because of `null` vertices
+     * @param[circleOrLine] `null` also means line
+     * @param[startAngle] clockwise from the East, in `[0; 2*PI)`
+     * @param[sweepAngle] clockwise, `(-2*PI; 2*PI)`
+     * @param[freeMidpoint] for sagitta-defined arcs
      */
     @Immutable
     @Serializable
@@ -95,11 +98,14 @@ data class ConcreteArcPath(
         return distance
     }
 
-    /**
-     * assumes [vertices]`.size >= 1`
-     * @return (arcIndex, projectedPoint, arcPercentage)
-     */
-    fun project(point: Point): Triple<Int, Point, Double> {
+    data class ProjectionResult(
+        val projectedPoint: Point,
+        val arcIndex: Int,
+        val arcPercentage: Double,
+    )
+
+    /** assumes [vertices]`.size >= 1` */
+    fun project(point: Point): ProjectionResult {
         var index = 0
         var projectedPoint = vertices.first()
         var arcPercentage = 0.0
@@ -143,7 +149,11 @@ data class ConcreteArcPath(
                 null -> {}
             }
         }
-        return Triple(index, projectedPoint, arcPercentage)
+        return ProjectionResult(
+            projectedPoint = projectedPoint,
+            arcIndex = index,
+            arcPercentage = arcPercentage,
+        )
     }
 
     fun scaled00(zoom: Double): ConcreteArcPath = copy(
@@ -234,39 +244,60 @@ data class ConcreteArcPath(
     }
 
     // discriminates CCW vs CW
-    /** Cumulative vector turning angle in radians, as it's dragged along this path */
-    fun calculateWinding(): Double {
+    /** Cumulative vector turning CW angle in radians, as it travels along this path.
+     * Aka 'turning number' `*TAU` for loops.
+     *
+     * For non-intersecting loops it's either `+TAU` (clockwise)
+     * or `-TAU` (counterclockwise); can be 0 for self-intersectin loops (eg 8-shape).
+     */
+    fun calculateTurningAngle(): Double {
         var angle = 0.0
         arcs.forEachIndexed { arcIndex, arc ->
-            // arc angle + vertex angle
-            angle += arc.sweepAngle // need to ensure it's in [-PI; PI]
-            if (isClosed || arcIndex < arcs.lastIndex) {
-                val nextArcIndex = (arcIndex + 1).mod(arcs.size)
+            // vertex angle + arc sweep angle
+            if (isClosed || arcIndex != 0) {
+                val previousArcIndex = (arcIndex - 1).mod(arcs.size)
                 val vertex = vertices[arcIndex].toOffset()
-                val nextVertex = vertices[nextArcIndex].toOffset()
-                val incomingNormalVector = when (val circle = arc.circleOrLine) {
+                val incomingNormalVector = when (val previousCircle = arcs[previousArcIndex].circleOrLine) {
                     is Circle ->
-                        vertex - circle.center
-                    else ->
-                        Offset(
-                            nextVertex.y - vertex.y,
-                            -(nextVertex.x - vertex.x)
-                        )
-                }
-                val outgoingNormalVector = when (val nextCircle = arcs[nextArcIndex].circleOrLine) {
-                    is Circle ->
-                        nextVertex - nextCircle.center
+                        circleNormal(previousCircle, vertex)
                     else -> {
-                        val nextNextVertex = vertices[(nextArcIndex + 1).mod(vertices.size)].toOffset()
-                        Offset(
-                            nextNextVertex.y - nextVertex.y,
-                            -(nextNextVertex.x - nextVertex.x)
-                        )
+                        val previousVertex = vertices[previousArcIndex].toOffset()
+                        lineSegmentNormal(previousVertex, vertex)
                     }
                 }
-                angle += outgoingNormalVector.angleRad(incomingNormalVector)
+                val outgoingNormalVector = when (val circle = arc.circleOrLine) {
+                    is Circle ->
+                        circleNormal(circle, vertex)
+                    else -> {
+                        val nextVertex = vertices[(arcIndex + 1).mod(vertices.size)].toOffset()
+                        lineSegmentNormal(vertex, nextVertex)
+                    }
+                }
+                val vertexAngle = incomingNormalVector.angleRad(outgoingNormalVector)
+                angle += vertexAngle
+//                println("#$arcIndex: sweep angle = ${arc.sweepAngle.toDegree()}, vertex angle = ${vertexAngle.toDegree()}")
             }
+            angle += arc.sweepAngle // sweep is 0 for lines
         }
         return angle
     }
+
+    fun isClockwise(): Boolean =
+        isClosed && calculateTurningAngle() > PI
+
+    fun isCounterclockwise(): Boolean =
+        isClosed && calculateTurningAngle() < -PI
 }
+
+// normal points to the left of direction
+private fun circleNormal(circle: Circle, at: Offset): Offset =
+    if (circle.isCCW)
+        circle.center - at
+    else
+        at - circle.center
+
+private fun lineSegmentNormal(start: Offset, end: Offset): Offset =
+    Offset(
+        end.y - start.y,
+        -(end.x - start.x)
+    )
