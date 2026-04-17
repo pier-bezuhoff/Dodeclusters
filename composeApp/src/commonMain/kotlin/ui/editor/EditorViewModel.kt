@@ -99,6 +99,7 @@ import domain.settings.BlendModeType
 import domain.settings.InversionOfControl
 import domain.settings.Settings
 import domain.sortedByFrequency
+import domain.xor
 import domain.transpose
 import domain.withoutElementsAt
 import getPlatform
@@ -1090,7 +1091,23 @@ class EditorViewModel : ViewModel() {
         )
     }
 
-    fun getClosedArcPathAround(
+    fun getClosedArcPathsSurrounding(
+        visiblePosition: Offset,
+        potentialIndices: Iterable<Ix> = objectModel.arcPathIndices,
+        hasToBeFilled: Boolean = false,
+    ): List<Ix> {
+        val position = Point.fromOffset(absolute(visiblePosition))
+        val notFilledIsOk = !hasToBeFilled
+        return potentialIndices.filter { ix ->
+            val concreteArcPath = objects[ix] as? ConcreteArcPath
+            concreteArcPath != null &&
+                concreteArcPath.isClosed &&
+                (notFilledIsOk || objectModel.fillColors[ix] != null) &&
+                concreteArcPath.contains(position)
+        }
+    }
+
+    fun getClosedArcPathSurrounding(
         visiblePosition: Offset,
         potentialIndices: Iterable<Ix> = objectModel.arcPathIndices,
         hasToBeFilled: Boolean = false,
@@ -1108,7 +1125,7 @@ class EditorViewModel : ViewModel() {
 
     // NOTE: region boundaries get messed up when we alter a big structure like spiral
     /** @return (compressed region, verbose region involving all circles) surrounding clicked position */
-    private fun getRegionAround(
+    private fun getRegionSurrounding(
         visiblePosition: Offset,
         bounds: List<Ix>? = null
     ): Pair<LogicalRegion, LogicalRegion> {
@@ -1138,9 +1155,9 @@ class EditorViewModel : ViewModel() {
         bounds: List<Ix>? = null,
     ): Unit? {
         val ix = if (bounds.isNullOrEmpty())
-            getClosedArcPathAround(visiblePosition)
+            getClosedArcPathSurrounding(visiblePosition)
         else
-            getClosedArcPathAround(visiblePosition, bounds)
+            getClosedArcPathSurrounding(visiblePosition, bounds)
         if (ix != null) {
             val fillColor = objectModel.fillColors[ix]
             if (fillColor != regionColor) {
@@ -1157,7 +1174,7 @@ class EditorViewModel : ViewModel() {
         visiblePosition: Offset,
         bounds: List<Ix>? = null,
     ) {
-        val (compressedRegion, uncompressedRegion) = getRegionAround(visiblePosition, bounds)
+        val (compressedRegion, uncompressedRegion) = getRegionSurrounding(visiblePosition, bounds)
         regions = RegionManipulationStrategy.updateRegionsAfterReselection(
             compressedRegion = compressedRegion,
             uncompressedRegion = uncompressedRegion,
@@ -2067,7 +2084,7 @@ class EditorViewModel : ViewModel() {
                             Selection(gCircles = listOf(selectedCircleIndex))
                         } else {
                             val selectedArcPathIndex = getArcPathsAround(position).firstOrNull()
-                                ?: getClosedArcPathAround(position, hasToBeFilled = true)
+                                ?: getClosedArcPathSurrounding(position, hasToBeFilled = true)
                             if (selectedArcPathIndex != null) {
                                 Selection(arcPaths = listOf(selectedArcPathIndex))
                             } else {
@@ -2091,14 +2108,18 @@ class EditorViewModel : ViewModel() {
                         }
                     }
                     is SubMode.FlowSelect -> { // doesn't yet work with arc paths
-                        val (_, qualifiedRegion) = getRegionAround(position)
-                        submode = SubMode.FlowSelect(qualifiedRegion)
+                        val surroundingArcPaths = getClosedArcPathsSurrounding(position)
+                        val (_, qualifiedRegion) = getRegionSurrounding(position)
+                        submode = SubMode.FlowSelect(
+                            lastQualifiedRegion = qualifiedRegion,
+                            lastSurroundingArcPaths = surroundingArcPaths.toSet(),
+                        )
                     }
                     else -> {}
                 }
                 SelectionMode.Region -> when (submode) {
                     is SubMode.FlowFill -> {
-                        val (_, qualifiedRegion) = getRegionAround(position)
+                        val (_, qualifiedRegion) = getRegionSurrounding(position)
                         submode = SubMode.FlowFill(qualifiedRegion)
                         val selectedCircles = objectSelection.filter { objects[it] is CircleOrLine }
                         if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
@@ -2188,7 +2209,7 @@ class EditorViewModel : ViewModel() {
                 } else {
                     if (selectableArcPaths.isEmpty())
                         selectableArcPaths = listOfNotNull(
-                            getClosedArcPathAround(visiblePosition, hasToBeFilled = true)
+                            getClosedArcPathSurrounding(visiblePosition, hasToBeFilled = true)
                         )
                     if (selectableArcPaths.isNotEmpty()) {
                         selection = Selection(arcPaths = selectableArcPaths.take(1))
@@ -2232,7 +2253,7 @@ class EditorViewModel : ViewModel() {
                     highlightSelectionParents()
                 } else {
                     val selectedArcPathIndex = getArcPathsAround(visiblePosition).firstOrNull()
-                        ?: getClosedArcPathAround(visiblePosition, hasToBeFilled = true)
+                        ?: getClosedArcPathSurrounding(visiblePosition, hasToBeFilled = true)
                     if (selectedArcPathIndex != null) {
                         selection = Selection(arcPaths = listOf(selectedArcPathIndex))
                         highlightSelectionParents()
@@ -2264,7 +2285,7 @@ class EditorViewModel : ViewModel() {
                 }
             } else {
                 val selectedArcPathIndex = getArcPathsAround(visiblePosition).firstOrNull()
-                    ?: getClosedArcPathAround(visiblePosition, hasToBeFilled = true)
+                    ?: getClosedArcPathSurrounding(visiblePosition, hasToBeFilled = true)
                 if (selectedArcPathIndex != null) {
                     if (selectedArcPathIndex in selection.arcPaths) {
                         selection = selection.copy(
@@ -2277,7 +2298,7 @@ class EditorViewModel : ViewModel() {
                         highlightSelectionParents()
                     }
                 } else { // try to select bounding circles of the selected region
-                    val (region, region0) = getRegionAround(visiblePosition)
+                    val (region, region0) = getRegionSurrounding(visiblePosition)
                     if (region0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
                         toggleSelectAll()
                         if (!showPhantomObjects) {
@@ -2772,26 +2793,34 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun updateFlowSelect(visiblePosition: Offset, sm: SubMode.FlowSelect) {
-        val qualifiedRegion = sm.lastQualifiedRegion
-        val (_, newQualifiedRegion) = getRegionAround(visiblePosition)
-        if (qualifiedRegion == null) {
-            submode = SubMode.FlowSelect(newQualifiedRegion)
+        val surroundingArcPaths = getClosedArcPathsSurrounding(visiblePosition)
+        val (_, qualifiedRegion) = getRegionSurrounding(visiblePosition)
+        if (sm.lastQualifiedRegion == null || sm.lastSurroundingArcPaths == null) {
+            submode = SubMode.FlowSelect(
+                lastQualifiedRegion = qualifiedRegion,
+                lastSurroundingArcPaths = surroundingArcPaths.toSet(),
+            )
         } else {
             val diff =
-                (qualifiedRegion.insides - newQualifiedRegion.insides) union
-                (newQualifiedRegion.insides - qualifiedRegion.insides) union
-                (qualifiedRegion.outsides - newQualifiedRegion.outsides) union
-                (newQualifiedRegion.outsides - qualifiedRegion.outsides)
-            selection = Selection(gCircles =
-                selection.gCircles +
-                    diff.filter { it !in objectSelection && (showPhantomObjects || it !in phantoms) }
+                (qualifiedRegion.insides xor sm.lastQualifiedRegion.insides) union
+                (qualifiedRegion.outsides xor sm.lastQualifiedRegion.outsides)
+            val additionalGCircles = diff.filter {
+                it !in selection.gCircles && (showPhantomObjects || it !in phantoms)
+            }
+            val diff2 = surroundingArcPaths.toSet() xor sm.lastSurroundingArcPaths
+            val additionalArcPaths = diff2.filter {
+                it !in selection.arcPaths && (showPhantomObjects || it !in phantoms)
+            }
+            selection = Selection(
+                gCircles = selection.gCircles + additionalGCircles,
+                arcPaths = selection.arcPaths + additionalArcPaths,
             )
         }
     }
 
     private fun updateFlowFill(visiblePosition: Offset, selectedCircles: List<Ix>, sm: SubMode.FlowFill) {
         val qualifiedRegion = sm.lastQualifiedRegion
-        val (_, newQualifiedRegion) = getRegionAround(visiblePosition)
+        val (_, newQualifiedRegion) = getRegionSurrounding(visiblePosition)
         if (qualifiedRegion == null) {
             submode = SubMode.FlowFill(newQualifiedRegion)
         } else if (qualifiedRegion != newQualifiedRegion) {
@@ -3450,7 +3479,8 @@ class EditorViewModel : ViewModel() {
     private fun completeCircleBy3Points() {
         val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.CLIP }
-        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.PointXY }) {
+        // i think circle by 3 implies we want to move these points later
+        if (args.all { it is Arg.PointXY }) {
             val (p1, p2, p3) = args.map {
                 (it as Arg.PointXY).toPoint().downscale()
             }
@@ -3483,7 +3513,7 @@ class EditorViewModel : ViewModel() {
     private fun completeCircleByPencilAndPoint() {
         val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.CLIP }
-        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.PointXY }) {
+        if (args.all { it is Arg.PointXY }) {
             val (p1, p2, p3) = args.map {
                 (it as Arg.PointXY).toPoint().downscale()
             }
@@ -3516,7 +3546,7 @@ class EditorViewModel : ViewModel() {
     private fun completeLineBy2Points() {
         val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.CLIP }
-        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.PointXY }) {
+        if (args.all { it is Arg.PointXY }) {
             val (p1, p2) = args.map {
                 (it as Arg.PointXY).toPoint().downscale()
             }

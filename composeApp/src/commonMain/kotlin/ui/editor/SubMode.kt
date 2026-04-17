@@ -37,10 +37,12 @@ sealed interface SubMode {
         val corner2: Offset? = null,
     ) : SubMode
     data class FlowSelect(
-        val lastQualifiedRegion: LogicalRegion? = null
+        val lastQualifiedRegion: LogicalRegion? = null,
+        val lastSurroundingArcPaths: Set<Ix>? = null,
     ) : SubMode
     data class FlowFill(
-        val lastQualifiedRegion: LogicalRegion? = null
+        val lastQualifiedRegion: LogicalRegion? = null,
+        val lastSurroundingArcPaths: Set<Ix>? = null,
     ) : SubMode
 
     data class SelectionChoices(

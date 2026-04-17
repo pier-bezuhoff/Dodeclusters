@@ -111,6 +111,10 @@ inline fun <K, V : Any> MutableMap<K, V>.setOrRemove(key: K, value: V?) {
         set(key, value)
 }
 
+/** `(A \ B) U (B \ A)`, symmetric difference */
+infix fun <T> Set<T>.xor(other: Set<T>): Set<T> =
+    (this - other).union(other - this)
+
 /** To be used in `when` pattern matching in cases that should NEVER be reached */
 @Throws(IllegalStateException::class)
 inline fun never(info: String = ""): Nothing =

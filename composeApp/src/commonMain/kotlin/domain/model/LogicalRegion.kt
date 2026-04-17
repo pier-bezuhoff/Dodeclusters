@@ -7,6 +7,7 @@ import domain.io.DdcV2
 import domain.toCssString
 import kotlinx.serialization.Serializable
 
+// MAYBE: allow arc-paths to bound regions
 // MAYBE: we can alternatively use 1 BooleanArray[circles.size] to specify region bounds
 //  out of the circles, and another BooleanArray[insides.size + outsides.size] to specify
 //  which are in and which are out
