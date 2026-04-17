@@ -61,11 +61,8 @@ import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.Parameters
 import domain.expressions.RotationParameters
 import domain.expressions.computeArcPathIncidenceOrder
-import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByCenterAndRadius
-import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeIntersection
-import domain.expressions.computeLineBy2Points
 import domain.expressions.computeSagittaRatio
 import domain.expressions.copy
 import domain.expressions.copyWithNewParameters
@@ -1149,6 +1146,7 @@ class EditorViewModel : ViewModel() {
         return Pair(region, region0)
     }
 
+    // ideally: select 'smallest' surrounding arc-path
     /** @return `null` if no arc-path were altered, [Unit] otherwise */
     private fun refillClosedArcPathAt(
         visiblePosition: Offset,
@@ -1882,6 +1880,109 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    private fun downSingleCircle(visiblePosition: Offset) {
+        val circle = objects[selection.gCircles.single()]
+        if (circle is Circle) {
+            val radiusHandlePosition = circle.center + Offset(circle.radius.toFloat(), 0f)
+            when {
+                isCloseEnoughToSelect(radiusHandlePosition, visiblePosition, lowAccuracy = true) ->
+                    submode = SubMode.Scale(circle.center)
+            }
+        }
+    }
+
+    private fun downSeveralObjects(visiblePosition: Offset) {
+        calculateSelectionRect()?.let { rect ->
+            val scaleHandlePosition = rect.topRight
+            val rotateHandlePosition = rect.bottomRight
+            when {
+                isCloseEnoughToSelect(scaleHandlePosition, visiblePosition, lowAccuracy = true) ->
+                    submode = SubMode.Scale(rect.center)
+                isCloseEnoughToSelect(rotateHandlePosition, visiblePosition, lowAccuracy = true) -> {
+                    submode = SubMode.Rotate(rect.center)
+                }
+            }
+        }
+    }
+
+    private fun tryGrabbingArcMidpoint(visiblePosition: Offset) {
+        for (ix in selection.arcPaths) {
+            val concreteArcPath = objects[ix] as? ConcreteArcPath ?: continue
+            for (arcIndex in concreteArcPath.arcs.indices) {
+                concreteArcPath.arcs[arcIndex].freeMidpoint?.let { midpoint ->
+                    if (isCloseEnoughToSelect(midpoint.toOffset(), visiblePosition, lowAccuracy = true)) {
+                        submode = SubMode.GrabbedArcMidpoint(ix, arcIndex)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun downDuringDrag(visiblePosition: Offset) {
+        val selectedPointIndex = getPreferablyFreePointsAround(visiblePosition).firstOrNull()
+        // select point > circle > arcpath
+        selection = if (selectedPointIndex != null) {
+            Selection(gCircles = listOf(selectedPointIndex))
+        } else {
+            val selectedCircleIndex = getPreferablyFreeCirclesAround(visiblePosition).firstOrNull()
+            if (selectedCircleIndex != null) {
+                Selection(gCircles = listOf(selectedCircleIndex))
+            } else {
+                val selectedArcPathIndex = getArcPathsAround(visiblePosition).firstOrNull()
+                    ?: getClosedArcPathSurrounding(visiblePosition, hasToBeFilled = true)
+                if (selectedArcPathIndex != null) {
+                    Selection(arcPaths = listOf(selectedArcPathIndex))
+                } else {
+                    // we keep the previous selection in case we want to drag it
+                    // but it can still be discarded in :onTap
+                    selection
+                }
+            }
+        }
+    }
+
+    private fun downDuringRectangularSelect(visiblePosition: Offset) {
+        val absolutePosition = absolute(visiblePosition)
+        val (corner1, corner2) = submode as SubMode.RectangularSelect
+        submode = if (corner1 == null) {
+            SubMode.RectangularSelect(absolutePosition)
+        } else if (corner2 == null) {
+            SubMode.RectangularSelect(corner1, absolutePosition)
+        } else {
+            SubMode.RectangularSelect(absolutePosition)
+        }
+    }
+
+    private fun downDuringFlowSelect(visiblePosition: Offset) {
+        val surroundingArcPaths = getClosedArcPathsSurrounding(visiblePosition)
+        val (_, qualifiedRegion) = getRegionSurrounding(visiblePosition)
+        submode = SubMode.FlowSelect(
+            lastQualifiedRegion = qualifiedRegion,
+            lastSurroundingArcPaths = surroundingArcPaths.toSet(),
+        )
+    }
+
+    private fun downDuringFlowFill(visiblePosition: Offset) {
+        val surroundingArcPaths = getClosedArcPathsSurrounding(visiblePosition)
+            .toSet()
+        val (_, qualifiedRegion) = getRegionSurrounding(visiblePosition)
+        submode = SubMode.FlowFill(
+            qualifiedRegion,
+            surroundingArcPaths
+        )
+        val selectedCircles = selection.gCircles.filter { objects[it] is CircleOrLine }
+        if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
+            refillRegionAt(visiblePosition, selectedCircles)
+        } else {
+            refillRegionAt(visiblePosition)
+        }
+        if (restrictRegionsToSelection && selection.arcPaths.isNotEmpty()) {
+            refillClosedArcPathAt(visiblePosition, selection.arcPaths)
+        } else {
+            refillClosedArcPathAt(visiblePosition)
+        }
+    }
+
     private fun downArcPathPoint(visiblePosition: Offset) {
         val snap = snapped(absolute(visiblePosition))
         val arcPath = partialArcPath
@@ -2036,98 +2137,28 @@ class EditorViewModel : ViewModel() {
             submode = null
         if (showCircles) { // TODO: allow arc-path selection when no circles shown
             when (handleConfig) {
-                HandleConfig.SINGLE_CIRCLE -> {
-                    val circle = objects[selection.gCircles.single()]
-                    if (circle is Circle) {
-                        val radiusHandlePosition = circle.center + Offset(circle.radius.toFloat(), 0f)
-                        when {
-                            isCloseEnoughToSelect(radiusHandlePosition, position, lowAccuracy = true) ->
-                                submode = SubMode.Scale(circle.center)
-                        }
-                    }
-                }
-                HandleConfig.SEVERAL_OBJECTS -> {
-                    calculateSelectionRect()?.let { rect ->
-                        val scaleHandlePosition = rect.topRight
-                        val rotateHandlePosition = rect.bottomRight
-                        when {
-                            isCloseEnoughToSelect(scaleHandlePosition, position, lowAccuracy = true) ->
-                                submode = SubMode.Scale(rect.center)
-                            isCloseEnoughToSelect(rotateHandlePosition, position, lowAccuracy = true) -> {
-                                submode = SubMode.Rotate(rect.center)
-                            }
-                        }
-                    }
-                }
+                HandleConfig.SINGLE_CIRCLE ->
+                    downSingleCircle(position)
+                HandleConfig.SEVERAL_OBJECTS ->
+                    downSeveralObjects(position)
                 else -> {}
             }
-            if (submode == null) { // try grabbing arc midpoint
-                for (ix in selection.arcPaths) {
-                    val concreteArcPath = objects[ix] as? ConcreteArcPath ?: continue
-                    for (arcIndex in concreteArcPath.arcs.indices) {
-                        concreteArcPath.arcs[arcIndex].freeMidpoint?.let { midpoint ->
-                            if (isCloseEnoughToSelect(midpoint.toOffset(), position, lowAccuracy = true)) {
-                                submode = SubMode.GrabbedArcMidpoint(ix, arcIndex)
-                            }
-                        }
-                    }
-                }
+            if (submode == null) {
+                tryGrabbingArcMidpoint(position)
             }
             when (mode) {
-                SelectionMode.Drag -> if (submode == null) { // select point > circle > arcpath
-                    val selectedPointIndex = getPreferablyFreePointsAround(position).firstOrNull()
-                    selection = if (selectedPointIndex != null) {
-                        Selection(gCircles = listOf(selectedPointIndex))
-                    } else {
-                        val selectedCircleIndex = getPreferablyFreeCirclesAround(position).firstOrNull()
-                        if (selectedCircleIndex != null) {
-                            Selection(gCircles = listOf(selectedCircleIndex))
-                        } else {
-                            val selectedArcPathIndex = getArcPathsAround(position).firstOrNull()
-                                ?: getClosedArcPathSurrounding(position, hasToBeFilled = true)
-                            if (selectedArcPathIndex != null) {
-                                Selection(arcPaths = listOf(selectedArcPathIndex))
-                            } else {
-                                // we keep the previous selection in case we want to drag it
-                                // but it can still be discarded in :onTap
-                                selection
-                            }
-                        }
-                    }
-                }
+                SelectionMode.Drag if (submode == null) ->
+                    downDuringDrag(position)
                 SelectionMode.Multiselect -> when (submode) {
-                    is SubMode.RectangularSelect -> { // TODO: rect select for arc-paths
-                        val absolutePosition = absolute(position)
-                        val (corner1, corner2) = submode as SubMode.RectangularSelect
-                        submode = if (corner1 == null) {
-                            SubMode.RectangularSelect(absolutePosition)
-                        } else if (corner2 == null) {
-                            SubMode.RectangularSelect(corner1, absolutePosition)
-                        } else {
-                            SubMode.RectangularSelect(absolutePosition)
-                        }
-                    }
-                    is SubMode.FlowSelect -> { // doesn't yet work with arc paths
-                        val surroundingArcPaths = getClosedArcPathsSurrounding(position)
-                        val (_, qualifiedRegion) = getRegionSurrounding(position)
-                        submode = SubMode.FlowSelect(
-                            lastQualifiedRegion = qualifiedRegion,
-                            lastSurroundingArcPaths = surroundingArcPaths.toSet(),
-                        )
-                    }
+                    is SubMode.RectangularSelect ->
+                        downDuringRectangularSelect(position)
+                    is SubMode.FlowSelect ->
+                        downDuringFlowSelect(position)
                     else -> {}
                 }
                 SelectionMode.Region -> when (submode) {
-                    is SubMode.FlowFill -> {
-                        val (_, qualifiedRegion) = getRegionSurrounding(position)
-                        submode = SubMode.FlowFill(qualifiedRegion)
-                        val selectedCircles = objectSelection.filter { objects[it] is CircleOrLine }
-                        if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
-                            refillRegionAt(position, selectedCircles)
-                        } else {
-                            refillRegionAt(position)
-                        }
-                    }
+                    is SubMode.FlowFill ->
+                        downDuringFlowFill(position)
                     else -> {}
                 }
                 ToolMode.ARC_PATH -> {
@@ -2137,7 +2168,7 @@ class EditorViewModel : ViewModel() {
                         downArcPathPoint(position)
                     }
                 }
-                is ToolMode -> if (partialArgList?.isFull != true)
+                is ToolMode if (partialArgList?.isFull != true) ->
                     downToolArg(position)
                 else -> {}
             }
@@ -2160,7 +2191,8 @@ class EditorViewModel : ViewModel() {
                 Arg.InfinitePoint in nextArgType.possibleTypes
             } == true
         )
-        val infinityIndex = objectModel.getInfinityIndex() ?: createNewFreePoint(Point.CONFORMAL_INFINITY)
+        val infinityIndex = objectModel.getInfinityIndex()
+            ?: createNewFreePoint(Point.CONFORMAL_INFINITY)
         val newArg =
             if (Arg.Indices in argList.nextArgType.possibleTypes)
                 Arg.Indices(listOf(infinityIndex))
@@ -2819,17 +2851,32 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun updateFlowFill(visiblePosition: Offset, selectedCircles: List<Ix>, sm: SubMode.FlowFill) {
-        val qualifiedRegion = sm.lastQualifiedRegion
-        val (_, newQualifiedRegion) = getRegionSurrounding(visiblePosition)
-        if (qualifiedRegion == null) {
-            submode = SubMode.FlowFill(newQualifiedRegion)
-        } else if (qualifiedRegion != newQualifiedRegion) {
-            submode = SubMode.FlowFill(newQualifiedRegion)
-            if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
-                refillRegionAt(visiblePosition, selectedCircles)
-            } else {
-                refillRegionAt(visiblePosition)
+        val surroundingArcPaths = getClosedArcPathsSurrounding(visiblePosition).toSet()
+        val (_, qualifiedRegion) = getRegionSurrounding(visiblePosition)
+        if (sm.lastQualifiedRegion == null) {
+            submode = SubMode.FlowFill(
+                lastQualifiedRegion = qualifiedRegion,
+                lastSurroundingArcPaths = surroundingArcPaths,
+            )
+        } else {
+            var submode: SubMode.FlowFill = sm
+            if (sm.lastQualifiedRegion != qualifiedRegion) {
+                submode = sm.copy(lastQualifiedRegion = qualifiedRegion)
+                if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
+                    refillRegionAt(visiblePosition, selectedCircles)
+                } else {
+                    refillRegionAt(visiblePosition)
+                }
             }
+            if (sm.lastSurroundingArcPaths != surroundingArcPaths) {
+                submode = submode.copy(lastSurroundingArcPaths = surroundingArcPaths)
+                if (restrictRegionsToSelection && selection.arcPaths.isNotEmpty()) {
+                    refillClosedArcPathAt(visiblePosition, selection.arcPaths)
+                } else {
+                    refillClosedArcPathAt(visiblePosition)
+                }
+            }
+            this.submode = submode
         }
     }
 
@@ -2898,8 +2945,8 @@ class EditorViewModel : ViewModel() {
         movementAfterDown = true
         /** absolute cursor/pointer position/centroid */
         val absoluteCentroid = absolute(centroid)
-        val selectedCircles = objectSelection.filter { objects[it] is CircleOrLineOrImaginaryCircle }
-        val selectedPoints = objectSelection.filter { objects[it] is Point }
+        val selectedCircles = selection.gCircles.filter { objects[it] is CircleOrLineOrImaginaryCircle }
+        val selectedPoints = selection.gCircles.filter { objects[it] is Point }
         when (val sm = submode) {
             is SubMode.Scale -> when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
@@ -3480,31 +3527,22 @@ class EditorViewModel : ViewModel() {
         val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.CLIP }
         // i think circle by 3 implies we want to move these points later
-        if (args.all { it is Arg.PointXY }) {
-            val (p1, p2, p3) = args.map {
-                (it as Arg.PointXY).toPoint().downscale()
+        val realized = args.map {
+            when (it) {
+                is Arg.Index -> it.index
+                is Arg.FixedPoint -> createNewFreePoint(it.toPoint())
             }
-            val newCircle = computeCircleBy3Points(p1, p2, p3)
-            expressions.addFree()
-            createNewGCircle(newCircle?.upscale())
-        } else {
-            val realized = args.map {
-                when (it) {
-                    is Arg.Index -> it.index
-                    is Arg.FixedPoint -> createNewFreePoint(it.toPoint())
-                }
-            }
-            val newGCircle = expressions.addSoloExpr(
-                Expr.CircleBy3Points(
-                    object1 = realized[0],
-                    object2 = realized[1],
-                    object3 = realized[2],
-                ),
-            ) as? GCircle
-            createNewGCircle(newGCircle?.upscale())
-            if (newGCircle is ImaginaryCircle) {
-                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
-            }
+        }
+        val newGCircle = expressions.addSoloExpr(
+            Expr.CircleBy3Points(
+                object1 = realized[0],
+                object2 = realized[1],
+                object3 = realized[2],
+            ),
+        ) as? GCircle
+        createNewGCircle(newGCircle?.upscale())
+        if (newGCircle is ImaginaryCircle) {
+            queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
         partialArgList = argList.copyEmpty()
         recordHistory()
@@ -3513,31 +3551,22 @@ class EditorViewModel : ViewModel() {
     private fun completeCircleByPencilAndPoint() {
         val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.CLIP }
-        if (args.all { it is Arg.PointXY }) {
-            val (p1, p2, p3) = args.map {
-                (it as Arg.PointXY).toPoint().downscale()
+        val realized = args.map {
+            when (it) {
+                is Arg.Index -> it.index
+                is Arg.FixedPoint -> createNewFreePoint(it.toPoint())
             }
-            val newCircle = computeCircleByPencilAndPoint(p1, p2, p3)
-            expressions.addFree()
-            createNewGCircle(newCircle?.upscale())
-        } else {
-            val realized = args.map {
-                when (it) {
-                    is Arg.Index -> it.index
-                    is Arg.FixedPoint -> createNewFreePoint(it.toPoint())
-                }
-            }
-            val newGCircle = expressions.addSoloExpr(
-                Expr.CircleByPencilAndPoint(
-                    pencilObject1 = realized[0],
-                    pencilObject2 = realized[1],
-                    perpendicularObject = realized[2],
-                ),
-            ) as? GCircle
-            createNewGCircle(newGCircle?.upscale())
-            if (newGCircle is ImaginaryCircle) {
-                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
-            }
+        }
+        val newGCircle = expressions.addSoloExpr(
+            Expr.CircleByPencilAndPoint(
+                pencilObject1 = realized[0],
+                pencilObject2 = realized[1],
+                perpendicularObject = realized[2],
+            ),
+        ) as? GCircle
+        createNewGCircle(newGCircle?.upscale())
+        if (newGCircle is ImaginaryCircle) {
+            queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
         partialArgList = argList.copyEmpty()
         recordHistory()
@@ -3546,30 +3575,22 @@ class EditorViewModel : ViewModel() {
     private fun completeLineBy2Points() {
         val argList = partialArgList ?: return
         val args = argList.args.map { it as Arg.CLIP }
-        if (args.all { it is Arg.PointXY }) {
-            val (p1, p2) = args.map {
-                (it as Arg.PointXY).toPoint().downscale()
+        val realized = args.map {
+            when (it) {
+                is Arg.Index -> it.index
+                is Arg.FixedPoint -> createNewFreePoint(it.toPoint())
             }
-            val newGCircle = computeLineBy2Points(p1, p2)
-            expressions.addFree()
-            createNewGCircle(newGCircle?.upscale())
-        } else {
-            val realized = args.map {
-                when (it) {
-                    is Arg.Index -> it.index
-                    is Arg.FixedPoint -> createNewFreePoint(it.toPoint())
-                }
-            }
-            val infinityIndex = objectModel.getInfinityIndex() ?: createNewFreePoint(Point.CONFORMAL_INFINITY)
-            val newGCircle = expressions.addSoloExpr(
-                Expr.CircleBy3Points(
-                    object1 = realized[0],
-                    object2 = realized[1],
-                    object3 = infinityIndex,
-                ),
-            ) as? GCircle
-            createNewGCircle(newGCircle?.upscale())
         }
+        val infinityIndex = objectModel.getInfinityIndex()
+            ?: createNewFreePoint(Point.CONFORMAL_INFINITY)
+        val newGCircle = expressions.addSoloExpr(
+            Expr.CircleBy3Points(
+                object1 = realized[0],
+                object2 = realized[1],
+                object3 = infinityIndex,
+            ),
+        ) as? GCircle
+        createNewGCircle(newGCircle?.upscale())
         partialArgList = argList.copyEmpty()
         recordHistory()
     }
