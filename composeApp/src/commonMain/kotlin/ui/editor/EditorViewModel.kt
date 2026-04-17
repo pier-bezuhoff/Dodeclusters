@@ -111,7 +111,6 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import ui.colorpicker.toDegree
 import ui.editor.EditorViewModel.Companion.INVERSION_OF_CONTROL
 import ui.editor.dialogs.ColorPickerParameters
 import ui.editor.dialogs.DefaultBiInversionParameters
@@ -2761,12 +2760,13 @@ class EditorViewModel : ViewModel() {
         val corner1 = sm.corner1
         val rect = Rect.fromCorners(corner1 ?: absolutePosition, absolutePosition)
         val selectables = objects.mapIndexed { ix, o ->
-            if (o is GCircle && (showPhantomObjects || ix !in phantoms)) o
+            if (o is GCircleOrConcreteAcPath && (showPhantomObjects || ix !in phantoms)) o
             else null
         }
-        // TODO: rect select arc-paths too
+        val rectSelection = RectangleCollider.selectWithRectangle(selectables, rect)
         selection = Selection(
-            gCircles = RectangleCollider.selectWithRectangle(selectables, rect)
+            gCircles = rectSelection.filter { objects[it] is GCircle },
+            arcPaths = rectSelection.filter { objects[it] is ConcreteArcPath },
         )
         submode = SubMode.RectangularSelect(corner1, absolutePosition)
     }
@@ -3011,7 +3011,10 @@ class EditorViewModel : ViewModel() {
                 .also {
                     println("rectangle selection -> $it")
                 }
-            selection = Selection(gCircles = rectSelection)
+            selection = Selection(
+                gCircles = rectSelection.filter { objects[it] is GCircle },
+                arcPaths = rectSelection.filter { objects[it] is ConcreteArcPath },
+            )
             submode = SubMode.RectangularSelect(corner1, corner2)
         }
     }

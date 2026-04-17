@@ -6,29 +6,29 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.util.fastCoerceIn
 import domain.filterIndices
+import domain.pow2
 import domain.squareSum
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.pow
 import kotlin.math.sqrt
 
 object RectangleCollider {
     fun selectWithRectangle(objects: List<*>, rect: Rect): List<Int> =
         objects.filterIndices { o ->
-            if (o is GCircle)
-                objectRectangleCollisionTest(o, rect)
-            else
-                false
+            when (o) {
+                is GCircleOrConcreteAcPath ->
+                    objectRectangleCollisionTest(o, rect)
+                else -> false
+            }
         }
 
     /** Rectangle collider.
      * @return `true` if intersection of [obj]'s border and [rect] is
      * non-empty (including [rect]'s interior), otherwise `false` */
-    fun objectRectangleCollisionTest(obj: GCircle, rect: Rect): Boolean =
+    fun objectRectangleCollisionTest(obj: GCircleOrConcreteAcPath, rect: Rect): Boolean =
         when (obj) {
             is Circle -> {
                 circleRectCollisionTest(obj, rect)
-//            circleRectCollisionTestEveryEdge(obj, rect)
             }
             is Line -> {
                 testHorizontalSegmentLineIntersection(rect.top, rect.left, rect.right, obj) ||
@@ -40,6 +40,8 @@ object RectangleCollider {
                 obj.x in rect.left .. rect.right &&
                 obj.y in rect.top .. rect.bottom
             is ImaginaryCircle -> false
+            is ConcreteArcPath ->
+                concreteArcPathRectangleCollisionTest(obj, rect)
         }
 }
 
@@ -50,18 +52,104 @@ fun Rect.Companion.fromCorners(corner1: Offset, corner2: Offset): Rect {
     return Rect(topLeft, bottomRight)
 }
 
-// for inclusion test prepend
-// rect.contains(arcStart.toOffset()) || rect.contains(arcEnd.toOffset()) ||
-private fun arcRectangleCollisionTest(
-    arcStart: Point, arcEnd: Point,
-    circleOrLine: CircleOrLine?,
+private fun concreteArcPathRectangleCollisionTest(
+    concreteArcPath: ConcreteArcPath,
     rect: Rect,
 ): Boolean {
-    return when (circleOrLine) {
+    if (concreteArcPath.vertices.any { rect.contains(it.toOffset()) })
+        return true
+    concreteArcPath.forEachArc { _, arc, arcStart, arcEnd ->
+        if (arcRectangleCollisionTest(
+            arcStart, arcEnd, arc.circleOrLine, rect
+        ))
+            return true
+    }
+    return false
+}
+
+/** for quick accept first check if [arcStart] or [arcEnd] are contained within [rect] */
+private fun arcRectangleCollisionTest(
+    arcStart: Point, arcEnd: Point,
+    circle: CircleOrLine?,
+    rect: Rect,
+): Boolean {
+    return when (circle) {
         is Circle -> {
-            // find circle-rect intersections
-            // test if any are on-arc
-            TODO()
+            if (!rect.overlaps(circle.toRect()))
+                return false
+            // similar test for top, bottom, left and right rect segments
+            val horizontalRectRange = rect.left .. rect.right
+            val verticalRectRange = rect.top .. rect.bottom
+            val r2 = circle.r2.toFloat()
+            var discriminant = r2 - (rect.top - circle.y.toFloat()).pow2()
+            if (discriminant >= 0) {
+                val sqrtD = sqrt(discriminant)
+                val x1 = circle.x + sqrtD
+                val x2 = circle.x - sqrtD
+                if (x1 in horizontalRectRange &&
+                    circle.agreesWithOrientation(
+                        arcStart, Point(x1, rect.top.toDouble()), arcEnd
+                    ) ||
+                    x2 in horizontalRectRange &&
+                    circle.agreesWithOrientation(
+                        arcStart, Point(x2, rect.top.toDouble()), arcEnd
+                    )
+                ) {
+                    return true
+                }
+            }
+            discriminant = r2 - (rect.bottom - circle.y.toFloat()).pow2()
+            if (discriminant >= 0) {
+                val sqrtD = sqrt(discriminant)
+                val x1 = circle.x + sqrtD
+                val x2 = circle.x - sqrtD
+                if (x1 in horizontalRectRange &&
+                    circle.agreesWithOrientation(
+                        arcStart, Point(x1, rect.bottom.toDouble()), arcEnd
+                    ) ||
+                    x2 in horizontalRectRange &&
+                    circle.agreesWithOrientation(
+                        arcStart, Point(x2, rect.bottom.toDouble()), arcEnd
+                    )
+                ) {
+                    return true
+                }
+            }
+            discriminant = r2 - (rect.left - circle.x.toFloat()).pow2()
+            if (discriminant >= 0) {
+                val sqrtD = sqrt(discriminant)
+                val y1 = circle.y + sqrtD
+                val y2 = circle.y - sqrtD
+                if (y1 in verticalRectRange &&
+                    circle.agreesWithOrientation(
+                        arcStart, Point(rect.left.toDouble(), y1), arcEnd
+                    ) ||
+                    y2 in verticalRectRange &&
+                    circle.agreesWithOrientation(
+                        arcStart, Point(rect.left.toDouble(), y2), arcEnd
+                    )
+                ) {
+                    return true
+                }
+            }
+            discriminant = r2 - (rect.right - circle.x.toFloat()).pow2()
+            if (discriminant >= 0) {
+                val sqrtD = sqrt(discriminant)
+                val y1 = circle.y + sqrtD
+                val y2 = circle.y - sqrtD
+                if (y1 in verticalRectRange &&
+                    circle.agreesWithOrientation(
+                        arcStart, Point(rect.right.toDouble(), y1), arcEnd
+                    ) ||
+                    y2 in verticalRectRange &&
+                    circle.agreesWithOrientation(
+                        arcStart, Point(rect.right.toDouble(), y2), arcEnd
+                    )
+                ) {
+                    return true
+                }
+            }
+            false
         }
         else -> segmentRectIntersectionTest(arcStart, arcEnd, rect)
     }
@@ -208,10 +296,10 @@ private fun circleRectCollisionTest(circle: Circle, rect: Rect): Boolean {
 private fun testHorizontalSegmentCircleIntersections(
     y: Float,
     startX: Float, endX: Float,
-    circle: Circle
+    circle: Circle,
 ): Boolean {
     val range = startX .. endX
-    val discriminant = circle.r2 - (y - circle.y).pow(2)
+    val discriminant = circle.r2 - (y - circle.y).pow2()
     if (discriminant < 0)
         return false
     val sqrtD = sqrt(discriminant)
@@ -223,10 +311,10 @@ private fun testHorizontalSegmentCircleIntersections(
 private fun testVerticalSegmentCircleIntersections(
     x: Float,
     startY: Float, endY: Float,
-    circle: Circle
+    circle: Circle,
 ): Boolean {
     val range = startY .. endY
-    val discriminant = circle.r2 - (x - circle.x).pow(2)
+    val discriminant = circle.r2 - (x - circle.x).pow2()
     if (discriminant < 0)
         return false
     val sqrtD = sqrt(discriminant)

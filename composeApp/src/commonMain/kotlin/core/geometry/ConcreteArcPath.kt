@@ -37,6 +37,17 @@ data class ConcreteArcPath(
         val freeMidpoint: Point? = null,
     )
 
+    inline fun forEachArc(
+        action: (arcIndex: Int, arc: Arc, arcStart: Point, arcEnd: Point) -> Unit,
+    ) {
+        for (arcIndex in arcs.indices) {
+            action(
+                arcIndex, arcs[arcIndex],
+                vertices[arcIndex], vertices[(arcIndex + 1).mod(vertices.size)]
+            )
+        }
+    }
+
     fun toRect(): Rect {
         var left = Float.POSITIVE_INFINITY
         var right = Float.NEGATIVE_INFINITY
@@ -50,11 +61,9 @@ data class ConcreteArcPath(
             top = min(top, y)
             bottom = max(bottom, y)
         }
-        arcs.forEachIndexed { i, arc ->
+        forEachArc { _, arc, start, end ->
             when (val circle = arc.circleOrLine) {
                 is Circle -> {
-                    val start = vertices[i]
-                    val end = vertices[(i + 1).mod(vertices.size)]
                     val circleLeft = Point(circle.x - circle.radius, circle.y)
                     val circleRight = Point(circle.x + circle.radius, circle.y)
                     val circleTop = Point(circle.x, circle.y - circle.radius)
@@ -78,9 +87,7 @@ data class ConcreteArcPath(
         var distance = vertices.minOfOrNull {
             it.distanceFrom(point)
         } ?: Double.POSITIVE_INFINITY
-        arcs.forEachIndexed { i, arc ->
-            val start = vertices[i]
-            val end = vertices[(i + 1).mod(vertices.size)]
+        forEachArc { _, arc, start, end ->
             when (val circle = arc.circleOrLine) {
                 is CircleOrLine -> {
                     val closest = circle.project(point)
@@ -176,18 +183,29 @@ data class ConcreteArcPath(
         }
     )
 
+    fun contains(point: Point): Boolean =
+        calculateWindingNumber(point) != 0
+
     // algo based on https://web.archive.org/web/20130126163405/http://geomalgorithms.com/a03-_inclusion.html
     // and https://stackoverflow.com/a/33974251/7143065
     // more general algo: https://arxiv.org/abs/2403.17371
-    fun contains(point: Point): Boolean {
+    /**
+     * Checks scan-ray x>point.x, y=point.y intersections against every arc/segment,
+     * up-crossing is +1, down-crossing is -1.
+     * @return `0` if the point is outside (#up crossings = #down crossings),
+     * `+1` if it's to the left side (inside CCW path),
+     * `-1` if it's to the right side (inside CW path)
+     */
+    private fun calculateWindingNumber(point: Point): Int {
         if (!isClosed)
-            return false
+            return 0
         var windingNumber = 0
         val (x, y) = point
         for (arcIndex in arcs.indices) {
             val arc = arcs[arcIndex]
-            val startVertex = vertices[arcIndex]
-            val endVertex = vertices[(arcIndex + 1).mod(vertices.size)]
+            val arcStart = vertices[arcIndex]
+            val arcEnd = vertices[(arcIndex + 1).mod(vertices.size)]
+            // we ignore a number of edge cases
             when (val circle = arc.circleOrLine) {
                 is Circle -> { // there actually is a closed formula for arc winding number, tho it's not nice
                     val (cx, cy, r) = circle
@@ -206,41 +224,40 @@ data class ConcreteArcPath(
                         continue
                     val candidate1 = Point(cx + ix, y)
                     if (circle.agreesWithOrientation(
-                        startVertex, candidate1, endVertex
+                        arcStart, candidate1, arcEnd
                     ))
                         windingNumber += if (circle.isCCW) 1 else -1
                     if (x0 < -ix) {
                         val candidate2 = Point(cx - ix, y)
                         if (circle.agreesWithOrientation(
-                            startVertex, candidate2, endVertex
+                            arcStart, candidate2, arcEnd
                         ))
                             windingNumber -= if (circle.isCCW) 1 else -1
                     }
                 }
                 else -> {
                     // rect-based quick reject of eastward ray
-                    if (y < startVertex.y && y < endVertex.y ||
-                        startVertex.y < y && endVertex.y < y ||
-                        startVertex.x < x && endVertex.x < x
+                    if (y < arcStart.y && y < arcEnd.y ||
+                        arcStart.y < y && arcEnd.y < y ||
+                        arcStart.x < x && arcEnd.x < x
                     )
                         continue
-                    if (startVertex.y < y) { // downward crossing
+                    if (arcStart.y < y) { // downward crossing
                         // quick reject implies: startVertex.y < y <= endVertex.y
                         // start->end x start->point
-                        val cross = Point.cross(startVertex, endVertex, point)
+                        val cross = Point.cross(arcStart, arcEnd, point)
                         if (cross < 0) // right side
                             windingNumber -= 1
                     } else { // upward crossing
                         // quick reject implies: endVertex.y <= y <= startVertex.y
-                        val cross = Point.cross(startVertex, endVertex, point)
+                        val cross = Point.cross(arcStart, arcEnd, point)
                         if (cross > 0) // left side
                             windingNumber += 1
                     }
                 }
             }
         }
-//        println("winding number = $windingNumber")
-        return windingNumber.mod(2) == 1
+        return windingNumber
     }
 
     // discriminates CCW vs CW
@@ -285,6 +302,7 @@ data class ConcreteArcPath(
     fun isClockwise(): Boolean =
         isClosed && calculateTurningAngle() > PI
 
+    // better test: if the first scanline intersection at y=average vertex y is downward
     fun isCounterclockwise(): Boolean =
         isClosed && calculateTurningAngle() < -PI
 }
