@@ -522,6 +522,9 @@ class EditorViewModel : ViewModel() {
             "$ix: " + expressions[ix].toString()
         }
         println("mode = $mode, submode = $submode")
+        println("circles/lines @ ${objectModel.circleOrLineIndices}")
+        println("points @ ${objectModel.pointIndices}")
+        println("arc-paths @ ${objectModel.arcPathIndices}")
         println("partialArgList = $partialArgList")
         println("selection = $selection")
         println("selected objects = $selectedObjectsString")
@@ -1109,15 +1112,16 @@ class EditorViewModel : ViewModel() {
         potentialIndices: Iterable<Ix> = objectModel.arcPathIndices,
         hasToBeFilled: Boolean = false,
     ): Ix? {
-        val position = Point.fromOffset(absolute(visiblePosition))
-        val notFilledIsOk = !hasToBeFilled
-        return potentialIndices.lastOrNull { ix ->
-            val concreteArcPath = objects[ix] as? ConcreteArcPath
-            concreteArcPath != null &&
-                concreteArcPath.isClosed &&
-                (notFilledIsOk || objectModel.fillColors[ix] != null) &&
-                concreteArcPath.contains(position)
-        }
+        return getClosedArcPathsSurrounding(visiblePosition, potentialIndices, hasToBeFilled)
+            .maxWithOrNull(
+                compareBy<Int> { ix ->
+                    objectModel.fillColors[ix] != null
+                }.thenByDescending{ ix ->
+                    (objects[ix] as? ConcreteArcPath)
+                        ?.calculateVertexArea()
+                        ?: Double.POSITIVE_INFINITY
+                }
+            )
     }
 
     // NOTE: region boundaries get messed up when we alter a big structure like spiral
@@ -1128,8 +1132,9 @@ class EditorViewModel : ViewModel() {
     ): Pair<LogicalRegion, LogicalRegion> {
         val position = absolute(visiblePosition)
         val delimiters = bounds ?:
-            objectModel.circleOrLineIndices.filter { objects[it] is CircleOrLine }
-                .filter { showPhantomObjects || it !in phantoms }
+            objectModel.circleOrLineIndices.filter { ix ->
+                objects[ix] is CircleOrLine && (showPhantomObjects || ix !in phantoms)
+            }
         val ins = delimiters // NOTE: doesn't include circles that the point lies on
             .filter { ix -> (objects[ix] as? CircleOrLine)?.hasInside(position) ?: false }
         val outs = delimiters
@@ -1146,7 +1151,6 @@ class EditorViewModel : ViewModel() {
         return Pair(region, region0)
     }
 
-    // ideally: select 'smallest' surrounding arc-path
     /** @return `null` if no arc-path were altered, [Unit] otherwise */
     private fun refillClosedArcPathAt(
         visiblePosition: Offset,

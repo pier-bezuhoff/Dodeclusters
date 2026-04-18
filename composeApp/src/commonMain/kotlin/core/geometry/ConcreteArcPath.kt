@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.Rect
 import domain.angleRad
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -305,6 +306,20 @@ data class ConcreteArcPath(
     // better test: if the first scanline intersection at y=average vertex y is downward
     fun isCounterclockwise(): Boolean =
         isClosed && calculateTurningAngle() < -PI
+
+    // reference: https://en.wikipedia.org/wiki/Shoelace_formula
+    /** Area of the polygon made of vertices */
+    fun calculateVertexArea(): Double {
+        if (!isClosed)
+            return 0.0
+        var sum = 0.0
+        for (i in vertices.indices) {
+            val prevX = vertices[(i - 1).mod(vertices.size)].x
+            val nextX = vertices[(i + 1).mod(vertices.size)].x
+            sum += vertices[i].y * (prevX - nextX)
+        }
+        return abs(sum)/2.0
+    }
 }
 
 // normal points to the left of direction
