@@ -161,6 +161,8 @@ fun ArcPath.toConcreteArcPath(objects: List<*>): ConcreteArcPath {
                     }
                 }
             }
+            if (realArcs.size < realVertices.size)
+                realArcs.add(ConcreteArcPath.Arc(null, null))
             return ConcreteArcPath(
                 vertices = realVertices,
                 arcs = realArcs,

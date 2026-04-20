@@ -14,11 +14,11 @@ import kotlin.math.sin
 /** Sphere (0,0,0; 1) antipodes projected stereographicly */
 private inline val Point.antipodal: Point
     get() {
-    val l2 = squareSum(x, y)
-    return if (l2 < EPSILON2)
-        Point.Companion.CONFORMAL_INFINITY
-    else Point(-x / l2, -y / l2)
-}
+        val l2 = squareSum(x, y)
+        return if (l2 < EPSILON2)
+            Point.CONFORMAL_INFINITY
+        else Point(-x / l2, -y / l2)
+    }
 
 /**
  * @return bi-inversion engines, generating stereographic sphere rotation (double speed)

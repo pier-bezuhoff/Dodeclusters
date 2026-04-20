@@ -14,6 +14,7 @@ import kotlin.math.sign
 import kotlin.math.sin
 
 // MAYBE: 2-point constructor instead of a,b,c for smoother incident point transformation
+// MAYBE: always normalize lines on init
 /** [a]*x + [b]*y + [c] = 0
  *
  * Normal vector = ([a], [b]), so it depends on the sign
@@ -118,8 +119,8 @@ data class Line(
     override fun getPointLocation(point: Offset): Region.PointLocation {
         val t = a * point.x + b * point.y + c
         return when {
-            t > 0 -> Region.PointLocation.INSIDE
-            t < 0 -> Region.PointLocation.OUTSIDE
+            t < 0 -> Region.PointLocation.INSIDE
+            t > 0 -> Region.PointLocation.OUTSIDE
             else -> Region.PointLocation.BORDERING
         }
     }
@@ -130,7 +131,7 @@ data class Line(
         val t = (a*point.x + b*point.y + c)/norm
         return when {
             abs(t) < EPSILON -> Region.PointLocation.BORDERING
-            t > 0 -> Region.PointLocation.INSIDE
+            t < 0 -> Region.PointLocation.INSIDE
             else -> Region.PointLocation.OUTSIDE
         }
     }
@@ -256,22 +257,31 @@ data class Line(
                         return@forEachArc
                     }
                     when (val circle = arc.circleOrLine) {
-                        is Circle -> {
-                            val d = distanceFrom(circle.x, circle.y)
-                            if (d <= circle.radius) {
-                                val qx = circle.x + circle.radius*normalX
-                                val qy = circle.y + circle.radius*normalY
-                                val signedDistance3 = a*qx + b*qy + c
-                                val diffSides = signedDistance1*signedDistance3 <= 0
-                                val onArc = circle.agreesWithOrientation(arcStart, Point(qx, qy), arcEnd)
-                                // q is on the other side & on arc
-                                // or it's on the same side & not on arc
-                                if (diffSides != onArc) {
-                                    noIntersection = false
-                                    return@forEachArc
+                        is Circle ->
+                            if (distanceFrom(circle.x, circle.y) <= circle.radius) {
+                                // P and Q are the closest and the furthest points from the line on the circle
+                                val px = circle.x + circle.radius*normalX
+                                val py = circle.y + circle.radius*normalY
+                                val signedDistanceP = a*px + b*py + c
+                                val diffSides1P = signedDistance1*signedDistanceP <= 0
+                                if (diffSides1P) { // then q is on the same side, so no need to check it
+                                    if (circle.agreesWithOrientation(arcStart, Point(px, py), arcEnd)) {
+                                        noIntersection = false
+                                        return@forEachArc
+                                    }
+                                } else {
+                                    val qx = circle.x - circle.radius*normalX
+                                    val qy = circle.y - circle.radius*normalY
+                                    val signedDistanceQ = a*qx + b*qy + c
+                                    val diffSides1Q = signedDistance1*signedDistanceQ <= 0
+                                    if (diffSides1Q &&
+                                        circle.agreesWithOrientation(arcStart, Point(qx, qy), arcEnd)
+                                    ) {
+                                        noIntersection = false
+                                        return@forEachArc
+                                    }
                                 }
                             }
-                        }
                         else -> {}
                     }
                 }
@@ -343,6 +353,18 @@ data class Line(
                         endOrder
                     else
                         startOrder
+        }
+
+        fun projectPointOntoSegment(point: Point, start: Point, end: Point): Point {
+            val l2 = start.distance2From(end)
+            val dx = end.x - start.x
+            val dy = end.y - start.y
+            val scalar = (point.x - start.x)*dx + (point.y - start.y)*dy
+            val t = (scalar/l2).coerceIn(0.0, 1.0)
+            return Point(
+                x = start.x + t*dx,
+                y = start.y + t*dy
+            )
         }
 
         fun pointIsInBetweenUndirected(p1: Point, p2: Point, p3: Point): Boolean {

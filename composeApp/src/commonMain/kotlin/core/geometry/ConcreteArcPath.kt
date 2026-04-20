@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import domain.angleRad
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
 import kotlin.math.abs
@@ -15,6 +16,7 @@ import kotlin.math.sqrt
 /** [domain.expressions.ArcPath] representation for calculation */
 @Immutable
 @Serializable
+@SerialName("core.geometry.ConcreteArcPath")
 data class ConcreteArcPath(
     val vertices: List<Point>,
     val arcs: List<Arc>,
@@ -37,6 +39,15 @@ data class ConcreteArcPath(
         val sweepAngle: Double = 0.0,
         val freeMidpoint: Point? = null,
     )
+
+    init {
+        require(
+            if (isClosed)
+                vertices.size == arcs.size
+            else
+                vertices.size == arcs.size + 1
+        ) { "Incorrect combination of vertices and arcs:\nisClosed=$isClosed, #vertices=${vertices.size}, #arcs = ${arcs.size}" }
+    }
 
     inline fun forEachArc(
         action: (arcIndex: Int, arc: Arc, arcStart: Point, arcEnd: Point) -> Unit,
@@ -86,27 +97,35 @@ data class ConcreteArcPath(
         return Rect(left, top, right, bottom)
     }
 
-    override fun distanceFrom(point: Point): Double {
-        var distance = vertices.minOfOrNull {
-            it.distanceFrom(point)
+    fun distance2From(point: Point): Double {
+        var distance2 = vertices.minOfOrNull {
+            it.distance2From(point)
         } ?: Double.POSITIVE_INFINITY
         forEachArc { _, arc, start, end ->
             when (val circle = arc.circleOrLine) {
-                is CircleOrLine -> {
+                is Circle -> {
                     val closest = circle.project(point)
                     // another projection onto the circle is always farther than both of the arc ends
                     val onTheArc =
                         circle.agreesWithOrientation(start, closest, end)
                     if (onTheArc) {
-                        val d = point.distanceFrom(closest)
-                        distance = min(distance, d)
+                        val d2 = point.distance2From(closest)
+                        distance2 = min(distance2, d2)
                     }
                 }
-                null -> {}
+                else -> {
+                    val closest = Line.projectPointOntoSegment(point, start, end)
+                    val d2 = point.distance2From(closest)
+                    distance2 = min(distance2, d2)
+                }
             }
         }
-        return distance
+        return distance2
     }
+
+    /** prefer [distance2From] */
+    override fun distanceFrom(point: Point): Double =
+        sqrt(distance2From(point))
 
     data class ProjectionResult(
         val projectedPoint: Point,

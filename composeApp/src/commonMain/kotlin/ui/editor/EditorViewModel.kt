@@ -72,6 +72,7 @@ import domain.expressions.reIndex
 import domain.filterIndices
 import domain.hug
 import domain.indicesSortedBy
+import domain.io.DdcFormat
 import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV5
@@ -79,7 +80,6 @@ import domain.io.SaveConfig
 import domain.io.SaveRequest
 import domain.io.SaveResult
 import domain.io.saveStateAsSvg
-import domain.io.tryParseDdc
 import domain.model.Arg
 import domain.model.ArgType
 import domain.model.ChangeHistory
@@ -97,9 +97,9 @@ import domain.settings.BlendModeType
 import domain.settings.InversionOfControl
 import domain.settings.Settings
 import domain.sortedByFrequency
-import domain.xor
 import domain.transpose
 import domain.withoutElementsAt
+import domain.xor
 import getPlatform
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -122,7 +122,6 @@ import ui.theme.DodeclustersColors
 import ui.theme.ExtendedColorScheme
 import ui.tools.Category
 import ui.tools.Tool
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -404,7 +403,7 @@ class EditorViewModel : ViewModel() {
 
     // i dont want to make it suspend tbh
     fun loadDdc(content: String, filename: String? = null) {
-        tryParseDdc(
+        DdcFormat.tryParseDdc(
             content = content,
             onDdc5 = { ddc5 ->
                 val state = ddc5.toSaveState()
@@ -554,6 +553,13 @@ class EditorViewModel : ViewModel() {
                     appendLine("$selectedExpressionsString;")
                 if (selectedArcPathsString.isNotEmpty())
                     appendLine("$selectedArcPathsString;")
+                //TMP
+                val line = objects[expressions.lineIndices.first()] as Line
+                val arcPath = objects[expressions.arcPathIndices.first()] as ConcreteArcPath
+                clear()
+                append(
+                    line.getRegionLocation(arcPath)
+                )
             }
             queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
         }
@@ -3029,7 +3035,8 @@ class EditorViewModel : ViewModel() {
         // attempt fusing focused vertex to the next or previous
         if (pArcPath != null && visiblePosition != null && focus is PartialArcPath.Focus.Vertex) {
             val absolutePosition = absolute(visiblePosition)
-            val closeVertices = pArcPath.vertices.indices.minus(focus.vertexIndex)
+            val closeVertices = pArcPath.vertices.indices
+                .minus(focus.vertexIndex)
                 .filter { i ->
                     absolutePosition.minus(pArcPath.vertices[i].point.toOffset())
                         .getDistanceSquared() <= tapRadius2
