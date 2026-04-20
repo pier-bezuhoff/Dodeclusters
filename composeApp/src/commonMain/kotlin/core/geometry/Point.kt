@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isFinite
 import domain.radians
+import domain.squareSum
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.atan2
@@ -46,17 +47,30 @@ data class Point(
         else
             Offset(x.toFloat(), y.toFloat())
 
+    override fun distanceFrom(point: Point): Double = when {
+        this.isInfinite && point.isInfinite -> 0.0
+        this.isInfinite && point.isFinite -> Double.POSITIVE_INFINITY
+        this.isFinite && point.isInfinite -> Double.POSITIVE_INFINITY
+        else -> hypot(point.x - x, point.y - y)
+    }
+
+    override fun distanceFrom(x: Double, y: Double): Double =
+        if (this.isInfinite)
+            Double.POSITIVE_INFINITY
+        else
+            hypot(this.x - x, this.y - y)
+
     override fun distanceFrom(point: Offset): Double =
         if (this.isInfinite)
             Double.POSITIVE_INFINITY
         else
             hypot(x - point.x, y - point.y)
 
-    override fun distanceFrom(point: Point): Double = when {
+    fun distance2From(point: Point): Double = when {
         this.isInfinite && point.isInfinite -> 0.0
         this.isInfinite && point.isFinite -> Double.POSITIVE_INFINITY
         this.isFinite && point.isInfinite -> Double.POSITIVE_INFINITY
-        else -> hypot(point.x - x, point.y - y)
+        else -> squareSum(point.x - x, point.y - y)
     }
 
     override fun translated(vector: Offset): Point =

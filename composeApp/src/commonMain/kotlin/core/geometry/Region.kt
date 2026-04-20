@@ -3,8 +3,9 @@
 package core.geometry
 
 import androidx.compose.ui.geometry.Offset
+import core.geometry.Region.RegionLocation
 
-interface Region : CanMeasureDistanceFromPoint {
+sealed interface Region : CanMeasureDistanceFromPoint {
 
     /** A point is either [INSIDE] a region, [BORDERING] it or [OUTSIDE] of it */
     enum class PointLocation {
@@ -14,11 +15,12 @@ interface Region : CanMeasureDistanceFromPoint {
     }
 
     /** Region-Region location.
-     * A region is either [INSIDE] another region, [INTERSECTING] it or [OUTSIDE] of it */
+     * A region either fully [CONTAINS_INSIDE] another one,
+     * [OVERLAPS] it or has [NO_INTERSECTION] with it */
     enum class RegionLocation {
-        INSIDE,
-        INTERSECTING,
-        OUTSIDE,
+        CONTAINS_INSIDE,
+        OVERLAPS,
+        NO_INTERSECTION,
     }
 
     fun getPointLocation(point: Point): PointLocation
@@ -35,6 +37,10 @@ interface Region : CanMeasureDistanceFromPoint {
      * not considered outside */
     fun hasOutside(point: Point): Boolean =
         getPointLocation(point) == PointLocation.OUTSIDE
+
+    /** tests whether `this` region contains another [region],
+     * overlaps it, or they have no intersection */
+    fun getRegionLocation(region: Region): RegionLocation
 }
 
 // `point in this` overload
@@ -51,3 +57,11 @@ inline infix fun Point.isOutside(region: Region): Boolean =
     region.hasOutside(this)
 inline infix fun Offset.isOutside(region: Region): Boolean =
     region.hasOutside(this)
+
+/** partial order ⊆ on regions (treated as either inside or outside regions) */
+inline infix fun Region.isInside(region: Region): Boolean =
+    region.getRegionLocation(this) == RegionLocation.CONTAINS_INSIDE
+/** partial order ⊇ on regions (treated as either inside or outside regions)
+ * `A isOutside B` == A ⊆ Bꟲ*/
+inline infix fun Region.isOutside(region: Region): Boolean =
+    region.getRegionLocation(this) == RegionLocation.NO_INTERSECTION

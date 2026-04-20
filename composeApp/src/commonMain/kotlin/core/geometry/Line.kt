@@ -108,6 +108,9 @@ data class Line(
     override fun distanceFrom(point: Offset): Double =
         abs(a*point.x + b*point.y + c)/norm
 
+    override fun distanceFrom(x: Double, y: Double): Double =
+        abs(a*x + b*y + c)/norm
+
     override fun distanceFrom(point: Point): Double =
         if (point.isInfinite) 0.0
         else abs(a*point.x + b*point.y + c)/norm
@@ -217,34 +220,31 @@ data class Line(
     override fun reversed(): Line =
         copy(a = -a, b = -b, c = -c)
 
-    override fun isInside(circle: CircleOrLine): Boolean =
-        when (circle) {
+    override fun getRegionLocation(region: Region): Region.RegionLocation =
+        when (region) {
             is Circle -> {
-                if (circle.isCCW)
-                    false
-                else
-                    circle.copy(isCCW = true)
-                        .isOutside(this)
+                if (region.isCCW) {
+                    val far = distanceFrom(region.x, region.y) > region.radius
+                    if (!far)
+                        Region.RegionLocation.OVERLAPS
+                    else if (region.center isInside this)
+                        Region.RegionLocation.CONTAINS_INSIDE
+                    else // center is far outside
+                        Region.RegionLocation.NO_INTERSECTION
+                } else {
+                    Region.RegionLocation.OVERLAPS
+                }
             }
             is Line -> {
-                val l1 = this.normalized()
-                val l2 = circle.normalized()
-                l1.a == l2.a && l1.b == l2.b && l1.c <= l2.c // MAYBE: use epsilon eq here
+                val (a1, b1, c1) = this.normalized()
+                val (a2, b2, c2) = region.normalized()
+                if (abs(a1 - a2) < EPSILON && abs(b1 - b2) < EPSILON && c1 <= c2)
+                    Region.RegionLocation.CONTAINS_INSIDE
                 // NOTE: anti-parallel line (l' == -l) cannot define a half-plane that is fully inside
-            }
-        }
-
-    override fun isOutside(circle: CircleOrLine): Boolean =
-        when (circle) {
-            is Circle ->
-                if (circle.isCCW)
-                    circle.isOutside(this) // beware of cyclic dependencies
+                else if (abs(a1 + a2) < EPSILON && abs(b1 + b2) < EPSILON && c1 <= c2)
+                    Region.RegionLocation.NO_INTERSECTION
                 else
-                    false
-            is Line -> {
-                val l1 = this.normalized()
-                val l2 = circle.normalized()
-                l1.a == -l2.a && l1.b == -l2.b && l1.c <= -l2.c // MAYBE: use epsilon eq here
+                    Region.RegionLocation.OVERLAPS
             }
         }
 

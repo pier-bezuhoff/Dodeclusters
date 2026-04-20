@@ -5,6 +5,8 @@ import core.geometry.CircleOrLine
 import core.geometry.EPSILON
 import core.geometry.Line
 import core.geometry.Point
+import core.geometry.isInside
+import core.geometry.isOutside
 import domain.model.Delimiters
 
 /**

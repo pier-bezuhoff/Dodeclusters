@@ -21,13 +21,13 @@ infix fun CircleOrLineOrPoint.perpendicularDistance(another: CircleOrLineOrPoint
                 minOf(d1, d2, d3)
             }
             is Line ->
-                abs(another.distanceFrom(this.centerPoint) - this.radius)
+                abs(another.distanceFrom(x, y) - this.radius)
             is Point ->
                 this.distanceFrom(another)
         }
         is Line -> when (another) {
             is Circle ->
-                abs(this.distanceFrom(another.centerPoint) - another.radius)
+                abs(this.distanceFrom(another.x, another.y) - another.radius)
             is Line ->
                 if (this isCollinearTo another)
                     this.distanceFrom(another.order2point(0.0))

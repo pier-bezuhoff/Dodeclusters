@@ -18,12 +18,6 @@ sealed interface CircleOrLine :
 {
     fun project(point: Point): Point
 
-    /** partial order ⊆ on circles (treated as either inside or outside regions) */
-    infix fun isInside(circle: CircleOrLine): Boolean
-    /** partial order ⊇ on circles (treated as either inside or outside regions)
-     * `A isOutside B` == A ⊆ Bꟲ*/
-    infix fun isOutside(circle: CircleOrLine): Boolean
-
     override fun translated(vector: Offset): CircleOrLine
     override fun translated(dx: Double, dy: Double): CircleOrLine
     fun scaled(focus: Offset, zoom: Float): CircleOrLine

@@ -45,11 +45,11 @@ const val EPSILON2: Double = EPSILON*EPSILON
 @Serializable
 @SerialName("circle")
 data class Circle(
-    override val x: Double,
-    override val y: Double,
-    override val radius: Double,
+    val x: Double,
+    val y: Double,
+    val radius: Double,
     val isCCW: Boolean = true,
-) : UndirectedCircle {
+) : CircleOrLine {
     val center: Offset get() =
         Offset(x.toFloat(), y.toFloat())
 
@@ -89,13 +89,16 @@ data class Circle(
         return Point(x + k*vx, y + k*vy)
     }
 
-    override fun distanceFrom(point: Offset): Double =
-        abs((point - center).getDistance() - radius)
-
     override fun distanceFrom(point: Point): Double =
         if (point.isInfinite)
             Double.POSITIVE_INFINITY
         else abs(hypot(point.x - x, point.y - y) - radius)
+
+    override fun distanceFrom(x: Double, y: Double): Double =
+        abs(hypot(x - this.x, y - this.y) - radius)
+
+    override fun distanceFrom(point: Offset): Double =
+        abs((point - center).getDistance() - radius)
 
     /** prefer squared distance -- [distance2BetweenCenters] for performance */
     fun distanceBetweenCenters(circle: Circle): Double =
@@ -122,7 +125,10 @@ data class Circle(
 
     override fun getPointLocation(point: Point): Region.PointLocation {
         if (point.isInfinite) {
-            return if (isCCW) Region.PointLocation.OUTSIDE else Region.PointLocation.INSIDE
+            return if (isCCW)
+                Region.PointLocation.OUTSIDE
+            else
+                Region.PointLocation.INSIDE
         }
         val d2 = squareSum(point.x - x, point.y - y)
         val diff = d2 - r2
@@ -166,7 +172,7 @@ data class Circle(
         return d2 < r2 != isCCW
     }
 
-    override fun point2angle(point: Point): Float {
+    fun point2angle(point: Point): Float {
         if (point.isInfinite || point == centerPoint)
             return ORDER_OF_CONFORMAL_INFINITY.toFloat()
         return atan2(-point.y + y, point.x - x).degrees
@@ -351,52 +357,57 @@ data class Circle(
 
     /** "⭗" case, anti-symmetric in args */
     infix fun isIn(circle: Circle): Boolean =
+        circle.radius >= radius &&
         distance2BetweenCenters(circle) <= (circle.radius - radius).pow2()
 
     /** "o o" case, symmetric in args */
     infix fun isOutBeside(circle: Circle): Boolean =
         distance2BetweenCenters(circle) >= (radius + circle.radius).pow2()
 
-    // MAYBE: use epsilon?
-    override fun isInside(circle: CircleOrLine): Boolean =
-        when (circle) {
-            is Circle ->
-                when {
-                    this.isCCW && circle.isCCW -> // "⭗" case
-                        this isIn circle
-                    this.isCCW && !circle.isCCW -> // "o o" case
-                        this isOutBeside circle
-                    !this.isCCW && circle.isCCW ->
-                        false
-                    else -> // both are outsides, "⭗'" case
-                        circle isIn this
-                }
-            is Line -> {
-                if (isCCW) // " o |" case
-                    center isInside circle && circle.distanceFrom(centerPoint) >= radius
-                else
-                    false
+    // NOTE: checks without epsilon
+    override fun getRegionLocation(region: Region): Region.RegionLocation =
+        when (region) {
+            is Circle -> when {
+                isCCW && region.isCCW ->
+                    if (region isIn this) // "⭗" case
+                        Region.RegionLocation.CONTAINS_INSIDE
+                    else if (region isOutBeside this) // "↺ ↺" case
+                        Region.RegionLocation.NO_INTERSECTION
+                    else
+                        Region.RegionLocation.OVERLAPS
+                isCCW && !region.isCCW ->
+                    if (this isIn region) // "⭗'" case
+                        Region.RegionLocation.NO_INTERSECTION
+                    else
+                        Region.RegionLocation.OVERLAPS
+                !isCCW && region.isCCW ->
+                    if (region isOutBeside this) // "↻ ↺" case
+                        Region.RegionLocation.CONTAINS_INSIDE
+                    else if (region isIn this) // "⭗" case
+                        Region.RegionLocation.NO_INTERSECTION
+                    else
+                        Region.RegionLocation.OVERLAPS
+                else -> // both are outsides / CW
+                    if (this isIn region) // "⭗'" case
+                        Region.RegionLocation.CONTAINS_INSIDE
+                    else
+                        Region.RegionLocation.OVERLAPS
             }
-        }
-
-    override fun isOutside(circle: CircleOrLine): Boolean =
-        when (circle) {
-            is Circle ->
-                when {
-                    this.isCCW && circle.isCCW -> // "o o" case
-                        this isOutBeside circle
-                    this.isCCW && !circle.isCCW -> // "⭗" case
-                        this isIn circle
-                    !this.isCCW && circle.isCCW -> // "⭗'" case
-                        circle isIn this
-                    else -> // both are outsides
-                        false
-                }
             is Line -> {
-                if (this.isCCW) // "| o" case
-                    circle.hasOutside(center) && circle.distanceFrom(center) >= radius
-                else
-                    false
+                val far = region.distanceFrom(x, y) > radius
+                if (!far) {
+                    Region.RegionLocation.OVERLAPS
+                } else if (isCCW) { // far CCW
+                    if (center isOutside region) // "↑ ↺" case
+                        Region.RegionLocation.NO_INTERSECTION
+                    else // "↺ ↑" case
+                        Region.RegionLocation.OVERLAPS // the circle is contained in the half-plane
+                } else { // far CW
+                    if (center isOutside region) // "↑ ↻" case
+                        Region.RegionLocation.CONTAINS_INSIDE
+                    else // "↻ ↑" case
+                        Region.RegionLocation.OVERLAPS
+                }
             }
         }
 
@@ -471,7 +482,7 @@ data class Circle(
             calculateIntersectionPoints(b12, b22)
         return potentialCenters
             .distinct()
-            .minByOrNull { it.distanceFrom(this.centerPoint) }
+            .minByOrNull { it.distanceFrom(x, y) }
             ?.let { newCenter ->
                 if (newCenter.isInfinite)
                     null
