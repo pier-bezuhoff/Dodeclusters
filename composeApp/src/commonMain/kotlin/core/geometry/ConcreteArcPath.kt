@@ -19,7 +19,7 @@ data class ConcreteArcPath(
     val vertices: List<Point>,
     val arcs: List<Arc>,
     val isClosed: Boolean,
-) : GCircleOrConcreteAcPath {
+) : GCircleOrConcreteAcPath, Region {
     /**
      * @param[arcIndex] index within [domain.expressions.ArcPath.arcs], `null` means
      * several arcs were fused because of `null` vertices
@@ -43,8 +43,10 @@ data class ConcreteArcPath(
     ) {
         for (arcIndex in arcs.indices) {
             action(
-                arcIndex, arcs[arcIndex],
-                vertices[arcIndex], vertices[(arcIndex + 1).mod(vertices.size)]
+                arcIndex,
+                arcs[arcIndex],
+                vertices[arcIndex],
+                vertices[(arcIndex + 1).mod(vertices.size)]
             )
         }
     }
@@ -84,7 +86,7 @@ data class ConcreteArcPath(
         return Rect(left, top, right, bottom)
     }
 
-    fun distanceFrom(point: Point): Double {
+    override fun distanceFrom(point: Point): Double {
         var distance = vertices.minOfOrNull {
             it.distanceFrom(point)
         } ?: Double.POSITIVE_INFINITY
@@ -183,9 +185,6 @@ data class ConcreteArcPath(
             )
         }
     )
-
-    fun contains(point: Point): Boolean =
-        calculateWindingNumber(point) != 0
 
     // algo based on https://web.archive.org/web/20130126163405/http://geomalgorithms.com/a03-_inclusion.html
     // and https://stackoverflow.com/a/33974251/7143065
@@ -306,6 +305,34 @@ data class ConcreteArcPath(
     // better test: if the first scanline intersection at y=average vertex y is downward
     fun isCounterclockwise(): Boolean =
         isClosed && calculateTurningAngle() < -PI
+
+    override fun hasInside(point: Point): Boolean =
+        calculateWindingNumber(point) != 0
+
+    override fun getPointLocation(point: Point): Region.PointLocation =
+        if (distanceFrom(point) < EPSILON)
+            Region.PointLocation.BORDERING
+        else if (calculateWindingNumber(point) == 0)
+            Region.PointLocation.OUTSIDE
+        else
+            Region.PointLocation.INSIDE
+
+    override fun getRegionLocation(region: Region): Region.RegionLocation =
+        when (region) {
+            is Circle -> {
+                if (region.isCCW)
+                    TODO()
+                else // cannot be contained inside
+                    TODO()
+            }
+            is Line -> {
+                // cannot be contained inside
+                TODO()
+            }
+            is ConcreteArcPath -> {
+                TODO()
+            }
+        }
 
     // reference: https://en.wikipedia.org/wiki/Shoelace_formula
     /** Area of the polygon made of vertices */

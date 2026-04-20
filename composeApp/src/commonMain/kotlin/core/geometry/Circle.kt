@@ -398,16 +398,19 @@ data class Circle(
                 if (!far) {
                     Region.RegionLocation.OVERLAPS
                 } else if (isCCW) { // far CCW
-                    if (center isOutside region) // "↑ ↺" case
+                    if (center liesOutside region) // "↑ ↺" case
                         Region.RegionLocation.NO_INTERSECTION
                     else // "↺ ↑" case
                         Region.RegionLocation.OVERLAPS // the circle is contained in the half-plane
                 } else { // far CW
-                    if (center isOutside region) // "↑ ↻" case
+                    if (center liesOutside region) // "↑ ↻" case
                         Region.RegionLocation.CONTAINS_INSIDE
                     else // "↻ ↑" case
                         Region.RegionLocation.OVERLAPS
                 }
+            }
+            is ConcreteArcPath -> {
+                TODO()
             }
         }
 

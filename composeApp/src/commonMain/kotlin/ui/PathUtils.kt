@@ -15,7 +15,7 @@ import domain.model.PartialArcPath
 import domain.PathCache
 import domain.model.LogicalRegion
 import core.geometry.ConcreteArcPath
-import core.geometry.isInside
+import core.geometry.liesInside
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow
@@ -157,7 +157,7 @@ fun circle2cubicPath(
                 isCCW = circle.isCCW,
             )
         }
-    } else if (closed && screenCenter isInside  circle) {
+    } else if (closed && screenCenter liesInside  circle) {
         // our circle includes all visible region
         path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
     } // else: empty path

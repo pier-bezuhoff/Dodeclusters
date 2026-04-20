@@ -24,7 +24,8 @@ sealed interface Region : CanMeasureDistanceFromPoint {
     }
 
     fun getPointLocation(point: Point): PointLocation
-    fun getPointLocation(point: Offset): PointLocation
+    fun getPointLocation(point: Offset): PointLocation =
+        getPointLocation(Point.fromOffset(point))
 
     fun hasInside(point: Point): Boolean =
         getPointLocation(point) == PointLocation.INSIDE
@@ -49,13 +50,13 @@ inline operator fun Region.contains(point: Point): Boolean =
 inline operator fun Region.contains(point: Offset): Boolean =
     hasInside(point)
 
-inline infix fun Point.isInside(region: Region): Boolean =
+inline infix fun Point.liesInside(region: Region): Boolean =
     region.hasInside(this)
-inline infix fun Offset.isInside(region: Region): Boolean =
+inline infix fun Offset.liesInside(region: Region): Boolean =
     region.hasInside(this)
-inline infix fun Point.isOutside(region: Region): Boolean =
+inline infix fun Point.liesOutside(region: Region): Boolean =
     region.hasOutside(this)
-inline infix fun Offset.isOutside(region: Region): Boolean =
+inline infix fun Offset.liesOutside(region: Region): Boolean =
     region.hasOutside(this)
 
 /** partial order ⊆ on regions (treated as either inside or outside regions) */

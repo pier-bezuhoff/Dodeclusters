@@ -85,7 +85,7 @@ data class Line(
     /** Project [point] down onto this line */
     fun project(point: Offset): Offset {
         val t = b*point.x - a*point.y
-        val n2 = a*a + b*b
+        val n2 = norm*norm
         return Offset(
             ((b*t - a*c)/n2).toFloat(),
             ((-a*t - b*c)/n2).toFloat()
@@ -227,7 +227,7 @@ data class Line(
                     val far = distanceFrom(region.x, region.y) > region.radius
                     if (!far)
                         Region.RegionLocation.OVERLAPS
-                    else if (region.center isInside this)
+                    else if (region.center liesInside this)
                         Region.RegionLocation.CONTAINS_INSIDE
                     else // center is far outside
                         Region.RegionLocation.NO_INTERSECTION
@@ -245,6 +245,42 @@ data class Line(
                     Region.RegionLocation.NO_INTERSECTION
                 else
                     Region.RegionLocation.OVERLAPS
+            }
+            is ConcreteArcPath -> {
+                var noIntersection = true
+                region.forEachArc { _, arc, arcStart, arcEnd ->
+                    val signedDistance1 = a*arcStart.x + b*arcStart.y + c
+                    val signedDistance2 = a*arcEnd.x + b*arcEnd.y + c
+                    if (signedDistance1*signedDistance2 < EPSILON) {
+                        noIntersection = false
+                        return@forEachArc
+                    }
+                    when (val circle = arc.circleOrLine) {
+                        is Circle -> {
+                            val d = distanceFrom(circle.x, circle.y)
+                            if (d <= circle.radius) {
+                                val qx = circle.x + circle.radius*normalX
+                                val qy = circle.y + circle.radius*normalY
+                                val signedDistance3 = a*qx + b*qy + c
+                                val diffSides = signedDistance1*signedDistance3 <= 0
+                                val onArc = circle.agreesWithOrientation(arcStart, Point(qx, qy), arcEnd)
+                                // q is on the other side & on arc
+                                // or it's on the same side & not on arc
+                                if (diffSides != onArc) {
+                                    noIntersection = false
+                                    return@forEachArc
+                                }
+                            }
+                        }
+                        else -> {}
+                    }
+                }
+                if (!noIntersection)
+                    Region.RegionLocation.OVERLAPS
+                else if (region.vertices.firstOrNull()?.liesInside(this) == true)
+                    Region.RegionLocation.CONTAINS_INSIDE
+                else
+                    Region.RegionLocation.NO_INTERSECTION
             }
         }
 
