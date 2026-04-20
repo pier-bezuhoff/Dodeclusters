@@ -5,65 +5,76 @@ import core.geometry.CircleOrLine
 import core.geometry.EPSILON
 import core.geometry.Line
 import core.geometry.Point
-import core.geometry.RegionPointLocation
+import domain.model.Delimiters
 
-/** [ins] and [outs] delimiters must not contain `null` circles */
+/**
+ * [ins] and [outs] delimiters must be indices of [CircleOrLine].
+ */
 fun compressConstraints(
-    circles: List<CircleOrLine?>,
+    allObjects: List<*>,
     ins: List<Ix>,
     outs: List<Ix>,
-): Pair<Set<Ix>, Set<Ix>> {
+): Delimiters {
     val (sievedIns, sievedOuts) =
-        compressConstraintsByRelativeContainment(circles, ins, outs)
+        compressConstraintsByRelativeContainment(allObjects, ins, outs)
     val (essentialInsIxs, essentialOutsIxs) =
         compressConstraintsByIntersectionPoints(
-            sievedIns.map { circles[it]!! },
-            sievedOuts.map { circles[it]!! }
+            sievedIns.map { allObjects[it] as CircleOrLine },
+            sievedOuts.map { allObjects[it] as CircleOrLine }
         )
     val essentialIns = essentialInsIxs.map { sievedIns[it] }
     val essentialOuts = essentialOutsIxs.map { sievedOuts[it] }
-    return Pair(essentialIns.toSet(), essentialOuts.toSet())
+    return Delimiters(essentialIns, essentialOuts)
 }
 
-fun compressConstraintsByRelativeContainment(
-    circles: List<CircleOrLine?>,
+/**
+ * [ins] and [outs] delimiters must be indices of [CircleOrLine].
+ */
+private fun compressConstraintsByRelativeContainment(
+    allObjects: List<*>,
     ins: List<Ix>,
     outs: List<Ix>,
-): Pair<List<Ix>, List<Ix>> {
+): Delimiters {
     // NOTE: these do not take into account more complex
     //  "intersection is always inside x" type relationships,
     //  we leave it to compressRegionsByIntersectionPoints
     val excessiveIns = ins.filter { inJ -> // NOTE: tbh idt these can occur naturally
-        val circle = circles[inJ]!!
+        val circle = allObjects[inJ] as CircleOrLine
         ins.any { otherIn ->
-            otherIn != inJ && circles[otherIn]!! isInside circle // we only leave the smallest 'in'
+            val otherInCircle = allObjects[otherIn] as CircleOrLine
+            otherIn != inJ && otherInCircle isInside circle // we only leave the smallest 'in'
         } || outs.any { otherOut ->
-            circle isInside circles[otherOut]!! // if an 'in' isInside an 'out' it is empty
+            val otherOutCircle = allObjects[otherOut] as CircleOrLine
+            circle isInside otherOutCircle // if an 'in' isInside an 'out' it is empty
         }
     }
     val excessiveOuts = outs.filter { outJ ->
-        val circle = circles[outJ]!!
+        val circle = allObjects[outJ] as CircleOrLine
         outs.any { otherOut ->
-            otherOut != outJ && circle isInside circles[otherOut]!! // we only leave the biggest 'out'
+            val otherOutCircle = allObjects[otherOut] as CircleOrLine
+            otherOut != outJ && circle isInside otherOutCircle // we only leave the biggest 'out'
         } || ins.any { otherIn ->
-            circle isOutside circles[otherIn]!! // if an 'out' isOutside an 'in' it is empty
+            val otherInCircle = allObjects[otherIn] as CircleOrLine
+            circle isOutside otherInCircle // if an 'out' isOutside an 'in' it is empty
         }
     }
     val sievedIns = ins.minus(excessiveIns.toSet())
     val sievedOuts = outs.minus(excessiveOuts.toSet())
-    return Pair(sievedIns, sievedOuts)
+    return Delimiters(sievedIns, sievedOuts)
 }
 
 // TODO: skip extremely small arcs (they can lead to display artifacts)
-/** Filters out all unused 'in' and 'out' separators by checking intersection points */
-fun compressConstraintsByIntersectionPoints(
+/**
+ * Filters out all unused 'in' and 'out' separators by checking intersection points.
+ */
+private fun compressConstraintsByIntersectionPoints(
     ins: List<CircleOrLine>,
     outs: List<CircleOrLine>,
-): Pair<List<Ix>, List<Ix>> {
+): Delimiters {
 
     fun testIfPointFitsOurRequirements(point: Point): Boolean =
-        ins.all { it.calculateLocationEpsilon(point) != RegionPointLocation.OUT } && // inside or bordering ins
-        outs.all { it.calculateLocationEpsilon(point) != RegionPointLocation.IN } // outside or bordering outs
+        ins.all { !it.hasOutside(point) } && // inside or bordering ins
+        outs.all { !it.hasInside(point) } // outside or bordering outs
 
     val allCircles = ins + outs
     val n = allCircles.size
@@ -113,7 +124,7 @@ fun compressConstraintsByIntersectionPoints(
             }
         } else {
             for (k in 0 until m) {
-                // TODO: keep track of 'order' and calculate arc length to skip extremely small arcs
+                // TODO: keep track of 'order' to skip extremely small arcs
                 val ip2 = orderedIPs[k]
                 val mid: Point =
                     if (k == 0 && c is Line && ip2 != Point.CONFORMAL_INFINITY) {
@@ -150,8 +161,8 @@ fun compressConstraintsByIntersectionPoints(
                 val repeatIx = extendedIntersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
                 if (repeatIx == -1) { // new ip
                     val itFits =
-                        essentialIns.all { ins[it].calculateLocationEpsilon(ip) != RegionPointLocation.OUT } && // inside or bordering ins
-                        essentialOuts.all { outs[it].calculateLocationEpsilon(ip) != RegionPointLocation.IN } // outside or bordering outs
+                        essentialIns.all { !ins[it].hasOutside(ip) } && // inside or bordering ins
+                        essentialOuts.all { !outs[it].hasInside(ip) } // outside or bordering outs
                     if (itFits)
                         extendedIntersections.add(ip)
                 }
@@ -162,21 +173,21 @@ fun compressConstraintsByIntersectionPoints(
     // find the one additional circle isolating unwanted intersections
     if (unwantedIntersections.isNotEmpty()) {
         val inSeparator = (ins.indices - essentialIns.toSet()).firstOrNull { inIx ->
-            unwantedIntersections.all { ins[inIx].hasOutsideEpsilon(it) }
+            unwantedIntersections.all { ins[inIx].hasOutside(it) }
         }
         if (inSeparator != null) {
             essentialIns.add(inSeparator)
         } else {
             val outSeparator =
                 (outs.indices - essentialOuts.toSet()).firstOrNull { outIx ->
-                    unwantedIntersections.all { outs[outIx].hasInsideEpsilon(it) }
+                    unwantedIntersections.all { outs[outIx].hasInside(it) }
                 }
             if (outSeparator != null) {
                 essentialOuts.add(outSeparator)
             } // MAYBE: otherwise artificially add a befitting separator (intersections <-|-> unwantedIntersections)
         }
     }
-    return Pair(essentialIns, essentialOuts)
+    return Delimiters(essentialIns, essentialOuts)
 }
 
 private sealed interface Arc {
@@ -201,8 +212,8 @@ fun constraints2arcpaths(
     val outCircles = outs.map { allCircles[it] }
 
     fun testIfPointFitsOurRequirements(point: Point): Boolean =
-        inCircles.all { it.calculateLocationEpsilon(point) != RegionPointLocation.OUT } && // inside or bordering ins
-        outCircles.all { it.calculateLocationEpsilon(point) != RegionPointLocation.IN } // outside or bordering outs
+        inCircles.all { !it.hasOutside(point) } && // inside or bordering ins
+        outCircles.all { !it.hasInside(point) } // outside or bordering outs
 
     val n = allCircles.size
     val intersections = mutableListOf<Point>()

@@ -13,33 +13,17 @@ import kotlin.math.sqrt
 
 @Immutable
 @Serializable
-sealed interface CircleOrLine : CircleOrLineOrImaginaryCircle, CircleOrLineOrPoint, LocusWithOrder {
+sealed interface CircleOrLine :
+    CircleOrLineOrImaginaryCircle, CircleOrLineOrPoint, Region, LocusWithOrder
+{
     fun project(point: Point): Point
-    override fun distanceFrom(point: Point): Double
-    fun distanceFrom(point: Offset): Double
-    fun calculateLocation(point: Offset): RegionPointLocation
-    /** @return [RegionPointLocation.BORDERING] when the distance is in (-[EPSILON]; +[EPSILON]) */
-    fun calculateLocationEpsilon(point: Point): RegionPointLocation
-    fun hasInside(point: Offset): Boolean =
-        calculateLocation(point) == RegionPointLocation.IN
-    fun hasOutside(point: Offset): Boolean =
-        calculateLocation(point) == RegionPointLocation.OUT
-    /** tests if [point] is strictly inside `this`, within [EPSILON] of the border is
-     * not considered inside */
-    fun hasInsideEpsilon(point: Point): Boolean =
-        calculateLocationEpsilon(point) == RegionPointLocation.IN
-    /** tests if [point] is strictly outside of `this`, within [EPSILON] of the border is
-     * not considered outside */
-    fun hasOutsideEpsilon(point: Point): Boolean =
-        calculateLocationEpsilon(point) == RegionPointLocation.OUT
-    /** = [point] is bordering `this` (within [EPSILON] distance) */
-    fun hasBorderingEpsilon(point: Point): Boolean =
-        calculateLocationEpsilon(point) == RegionPointLocation.BORDERING
+
     /** partial order ⊆ on circles (treated as either inside or outside regions) */
     infix fun isInside(circle: CircleOrLine): Boolean
     /** partial order ⊇ on circles (treated as either inside or outside regions)
      * `A isOutside B` == A ⊆ Bꟲ*/
     infix fun isOutside(circle: CircleOrLine): Boolean
+
     override fun translated(vector: Offset): CircleOrLine
     override fun translated(dx: Double, dy: Double): CircleOrLine
     fun scaled(focus: Offset, zoom: Float): CircleOrLine
@@ -51,7 +35,7 @@ sealed interface CircleOrLine : CircleOrLineOrImaginaryCircle, CircleOrLineOrPoi
     fun tangentAt(point: Point): Line
 
     companion object {
-        // FIX: dont work
+        // FIX: doesnt work
         // TEST: if this is faster/more accurate than perp3
         /** note more general GeneralizedCircle.perp3 */
         fun by3Points(point1: Point, point2: Point, point3: Point): CircleOrLine? {
@@ -163,7 +147,7 @@ fun calculateIntersection(
                 val p = Point(px + vx * pToIntersection, py + vy * pToIntersection)
                 val q = Point(px - vx * pToIntersection, py - vy * pToIntersection)
                 val s = o1.pointInBetween(p, q) // directed segment p->s->q
-                if (o2.hasInsideEpsilon(s))
+                if (s in o2)
                     CircleLineIntersection.Double(p, q)
                 else
                     CircleLineIntersection.Double(q, p)
@@ -184,7 +168,7 @@ fun calculateIntersection(
                 val p = Point(px + vx * pToIntersection, py + vy * pToIntersection)
                 val q = Point(px - vx * pToIntersection, py - vy * pToIntersection)
                 val s = o2.pointInBetween(p, q) // directed segment p->s->q
-                if (o1.hasInsideEpsilon(s))
+                if (s in o1)
                     CircleLineIntersection.Double(q, p)
                 else
                     CircleLineIntersection.Double(p, q)
@@ -226,7 +210,7 @@ fun calculateIntersection(
                 val p = Point(pcx + vy, pcy - vx)
                 val q = Point(pcx - vy, pcy + vx)
                 val s = o1.pointInBetween(p, q) // directed arc p->s->q
-                if (o2.hasInsideEpsilon(s))
+                if (s in o2)
                     CircleLineIntersection.Double(p, q)
                 else
                     CircleLineIntersection.Double(q, p)

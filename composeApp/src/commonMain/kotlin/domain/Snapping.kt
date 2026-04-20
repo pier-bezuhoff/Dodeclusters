@@ -351,7 +351,7 @@ object Snapping {
                 val c2 = allObjects[ix2] as CircleOrLineOrPoint
                 val newCircle = c.translatedUntilBiTangency(c1, c2)
                 if (newCircle == null ||
-                    newCircle.distanceBetweenCenters(c) >= bitangentTolerance * snapDistance
+                    newCircle.distance2BetweenCenters(c) >= (bitangentTolerance * snapDistance).pow2()
                 ) {
                     return CircleSnapResult.Tangent(c.translatedUntilTangency(c1), ix1)
                 }

@@ -46,21 +46,18 @@ data class Point(
         else
             Offset(x.toFloat(), y.toFloat())
 
-    fun distanceFrom(offset: Offset): Double =
-        when {
-            this.isInfinite -> Double.POSITIVE_INFINITY
-            else ->
-                hypot(x - offset.x, y - offset.y)
-        }
+    override fun distanceFrom(point: Offset): Double =
+        if (this.isInfinite)
+            Double.POSITIVE_INFINITY
+        else
+            hypot(x - point.x, y - point.y)
 
-    override fun distanceFrom(point: Point): Double =
-        when {
-            this.isInfinite && point.isInfinite -> 0.0
-            this.isInfinite && point.isFinite -> Double.POSITIVE_INFINITY
-            this.isFinite && point.isInfinite -> Double.POSITIVE_INFINITY
-            else ->
-                hypot(point.x - x, point.y - y)
-        }
+    override fun distanceFrom(point: Point): Double = when {
+        this.isInfinite && point.isInfinite -> 0.0
+        this.isInfinite && point.isFinite -> Double.POSITIVE_INFINITY
+        this.isFinite && point.isInfinite -> Double.POSITIVE_INFINITY
+        else -> hypot(point.x - x, point.y - y)
+    }
 
     override fun translated(vector: Offset): Point =
         if (isInfinite)
@@ -205,15 +202,4 @@ data class Point(
             return cross(p1, p2, p3) >= 0.0
         }
     }
-}
-
-/** A point is either [IN] a region, [BORDERING] it or [OUT]side of it */
-@Immutable
-enum class RegionPointLocation {
-    /** A point is inside of a region */
-    IN,
-    /** A point is on the border of a region */
-    BORDERING,
-    /** A point is outside of a region */
-    OUT,
 }

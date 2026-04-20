@@ -8,7 +8,7 @@ import core.geometry.GCircle
 import core.geometry.conformal.GeneralizedCircle
 import core.geometry.Line
 import core.geometry.Point
-import core.geometry.RegionPointLocation
+import core.geometry.Region
 import domain.squareSum
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -202,7 +202,7 @@ fun computePole(
 ): Point {
     val (x, y, r) = circle
     val (a, b, c) = polarLine
-    if (polarLine.calculateLocationEpsilon(circle.centerPoint) == RegionPointLocation.BORDERING)
+    if (polarLine.getPointLocation(circle.centerPoint) == Region.PointLocation.BORDERING)
         // NOTE: projectively correct pole would be the infinite point in a direction that
         //  is perpendicular to the polar line
         return Point.CONFORMAL_INFINITY

@@ -35,7 +35,7 @@ enum class RegionManipulationStrategy(
             crossinline setSelection: (List<Ix>) -> Unit,
         ): List<LogicalRegion> {
             var resultingRegions = allRegions
-            val outerRegionsIndices = allRegions.filterIndices { compressedRegion isObviouslyInside it || uncompressedRegion isObviouslyInside it  }
+            val outerRegionsIndices = allRegions.filterIndices { compressedRegion isTriviallyInside it || uncompressedRegion isTriviallyInside it  }
             val outerRegions = outerRegionsIndices.map { allRegions[it] }
             val sameBoundsRegionsIndices = outerRegionsIndices.filter {
                 allRegions[it].insides == compressedRegion.insides && allRegions[it].outsides == compressedRegion.outsides

@@ -1113,15 +1113,29 @@ class EditorViewModel : ViewModel() {
         hasToBeFilled: Boolean = false,
     ): Ix? {
         return getClosedArcPathsSurrounding(visiblePosition, potentialIndices, hasToBeFilled)
-            .maxWithOrNull(
-                compareBy<Int> { ix ->
-                    objectModel.fillColors[ix] != null
-                }.thenByDescending{ ix ->
-                    (objects[ix] as? ConcreteArcPath)
-                        ?.calculateVertexArea()
-                        ?: Double.POSITIVE_INFINITY
+            .maxWithOrNull(Comparator { ix1: Ix, ix2: Ix ->
+                val filled1 = objectModel.fillColors[ix1] != null
+                val filled2 = objectModel.fillColors[ix2] != null
+                if (filled1) {
+                    if (filled2) {
+                        ix1.compareTo(ix2) // last index wins when both filled
+                    } else {
+                        +1
+                    }
+                } else {
+                    if (filled2) {
+                        -1
+                    } else { // smallest area wins when both unfilled
+                        val area1 = (objects[ix1] as? ConcreteArcPath)
+                            ?.calculateVertexArea()
+                            ?: Double.POSITIVE_INFINITY
+                        val area2 = (objects[ix2] as? ConcreteArcPath)
+                            ?.calculateVertexArea()
+                            ?: Double.POSITIVE_INFINITY
+                        -area1.compareTo(area2)
+                    }
                 }
-            )
+            })
     }
 
     // NOTE: region boundaries get messed up when we alter a big structure like spiral
@@ -1135,17 +1149,23 @@ class EditorViewModel : ViewModel() {
             objectModel.circleOrLineIndices.filter { ix ->
                 objects[ix] is CircleOrLine && (showPhantomObjects || ix !in phantoms)
             }
-        val ins = delimiters // NOTE: doesn't include circles that the point lies on
-            .filter { ix -> (objects[ix] as? CircleOrLine)?.hasInside(position) ?: false }
-        val outs = delimiters
-            .filter { ix -> (objects[ix] as? CircleOrLine)?.hasOutside(position) ?: false }
-        val circles = objects.map { it as? CircleOrLine }
+        // NOTE: doesn't include circles that the point lies on
+        val ins = delimiters.filter { ix ->
+            (objects[ix] as? CircleOrLine)?.hasInside(position) ?: false
+        }
+        val outs = delimiters.filter { ix ->
+            (objects[ix] as? CircleOrLine)?.hasOutside(position) ?: false
+        }
         val (essentialIns, essentialOuts) =
-            compressConstraints(circles, ins, outs)
-        val region0 = LogicalRegion(ins.toSet(), outs.toSet(), regionColor)
+            compressConstraints(objects, ins, outs)
+        val region0 = LogicalRegion(
+            insides = ins.toSet(),
+            outsides = outs.toSet(),
+            fillColor = regionColor
+        )
         val region = LogicalRegion(
-            insides = essentialIns,
-            outsides = essentialOuts,
+            insides = essentialIns.toSet(),
+            outsides = essentialOuts.toSet(),
             fillColor = regionColor
         )
         return Pair(region, region0)
@@ -2345,7 +2365,7 @@ class EditorViewModel : ViewModel() {
                     } else {
                         val selectedCircles = objectSelection.filter { objects[it] is CircleOrLine }
                         val largestInnerRegion = regions
-                            .filter { region isObviouslyInside it || region0 isObviouslyInside it }
+                            .filter { region isTriviallyInside it || region0 isTriviallyInside it }
                             .maxByOrNull { it.insides.size + it.outsides.size }
                         if (largestInnerRegion == null) { // select bound of a non-existent region
                             println("bounds of $region")

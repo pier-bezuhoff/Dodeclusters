@@ -2,9 +2,7 @@ package core.geometry
 
 import kotlin.math.abs
 
-sealed interface CircleOrLineOrPoint : GCircle {
-    fun distanceFrom(point: Point): Double
-}
+sealed interface CircleOrLineOrPoint : GCircle, CanMeasureDistanceFromPoint
 
 /**
  * Minimal distance between objects across common perpendicular line (disregarding orientation),

@@ -63,11 +63,6 @@ data class Line(
     val directionVector: Offset get() =
         Offset((b/norm).toFloat(), (-a/norm).toFloat())
 
-    /** [a] * [x] + [b] * [y] + [c] */
-    @Suppress("NOTHING_TO_INLINE")
-    inline fun equation(x: Double, y: Double): Double =
-        a*x + b*y + c
-
     /** Direction-preserving, ensures that `hypot(a, b) == 1` */
     fun normalized(): Line =
         Line(a/norm, b/norm, c/norm)
@@ -117,23 +112,24 @@ data class Line(
         if (point.isInfinite) 0.0
         else abs(a*point.x + b*point.y + c)/norm
 
-    override fun calculateLocation(point: Offset): RegionPointLocation {
-        val m = -(a * point.x + b * point.y + c)
-        return if (m < 0) RegionPointLocation.IN
-        else if (m > 0) RegionPointLocation.OUT
-        else RegionPointLocation.BORDERING
+    override fun getPointLocation(point: Offset): Region.PointLocation {
+        val t = a * point.x + b * point.y + c
+        return when {
+            t > 0 -> Region.PointLocation.INSIDE
+            t < 0 -> Region.PointLocation.OUTSIDE
+            else -> Region.PointLocation.BORDERING
+        }
     }
 
-    override fun calculateLocationEpsilon(point: Point): RegionPointLocation {
+    override fun getPointLocation(point: Point): Region.PointLocation {
         if (point.isInfinite)
-            return RegionPointLocation.BORDERING
+            return Region.PointLocation.BORDERING
         val t = (a*point.x + b*point.y + c)/norm
-        return if (abs(t) < EPSILON)
-            RegionPointLocation.BORDERING
-        else if (t > 0) // inside
-            RegionPointLocation.IN
-        else // outside
-            RegionPointLocation.OUT
+        return when {
+            abs(t) < EPSILON -> Region.PointLocation.BORDERING
+            t > 0 -> Region.PointLocation.INSIDE
+            else -> Region.PointLocation.OUTSIDE
+        }
     }
 
     // conf_inf < projection along line direction; order 0 = project(0,0)
@@ -161,7 +157,7 @@ data class Line(
         Line.orderInBetween(order1, order2)
 
     override fun agreesWithOrientation(startOrder: Double, middleOrder: Double, endOrder: Double): Boolean =
-        Line.orderIsInBetween(startOrder, middleOrder, endOrder)
+        orderIsInBetween(startOrder, middleOrder, endOrder)
 
     override fun translated(vector: Offset): Line =
        copy(c = c - (a*vector.x + b*vector.y))
@@ -223,12 +219,13 @@ data class Line(
 
     override fun isInside(circle: CircleOrLine): Boolean =
         when (circle) {
-            is Circle ->
+            is Circle -> {
                 if (circle.isCCW)
                     false
                 else
                     circle.copy(isCCW = true)
                         .isOutside(this)
+            }
             is Line -> {
                 val l1 = this.normalized()
                 val l2 = circle.normalized()

@@ -10,7 +10,9 @@ import core.kmath_complex.r2
 import domain.TAU
 import domain.degrees
 import domain.never
+import domain.pow2
 import domain.radians
+import domain.squareSum
 import domain.toComplex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -95,66 +97,73 @@ data class Circle(
             Double.POSITIVE_INFINITY
         else abs(hypot(point.x - x, point.y - y) - radius)
 
+    /** prefer squared distance -- [distance2BetweenCenters] for performance */
     fun distanceBetweenCenters(circle: Circle): Double =
         hypot(x - circle.x, y - circle.y)
 
-    override fun calculateLocation(point: Offset): RegionPointLocation {
-        val distance = (center - point).getDistance()
-        val r = radius.toFloat()
+    fun distance2BetweenCenters(circle: Circle): Double =
+        squareSum(x - circle.x, y - circle.y)
+
+    override fun getPointLocation(point: Offset): Region.PointLocation {
+        val d2 = (center - point).getDistanceSquared()
+        val diff = d2 - radius.toFloat().pow2()
         return when {
-            distance < r ->
-                if (isCCW) RegionPointLocation.IN
-                else RegionPointLocation.OUT
-            distance == r -> RegionPointLocation.BORDERING // this prob never happens, strict double equality
-            distance > r ->
-                if (isCCW) RegionPointLocation.OUT
-                else RegionPointLocation.IN
+            diff < 0 ->
+                if (isCCW) Region.PointLocation.INSIDE
+                else Region.PointLocation.OUTSIDE
+            // this prob never happens, strict double equality, mb use epsilon
+            diff == 0f -> Region.PointLocation.BORDERING
+            diff > 0 ->
+                if (isCCW) Region.PointLocation.OUTSIDE
+                else Region.PointLocation.INSIDE
             else -> never()
         }
     }
 
-    override fun calculateLocationEpsilon(point: Point): RegionPointLocation {
+    override fun getPointLocation(point: Point): Region.PointLocation {
         if (point.isInfinite) {
-            return if (isCCW) RegionPointLocation.OUT else RegionPointLocation.IN
+            return if (isCCW) Region.PointLocation.OUTSIDE else Region.PointLocation.INSIDE
         }
-        val distance = hypot(point.x - x, point.y - y)
-        return if (abs(radius - distance) < EPSILON) {
-            RegionPointLocation.BORDERING
-        } else if (distance < radius) {
-            if (isCCW) RegionPointLocation.IN else RegionPointLocation.OUT
-        } else {
-            // outside
-            if (isCCW) RegionPointLocation.OUT else RegionPointLocation.IN
+        val d2 = squareSum(point.x - x, point.y - y)
+        val diff = d2 - r2
+        return if (abs(diff) < EPSILON) {
+            Region.PointLocation.BORDERING
+        } else if (diff < 0) {
+            if (isCCW) Region.PointLocation.INSIDE else Region.PointLocation.OUTSIDE
+        } else { // outside
+            if (isCCW) Region.PointLocation.OUTSIDE else Region.PointLocation.INSIDE
         }
     }
 
-    override fun hasInsideEpsilon(point: Point): Boolean {
+    override fun hasInside(point: Point): Boolean {
         // works for infinity
-        val distance = hypot(point.x - x, point.y - y)
-        return abs(radius - distance) >= EPSILON && distance < radius == isCCW
+        val d2 = squareSum(point.x - x, point.y - y)
+        val diff = d2 - r2
+        return abs(diff) >= EPSILON && diff < 0 == isCCW
     }
 
     override fun hasInside(point: Offset): Boolean {
-        val distance = hypot(point.x - x, point.y - y)
+        val d2 = squareSum(point.x - x, point.y - y)
         // distance is infinite for infinite point
-        return distance < radius == isCCW
+        return d2 < r2 == isCCW
     }
 
     fun hasInside(px: Double, py: Double): Boolean {
-        val distance = hypot(x - px, y - py)
-        return distance < radius == isCCW
+        val d2 = squareSum(x - px, y - py)
+        return d2 < r2 == isCCW
     }
 
-    override fun hasOutsideEpsilon(point: Point): Boolean {
+    override fun hasOutside(point: Point): Boolean {
         // works for infinity
-        val distance = hypot(point.x - x, point.y - y)
-        return abs(radius - distance) >= EPSILON && distance < radius != isCCW
+        val d2 = squareSum(point.x - x, point.y - y)
+        val diff = d2 - r2
+        return abs(diff) >= EPSILON && diff < 0 != isCCW
     }
 
     override fun hasOutside(point: Offset): Boolean {
-        val distance = hypot(point.x - x, point.y - y)
+        val d2 = squareSum(point.x - x, point.y - y)
         // distance is infinite for infinite point
-        return distance < radius != isCCW
+        return d2 < r2 != isCCW
     }
 
     override fun point2angle(point: Point): Float {
@@ -202,22 +211,54 @@ data class Circle(
     override fun orderInBetween(order1: Double, order2: Double): Double =
         Circle.orderInBetween(order1, order2)
 
-    /** FIX: broken for CW */
-    override fun agreesWithOrientation(startOrder: Double, middleOrder: Double, endOrder: Double): Boolean {
-        val o = (middleOrder + TAU) % TAU
-        val start = (startOrder + TAU) % TAU
-        val end = (endOrder + TAU) % TAU
-        return if (start <= end) {
-            o in start..end
-        } else { // the arc contains order=0
-            o in start..TAU || o in 0.0..end
+    override fun pointInBetween(point1: Point, point2: Point): Point {
+        val to1x = point1.x - x
+        val to1y = point1.y - y
+        val to2x = point2.x - x
+        val to2y = point2.y - y
+        val cross12 = to1y*to2x - to1x*to2y
+        val shortArc = isCCW == (cross12 >= 0.0)
+        val mx = (to1x + to2x)/2.0
+        val my = (to1y + to2y)/2.0
+        val m = hypot(mx, my)
+        if (m < EPSILON) {
+            return if (isCCW)
+                Point(x + to1y, y - to1x)
+            else
+                Point(x - to1y, y + to1x)
         }
+        val k = if (shortArc) radius/m else -radius/m
+        return Point(x + k*mx, y + k*my)
+    }
+
+    override fun agreesWithOrientation(startOrder: Double, middleOrder: Double, endOrder: Double): Boolean {
+        val toMiddle = (middleOrder - startOrder).mod(TAU)
+        val toEnd = (endOrder - startOrder).mod(TAU)
+        // order sign already accounts for CCW/CW
+        return toMiddle <= toEnd
     }
 
     override fun agreesWithOrientation(startPoint: Point, middlePoint: Point, endPoint: Point): Boolean {
         // startToMiddle x startToEnd
         val cross = Point.cross(startPoint, middlePoint, endPoint)
-        return abs(cross) < EPSILON || (cross > 0) == isCCW
+        return abs(cross) < EPSILON || (cross > 0.0) == isCCW
+    }
+
+    fun getPointOrderComparator(): Comparator<Point> {
+        val east = Point(x + radius, y)
+        // i think it's faster than calculating order (atan2) of each point
+        return Comparator { a, b ->
+            val cross = Point.cross(east, a, b)
+            // positive cross => a is on east->b arc => a < b => cmp is negative
+            if (isCCW)
+                -cross.compareTo(0.0)
+            else
+                cross.compareTo(0.0)
+        }
+    }
+
+    override fun orderPoints(points: Collection<Point>): List<Point> {
+        return points.sortedWith(getPointOrderComparator())
     }
 
     override fun translated(vector: Offset): Circle =
@@ -310,11 +351,11 @@ data class Circle(
 
     /** "⭗" case, anti-symmetric in args */
     infix fun isIn(circle: Circle): Boolean =
-        distanceBetweenCenters(circle) + radius <= circle.radius
+        distance2BetweenCenters(circle) <= (circle.radius - radius).pow2()
 
     /** "o o" case, symmetric in args */
     infix fun isOutBeside(circle: Circle): Boolean =
-        distanceBetweenCenters(circle) >= radius + circle.radius
+        distance2BetweenCenters(circle) >= (radius + circle.radius).pow2()
 
     // MAYBE: use epsilon?
     override fun isInside(circle: CircleOrLine): Boolean =
@@ -332,7 +373,7 @@ data class Circle(
                 }
             is Line -> {
                 if (isCCW) // " o |" case
-                    circle.hasInside(center) && circle.distanceFrom(centerPoint) >= radius
+                    center isInside circle && circle.distanceFrom(centerPoint) >= radius
                 else
                     false
             }
@@ -647,7 +688,7 @@ data class Circle(
                         val p = Point(px + vx * pToIntersection, py + vy * pToIntersection)
                         val q = Point(px - vx * pToIntersection, py - vy * pToIntersection)
                         val s = circle1.pointInBetween(p, q) // directed segment p->s->q
-                        if (circle2.hasInsideEpsilon(s))
+                        if (s in circle2)
                             listOf(p, q)
                         else
                             listOf(q, p)
@@ -669,7 +710,7 @@ data class Circle(
                         val p = Point(px + vx * pToIntersection, py + vy * pToIntersection)
                         val q = Point(px - vx * pToIntersection, py - vy * pToIntersection)
                         val s = circle2.pointInBetween(p, q) // directed segment p->s->q
-                        if (circle1.hasInsideEpsilon(s))
+                        if (s in circle1)
                             listOf(q, p)
                         else
                             listOf(p, q)
@@ -711,7 +752,7 @@ data class Circle(
                         val p = Point(pcx + vy, pcy - vx)
                         val q = Point(pcx - vy, pcy + vx)
                         val s = circle1.pointInBetween(p, q) // directed arc p->s->q
-                        if (circle2.hasInsideEpsilon(s))
+                        if (s in circle2)
                             listOf(p, q)
                         else
                             listOf(q, p)
@@ -790,12 +831,10 @@ data class Circle(
             }
         }
 
-        fun orderInBetween(order1: Double, order2: Double): Double =
-            if (order2 > order1)
-                order1 + (order2 - order1)/2.0
-            else // includes order1 == order2 case
-                order1 + (TAU - (order1 - order2))/2.0
-//        val half = (order2 - order1).mod(2*PI)/2.0
+        fun orderInBetween(order1: Double, order2: Double): Double {
+            val d = (order2 - order1).mod(TAU)
+            return (order1 + d/2.0).mod(TAU)
+        }
 
         /**
          * @param[angle] in `[0; TAU)`
@@ -829,33 +868,6 @@ data class Circle(
                     else
                         startAngle
                 }
-            }
-        }
-
-        private fun calculateArcWindingNumber(
-            angle: Double,
-            startAngle: Double,
-            sweepAngle: Double,
-        ): Int {
-            val angle = angle.mod(TAU)
-            if (sweepAngle > 0) { // CCW
-                val endAngle =
-                    if (angle < startAngle)
-                        startAngle + sweepAngle - TAU
-                    else
-                        startAngle + sweepAngle
-                return if (angle < endAngle)
-                    1
-                else 0
-            } else { // CW
-                val endAngle =
-                    if (startAngle < angle)
-                        startAngle + sweepAngle + TAU
-                    else
-                        startAngle + sweepAngle
-                return if (endAngle <= angle)
-                    -1
-                else 0
             }
         }
     }
