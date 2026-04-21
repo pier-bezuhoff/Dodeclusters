@@ -174,11 +174,10 @@ fun halfPlanePath(
     val centerY = visibleRect.top + visibleRect.height/2f
     val maxDim = visibleRect.maxDimension
     val t = b*centerX - a*centerY
-    val n2 = line.norm * line.norm
-    val pointClosestToScreenCenterX = ((b*t - a*c)/n2).toFloat()
-    val pointClosestToScreenCenterY = ((-a*t - b*c)/n2).toFloat()
+    val pointClosestToScreenCenterX = (b*t - a*c).toFloat()
+    val pointClosestToScreenCenterY = (-a*t - b*c).toFloat()
     val eq = a*centerX + b*centerY + c
-    val offScreenLine = abs(eq) > maxDim * line.norm
+    val offScreenLine = abs(eq) > maxDim
     if (offScreenLine) {
         if (eq > 0) { // to the west/inside of the line
             path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))

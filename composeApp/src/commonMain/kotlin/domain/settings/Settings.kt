@@ -19,7 +19,7 @@ data class Settings(
 //    val fastCenteredCircles: Boolean = true,
 //    val enableAngleSnapping: Boolean = true,
 //    val restoreLastSaveOnLoad: Boolean = true,
-//    val showDirectionArrowsOnSelectedCircles: Boolean = false,
+    val showDirectionArrows: Boolean = false,
 //    val showImaginaryCircles: Boolean = true,
 //    val inversionOfControl: InversionOfControl = InversionOfControl.LEVEL_1,
 //    val alwaysCreateAdditionalPoints: Boolean = false,

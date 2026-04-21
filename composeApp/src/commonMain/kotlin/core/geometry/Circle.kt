@@ -377,6 +377,11 @@ data class Circle(
     infix fun isOutBeside(circle: Circle): Boolean =
         distance2BetweenCenters(circle) >= (radius + circle.radius).pow2()
 
+    infix fun doesntIntersect(circle: Circle): Boolean {
+        val d2 = distance2BetweenCenters(circle)
+        return d2 < (circle.radius - radius).pow2() || d2 > (radius + circle.radius).pow2()
+    }
+
     // NOTE: checks without epsilon
     override fun getRegionLocation(region: Region): Region.RegionLocation =
         // sort cases by likelihood
@@ -434,20 +439,71 @@ data class Circle(
                 val r2 = r2
                 var noIntersection = true
                 region.forEachArc { _, arc, arcStart, arcEnd ->
+                    val side1 = c.distance2From(arcStart) >= r2
+                    val side2 = c.distance2From(arcEnd) >= r2
+                    if (side1 != side2) {
+                        noIntersection = false
+                        return@forEachArc
+                    }
                     when (val circle = arc.circleOrLine) {
-                        is Circle -> {}
-                        else -> {
-                            val side1 = c.distance2From(arcStart) >= r2
-                            val side2 = c.distance2From(arcEnd) >= r2
-                            if (side1 != side2) {
-                                noIntersection = false
-                                return@forEachArc
+                        is Circle -> {
+                            val dcx = circle.x - x
+                            val dcy = circle.y - y
+                            val d2 = dcx * dcx + dcy * dcy
+                            val circlesIntersect =
+                                d2 >= (circle.radius - radius).pow2() && d2 <= (radius + circle.radius).pow2()
+                            if (circlesIntersect) { // simply find & test if intersection points lie on the arc
+                                val r12 = r2
+                                val r22 = circle.r2
+                                val dr2 = r12 - r22
+                                // reference (0->1, 1->2):
+                                // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
+                                val d = sqrt(d2)
+                                val a = (d2 + dr2)/(2 * d)
+                                val h = sqrt(r12 - a * a)
+                                val dc0x = dcx/d
+                                val dc0y = dcy/d
+                                val pcx = x + a * dc0x
+                                val pcy = y + a * dc0y
+                                val vx = h * dc0x
+                                val vy = h * dc0y
+                                val p = Point(pcx + vy, pcy - vx)
+                                val q = Point(pcx - vy, pcy + vx)
+                                if (circle.agreesWithOrientation(arcStart, p, arcEnd) ||
+                                    circle.agreesWithOrientation(arcStart, q, arcEnd)
+                                ) {
+                                    noIntersection = false
+                                    return@forEachArc
+                                }
                             }
-                            // test w/ arc vs segment
+                        }
+                        else -> {
+                            // if both segment ends are in the circle, that's it
+                            if (side1 || side2) {
+                                val l2 = arcStart.distance2From(arcEnd)
+                                val t = (arcStart.dot(c, arcEnd)/l2).coerceIn(0.0, 1.0)
+                                /** distance^2 from the circle center to the path's line segment */
+                                val d2 = c.distance2From(
+                                    arcStart.x + t*(arcEnd.x - arcStart.x),
+                                    arcStart.y + t*(arcEnd.y - arcStart.y),
+                                )
+                                if (d2 <= r2) { // both ends are outside, BUT the segment is closer than radius
+                                    noIntersection = false
+                                    return@forEachArc
+                                }
+                            }
                         }
                     }
                 }
-                TODO()
+                if (!noIntersection) {
+                    Region.RegionLocation.OVERLAPS
+                } else if (region.vertices.firstOrNull()?.liesInside(this) == true) {
+                    Region.RegionLocation.CONTAINS_INSIDE
+                } else if (isCCW && c liesInside region) {
+                    Region.RegionLocation.IS_CONTAINED_INSIDE
+                } else {
+                    Region.RegionLocation.NO_INTERSECTION
+                }
             }
         }
 
@@ -701,10 +757,10 @@ data class Circle(
         fun calculateIntersectionPoints(
             circle1: CircleOrLine, circle2: CircleOrLine
         ): List<Point> =
-            when {
-                circle1 == circle2 ->
+            when (circle1) {
+                circle2 ->
                     emptyList()
-                circle1 is Line && circle2 is Line -> {
+                is Line if circle2 is Line -> {
                     val (a1, b1, c1) = circle1
                     val (a2, b2, c2) = circle2
                     val w = a1*b2 - a2*b1
@@ -724,7 +780,7 @@ data class Circle(
                             listOf(q, p)
                     }
                 }
-                circle1 is Line && circle2 is Circle -> {
+                is Line if circle2 is Circle -> {
                     val (cx, cy, r) = circle2
                     val (px, py) = circle1.project(Point(cx, cy))
                     val distance = hypot(px - cx, py - cy)
@@ -745,8 +801,8 @@ data class Circle(
                             listOf(q, p)
                     }
                 }
-                circle1 is Circle && circle2 is Line -> {
-//                    calculateIntersectionPoints(circle2, circle1).reversed() // ^^^
+                is Circle if circle2 is Line -> {
+        //                    calculateIntersectionPoints(circle2, circle1).reversed() // ^^^
                     val (cx, cy, r) = circle1
                     val (px, py) = circle2.project(Point(cx, cy))
                     val distance = hypot(px - cx, py - cy)
@@ -767,7 +823,7 @@ data class Circle(
                             listOf(p, q)
                     }
                 }
-                circle1 is Circle && circle2 is Circle -> {
+                is Circle if circle2 is Circle -> {
                     val (x1,y1,r1) = circle1
                     val (x2,y2,r2) = circle2
                     val dcx = x2 - x1

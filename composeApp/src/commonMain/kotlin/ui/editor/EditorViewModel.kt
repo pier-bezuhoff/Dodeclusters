@@ -553,12 +553,12 @@ class EditorViewModel : ViewModel() {
                     appendLine("$selectedExpressionsString;")
                 if (selectedArcPathsString.isNotEmpty())
                     appendLine("$selectedArcPathsString;")
-                //TMP
-                val line = objects[expressions.lineIndices.first()] as Line
+                // TMP
+                val circle = objects[expressions.circleIndices.first()] as Circle
                 val arcPath = objects[expressions.arcPathIndices.first()] as ConcreteArcPath
                 clear()
                 append(
-                    line.getRegionLocation(arcPath)
+                    circle.getRegionLocation(arcPath)
                 )
             }
             queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
@@ -4565,6 +4565,7 @@ class EditorViewModel : ViewModel() {
         defaultLoxodromicMotionParameters = settings.defaultLoxodromicMotionParameters
         saveConfig = saveConfig.copy(directory = settings.saveDirectory)
         toolbarState = toolbarState.copy(categoryDefaultIndices = settings.categoryDefaultIndices)
+        showDirectionArrows = settings.showDirectionArrows
         switchToCategory(toolbarState.activeCategory)
     }
 
@@ -4622,6 +4623,7 @@ class EditorViewModel : ViewModel() {
             defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters,
             categoryDefaultIndices = toolbarState.categoryDefaultIndices,
             saveDirectory = saveConfig.directory,
+            showDirectionArrows = showDirectionArrows,
         )
 
     // NOTE: i never seen this proc on Android or Wasm tbh, only on Desktop

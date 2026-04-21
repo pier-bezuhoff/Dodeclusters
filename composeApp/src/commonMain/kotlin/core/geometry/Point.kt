@@ -66,6 +66,12 @@ data class Point(
         else
             hypot(x - point.x, y - point.y)
 
+    fun distance2From(x: Double, y: Double): Double =
+        if (isInfinite)
+            Double.POSITIVE_INFINITY
+        else
+            squareSum(this.x - x, this.y - y)
+
     fun distance2From(point: Point): Double = when {
         this.isInfinite && point.isInfinite -> 0.0
         this.isInfinite && point.isFinite -> Double.POSITIVE_INFINITY
@@ -181,6 +187,10 @@ data class Point(
             CONFORMAL_INFINITY
         else Point((x + point.x)/2, (y + point.y)/2)
 
+    /** dot product `this->p1 ⋅ this->p2` */
+    inline fun dot(p1: Point, p2: Point): Double =
+        (p1.x - x)*(p2.x - x) + (p1.y - y)*(p2.y - y)
+
     companion object {
         /** All lines pass through this point, it's a stereographic projection of the North pole */
         val CONFORMAL_INFINITY =
@@ -205,7 +215,11 @@ data class Point(
             )
         }
 
-        /** cross product p1->p2 x p1->p3 */
+        /** dot product `p1->p2 ⋅ p3->p4` */
+        inline fun dot(p1: Point, p2: Point, p3: Point, p4: Point): Double =
+            (p2.x - p1.x)*(p4.x - p4.x) + (p2.y - p1.y)*(p4.y - p3.y)
+
+        /** cross product `p1->p2 x p1->p3` */
         inline fun cross(p1: Point, p2: Point, p3: Point): Double {
             // we negate the usual `dx1*dy2 - dx2*dy1` formula cuz of left-hand-ness
             return -(p2.x-p1.x)*(p3.y-p1.y) + (p2.y-p1.y)*(p3.x-p1.x)
