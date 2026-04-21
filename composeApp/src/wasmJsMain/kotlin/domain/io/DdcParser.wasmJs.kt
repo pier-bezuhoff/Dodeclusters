@@ -67,7 +67,7 @@ private fun _parseDdc(content: String): DdcV2 {
                                 }
                                 isLineObject(it) -> {
                                     val line = it as JsLine
-                                    Line(line.a, line.b, line.c)
+                                    Line(line.a, line.b, line.c).normalized()
                                 }
                                 else ->
                                     throw IllegalArgumentException("Bad YAML: cannot parse\"${jsonStringify(it)}\" as CircleOrLine")

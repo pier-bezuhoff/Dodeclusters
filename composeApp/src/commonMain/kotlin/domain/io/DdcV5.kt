@@ -49,7 +49,7 @@ data class DdcV5(
     @SerialName("GCircleToken")
     data class GCircleToken(
         // discriminates DdcV4.Token.Object
-        val representation: GCircle?,
+        val representation: GCircle? = null,
         val expression: ConformalExprOutput? = null,
         val label: String? = null,
         val color: ColorAsCss? = null,

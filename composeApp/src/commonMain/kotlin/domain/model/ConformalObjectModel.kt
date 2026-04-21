@@ -9,6 +9,7 @@ import domain.Ix
 import domain.cluster.Constellation
 import domain.expressions.ArcPath
 import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.Line
 import domain.expressions.ConformalExpressions
 import domain.expressions.ObjectConstruct
 import kotlin.collections.component1
@@ -115,7 +116,7 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
         for (objectConstruct in constellation.objects) {
             val o = when (objectConstruct) {
                 is ObjectConstruct.ConcreteCircle -> objectConstruct.circle
-                is ObjectConstruct.ConcreteLine -> objectConstruct.line
+                is ObjectConstruct.ConcreteLine -> objectConstruct.line.normalized()
                 is ObjectConstruct.ConcretePoint -> objectConstruct.point
                 is ObjectConstruct.Dynamic -> null // to-be-computed during reEval()
             }
@@ -161,8 +162,12 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
             // cannot use generic addDisplayObjects cuz expressions were
             // not yet initialized, but each addDisplayObject calls
             // expressions.updateObjectTypeAt
-            displayObjects.add(o)
-            downscaledObjects.add(o?.downscale())
+            val obj = when (o) {
+                is Line -> o.normalized()
+                else -> o
+            }
+            displayObjects.add(obj)
+            downscaledObjects.add(obj?.downscale())
             pathCache.addObject()
         }
         expressions = ConformalExpressions(

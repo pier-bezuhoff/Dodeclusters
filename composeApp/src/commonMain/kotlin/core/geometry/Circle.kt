@@ -1,3 +1,5 @@
+@file:Suppress("LocalVariableName")
+
 package core.geometry
 
 import androidx.compose.runtime.Immutable
@@ -340,19 +342,30 @@ data class Circle(
     override fun reversed(): Circle =
         copy(isCCW = !isCCW)
 
+    fun tangentVectorAt(point: Point): Offset {
+        // O = center, P = point
+        val OPx = (x - point.x).toFloat()
+        val OPy = (y - point.y).toFloat()
+        // if the circle is CCW, it is to the left of the tangent
+        val k = if (isCCW) 1f else -1f
+        return Offset(k*OPy, -k*OPx)
+    }
+
     /** tangent line at [project]`(point)`, directed along the circle */
     override fun tangentAt(point: Point): Line {
-        val center2pointX = x - point.x
-        val center2pointY = y - point.y
-        val center2point = hypot(center2pointX, center2pointY)
-        if (center2point == 0.0 || center2point.isInfinite())
+        // O = center, P = point
+        val OPx = x - point.x
+        val OPy = y - point.y
+        val OP = hypot(OPx, OPy)
+        if (OP == 0.0 || OP.isInfinite())
             return Line(0.0, 1.0, y + point.y)
-        val sign = if (isCCW) +1 else -1 // if the circle is CCW, it is to the left of the tangent
-        val a = sign*center2pointX/center2point // normal
-        val b = sign*center2pointY/center2point
+        // if the circle is CCW, it is to the left of the tangent
+        val k = if (isCCW) 1.0/OP else -1.0/OP
+        val a = k*OPx // normal
+        val b = k*OPy
         val (baseX, baseY) = project(point)
         val c = -a*baseX - b*baseY
-        return Line(a, b, c)
+        return Line(a, b, c).normalized()
     }
 
     /** "⭗" case, anti-symmetric in args */
@@ -366,17 +379,22 @@ data class Circle(
 
     // NOTE: checks without epsilon
     override fun getRegionLocation(region: Region): Region.RegionLocation =
+        // sort cases by likelihood
         when (region) {
             is Circle -> when {
                 isCCW && region.isCCW ->
-                    if (region isIn this) // "⭗" case
-                        Region.RegionLocation.CONTAINS_INSIDE
-                    else if (region isOutBeside this) // "↺ ↺" case
+                    if (region isOutBeside this) // "↺ ↺" case
                         Region.RegionLocation.NO_INTERSECTION
+                    else if (region isIn this) // "⭗" case
+                        Region.RegionLocation.CONTAINS_INSIDE
+                    else if (this isIn region)
+                        Region.RegionLocation.IS_CONTAINED_INSIDE
                     else
                         Region.RegionLocation.OVERLAPS
                 isCCW && !region.isCCW ->
-                    if (this isIn region) // "⭗'" case
+                    if (this isOutBeside region) // "↺ ↻" case
+                        Region.RegionLocation.IS_CONTAINED_INSIDE
+                    else if (this isIn region) // "⭗'" case
                         Region.RegionLocation.NO_INTERSECTION
                     else
                         Region.RegionLocation.OVERLAPS
@@ -390,6 +408,8 @@ data class Circle(
                 else -> // both are outsides / CW
                     if (this isIn region) // "⭗'" case
                         Region.RegionLocation.CONTAINS_INSIDE
+                    else if (region isIn this)
+                        Region.RegionLocation.IS_CONTAINED_INSIDE
                     else
                         Region.RegionLocation.OVERLAPS
             }
@@ -398,18 +418,35 @@ data class Circle(
                 if (!far) {
                     Region.RegionLocation.OVERLAPS
                 } else if (isCCW) { // far CCW
-                    if (center liesOutside region) // "↑ ↺" case
+                    if (center liesInside region) // "↺ ↑" case
+                        Region.RegionLocation.IS_CONTAINED_INSIDE
+                    else // "↑ ↺" case
                         Region.RegionLocation.NO_INTERSECTION
-                    else // "↺ ↑" case
-                        Region.RegionLocation.OVERLAPS // the circle is contained in the half-plane
                 } else { // far CW
-                    if (center liesOutside region) // "↑ ↻" case
-                        Region.RegionLocation.CONTAINS_INSIDE
-                    else // "↻ ↑" case
+                    if (center liesInside region) // "↻ ↑" case
                         Region.RegionLocation.OVERLAPS
+                    else // "↑ ↻" case
+                        Region.RegionLocation.CONTAINS_INSIDE
                 }
             }
             is ConcreteArcPath -> {
+                val c = centerPoint
+                val r2 = r2
+                var noIntersection = true
+                region.forEachArc { _, arc, arcStart, arcEnd ->
+                    when (val circle = arc.circleOrLine) {
+                        is Circle -> {}
+                        else -> {
+                            val side1 = c.distance2From(arcStart) >= r2
+                            val side2 = c.distance2From(arcEnd) >= r2
+                            if (side1 != side2) {
+                                noIntersection = false
+                                return@forEachArc
+                            }
+                            // test w/ arc vs segment
+                        }
+                    }
+                }
                 TODO()
             }
         }
@@ -672,7 +709,7 @@ data class Circle(
                     val (a2, b2, c2) = circle2
                     val w = a1*b2 - a2*b1
                     // collinearity condition
-                    if (abs(w) < EPSILON * circle1.norm * circle2.norm) {
+                    if (abs(w) < EPSILON) {
                         listOf(Point.CONFORMAL_INFINITY) // & potentially full coincidence
                     } else {
                         val wx = b1*c2 - b2*c1 // det in homogenous coordinates

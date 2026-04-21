@@ -182,7 +182,7 @@ fun computePolarLine(
             // (px - cx)(x - cx) + (py - cy)(y - cy) = R^2
             val dx = x - circle.x
             val dy = y - circle.y
-            Line(dx, dy, -(circle.x * dx + circle.y * dy + circle.r2))
+            Line(dx, dy, -(circle.x * dx + circle.y * dy + circle.r2)).normalized()
         }
         is Line -> { // parallel line thru REFLECTED point
             val (a, b, c) = circle

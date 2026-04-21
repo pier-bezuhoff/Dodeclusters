@@ -14,11 +14,14 @@ sealed interface Region : CanMeasureDistanceFromPoint {
         OUTSIDE,
     }
 
-    /** Region-Region location.
-     * A region either fully [CONTAINS_INSIDE] another one,
-     * [OVERLAPS] it or has [NO_INTERSECTION] with it */
+    /** Region-Region location / containment state.
+     * Region1 either fully [CONTAINS_INSIDE] region2,
+     * [IS_CONTAINED_INSIDE] region2,
+     * [OVERLAPS] it (but none contains the other)
+     * or has [NO_INTERSECTION] with it */
     enum class RegionLocation {
         CONTAINS_INSIDE,
+        IS_CONTAINED_INSIDE,
         OVERLAPS,
         NO_INTERSECTION,
     }

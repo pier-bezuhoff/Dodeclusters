@@ -395,9 +395,9 @@ data class GeneralizedCircle(
             if (abs(x) < EPSILON && abs(y) < EPSILON) // implies z > EPSILON
                 Point.CONFORMAL_INFINITY
             else if (w < 0)
-                Line(-x, -y, z)
+                Line(-x, -y, z).normalized()
             else
-                Line(x, y, -z)
+                Line(x, y, -z).normalized()
         } else {
             val x0 = x/w
             val y0 = y/w
@@ -433,7 +433,7 @@ data class GeneralizedCircle(
                 else null
             } else {
                 if (sameGCircleTypeAs is CircleOrLine)
-                    Line(x, y, -z)
+                    Line(x, y, -z).normalized()
                 else null
             }
         } else {

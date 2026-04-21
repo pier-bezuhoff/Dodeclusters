@@ -6,7 +6,6 @@ import domain.radians
 import domain.rotateBy
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -14,8 +13,9 @@ import kotlin.math.sign
 import kotlin.math.sin
 
 // MAYBE: 2-point constructor instead of a,b,c for smoother incident point transformation
-// MAYBE: always normalize lines on init
 /** [a]*x + [b]*y + [c] = 0
+ *
+ * NOTE: must be [normalized] `a^2 + b^2 == 1` before most operations
  *
  * Normal vector = ([a], [b]), so it depends on the sign
  *
@@ -39,38 +39,36 @@ data class Line(
         ) { "Invalid Line($a, $b, $c)" }
     }
 
-    /** `sqrt(a^2 + b^2) > 0` */
-    @Transient
-    val norm: Double =
-        hypot(a, b)
-
     inline val normalX: Double get() =
-        a/norm
+        a
 
     inline val normalY: Double get() =
-        b/norm
+        b
 
     /** length=1 normal vector, to the left of the direction vector */
     val normalVector: Offset get() =
         Offset(normalX.toFloat(), normalY.toFloat())
 
     inline val directionX: Double get() =
-        b/norm
+        b
 
     inline val directionY: Double get() =
-        -a/norm
+        -a
 
     /** length=1 direction vector */
     val directionVector: Offset get() =
-        Offset((b/norm).toFloat(), (-a/norm).toFloat())
+        Offset(b.toFloat(), (-a).toFloat())
 
-    /** Direction-preserving, ensures that `hypot(a, b) == 1` */
-    fun normalized(): Line =
-        Line(a/norm, b/norm, c/norm)
+    /** Direction-preserving, ensures that `a^2 + b^2 == 1` */
+    fun normalized(): Line {
+        val norm = hypot(a, b)
+        return Line(a / norm, b / norm, c / norm)
+    }
 
     /** First non-zero coordinate is guaranteed to be positive and
-     * `hypot(a, b) == 1` */
+     * `a^2 + b^2 == 1` */
     fun normalizedNoDirection(): Line {
+        val norm = hypot(a, b)
         val sign =
             if (a == 0.0) sign(b) // b != 0
             else sign(a)
@@ -78,18 +76,24 @@ data class Line(
     }
 
     infix fun isCollinearTo(line: Line): Boolean {
-        val crossProduct = (this.a*line.b - this.b*line.a) / this.norm / line.norm
+        val crossProduct = this.a*line.b - this.b*line.a
         return abs(crossProduct) < EPSILON
     }
+
+    /** [point] to line vector, normalized */
+    fun towardsVectorFrom(point: Offset) =
+        if (point liesInside this)
+            -normalVector
+        else
+            normalVector
 
     // reference: https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_an_equation
     /** Project [point] down onto this line */
     fun project(point: Offset): Offset {
         val t = b*point.x - a*point.y
-        val n2 = norm*norm
         return Offset(
-            ((b*t - a*c)/n2).toFloat(),
-            ((-a*t - b*c)/n2).toFloat()
+            (b*t - a*c).toFloat(),
+            (-a*t - b*c).toFloat()
         )
     }
 
@@ -99,22 +103,21 @@ data class Line(
             return point
         val (x, y) = point
         val t = b*x - a*y
-        val n2 = norm*norm
         return Point(
-            (b*t - a*c)/n2,
-            (-a*t - b*c)/n2
+            b*t - a*c,
+            -a*t - b*c
         )
     }
 
     override fun distanceFrom(point: Offset): Double =
-        abs(a*point.x + b*point.y + c)/norm
+        abs(a*point.x + b*point.y + c)
 
     override fun distanceFrom(x: Double, y: Double): Double =
-        abs(a*x + b*y + c)/norm
+        abs(a*x + b*y + c)
 
     override fun distanceFrom(point: Point): Double =
         if (point.isInfinite) 0.0
-        else abs(a*point.x + b*point.y + c)/norm
+        else abs(a*point.x + b*point.y + c)
 
     override fun getPointLocation(point: Offset): Region.PointLocation {
         val t = a * point.x + b * point.y + c
@@ -128,7 +131,7 @@ data class Line(
     override fun getPointLocation(point: Point): Region.PointLocation {
         if (point.isInfinite)
             return Region.PointLocation.BORDERING
-        val t = (a*point.x + b*point.y + c)/norm
+        val t = (a*point.x + b*point.y + c)
         return when {
             abs(t) < EPSILON -> Region.PointLocation.BORDERING
             t < 0 -> Region.PointLocation.INSIDE
@@ -148,7 +151,7 @@ data class Line(
         if (order.isInfinite())
             return Point.CONFORMAL_INFINITY
 //        val (p0x, p0y) = project(Point(0.0, 0.0))
-        val k = -c/(norm*norm)
+        val k = -c
         val p0x = k*a
         val p0y = k*b
         return Point(
@@ -189,7 +192,7 @@ data class Line(
     override fun rotated(focusX: Double, focusY: Double, angleInRadians: Double): Line {
         val newA = normalX * cos(angleInRadians) - normalY * sin(angleInRadians)
         val newB = normalX * sin(angleInRadians) + normalY * cos(angleInRadians)
-        val newC = (hypot(newA, newB)/norm) * (a*focusX + b*focusY + c) - newA*focusX - newB*focusY
+        val newC = hypot(newA, newB) * (a*focusX + b*focusY + c) - newA*focusX - newB*focusY
         return Line(newA, newB, newC)
     }
 
@@ -197,11 +200,16 @@ data class Line(
         val newNormal = normalVector.rotateBy(angleInDegrees)
         val newA = newNormal.x.toDouble()
         val newB = newNormal.y.toDouble()
-        val newC = (hypot(newA, newB)/norm) * (a*focus.x + b*focus.y + c) - newA*focus.x - newB*focus.y
+        val newC = hypot(newA, newB) * (a*focus.x + b*focus.y + c) - newA*focus.x - newB*focus.y
         return Line(newA, newB, newC)
     }
 
-    override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): Line {
+    override fun transformed(
+        translation: Offset,
+        focus: Offset,
+        zoom: Float,
+        rotationAngle: Float,
+    ): Line {
         val (focusX, focusY) =
             if (focus == Offset.Unspecified)
                 order2point(0.0).toOffset()
@@ -214,7 +222,7 @@ data class Line(
         val sinPhi = sin(phi)
         val a1 = a * cosPhi - b * sinPhi
         val b1 = a * sinPhi + b * cosPhi
-        c1 = (hypot(a1, b1)/norm) * c1 - a1*focusX - b1*focusY
+        c1 = hypot(a1, b1) * c1 - a1*focusX - b1*focusY
         return Line(a1, b1, c1)
     }
 
@@ -224,28 +232,35 @@ data class Line(
     override fun getRegionLocation(region: Region): Region.RegionLocation =
         when (region) {
             is Circle -> {
-                if (region.isCCW) {
-                    val far = distanceFrom(region.x, region.y) > region.radius
-                    if (!far)
-                        Region.RegionLocation.OVERLAPS
-                    else if (region.center liesInside this)
-                        Region.RegionLocation.CONTAINS_INSIDE
-                    else // center is far outside
-                        Region.RegionLocation.NO_INTERSECTION
-                } else {
+                val far = distanceFrom(region.x, region.y) > region.radius
+                if (!far) {
                     Region.RegionLocation.OVERLAPS
+                } else if (region.isCCW) { // far CCW
+                    if (region.center liesInside this) // "↺ ↑" case
+                        Region.RegionLocation.CONTAINS_INSIDE
+                    else  // "↑ ↺" case
+                        Region.RegionLocation.NO_INTERSECTION
+                } else { // far CW
+                    if (region.center liesInside this) // "↻ ↑" case
+                        Region.RegionLocation.OVERLAPS
+                    else // "↑ ↻" case
+                        Region.RegionLocation.IS_CONTAINED_INSIDE
                 }
             }
             is Line -> {
                 val (a1, b1, c1) = this.normalized()
                 val (a2, b2, c2) = region.normalized()
-                if (abs(a1 - a2) < EPSILON && abs(b1 - b2) < EPSILON && c1 <= c2)
-                    Region.RegionLocation.CONTAINS_INSIDE
-                // NOTE: anti-parallel line (l' == -l) cannot define a half-plane that is fully inside
-                else if (abs(a1 + a2) < EPSILON && abs(b1 + b2) < EPSILON && c1 <= c2)
+                if (abs(a1 - a2) < EPSILON && abs(b1 - b2) < EPSILON) {
+                    if (c1 <= c2)
+                        Region.RegionLocation.CONTAINS_INSIDE
+                    else
+                        Region.RegionLocation.IS_CONTAINED_INSIDE
+                    // NOTE: anti-parallel line (l' == -l) cannot define a half-plane that is fully inside
+                } else if (abs(a1 + a2) < EPSILON && abs(b1 + b2) < EPSILON && c1 <= c2) {
                     Region.RegionLocation.NO_INTERSECTION
-                else
+                } else {
                     Region.RegionLocation.OVERLAPS
+                }
             }
             is ConcreteArcPath -> {
                 var noIntersection = true
@@ -259,6 +274,7 @@ data class Line(
                     when (val circle = arc.circleOrLine) {
                         is Circle ->
                             if (distanceFrom(circle.x, circle.y) <= circle.radius) {
+                                // alt: test that arc direction vectors at start and end point towards the line
                                 // P and Q are the closest and the furthest points from the line on the circle
                                 val px = circle.x + circle.radius*normalX
                                 val py = circle.y + circle.radius*normalY

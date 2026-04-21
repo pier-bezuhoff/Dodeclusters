@@ -85,7 +85,7 @@ data class DdcV2(
             val rule: List<Int> = DEFAULT_CIRCLE_RULE,
         ) : Token() {
             fun toLine(): core.geometry.Line =
-                Line(a, b, c)
+                Line(a, b, c).normalized()
         }
     }
 

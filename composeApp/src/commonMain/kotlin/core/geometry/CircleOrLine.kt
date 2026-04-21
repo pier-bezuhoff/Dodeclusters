@@ -112,7 +112,7 @@ fun calculateIntersection(
             val (a1, b1, c1) = o1
             val (a2, b2, c2) = o2
             val w = a1*b2 - a2*b1
-            if (abs(w / o1.norm / o2.norm) < EPSILON) { // parallel condition
+            if (abs(w) < EPSILON) { // parallel condition
                 CircleLineIntersection.Tangent(Point.CONFORMAL_INFINITY)
             } else {
                 val wx = b1*c2 - b2*c1 // det in homogenous coordinates

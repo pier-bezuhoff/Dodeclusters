@@ -90,13 +90,13 @@ fun randomLine(maxAmplitude: Double = 16.0): Line {
     val b = Random.nextDouble(-maxAmplitude, maxAmplitude)
     val c = Random.nextDouble(-maxAmplitude, maxAmplitude)
     return when (Random.nextInt(0..10)) {
-        1 -> Line(if (a != 0.0) a else 1.0, 0.0, c) // vertical
-        2 -> Line(0.0, if (b != 0.0) b else 1.0, c) // horizontal
+        1 -> Line(if (a != 0.0) a else 1.0, 0.0, c).normalized() // vertical
+        2 -> Line(0.0, if (b != 0.0) b else 1.0, c).normalized() // horizontal
         else ->
             if (a == 0.0 && b == 0.0)
                 Line(1.0, 0.0, 0.0)
             else
-                Line(a, b, c)
+                Line(a, b, c).normalized()
     }
 }
 
