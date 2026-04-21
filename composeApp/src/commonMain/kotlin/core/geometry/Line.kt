@@ -263,45 +263,7 @@ data class Line(
                 }
             }
             is ConcreteArcPath -> {
-                var noIntersection = true
-                region.forEachArc { _, arc, arcStart, arcEnd ->
-                    val signedDistance1 = a*arcStart.x + b*arcStart.y + c
-                    val signedDistance2 = a*arcEnd.x + b*arcEnd.y + c
-                    if (signedDistance1*signedDistance2 < EPSILON) {
-                        noIntersection = false
-                        return@forEachArc
-                    }
-                    when (val circle = arc.circleOrLine) {
-                        is Circle ->
-                            if (distanceFrom(circle.x, circle.y) <= circle.radius) {
-                                // alt: test that arc direction vectors at start and end point towards the line
-                                // P and Q are the closest and the furthest points from the line on the circle
-                                val px = circle.x + circle.radius*normalX
-                                val py = circle.y + circle.radius*normalY
-                                val signedDistanceP = a*px + b*py + c
-                                val diffSides1P = signedDistance1*signedDistanceP <= 0
-                                if (diffSides1P) { // then q is on the same side, so no need to check it
-                                    if (circle.agreesWithOrientation(arcStart, Point(px, py), arcEnd)) {
-                                        noIntersection = false
-                                        return@forEachArc
-                                    }
-                                } else {
-                                    val qx = circle.x - circle.radius*normalX
-                                    val qy = circle.y - circle.radius*normalY
-                                    val signedDistanceQ = a*qx + b*qy + c
-                                    val diffSides1Q = signedDistance1*signedDistanceQ <= 0
-                                    if (diffSides1Q &&
-                                        circle.agreesWithOrientation(arcStart, Point(qx, qy), arcEnd)
-                                    ) {
-                                        noIntersection = false
-                                        return@forEachArc
-                                    }
-                                }
-                            }
-                        else -> {}
-                    }
-                }
-                if (!noIntersection)
+                if (region intersects this)
                     Region.RegionLocation.OVERLAPS
                 else if (region.vertices.firstOrNull()?.liesInside(this) == true)
                     Region.RegionLocation.CONTAINS_INSIDE

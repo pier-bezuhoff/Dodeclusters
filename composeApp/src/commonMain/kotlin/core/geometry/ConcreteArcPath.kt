@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import domain.angleRad
+import domain.pow2
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
@@ -336,17 +337,136 @@ data class ConcreteArcPath(
         else
             Region.PointLocation.INSIDE
 
+    /** checks whether `this` contour has intersections [circle] contour */
+    infix fun intersects(circle: Circle): Boolean {
+        var noIntersection = true
+        val (x, y, radius) = circle
+        val c = circle.centerPoint
+        val r2 = circle.r2
+        forEachArc { _, arc, arcStart, arcEnd ->
+            val side1 = c.distance2From(arcStart) >= r2
+            val side2 = c.distance2From(arcEnd) >= r2
+            if (side1 != side2) {
+                noIntersection = false
+                return@forEachArc
+            }
+            when (val circle = arc.circleOrLine) {
+                is Circle -> {
+                    val dcx = circle.x - x
+                    val dcy = circle.y - y
+                    val d2 = dcx * dcx + dcy * dcy
+                    val circlesIntersect =
+                        d2 >= (circle.radius - radius).pow2() && d2 <= (radius + circle.radius).pow2()
+                    if (circlesIntersect) { // simply find & test if intersection points lie on the arc
+                        val r12 = r2
+                        val r22 = circle.r2
+                        val dr2 = r12 - r22
+                        // reference (0->1, 1->2):
+                        // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
+                        val d = sqrt(d2)
+                        val a = (d2 + dr2)/(2 * d)
+                        val h = sqrt(r12 - a * a)
+                        val dc0x = dcx/d
+                        val dc0y = dcy/d
+                        val pcx = x + a * dc0x
+                        val pcy = y + a * dc0y
+                        val vx = h * dc0x
+                        val vy = h * dc0y
+                        val p = Point(pcx + vy, pcy - vx)
+                        val q = Point(pcx - vy, pcy + vx)
+                        if (circle.agreesWithOrientation(arcStart, p, arcEnd) ||
+                            circle.agreesWithOrientation(arcStart, q, arcEnd)
+                        ) {
+                            noIntersection = false
+                            return@forEachArc
+                        }
+                    }
+                }
+                else -> {
+                    // if both segment ends are in the circle, that's it
+                    if (side1 || side2) {
+                        val l2 = arcStart.distance2From(arcEnd)
+                        val t = (arcStart.dot(c, arcEnd)/l2).coerceIn(0.0, 1.0)
+                        /** distance^2 from the circle center to the path's line segment */
+                        val d2 = c.distance2From(
+                            arcStart.x + t*(arcEnd.x - arcStart.x),
+                            arcStart.y + t*(arcEnd.y - arcStart.y),
+                        )
+                        if (d2 <= r2) { // both ends are outside, BUT the segment is closer than radius
+                            noIntersection = false
+                            return@forEachArc
+                        }
+                    }
+                }
+            }
+        }
+        return !noIntersection
+    }
+
+    /** checks whether `this` contour has intersections [line] contour */
+    infix fun intersects(line: Line): Boolean {
+        var noIntersection = true
+        val (a, b, c) = line
+        forEachArc { _, arc, arcStart, arcEnd ->
+            val signedDistance1 = a*arcStart.x + b*arcStart.y + c
+            val signedDistance2 = a*arcEnd.x + b*arcEnd.y + c
+            if (signedDistance1*signedDistance2 < EPSILON) {
+                noIntersection = false
+                return@forEachArc
+            }
+            when (val circle = arc.circleOrLine) {
+                is Circle ->
+                    if (distanceFrom(circle.x, circle.y) <= circle.radius) {
+                        // alt: test that arc direction vectors at start and end point towards the line
+                        // P and Q are the closest and the furthest points from the line on the circle
+                        val px = circle.x + circle.radius*a
+                        val py = circle.y + circle.radius*b
+                        val signedDistanceP = a*px + b*py + c
+                        val diffSides1P = signedDistance1*signedDistanceP <= 0
+                        if (diffSides1P) { // then q is on the same side, so no need to check it
+                            if (circle.agreesWithOrientation(arcStart, Point(px, py), arcEnd)) {
+                                noIntersection = false
+                                return@forEachArc
+                            }
+                        } else {
+                            val qx = circle.x - circle.radius*a
+                            val qy = circle.y - circle.radius*b
+                            val signedDistanceQ = a*qx + b*qy + c
+                            val diffSides1Q = signedDistance1*signedDistanceQ <= 0
+                            if (diffSides1Q &&
+                                circle.agreesWithOrientation(arcStart, Point(qx, qy), arcEnd)
+                            ) {
+                                noIntersection = false
+                                return@forEachArc
+                            }
+                        }
+                    }
+                else -> {}
+            }
+        }
+        return !noIntersection
+    }
+
     override fun getRegionLocation(region: Region): Region.RegionLocation =
         when (region) {
             is Circle -> {
-                if (region.isCCW)
-                    TODO()
-                else // cannot be contained inside
-                    TODO()
+                if (this intersects region) {
+                    Region.RegionLocation.OVERLAPS
+                } else if (vertices.firstOrNull()?.liesInside(region) == true) {
+                    Region.RegionLocation.IS_CONTAINED_INSIDE
+                } else if (region.isCCW && region.center liesInside this) {
+                    Region.RegionLocation.CONTAINS_INSIDE
+                } else {
+                    Region.RegionLocation.NO_INTERSECTION
+                }
             }
             is Line -> {
-                // cannot be contained inside
-                TODO()
+                if (this intersects region)
+                    Region.RegionLocation.OVERLAPS
+                else if (vertices.firstOrNull()?.liesInside(region) == true)
+                    Region.RegionLocation.IS_CONTAINED_INSIDE
+                else
+                    Region.RegionLocation.NO_INTERSECTION
             }
             is ConcreteArcPath -> {
                 TODO()

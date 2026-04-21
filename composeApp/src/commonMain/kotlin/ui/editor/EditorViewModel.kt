@@ -553,13 +553,14 @@ class EditorViewModel : ViewModel() {
                     appendLine("$selectedExpressionsString;")
                 if (selectedArcPathsString.isNotEmpty())
                     appendLine("$selectedArcPathsString;")
-                // TMP
-                val circle = objects[expressions.circleIndices.first()] as Circle
-                val arcPath = objects[expressions.arcPathIndices.first()] as ConcreteArcPath
-                clear()
-                append(
-                    circle.getRegionLocation(arcPath)
-                )
+                // tests
+//                val circle = objects[expressions.circleIndices.first()] as Circle
+//                val line = objects[expressions.lineIndices.first()] as Line
+//                val arcPath = objects[expressions.arcPathIndices.first()] as ConcreteArcPath
+//                clear()
+//                append(
+//                    arcPath.getRegionLocation(line)
+//                )
             }
             queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
         }
