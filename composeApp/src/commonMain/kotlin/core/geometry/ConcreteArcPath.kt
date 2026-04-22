@@ -553,7 +553,7 @@ data class ConcreteArcPath(
                     Region.RegionLocation.OVERLAPS
                 } else if (vertices.firstOrNull()?.liesInside(region) == true) {
                     Region.RegionLocation.IS_CONTAINED_INSIDE
-                } else if (region.isCCW && region.center liesInside this) {
+                } else if (isClosed && region.isCCW && region.center liesInside this) {
                     Region.RegionLocation.CONTAINS_INSIDE
                 } else {
                     Region.RegionLocation.NO_INTERSECTION
@@ -572,9 +572,9 @@ data class ConcreteArcPath(
                 if (this.toRect().overlaps(region.toRect())) {
                     if (this intersects region)
                         Region.RegionLocation.OVERLAPS
-                    else if (region.vertices.firstOrNull()?.liesInside(this) == true)
+                    else if (isClosed && region.vertices.firstOrNull()?.liesInside(this) == true)
                         Region.RegionLocation.CONTAINS_INSIDE
-                    else if (this.vertices.firstOrNull()?.liesInside(region) == true)
+                    else if (region.isClosed && this.vertices.firstOrNull()?.liesInside(region) == true)
                         Region.RegionLocation.IS_CONTAINED_INSIDE
                     else
                         Region.RegionLocation.NO_INTERSECTION

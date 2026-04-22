@@ -1,6 +1,6 @@
 [versions]
-dodeclusters-version = "0.5.2"
-dodeclusters-android-versionCode = "10"
+dodeclusters-version = "0.5.3"
+dodeclusters-android-versionCode = "11"
 dodeclusters-desktop-packageVersion = "1.0.5" # cannot start with 0 it seems
 android-compileSdk = "36"
 android-minSdk = "24" # = Android 7.0 Nougat

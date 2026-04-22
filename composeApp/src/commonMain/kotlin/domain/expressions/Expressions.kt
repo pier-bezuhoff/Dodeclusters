@@ -262,10 +262,16 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         return result.firstOrNull()
     }
 
+    /** @param[changedIndices] indices of arc-paths, changed as a result of deletion */
+    data class DeletionResult(
+        val allDeletedIndices: Set<Ix>,
+        val changedIndices: Set<Ix> = emptySet(),
+    )
+
     /** @return (all deleted indices, indices changed as the result of this deletion) */
     private fun expandDeletionToChildren(
         indicesToBeDeleted: List<Ix>
-    ): Pair<Set<Ix>, Set<Ix>> {
+    ): DeletionResult {
         val deleted = indicesToBeDeleted.toMutableSet()
         val changed = mutableSetOf<Ix>()
         var lvl = indicesToBeDeleted.toSet()
@@ -280,16 +286,16 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
                         when (val expr = expressions[childIndex]?.expr) {
                             // an arc-path is deleted only when it has less than 2 vertices left
                             is ArcPath if (
-                                    expr.vertices
-                                        .filter {
-                                            // deleted contains lvl
-                                            it !in deleted && objects[it] != null
-                                        }
-                                        .size >= 2
-                                    ) ->
+                                expr.vertices
+                                    .filter { // deleted contains lvl
+                                        it !in deleted && objects[it] != null
+                                    }.size >= 2
+                            ) -> {
                                 changed.add(childIndex)
-                            else ->
+                            }
+                            else -> {
                                 newLvl.add(childIndex)
+                            }
                         }
                     }
                 }
@@ -297,14 +303,8 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             lvl = newLvl
             deleted += lvl
         }
-        return Pair(deleted, changed)
+        return DeletionResult(deleted, changed)
     }
-
-    /** @param[changedIndices] indices of arc-paths, changed as a result of deletion */
-    data class DeletionResult(
-        val allDeletedIndices: Set<Ix>,
-        val changedIndices: Set<Ix> = emptySet(),
-    )
 
     /**
      * Delete [indices] nodes and all of their children from the [ConformalExpressions] by
@@ -320,6 +320,16 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
             children.remove(deletedIndex)
             ix2tier[deletedIndex] = ABANDONED_TIER
             objectDeletedAt(deletedIndex)
+        }
+        for (changedIndex in changed) {
+            when (val expr = expressions[changedIndex]?.expr) {
+                is ArcPath -> {
+                    expressions[changedIndex] = ExprOutput.Just(
+                        expr.withoutPointsAt(deleted)!!
+                    )
+                }
+                else -> {}
+            }
         }
         for ((parentIx, childIxs) in children) {
             children[parentIx] = childIxs - deleted
