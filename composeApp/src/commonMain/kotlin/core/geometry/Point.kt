@@ -114,11 +114,11 @@ data class Point(
         else { // cmp with Offset.rotateBy
             val x0 = x - focusX
             val y0 = y - focusY
-            val cosPhi = cos(angleInRadians)
-            val sinPhi = sin(angleInRadians)
+            val cosine = cos(angleInRadians)
+            val sine = sin(angleInRadians)
             Point(
-                (x0 * cosPhi - y0 * sinPhi) + focusX,
-                (x0 * sinPhi + y0 * cosPhi) + focusY,
+                (x0 * cosine - y0 * sine) + focusX,
+                (x0 * sine + y0 * cosine) + focusY,
             )
         }
 
@@ -130,16 +130,21 @@ data class Point(
             val focusY = focus.y
             val x0 = x - focusX
             val y0 = y - focusY
-            val phi: Double = angleDeg.radians
-            val cosPhi = cos(phi)
-            val sinPhi = sin(phi)
+            val angle: Double = angleDeg.radians
+            val cosine = cos(angle)
+            val sine = sin(angle)
             Point(
-                (x0 * cosPhi - y0 * sinPhi) + focusX,
-                (x0 * sinPhi + y0 * cosPhi) + focusY,
+                (x0 * cosine - y0 * sine) + focusX,
+                (x0 * sine + y0 * cosine) + focusY,
             )
         }
 
-    override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): Point {
+    override fun transformed(
+        translation: Offset,
+        focus: Offset,
+        zoom: Float,
+        rotationAngle: Float
+    ): Point {
         if (isInfinite)
             return CONFORMAL_INFINITY
         var newX: Double = x + translation.x
@@ -149,11 +154,11 @@ data class Point(
             // cmp. Offset.rotateBy & zoom and rotation are commutative
             val dx = newX - focusX
             val dy = newY - focusY
-            val phi: Double = rotationAngle.radians
-            val cosPhi = cos(phi)
-            val sinPhi = sin(phi)
-            newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
-            newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
+            val angle: Double = rotationAngle.radians
+            val cosine = cos(angle)
+            val sine = sin(angle)
+            newX = (dx * cosine - dy * sine) * zoom + focusX
+            newY = (dx * sine + dy * cosine) * zoom + focusY
         } // tbf because of T;S;R order it is not completely accurate
         return Point(newX, newY)
     }
@@ -173,11 +178,11 @@ data class Point(
         // cmp. Offset.rotateBy & zoom and rotation are commutative
         val dx = newX - focusX
         val dy = newY - focusY
-        val phi: Double = rotationAngle.radians
-        val cosPhi = cos(phi)
-        val sinPhi = sin(phi)
-        newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
-        newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
+        val angle: Double = rotationAngle.radians
+        val cosine = cos(angle)
+        val sine = sin(angle)
+        newX = (dx * cosine - dy * sine) * zoom + focusX
+        newY = (dx * sine + dy * cosine) * zoom + focusY
         return Point(newX, newY)
     }
 

@@ -1,9 +1,10 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package core.geometry
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import domain.radians
-import domain.rotateBy
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
@@ -50,14 +51,14 @@ data class Line(
         Offset(normalX.toFloat(), normalY.toFloat())
 
     inline val directionX: Double get() =
-        b
+        -b
 
     inline val directionY: Double get() =
-        -a
+        a
 
     /** length=1 direction vector */
     val directionVector: Offset get() =
-        Offset(b.toFloat(), (-a).toFloat())
+        Offset(-b.toFloat(), a.toFloat())
 
     /** Direction-preserving, ensures that `a^2 + b^2 == 1` */
     fun normalized(): Line {
@@ -109,6 +110,18 @@ data class Line(
         )
     }
 
+    inline fun signedDistanceFrom(x: Double, y: Double): Double =
+        a*x + b*y + c
+
+    inline fun signedDistanceFrom(x: Float, y: Float): Double =
+        a*x + b*y + c
+
+    inline fun signedDistanceFrom(point: Point): Double =
+        a*point.x + b*point.y + c
+
+    inline fun signedDistanceFrom(point: Offset): Double =
+        a*point.x + b*point.y + c
+
     override fun distanceFrom(point: Offset): Double =
         abs(a*point.x + b*point.y + c)
 
@@ -120,10 +133,10 @@ data class Line(
         else abs(a*point.x + b*point.y + c)
 
     override fun getPointLocation(point: Offset): Region.PointLocation {
-        val t = a * point.x + b * point.y + c
+        val sd = signedDistanceFrom(point)
         return when {
-            t < 0 -> Region.PointLocation.INSIDE
-            t > 0 -> Region.PointLocation.OUTSIDE
+            sd > 0 -> Region.PointLocation.INSIDE
+            sd < 0 -> Region.PointLocation.OUTSIDE
             else -> Region.PointLocation.BORDERING
         }
     }
@@ -131,10 +144,10 @@ data class Line(
     override fun getPointLocation(point: Point): Region.PointLocation {
         if (point.isInfinite)
             return Region.PointLocation.BORDERING
-        val t = (a*point.x + b*point.y + c)
+        val sd = signedDistanceFrom(point)
         return when {
-            abs(t) < EPSILON -> Region.PointLocation.BORDERING
-            t < 0 -> Region.PointLocation.INSIDE
+            abs(sd) < EPSILON -> Region.PointLocation.BORDERING
+            sd > 0 -> Region.PointLocation.INSIDE
             else -> Region.PointLocation.OUTSIDE
         }
     }
@@ -177,7 +190,7 @@ data class Line(
 
     override fun scaled(focus: Offset, zoom: Float): Line {
         // dist1 -> zoom * dist 1
-        val newC = zoom*(a*focus.x + b*focus.y + c) - a*focus.x - b*focus.y
+        val newC = zoom * signedDistanceFrom(focus) - a*focus.x - b*focus.y
         return copy(c = newC)
     }
 
@@ -185,22 +198,26 @@ data class Line(
     // MAYBE: scale a&b too and for incidents use vector (a, b) instead of normal with length=1?
     override fun scaled(focusX: Double, focusY: Double, zoom: Double): Line {
         // dist1 -> zoom * dist 1
-        val newC = zoom*(a*focusX + b*focusY + c) - a*focusX - b*focusY
+        val newC = zoom * signedDistanceFrom(focusX, focusY) - a*focusX - b*focusY
         return copy(c = newC)
     }
 
     override fun rotated(focusX: Double, focusY: Double, angleInRadians: Double): Line {
-        val newA = normalX * cos(angleInRadians) - normalY * sin(angleInRadians)
-        val newB = normalX * sin(angleInRadians) + normalY * cos(angleInRadians)
-        val newC = hypot(newA, newB) * (a*focusX + b*focusY + c) - newA*focusX - newB*focusY
+        val cosine = cos(angleInRadians)
+        val sine = sin(angleInRadians)
+        val newA = normalX * cosine - normalY * sine
+        val newB = normalX * sine + normalY * cosine
+        val newC = signedDistanceFrom(focusX, focusY) - newA*focusX - newB*focusY
         return Line(newA, newB, newC)
     }
 
     override fun rotated(focus: Offset, angleInDegrees: Float): Line {
-        val newNormal = normalVector.rotateBy(angleInDegrees)
-        val newA = newNormal.x.toDouble()
-        val newB = newNormal.y.toDouble()
-        val newC = hypot(newA, newB) * (a*focus.x + b*focus.y + c) - newA*focus.x - newB*focus.y
+        val angle = angleInDegrees.radians
+        val cosine = cos(angle)
+        val sine = sin(angle)
+        val newA = normalX * cosine - normalY * sine
+        val newB = normalX * sine + normalY * cosine
+        val newC = signedDistanceFrom(focus) - newA*focus.x - newB*focus.y
         return Line(newA, newB, newC)
     }
 
@@ -216,13 +233,13 @@ data class Line(
             else focus
         var c1: Double = c
         c1 -= a*translation.x + b*translation.y
-        c1 = zoom*(a*focusX + b*focusY + c1) // - a*focusX - b*focusY // added back when rotating
-        val phi: Double = rotationAngle.radians
-        val cosPhi = cos(phi)
-        val sinPhi = sin(phi)
-        val a1 = a * cosPhi - b * sinPhi
-        val b1 = a * sinPhi + b * cosPhi
-        c1 = hypot(a1, b1) * c1 - a1*focusX - b1*focusY
+        c1 = zoom * signedDistanceFrom(focusX, focusY) // - a*focusX - b*focusY // added back when rotating
+        val angle: Double = rotationAngle.radians
+        val cosine = cos(angle)
+        val sine = sin(angle)
+        val a1 = normalX * cosine - normalY * sine
+        val b1 = normalX * sine + normalY * cosine
+        c1 = c1 - a1*focusX - b1*focusY
         return Line(a1, b1, c1)
     }
 
@@ -339,6 +356,18 @@ data class Line(
             val dy = end.y - start.y
             val scalar = (point.x - start.x)*dx + (point.y - start.y)*dy
             val t = (scalar/l2).coerceIn(0.0, 1.0)
+            return Point(
+                x = start.x + t*dx,
+                y = start.y + t*dy
+            )
+        }
+
+        fun projectPointOntoLineBy2Points(point: Point, start: Point, end: Point): Point {
+            val l2 = start.distance2From(end)
+            val dx = end.x - start.x
+            val dy = end.y - start.y
+            val scalar = (point.x - start.x)*dx + (point.y - start.y)*dy
+            val t = scalar/l2
             return Point(
                 x = start.x + t*dx,
                 y = start.y + t*dy

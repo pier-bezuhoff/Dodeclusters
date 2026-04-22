@@ -681,17 +681,16 @@ private fun DrawScope.drawVisibleLineSegment(
     val (a, b, c) = line
     val centerX = visibleRect.left + visibleRect.width/2f
     val centerY = visibleRect.top + visibleRect.height/2f
-    val maxDim = visibleRect.maxDimension
     val t = b*centerX - a*centerY
-    val n2 = a*a + b*b
-    val pointClosestToScreenCenterX = ((b*t - a*c)/n2).toFloat()
-    val pointClosestToScreenCenterY = ((-a*t - b*c)/n2).toFloat()
-    val directionX =  line.directionX.toFloat()
-    val directionY =  line.directionY.toFloat()
-    val farBackX: Float = pointClosestToScreenCenterX - directionX * maxDim
-    val farBackY: Float = pointClosestToScreenCenterY - directionY * maxDim
-    val farForwardX: Float = pointClosestToScreenCenterX + directionX * maxDim
-    val farForwardY: Float = pointClosestToScreenCenterY + directionY * maxDim
+    val pointClosestToScreenCenterX = (b*t - a*c).toFloat()
+    val pointClosestToScreenCenterY = (-a*t - b*c).toFloat()
+    val maxDim = visibleRect.maxDimension
+    val shiftX =  line.directionX.toFloat() * maxDim
+    val shiftY =  line.directionY.toFloat() * maxDim
+    val farBackX: Float = pointClosestToScreenCenterX - shiftX
+    val farBackY: Float = pointClosestToScreenCenterY - shiftY
+    val farForwardX: Float = pointClosestToScreenCenterX + shiftX
+    val farForwardY: Float = pointClosestToScreenCenterY + shiftY
     drawLine(
         color,
         Offset(farBackX, farBackY),
@@ -754,11 +753,10 @@ private fun DrawScope.drawArrows(
             drawPath(path, color, style = Stroke(pathEffect = ARROWED_PATH_EFFECT))
         }
         is Line -> {
-            val maxDim = visibleRect.maxDimension
             val pointClosestToScreenCenter = circle.project(visibleRect.center)
-            val direction =  circle.directionVector
-            val farBack = pointClosestToScreenCenter - direction * maxDim
-            val farForward = pointClosestToScreenCenter + direction * maxDim
+            val shift =  circle.directionVector * visibleRect.maxDimension
+            val farBack = pointClosestToScreenCenter - shift
+            val farForward = pointClosestToScreenCenter + shift
             val path = Path()
             path.moveTo(farBack.x, farBack.y)
             path.lineTo(farForward.x, farForward.y)
@@ -798,11 +796,10 @@ private fun DrawScope.drawArrowsPatchedForAndroid(
             drawPath(path, color, style = Stroke(pathEffect = ARROWED_PATH_EFFECT))
         }
         is Line -> {
-            val maxDim = visibleRect.maxDimension
             val pointClosestToScreenCenter = circle.project(visibleRect.center)
-            val direction =  circle.directionVector
-            val farBack = pointClosestToScreenCenter - direction * maxDim
-            val farForward = pointClosestToScreenCenter + direction * maxDim
+            val shift = circle.directionVector * visibleRect.maxDimension
+            val farBack = pointClosestToScreenCenter - shift
+            val farForward = pointClosestToScreenCenter + shift
             // NOTE: Android  clips arrows & hair on near-horizontal and near-vertical lines
             //  so im trying to toe around it
             //  ┏━━━━┛

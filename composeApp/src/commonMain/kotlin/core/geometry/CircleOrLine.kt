@@ -91,7 +91,7 @@ sealed interface CircleLineIntersection {
     data class Double(val point1: Point, val point2: Point) : CircleLineIntersection
 }
 
-// from Circle.calculateIntersectionPoints
+// from Circle.calculateIntersectionPoints, more all-encompassing version
 /** @return Ordered intersection between [o1] and [o2]. When there are 2 intersection points,
  * they are ordered as follows:
  *
@@ -105,10 +105,10 @@ fun calculateIntersection(
     o1: CircleOrLine,
     o2: CircleOrLine,
 ): CircleLineIntersection {
-    return when {
-        o1 == o2 || o1 == o2.reversed() ->
+    return when (o1) {
+        o2, o2.reversed() ->
             CircleLineIntersection.Eq
-        o1 is Line && o2 is Line -> {
+        is Line if o2 is Line -> {
             val (a1, b1, c1) = o1
             val (a2, b2, c2) = o2
             val w = a1*b2 - a2*b1
@@ -126,7 +126,7 @@ fun calculateIntersection(
                     CircleLineIntersection.Double(q, p)
             }
         }
-        o1 is Line && o2 is Circle -> {
+        is Line if o2 is Circle -> {
             val (cx, cy, r) = o2
             val (px, py) = o1.project(Point(cx, cy))
             val distance = hypot(px - cx, py - cy)
@@ -136,10 +136,10 @@ fun calculateIntersection(
                 CircleLineIntersection.Tangent(Point(px, py))
             } else {
                 val pToIntersection = sqrt(r.pow(2) - distance * distance)
-                val vx = o1.directionX
-                val vy = o1.directionY
-                val p = Point(px + vx * pToIntersection, py + vy * pToIntersection)
-                val q = Point(px - vx * pToIntersection, py - vy * pToIntersection)
+                val vx = o1.directionX * pToIntersection
+                val vy = o1.directionY * pToIntersection
+                val p = Point(px - vx, py - vy)
+                val q = Point(px + vx, py + vy)
                 val s = o1.pointInBetween(p, q) // directed segment p->s->q
                 if (s in o2)
                     CircleLineIntersection.Double(p, q)
@@ -147,7 +147,7 @@ fun calculateIntersection(
                     CircleLineIntersection.Double(q, p)
             }
         }
-        o1 is Circle && o2 is Line -> {
+        is Circle if o2 is Line -> {
             val (cx, cy, r) = o1
             val (px, py) = o2.project(Point(cx, cy))
             val distance = hypot(px - cx, py - cy)
@@ -157,10 +157,10 @@ fun calculateIntersection(
                 CircleLineIntersection.Tangent(Point(px, py))
             } else {
                 val pToIntersection = sqrt(r.pow(2) - distance * distance)
-                val vx = o2.directionX
-                val vy = o2.directionY
-                val p = Point(px + vx * pToIntersection, py + vy * pToIntersection)
-                val q = Point(px - vx * pToIntersection, py - vy * pToIntersection)
+                val vx = o2.directionX * pToIntersection
+                val vy = o2.directionY * pToIntersection
+                val p = Point(px - vx, py - vy)
+                val q = Point(px + vx, py + vy)
                 val s = o2.pointInBetween(p, q) // directed segment p->s->q
                 if (s in o1)
                     CircleLineIntersection.Double(q, p)
@@ -168,9 +168,9 @@ fun calculateIntersection(
                     CircleLineIntersection.Double(p, q)
             }
         }
-        o1 is Circle && o2 is Circle -> {
-            val (x1,y1,r1) = o1
-            val (x2,y2,r2) = o2
+        is Circle if o2 is Circle -> {
+            val (x1, y1, r1) = o1
+            val (x2, y2, r2) = o2
             val r12 = o1.r2
             val r22 = o2.r2
             val dcx = x2 - x1

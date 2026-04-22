@@ -23,7 +23,6 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
-import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -298,27 +297,32 @@ data class Circle(
     override fun rotated(focusX: Double, focusY: Double, angleInRadians: Double): Circle {
         val x0 = x - focusX
         val y0 = y - focusY
-        val cosPhi = cos(angleInRadians)
-        val sinPhi = sin(angleInRadians)
+        val cosine = cos(angleInRadians)
+        val sine = sin(angleInRadians)
         return copy(
-            x = (x0 * cosPhi - y0 * sinPhi) + focusX,
-            y = (x0 * sinPhi + y0 * cosPhi) + focusY,
+            x = (x0 * cosine - y0 * sine) + focusX,
+            y = (x0 * sine + y0 * cosine) + focusY,
         )
     }
 
     override fun rotated(focus: Offset, angleInDegrees: Float): Circle {
         val x0 = x - focus.x
         val y0 = y - focus.y
-        val phi: Double = angleInDegrees.radians
-        val cosPhi = cos(phi)
-        val sinPhi = sin(phi)
+        val angle: Double = angleInDegrees.radians
+        val cosine = cos(angle)
+        val sine = sin(angle)
         return copy(
-            x = (x0 * cosPhi - y0 * sinPhi) + focus.x,
-            y = (x0 * sinPhi + y0 * cosPhi) + focus.y,
+            x = (x0 * cosine - y0 * sine) + focus.x,
+            y = (x0 * sine + y0 * cosine) + focus.y,
         )
     }
 
-    override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): Circle {
+    override fun transformed(
+        translation: Offset,
+        focus: Offset,
+        zoom: Float,
+        rotationAngle: Float
+    ): Circle {
         var newX: Double = x + translation.x
         var newY: Double = y + translation.y
         if (focus != Offset.Unspecified) {
@@ -326,11 +330,11 @@ data class Circle(
             // cmp. Offset.rotateBy & zoom and rotation are commutative
             val dx = newX - focusX
             val dy = newY - focusY
-            val phi: Double = rotationAngle.radians
-            val cosPhi = cos(phi)
-            val sinPhi = sin(phi)
-            newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
-            newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
+            val angle: Double = rotationAngle.radians
+            val cosine = cos(angle)
+            val sine = sin(angle)
+            newX = (dx * cosine - dy * sine) * zoom + focusX
+            newY = (dx * sine + dy * cosine) * zoom + focusY
         }
         return copy(
             x = newX,
@@ -377,9 +381,9 @@ data class Circle(
     infix fun isOutBeside(circle: Circle): Boolean =
         distance2BetweenCenters(circle) >= (radius + circle.radius).pow2()
 
-    infix fun doesntIntersect(circle: Circle): Boolean {
+    infix fun intersects(circle: Circle): Boolean {
         val d2 = distance2BetweenCenters(circle)
-        return d2 < (circle.radius - radius).pow2() || d2 > (radius + circle.radius).pow2()
+        return d2 >= (circle.radius - radius).pow2() && d2 <= (radius + circle.radius).pow2()
     }
 
     // NOTE: checks without epsilon
@@ -683,6 +687,7 @@ data class Circle(
             }
 
         private const val TANGENTIAL_TOUCH_EPSILON: Double = 2 * EPSILON
+        private const val TANGENTIAL_TOUCH_EPSILON2: Double = TANGENTIAL_TOUCH_EPSILON*TANGENTIAL_TOUCH_EPSILON
         private const val TANGENTIAL_TOUCH_EPSILON_F: Float = 2e-6f
 
         // NOTE: on Android triple tangential intersections are brittle
@@ -713,27 +718,31 @@ data class Circle(
                         // we know that w != 0 (non-parallel)
                         val p = Point(wx / w, wy / w)
                         val q = Point.CONFORMAL_INFINITY
+                        listOf(p, q)
+                        // NOTE: i think it's more reasonable to fix order for line-line
+                        //  but we could set proper order for oriented intersection
                         // 2's normal forms non-obtuse angle with 1's direction, or
-                        if (w >= 0)
-                            listOf(p, q)
-                        else
-                            listOf(q, p)
+//                        if (w >= 0)
+//                            listOf(p, q)
+//                        else
+//                            listOf(q, p)
                     }
                 }
                 is Line if circle2 is Circle -> {
                     val (cx, cy, r) = circle2
                     val (px, py) = circle1.project(Point(cx, cy))
-                    val distance = hypot(px - cx, py - cy)
-                    if (distance >= r + TANGENTIAL_TOUCH_EPSILON) {
+                    val distance2 = squareSum(px - cx, py - cy)
+                    val diff = r*r - distance2
+                    if (diff + TANGENTIAL_TOUCH_EPSILON2 <= 0) {
                         emptyList()
-                    } else if (abs(distance - r) < TANGENTIAL_TOUCH_EPSILON) { // they touch (hold hands ///)
+                    } else if (abs(diff) < TANGENTIAL_TOUCH_EPSILON2) { // they touch (hold hands ///)
                         listOf(Point(px, py))
                     } else {
-                        val pToIntersection = sqrt(r.pow(2) - distance * distance)
-                        val vx = circle1.directionX
-                        val vy = circle1.directionY
-                        val p = Point(px + vx * pToIntersection, py + vy * pToIntersection)
-                        val q = Point(px - vx * pToIntersection, py - vy * pToIntersection)
+                        val pToIntersection = sqrt(diff)
+                        val vx = circle1.directionX * pToIntersection
+                        val vy = circle1.directionY * pToIntersection
+                        val p = Point(px - vx, py - vy)
+                        val q = Point(px + vx, py + vy)
                         val s = circle1.pointInBetween(p, q) // directed segment p->s->q
                         if (s in circle2)
                             listOf(p, q)
@@ -742,20 +751,21 @@ data class Circle(
                     }
                 }
                 is Circle if circle2 is Line -> {
-        //                    calculateIntersectionPoints(circle2, circle1).reversed() // ^^^
+//                    calculateIntersectionPoints(circle2, circle1).reversed() // ^^^
                     val (cx, cy, r) = circle1
                     val (px, py) = circle2.project(Point(cx, cy))
-                    val distance = hypot(px - cx, py - cy)
-                    if (distance >= r + TANGENTIAL_TOUCH_EPSILON) {
+                    val distance2 = squareSum(px - cx, py - cy)
+                    val diff = r*r - distance2
+                    if (diff + TANGENTIAL_TOUCH_EPSILON2 <= 0) {
                         emptyList()
-                    } else if (abs(distance - r) < TANGENTIAL_TOUCH_EPSILON) {
+                    } else if (abs(diff) < TANGENTIAL_TOUCH_EPSILON2) {
                         listOf(Point(px, py))
                     } else {
-                        val pToIntersection = sqrt(r.pow(2) - distance * distance)
-                        val vx = circle2.directionX
-                        val vy = circle2.directionY
-                        val p = Point(px + vx * pToIntersection, py + vy * pToIntersection)
-                        val q = Point(px - vx * pToIntersection, py - vy * pToIntersection)
+                        val pToIntersection = sqrt(diff)
+                        val vx = circle2.directionX * pToIntersection
+                        val vy = circle2.directionY * pToIntersection
+                        val p = Point(px - vx, py - vy)
+                        val q = Point(px + vx, py + vy)
                         val s = circle2.pointInBetween(p, q) // directed segment p->s->q
                         if (s in circle1)
                             listOf(q, p)
@@ -764,12 +774,13 @@ data class Circle(
                     }
                 }
                 is Circle if circle2 is Circle -> {
-                    val (x1,y1,r1) = circle1
-                    val (x2,y2,r2) = circle2
+                    val (x1, y1, r1) = circle1
+                    val (x2, y2, r2) = circle2
                     val dcx = x2 - x1
                     val dcy = y2 - y1
                     val d2 = dcx*dcx + dcy*dcy
-                    val d = sqrt(d2) // distance between centers
+                    /** distance between centers */
+                    val d = sqrt(d2)
                     val rDiff = abs(r1 - r2)
                     if (d == 0.0 && rDiff < TANGENTIAL_TOUCH_EPSILON || // coinciding circles
                         rDiff >= d + TANGENTIAL_TOUCH_EPSILON || // matryoshka
@@ -876,6 +887,37 @@ data class Circle(
                 else
                     listOf(qx, qy, px, py)
             }
+        }
+
+        fun calculate2RoughIntersections(
+            circle1: Circle, circle2: Circle
+        ): List<Point> {
+            val (x1, y1, r1) = circle1
+            val (x2, y2, r2) = circle2
+            val dcx = x2 - x1
+            val dcy = y2 - y1
+            val d2 = dcx * dcx + dcy * dcy
+            if (d2 <= 0)
+                return emptyList()
+            val d = sqrt(d2) // distance between centers
+            val r12 = r1 * r1
+            val r22 = r2 * r2
+            val dr2 = r12 - r22
+            val a = (d2 + dr2) / (2 * d)
+            val discriminant = r12 - a * a
+            if (discriminant <= 0)
+                return emptyList()
+            val h = sqrt(discriminant)
+            val dc0x = dcx/d
+            val dc0y = dcy/d
+            val pcx = x1 + a * dc0x
+            val pcy = y1 + a * dc0y
+            val vx = h * dc0x
+            val vy = h * dc0y
+            return listOf(
+                Point(pcx + vy, pcy - vx),
+                Point(pcx - vy, pcy + vx),
+            )
         }
 
         fun orderInBetween(order1: Double, order2: Double): Double {

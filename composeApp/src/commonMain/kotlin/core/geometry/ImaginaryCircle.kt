@@ -49,15 +49,20 @@ data class ImaginaryCircle(
     override fun rotated(focusX: Double, focusY: Double, angleInRadians: Double): ImaginaryCircle {
         val x0 = x - focusY
         val y0 = y - focusY
-        val cosPhi = cos(angleInRadians)
-        val sinPhi = sin(angleInRadians)
+        val cosine = cos(angleInRadians)
+        val sine = sin(angleInRadians)
         return copy(
-            x = (x0 * cosPhi - y0 * sinPhi) + focusX,
-            y = (x0 * sinPhi + y0 * cosPhi) + focusY,
+            x = (x0 * cosine - y0 * sine) + focusX,
+            y = (x0 * sine + y0 * cosine) + focusY,
         )
     }
 
-    override fun transformed(translation: Offset, focus: Offset, zoom: Float, rotationAngle: Float): ImaginaryCircle {
+    override fun transformed(
+        translation: Offset,
+        focus: Offset,
+        zoom: Float,
+        rotationAngle: Float
+    ): ImaginaryCircle {
         var newX: Double = x + translation.x
         var newY: Double = y + translation.y
         if (focus != Offset.Unspecified) {
@@ -65,11 +70,11 @@ data class ImaginaryCircle(
             // cmp. Offset.rotateBy & zoom and rotation are commutative
             val dx = newX - focusX
             val dy = newY - focusY
-            val phi: Double = rotationAngle.radians
-            val cosPhi = cos(phi)
-            val sinPhi = sin(phi)
-            newX = (dx * cosPhi - dy * sinPhi) * zoom + focusX
-            newY = (dx * sinPhi + dy * cosPhi) * zoom + focusY
+            val angle: Double = rotationAngle.radians
+            val cosine = cos(angle)
+            val sine = sin(angle)
+            newX = (dx * cosine - dy * sine) * zoom + focusX
+            newY = (dx * sine + dy * cosine) * zoom + focusY
         }
         return ImaginaryCircle(newX, newY, zoom * radius)
     }

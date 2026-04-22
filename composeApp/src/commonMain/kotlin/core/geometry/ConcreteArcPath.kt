@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import domain.angleRad
 import domain.pow2
+import domain.squareSum
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
@@ -447,6 +448,104 @@ data class ConcreteArcPath(
         return !noIntersection
     }
 
+    /** checks whether `this` contour has intersections [concreteArcPath] contour */
+    infix fun intersects(concreteArcPath: ConcreteArcPath): Boolean {
+        var noIntersection = true
+        forEachArc { _, arc1, start1, end1 ->
+            concreteArcPath.forEachArc { _, arc2, start2, end2 ->
+                when (val circle1 = arc1.circleOrLine) {
+                    is Circle -> when (val circle2 = arc2.circleOrLine) {
+                        is Circle -> if (circle1 intersects circle2) {
+                            val ips = Circle.calculate2RoughIntersections(circle1, circle2)
+                            if (ips.size == 2) {
+                                val (p, q) = ips
+                                if (circle1.agreesWithOrientation(start1, p, end1) &&
+                                    circle2.agreesWithOrientation(start2, p, end2) ||
+                                    circle1.agreesWithOrientation(start1, q, end1) &&
+                                    circle2.agreesWithOrientation(start2, q, end2)
+                                ) {
+                                    noIntersection = false
+                                    return@forEachArc
+                                }
+                            }
+                        }
+                        else -> {
+                            val (cx, cy, r) = circle1
+                            val l2 = start2.distance2From(end2)
+                            val dx = end2.x - start2.x
+                            val dy = end2.y - start2.y
+                            val scalar = (cx - start2.x)*dx + (cy - start2.y)*dy
+                            val t = scalar/l2
+                            // circle center projected onto segment
+                            val px = start2.x + t*dx
+                            val py = start2.y + t*dy
+                            val distance2 = squareSum(px - cx, py - cy)
+                            val diff = r*r - distance2
+                            if (diff > 0) {
+                                val k = sqrt(diff)/sqrt(l2)
+                                val vx = k * dx
+                                val vy = k * dy
+                                val p = Point(px - vx, py - vy)
+                                val q = Point(px + vx, py + vy)
+                                if (circle1.agreesWithOrientation(start1, p, end1) &&
+                                    start2.dot(p, end2) in 0.0..l2 ||
+                                    circle1.agreesWithOrientation(start1, q, end1) &&
+                                    start2.dot(q, end2) in 0.0..l2
+                                ) {
+                                    noIntersection = false
+                                    return@forEachArc
+                                }
+                            }
+                        }
+                    }
+                    else -> when (val circle2 = arc2.circleOrLine) {
+                        is Circle -> {
+                            val (cx, cy, r) = circle2
+                            val l2 = start1.distance2From(end1)
+                            val dx = end1.x - start1.x
+                            val dy = end1.y - start1.y
+                            val scalar = (cx - start1.x)*dx + (cy - start1.y)*dy
+                            val t = scalar/l2
+                            val px = start1.x + t*dx
+                            val py = start1.y + t*dy
+                            val distance2 = squareSum(px - cx, py - cy)
+                            val diff = r*r - distance2
+                            if (diff > 0) {
+                                val k = sqrt(diff)/sqrt(l2)
+                                val vx = k * dx
+                                val vy = k * dy
+                                val p = Point(px - vx, py - vy)
+                                val q = Point(px + vx, py + vy)
+                                if (start1.dot(p, end1) in 0.0..l2 &&
+                                    circle2.agreesWithOrientation(start2, p, end2) ||
+                                    start1.dot(q, end1) in 0.0..l2 &&
+                                    circle2.agreesWithOrientation(start2, q, end2)
+                                ) {
+                                    noIntersection = false
+                                    return@forEachArc
+                                }
+                            }
+                        }
+                        else -> {
+                            val o1 = Point.cross(start1, end1, start2) > 0
+                            val o2 = Point.cross(start1, end1, end2) > 0
+                            val o3 = Point.cross(start2, end2, start1) > 0
+                            val o4 = Point.cross(start2, end2, end1) > 0
+                            if (o1 != o2 && o3 != o4) { // each segment must separate ends of the other one
+                                noIntersection = false
+                                return@forEachArc
+                            }
+                            // ideally we also check collinear stuff
+                        }
+                    }
+                }
+            }
+            if (!noIntersection)
+                return@forEachArc
+        }
+        return !noIntersection
+    }
+
     override fun getRegionLocation(region: Region): Region.RegionLocation =
         when (region) {
             is Circle -> {
@@ -469,7 +568,19 @@ data class ConcreteArcPath(
                     Region.RegionLocation.NO_INTERSECTION
             }
             is ConcreteArcPath -> {
-                TODO()
+                // i think it's smart to do O(2*n) quick reject first before O(n^2) intersection tests
+                if (this.toRect().overlaps(region.toRect())) {
+                    if (this intersects region)
+                        Region.RegionLocation.OVERLAPS
+                    else if (region.vertices.firstOrNull()?.liesInside(this) == true)
+                        Region.RegionLocation.CONTAINS_INSIDE
+                    else if (this.vertices.firstOrNull()?.liesInside(region) == true)
+                        Region.RegionLocation.IS_CONTAINED_INSIDE
+                    else
+                        Region.RegionLocation.NO_INTERSECTION
+                } else {
+                    Region.RegionLocation.NO_INTERSECTION
+                }
             }
         }
 

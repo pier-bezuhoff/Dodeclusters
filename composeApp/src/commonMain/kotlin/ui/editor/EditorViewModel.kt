@@ -556,10 +556,12 @@ class EditorViewModel : ViewModel() {
                 // tests
 //                val circle = objects[expressions.circleIndices.first()] as Circle
 //                val line = objects[expressions.lineIndices.first()] as Line
+//                val point = objects[expressions.pointIndices.last()] as Point
 //                val arcPath = objects[expressions.arcPathIndices.first()] as ConcreteArcPath
+//                val arcPath2 = objects[expressions.arcPathIndices.last()] as ConcreteArcPath
 //                clear()
 //                append(
-//                    arcPath.getRegionLocation(line)
+//                    arcPath.getRegionLocation(arcPath2)
 //                )
             }
             queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
@@ -1350,7 +1352,8 @@ class EditorViewModel : ViewModel() {
             }
             is PointSnapResult.Intersection -> {
                 val point = snapResult.result
-                val (ix1, ix2) = listOf(snapResult.circle1Index, snapResult.circle2index)
+                val ix1 = snapResult.circle1Index
+                val ix2 = snapResult.circle2index
                 val expr = Expr.Intersection(ix1, ix2)
                 val possibleExistingIntersections =
                     expressions.findExistingIntersectionIndices(ix1, ix2)
@@ -1359,7 +1362,7 @@ class EditorViewModel : ViewModel() {
                     val p = objects[it] as Point
                     p.distanceFrom(point)
                 }
-                val intersectionSnapDistance = 1.5 * tapRadius.toDouble() // magic number
+                val intersectionSnapDistance = INTERSECTION_SNAP_FACTOR * tapRadius
                 if (closestIndex != null &&
                     point.distanceFrom(objects[closestIndex] as Point) <= intersectionSnapDistance
                 ) {
@@ -1939,6 +1942,8 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun tryGrabbingArcMidpoint(absolutePosition: Offset) {
+        // FIX: cannot grab when any arc-path point is deleted
+        //  also no adjustable midpoints on deleted arcs
         for (ix in selection.arcPaths) {
             val concreteArcPath = objects[ix] as? ConcreteArcPath ?: continue
             for (arcIndex in concreteArcPath.arcs.indices) {
@@ -4692,6 +4697,7 @@ class EditorViewModel : ViewModel() {
         const val HUD_ZOOM_INCREMENT = 1.1f // == +10%
         const val KEYBOARD_ZOOM_INCREMENT = 1.05f // == +5%
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
+        const val INTERSECTION_SNAP_FACTOR = 1.5
         const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_ANGLE_SNAPPING = false //true

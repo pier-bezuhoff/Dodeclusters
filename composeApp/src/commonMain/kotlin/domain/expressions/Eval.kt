@@ -43,13 +43,9 @@ fun computeCircleBy3Points(
         GeneralizedCircle.fromGCircle(point1),
         GeneralizedCircle.fromGCircle(point2),
         GeneralizedCircle.fromGCircle(point3),
-    )
-    // we reverse orientation for circles because of left-hand xOy
-    // but it doesn't affect lines
-    return when (val gCircle = perp3?.toGCircle()) {
-        is Circle -> gCircle.reversed()
-        else -> gCircle
-    }
+    )?.times(-1)
+    // we reverse orientation because of left-hand xOy
+    return perp3?.toGCircle()
 }
 
 fun computeCircleByPencilAndPoint(
@@ -68,12 +64,14 @@ fun computeCircleByPencilAndPoint(
 fun computeLineBy2Points(
     point1: GCircle,
     point2: GCircle
-): Line? =
-    GeneralizedCircle.perp3(
+): Line? {
+    val perp3 = GeneralizedCircle.perp3(
         GeneralizedCircle.fromGCircle(point1),
         GeneralizedCircle.fromGCircle(point2),
         GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
-    )?.toGCircle() as? Line
+    )?.times(-1)
+    return perp3?.toGCircle() as? Line
+}
 
 fun computeCircleInversion(
     target: GCircle,
