@@ -141,43 +141,41 @@ data class ConcreteArcPath(
         var projectedPoint = vertices.first()
         var arcPercentage = 0.0
         var distance = Double.POSITIVE_INFINITY
-        for (arcIndex in arcs.indices) {
-            val arc = arcs[arcIndex]
+        forEachArc { arcIndex, arc, start, end ->
             when (val circleOrLine = arc.circleOrLine) {
                 is Circle -> {
-                    if (arc.sweepAngle == 0.0)
-                        continue
-                    val onCirclePoint = circleOrLine.project(point)
-                    val angle = circleOrLine.calculateStartAngle(onCirclePoint)
-                    val closestOnArcAngle = Circle.coerceAngle(angle, arc.startAngle, arc.sweepAngle)
-                    val onArcPoint = circleOrLine.angle2point(closestOnArcAngle)
+                    if (arc.sweepAngle != 0.0) {
+                        val onCirclePoint = circleOrLine.project(point)
+                        val angle = circleOrLine.calculateStartAngle(onCirclePoint)
+                        val closestOnArcAngle = Circle.coerceAngle(angle, arc.startAngle, arc.sweepAngle)
+                        val onArcPoint = circleOrLine.angle2point(closestOnArcAngle)
+                        val d = point.distanceFrom(onArcPoint)
+                        if (d < distance) {
+                            index = arcIndex
+                            distance = d
+                            projectedPoint = onArcPoint
+                            arcPercentage = (closestOnArcAngle - arc.startAngle)/arc.sweepAngle
+                        }
+                    }
+                }
+                else -> {
+                    val l2 = start.distance2From(end)
+                    val dx = end.x - start.x
+                    val dy = end.y - start.y
+                    val scalar = (point.x - start.x)*dx + (point.y - start.y)*dy
+                    val percentage = (scalar/l2).coerceIn(0.0, 1.0)
+                    val onArcPoint = Point(
+                        x = start.x + percentage*dx,
+                        y = start.y + percentage*dy
+                    )
                     val d = point.distanceFrom(onArcPoint)
                     if (d < distance) {
                         index = arcIndex
                         distance = d
                         projectedPoint = onArcPoint
-                        arcPercentage = (closestOnArcAngle - arc.startAngle)/arc.sweepAngle
+                        arcPercentage = percentage
                     }
                 }
-                is Line -> {
-                    val onLineOrder = circleOrLine.point2order(point)
-                    val startOrder = circleOrLine.point2order(vertices[arcIndex])
-                    val endOrder = circleOrLine.point2order(vertices[
-                        (arcIndex + 1).mod(vertices.size)
-                    ])
-                    if (startOrder == endOrder)
-                        continue
-                    val closestOrder = Line.coerceOrder(onLineOrder, startOrder, endOrder)
-                    val onArcPoint = circleOrLine.order2point(closestOrder)
-                    val d = point.distanceFrom(onArcPoint)
-                    if (d < distance) {
-                        index = arcIndex
-                        distance = d
-                        projectedPoint = onArcPoint
-                        arcPercentage = (closestOrder - startOrder)/(endOrder - startOrder)
-                    }
-                }
-                null -> {}
             }
         }
         return ProjectionResult(

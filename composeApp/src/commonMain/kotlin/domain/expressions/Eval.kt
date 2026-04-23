@@ -238,17 +238,16 @@ fun computeArcPathIncidence(
             val angle = arc.startAngle + arc.sweepAngle*params.arcPercentage
             circleOrLine.angle2point(angle)
         }
-        is Line -> {
+        else -> {
             val arcStart = concreteArcPath.vertices[params.arcIndex]
             val arcEnd = concreteArcPath.vertices[
                 (params.arcIndex + 1).mod(concreteArcPath.vertices.size)
             ]
-            val startOrder = circleOrLine.point2order(arcStart)
-            val endOrder = circleOrLine.point2order(arcEnd)
-            val order = startOrder + (endOrder - startOrder)*params.arcPercentage
-            circleOrLine.order2point(order)
+            Point(
+                x = arcStart.x + params.arcPercentage*(arcEnd.x - arcStart.x),
+                y = arcStart.y + params.arcPercentage*(arcEnd.y - arcStart.y)
+            )
         }
-        null -> null
     }
 }
 

@@ -1,6 +1,8 @@
 package domain.expressions
 
 import domain.Ix
+import domain.filterIndices
+import domain.reindexingMap
 
 /**
  * tier = 0: free object,
@@ -262,11 +264,92 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         return result.firstOrNull()
     }
 
+    private fun getChildrenOfArc(index: Ix, arcIndex: Int): List<Ix> =
+        children[index]?.filter { childIx ->
+            when (val expr = expressions[childIx]?.expr) {
+                is Expr.ArcPathIncidence ->
+                    expr.parameters.arcIndex == arcIndex
+                is Expr.ArcPathArcMidpoint ->
+                    expr.parameters.arcIndex == arcIndex
+                else -> false
+            }
+        } ?: emptyList()
+
     /** @param[changedIndices] indices of arc-paths, changed as a result of deletion */
     data class DeletionResult(
         val allDeletedIndices: Set<Ix>,
         val changedIndices: Set<Ix> = emptySet(),
     )
+
+    /** if [arcPath] is left with >2 vertices after deletions, we
+     * delete things dependent on its now-deleted arcs and reindex those
+     * dependent on the other arcs,
+     * otherwise mark the arc-path for deletion */
+    private fun deleteArcPathVertices(
+        arcPathIndex: Ix,
+        arcPath: ArcPath,
+        deleted: Set<Ix>,
+        newDeleted: MutableSet<Ix>,
+        changed: MutableSet<Ix>,
+    ) {
+        val deletedVertices = arcPath.vertices.filterIndices { ix ->
+            ix in deleted // deleted contains lvl
+        }
+        if (arcPath.vertices.size - deletedVertices.size >= 2) {
+            val deletedArcs = deletedVertices.flatMap { i ->
+                if (arcPath is ArcPath.Closed) {
+                    listOf((i - 1).mod(arcPath.arcs.size), i)
+                } else if (i == 0) {
+                    if (arcPath.vertices.size == 1)
+                        emptyList()
+                    else
+                        listOf(i)
+                } else if (i == arcPath.vertices.lastIndex) {
+                    listOf(i - 1)
+                } else {
+                    listOf(i - 1, i)
+                }
+            }.toSet() + arcPath.arcs.filterIndices { arc ->
+                when (arc) {
+                    is ArcPath.Arc.By2Points -> false
+                    is ArcPath.Arc.By3Points -> arc.middlePointIndex in deleted
+                }
+            }
+            val leftoverArcs = arcPath.arcs.indices - deletedArcs
+            val reindexing = reindexingMap(arcPath.arcs.indices, deletedArcs)
+            for (arcIndex in leftoverArcs) {
+                val newArcIndex = reindexing[arcIndex] ?: continue
+                for (ix in getChildrenOfArc(arcPathIndex, arcIndex)) {
+                    when (val e = expressions[ix]?.expr) {
+                        is Expr.ArcPathIncidence ->
+                            expressions[ix] = ExprOutput.Just(
+                                e.copy(
+                                    parameters = e.parameters.copy(
+                                        arcIndex = newArcIndex
+                                    )
+                                )
+                            )
+                        is Expr.ArcPathArcMidpoint ->
+                            expressions[ix] = ExprOutput.Just(
+                                e.copy(
+                                    parameters = e.parameters.copy(
+                                        arcIndex = newArcIndex
+                                    )
+                                )
+                            )
+                        else -> {}
+                    }
+                }
+            }
+            val deletedArcChildren = deletedArcs.flatMap { arcIndex ->
+                getChildrenOfArc(arcPathIndex, arcIndex)
+            }
+            changed.add(arcPathIndex)
+            newDeleted.addAll(deletedArcChildren)
+        } else {
+            newDeleted.add(arcPathIndex)
+        }
+    }
 
     /** @return (all deleted indices, indices changed as the result of this deletion) */
     private fun expandDeletionToChildren(
@@ -282,16 +365,14 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
                 val childrenOfDeleted = children[deletedIndex]
                 if (childrenOfDeleted != null) {
                     for (childIndex in childrenOfDeleted) {
-                        // hardcoding ts is faux pas
                         when (val expr = expressions[childIndex]?.expr) {
-                            // an arc-path is deleted only when it has less than 2 vertices left
-                            is ArcPath if (
-                                expr.vertices
-                                    .filter { // deleted contains lvl
-                                        it !in deleted && objects[it] != null
-                                    }.size >= 2
-                            ) -> {
-                                changed.add(childIndex)
+                            // hardcoding ts is faux pas
+                            is ArcPath -> {
+                                // an arc-path is deleted only when it has less than 2 vertices left
+                                deleteArcPathVertices(
+                                    childIndex, expr,
+                                    deleted, newLvl, changed
+                                )
                             }
                             else -> {
                                 newLvl.add(childIndex)
