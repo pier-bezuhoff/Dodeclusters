@@ -509,7 +509,7 @@ fun DialogTitle(
 fun PreTextFieldLabel(
     stringResource: StringResource,
     modifier: Modifier = Modifier,
-    textyStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
+    textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
     Text(
         buildAnnotatedString {
@@ -517,7 +517,7 @@ fun PreTextFieldLabel(
             append(":  ")
         },
         modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp),
-        style = textyStyle,
+        style = textStyle,
     )
 }
 
@@ -558,8 +558,8 @@ fun FloatTextField(
     modifier: Modifier = Modifier,
     textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
-    val s = value.formatDecimals(nFractionalDigits, showTrailingZeroes = false)
-    var textFieldValue by remember(value) {
+    var textFieldValue by remember(value, nFractionalDigits) {
+        val s = value.formatDecimals(nFractionalDigits, showTrailingZeroes = false)
         mutableStateOf(TextFieldValue(s, TextRange(s.length)))
     }
     OutlinedTextField(
@@ -590,8 +590,8 @@ fun DoubleTextField(
     modifier: Modifier = Modifier,
     textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
-    val s = value.formatDecimals(nFractionalDigits, showTrailingZeroes = false)
-    var textFieldValue by remember(value) {
+    var textFieldValue by remember(value, nFractionalDigits) {
+        val s = value.formatDecimals(nFractionalDigits, showTrailingZeroes = false)
         mutableStateOf(TextFieldValue(s, TextRange(s.length)))
     }
     OutlinedTextField(
@@ -622,8 +622,8 @@ fun IntTextField(
     modifier: Modifier = Modifier,
     textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
-    val s = value.toString()
     var textFieldValue by remember(value) {
+        val s = value.toString()
         mutableStateOf(TextFieldValue(s, TextRange(s.length)))
     }
     OutlinedTextField(

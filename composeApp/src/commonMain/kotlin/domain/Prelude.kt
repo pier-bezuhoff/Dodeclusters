@@ -5,6 +5,7 @@ package domain
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
@@ -38,11 +39,15 @@ fun Number.formatDecimals(
     val x00 = (abs(x) * factor).roundToInt() // 1234.56 -> 1235
     val integerPart: Int = x00.div(factor) // 12
     val fractionalPart: Int = x00 - integerPart*factor // 35
+    val nFractionalPartDigits = fractionalPart.toString().length
+    val interimZeroes = "0".repeat(
+        max(0, fractionalDigits - nFractionalPartDigits)
+    )
     val sign = if (isNegative) "-" else ""
-    return if (showTrailingZeroes)
-        "$sign$integerPart.$fractionalPart" // 12.35
+    return if (showTrailingZeroes && fractionalDigits > 0)
+        "$sign$integerPart.$interimZeroes$fractionalPart" // 12.35
     else if (fractionalPart != 0)
-        "$sign$integerPart.$fractionalPart".trimEnd('0')
+        "$sign$integerPart.$interimZeroes$fractionalPart".trimEnd('0')
     else "$sign$integerPart"
 } // -0.6666666, 3   f=1000   x*f = -666.6666  x00=-667   ip=-1   fp=333  -> -1.333
 
