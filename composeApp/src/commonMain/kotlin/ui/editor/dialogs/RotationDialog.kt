@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Label
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -35,6 +36,7 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.angle_fraction_denominator_placeholder
 import dodeclusters.composeapp.generated.resources.angle_fraction_denominator_suffix
 import dodeclusters.composeapp.generated.resources.angle_fraction_numerator_placeholder
+import dodeclusters.composeapp.generated.resources.angle_fraction_numerator_prefix
 import dodeclusters.composeapp.generated.resources.angle_fraction_numerator_suffix
 import dodeclusters.composeapp.generated.resources.angle_in_degrees_placeholder
 import dodeclusters.composeapp.generated.resources.degrees_suffix
@@ -53,6 +55,8 @@ import ui.DialogTitle
 import ui.FloatTextField
 import ui.IntTextField
 import ui.PreTextFieldLabel
+import ui.TextLabel
+import ui.theme.adaptiveTypography
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -146,6 +150,7 @@ fun RotationDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
+                    TextLabel(Res.string.angle_fraction_numerator_prefix)
                     FloatTextField(
                         value = angleNumerator,
                         onNewValue = {
@@ -155,13 +160,12 @@ fun RotationDialog(
                         placeholderStringResource = Res.string.angle_fraction_numerator_placeholder,
                         nFractionalDigits = 4,
                         modifier = Modifier
-//                            .padding(horizontal = 8.dp)
-                            .widthIn(max = 160.dp)
+                            .widthIn(max = 120.dp)
                     )
                     Text(
                         stringResource(Res.string.angle_fraction_numerator_suffix),
                         Modifier.padding(8.dp),
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.adaptiveTypography.title,
                     )
                     IntTextField(
                         value = angleDenominator,
@@ -170,17 +174,11 @@ fun RotationDialog(
                             angle = (angleNumerator/angleDenominator) * 360f
                         },
                         placeholderStringResource = Res.string.angle_fraction_denominator_placeholder,
-//                        suffixStringResource = Res.string.angle_fraction_denominator_suffix,
                         valueValidator = { it != 0 },
                         modifier = Modifier
-//                            .padding(horizontal = 8.dp)
                             .widthIn(max = 100.dp)
                     )
-                    Text(
-                        stringResource(Res.string.angle_fraction_denominator_suffix),
-                        Modifier.padding(8.dp),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
+                    TextLabel(Res.string.angle_fraction_denominator_suffix)
                 }
                 Slider(
                     value = angle,

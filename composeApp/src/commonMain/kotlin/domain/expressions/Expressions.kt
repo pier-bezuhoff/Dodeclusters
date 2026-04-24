@@ -292,6 +292,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         newDeleted: MutableSet<Ix>,
         changed: MutableSet<Ix>,
     ) {
+        /** indices of deleted vertices within ConcreteArcPath.vertices */
         val deletedVertices = arcPath.vertices.filterIndices { ix ->
             ix in deleted // deleted contains lvl
         }
@@ -315,9 +316,16 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
                     is ArcPath.Arc.By3Points -> arc.middlePointIndex in deleted
                 }
             }
+            val deletedArcChildren = deletedArcs.flatMap { arcIndex ->
+                getChildrenOfArc(arcPathIndex, arcIndex)
+            }
             val leftoverArcs = arcPath.arcs.indices - deletedArcs
-            val reindexing = reindexingMap(arcPath.arcs.indices, deletedArcs)
+            val reindexing = reindexingMap(
+                arcPath.vertices.indices,
+                deletedVertices.toSet()
+            )
             for (arcIndex in leftoverArcs) {
+                // note that we use vertex reindexing instead of arcs
                 val newArcIndex = reindexing[arcIndex] ?: continue
                 for (ix in getChildrenOfArc(arcPathIndex, arcIndex)) {
                     when (val e = expressions[ix]?.expr) {
@@ -340,9 +348,6 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
                         else -> {}
                     }
                 }
-            }
-            val deletedArcChildren = deletedArcs.flatMap { arcIndex ->
-                getChildrenOfArc(arcPathIndex, arcIndex)
             }
             changed.add(arcPathIndex)
             newDeleted.addAll(deletedArcChildren)

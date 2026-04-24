@@ -217,6 +217,7 @@
     <string name="n_steps_placeholder">&lt;number of steps&gt;</string>
     <string name="angle_in_degrees_placeholder">&lt;angle in degrees&gt;</string>
     <string name="degrees_suffix">°</string>
+    <string name="angle_fraction_numerator_prefix">Fraction</string>
     <string name="angle_fraction_numerator_placeholder">&lt;numerator&gt;</string>
     <string name="angle_fraction_numerator_suffix">/</string>
     <string name="angle_fraction_denominator_placeholder">&lt;denominator&gt;</string>

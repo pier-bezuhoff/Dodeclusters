@@ -909,10 +909,12 @@ class EditorViewModel : ViewModel() {
         }
         val toDelete = indicesToDeleteSet + arcPathPointsToDelete
         val (deletedIndices, changedIndices) = expressions.deleteNodes(toDelete.toList())
-        val nonNullDeleted = deletedIndices.filter { objects[it] is GCircleOrConcreteAcPath }
-        if (nonNullDeleted.isNotEmpty()) {
-            deleteRegionsBoundBy(nonNullDeleted)
-            val ix2o = nonNullDeleted.associateWith { objects[it] as GCircleOrConcreteAcPath }
+        val visibleDeleted = deletedIndices.filter { ix ->
+            objects[ix] is GCircleOrConcreteAcPath && (showPhantomObjects || ix !in phantoms)
+        }
+        if (visibleDeleted.isNotEmpty()) {
+            deleteRegionsBoundBy(visibleDeleted)
+            val ix2o = visibleDeleted.associateWith { objects[it] as GCircleOrConcreteAcPath }
             animationInit(ix2o)?.let { circleAnimation ->
                 viewModelScope.launch {
                     animations.emit(circleAnimation)

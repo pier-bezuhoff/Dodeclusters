@@ -214,6 +214,7 @@
     <string name="n_steps_placeholder">&lt;число шагов&gt;</string>
     <string name="angle_in_degrees_placeholder">&lt;угол в градусах&gt;</string>
     <string name="degrees_suffix">°</string>
+    <string name="angle_fraction_numerator_prefix">Дробь</string>
     <string name="angle_fraction_numerator_placeholder">&lt;числитель&gt;</string>
     <string name="angle_fraction_denominator_placeholder">&lt;знаменатель&gt;</string>
     <string name="dilation_placeholder">&lt;логарифм раздутия/сжатия&gt;</string>

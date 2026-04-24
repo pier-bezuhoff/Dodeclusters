@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -506,6 +507,19 @@ fun DialogTitle(
 }
 
 @Composable
+fun TextLabel(
+    stringResource: StringResource,
+    modifier: Modifier = Modifier.padding(8.dp),
+    textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
+) {
+    Text(
+        text = stringResource(stringResource),
+        modifier = modifier,
+        style = textStyle,
+    )
+}
+
+@Composable
 fun PreTextFieldLabel(
     stringResource: StringResource,
     modifier: Modifier = Modifier,
@@ -548,6 +562,7 @@ fun LabelColonBigValue(
     )
 }
 
+// MAYBE: control max width using AdaptiveTypography (Modifier.widthIn(max = ...))
 @Composable
 fun FloatTextField(
     value: Float,
