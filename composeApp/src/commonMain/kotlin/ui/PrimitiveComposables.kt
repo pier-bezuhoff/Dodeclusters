@@ -37,6 +37,7 @@ import androidx.compose.material3.SnackbarData
 import androidx.compose.material3.SnackbarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -790,12 +791,31 @@ fun BoxScope.LoadingOverlay(
 fun SnackbarWithHighlightMarkdown(
     snackbarData: SnackbarData,
     modifier: Modifier = Modifier,
+    actionOnNewLine: Boolean = false,
     shape: Shape = SnackbarDefaults.shape,
     containerColor: Color = SnackbarDefaults.color,
     contentColor: Color = SnackbarDefaults.contentColor,
     highlightColor: Color = MaterialTheme.colorScheme.secondary,
+    actionColor: Color = SnackbarDefaults.actionColor,
+    actionContentColor: Color = SnackbarDefaults.actionContentColor,
     dismissActionContentColor: Color = SnackbarDefaults.dismissActionContentColor,
 ) {
+    val annotatedMessage = remember(snackbarData, highlightColor) {
+        HighlightMarkdown.parse(snackbarData.visuals.message, highlightColor)
+    }
+    val actionLabel = snackbarData.visuals.actionLabel
+    val actionComposable: (@Composable () -> Unit)? =
+        if (actionLabel != null) {
+            @Composable {
+                TextButton(
+                    colors = ButtonDefaults.textButtonColors(contentColor = actionColor),
+                    onClick = { snackbarData.performAction() },
+                    content = { Text(actionLabel) },
+                )
+            }
+        } else {
+            null
+        }
     val dismissActionComposable: (@Composable () -> Unit)? =
         // see Snackbar default source code
         if (snackbarData.visuals.withDismissAction) {
@@ -812,7 +832,10 @@ fun SnackbarWithHighlightMarkdown(
                     IconButton(
                         onClick = { snackbarData.dismiss() },
                         content = {
-                            Icon(painterResource(Res.drawable.close), contentDescription = contentDescription)
+                            Icon(
+                                painterResource(Res.drawable.close),
+                                contentDescription = contentDescription
+                            )
                         },
                     )
                 }
@@ -822,16 +845,18 @@ fun SnackbarWithHighlightMarkdown(
         }
     Snackbar(
         modifier = modifier.padding(12.dp),
+        action = actionComposable,
         dismissAction = dismissActionComposable,
+        actionOnNewLine = actionOnNewLine,
         shape = shape,
         containerColor = containerColor,
         contentColor = contentColor,
+        actionContentColor = actionContentColor,
         dismissActionContentColor = dismissActionContentColor,
         content = {
-            val annotatedMessage = remember(snackbarData, highlightColor) {
-                HighlightMarkdown.parse(snackbarData.visuals.message, highlightColor)
-            }
-            Text(text = annotatedMessage)
+            Text(
+                text = annotatedMessage
+            )
         },
     )
 }

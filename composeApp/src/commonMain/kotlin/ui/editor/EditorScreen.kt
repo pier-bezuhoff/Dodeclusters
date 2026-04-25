@@ -43,8 +43,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -60,6 +58,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import core.geometry.CircleOrLine
@@ -83,12 +82,12 @@ import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
 import domain.LoadingState
-import domain.model.PartialArgList
 import domain.ProgressState
 import domain.io.DdcSharing
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
+import domain.model.PartialArgList
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
@@ -99,7 +98,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import ui.DisableableButton
-import ui.HighlightMarkdown
 import ui.LifecycleEvent
 import ui.LoadingOverlay
 import ui.OnOffButton
@@ -120,9 +118,8 @@ import ui.editor.dialogs.LoxodromicMotionDialog
 import ui.editor.dialogs.RotationDialog
 import ui.editor.dialogs.SaveOptionsDialog
 import ui.editor.dialogs.SavePromptDialog
-import ui.isCompact
-import ui.isLandscape
 import ui.theme.DodeclustersColors
+import ui.theme.adaptiveSizing
 import ui.theme.extendedColorScheme
 import ui.theme.isDarkTheme
 import ui.tools.Category
@@ -139,10 +136,7 @@ fun EditorScreen(
     lifecycleEvents: SharedFlow<LifecycleEvent>? = null,
     ddcSharing: DdcSharing? = null,
 ) {
-    val windowSizeClass = calculateWindowSizeClass()
-    val isLandscape = windowSizeClass.isLandscape
-    val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
-    val compact = windowSizeClass.isCompact
+    val isLandscape = MaterialTheme.adaptiveSizing.isLandscape
     val coroutineScope = rememberCoroutineScope()
     val dialogActions = keyboardActions?.mapNotNull {
         when (it) {
@@ -167,7 +161,6 @@ fun EditorScreen(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
-//                    highlightColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         },
@@ -180,7 +173,7 @@ fun EditorScreen(
                         viewModel.switchToCategory(category, togglePanel = true)
                     },
                     modifier =
-                        if (compactHeight) Modifier
+                        if (MaterialTheme.adaptiveSizing.isCompactVertically) Modifier
                             .size(48.dp)
                             .offset(x = 8.dp, y = 16.dp)
                         else Modifier,
@@ -213,14 +206,11 @@ fun EditorScreen(
                         tool = viewModel.toolbarState.activeTool,
                         toolIsEnabled = viewModel.toolPredicate(viewModel.toolbarState.activeTool),
                         partialArgList = viewModel.partialArgList,
-                        isLandscape = isLandscape,
-                        compact = compact,
                         showSelectionAsArgPrompt = viewModel.showPromptToSetActiveSelectionAsToolArg,
                         setSelectionAsArg = viewModel::setActiveSelectionAsToolArg,
                         modifier = Modifier.align(Alignment.TopStart)
                     )
                     EditorTopBar(
-                        compact = compact,
                         undoIsEnabled = viewModel.undoIsEnabled.value,
                         redoIsEnabled = viewModel.redoIsEnabled.value,
                         showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
@@ -239,13 +229,11 @@ fun EditorScreen(
                     if (isLandscape) {
                         ToolbarLandscape(
                             viewModel,
-                            compact,
                             Modifier.align(Alignment.CenterStart)
                         )
                     } else {
                         ToolbarPortrait(
                             viewModel,
-                            compact,
                             Modifier.align(Alignment.BottomStart)
                         )
                     }
@@ -485,7 +473,7 @@ fun EditorScreen(
     }
     LaunchedEffect(snackbarHostState) {
         viewModel.snackbarMessages.collectLatest { (message, formatArgs) ->
-            snackbarHostState.showSnackbar(
+            val result = snackbarHostState.showSnackbar(
                 getString(message.stringResource, *formatArgs),
                 duration = message.duration
             )
@@ -565,19 +553,19 @@ fun ToolDescription(
     tool: Tool,
     toolIsEnabled: Boolean,
     partialArgList: PartialArgList?,
-    isLandscape: Boolean,
-    compact: Boolean,
     showSelectionAsArgPrompt: Boolean,
     setSelectionAsArg: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isCompact = MaterialTheme.adaptiveSizing.isCompact
+    val isLandscape = MaterialTheme.adaptiveSizing.isLandscape
     val textStyle =
-        if (compact) MaterialTheme.typography.bodySmall
+        if (isCompact) MaterialTheme.typography.bodySmall
         else MaterialTheme.typography.titleMedium
     Column(
         modifier
             .offset(x = if (isLandscape) 100.dp else 0.dp) // offsetting left toolbar
-            .fillMaxWidth(if (compact) 0.45f else 0.5f) // we cant specify max text length, so im doing this
+            .fillMaxWidth(if (isCompact) 0.45f else 0.5f) // we cant specify max text length, so im doing this
     ) {
         Crossfade(Pair(tool, toolIsEnabled)) { (currentTool, currentToolIsEnabled) ->
             val description = when (currentTool) {
@@ -671,7 +659,7 @@ fun ToolDescription(
                             Modifier.padding(start = 8.dp)
                         )
                     }
-                } else if (!compact) {
+                } else if (!isCompact) {
                     Text(argPrompt,
                         Modifier.padding(24.dp, 4.dp),
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
@@ -686,7 +674,6 @@ fun ToolDescription(
 
 @Composable
 fun EditorTopBar(
-    compact: Boolean,
     undoIsEnabled: Boolean,
     redoIsEnabled: Boolean,
     openNewBlank: () -> Unit,
@@ -698,12 +685,13 @@ fun EditorTopBar(
     modifier: Modifier = Modifier,
     openFileRequests: SharedFlow<Unit>? = null,
 ) {
+    val isCompact = MaterialTheme.adaptiveSizing.isCompact
     val iconModifier =
-        if (compact) Modifier.padding(4.dp).size(30.dp)
+        if (isCompact) Modifier.padding(4.dp).size(30.dp)
         else Modifier.padding(8.dp, 4.dp).size(40.dp)
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
-    val toolbarHeight = if (compact) 48.dp else 64.dp
+    val toolbarHeight = if (isCompact) 48.dp else 64.dp
     // bad in portrait, fine in landscape
 //    SimpleToolButtonWithTooltip(
 //        Tool.ToggleMenu,
@@ -785,7 +773,10 @@ fun EditorTopBar(
 }
 
 @Composable
-private fun ToolbarPortrait(viewModel: EditorViewModel, compact: Boolean, modifier: Modifier = Modifier) {
+private fun ToolbarPortrait(
+    viewModel: EditorViewModel,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.Bottom,
@@ -800,7 +791,6 @@ private fun ToolbarPortrait(viewModel: EditorViewModel, compact: Boolean, modifi
             if (showPanel) {
                 HorizontalPanel(
                     activeCategory = activeCategory,
-                    compact = compact,
                     regionColor = viewModel.regionColor,
                     isToolEnabled = viewModel::toolPredicate,
                     isToolAlternativeEnabled = viewModel::toolAlternativePredicate,
@@ -811,16 +801,19 @@ private fun ToolbarPortrait(viewModel: EditorViewModel, compact: Boolean, modifi
                 )
             }
         }
-        BottomToolbar(viewModel, compact, Modifier.align(Alignment.Start))
+        BottomToolbar(viewModel, Modifier.align(Alignment.Start))
     }
 }
 
 @Composable
-private fun ToolbarLandscape(viewModel: EditorViewModel, compact: Boolean, modifier: Modifier = Modifier) {
+private fun ToolbarLandscape(
+    viewModel: EditorViewModel,
+    modifier: Modifier = Modifier
+) {
     Row(modifier,
         horizontalArrangement = Arrangement.Start
     ) {
-        LeftToolbar(viewModel, compact, Modifier
+        LeftToolbar(viewModel, Modifier
 //            .zIndex(1f)
             .align(Alignment.CenterVertically)
         )
@@ -834,7 +827,6 @@ private fun ToolbarLandscape(viewModel: EditorViewModel, compact: Boolean, modif
             if (showPanel) {
                 VerticalPanel(
                     activeCategory = activeCategory,
-                    compact = compact,
                     regionColor = viewModel.regionColor,
                     isToolEnabled = viewModel::toolPredicate,
                     isToolAlternativeEnabled = viewModel::toolAlternativePredicate,
@@ -851,14 +843,14 @@ private fun ToolbarLandscape(viewModel: EditorViewModel, compact: Boolean, modif
 @Composable
 private fun BottomToolbar(
     viewModel: EditorViewModel,
-    compact: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val isCompact = MaterialTheme.adaptiveSizing.isCompact
 //    val scrollState = rememberScrollState()
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
     val toolbarSize =
-        if (compact) 48.dp
+        if (isCompact) 48.dp
         else 64.dp
     Row(modifier
 //        .horizontalScroll(scrollState)
@@ -874,17 +866,17 @@ private fun BottomToolbar(
         Alignment.CenterVertically
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
-            CategoryButton(viewModel, Category.Drag, compact = compact)
-            CategoryButton(viewModel, Category.Multiselect, compact = compact)
-            CategoryButton(viewModel, Category.Region, compact = compact)
+            CategoryButton(viewModel, Category.Drag)
+            CategoryButton(viewModel, Category.Multiselect)
+            CategoryButton(viewModel, Category.Region)
             Spacer(Modifier.size(12.dp, 0.dp))
             VerticalDivider(Modifier
                 .fillMaxHeight(0.7f)
                 .align(Alignment.CenterVertically)
             )
-            CategoryButton(viewModel, Category.Visibility, compact = compact)
-            CategoryButton(viewModel, Category.Colors, compact = compact)
-            CategoryButton(viewModel, Category.Transform, compact = compact)
+            CategoryButton(viewModel, Category.Visibility)
+            CategoryButton(viewModel, Category.Colors)
+            CategoryButton(viewModel, Category.Transform)
         }
     }
 }
@@ -892,13 +884,13 @@ private fun BottomToolbar(
 @Composable
 private fun LeftToolbar(
     viewModel: EditorViewModel,
-    compact: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val isCompact = MaterialTheme.adaptiveSizing.isCompact
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
     val toolbarSize =
-        if (compact) 48.dp
+        if (isCompact) 48.dp
         else 64.dp
     Column(
         modifier
@@ -915,33 +907,33 @@ private fun LeftToolbar(
         Alignment.CenterHorizontally
     ) {
         val dividerPaddings =
-            if (compact) PaddingValues(vertical = 6.dp)
+            if (isCompact) PaddingValues(vertical = 6.dp)
             else PaddingValues(top = 12.dp) // every CategoryButton already has 12dp high spacer on the top
         CompositionLocalProvider(LocalContentColor provides contentColor) {
-            if (compact)
+            if (isCompact)
                 Spacer(Modifier.height(6.dp))
-            CategoryButton(viewModel, Category.Drag, compact = compact)
-            CategoryButton(viewModel, Category.Multiselect, compact = compact)
-            CategoryButton(viewModel, Category.Region, compact = compact)
+            CategoryButton(viewModel, Category.Drag)
+            CategoryButton(viewModel, Category.Multiselect)
+            CategoryButton(viewModel, Category.Region)
             HorizontalDivider(Modifier
                 .padding(dividerPaddings)
                 .fillMaxWidth(0.7f)
                 .align(Alignment.CenterHorizontally)
             )
-            CategoryButton(viewModel, Category.Visibility, compact = compact)
-            CategoryButton(viewModel, Category.Colors, compact = compact)
-            CategoryButton(viewModel, Category.Transform, compact = compact)
+            CategoryButton(viewModel, Category.Visibility)
+            CategoryButton(viewModel, Category.Colors)
+            CategoryButton(viewModel, Category.Transform)
             HorizontalDivider(Modifier
                 .padding(dividerPaddings)
                 .fillMaxWidth(0.7f)
                 .align(Alignment.CenterHorizontally)
             )
             CategoryButton(
-                viewModel, Category.Create, compact = compact,
+                viewModel, Category.Create
 //                tint = MaterialTheme.colorScheme.secondary
             )
             Spacer(Modifier.height(
-                if (compact) 6.dp else 12.dp
+                if (isCompact) 6.dp else 12.dp
             ))
         }
     }
@@ -951,17 +943,17 @@ private fun LeftToolbar(
 fun CategoryButton(
     viewModel: EditorViewModel,
     category: Category,
-    compact: Boolean = false,
     modifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current,
 ) {
+    val isCompact = MaterialTheme.adaptiveSizing.isCompact
     val defaultTool = viewModel.toolbarState.getDefaultTool(category)
-    if (!compact)
+    if (!isCompact)
         Spacer(Modifier.size(12.dp, 12.dp))
     val categoryModifier = modifier
         .padding(4.dp)
         .size(
-            if (compact) 36.dp
+            if (isCompact) 36.dp
             else 40.dp
         )
     if (defaultTool == null) {
@@ -996,7 +988,6 @@ fun CategoryButton(
 @Composable
 private fun HorizontalPanel(
     activeCategory: Category,
-    compact: Boolean,
     regionColor: Color,
     isToolEnabled: (Tool) -> Boolean,
     isToolAlternativeEnabled: (Tool) -> Boolean,
@@ -1009,8 +1000,9 @@ private fun HorizontalPanel(
     // scrollable lazy row, w = wrap content
     // can be shown or hidden with a collapse button at the end
     require(activeCategory.tools.size > 1)
+    val isCompact = MaterialTheme.adaptiveSizing.isCompact
     val toolModifier =
-        if (compact) Modifier.padding(4.dp).size(30.dp)
+        if (isCompact) Modifier.padding(4.dp).size(30.dp)
         else Modifier
     // scrollable row + highlight selected tool
     val scrollState = rememberScrollState()
@@ -1064,7 +1056,6 @@ private fun HorizontalPanel(
 @Composable
 private fun VerticalPanel(
     activeCategory: Category,
-    compact: Boolean,
     regionColor: Color,
     isToolEnabled: (Tool) -> Boolean,
     isToolAlternativeEnabled: (Tool) -> Boolean,
@@ -1077,8 +1068,9 @@ private fun VerticalPanel(
     // scrollable lazy row, w = wrap content
     // can be shown or hidden with a collapse button at the end
     require(activeCategory.tools.size > 1)
+    val isCompact = MaterialTheme.adaptiveSizing.isCompact
     val toolModifier =
-        if (compact) Modifier.padding(4.dp).size(30.dp)
+        if (isCompact) Modifier.padding(4.dp).size(30.dp)
         else Modifier
     // scrollable row + highlight selected tool
     val scrollState = rememberScrollState()

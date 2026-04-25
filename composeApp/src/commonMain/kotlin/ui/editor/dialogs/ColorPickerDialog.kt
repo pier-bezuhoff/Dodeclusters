@@ -27,9 +27,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -82,10 +79,8 @@ import ui.SimpleButton
 import ui.TwoIconButtonWithTooltip
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
-import ui.isCompact
-import ui.isExpanded
-import ui.isLandscape
 import ui.theme.DodeclustersColors
+import ui.theme.adaptiveSizing
 
 /**
  * @param[currentColor] currently chosen color
@@ -150,11 +145,10 @@ fun ColorPickerDialog(
         0.1f to Color.White,
         0.9f to Color.Black,
     ) }
-    val windowSizeClass = calculateWindowSizeClass()
-    val isCompact = windowSizeClass.isCompact
-    val isMedium = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium && windowSizeClass.heightSizeClass == WindowHeightSizeClass.Medium
-    val isExpanded = windowSizeClass.isExpanded
-    val isLandscape = windowSizeClass.isLandscape
+    val isCompact = MaterialTheme.adaptiveSizing.isCompact
+    val isMedium = MaterialTheme.adaptiveSizing.isMedium
+    val isExpanded = MaterialTheme.adaptiveSizing.isExpanded
+    val isLandscape = MaterialTheme.adaptiveSizing.isLandscape
     val maxColorsPerRowLandscape = 11
     val maxColorsPerRowPortrait = if (isMedium) 8 else 6
     val paletteModifier = Modifier

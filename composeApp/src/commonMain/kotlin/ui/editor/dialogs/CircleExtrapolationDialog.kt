@@ -14,8 +14,6 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
@@ -39,7 +37,7 @@ import dodeclusters.composeapp.generated.resources.circle_extrapolation_title
 import domain.expressions.ExtrapolationParameters
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
-import ui.isLandscape
+import ui.theme.adaptiveSizing
 import ui.theme.adaptiveTypography
 import kotlin.math.roundToInt
 
@@ -82,18 +80,17 @@ fun CircleExtrapolationDialog(
         steps = maxCount - minCount - 1,
         valueRange = minCount.toFloat()..maxCount.toFloat()
     ) }
-    val windowSizeClass = calculateWindowSizeClass()
-    val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
+    val isCompactVertically = MaterialTheme.adaptiveSizing.isCompactVertically
     Dialog(
         onDismissRequest = onDismissRequest,
-        properties = DialogProperties(usePlatformDefaultWidth = !compactHeight)
+        properties = DialogProperties(usePlatformDefaultWidth = !isCompactVertically)
     ) {
         Surface(
             modifier = Modifier.padding(16.dp),
             shape = MaterialTheme.shapes.extraLarge,
         ) {
-            if (windowSizeClass.isLandscape) {
-                if (windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Compact) // for mobile phones
+            if (MaterialTheme.adaptiveSizing.isLandscape) {
+                if (isCompactVertically) // for mobile phones
                     CircleExtrapolationHorizontalCompact(leftSliderState, rightSliderState, onDismissRequest, onConfirm)
                 else
                     CircleExtrapolationHorizontal(leftSliderState, rightSliderState, onDismissRequest, onConfirm)

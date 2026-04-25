@@ -12,12 +12,10 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ui.isCompact
 
 @Immutable
 enum class ColorTheme {
@@ -81,7 +79,9 @@ fun DodeclustersTheme(
     val extendedScheme =
         if (isLight) DodeclustersColors.extendedLightScheme
         else DodeclustersColors.extendedDarkScheme
-    val isCompact = calculateWindowSizeClass().isCompact
+    val windowSizeClass = calculateWindowSizeClass()
+    val adaptiveSizing = AdaptiveSizing(windowSizeClass)
+    val isCompact = adaptiveSizing.isCompact
     val adaptiveTypography = AdaptiveTypography(
         actionButtonFontSize =
             if (isCompact)
@@ -127,6 +127,8 @@ fun DodeclustersTheme(
     }
     CompositionLocalProvider(
         LocalExtendedColors provides extendedScheme,
+        LocalIsDarkTheme provides (!isLight),
+        LocalAdaptiveSizing provides adaptiveSizing,
         LocalAdaptiveTypography provides adaptiveTypography,
         LocalViewConfiguration provides viewConfiguration,
     ) {
