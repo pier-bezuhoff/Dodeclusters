@@ -46,7 +46,6 @@ import domain.ProgressState
 import domain.Snapping
 import domain.angleDeg
 import domain.cluster.Constellation
-import domain.compressConstraints
 import domain.entails
 import domain.expressions.ArcPath
 import domain.expressions.ArcPathArcMidpointParameters
@@ -86,6 +85,7 @@ import domain.model.ChangeHistory
 import domain.model.ChessboardPattern
 import domain.model.ConformalObjectModel
 import domain.model.ContinuousChange
+import domain.model.Delimiters
 import domain.model.LogicalRegion
 import domain.model.PartialArcPath
 import domain.model.PartialArgList
@@ -155,8 +155,9 @@ class EditorViewModel : ViewModel() {
 //    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
     // MAYBE: when circles are hidden select regions instead
+    private val selectionState: MutableState<Selection> = mutableStateOf(Selection())
     /** indices of selected circles/lines/points & arc-paths */
-    var selection: Selection by mutableStateOf(Selection())
+    var selection: Selection by selectionState
         private set
     /** Distinct selected [GCircle]? indices +
      * indices of all vertices/midpoints of selected arc-paths */
@@ -609,39 +610,9 @@ class EditorViewModel : ViewModel() {
         history.recordDiff(saveState())
     }
 
-    fun undo() {
-        if (!undoIsEnabled.value)
-            return
-        val m = mode
-        if (m is ToolMode && partialArgList?.args?.isNotEmpty() == true) {
-            // MAYBE: just pop the last arg
-            partialArgList = PartialArgList(m.signature, m.nonEqualityConditions)
-            if (submode is SubMode.ExprAdjustment<*>) {
-                cancelExprAdjustment()
-            }
-        } else {
-            when (submode) {
-                is SubMode.RotateStereographicSphere -> switchToCategory(Category.Drag)
-                else -> switchToMode(mode) // clears up stuff
-            }
-            clearSelection()
-            val presentState = saveState()
-            val newState = history.undo(presentState)
-            loadState(newState)
-            resetTransients()
-        }
-        objectModel.invalidate()
-    }
-
-    fun redo() {
-        if (!redoIsEnabled.value)
-            return
-        switchToMode(mode)
-        val presentState = saveState()
-        val newState = history.redo(presentState)
-        loadState(newState)
-        resetTransients()
-        objectModel.invalidate()
+    private fun resetTransients() {
+        showPromptToSetActiveSelectionAsToolArg = false
+        submode = null
     }
 
     private fun loadState(state: SaveState) {
@@ -672,9 +643,41 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun resetTransients() {
-        showPromptToSetActiveSelectionAsToolArg = false
-        submode = null
+    fun undo() {
+        if (!undoIsEnabled.value)
+            return
+        when (val mode = mode) {
+            is ToolMode if (partialArgList?.args?.isNotEmpty() == true) -> {
+                // MAYBE: just pop the last arg
+                partialArgList = PartialArgList(mode.signature, mode.nonEqualityConditions)
+                if (submode is SubMode.ExprAdjustment<*>) {
+                    cancelExprAdjustment()
+                }
+            }
+            else -> {
+                when (submode) {
+                    is SubMode.RotateStereographicSphere -> switchToCategory(Category.Drag)
+                    else -> switchToMode(mode) // clears up stuff
+                }
+                clearSelection()
+                val presentState = saveState()
+                val newState = history.undo(presentState)
+                loadState(newState)
+                resetTransients()
+            }
+        }
+        objectModel.invalidate()
+    }
+
+    fun redo() {
+        if (!redoIsEnabled.value)
+            return
+        switchToMode(mode)
+        val presentState = saveState()
+        val newState = history.redo(presentState)
+        loadState(newState)
+        resetTransients()
+        objectModel.invalidate()
     }
 
     /** Append (upscaled) [newGCircle] to [objects], set it as [selection], invalidate,
@@ -971,7 +974,7 @@ class EditorViewModel : ViewModel() {
 
     fun switchToMode(newMode: Mode) {
         // NOTE: these altering shortcuts are unused for now so that they don't confuse category-expand buttons
-        if (objectSelection.size > 1 && newMode == SelectionMode.Drag) {
+        if (selection.size > 1 && newMode == SelectionMode.Drag) {
             clearSelection()
         }
         showPromptToSetActiveSelectionAsToolArg = false
@@ -1170,7 +1173,7 @@ class EditorViewModel : ViewModel() {
             (objects[ix] as? CircleOrLine)?.hasOutside(absolutePosition) ?: false
         }
         val (essentialIns, essentialOuts) =
-            compressConstraints(objects, ins, outs)
+            Delimiters.compressConstraints(objects, ins, outs)
         val region0 = LogicalRegion(
             insides = ins.toSet(),
             outsides = outs.toSet(),
@@ -1902,22 +1905,6 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    /** sibling = has the same [Expr] (possibly `null`) */
-    private fun expandSelectionToAllSiblings() {
-        if (mode.isSelectingCircles()) {
-            val siblings = selection.indices
-                .map { exprOf(it) }
-                .distinct()
-                .flatMap { expr ->
-                    expressions.findExpr(expr)
-                }
-            if (mode == SelectionMode.Drag && siblings.size > 1) {
-                switchToMode(SelectionMode.Multiselect)
-            }
-            selection = Selection(gCircles = siblings)
-        }
-    }
-
     private fun downSingleCircle(absolutePosition: Offset) {
         val circle = objects[selection.gCircles.single()]
         if (circle is Circle) {
@@ -1944,8 +1931,6 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun tryGrabbingArcMidpoint(absolutePosition: Offset) {
-        // FIX: cannot grab when any arc-path point is deleted
-        //  also no adjustable midpoints on deleted arcs
         for (ix in selection.arcPaths) {
             val concreteArcPath = objects[ix] as? ConcreteArcPath ?: continue
             for (arcIndex in concreteArcPath.arcs.indices) {

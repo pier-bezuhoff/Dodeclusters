@@ -4,11 +4,12 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import domain.angleRad
+import domain.expressions.ArcPathIncidenceParameters
+import domain.expressions.computeArcPathIncidence
 import domain.pow2
 import domain.squareSum
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -23,7 +24,7 @@ data class ConcreteArcPath(
     val vertices: List<Point>,
     val arcs: List<Arc>,
     val isClosed: Boolean,
-) : GCircleOrConcreteAcPath, Region {
+) : GCircleOrConcreteAcPath, CircleOrLineOrConcreteArcPath {
     /**
      * @param[arcIndex] index within [domain.expressions.ArcPath.arcs], `null` means
      * several arcs were fused because of `null` vertices
@@ -295,18 +296,18 @@ data class ConcreteArcPath(
                 val vertex = vertices[arcIndex].toOffset()
                 val incomingNormalVector = when (val previousCircle = arcs[previousArcIndex].circleOrLine) {
                     is Circle ->
-                        circleNormal(previousCircle, vertex)
+                        normalOfCircle(previousCircle, vertex)
                     else -> {
                         val previousVertex = vertices[previousArcIndex].toOffset()
-                        lineSegmentNormal(previousVertex, vertex)
+                        normalOfLineSegment(previousVertex, vertex)
                     }
                 }
                 val outgoingNormalVector = when (val circle = arc.circleOrLine) {
                     is Circle ->
-                        circleNormal(circle, vertex)
+                        normalOfCircle(circle, vertex)
                     else -> {
                         val nextVertex = vertices[(arcIndex + 1).mod(vertices.size)].toOffset()
-                        lineSegmentNormal(vertex, nextVertex)
+                        normalOfLineSegment(vertex, nextVertex)
                     }
                 }
                 val vertexAngle = incomingNormalVector.angleRad(outgoingNormalVector)
@@ -318,15 +319,12 @@ data class ConcreteArcPath(
         return angle
     }
 
-    fun isClockwise(): Boolean =
-        isClosed && calculateTurningAngle() > PI
-
-    // better test: if the first scanline intersection at y=average vertex y is downward
-    fun isCounterclockwise(): Boolean =
-        isClosed && calculateTurningAngle() < -PI
-
     override fun hasInside(point: Point): Boolean =
         calculateWindingNumber(point) != 0
+
+    // everything is outside an open path
+    override fun hasOutside(point: Point): Boolean =
+        calculateWindingNumber(point) == 0
 
     override fun getPointLocation(point: Point): Region.PointLocation =
         if (distanceFrom(point) < EPSILON)
@@ -336,7 +334,33 @@ data class ConcreteArcPath(
         else
             Region.PointLocation.INSIDE
 
-    /** checks whether `this` contour has intersections [circle] contour */
+    override fun calculateIntersectionPoints(other: Intersectable): List<Point> {
+        val intersections = mutableListOf<Point>()
+        when (other) {
+            is Circle -> {
+                val center = other.centerPoint
+                val r2 = other.r2
+                forEachArc { _, arc, arcStart, arcEnd ->
+                    intersectCircleWithArc(center, other.radius, r2, arcStart, arcEnd, arc, intersections)
+                }
+            }
+            is Line -> {
+                forEachArc { _, arc, arcStart, arcEnd ->
+                    intersectLineWithArc(other, arcStart, arcEnd, arc, intersections)
+                }
+            }
+            is ConcreteArcPath -> {
+                forEachArc { _, arc1, start1, end1 ->
+                    other.forEachArc { _, arc2, start2, end2 ->
+                        intersect2Arcs(start1, end1, arc1, start2, end2, arc2, intersections)
+                    }
+                }
+            }
+        }
+        return intersections
+    }
+
+    /** checks whether `this` contour has intersections with [circle]'s contour */
     infix fun intersects(circle: Circle): Boolean {
         var noIntersection = true
         val (x, y, radius) = circle
@@ -402,36 +426,35 @@ data class ConcreteArcPath(
         return !noIntersection
     }
 
-    /** checks whether `this` contour has intersections [line] contour */
+    /** checks whether `this` contour has intersections with [line]'s contour */
     infix fun intersects(line: Line): Boolean {
         var noIntersection = true
-        val (a, b, c) = line
         forEachArc { _, arc, arcStart, arcEnd ->
-            val signedDistance1 = a*arcStart.x + b*arcStart.y + c
-            val signedDistance2 = a*arcEnd.x + b*arcEnd.y + c
-            if (signedDistance1*signedDistance2 < EPSILON) {
+            val sd1 = line.signedDistanceFrom(arcStart)
+            val sd2 = line.signedDistanceFrom(arcEnd)
+            if (sd1*sd2 < EPSILON) {
                 noIntersection = false
                 return@forEachArc
             }
             when (val circle = arc.circleOrLine) {
                 is Circle ->
-                    if (distanceFrom(circle.x, circle.y) <= circle.radius) {
+                    if (line.distanceFrom(circle.x, circle.y) <= circle.radius) {
                         // alt: test that arc direction vectors at start and end point towards the line
                         // P and Q are the closest and the furthest points from the line on the circle
-                        val px = circle.x + circle.radius*a
-                        val py = circle.y + circle.radius*b
-                        val signedDistanceP = a*px + b*py + c
-                        val diffSides1P = signedDistance1*signedDistanceP <= 0
+                        val px = circle.x + circle.radius*line.normalX
+                        val py = circle.y + circle.radius*line.normalY
+                        val sdP = line.signedDistanceFrom(px, py)
+                        val diffSides1P = sd1*sdP <= 0
                         if (diffSides1P) { // then q is on the same side, so no need to check it
                             if (circle.agreesWithOrientation(arcStart, Point(px, py), arcEnd)) {
                                 noIntersection = false
                                 return@forEachArc
                             }
                         } else {
-                            val qx = circle.x - circle.radius*a
-                            val qy = circle.y - circle.radius*b
-                            val signedDistanceQ = a*qx + b*qy + c
-                            val diffSides1Q = signedDistance1*signedDistanceQ <= 0
+                            val qx = circle.x - circle.radius*line.normalX
+                            val qy = circle.y - circle.radius*line.normalY
+                            val sdQ = line.signedDistanceFrom(qx, qy)
+                            val diffSides1Q = sd1*sdQ <= 0
                             if (diffSides1Q &&
                                 circle.agreesWithOrientation(arcStart, Point(qx, qy), arcEnd)
                             ) {
@@ -446,7 +469,7 @@ data class ConcreteArcPath(
         return !noIntersection
     }
 
-    /** checks whether `this` contour has intersections [concreteArcPath] contour */
+    /** checks whether `this` contour has intersections with [concreteArcPath]'s contour */
     infix fun intersects(concreteArcPath: ConcreteArcPath): Boolean {
         var noIntersection = true
         forEachArc { _, arc1, start1, end1 ->
@@ -583,7 +606,7 @@ data class ConcreteArcPath(
         }
 
     // reference: https://en.wikipedia.org/wiki/Shoelace_formula
-    /** Area of the polygon made of vertices */
+    /** Area of the polygon made up of [vertices] */
     fun calculateVertexArea(): Double {
         if (!isClosed)
             return 0.0
@@ -595,17 +618,289 @@ data class ConcreteArcPath(
         }
         return abs(sum)/2.0
     }
+
+    // i didn't test it
+    override fun reversed(): ConcreteArcPath =
+        copy(
+            vertices = vertices.take(1) + vertices.drop(1).reversed(),
+            arcs = arcs.reversed().map { arc ->
+                arc.copy(
+                    arcIndex = arc.arcIndex?.let { arcs.size - it },
+                    circleOrLine = arc.circleOrLine?.reversed(),
+                    sweepAngle = -arc.sweepAngle,
+                )
+            },
+        )
+
+    override fun point2order(point: Point): Double {
+        val (_, arcIndex, percentage) = project(point)
+        return arcIndex + percentage
+    }
+
+    override fun order2point(order: Double): Point {
+        val o = order.mod(arcs.size.toDouble())
+        return computeArcPathIncidence(
+            ArcPathIncidenceParameters(
+                arcIndex = o.toInt(),
+                arcPercentage = o.mod(1.0),
+            ),
+            this
+        )!!
+    }
+
+    override fun orderInBetween(order1: Double, order2: Double): Double {
+        val n = arcs.size.toDouble()
+        val o1 = order1.mod(n)
+        val o2 = order2.mod(n)
+        return if (o1 <= o2) {
+            (o1 + o2)*0.5
+        } else {
+            ((o2 + n + o1)*0.5).mod(n)
+        }
+    }
+
+    override fun agreesWithOrientation(startOrder: Double, middleOrder: Double, endOrder: Double): Boolean {
+        val n = arcs.size.toDouble()
+        val o1 = startOrder.mod(n)
+        val o2 = startOrder.mod(n)
+        val o3 = startOrder.mod(n)
+        return if (startOrder <= endOrder) {
+            o2 in o1..o3
+        } else {
+            o2 in o1 .. (o3 + n)
+        }
+    }
 }
 
 // normal points to the left of direction
-private fun circleNormal(circle: Circle, at: Offset): Offset =
+private fun normalOfCircle(circle: Circle, at: Offset): Offset =
     if (circle.isCCW)
         circle.center - at
     else
         at - circle.center
 
-private fun lineSegmentNormal(start: Offset, end: Offset): Offset =
+private fun normalOfLineSegment(start: Offset, end: Offset): Offset =
     Offset(
         end.y - start.y,
         -(end.x - start.x)
     )
+
+private fun intersectCircleWithArc(
+    center: Point,
+    radius: Double,
+    r2: Double,
+    arcStart: Point,
+    arcEnd: Point,
+    arc: ConcreteArcPath.Arc,
+    intersections: MutableList<Point>,
+) {
+    val side1 = center.distance2From(arcStart) >= r2
+    val side2 = center.distance2From(arcEnd) >= r2
+    when (val circle = arc.circleOrLine) {
+        is Circle -> {
+            val dcx = circle.x - center.x
+            val dcy = circle.y - center.y
+            val d2 = dcx * dcx + dcy * dcy
+            // simply find & test if intersection points lie on the arc
+            if (side1 != side2 ||
+                d2 > (circle.radius - radius).pow2() && d2 < (radius + circle.radius).pow2()
+            ) {
+                val r12 = r2
+                val r22 = circle.r2
+                val dr2 = r12 - r22
+                // reference (0->1, 1->2):
+                // https://stackoverflow.com/questions/3349125/circle-circle-intersection-points#answer-3349134
+                val d = sqrt(d2)
+                val a = (d2 + dr2)/(2 * d)
+                val h = sqrt(r12 - a * a)
+                val dc0x = dcx/d
+                val dc0y = dcy/d
+                val pcx = center.x + a * dc0x
+                val pcy = center.y + a * dc0y
+                val vx = h * dc0x
+                val vy = h * dc0y
+                val p = Point(pcx + vy, pcy - vx)
+                val q = Point(pcx - vy, pcy + vx)
+                if (circle.agreesWithOrientation(arcStart, p, arcEnd))
+                    intersections.add(p)
+                if (circle.agreesWithOrientation(arcStart, q, arcEnd))
+                    intersections.add(q)
+            }
+        }
+        // if both segment ends are in the circle, that's it
+        else -> if (side1 || side2) {
+            val (px, py) = Line.projectPointOntoSegment(center, arcStart, arcEnd)
+            val d2 = center.distance2From(px, py)
+            val diff = r2 - d2
+            if (diff > 0) {
+                val line = Line.by2Points(arcStart, arcEnd)
+                val pToIntersection = sqrt(diff)
+                val vx = line.directionX * pToIntersection
+                val vy = line.directionY * pToIntersection
+                val p = Point(px - vx, py - vy)
+                val q = Point(px + vx, py + vy)
+                if (line.agreesWithOrientation(arcStart, p, arcEnd))
+                    intersections.add(p)
+                if (line.agreesWithOrientation(arcStart, q, arcEnd))
+                    intersections.add(q)
+            }
+        }
+    }
+}
+
+private fun intersectLineWithArc(
+    line: Line,
+    arcStart: Point,
+    arcEnd: Point,
+    arc: ConcreteArcPath.Arc,
+    intersections: MutableList<Point>,
+) {
+    val sd1 = line.signedDistanceFrom(arcStart)
+    val sd2 = line.signedDistanceFrom(arcEnd)
+    when (val circle = arc.circleOrLine) {
+        is Circle -> if (line.distanceFrom(circle.x, circle.y) < circle.radius) {
+            // alt: test that arc direction vectors at start and end point towards the line
+            // P and Q are the closest and the furthest points from the line on the circle
+            val px = circle.x + circle.radius*line.normalX
+            val py = circle.y + circle.radius*line.normalY
+            val p = Point(px, py)
+            val sdP = line.signedDistanceFrom(px, py)
+            val diffSides1P = sd1*sdP < 0
+            if (diffSides1P) { // then q is on the same side, so no need to check it
+                if (circle.agreesWithOrientation(arcStart, p, arcEnd)) {
+                    intersections.add(p)
+                }
+            } else {
+                val qx = circle.x - circle.radius*line.normalX
+                val qy = circle.y - circle.radius*line.normalY
+                val q = Point(qx, qy)
+                val sdQ = line.signedDistanceFrom(qx, qy)
+                val diffSides1Q = sd1*sdQ < 0
+                if (diffSides1Q &&
+                    circle.agreesWithOrientation(arcStart, q, arcEnd)
+                ) {
+                    intersections.add(q)
+                }
+            }
+        }
+        else -> if (sd1*sd2 < 0) {
+            val line2 = Line.by2Points(arcStart, arcEnd)
+            val (a1, b1, c1) = line
+            val (a2, b2, c2) = line2
+            val w = a1*b2 - a2*b1 // guaranteed non-zero
+            val wx = b1*c2 - b2*c1 // det in homogenous coordinates
+            val wy = a2*c1 - a1*c2
+            val p = Point(wx / w, wy / w)
+            intersections.add(p)
+        }
+    }
+}
+
+private fun intersect2Arcs(
+    start1: Point,
+    end1: Point,
+    arc1: ConcreteArcPath.Arc,
+    start2: Point,
+    end2: Point,
+    arc2: ConcreteArcPath.Arc,
+    intersections: MutableList<Point>,
+) {
+    when (val circle1 = arc1.circleOrLine) {
+        is Circle -> when (val circle2 = arc2.circleOrLine) {
+            is Circle -> if (circle1 intersects circle2) {
+                val ips = Circle.calculate2RoughIntersections(circle1, circle2)
+                if (ips.size == 2) {
+                    val (p, q) = ips
+                    if (circle1.agreesWithOrientation(start1, p, end1) &&
+                        circle2.agreesWithOrientation(start2, p, end2)
+                    ) {
+                        intersections.add(p)
+                    }
+                    if (circle1.agreesWithOrientation(start1, q, end1) &&
+                        circle2.agreesWithOrientation(start2, q, end2)
+                    ) {
+                        intersections.add(q)
+                    }
+                }
+            }
+            else -> {
+                val (cx, cy, r) = circle1
+                val l2 = start2.distance2From(end2)
+                val dx = end2.x - start2.x
+                val dy = end2.y - start2.y
+                val scalar = (cx - start2.x)*dx + (cy - start2.y)*dy
+                val t = scalar/l2
+                // circle center projected onto segment
+                val px = start2.x + t*dx
+                val py = start2.y + t*dy
+                val distance2 = squareSum(px - cx, py - cy)
+                val diff = r*r - distance2
+                if (diff > 0) {
+                    val k = sqrt(diff)/sqrt(l2)
+                    val vx = k * dx
+                    val vy = k * dy
+                    val p = Point(px - vx, py - vy)
+                    val q = Point(px + vx, py + vy)
+                    if (circle1.agreesWithOrientation(start1, p, end1) &&
+                        start2.dot(p, end2) in 0.0..l2
+                    ) {
+                        intersections.add(p)
+                    }
+                    if (
+                        circle1.agreesWithOrientation(start1, q, end1) &&
+                        start2.dot(q, end2) in 0.0..l2
+                    ) {
+                        intersections.add(q)
+                    }
+                }
+            }
+        }
+        else -> when (val circle2 = arc2.circleOrLine) {
+            is Circle -> {
+                val (cx, cy, r) = circle2
+                val l2 = start1.distance2From(end1)
+                val dx = end1.x - start1.x
+                val dy = end1.y - start1.y
+                val scalar = (cx - start1.x)*dx + (cy - start1.y)*dy
+                val t = scalar/l2
+                val px = start1.x + t*dx
+                val py = start1.y + t*dy
+                val distance2 = squareSum(px - cx, py - cy)
+                val diff = r*r - distance2
+                if (diff > 0) {
+                    val k = sqrt(diff)/sqrt(l2)
+                    val vx = k * dx
+                    val vy = k * dy
+                    val p = Point(px - vx, py - vy)
+                    val q = Point(px + vx, py + vy)
+                    if (start1.dot(p, end1) in 0.0..l2 &&
+                        circle2.agreesWithOrientation(start2, p, end2)
+                    ) {
+                        intersections.add(p)
+                    }
+                    if (
+                        start1.dot(q, end1) in 0.0..l2 &&
+                        circle2.agreesWithOrientation(start2, q, end2)
+                    ) {
+                        intersections.add(q)
+                    }
+                }
+            }
+            else -> {
+                val o1 = Point.cross(start1, end1, start2) > 0
+                val o2 = Point.cross(start1, end1, end2) > 0
+                val o3 = Point.cross(start2, end2, start1) > 0
+                val o4 = Point.cross(start2, end2, end1) > 0
+                if (o1 != o2 && o3 != o4) { // each segment must separate ends of the other one
+                    val (a1, b1, c1) = Line.by2Points(start1, end1)
+                    val (a2, b2, c2) = Line.by2Points(start2, end2)
+                    val w = a1*b2 - a2*b1 // guaranteed non-zero
+                    val wx = b1*c2 - b2*c1 // det in homogenous coordinates
+                    val wy = a2*c1 - a1*c2
+                    val p = Point(wx / w, wy / w)
+                    intersections.add(p)
+                }
+            }
+        }
+    }
+}

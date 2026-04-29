@@ -14,7 +14,7 @@ import kotlin.math.sqrt
 @Immutable
 @Serializable
 sealed interface CircleOrLine :
-    CircleOrLineOrImaginaryCircle, CircleOrLineOrPoint, Region, LocusWithOrder
+    CircleOrLineOrImaginaryCircle, CircleOrLineOrPoint, CircleOrLineOrConcreteArcPath
 {
     fun project(point: Point): Point
 

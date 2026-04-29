@@ -125,12 +125,7 @@ data class Circle(
     }
 
     override fun getPointLocation(point: Point): Region.PointLocation {
-        if (point.isInfinite) {
-            return if (isCCW)
-                Region.PointLocation.OUTSIDE
-            else
-                Region.PointLocation.INSIDE
-        }
+        // works for conformal infinity
         val d2 = squareSum(point.x - x, point.y - y)
         val diff = d2 - r2
         return if (abs(diff) < EPSILON) {
@@ -142,35 +137,9 @@ data class Circle(
         }
     }
 
-    override fun hasInside(point: Point): Boolean {
-        // works for infinity
-        val d2 = squareSum(point.x - x, point.y - y)
-        val diff = d2 - r2
-        return abs(diff) >= EPSILON && diff < 0 == isCCW
-    }
-
-    override fun hasInside(point: Offset): Boolean {
-        val d2 = squareSum(point.x - x, point.y - y)
-        // distance is infinite for infinite point
-        return d2 < r2 == isCCW
-    }
-
     fun hasInside(px: Double, py: Double): Boolean {
         val d2 = squareSum(x - px, y - py)
         return d2 < r2 == isCCW
-    }
-
-    override fun hasOutside(point: Point): Boolean {
-        // works for infinity
-        val d2 = squareSum(point.x - x, point.y - y)
-        val diff = d2 - r2
-        return abs(diff) >= EPSILON && diff < 0 != isCCW
-    }
-
-    override fun hasOutside(point: Offset): Boolean {
-        val d2 = squareSum(point.x - x, point.y - y)
-        // distance is infinite for infinite point
-        return d2 < r2 != isCCW
     }
 
     fun point2angle(point: Point): Float {
@@ -579,6 +548,12 @@ data class Circle(
         val dy = radius*sin(angle)
         return Point(x + dx, y + dy)
     }
+
+    override fun calculateIntersectionPoints(other: Intersectable): List<Point> =
+        when (other) {
+            is CircleOrLine -> calculateIntersectionPoints(this, other)
+            else -> other.calculateIntersectionPoints(this)
+        }
 
     companion object {
         /** `Circle.point2order(Point.CONFORMAL_INFINITY)` */

@@ -292,6 +292,12 @@ data class Line(
     override fun tangentAt(point: Point): Line =
         this
 
+    override fun calculateIntersectionPoints(other: Intersectable): List<Point> =
+        when (other) {
+            is CircleOrLine -> Circle.calculateIntersectionPoints(this, other)
+            else -> other.calculateIntersectionPoints(this)
+        }
+
     companion object {
         /** `Line.point2order(Point.CONFORMAL_INFINITY)` */
         const val ORDER_OF_CONFORMAL_INFINITY = Double.NEGATIVE_INFINITY
@@ -354,8 +360,8 @@ data class Line(
             val l2 = start.distance2From(end)
             val dx = end.x - start.x
             val dy = end.y - start.y
-            val scalar = (point.x - start.x)*dx + (point.y - start.y)*dy
-            val t = (scalar/l2).coerceIn(0.0, 1.0)
+            val dotProduct = (point.x - start.x)*dx + (point.y - start.y)*dy
+            val t = (dotProduct/l2).coerceIn(0.0, 1.0)
             return Point(
                 x = start.x + t*dx,
                 y = start.y + t*dy

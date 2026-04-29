@@ -57,10 +57,22 @@ inline infix fun Point.liesInside(region: Region): Boolean =
     region.hasInside(this)
 inline infix fun Offset.liesInside(region: Region): Boolean =
     region.hasInside(this)
+
 inline infix fun Point.liesOutside(region: Region): Boolean =
     region.hasOutside(this)
 inline infix fun Offset.liesOutside(region: Region): Boolean =
     region.hasOutside(this)
+
+/** lies on the boundary */
+inline infix fun Point.liesOn(region: Region): Boolean =
+    region.getPointLocation(this) == Region.PointLocation.BORDERING
+
+/** inside or on the boundary */
+inline infix fun Point.liesOnOrInside(region: Region): Boolean =
+    !region.hasOutside(this)
+/** outside or on the boundary */
+inline infix fun Point.liesOnOrOutside(region: Region): Boolean =
+    !region.hasInside(this)
 
 /** partial order ⊆ on regions (treated as either inside or outside regions) */
 inline infix fun Region.isInside(region: Region): Boolean =

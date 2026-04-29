@@ -7,18 +7,6 @@ import domain.io.DdcV2
 import domain.toCssString
 import kotlinx.serialization.Serializable
 
-/**
- * @param[insides] Indices of circles inside which we are
- * @param[outsides] Indices of circles outside of which we are
- */
-@Immutable
-data class Delimiters(
-    /** indices of interior circles */
-    val insides: List<Ix>,
-    /** indices of bounding complementary circles */
-    val outsides: List<Ix>,
-)
-
 // MAYBE: allow arc-paths to bound regions
 // MAYBE: we can alternatively use 1 BooleanArray[circles.size] to specify region bounds
 //  out of the circles, and another BooleanArray[insides.size + outsides.size] to specify
@@ -38,9 +26,6 @@ data class LogicalRegion(
     // its use is debatable
     val borderColor: ColorAsCss? = DdcV2.DEFAULT_CLUSTER_BORDER_COLOR,
 ) {
-    val delimiters: Delimiters get() =
-        Delimiters(insides.toList(), outsides.toList())
-
     override fun toString(): String =
         """LogicalRegion(in = [${insides.joinToString()}], out = [${outsides.joinToString()}], fillColor = ${fillColor.toCssString()}, borderColor = ${borderColor?.toCssString()})"""
 
