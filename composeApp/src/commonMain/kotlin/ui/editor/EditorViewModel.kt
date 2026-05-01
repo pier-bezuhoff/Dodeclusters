@@ -22,6 +22,7 @@ import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
 import core.geometry.Circle
 import core.geometry.CircleOrLine
+import core.geometry.CircleOrLineOrConcreteArcPath
 import core.geometry.CircleOrLineOrImaginaryCircle
 import core.geometry.CircleOrLineOrPoint
 import core.geometry.ConcreteArcPath
@@ -85,7 +86,7 @@ import domain.model.ChangeHistory
 import domain.model.ChessboardPattern
 import domain.model.ConformalObjectModel
 import domain.model.ContinuousChange
-import domain.model.Delimiters
+import domain.model.RegionConstraints
 import domain.model.LogicalRegion
 import domain.model.PartialArcPath
 import domain.model.PartialArgList
@@ -1163,17 +1164,24 @@ class EditorViewModel : ViewModel() {
     ): Pair<LogicalRegion, LogicalRegion> {
         val delimiters = bounds ?:
             objectModel.circleOrLineIndices.filter { ix ->
-                objects[ix] is CircleOrLine && (showPhantomObjects || ix !in phantoms)
-            }
+                objects[ix] is CircleOrLine && ix !in phantoms
+            }.plus(
+                objectModel.arcPathIndices.filter { ix ->
+                    val o = objects[ix]
+                    o is ConcreteArcPath && o.isClosed && ix !in phantoms
+                }
+            )
         // NOTE: doesn't include circles that the point lies on
         val ins = delimiters.filter { ix ->
-            (objects[ix] as? CircleOrLine)?.hasInside(absolutePosition) ?: false
+            val o = objects[ix] as? CircleOrLineOrConcreteArcPath
+            o?.hasInside(absolutePosition) == true
         }
         val outs = delimiters.filter { ix ->
-            (objects[ix] as? CircleOrLine)?.hasOutside(absolutePosition) ?: false
+            val o = objects[ix] as? CircleOrLineOrConcreteArcPath
+            o?.hasOutside(absolutePosition) == true
         }
         val (essentialIns, essentialOuts) =
-            Delimiters.compressConstraints(objects, ins, outs)
+            RegionConstraints.compressConstraints(objects, ins, outs)
         val region0 = LogicalRegion(
             insides = ins.toSet(),
             outsides = outs.toSet(),
