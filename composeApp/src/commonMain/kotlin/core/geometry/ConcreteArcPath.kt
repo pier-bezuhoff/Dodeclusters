@@ -277,6 +277,7 @@ data class ConcreteArcPath(
                 }
             }
         }
+//        println("winding number = $windingNumber")
         return windingNumber
     }
 
@@ -322,7 +323,7 @@ data class ConcreteArcPath(
     override fun getPointLocation(point: Point): Region.PointLocation =
         if (distanceFrom(point) < EPSILON)
             Region.PointLocation.BORDERING
-        else if (calculateWindingNumber(point) == 0)
+        else if (calculateWindingNumber(point).mod(2) == 0)
             Region.PointLocation.OUTSIDE
         else
             Region.PointLocation.INSIDE

@@ -37,6 +37,7 @@ sealed interface SubMode {
         val corner2: Offset? = null,
     ) : SubMode
     data class FlowSelect(
+        // TODO: use RegionConstraints instead
         val lastQualifiedRegion: LogicalRegion? = null,
     ) : SubMode
     data class FlowFill(
