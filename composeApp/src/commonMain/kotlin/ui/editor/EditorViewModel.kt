@@ -1156,8 +1156,39 @@ class EditorViewModel : ViewModel() {
             })
     }
 
+    /** @return qualified/uncompressed in- and out- constraints */
+    private fun getUncompressedRegionSurrounding(
+        absolutePosition: Offset,
+        bounds: List<Ix>? = null
+    ): LogicalRegion {
+        val delimiters = bounds ?:
+        objectModel.circleOrLineIndices.filter { ix ->
+            objects[ix] is CircleOrLine && ix !in phantoms
+        }.plus(
+            objectModel.arcPathIndices.filter { ix ->
+                val o = objects[ix]
+                o is ConcreteArcPath && o.isClosed && ix !in phantoms
+            }
+        )
+        // NOTE: doesn't include circles that the point lies on
+        val ins = delimiters.filter { ix ->
+            val o = objects[ix] as? CircleOrLineOrConcreteArcPath
+            o?.hasInside(absolutePosition) == true
+        }
+        val outs = delimiters.filter { ix ->
+            val o = objects[ix] as? CircleOrLineOrConcreteArcPath
+            o?.hasOutside(absolutePosition) == true
+        }
+        return LogicalRegion(
+            insides = ins.toSet(),
+            outsides = outs.toSet(),
+            fillColor = regionColor
+        )
+    }
+
     // NOTE: region boundaries get messed up when we alter a big structure like spiral
-    /** @return (compressed region, verbose region involving all circles) surrounding clicked position */
+    /** @return (compressed region, verbose/uncompressed/fully qualified region
+     *  involving all circles) surrounding clicked position */
     private fun getRegionSurrounding(
         absolutePosition: Offset,
         bounds: List<Ix>? = null
@@ -1227,7 +1258,12 @@ class EditorViewModel : ViewModel() {
             allRegions = regions,
             regionManipulationStrategy = regionManipulationStrategy,
             shouldUpdateSelection = false,
-            setSelection = { selection = Selection(gCircles = it) },
+            setSelection = { newIndices ->
+                selection = Selection(
+                    gCircles = newIndices.filter { objects[it] is GCircle },
+                    arcPaths = newIndices.filter { objects[it] is ConcreteArcPath },
+                )
+            },
         )
     }
 
@@ -1987,7 +2023,7 @@ class EditorViewModel : ViewModel() {
 
     private fun downDuringFlowSelect(absolutePosition: Offset) {
         val surroundingArcPaths = getClosedArcPathsSurrounding(absolutePosition)
-        val (_, qualifiedRegion) = getRegionSurrounding(absolutePosition)
+        val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
         submode = SubMode.FlowSelect(
             lastQualifiedRegion = qualifiedRegion,
             lastSurroundingArcPaths = surroundingArcPaths.toSet(),
@@ -1997,7 +2033,7 @@ class EditorViewModel : ViewModel() {
     private fun downDuringFlowFill(absolutePosition: Offset) {
         val surroundingArcPaths = getClosedArcPathsSurrounding(absolutePosition)
             .toSet()
-        val (_, qualifiedRegion) = getRegionSurrounding(absolutePosition)
+        val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
         submode = SubMode.FlowFill(
             qualifiedRegion,
             surroundingArcPaths
@@ -2363,37 +2399,38 @@ class EditorViewModel : ViewModel() {
                         highlightSelectionParents()
                     }
                 } else { // try to select bounding circles of the selected region
-                    val (region, region0) = getRegionSurrounding(absolutePosition)
-                    if (region0.insides.isEmpty()) { // if we clicked outside of everything, toggle select all
+                    val (region, uncompressedRegion) = getRegionSurrounding(absolutePosition)
+                    if (uncompressedRegion.insides.isEmpty()) {
+                        // if we clicked outside of everything, toggle select all
                         toggleSelectAll()
                         if (!showPhantomObjects) {
                             selection = selection.copy(
                                 gCircles = selection.gCircles.filter { it !in phantoms },
+                                arcPaths = selection.arcPaths.filter { it !in phantoms },
                             )
                         }
                     } else {
-                        val selectedCircles = objectSelection.filter { objects[it] is CircleOrLine }
+                        val selectedBounds = selection.indices.filter { ix ->
+                            val o = objects[ix]
+                            o is CircleOrLine || o is ConcreteArcPath && o.isClosed
+                        }
                         val largestInnerRegion = regions
-                            .filter { region isTriviallyInside it || region0 isTriviallyInside it }
-                            .maxByOrNull { it.insides.size + it.outsides.size }
-                        if (largestInnerRegion == null) { // select bound of a non-existent region
-                            println("bounds of $region")
-                            val bounds: Set<Ix> = region.insides + region.outsides
-                            if (bounds != selectedCircles.toSet()) {
-                                selection = Selection(gCircles = bounds.toList())
-                                highlightSelectionParents()
-                            } else {
-                                clearSelection()
-                            }
+                            .filter { r ->
+                                region isTriviallyInside r || uncompressedRegion isTriviallyInside r
+                            }.maxByOrNull { it.insides.size + it.outsides.size }
+                        val bounds: Set<Ix> =
+                            if (largestInnerRegion == null) // select bounds of a non-existent region
+                                region.insides + region.outsides
+                            else
+                                largestInnerRegion.insides + largestInnerRegion.outsides
+                        if (bounds != selectedBounds.toSet()) {
+                            selection = Selection(
+                                gCircles = bounds.filter { objects[it] is GCircle },
+                                arcPaths = bounds.filter { objects[it] is ConcreteArcPath },
+                            )
+                            highlightSelectionParents()
                         } else {
-                            println("existing bound of $largestInnerRegion")
-                            val bounds: Set<Ix> = largestInnerRegion.insides + largestInnerRegion.outsides
-                            if (bounds != selectedCircles.toSet()) {
-                                selection = Selection(gCircles = bounds.toList())
-                                highlightSelectionParents()
-                            } else {
-                                clearSelection()
-                            }
+                            clearSelection()
                         }
                     }
                 }
@@ -2403,16 +2440,15 @@ class EditorViewModel : ViewModel() {
 
     private fun tapDuringRegions(absolutePosition: Offset) {
         if (restrictRegionsToSelection && selection.isNotEmpty()) {
-            val selectedCircles = selection.gCircles.filter { objects[it] is CircleOrLine }
-            val selectedClosedArcPaths = selection.arcPaths.filter { ix ->
+            val selectedBounds = selection.indices.filter { ix ->
                 val o = objects[ix]
-                o is ConcreteArcPath && o.isClosed
+                o is CircleOrLine || o is ConcreteArcPath && o.isClosed
             }
-            refillClosedArcPathAt(absolutePosition, selectedClosedArcPaths)
-                ?: refillRegionAt(absolutePosition, selectedCircles)
+//            refillClosedArcPathAt(absolutePosition, selectedClosedArcPaths)
+            refillRegionAt(absolutePosition, selectedBounds)
         } else {
-            refillClosedArcPathAt(absolutePosition)
-                ?: refillRegionAt(absolutePosition)
+//            refillClosedArcPathAt(absolutePosition)
+            refillRegionAt(absolutePosition)
         }
         objectModel.invalidate()
         recordHistory()
@@ -2860,7 +2896,7 @@ class EditorViewModel : ViewModel() {
 
     private fun updateFlowSelect(absolutePosition: Offset, sm: SubMode.FlowSelect) {
         val surroundingArcPaths = getClosedArcPathsSurrounding(absolutePosition)
-        val (_, qualifiedRegion) = getRegionSurrounding(absolutePosition)
+        val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
         if (sm.lastQualifiedRegion == null || sm.lastSurroundingArcPaths == null) {
             submode = SubMode.FlowSelect(
                 lastQualifiedRegion = qualifiedRegion,
@@ -2886,7 +2922,7 @@ class EditorViewModel : ViewModel() {
 
     private fun updateFlowFill(absolutePosition: Offset, selectedCircles: List<Ix>, sm: SubMode.FlowFill) {
         val surroundingArcPaths = getClosedArcPathsSurrounding(absolutePosition).toSet()
-        val (_, qualifiedRegion) = getRegionSurrounding(absolutePosition)
+        val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
         if (sm.lastQualifiedRegion == null) {
             submode = SubMode.FlowFill(
                 lastQualifiedRegion = qualifiedRegion,
@@ -3218,6 +3254,7 @@ class EditorViewModel : ViewModel() {
         snackbarMessages.tryEmit(snackbarMessage to formatArgs)
     }
 
+    // TODO: instead perma-highlight parents with 2 colors
     /** Signals locked state to the user with animation & snackbar message */
     private fun highlightSelectionParents() {
         val allParents = selection.indices.flatMap { ix ->

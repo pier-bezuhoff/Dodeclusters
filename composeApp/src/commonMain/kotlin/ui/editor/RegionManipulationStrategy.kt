@@ -32,13 +32,16 @@ enum class RegionManipulationStrategy(
             allRegions: List<LogicalRegion>,
             regionManipulationStrategy: RegionManipulationStrategy,
             shouldUpdateSelection: Boolean,
-            crossinline setSelection: (List<Ix>) -> Unit,
+            crossinline setSelection: (Collection<Ix>) -> Unit,
         ): List<LogicalRegion> {
             var resultingRegions = allRegions
-            val outerRegionsIndices = allRegions.filterIndices { compressedRegion isTriviallyInside it || uncompressedRegion isTriviallyInside it  }
+            val outerRegionsIndices = allRegions.filterIndices { r ->
+                compressedRegion isTriviallyInside r || uncompressedRegion isTriviallyInside r
+            }
             val outerRegions = outerRegionsIndices.map { allRegions[it] }
-            val sameBoundsRegionsIndices = outerRegionsIndices.filter {
-                allRegions[it].insides == compressedRegion.insides && allRegions[it].outsides == compressedRegion.outsides
+            val sameBoundsRegionsIndices = outerRegionsIndices.filter { i ->
+                allRegions[i].insides == compressedRegion.insides &&
+                allRegions[i].outsides == compressedRegion.outsides
             }
             val sameBoundsRegions = sameBoundsRegionsIndices.map { allRegions[it] }
             when (regionManipulationStrategy) {
@@ -46,7 +49,7 @@ enum class RegionManipulationStrategy(
                     if (outerRegions.isEmpty()) {
                         resultingRegions += compressedRegion
                         if (shouldUpdateSelection) {
-                            setSelection((compressedRegion.insides + compressedRegion.outsides).toList())
+                            setSelection(compressedRegion.insides + compressedRegion.outsides)
                         }
                         println("added $compressedRegion")
                     } else if (outerRegions.size == 1) {
@@ -56,9 +59,11 @@ enum class RegionManipulationStrategy(
                             resultingRegions = allRegions.withoutElementAt(i)
                             println("removed singular same-color outer $outer")
                         } else { // we are trying to change the color im guessing
-                            resultingRegions = allRegions.updated(i, outer.copy(fillColor = compressedRegion.fillColor))
+                            resultingRegions = allRegions.updated(i,
+                                outer.copy(fillColor = compressedRegion.fillColor)
+                            )
                             if (shouldUpdateSelection) {
-                                setSelection((compressedRegion.insides + compressedRegion.outsides).toList())
+                                setSelection(compressedRegion.insides + compressedRegion.outsides)
                             }
                             println("recolored singular $outer")
                         }
@@ -81,7 +86,7 @@ enum class RegionManipulationStrategy(
                                 }
                             resultingRegions = _regions
                             if (shouldUpdateSelection) {
-                                setSelection((compressedRegion.insides + compressedRegion.outsides).toList())
+                                setSelection(compressedRegion.insides + compressedRegion.outsides)
                             }
                             println("recolored $i (same bounds ~ $compressedRegion)")
                         }
@@ -96,7 +101,7 @@ enum class RegionManipulationStrategy(
                         } else { // there are several outer regions, but none of the color of region.fillColor
                             resultingRegions += compressedRegion
                             if (shouldUpdateSelection) {
-                                setSelection((compressedRegion.insides + compressedRegion.outsides).toList())
+                                setSelection(compressedRegion.insides + compressedRegion.outsides)
                             }
                             println("added $compressedRegion")
                         }
@@ -106,7 +111,7 @@ enum class RegionManipulationStrategy(
                     if (sameBoundsRegionsIndices.isEmpty()) {
                         resultingRegions += compressedRegion
                         if (shouldUpdateSelection) {
-                            setSelection((compressedRegion.insides + compressedRegion.outsides).toList())
+                            setSelection(compressedRegion.insides + compressedRegion.outsides)
                         }
                         println("added $compressedRegion")
                     } else if (sameBoundsRegions.last().fillColor == compressedRegion.fillColor) {
@@ -125,7 +130,7 @@ enum class RegionManipulationStrategy(
                         val _regions = allRegions.toMutableList()
                         _regions[i] = compressedRegion
                         if (shouldUpdateSelection) {
-                            setSelection((compressedRegion.insides + compressedRegion.outsides).toList())
+                            setSelection(compressedRegion.insides + compressedRegion.outsides)
                         }
                         sameBoundsRegions
                             .dropLast(1)

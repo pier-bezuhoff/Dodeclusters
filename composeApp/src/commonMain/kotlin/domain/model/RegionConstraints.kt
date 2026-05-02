@@ -122,12 +122,14 @@ private fun compressConstraintsByIntersectionPoints(
         allConstraints.indices.map { mutableSetOf() }
     // compute all distinct intersections bordering our region, noting which circles they belong to
     for (i in 0 until n) {
-        for (j in (i+1) until n) {
+        for (j in (i+1) until n) { // pair-wise diagonal
             val c1 = allConstraints[i]
             val c2 = allConstraints[j]
             val ips = c1.calculateIntersectionPoints(c2)
             for (ip in ips) {
-                val repeatIx = intersections.indexOfFirst { ip.distance2From(it) < EPSILON2 }
+                val repeatIx = intersections.indexOfFirst {
+                    ip.distance2From(it) < EPSILON2
+                }
                 if (repeatIx == -1) { // new ip
                     if (pointSatisfiesConstraints(ip, inConstraints, outConstraints)) {
                         val ix = intersections.size
@@ -184,21 +186,25 @@ private fun compressConstraintsByIntersectionPoints(
         }
     }
     // compute extra intersections formed only by the edges
-    val allEssentialCircles = essentialIns.map { inConstraints[it] } + essentialOuts.map { outConstraints[it] }
+    val allEssentialCircles =
+        essentialIns.map { inConstraints[it] } + essentialOuts.map { outConstraints[it] }
     val extendedIntersections = mutableListOf<Point>()
     for (i in allEssentialCircles.indices) {
-        for (j in (i+1) until allEssentialCircles.size) {
+        for (j in (i+1) until allEssentialCircles.size) { // pair-wise diagonal
             val c1 = allEssentialCircles[i]
             val c2 = allEssentialCircles[j]
             val ips = c1.calculateIntersectionPoints(c2)
             for (ip in ips) {
-                val repeatIx = extendedIntersections.indexOfFirst { ip.distance2From(it) < EPSILON2 }
+                val repeatIx = extendedIntersections.indexOfFirst {
+                    ip.distance2From(it) < EPSILON2
+                }
                 if (repeatIx == -1) { // new ip
-                    val itFits =
-                        essentialIns.all { ip liesOnOrInside inConstraints[it] } && // inside or bordering ins
-                        essentialOuts.all { ip liesOnOrOutside outConstraints[it] } // outside or bordering outs
-                    if (itFits)
+                    val itSatisfiesConstraints =
+                        essentialIns.all { ip liesOnOrInside inConstraints[it] } &&
+                        essentialOuts.all { ip liesOnOrOutside outConstraints[it] }
+                    if (itSatisfiesConstraints) {
                         extendedIntersections.add(ip)
+                    }
                 }
             }
         }
@@ -218,7 +224,10 @@ private fun compressConstraintsByIntersectionPoints(
                 }
             if (outSeparator != null) {
                 essentialOuts.add(outSeparator)
-            } // MAYBE: otherwise artificially add a befitting separator (intersections <-|-> unwantedIntersections)
+            }
+            // MAYBE: otherwise artificially add a befitting separator
+            //  (intersections <-|-> unwantedIntersections)
+            //  or find several separators that separate unwanted intersections in totality
         }
     }
     return RegionConstraints(essentialIns, essentialOuts)
@@ -236,19 +245,13 @@ private sealed interface Arc {
     ) : Arc
 }
 
-
 private fun constraints2arcpaths(
     ins: List<Ix>,
     outs: List<Ix>,
     allCircles: List<CircleOrLine>,
 ): List<Nothing> {
-    val inCircles = ins.map { allCircles[it] }
-    val outCircles = outs.map { allCircles[it] }
-
-    fun testIfPointFitsOurRequirements(point: Point): Boolean =
-        inCircles.all { !it.hasOutside(point) } && // inside or bordering ins
-                outCircles.all { !it.hasInside(point) } // outside or bordering outs
-
+    val inConstraints = ins.map { allCircles[it] }
+    val outConstraints = outs.map { allCircles[it] }
     val n = allCircles.size
     val intersections = mutableListOf<Point>()
     // circle ix -> ip ixs
@@ -261,9 +264,9 @@ private fun constraints2arcpaths(
             val c2 = allCircles[j]
             val ips = Circle.calculateIntersectionPoints(c1, c2)
             for (ip in ips) {
-                val repeatIx = intersections.indexOfFirst { ip.distanceFrom(it) < EPSILON }
+                val repeatIx = intersections.indexOfFirst { ip.distance2From(it) < EPSILON2 }
                 if (repeatIx == -1) { // new ip
-                    val itFits = testIfPointFitsOurRequirements(ip)
+                    val itFits = pointSatisfiesConstraints(ip, inConstraints, outConstraints)
                     if (itFits) {
                         val ix = intersections.size
                         intersections.add(ip)
@@ -285,7 +288,7 @@ private fun constraints2arcpaths(
         val m = orderedIPs.size
         if (m == 0) {
             val mid = c.order2point(0.0) // no ips, checking random point on c
-            val itFits = testIfPointFitsOurRequirements(mid)
+            val itFits = pointSatisfiesConstraints(mid, inConstraints, outConstraints)
             if (itFits) {
                 arcs.add(Arc.Full(i))
             }
@@ -305,7 +308,7 @@ private fun constraints2arcpaths(
                         orderedIPs[prevK]
                     }
                 val mid: Point = c.pointInBetween(ip1, ip2)
-                val itFits = testIfPointFitsOurRequirements(mid)
+                val itFits = pointSatisfiesConstraints(mid, inConstraints, outConstraints)
                 if (itFits) {
                     arcs.add(Arc.Normal(i, intersections.indexOf(ip1), intersections.indexOf(ip2)))
                 }
