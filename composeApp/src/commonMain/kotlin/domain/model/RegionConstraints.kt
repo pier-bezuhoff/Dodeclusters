@@ -4,7 +4,6 @@ import androidx.compose.runtime.Immutable
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrConcreteArcPath
-import core.geometry.EPSILON
 import core.geometry.EPSILON2
 import core.geometry.Line
 import core.geometry.Point
@@ -18,14 +17,12 @@ import core.geometry.liesOutside
 import domain.Ix
 
 /**
- * @param[insides] Indices of circles inside which we are
- * @param[outsides] Indices of circles outside of which we are
+ * @param[insides] Indices of bounds inside which we are (exteriors)
+ * @param[outsides] Indices of bounds outside of which we are (interiors)
  */
 @Immutable
 data class RegionConstraints(
-    /** indices of interior circles */
     val insides: List<Ix>,
-    /** indices of bounding complementary circles */
     val outsides: List<Ix>,
 ) {
     // MAYBE: also separately process open arc-paths (potentially as outs)
@@ -60,7 +57,8 @@ data class RegionConstraints(
 }
 
 /**
- * [inConstraints] and [outConstraints] delimiters must be indices of [CircleOrLine].
+ * [inConstraints] and [outConstraints] delimiters must be indices of circles, lines or
+ * closed arc-paths.
  */
 private fun compressConstraintsByRelativeContainment(
     allObjects: List<*>,
@@ -95,8 +93,7 @@ private fun compressConstraintsByRelativeContainment(
     return RegionConstraints(sievedIns, sievedOuts)
 }
 
-@Suppress("NOTHING_TO_INLINE")
-private inline fun pointSatisfiesConstraints(
+private fun pointSatisfiesConstraints(
     point: Point,
     inConstraints: List<Region>,
     outConstraints: List<Region>,
@@ -186,13 +183,13 @@ private fun compressConstraintsByIntersectionPoints(
         }
     }
     // compute extra intersections formed only by the edges
-    val allEssentialCircles =
+    val allEssentialBounds =
         essentialIns.map { inConstraints[it] } + essentialOuts.map { outConstraints[it] }
     val extendedIntersections = mutableListOf<Point>()
-    for (i in allEssentialCircles.indices) {
-        for (j in (i+1) until allEssentialCircles.size) { // pair-wise diagonal
-            val c1 = allEssentialCircles[i]
-            val c2 = allEssentialCircles[j]
+    for (i in allEssentialBounds.indices) {
+        for (j in (i+1) until allEssentialBounds.size) { // pair-wise diagonal
+            val c1 = allEssentialBounds[i]
+            val c2 = allEssentialBounds[j]
             val ips = c1.calculateIntersectionPoints(c2)
             for (ip in ips) {
                 val repeatIx = extendedIntersections.indexOfFirst {

@@ -263,7 +263,7 @@ fun BoxScope.EditorCanvas(
             drawGrids(visibleRect = visibleRect, submode = viewModel.submode, stereographicGridColor = stereographicGridColor, stereographicGridStroke = circleStroke, southPointRadius = handleRadius)
             drawLabels(objects = viewModel.objects, objectColors = viewModel.objectModel.borderColors, objectLabelLayouts = objectLabelLayouts, freePointColor = defaultFreePointColor)
             drawHandles(objects = viewModel.objects, selection = viewModel.selectedIndices, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.calculateSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
-//            drawDebugObjects(viewModel._debugObjects, visibleRect, circleStroke, pointRadius, rotateIconColor)
+            drawDebugObjects(viewModel._debugObjects, visibleRect, circleStroke, pointRadius, rotateIconColor)
         }
         if (viewModel.showGenericSelectionContextActions) {
             drawRotationHandleArrows(concretePositions.positions, viewModel.rotationHandleAngle, rotationHandleColor, rotationHandleBackgroundColor)

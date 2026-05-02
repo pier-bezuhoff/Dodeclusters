@@ -237,40 +237,48 @@ fun region2pathWithCache(
     }
     path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
     for (ix in region.insides) {
-        when (val circleOrLine = allObjects[ix]) {
+        when (val o = allObjects[ix]) {
             is Circle -> {
                 val p = pathCache.getOrSet(ix) {
-                    circle2path(circleOrLine, visibleRect, it)
+                    circle2path(o, visibleRect, it)
                 }
                 path.op(path, p,
-                    if (circleOrLine.isCCW) PathOperation.Intersect
+                    if (o.isCCW) PathOperation.Intersect
                     else PathOperation.Difference
                 )
             }
             is Line -> {
                 val p = pathCache.getOrSet(ix) {
-                    halfPlanePath(circleOrLine, visibleRect, it)
+                    halfPlanePath(o, visibleRect, it)
                 }
+                path.op(path, p, PathOperation.Intersect)
+            }
+            is ConcreteArcPath if (o.isClosed) -> {
+                val p = pathCache.getOrSet(ix) { o.toPath(it) }
                 path.op(path, p, PathOperation.Intersect)
             }
             else -> {}
         }
     }
     for (ix in region.outsides) {
-        when (val circleOrLine = allObjects[ix]) {
+        when (val o = allObjects[ix]) {
             is Circle -> {
                 val p = pathCache.getOrSet(ix) {
-                    circle2path(circleOrLine, visibleRect, it)
+                    circle2path(o, visibleRect, it)
                 }
                 path.op(path, p,
-                    if (circleOrLine.isCCW) PathOperation.Difference
+                    if (o.isCCW) PathOperation.Difference
                     else PathOperation.Intersect
                 )
             }
             is Line -> {
                 val p = pathCache.getOrSet(ix) {
-                    halfPlanePath(circleOrLine, visibleRect, it)
+                    halfPlanePath(o, visibleRect, it)
                 }
+                path.op(path, p, PathOperation.Difference)
+            }
+            is ConcreteArcPath if (o.isClosed) -> {
+                val p = pathCache.getOrSet(ix) { o.toPath(it) }
                 path.op(path, p, PathOperation.Difference)
             }
             else -> {}
@@ -293,32 +301,40 @@ fun region2path(
     }
     path.addRect(visibleRect.inflate(VISIBLE_RECT_INDENT))
     for (ix in region.insides) {
-        when (val circleOrLine = allObjects[ix]) {
+        when (val o = allObjects[ix]) {
             is Circle -> {
-                val p = circle2path(circleOrLine, visibleRect)
+                val p = circle2path(o, visibleRect)
                 path.op(path, p,
-                    if (circleOrLine.isCCW) PathOperation.Intersect
+                    if (o.isCCW) PathOperation.Intersect
                     else PathOperation.Difference
                 )
             }
             is Line -> {
-                val p = halfPlanePath(circleOrLine, visibleRect)
+                val p = halfPlanePath(o, visibleRect)
+                path.op(path, p, PathOperation.Intersect)
+            }
+            is ConcreteArcPath if (o.isClosed) -> {
+                val p = o.toPath()
                 path.op(path, p, PathOperation.Intersect)
             }
             else -> {}
         }
     }
     for (ix in region.outsides) {
-        when (val circleOrLine = allObjects[ix]) {
+        when (val o = allObjects[ix]) {
             is Circle -> {
-                val p = circle2path(circleOrLine, visibleRect)
+                val p = circle2path(o, visibleRect)
                 path.op(path, p,
-                    if (circleOrLine.isCCW) PathOperation.Difference
+                    if (o.isCCW) PathOperation.Difference
                     else PathOperation.Intersect
                 )
             }
             is Line -> {
-                val p = halfPlanePath(circleOrLine, visibleRect)
+                val p = halfPlanePath(o, visibleRect)
+                path.op(path, p, PathOperation.Difference)
+            }
+            is ConcreteArcPath if (o.isClosed) -> {
+                val p = o.toPath()
                 path.op(path, p, PathOperation.Difference)
             }
             else -> {}

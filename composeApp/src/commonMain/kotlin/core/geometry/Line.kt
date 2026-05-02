@@ -98,6 +98,14 @@ data class Line(
         )
     }
 
+    fun project(x: Double, y: Double): Point {
+        val t = b*x - a*y
+        return Point(
+            b*t - a*c,
+            -a*t - b*c
+        )
+    }
+
     /** Project Point(x, y) down onto this line */
     override fun project(point: Point): Point {
         if (point.isInfinite)
@@ -176,6 +184,7 @@ data class Line(
     override fun orderInBetween(order1: Double, order2: Double): Double =
         Line.orderInBetween(order1, order2)
 
+    // point-in-segment test: start.dot(point, end) in 0.0 .. start.distance2From(end)
     override fun agreesWithOrientation(startOrder: Double, middleOrder: Double, endOrder: Double): Boolean =
         orderIsInBetween(startOrder, middleOrder, endOrder)
 

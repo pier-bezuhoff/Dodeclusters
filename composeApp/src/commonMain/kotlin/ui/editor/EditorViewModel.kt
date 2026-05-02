@@ -153,7 +153,7 @@ class EditorViewModel : ViewModel() {
         private set
     var chessboardPattern: ChessboardPattern by mutableStateOf(ChessboardPattern.NONE)
         private set
-//    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
+    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
     // MAYBE: when circles are hidden select regions instead
     private val selectionState: MutableState<Selection> = mutableStateOf(Selection())
@@ -547,6 +547,14 @@ class EditorViewModel : ViewModel() {
         println("invalidation #${objectModel.invalidations}\t " +
                 "propertyInvalidation #${objectModel.propertyInvalidations}"
         )
+//        val circle = objects[expressions.circleIndices.first()] as Circle
+//        val line = objects[expressions.lineIndices.first()] as Line
+//        val point = objects[expressions.pointIndices.first()] as Point
+//        val point2 = objects[expressions.pointIndices.toList()[1]] as Point
+//        val point3 = objects[expressions.pointIndices.last()] as Point
+//        val arcPath = objects[expressions.arcPathIndices.first()] as ConcreteArcPath
+//        val arcPath2 = objects[expressions.arcPathIndices.last()] as ConcreteArcPath
+//        _debugObjects = arcPath.calculateIntersectionPoints(circle)
         if (selection.isNotEmpty()) {
             val message = buildString {
                 if (selectedObjectsString.isNotEmpty())
@@ -555,16 +563,8 @@ class EditorViewModel : ViewModel() {
                     appendLine("$selectedExpressionsString;")
                 if (selectedArcPathsString.isNotEmpty())
                     appendLine("$selectedArcPathsString;")
-                // tests
-//                val circle = objects[expressions.circleIndices.first()] as Circle
-//                val line = objects[expressions.lineIndices.first()] as Line
-//                val point = objects[expressions.pointIndices.last()] as Point
-//                val arcPath = objects[expressions.arcPathIndices.first()] as ConcreteArcPath
-//                val arcPath2 = objects[expressions.arcPathIndices.last()] as ConcreteArcPath
-//                clear()
-//                append(
-//                    arcPath.getRegionLocation(arcPath2)
-//                )
+//                clear() // tmp
+//                append(line.agreesWithOrientation(point, point3, point2))
             }
             queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
         }
@@ -1257,13 +1257,6 @@ class EditorViewModel : ViewModel() {
             uncompressedRegion = uncompressedRegion,
             allRegions = regions,
             regionManipulationStrategy = regionManipulationStrategy,
-            shouldUpdateSelection = false,
-            setSelection = { newIndices ->
-                selection = Selection(
-                    gCircles = newIndices.filter { objects[it] is GCircle },
-                    arcPaths = newIndices.filter { objects[it] is ConcreteArcPath },
-                )
-            },
         )
     }
 
@@ -2022,32 +2015,21 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun downDuringFlowSelect(absolutePosition: Offset) {
-        val surroundingArcPaths = getClosedArcPathsSurrounding(absolutePosition)
         val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
-        submode = SubMode.FlowSelect(
-            lastQualifiedRegion = qualifiedRegion,
-            lastSurroundingArcPaths = surroundingArcPaths.toSet(),
-        )
+        submode = SubMode.FlowSelect(lastQualifiedRegion = qualifiedRegion)
     }
 
     private fun downDuringFlowFill(absolutePosition: Offset) {
-        val surroundingArcPaths = getClosedArcPathsSurrounding(absolutePosition)
-            .toSet()
         val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
-        submode = SubMode.FlowFill(
-            qualifiedRegion,
-            surroundingArcPaths
-        )
-        val selectedCircles = selection.gCircles.filter { objects[it] is CircleOrLine }
-        if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
-            refillRegionAt(absolutePosition, selectedCircles)
+        submode = SubMode.FlowFill(qualifiedRegion)
+        val selectedBounds = selection.indices.filter {
+            val o = objects[it]
+            o is CircleOrLine || o is ConcreteArcPath && o.isClosed
+        }
+        if (restrictRegionsToSelection && selectedBounds.isNotEmpty()) {
+            refillRegionAt(absolutePosition, selectedBounds)
         } else {
             refillRegionAt(absolutePosition)
-        }
-        if (restrictRegionsToSelection && selection.arcPaths.isNotEmpty()) {
-            refillClosedArcPathAt(absolutePosition, selection.arcPaths)
-        } else {
-            refillClosedArcPathAt(absolutePosition)
         }
     }
 
@@ -2895,39 +2877,31 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun updateFlowSelect(absolutePosition: Offset, sm: SubMode.FlowSelect) {
-        val surroundingArcPaths = getClosedArcPathsSurrounding(absolutePosition)
         val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
-        if (sm.lastQualifiedRegion == null || sm.lastSurroundingArcPaths == null) {
-            submode = SubMode.FlowSelect(
-                lastQualifiedRegion = qualifiedRegion,
-                lastSurroundingArcPaths = surroundingArcPaths.toSet(),
-            )
+        if (sm.lastQualifiedRegion == null) {
+            submode = SubMode.FlowSelect(lastQualifiedRegion = qualifiedRegion)
         } else {
             val diff =
                 (qualifiedRegion.insides xor sm.lastQualifiedRegion.insides) union
                 (qualifiedRegion.outsides xor sm.lastQualifiedRegion.outsides)
-            val additionalGCircles = diff.filter {
-                it !in selection.gCircles && (showPhantomObjects || it !in phantoms)
-            }
-            val diff2 = surroundingArcPaths.toSet() xor sm.lastSurroundingArcPaths
-            val additionalArcPaths = diff2.filter {
-                it !in selection.arcPaths && (showPhantomObjects || it !in phantoms)
+            val additional = diff.filter {
+                it !in selection.indices && (showPhantomObjects || it !in phantoms)
             }
             selection = Selection(
-                gCircles = selection.gCircles + additionalGCircles,
-                arcPaths = selection.arcPaths + additionalArcPaths,
+                gCircles = selection.gCircles + additional.filter { objects[it] is GCircle },
+                arcPaths = selection.arcPaths + additional.filter { objects[it] is ConcreteArcPath },
             )
         }
     }
 
-    private fun updateFlowFill(absolutePosition: Offset, selectedCircles: List<Ix>, sm: SubMode.FlowFill) {
-        val surroundingArcPaths = getClosedArcPathsSurrounding(absolutePosition).toSet()
+    private fun updateFlowFill(
+        absolutePosition: Offset,
+        selectedCircles: List<Ix>,
+        sm: SubMode.FlowFill
+    ) {
         val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
         if (sm.lastQualifiedRegion == null) {
-            submode = SubMode.FlowFill(
-                lastQualifiedRegion = qualifiedRegion,
-                lastSurroundingArcPaths = surroundingArcPaths,
-            )
+            submode = SubMode.FlowFill(lastQualifiedRegion = qualifiedRegion)
         } else {
             var submode: SubMode.FlowFill = sm
             if (sm.lastQualifiedRegion != qualifiedRegion) {
@@ -2936,14 +2910,6 @@ class EditorViewModel : ViewModel() {
                     refillRegionAt(absolutePosition, selectedCircles)
                 } else {
                     refillRegionAt(absolutePosition)
-                }
-            }
-            if (sm.lastSurroundingArcPaths != surroundingArcPaths) {
-                submode = submode.copy(lastSurroundingArcPaths = surroundingArcPaths)
-                if (restrictRegionsToSelection && selection.arcPaths.isNotEmpty()) {
-                    refillClosedArcPathAt(absolutePosition, selection.arcPaths)
-                } else {
-                    refillClosedArcPathAt(absolutePosition)
                 }
             }
             this.submode = submode

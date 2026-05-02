@@ -319,13 +319,6 @@ data class ConcreteArcPath(
         return angle
     }
 
-    override fun hasInside(point: Point): Boolean =
-        calculateWindingNumber(point) != 0
-
-    // everything is outside an open path
-    override fun hasOutside(point: Point): Boolean =
-        calculateWindingNumber(point) == 0
-
     override fun getPointLocation(point: Point): Region.PointLocation =
         if (distanceFrom(point) < EPSILON)
             Region.PointLocation.BORDERING
@@ -729,19 +722,22 @@ private fun intersectCircleWithArc(
         }
         // if both segment ends are in the circle, that's it
         else -> if (side1 || side2) {
-            val (px, py) = Line.projectPointOntoSegment(center, arcStart, arcEnd)
+            val line = Line.by2Points(arcStart, arcEnd)
+            val (px, py) = line.project(center)
             val d2 = center.distance2From(px, py)
             val diff = r2 - d2
             if (diff > 0) {
-                val line = Line.by2Points(arcStart, arcEnd)
                 val pToIntersection = sqrt(diff)
                 val vx = line.directionX * pToIntersection
                 val vy = line.directionY * pToIntersection
                 val p = Point(px - vx, py - vy)
                 val q = Point(px + vx, py + vy)
-                if (line.agreesWithOrientation(arcStart, p, arcEnd))
+                val l2 = arcStart.distance2From(arcEnd)
+                if (arcStart.dot(p, arcEnd) in 0.0..l2)
+//                if (line.agreesWithOrientation(arcStart, p, arcEnd))
                     intersections.add(p)
-                if (line.agreesWithOrientation(arcStart, q, arcEnd))
+                if (arcStart.dot(q, arcEnd) in 0.0..l2)
+//                if (line.agreesWithOrientation(arcStart, q, arcEnd))
                     intersections.add(q)
             }
         }
@@ -755,43 +751,37 @@ private fun intersectLineWithArc(
     arc: ConcreteArcPath.Arc,
     intersections: MutableList<Point>,
 ) {
-    val sd1 = line.signedDistanceFrom(arcStart)
-    val sd2 = line.signedDistanceFrom(arcEnd)
     when (val circle = arc.circleOrLine) {
-        is Circle -> if (line.distanceFrom(circle.x, circle.y) < circle.radius) {
-            // alt: test that arc direction vectors at start and end point towards the line
-            // P and Q are the closest and the furthest points from the line on the circle
-            val px = circle.x + circle.radius*line.normalX
-            val py = circle.y + circle.radius*line.normalY
-            val p = Point(px, py)
-            val sdP = line.signedDistanceFrom(px, py)
-            val diffSides1P = sd1*sdP < 0
-            if (diffSides1P) { // then q is on the same side, so no need to check it
-                if (circle.agreesWithOrientation(arcStart, p, arcEnd)) {
+        is Circle -> {
+            val (cx, cy, r) = circle
+            val (px, py) = line.project(cx, cy)
+            val distance2 = squareSum(px - cx, py - cy)
+            val diff = r*r - distance2
+            if (diff > 0) {
+                val pToIntersection = sqrt(diff)
+                val vx = line.directionX * pToIntersection
+                val vy = line.directionY * pToIntersection
+                val p = Point(px - vx, py - vy)
+                val q = Point(px + vx, py + vy)
+                if (circle.agreesWithOrientation(arcStart, p, arcEnd))
                     intersections.add(p)
-                }
-            } else {
-                val qx = circle.x - circle.radius*line.normalX
-                val qy = circle.y - circle.radius*line.normalY
-                val q = Point(qx, qy)
-                val sdQ = line.signedDistanceFrom(qx, qy)
-                val diffSides1Q = sd1*sdQ < 0
-                if (diffSides1Q &&
-                    circle.agreesWithOrientation(arcStart, q, arcEnd)
-                ) {
+                if (circle.agreesWithOrientation(arcStart, q, arcEnd))
                     intersections.add(q)
-                }
             }
         }
-        else -> if (sd1*sd2 < 0) {
-            val line2 = Line.by2Points(arcStart, arcEnd)
-            val (a1, b1, c1) = line
-            val (a2, b2, c2) = line2
-            val w = a1*b2 - a2*b1 // guaranteed non-zero
-            val wx = b1*c2 - b2*c1 // det in homogenous coordinates
-            val wy = a2*c1 - a1*c2
-            val p = Point(wx / w, wy / w)
-            intersections.add(p)
+        else -> {
+            val sd1 = line.signedDistanceFrom(arcStart)
+            val sd2 = line.signedDistanceFrom(arcEnd)
+            if (sd1*sd2 < 0) { // line separates segment ends
+                val line2 = Line.by2Points(arcStart, arcEnd)
+                val (a1, b1, c1) = line
+                val (a2, b2, c2) = line2
+                val w = a1*b2 - a2*b1 // guaranteed non-zero
+                val wx = b1*c2 - b2*c1 // det in homogenous coordinates
+                val wy = a2*c1 - a1*c2
+                val p = Point(wx / w, wy / w)
+                intersections.add(p)
+            }
         }
     }
 }

@@ -5,9 +5,8 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_add
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_erase
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_replace
-import domain.Ix
-import domain.model.LogicalRegion
 import domain.filterIndices
+import domain.model.LogicalRegion
 import domain.updated
 import domain.withoutElementAt
 import kotlinx.serialization.Serializable
@@ -26,13 +25,11 @@ enum class RegionManipulationStrategy(
     ERASE(Res.string.region_manipulation_strategy_erase), ;
 
     companion object {
-        internal inline fun updateRegionsAfterReselection(
+        fun updateRegionsAfterReselection(
             compressedRegion: LogicalRegion,
             uncompressedRegion: LogicalRegion,
             allRegions: List<LogicalRegion>,
             regionManipulationStrategy: RegionManipulationStrategy,
-            shouldUpdateSelection: Boolean,
-            crossinline setSelection: (Collection<Ix>) -> Unit,
         ): List<LogicalRegion> {
             var resultingRegions = allRegions
             val outerRegionsIndices = allRegions.filterIndices { r ->
@@ -45,12 +42,9 @@ enum class RegionManipulationStrategy(
             }
             val sameBoundsRegions = sameBoundsRegionsIndices.map { allRegions[it] }
             when (regionManipulationStrategy) {
-                RegionManipulationStrategy.REPLACE -> {
+                REPLACE -> {
                     if (outerRegions.isEmpty()) {
                         resultingRegions += compressedRegion
-                        if (shouldUpdateSelection) {
-                            setSelection(compressedRegion.insides + compressedRegion.outsides)
-                        }
                         println("added $compressedRegion")
                     } else if (outerRegions.size == 1) {
                         val i = outerRegionsIndices.single()
@@ -62,9 +56,6 @@ enum class RegionManipulationStrategy(
                             resultingRegions = allRegions.updated(i,
                                 outer.copy(fillColor = compressedRegion.fillColor)
                             )
-                            if (shouldUpdateSelection) {
-                                setSelection(compressedRegion.insides + compressedRegion.outsides)
-                            }
                             println("recolored singular $outer")
                         }
                     } else if (sameBoundsRegionsIndices.isNotEmpty()) {
@@ -85,14 +76,13 @@ enum class RegionManipulationStrategy(
                                     _regions.remove(it) // cleanup
                                 }
                             resultingRegions = _regions
-                            if (shouldUpdateSelection) {
-                                setSelection(compressedRegion.insides + compressedRegion.outsides)
-                            }
                             println("recolored $i (same bounds ~ $compressedRegion)")
                         }
                     } else {
                         // NOTE: click on overlapping region: contested behaviour
-                        val outerRegionsOfTheSameColor = outerRegions.filter { it.fillColor == compressedRegion.fillColor }
+                        val outerRegionsOfTheSameColor = outerRegions.filter { r ->
+                            r.fillColor == compressedRegion.fillColor
+                        }
                         if (outerRegionsOfTheSameColor.isNotEmpty()) {
                             // NOTE: this removes regions of the same color that lie under
                             //  others (potentially invisible), which can be counter-intuitive
@@ -100,19 +90,13 @@ enum class RegionManipulationStrategy(
                             println("removed same color regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
                         } else { // there are several outer regions, but none of the color of region.fillColor
                             resultingRegions += compressedRegion
-                            if (shouldUpdateSelection) {
-                                setSelection(compressedRegion.insides + compressedRegion.outsides)
-                            }
                             println("added $compressedRegion")
                         }
                     }
                 }
-                RegionManipulationStrategy.ADD -> {
+                ADD -> {
                     if (sameBoundsRegionsIndices.isEmpty()) {
                         resultingRegions += compressedRegion
-                        if (shouldUpdateSelection) {
-                            setSelection(compressedRegion.insides + compressedRegion.outsides)
-                        }
                         println("added $compressedRegion")
                     } else if (sameBoundsRegions.last().fillColor == compressedRegion.fillColor) {
                         // im gonna cleanup same bounds until only 1 is left
@@ -129,9 +113,6 @@ enum class RegionManipulationStrategy(
                         val i = sameBoundsRegionsIndices.last()
                         val _regions = allRegions.toMutableList()
                         _regions[i] = compressedRegion
-                        if (shouldUpdateSelection) {
-                            setSelection(compressedRegion.insides + compressedRegion.outsides)
-                        }
                         sameBoundsRegions
                             .dropLast(1)
                             .forEach {
@@ -141,7 +122,7 @@ enum class RegionManipulationStrategy(
                         println("recolored $i (same bounds ~ $compressedRegion)")
                     }
                 }
-                RegionManipulationStrategy.ERASE -> {
+                ERASE -> {
                     if (sameBoundsRegions.isNotEmpty()) {
                         resultingRegions = allRegions.filter { it !in sameBoundsRegions }
                         println("removed [${sameBoundsRegionsIndices.joinToString(prefix = "\n", separator = ";\n")}] (same bounds ~ $compressedRegion)")
