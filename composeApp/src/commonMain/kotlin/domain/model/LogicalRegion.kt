@@ -19,21 +19,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LogicalRegion(
     /** indices of interior circles */
-    val insides: Set<Ix>,
+    override val insides: Set<Ix>,
     /** indices of bounding complementary circles */
-    val outsides: Set<Ix>,
+    override val outsides: Set<Ix>,
     val fillColor: ColorAsCss = DdcV2.DEFAULT_CLUSTER_FILL_COLOR,
     // its use is debatable
     val borderColor: ColorAsCss? = DdcV2.DEFAULT_CLUSTER_BORDER_COLOR,
-) {
+) : Constrained {
+
     override fun toString(): String =
         """LogicalRegion(in = [${insides.joinToString()}], out = [${outsides.joinToString()}], fillColor = ${fillColor.toCssString()}, borderColor = ${borderColor?.toCssString()})"""
-
-    /** ruff semiorder ⊆ on delimited regions; only goes off indices */
-    infix fun isTriviallyInside(otherRegion: LogicalRegion): Boolean =
-        // the more intersections the smaller the delimited region is
-        insides.containsAll(otherRegion.insides) &&
-        outsides.containsAll(otherRegion.outsides)
 
     inline fun reIndex(
         crossinline reIndexer: (Ix) -> Ix

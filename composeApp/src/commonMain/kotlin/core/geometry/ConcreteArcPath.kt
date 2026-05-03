@@ -240,13 +240,14 @@ data class ConcreteArcPath(
                     val x0 = x - cx
                     /** intersection.x within the circle-centered coordinate system */
                     val ix = sqrt(discriminant)
-                    if (ix < x0) // eastmost intersection should be easter than (x0,y0)
+                    if (ix < x0) // eastmost intersection should be east-er than (x0,y0)
                         continue
                     val candidate1 = Point(cx + ix, y)
                     if (circle.agreesWithOrientation(
                         arcStart, candidate1, arcEnd
-                    ))
+                    )) {
                         windingNumber += if (circle.isCCW) 1 else -1
+                    }
                     if (x0 < -ix) {
                         val candidate2 = Point(cx - ix, y)
                         if (circle.agreesWithOrientation(
@@ -321,7 +322,7 @@ data class ConcreteArcPath(
     }
 
     override fun getPointLocation(point: Point): Region.PointLocation =
-        if (distanceFrom(point) < EPSILON)
+        if (distance2From(point) < EPSILON2)
             Region.PointLocation.BORDERING
         else if (calculateWindingNumber(point).mod(2) == 0)
             Region.PointLocation.OUTSIDE

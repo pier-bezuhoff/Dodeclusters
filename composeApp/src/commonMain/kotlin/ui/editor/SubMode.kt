@@ -11,6 +11,7 @@ import domain.expressions.ArcPath
 import domain.model.LogicalRegion
 import domain.expressions.Expr
 import domain.model.PartialArgList
+import domain.model.RegionConstraints
 
 @Immutable
 /** Additional mode accompanying [Mode] and
@@ -37,11 +38,10 @@ sealed interface SubMode {
         val corner2: Offset? = null,
     ) : SubMode
     data class FlowSelect(
-        // TODO: use RegionConstraints instead
-        val lastQualifiedRegion: LogicalRegion? = null,
+        val lastConstraints: RegionConstraints? = null,
     ) : SubMode
     data class FlowFill(
-        val lastQualifiedRegion: LogicalRegion? = null,
+        val lastConstraints: RegionConstraints? = null,
     ) : SubMode
 
     data class SelectionChoices(

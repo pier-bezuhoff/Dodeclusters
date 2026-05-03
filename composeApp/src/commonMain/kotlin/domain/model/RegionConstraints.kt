@@ -1,6 +1,7 @@
 package domain.model
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrConcreteArcPath
@@ -15,16 +16,39 @@ import core.geometry.liesOnOrInside
 import core.geometry.liesOnOrOutside
 import core.geometry.liesOutside
 import domain.Ix
+import domain.toCssString
 
 /**
- * @param[insides] Indices of bounds inside which we are (exteriors)
- * @param[outsides] Indices of bounds outside of which we are (interiors)
+ * @property[insides] Indices of bounds, inside which we are. (exteriors)
+ * @property[outsides] Indices of bounds, outside of which we are. (interiors)
  */
+interface Constrained {
+    val insides: Collection<Ix>
+    val outsides: Collection<Ix>
+
+    /** ruff semiorder ⊆ on constrained regions; only goes off indices */
+    infix fun isTriviallyInside(other: Constrained): Boolean =
+        // the more intersections the smaller the delimited region is
+        insides.containsAll(other.insides) &&
+        outsides.containsAll(other.outsides)
+}
+
 @Immutable
 data class RegionConstraints(
-    val insides: List<Ix>,
-    val outsides: List<Ix>,
-) {
+    override val insides: List<Ix>,
+    override val outsides: List<Ix>,
+) : Constrained {
+
+    override fun toString(): String =
+        """RegionConstraints(in = [${insides.joinToString()}], out = [${outsides.joinToString()}])"""
+
+    fun toLogicalRegion(fillColor: Color): LogicalRegion =
+        LogicalRegion(
+            insides = insides.toSet(),
+            outsides = outsides.toSet(),
+            fillColor = fillColor,
+        )
+
     // MAYBE: also separately process open arc-paths (potentially as outs)
     //  that have >2 intersections with the rest of essentials, or that have self-intersections
     companion object {

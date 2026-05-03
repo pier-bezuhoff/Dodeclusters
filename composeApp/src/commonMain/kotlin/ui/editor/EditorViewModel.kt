@@ -1160,7 +1160,7 @@ class EditorViewModel : ViewModel() {
     private fun getUncompressedRegionSurrounding(
         absolutePosition: Offset,
         bounds: List<Ix>? = null
-    ): LogicalRegion {
+    ): RegionConstraints {
         val delimiters = bounds ?:
         objectModel.circleOrLineIndices.filter { ix ->
             objects[ix] is CircleOrLine && ix !in phantoms
@@ -1171,28 +1171,25 @@ class EditorViewModel : ViewModel() {
             }
         )
         // NOTE: doesn't include circles that the point lies on
-        val ins = delimiters.filter { ix ->
+        val insides = delimiters.filter { ix ->
             val o = objects[ix] as? CircleOrLineOrConcreteArcPath
             o?.hasInside(absolutePosition) == true
         }
-        val outs = delimiters.filter { ix ->
+        val outsides = delimiters.filter { ix ->
             val o = objects[ix] as? CircleOrLineOrConcreteArcPath
             o?.hasOutside(absolutePosition) == true
         }
-        return LogicalRegion(
-            insides = ins.toSet(),
-            outsides = outs.toSet(),
-            fillColor = regionColor
-        )
+        return RegionConstraints(insides, outsides)
     }
 
     // NOTE: region boundaries get messed up when we alter a big structure like spiral
-    /** @return (compressed region, verbose/uncompressed/fully qualified region
-     *  involving all circles) surrounding clicked position */
+    /** @return (compressed region constraints, verbose/uncompressed/fully qualified constraints
+     * involving all circles) surrounding clicked position
+     */
     private fun getRegionSurrounding(
         absolutePosition: Offset,
         bounds: List<Ix>? = null
-    ): Pair<LogicalRegion, LogicalRegion> {
+    ): Pair<RegionConstraints, RegionConstraints> {
         val delimiters = bounds ?:
             objectModel.circleOrLineIndices.filter { ix ->
                 objects[ix] is CircleOrLine && ix !in phantoms
@@ -1203,27 +1200,18 @@ class EditorViewModel : ViewModel() {
                 }
             )
         // NOTE: doesn't include circles that the point lies on
-        val ins = delimiters.filter { ix ->
+        val insides = delimiters.filter { ix ->
             val o = objects[ix] as? CircleOrLineOrConcreteArcPath
             o?.hasInside(absolutePosition) == true
         }
-        val outs = delimiters.filter { ix ->
+        val outsides = delimiters.filter { ix ->
             val o = objects[ix] as? CircleOrLineOrConcreteArcPath
             o?.hasOutside(absolutePosition) == true
         }
-        val (essentialIns, essentialOuts) =
-            RegionConstraints.compressConstraints(objects, ins, outs)
-        val region0 = LogicalRegion(
-            insides = ins.toSet(),
-            outsides = outs.toSet(),
-            fillColor = regionColor
-        )
-        val region = LogicalRegion(
-            insides = essentialIns.toSet(),
-            outsides = essentialOuts.toSet(),
-            fillColor = regionColor
-        )
-        return Pair(region, region0)
+        val fullConstraints = RegionConstraints(insides, outsides)
+        val compressedConstraints =
+            RegionConstraints.compressConstraints(objects, insides, outsides)
+        return Pair(compressedConstraints, fullConstraints)
     }
 
     /** @return `null` if no arc-path were altered, [Unit] otherwise */
@@ -1251,12 +1239,13 @@ class EditorViewModel : ViewModel() {
         absolutePosition: Offset,
         bounds: List<Ix>? = null,
     ) {
-        val (compressedRegion, uncompressedRegion) = getRegionSurrounding(absolutePosition, bounds)
+        val (constraints, fullConstraints) = getRegionSurrounding(absolutePosition, bounds)
         regions = RegionManipulationStrategy.updateRegionsAfterReselection(
-            compressedRegion = compressedRegion,
-            uncompressedRegion = uncompressedRegion,
+            constraints = constraints,
+            fullConstraints = fullConstraints,
             allRegions = regions,
             regionManipulationStrategy = regionManipulationStrategy,
+            color = regionColor,
         )
     }
 
@@ -2015,13 +2004,13 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun downDuringFlowSelect(absolutePosition: Offset) {
-        val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
-        submode = SubMode.FlowSelect(lastQualifiedRegion = qualifiedRegion)
+        val fullConstraints = getUncompressedRegionSurrounding(absolutePosition)
+        submode = SubMode.FlowSelect(lastConstraints = fullConstraints)
     }
 
     private fun downDuringFlowFill(absolutePosition: Offset) {
-        val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
-        submode = SubMode.FlowFill(qualifiedRegion)
+        val fullConstraints = getUncompressedRegionSurrounding(absolutePosition)
+        submode = SubMode.FlowFill(lastConstraints = fullConstraints)
         val selectedBounds = selection.indices.filter {
             val o = objects[it]
             o is CircleOrLine || o is ConcreteArcPath && o.isClosed
@@ -2381,8 +2370,8 @@ class EditorViewModel : ViewModel() {
                         highlightSelectionParents()
                     }
                 } else { // try to select bounding circles of the selected region
-                    val (region, uncompressedRegion) = getRegionSurrounding(absolutePosition)
-                    if (uncompressedRegion.insides.isEmpty()) {
+                    val (constraints, fullConstraints) = getRegionSurrounding(absolutePosition)
+                    if (fullConstraints.insides.isEmpty()) {
                         // if we clicked outside of everything, toggle select all
                         toggleSelectAll()
                         if (!showPhantomObjects) {
@@ -2398,11 +2387,11 @@ class EditorViewModel : ViewModel() {
                         }
                         val largestInnerRegion = regions
                             .filter { r ->
-                                region isTriviallyInside r || uncompressedRegion isTriviallyInside r
+                                constraints isTriviallyInside r || fullConstraints isTriviallyInside r
                             }.maxByOrNull { it.insides.size + it.outsides.size }
                         val bounds: Set<Ix> =
                             if (largestInnerRegion == null) // select bounds of a non-existent region
-                                region.insides + region.outsides
+                                constraints.insides.toSet() + constraints.outsides
                             else
                                 largestInnerRegion.insides + largestInnerRegion.outsides
                         if (bounds != selectedBounds.toSet()) {
@@ -2877,13 +2866,13 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun updateFlowSelect(absolutePosition: Offset, sm: SubMode.FlowSelect) {
-        val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
-        if (sm.lastQualifiedRegion == null) {
-            submode = SubMode.FlowSelect(lastQualifiedRegion = qualifiedRegion)
+        val fullConstraints = getUncompressedRegionSurrounding(absolutePosition)
+        if (sm.lastConstraints == null) {
+            submode = SubMode.FlowSelect(lastConstraints = fullConstraints)
         } else {
             val diff =
-                (qualifiedRegion.insides xor sm.lastQualifiedRegion.insides) union
-                (qualifiedRegion.outsides xor sm.lastQualifiedRegion.outsides)
+                (fullConstraints.insides.toSet() xor sm.lastConstraints.insides.toSet()) union
+                (fullConstraints.outsides.toSet() xor sm.lastConstraints.outsides.toSet())
             val additional = diff.filter {
                 it !in selection.indices && (showPhantomObjects || it !in phantoms)
             }
@@ -2899,13 +2888,13 @@ class EditorViewModel : ViewModel() {
         selectedCircles: List<Ix>,
         sm: SubMode.FlowFill
     ) {
-        val qualifiedRegion = getUncompressedRegionSurrounding(absolutePosition)
-        if (sm.lastQualifiedRegion == null) {
-            submode = SubMode.FlowFill(lastQualifiedRegion = qualifiedRegion)
+        val fullConstraints = getUncompressedRegionSurrounding(absolutePosition)
+        if (sm.lastConstraints == null) {
+            submode = SubMode.FlowFill(lastConstraints = fullConstraints)
         } else {
             var submode: SubMode.FlowFill = sm
-            if (sm.lastQualifiedRegion != qualifiedRegion) {
-                submode = sm.copy(lastQualifiedRegion = qualifiedRegion)
+            if (sm.lastConstraints != fullConstraints) {
+                submode = sm.copy(lastConstraints = fullConstraints)
                 if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
                     refillRegionAt(absolutePosition, selectedCircles)
                 } else {

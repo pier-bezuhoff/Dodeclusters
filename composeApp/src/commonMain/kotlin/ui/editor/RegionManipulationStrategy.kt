@@ -1,12 +1,14 @@
 package ui.editor
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_add
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_erase
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_replace
 import domain.filterIndices
 import domain.model.LogicalRegion
+import domain.model.RegionConstraints
 import domain.updated
 import domain.withoutElementAt
 import kotlinx.serialization.Serializable
@@ -26,62 +28,63 @@ enum class RegionManipulationStrategy(
 
     companion object {
         fun updateRegionsAfterReselection(
-            compressedRegion: LogicalRegion,
-            uncompressedRegion: LogicalRegion,
+            constraints: RegionConstraints,
+            fullConstraints: RegionConstraints,
             allRegions: List<LogicalRegion>,
             regionManipulationStrategy: RegionManipulationStrategy,
+            color: Color,
         ): List<LogicalRegion> {
             var resultingRegions = allRegions
             val outerRegionsIndices = allRegions.filterIndices { r ->
-                compressedRegion isTriviallyInside r || uncompressedRegion isTriviallyInside r
+                constraints isTriviallyInside r || fullConstraints isTriviallyInside r
             }
             val outerRegions = outerRegionsIndices.map { allRegions[it] }
             val sameBoundsRegionsIndices = outerRegionsIndices.filter { i ->
-                allRegions[i].insides == compressedRegion.insides &&
-                allRegions[i].outsides == compressedRegion.outsides
+                allRegions[i].insides == constraints.insides.toSet() &&
+                allRegions[i].outsides == constraints.outsides.toSet()
             }
             val sameBoundsRegions = sameBoundsRegionsIndices.map { allRegions[it] }
             when (regionManipulationStrategy) {
                 REPLACE -> {
                     if (outerRegions.isEmpty()) {
-                        resultingRegions += compressedRegion
-                        println("added $compressedRegion")
+                        resultingRegions += constraints.toLogicalRegion(color)
+                        println("added $constraints")
                     } else if (outerRegions.size == 1) {
                         val i = outerRegionsIndices.single()
                         val outer = outerRegions.single()
-                        if (compressedRegion.fillColor == outer.fillColor) {
+                        if (color == outer.fillColor) {
                             resultingRegions = allRegions.withoutElementAt(i)
                             println("removed singular same-color outer $outer")
                         } else { // we are trying to change the color im guessing
                             resultingRegions = allRegions.updated(i,
-                                outer.copy(fillColor = compressedRegion.fillColor)
+                                outer.copy(fillColor = color)
                             )
                             println("recolored singular $outer")
                         }
                     } else if (sameBoundsRegionsIndices.isNotEmpty()) {
                         val sameBoundsSameColorRegionsIndices = sameBoundsRegionsIndices.filter {
-                            allRegions[it].fillColor == compressedRegion.fillColor
+                            allRegions[it].fillColor == color
                         }
                         if (sameBoundsSameColorRegionsIndices.isNotEmpty()) {
                             val sameRegions = sameBoundsSameColorRegionsIndices.map { allRegions[it] }
                             resultingRegions = allRegions.filter { it !in sameRegions }
-                            println("removed all same-bounds same-color $sameBoundsSameColorRegionsIndices ~ $compressedRegion")
+                            println("removed all same-bounds same-color $sameBoundsSameColorRegionsIndices ~ $constraints")
                         } else { // we are trying to change the color im guessing
                             val i = sameBoundsRegionsIndices.last()
                             val _regions = allRegions.toMutableList()
-                            _regions[i] = compressedRegion
+                            _regions[i] = constraints.toLogicalRegion(color)
                             sameBoundsRegions
                                 .dropLast(1)
                                 .forEach {
                                     _regions.remove(it) // cleanup
                                 }
                             resultingRegions = _regions
-                            println("recolored $i (same bounds ~ $compressedRegion)")
+                            println("recolored $i (same bounds ~ $constraints)")
                         }
                     } else {
                         // NOTE: click on overlapping region: contested behaviour
                         val outerRegionsOfTheSameColor = outerRegions.filter { r ->
-                            r.fillColor == compressedRegion.fillColor
+                            r.fillColor == color
                         }
                         if (outerRegionsOfTheSameColor.isNotEmpty()) {
                             // NOTE: this removes regions of the same color that lie under
@@ -89,16 +92,16 @@ enum class RegionManipulationStrategy(
                             resultingRegions = allRegions.filter { it !in outerRegionsOfTheSameColor }
                             println("removed same color regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
                         } else { // there are several outer regions, but none of the color of region.fillColor
-                            resultingRegions += compressedRegion
-                            println("added $compressedRegion")
+                            resultingRegions += constraints.toLogicalRegion(color)
+                            println("added $constraints")
                         }
                     }
                 }
                 ADD -> {
                     if (sameBoundsRegionsIndices.isEmpty()) {
-                        resultingRegions += compressedRegion
-                        println("added $compressedRegion")
-                    } else if (sameBoundsRegions.last().fillColor == compressedRegion.fillColor) {
+                        resultingRegions += constraints.toLogicalRegion(color)
+                        println("added $constraints")
+                    } else if (sameBoundsRegions.last().fillColor == color) {
                         // im gonna cleanup same bounds until only 1 is left
                         // cleanup & skip
                         val _regions = allRegions.toMutableList()
@@ -112,20 +115,20 @@ enum class RegionManipulationStrategy(
                         // replace & cleanup
                         val i = sameBoundsRegionsIndices.last()
                         val _regions = allRegions.toMutableList()
-                        _regions[i] = compressedRegion
+                        _regions[i] = constraints.toLogicalRegion(color)
                         sameBoundsRegions
                             .dropLast(1)
                             .forEach {
                                 _regions.remove(it) // cannot use removeAll cuz it could remove the last one too
                             }
                         resultingRegions = _regions
-                        println("recolored $i (same bounds ~ $compressedRegion)")
+                        println("recolored $i (same bounds ~ $constraints)")
                     }
                 }
                 ERASE -> {
                     if (sameBoundsRegions.isNotEmpty()) {
                         resultingRegions = allRegions.filter { it !in sameBoundsRegions }
-                        println("removed [${sameBoundsRegionsIndices.joinToString(prefix = "\n", separator = ";\n")}] (same bounds ~ $compressedRegion)")
+                        println("removed [${sameBoundsRegionsIndices.joinToString(prefix = "\n", separator = ";\n")}] (same bounds ~ $constraints)")
                     } else if (outerRegions.isNotEmpty()) {
                         // maybe find minimal and erase it OR remove last outer
                         // tho it would stop working like eraser then
