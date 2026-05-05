@@ -1190,27 +1190,8 @@ class EditorViewModel : ViewModel() {
         absolutePosition: Offset,
         bounds: List<Ix>? = null
     ): Pair<RegionConstraints, RegionConstraints> {
-        val delimiters = bounds ?:
-            objectModel.circleOrLineIndices.filter { ix ->
-                objects[ix] is CircleOrLine && ix !in phantoms
-            }.plus(
-                objectModel.arcPathIndices.filter { ix ->
-                    val o = objects[ix]
-                    o is ConcreteArcPath && o.isClosed && ix !in phantoms
-                }
-            )
-        // NOTE: doesn't include circles that the point lies on
-        val insides = delimiters.filter { ix ->
-            val o = objects[ix] as? CircleOrLineOrConcreteArcPath
-            o?.hasInside(absolutePosition) == true
-        }
-        val outsides = delimiters.filter { ix ->
-            val o = objects[ix] as? CircleOrLineOrConcreteArcPath
-            o?.hasOutside(absolutePosition) == true
-        }
-        val fullConstraints = RegionConstraints(insides, outsides)
-        val compressedConstraints =
-            RegionConstraints.compressConstraints(objects, insides, outsides)
+        val fullConstraints = getUncompressedRegionSurrounding(absolutePosition, bounds)
+        val compressedConstraints = fullConstraints.compressConstraints(objects)
         return Pair(compressedConstraints, fullConstraints)
     }
 

@@ -37,6 +37,8 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -83,8 +85,6 @@ import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
-import domain.expressions.ArcPath
-import domain.mostCommonOf
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -99,6 +99,7 @@ import ui.editor.dialogs.DefaultInterpolationParameters
 import ui.editor.dialogs.DefaultLoxodromicMotionParameters
 import ui.editor.dialogs.DefaultRotationParameters
 import ui.theme.DodeclustersColors
+import ui.theme.adaptiveSizing
 import ui.theme.extendedColorScheme
 import ui.tools.Tool
 import kotlin.math.abs
@@ -1020,13 +1021,76 @@ fun BoxScope.PartialArcPathContextActions(
     }
 }
 
-// FIX: takes too much screen space, esp on mobile
+@Composable
+private fun RegionManipulationStrategyCard(
+    strategy: RegionManipulationStrategy,
+    isActive: Boolean,
+    iconOnly: Boolean,
+    setStrategy: (RegionManipulationStrategy) -> Unit,
+) {
+    val description = stringResource(strategy.descriptionResource)
+    val color =
+        if (isActive)
+            MaterialTheme.colorScheme.onSecondaryContainer
+        else
+            MaterialTheme.colorScheme.onSurface
+    if (iconOnly) {
+        WithTooltip(
+            description,
+            modifier = Modifier
+                .selectable(
+                    selected = isActive,
+                    onClick = { setStrategy(strategy) },
+                    role = Role.RadioButton
+                ).padding(8.dp)
+        ) {
+            Icon(painterResource(strategy.iconResource),
+                contentDescription = description,
+                modifier = Modifier,
+                tint = color,
+            )
+        }
+    } else {
+        Row(
+            Modifier
+                .selectable(
+                    selected = isActive,
+                    onClick = { setStrategy(strategy) },
+                    role = Role.RadioButton
+                )
+                .height(56.dp)
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+            ,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = isActive,
+                onClick = null, // null recommended for accessibility with screen readers
+                colors = RadioButtonDefaults.colors().copy(
+                    selectedColor = MaterialTheme.colorScheme.secondary,
+                )
+            )
+            Text(
+                text = description,
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .weight(1f),
+                color = color,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+    }
+}
+
 @Composable
 fun BoxScope.RegionManipulationStrategySelector(
     currentStrategy: RegionManipulationStrategy,
     setStrategy: (RegionManipulationStrategy) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val iconOnly =
+        MaterialTheme.adaptiveSizing.windowSizeClass.widthSizeClass < WindowWidthSizeClass.Expanded
     Surface(
         modifier = modifier.align(Alignment.CenterEnd),
         shape = MaterialTheme.shapes.large,
@@ -1038,38 +1102,12 @@ fun BoxScope.RegionManipulationStrategySelector(
             .selectableGroup()
         ) {
             RegionManipulationStrategy.entries.forEach { strategy ->
-                Row(
-                    Modifier
-                        .selectable(
-                            selected = (strategy == currentStrategy),
-                            onClick = { setStrategy(strategy) },
-                            role = Role.RadioButton
-                        )
-                        .height(56.dp)
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth()
-                    ,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = (strategy == currentStrategy),
-                        onClick = null, // null recommended for accessibility with screen readers
-                        colors = RadioButtonDefaults.colors().copy(
-                            selectedColor = MaterialTheme.colorScheme.secondary,
-                        )
-                    )
-                    Text(
-                        text = stringResource(strategy.stringResource),
-                        modifier = Modifier
-                            .padding(start = 16.dp)
-                            .weight(1f),
-                        color =
-                            if (strategy == currentStrategy)
-                                MaterialTheme.colorScheme.onSecondaryContainer
-                            else MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
+                RegionManipulationStrategyCard(
+                    strategy = strategy,
+                    isActive = currentStrategy == strategy,
+                    iconOnly = iconOnly,
+                    setStrategy = setStrategy,
+                )
             }
         }
     }

@@ -374,17 +374,17 @@ fun BoxScope.EditorCanvas(
             }
         }
 
-        when (val sm = viewModel.submode) {
+        when (val submode = viewModel.submode) {
             is SubMode.SelectionChoices ->
-                SelectionChoices(sm.choices, viewModel::selectFromChoices)
+                SelectionChoices(submode.choices, viewModel::selectFromChoices)
             else -> {}
         }
-//        if (viewModel.mode == SelectionMode.Region && viewModel.showCircles) {
-//            RegionManipulationStrategySelector(
-//                currentStrategy = viewModel.regionManipulationStrategy,
-//                setStrategy = viewModel::setRegionsManipulationStrategy
-//            )
-//        }
+        if (viewModel.mode == SelectionMode.Region) {
+            RegionManipulationStrategySelector(
+                currentStrategy = viewModel.regionManipulationStrategy,
+                setStrategy = viewModel::setRegionsManipulationStrategy
+            )
+        }
         if (viewModel.toolPredicate(Tool.InfinitePoint)) {
             InfinitePointInput(
                 toolAction = viewModel::toolAction,

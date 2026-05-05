@@ -3,6 +3,11 @@ package ui.editor
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.add_circle
+import dodeclusters.composeapp.generated.resources.delete_forever
+import dodeclusters.composeapp.generated.resources.delta
+import dodeclusters.composeapp.generated.resources.erase
+import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_add
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_erase
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_replace
@@ -12,19 +17,32 @@ import domain.model.RegionConstraints
 import domain.updated
 import domain.withoutElementAt
 import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 
+// TODO: symbols in place of descriptions (too long, use them as tooltips)
+//  and mb diff colors?
 @Immutable
 @Serializable
 enum class RegionManipulationStrategy(
-    val stringResource: StringResource
+    val iconResource: DrawableResource,
+    val descriptionResource: StringResource,
 ) {
     /** When clicking into an existing region, intelligently prefer XOR-style replacing */
-    REPLACE(Res.string.region_manipulation_strategy_replace),
+    REPLACE(
+        Res.drawable.delta,
+        Res.string.region_manipulation_strategy_replace,
+    ),
     /** Only & always add new regions within set of delimiters */
-    ADD(Res.string.region_manipulation_strategy_add),
+    ADD(
+        Res.drawable.add_circle,
+        Res.string.region_manipulation_strategy_add,
+    ),
     /** Only & always erase minimal existing outer regions */
-    ERASE(Res.string.region_manipulation_strategy_erase), ;
+    ERASE(
+        Res.drawable.erase,
+        Res.string.region_manipulation_strategy_erase
+    ), ;
 
     companion object {
         fun updateRegionsAfterReselection(

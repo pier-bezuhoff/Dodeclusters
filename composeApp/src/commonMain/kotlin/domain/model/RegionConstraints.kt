@@ -16,7 +16,6 @@ import core.geometry.liesOnOrInside
 import core.geometry.liesOnOrOutside
 import core.geometry.liesOutside
 import domain.Ix
-import domain.toCssString
 
 /**
  * @property[insides] Indices of bounds, inside which we are. (exteriors)
@@ -51,70 +50,62 @@ data class RegionConstraints(
 
     // MAYBE: also separately process open arc-paths (potentially as outs)
     //  that have >2 intersections with the rest of essentials, or that have self-intersections
-    companion object {
-        /**
-         * [ins] and [outs] delimiters must be indices of [CircleOrLine] or
-         * closed [core.geometry.ConcreteArcPath].
-         */
-        fun compressConstraints(
-            allObjects: List<*>,
-            ins: List<Ix>,
-            outs: List<Ix>,
-        ): RegionConstraints {
-            val (sievedIns, sievedOuts) =
-                compressConstraintsByRelativeContainment(allObjects, ins, outs)
-            val (essentialInsIxs, essentialOutsIxs) =
-                compressConstraintsByIntersectionPoints(
-                    sievedIns.map { ix ->
-                        allObjects[ix] as CircleOrLineOrConcreteArcPath
-                    },
-                    sievedOuts.map { ix ->
-                        allObjects[ix] as CircleOrLineOrConcreteArcPath
-                    }
-                )
-            val essentialIns = essentialInsIxs.map { sievedIns[it] }
-            val essentialOuts = essentialOutsIxs.map { sievedOuts[it] }
-            return RegionConstraints(essentialIns, essentialOuts)
-        }
+    /**
+     * [insides] and [outsides] delimiters must be indices of [CircleOrLine] or
+     * closed [core.geometry.ConcreteArcPath].
+     */
+    fun compressConstraints(
+        allObjects: List<*>,
+    ): RegionConstraints {
+        val (sievedIns, sievedOuts) = compressConstraintsByRelativeContainment(allObjects)
+        val (essentialInsIxs, essentialOutsIxs) =
+            compressConstraintsByIntersectionPoints(
+                sievedIns.map { ix ->
+                    allObjects[ix] as CircleOrLineOrConcreteArcPath
+                },
+                sievedOuts.map { ix ->
+                    allObjects[ix] as CircleOrLineOrConcreteArcPath
+                }
+            )
+        val essentialIns = essentialInsIxs.map { sievedIns[it] }
+        val essentialOuts = essentialOutsIxs.map { sievedOuts[it] }
+        return RegionConstraints(essentialIns, essentialOuts)
+    }
 
+    /**
+     * [insides] and [outsides] delimiters must be indices of circles, lines or closed arc-paths.
+     */
+    private fun compressConstraintsByRelativeContainment(
+        allObjects: List<*>,
+    ): RegionConstraints {
+        // NOTE: these do not take into account more complex
+        //  "intersection is always inside x" type relationships,
+        //  we leave it to compressRegionsByIntersectionPoints
+        val excessiveIns = insides.filter { inJ -> // NOTE: tbh idt these can occur naturally
+            val region = allObjects[inJ] as Region
+            insides.any { otherIn ->
+                val otherInRegion = allObjects[otherIn] as Region
+                otherIn != inJ && otherInRegion isInside region // we only leave the smallest 'in'
+            } || outsides.any { otherOut ->
+                val otherOutRegion = allObjects[otherOut] as Region
+                region isInside otherOutRegion // if an 'in' isInside an 'out' it is empty
+            }
+        }
+        val excessiveOuts = outsides.filter { outJ ->
+            val region = allObjects[outJ] as Region
+            outsides.any { otherOut ->
+                val otherOutRegion = allObjects[otherOut] as Region
+                otherOut != outJ && region isInside otherOutRegion // we only leave the biggest 'out'
+            } || insides.any { otherIn ->
+                val otherInRegion = allObjects[otherIn] as Region
+                region isOutside otherInRegion // if an 'out' isOutside an 'in' it is empty
+            }
+        }
+        val sievedIns = insides.minus(excessiveIns.toSet())
+        val sievedOuts = outsides.minus(excessiveOuts.toSet())
+        return RegionConstraints(sievedIns, sievedOuts)
     }
-}
 
-/**
- * [inConstraints] and [outConstraints] delimiters must be indices of circles, lines or
- * closed arc-paths.
- */
-private fun compressConstraintsByRelativeContainment(
-    allObjects: List<*>,
-    inConstraints: List<Ix>,
-    outConstraints: List<Ix>,
-): RegionConstraints {
-    // NOTE: these do not take into account more complex
-    //  "intersection is always inside x" type relationships,
-    //  we leave it to compressRegionsByIntersectionPoints
-    val excessiveIns = inConstraints.filter { inJ -> // NOTE: tbh idt these can occur naturally
-        val region = allObjects[inJ] as Region
-        inConstraints.any { otherIn ->
-            val otherInRegion = allObjects[otherIn] as Region
-            otherIn != inJ && otherInRegion isInside region // we only leave the smallest 'in'
-        } || outConstraints.any { otherOut ->
-            val otherOutRegion = allObjects[otherOut] as Region
-            region isInside otherOutRegion // if an 'in' isInside an 'out' it is empty
-        }
-    }
-    val excessiveOuts = outConstraints.filter { outJ ->
-        val region = allObjects[outJ] as Region
-        outConstraints.any { otherOut ->
-            val otherOutRegion = allObjects[otherOut] as Region
-            otherOut != outJ && region isInside otherOutRegion // we only leave the biggest 'out'
-        } || inConstraints.any { otherIn ->
-            val otherInRegion = allObjects[otherIn] as Region
-            region isOutside otherInRegion // if an 'out' isOutside an 'in' it is empty
-        }
-    }
-    val sievedIns = inConstraints.minus(excessiveIns.toSet())
-    val sievedOuts = outConstraints.minus(excessiveOuts.toSet())
-    return RegionConstraints(sievedIns, sievedOuts)
 }
 
 private fun pointSatisfiesConstraints(
@@ -248,7 +239,7 @@ private fun compressConstraintsByIntersectionPoints(
             }
             // MAYBE: otherwise artificially add a befitting separator
             //  (intersections <-|-> unwantedIntersections)
-            //  or find several separators that separate unwanted intersections in totality
+            //  OR find several separators that separate unwanted intersections in totality
         }
     }
     return RegionConstraints(essentialIns, essentialOuts)

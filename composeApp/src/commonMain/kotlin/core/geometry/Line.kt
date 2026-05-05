@@ -184,7 +184,7 @@ data class Line(
     override fun orderInBetween(order1: Double, order2: Double): Double =
         Line.orderInBetween(order1, order2)
 
-    // point-in-segment test: start.dot(point, end) in 0.0 .. start.distance2From(end)
+    // point-on-segment test: start.dot(point, end) in 0.0 .. start.distance2From(end)
     override fun agreesWithOrientation(startOrder: Double, middleOrder: Double, endOrder: Double): Boolean =
         orderIsInBetween(startOrder, middleOrder, endOrder)
 
@@ -371,18 +371,6 @@ data class Line(
             val dy = end.y - start.y
             val dotProduct = (point.x - start.x)*dx + (point.y - start.y)*dy
             val t = (dotProduct/l2).coerceIn(0.0, 1.0)
-            return Point(
-                x = start.x + t*dx,
-                y = start.y + t*dy
-            )
-        }
-
-        fun projectPointOntoLineBy2Points(point: Point, start: Point, end: Point): Point {
-            val l2 = start.distance2From(end)
-            val dx = end.x - start.x
-            val dy = end.y - start.y
-            val scalar = (point.x - start.x)*dx + (point.y - start.y)*dy
-            val t = scalar/l2
             return Point(
                 x = start.x + t*dx,
                 y = start.y + t*dy
