@@ -17,6 +17,11 @@ string|add_point_description|Q3JlYXRlIGFuIGFuY2hvciBwb2ludA==
 string|add_point_name|QWRkIHBvaW50
 string|adjust_expr_description|QWRqdXN0IGV4cHJlc3Npb24gcGFyYW1ldGVycyBvZiBzZWxlY3RlZCBvYmplY3Rz
 string|adjust_expr_name|QWRqdXN0IGV4cHJlc3Npb24=
+string|angle_fraction_denominator_placeholder|PGRlbm9taW5hdG9yPg==
+string|angle_fraction_denominator_suffix|4ouFIDM2MMKw
+string|angle_fraction_numerator_placeholder|PG51bWVyYXRvcj4=
+string|angle_fraction_numerator_prefix|RnJhY3Rpb24=
+string|angle_fraction_numerator_suffix|Lw==
 string|angle_in_degrees_placeholder|PGFuZ2xlIGluIGRlZ3JlZXM+
 string|app_name|RG9kZWNsdXN0ZXJz
 string|applied_color_description|U3dpdGNoIHRvIHRoaXMgcmVjZW50bHkgdXNlZCBjb2xvcg==
@@ -179,8 +184,11 @@ string|rectangular_select_name|UmVjdGFuZ3VsYXIgc2VsZWN0aW9u
 string|redo_name|UmVkbw==
 string|region_category_name|UmVnaW9ucw==
 string|region_description|RmlsbCB3aXRoIGNvbG9yIHJlZ2lvbnMgYmV0d2VlbiBjaXJjbGVz
+string|region_manipulation_strategy_add_postfix|VW5pb24=
 string|region_manipulation_strategy_add|QWRk
+string|region_manipulation_strategy_erase_postfix|RXJhc3VyZQ==
 string|region_manipulation_strategy_erase|RXJhc2U=
+string|region_manipulation_strategy_replace_postfix|UmVwbGFjZW1lbnQ=
 string|region_manipulation_strategy_replace|UmVwbGFjZQ==
 string|region_name|UmVnaW9u
 string|regions_blend_settings_description|Q2hhbmdlIHJlZ2lvbiB0cmFuc3BhcmVuY3kgYW5kIGJsZW5kaW5nIHdoZW4gdGhleSBvdmVybGFw
@@ -203,7 +211,7 @@ string|save|U2F2ZQ==
 string|selection_choices_title|QWx0ZXJuYXRpdmUgc2VsZWN0aW9uczo=
 string|set_label_description|U2V0IGxhYmVs
 string|set_label_name|U2V0IGxhYmVs
-string|set_selection_as_tool_arg_prompt|VXNlIGFjdGl2ZSBzZWxlY3Rpb24gYXM=
+string|set_selection_as_tool_arg_prompt|VXNlIGFjdGl2ZSBzZWxlY3Rpb24gYXMgMXN0IGFyZ3VtZW50Pw==
 string|share_new_done|U3VjY2Vzc2Z1bGx5IHVwbG9hZGVkLiBDaGVjayB0aGUgbGluayBhdCB0aGUgdG9wLg==
 string|share_new_error|RmFpbGVkIHRvIHVwbG9hZC4=
 string|share_new_name|U2hhcmUgb25saW5l
@@ -239,3 +247,4 @@ string|tool_arg_parameter_adjustment_prompt|UGxlYXNlIGNvbmZpcm0gc2VsZWN0ZWQgcGFy
 string|transform_category_name|VHJhbnNmb3Jt
 string|undo_name|VW5kbw==
 string|visibility_category_name|Vmlldw==
+string|yes|WWVz
