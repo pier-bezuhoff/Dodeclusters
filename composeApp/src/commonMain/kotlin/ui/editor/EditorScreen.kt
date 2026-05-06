@@ -25,8 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -73,11 +71,9 @@ import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.new_blank_name
 import dodeclusters.composeapp.generated.resources.new_document
-import dodeclusters.composeapp.generated.resources.ok
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.save_prompt_after_blank_description
-import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
@@ -158,12 +154,11 @@ fun EditorScreen(
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 SnackbarWithHighlightMarkdown(data,
-//                    actionOnNewLine = true,
                     containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
                     actionColor = MaterialTheme.colorScheme.primary,
-                    dismissActionContentColor = MaterialTheme.colorScheme.onSurface,
+                    dismissActionContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         },
@@ -444,7 +439,7 @@ fun EditorScreen(
                     is LoadingState.Error -> {
                         println(ddcContent.exception.message ?: "Error")
                         ddcContent.exception.message?.let { message ->
-                            viewModel.queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
+                            viewModel.showSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
                         }
                     }
                 }
@@ -568,6 +563,8 @@ fun ToolDescription(
     val textStyle =
         if (isCompact) MaterialTheme.typography.bodySmall
         else MaterialTheme.typography.titleMedium
+    val inputPrompt = stringResource(Res.string.tool_arg_input_prompt)
+    val confirmParametersPrompt = stringResource(Res.string.tool_arg_parameter_adjustment_prompt)
     Column(
         modifier
             .offset(x = if (isLandscape) 100.dp else 0.dp) // offsetting left toolbar
@@ -605,11 +602,9 @@ fun ToolDescription(
                 style = textStyle,
             )
         }
-        val inputPrompt = stringResource(Res.string.tool_arg_input_prompt)
         val argDescriptions = (tool as? Tool.MultiArg)?.let {
             stringArrayResource(it.argDescriptions)
         }
-        val confirmParametersPrompt = stringResource(Res.string.tool_arg_parameter_adjustment_prompt)
         val number =
             if (partialArgList == null ||
                 tool !is Tool.MultiArg ||

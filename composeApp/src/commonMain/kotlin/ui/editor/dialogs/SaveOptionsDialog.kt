@@ -140,7 +140,7 @@ fun SaveOptionsDialog(
                                 onShared = {
                                     ddcSharing.shared = it
                                     // we dont close the dialog cuz the user needs to grab the new link
-                                    viewModel.queueSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE)
+                                    viewModel.showSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE)
                                 },
                             )
                             if (shared?.second == true) {
@@ -160,7 +160,7 @@ fun SaveOptionsDialog(
                                     setLoadingShared = { loadingShared = it },
                                     onShared = {
                                         ddcSharing.shared = it
-                                        viewModel.queueSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE_OVERWRITE)
+                                        viewModel.showSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE_OVERWRITE)
                                         onConfirm()
                                     },
                                 )

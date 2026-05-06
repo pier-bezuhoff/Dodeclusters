@@ -81,7 +81,6 @@ import domain.io.SaveRequest
 import domain.io.SaveResult
 import domain.io.saveStateAsSvg
 import domain.model.Arg
-import domain.model.ArgType
 import domain.model.ChangeHistory
 import domain.model.ChessboardPattern
 import domain.model.ConformalObjectModel
@@ -466,7 +465,7 @@ class EditorViewModel : ViewModel() {
                 updateSaveConfig(filename)
             },
             onFail = {
-                queueSnackbarMessage(SnackbarMessage.FAILED_OPEN, filename ?: "")
+                showSnackbarMessage(SnackbarMessage.FAILED_OPEN, filename ?: "")
             },
         )
         resetHistory()
@@ -564,7 +563,7 @@ class EditorViewModel : ViewModel() {
 //                clear() // tmp
 //                append(line.agreesWithOrientation(point, point3, point2))
             }
-            queueSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
+            showSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
         }
     }
 
@@ -981,7 +980,7 @@ class EditorViewModel : ViewModel() {
                 // we don't prompt to accept a singular GCircle
                 (selection.arcPaths.isNotEmpty() || selection.gCircles.size > 1)
             ) {
-                queueSnackbarMessage(SnackbarMessage.ACT_ON_SELECTION_PROMPT)
+                showSnackbarMessage(SnackbarMessage.ACT_ON_SELECTION_PROMPT)
             } else {
                 // keep selection for a bit in case we now switch to another mode that
                 // accepts selection as the first arg
@@ -1490,7 +1489,7 @@ class EditorViewModel : ViewModel() {
     fun togglePhantomObjects() {
         showPhantomObjects = !showPhantomObjects
         if (phantoms.isEmpty()) {
-            queueSnackbarMessage(SnackbarMessage.PHANTOM_OBJECT_EXPLANATION)
+            showSnackbarMessage(SnackbarMessage.PHANTOM_OBJECT_EXPLANATION)
         }
     }
 
@@ -1757,9 +1756,9 @@ class EditorViewModel : ViewModel() {
         }
         if (targets.isEmpty()) {
             if (selection.gCircles.size == 1)
-                queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
+                showSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
             else if (selection.gCircles.size > 1)
-                queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
+                showSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
             objectModel.setDisplayObjectsWithConsequences(
                 targets.associateWith { ix ->
@@ -2788,9 +2787,9 @@ class EditorViewModel : ViewModel() {
             }
         if (actualTargets.isEmpty()) {
             if (targets.size == 1) // not sure this is the right place for snackbar messages
-                queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
+                showSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
             else
-                queueSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
+                showSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
             val changedIndices =
                 objectModel.transform(actualTargets, translation, focus, zoom, rotationAngle)
@@ -3157,7 +3156,7 @@ class EditorViewModel : ViewModel() {
 //    fun onLongDragCancel() {}
 //    fun onLongDragEnd() {}
 
-    fun queueSnackbarMessage(snackbarMessage: SnackbarMessage, vararg formatArgs: Any) {
+    fun showSnackbarMessage(snackbarMessage: SnackbarMessage, vararg formatArgs: Any) {
         snackbarMessages.tryEmit(snackbarMessage to formatArgs)
     }
 
@@ -3546,7 +3545,7 @@ class EditorViewModel : ViewModel() {
         ) as? GCircle
         createNewGCircle(newGCircle?.upscale())
         if (newGCircle is ImaginaryCircle) {
-            queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+            showSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
         partialArgList = argList.copyEmpty()
         recordHistory()
@@ -3570,7 +3569,7 @@ class EditorViewModel : ViewModel() {
         ) as? GCircle
         createNewGCircle(newGCircle?.upscale())
         if (newGCircle is ImaginaryCircle) {
-            queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+            showSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
         }
         partialArgList = argList.copyEmpty()
         recordHistory()
@@ -3699,7 +3698,7 @@ class EditorViewModel : ViewModel() {
                 )
             ))
             if (newGCircles.any { it is ImaginaryCircle }) {
-                queueSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
+                showSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
             }
         } else if (startArg is Arg.Point && endArg is Arg.Point) {
             val (startPointIndex, endPointIndex) = listOf(startArg, endArg).map { pointArg ->
@@ -4236,7 +4235,7 @@ class EditorViewModel : ViewModel() {
         when (saveResult) {
             is SaveResult.Success -> {
                 saveConfig = saveResult.asSaveConfig()
-                queueSnackbarMessage(
+                showSnackbarMessage(
                     SnackbarMessage.SUCCESSFUL_SAVE,
                     saveResult.filename,
                 )
@@ -4250,7 +4249,7 @@ class EditorViewModel : ViewModel() {
                 val errorMessage =
                     if (saveResult.error == null) ""
                     else "; error: \"${saveResult.error}\""
-                queueSnackbarMessage(
+                showSnackbarMessage(
                     SnackbarMessage.FAILED_SAVE,
                     saveResult.filename ?: "-",
                     errorMessage

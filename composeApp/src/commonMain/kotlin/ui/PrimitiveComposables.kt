@@ -809,7 +809,15 @@ fun SnackbarWithHighlightMarkdown(
                 TextButton(
                     colors = ButtonDefaults.textButtonColors(contentColor = actionColor),
                     onClick = { snackbarData.performAction() },
-                    content = { Text(actionLabel) },
+                    content = {
+                        val boldActionLabel = buildAnnotatedString {
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(actionLabel)
+                            }
+                        }
+                        // MAYBE: pass actionLabelTextStyle as an arg
+                        Text(boldActionLabel)
+                    },
                 )
             }
         } else {
