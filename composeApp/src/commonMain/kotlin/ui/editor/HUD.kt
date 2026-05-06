@@ -37,7 +37,6 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -1022,7 +1021,7 @@ fun BoxScope.PartialArcPathContextActions(
 }
 
 @Composable
-private fun RegionManipulationStrategyCard(
+private fun RegionManipulationStrategyChoice(
     strategy: RegionManipulationStrategy,
     isActive: Boolean,
     iconOnly: Boolean,
@@ -1102,7 +1101,7 @@ fun BoxScope.RegionManipulationStrategySelector(
             .selectableGroup()
         ) {
             RegionManipulationStrategy.entries.forEach { strategy ->
-                RegionManipulationStrategyCard(
+                RegionManipulationStrategyChoice(
                     strategy = strategy,
                     isActive = currentStrategy == strategy,
                     iconOnly = iconOnly,

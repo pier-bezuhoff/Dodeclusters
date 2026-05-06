@@ -141,7 +141,6 @@
         <item>An anchor point</item>
     </string-array>
     <string name="tool_arg_input_prompt">Please specify</string>
-    <string name="set_selection_as_tool_arg_prompt">Use active selection as</string>
     <string name="tool_arg_parameter_adjustment_prompt">Please confirm selected parameters</string>
     <!-- contextual tools -->
     <string name="expand_name">Expand</string>
@@ -203,8 +202,11 @@
 
     <!-- region manipulation strategies -->
     <string name="region_manipulation_strategy_replace">Replace</string>
+    <string name="region_manipulation_strategy_replace_postfix">Replacement</string>
     <string name="region_manipulation_strategy_add">Add</string>
+    <string name="region_manipulation_strategy_add_postfix">Union</string>
     <string name="region_manipulation_strategy_erase">Erase</string>
+    <string name="region_manipulation_strategy_erase_postfix">Erasure</string>
 
     <!-- dialog commons -->
     <string name="hex_hash">hex #</string>
@@ -213,6 +215,7 @@
     <string name="confirm">Confirm</string>
     <string name="apply">Apply</string>
     <string name="dismiss">Dismiss</string>
+    <string name="yes">Yes</string>
     <string name="n_steps_prompt">Number of steps</string>
     <string name="n_steps_placeholder">&lt;number of steps&gt;</string>
     <string name="angle_in_degrees_placeholder">&lt;angle in degrees&gt;</string>
@@ -308,6 +311,7 @@
     <string name="successful_save_notice">Saved as ^"%1$s"^</string>
     <string name="failed_save_notice">Failed to save ^"%1$s"^%2$s</string>
     <string name="phantom_object_explanation">No ^phantom objects^. To mark an object as ^'phantom'^ (= invisible), select it and click the 'eye' icon on the bottom-right</string>
+    <string name="set_selection_as_tool_arg_prompt">Use active selection as 1st argument?</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

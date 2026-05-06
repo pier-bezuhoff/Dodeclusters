@@ -10,14 +10,22 @@ import dodeclusters.composeapp.generated.resources.locked_objects_notice
 import dodeclusters.composeapp.generated.resources.overwrite_shared_done
 import dodeclusters.composeapp.generated.resources.phantom_object_explanation
 import dodeclusters.composeapp.generated.resources.placeholder
+import dodeclusters.composeapp.generated.resources.set_selection_as_tool_arg_prompt
 import dodeclusters.composeapp.generated.resources.share_new_done
 import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.successful_save_notice
+import dodeclusters.composeapp.generated.resources.yes
 import org.jetbrains.compose.resources.StringResource
 
 enum class SnackbarMessage(
-    val stringResource: StringResource,
-    val duration: SnackbarDuration = SnackbarDuration.Short,
+    val messageResource: StringResource,
+    val actionLabelResource: StringResource? = null,
+    val withDismissAction: Boolean = false,
+    val duration: SnackbarDuration =
+        if (withDismissAction)
+            SnackbarDuration.Indefinite
+        else
+            SnackbarDuration.Short,
 ) {
     STUB(Res.string.stub, duration = SnackbarDuration.Long),
     /** `$string` */
@@ -31,7 +39,14 @@ enum class SnackbarMessage(
     SUCCESSFUL_SAVE(Res.string.successful_save_notice),
     /** `... "$filename"$error` */
     FAILED_SAVE(Res.string.failed_save_notice),
-    PHANTOM_OBJECT_EXPLANATION(Res.string.phantom_object_explanation, duration = SnackbarDuration.Long),
+    PHANTOM_OBJECT_EXPLANATION(Res.string.phantom_object_explanation,
+        duration = SnackbarDuration.Long
+    ),
     SUCCESSFUL_SHARE(Res.string.share_new_done),
     SUCCESSFUL_SHARE_OVERWRITE(Res.string.overwrite_shared_done),
+    ACT_ON_SELECTION_PROMPT(Res.string.set_selection_as_tool_arg_prompt,
+        actionLabelResource = Res.string.yes,
+        withDismissAction = true,
+        duration = SnackbarDuration.Long
+    ),
 }

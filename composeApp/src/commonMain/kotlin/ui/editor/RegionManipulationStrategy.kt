@@ -4,10 +4,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.add_circle
-import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.delta
 import dodeclusters.composeapp.generated.resources.erase
-import dodeclusters.composeapp.generated.resources.redo
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_add
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_erase
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_replace
@@ -42,7 +40,8 @@ enum class RegionManipulationStrategy(
     ERASE(
         Res.drawable.erase,
         Res.string.region_manipulation_strategy_erase
-    ), ;
+    ),
+    ;
 
     companion object {
         fun updateRegionsAfterReselection(

@@ -225,8 +225,6 @@ class EditorViewModel : ViewModel() {
         private set
     var showPanel: Boolean by mutableStateOf(toolbarState.panelNeedsToBeShown)
         private set
-    var showPromptToSetActiveSelectionAsToolArg: Boolean by mutableStateOf(false) // to be updated manually
-        private set
     var showUI: Boolean by mutableStateOf(true)
         private set
 
@@ -612,7 +610,6 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun resetTransients() {
-        showPromptToSetActiveSelectionAsToolArg = false
         submode = null
     }
 
@@ -978,13 +975,13 @@ class EditorViewModel : ViewModel() {
         if (selection.size > 1 && newMode == SelectionMode.Drag) {
             clearSelection()
         }
-        showPromptToSetActiveSelectionAsToolArg = false
         if (newMode is ToolMode) {
-            if (newMode.signature.argTypes.first() == ArgType.INDICES &&
+            val firstArgType = newMode.signature.argTypes.firstOrNull()
+            if (firstArgType?.let { Arg.Indices in it.possibleTypes } == true &&
                 // we don't prompt to accept a singular GCircle
                 (selection.arcPaths.isNotEmpty() || selection.gCircles.size > 1)
             ) {
-                showPromptToSetActiveSelectionAsToolArg = true
+                queueSnackbarMessage(SnackbarMessage.ACT_ON_SELECTION_PROMPT)
             } else {
                 // keep selection for a bit in case we now switch to another mode that
                 // accepts selection as the first arg
@@ -1653,31 +1650,6 @@ class EditorViewModel : ViewModel() {
 
     fun setRegionsManipulationStrategy(newStrategy: RegionManipulationStrategy) {
         regionManipulationStrategy = newStrategy
-    }
-
-    fun cancelSelectionAsToolArgPrompt() {
-        if (showPromptToSetActiveSelectionAsToolArg) {
-            showPromptToSetActiveSelectionAsToolArg = false
-            clearSelection()
-        }
-    }
-
-    fun setActiveSelectionAsToolArg() {
-        toolbarState.activeTool.let { tool ->
-            require(
-                tool is Tool.MultiArg &&
-                tool.signature.argTypes.first() == ArgType.INDICES &&
-                selection.isNotEmpty()
-            ) { "Illegal state in setActiveSelectionAsToolArg(): tool = $tool, selection == $selection" }
-        }
-        partialArgList = partialArgList!!.addArg(
-            Arg.Indices(selection.indices.filter { objects[it] != null }),
-            confirmThisArg = true
-        )
-        cancelSelectionAsToolArgPrompt()
-        if (partialArgList!!.isFull) {
-            completeToolMode()
-        }
     }
 
     // MAYBE: axis-aligned cross centered at a point
@@ -3104,7 +3076,6 @@ class EditorViewModel : ViewModel() {
 
     /** @param[position] `null` if cancelled/OOB */
     fun onUp(position: Offset?) {
-        cancelSelectionAsToolArgPrompt()
         // history is recorded at the end of :onUp
         when (mode) {
             SelectionMode.Drag -> {
@@ -3188,6 +3159,31 @@ class EditorViewModel : ViewModel() {
 
     fun queueSnackbarMessage(snackbarMessage: SnackbarMessage, vararg formatArgs: Any) {
         snackbarMessages.tryEmit(snackbarMessage to formatArgs)
+    }
+
+    fun onSnackbarAction(snackbarMessage: SnackbarMessage) {
+        when (snackbarMessage) {
+            SnackbarMessage.ACT_ON_SELECTION_PROMPT ->
+                setActiveSelectionAsToolArg()
+            else -> {}
+        }
+    }
+
+    fun setActiveSelectionAsToolArg() {
+        toolbarState.activeTool.let { tool ->
+            require(
+                tool is Tool.MultiArg &&
+                Arg.Indices in tool.signature.argTypes.first().possibleTypes &&
+                selection.isNotEmpty()
+            ) { "Illegal state in setActiveSelectionAsToolArg(): tool = $tool, selection == $selection" }
+        }
+        partialArgList = partialArgList!!.addArg(
+            Arg.Indices(selection.indices),
+            confirmThisArg = true
+        )
+        if (partialArgList!!.isFull) {
+            completeToolMode()
+        }
     }
 
     // TODO: instead perma-highlight parents with 2 colors

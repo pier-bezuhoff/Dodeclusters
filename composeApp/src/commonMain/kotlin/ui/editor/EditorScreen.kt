@@ -39,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -58,7 +59,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import core.geometry.CircleOrLine
@@ -158,9 +158,12 @@ fun EditorScreen(
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 SnackbarWithHighlightMarkdown(data,
+//                    actionOnNewLine = true,
                     containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
+                    actionColor = MaterialTheme.colorScheme.primary,
+                    dismissActionContentColor = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
@@ -206,9 +209,7 @@ fun EditorScreen(
                         tool = viewModel.toolbarState.activeTool,
                         toolIsEnabled = viewModel.toolPredicate(viewModel.toolbarState.activeTool),
                         partialArgList = viewModel.partialArgList,
-                        showSelectionAsArgPrompt = viewModel.showPromptToSetActiveSelectionAsToolArg,
-                        setSelectionAsArg = viewModel::setActiveSelectionAsToolArg,
-                        modifier = Modifier.align(Alignment.TopStart)
+                        modifier = Modifier.align(Alignment.TopStart),
                     )
                     EditorTopBar(
                         undoIsEnabled = viewModel.undoIsEnabled.value,
@@ -474,10 +475,16 @@ fun EditorScreen(
     LaunchedEffect(snackbarHostState) {
         viewModel.snackbarMessages.collectLatest { (message, formatArgs) ->
             val result = snackbarHostState.showSnackbar(
-                getString(message.stringResource, *formatArgs),
-                duration = message.duration
+                message = getString(message.messageResource, *formatArgs),
+                actionLabel = message.actionLabelResource?.let { getString(it) },
+                withDismissAction = message.withDismissAction,
+                duration = message.duration,
             )
-            // MAYBE: move on-selection action prompt here instead
+            when (result) {
+                SnackbarResult.ActionPerformed ->
+                    viewModel.onSnackbarAction(message)
+                SnackbarResult.Dismissed -> {}
+            }
         }
     }
     val colorScheme = MaterialTheme.colorScheme
@@ -553,10 +560,9 @@ fun ToolDescription(
     tool: Tool,
     toolIsEnabled: Boolean,
     partialArgList: PartialArgList?,
-    showSelectionAsArgPrompt: Boolean,
-    setSelectionAsArg: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+//    val regionManipulation = tool is Tool.Region || tool is Tool.FlowFill
     val isCompact = MaterialTheme.adaptiveSizing.isCompact
     val isLandscape = MaterialTheme.adaptiveSizing.isLandscape
     val textStyle =
@@ -616,7 +622,7 @@ fun ToolDescription(
                 min(partialArgList.args.size, tool.signature.argTypes.size - 1)
             else
                 max(0, partialArgList.args.size - 1)
-        AnimatedContent(Triple(tool, number, showSelectionAsArgPrompt)) { (currentTool, currentNumber, currentShowPrompt) ->
+        AnimatedContent(Pair(tool, number)) { (currentTool, currentNumber) ->
             if (currentTool is Tool.MultiArg &&
                 currentNumber != null &&
                 argDescriptions != null &&
@@ -635,31 +641,7 @@ fun ToolDescription(
 //                    argPrompt,
 //                    highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
 //                )
-                val setSelectionAsToolArgPrompt = stringResource(Res.string.set_selection_as_tool_arg_prompt)
-                val selectionAsArgPrompt = "$setSelectionAsToolArgPrompt: $argDescription?"
-                if (currentShowPrompt) {
-                    Button(
-                        onClick = setSelectionAsArg,
-                        Modifier.padding(8.dp),
-                        colors = ButtonDefaults.buttonColors()
-                            .copy(
-                                contentColor = MaterialTheme.colorScheme.primary,
-                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                            )
-                    ) {
-                        // NOTE: this functionality is non-obvious
-                        Text(selectionAsArgPrompt,
-                            Modifier.padding(4.dp, 4.dp),
-                            textDecoration = TextDecoration.Underline,
-                            style = textStyle,
-                        )
-                        Icon(
-                            painterResource(Res.drawable.confirm),
-                            stringResource(Res.string.ok),
-                            Modifier.padding(start = 8.dp)
-                        )
-                    }
-                } else if (!isCompact) {
+                if (!isCompact) {
                     Text(argPrompt,
                         Modifier.padding(24.dp, 4.dp),
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),

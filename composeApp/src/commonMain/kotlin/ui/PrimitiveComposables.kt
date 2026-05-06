@@ -797,7 +797,6 @@ fun SnackbarWithHighlightMarkdown(
     contentColor: Color = SnackbarDefaults.contentColor,
     highlightColor: Color = MaterialTheme.colorScheme.secondary,
     actionColor: Color = SnackbarDefaults.actionColor,
-    actionContentColor: Color = SnackbarDefaults.actionContentColor,
     dismissActionContentColor: Color = SnackbarDefaults.dismissActionContentColor,
 ) {
     val annotatedMessage = remember(snackbarData, highlightColor) {
@@ -851,7 +850,7 @@ fun SnackbarWithHighlightMarkdown(
         shape = shape,
         containerColor = containerColor,
         contentColor = contentColor,
-        actionContentColor = actionContentColor,
+        actionContentColor = actionColor,
         dismissActionContentColor = dismissActionContentColor,
         content = {
             Text(
