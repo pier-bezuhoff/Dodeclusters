@@ -217,7 +217,7 @@ data class ConcreteArcPath(
      * `-1` if it's to the right side (inside CW path)
      */
     private fun calculateWindingNumber(point: Point): Int {
-        if (!isClosed)
+        if (!isClosed || point.isInfinite)
             return 0
         var windingNumber = 0
         val (x, y) = point
@@ -266,12 +266,12 @@ data class ConcreteArcPath(
                     if (arcStart.y < y) { // downward crossing
                         // quick reject implies: startVertex.y < y <= endVertex.y
                         // start->end x start->point
-                        val cross = Point.cross(arcStart, arcEnd, point)
+                        val cross = arcStart.cross(arcEnd, point)
                         if (cross < 0) // right side
                             windingNumber -= 1
                     } else { // upward crossing
                         // quick reject implies: endVertex.y <= y <= startVertex.y
-                        val cross = Point.cross(arcStart, arcEnd, point)
+                        val cross = arcStart.cross(arcEnd, point)
                         if (cross > 0) // left side
                             windingNumber += 1
                     }
@@ -543,10 +543,10 @@ data class ConcreteArcPath(
                             }
                         }
                         else -> {
-                            val o1 = Point.cross(start1, end1, start2) > 0
-                            val o2 = Point.cross(start1, end1, end2) > 0
-                            val o3 = Point.cross(start2, end2, start1) > 0
-                            val o4 = Point.cross(start2, end2, end1) > 0
+                            val o1 = start1.cross(end1, start2) > 0
+                            val o2 = start1.cross(end1, end2) > 0
+                            val o3 = start2.cross(end2, start1) > 0
+                            val o4 = start2.cross(end2, end1) > 0
                             if (o1 != o2 && o3 != o4) { // each segment must separate ends of the other one
                                 noIntersection = false
                                 return@forEachArc
@@ -879,10 +879,10 @@ private fun intersect2Arcs(
                 }
             }
             else -> {
-                val o1 = Point.cross(start1, end1, start2) > 0
-                val o2 = Point.cross(start1, end1, end2) > 0
-                val o3 = Point.cross(start2, end2, start1) > 0
-                val o4 = Point.cross(start2, end2, end1) > 0
+                val o1 = start1.cross(end1, start2) > 0
+                val o2 = start1.cross(end1, end2) > 0
+                val o3 = start2.cross(end2, start1) > 0
+                val o4 = start2.cross(end2, end1) > 0
                 if (o1 != o2 && o3 != o4) { // each segment must separate ends of the other one
                     val (a1, b1, c1) = Line.by2Points(start1, end1)
                     val (a2, b2, c2) = Line.by2Points(start2, end2)

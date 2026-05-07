@@ -2217,6 +2217,7 @@ class EditorViewModel : ViewModel() {
 
     private fun tapDuringDrag(absolutePosition: Offset) {
         // when multiple close candidates, show choice list
+        // MAYBE: pass actionLabelTextStyle as an arg
         if (SHOW_SELECTION_CHOICES) {
             val selectablePoints = getPreferablyFreePointsAround(absolutePosition)
             var selectableCircles: List<Ix> = emptyList()

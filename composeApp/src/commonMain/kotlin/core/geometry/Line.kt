@@ -195,7 +195,10 @@ data class Line(
         copy(c = c - (a*dx + b*dy))
 
     fun translatedTo(point: Point): Line =
-        copy(c = -a*point.x - b*point.y)
+        if (point.isInfinite)
+            this
+        else
+            copy(c = -a*point.x - b*point.y)
 
     override fun scaled(focus: Offset, zoom: Float): Line {
         // dist1 -> zoom * dist 1
@@ -318,6 +321,7 @@ data class Line(
             return Line(-dy, dx, c).normalized()
         }
 
+        /** [p1] and [p2] must be finite */
         fun by2Points(p1: Point, p2: Point): Line {
             val dx = p2.x - p1.x
             val dy = p2.y - p1.y
@@ -366,7 +370,11 @@ data class Line(
         }
 
         fun projectPointOntoSegment(point: Point, start: Point, end: Point): Point {
+            if (point.isInfinite)
+                return start
             val l2 = start.distance2From(end)
+            if (l2.isInfinite())
+                return Point.CONFORMAL_INFINITY
             val dx = end.x - start.x
             val dy = end.y - start.y
             val dotProduct = (point.x - start.x)*dx + (point.y - start.y)*dy

@@ -78,13 +78,13 @@ data class Circle(
         Rect(center = center, radius = radius.toFloat())
 
     override fun project(point: Point): Point {
-        val (x1, y1) = point
-        if (x == x1 && y == y1 || point.isInfinite) {
+        val (px, py) = point
+        if (x == px && y == py || point.isInfinite) {
             println("WARNING: bad projection at Circle.project")
             return order2point(ORDER_OF_CONFORMAL_INFINITY)
         }
-        val vx = x1 - x
-        val vy = y1 - y
+        val vx = px - x
+        val vy = py - y
         val vLength = hypot(vx, vy)
         val k = radius/vLength
         return Point(x + k*vx, y + k*vy)
@@ -143,18 +143,19 @@ data class Circle(
     }
 
     fun point2angle(point: Point): Float {
-        if (point.isInfinite || point == centerPoint)
+        if (point.isInfinite || point == centerPoint) // MAYBE: epsilon distance within center
             return ORDER_OF_CONFORMAL_INFINITY.toFloat()
         return atan2(-point.y + y, point.x - x).degrees
     }
 
     /** CCW order in [-[PI]; +[PI]] starting from the East: ENWS */
     override fun point2order(point: Point): Double {
-        if (point.isInfinite)
+        val (px, py) = point
+        if (point.isInfinite || px == x && py == y) // MAYBE: epsilon distance within center
             return ORDER_OF_CONFORMAL_INFINITY
         // NOTE: atan2 uses CCW y-top, x-right coordinates
         //  so we negate y for CCW direction
-        val order = atan2(-point.y + y, point.x - x)
+        val order = atan2(-py + y, px - x)
         return if (isCCW) order else -order
     }
 
@@ -216,7 +217,7 @@ data class Circle(
 
     override fun agreesWithOrientation(startPoint: Point, middlePoint: Point, endPoint: Point): Boolean {
         // startToMiddle x startToEnd
-        val cross = Point.cross(startPoint, middlePoint, endPoint)
+        val cross = startPoint.cross(middlePoint, endPoint)
         return abs(cross) < EPSILON || (cross > 0.0) == isCCW
     }
 
@@ -224,7 +225,7 @@ data class Circle(
         val east = Point(x + radius, y)
         // i think it's faster than calculating order (atan2) of each point
         return Comparator { a, b ->
-            val cross = Point.cross(east, a, b)
+            val cross = east.cross(a, b)
             // positive cross => a is on east->b arc => a < b => cmp is negative
             if (isCCW)
                 -cross.compareTo(0.0)

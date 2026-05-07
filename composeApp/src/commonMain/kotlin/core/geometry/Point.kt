@@ -196,6 +196,12 @@ data class Point(
     inline fun dot(p1: Point, p2: Point): Double =
         (p1.x - x)*(p2.x - x) + (p1.y - y)*(p2.y - y)
 
+    /** cross product `this->p1 x this->p2`, projected on Oz */
+    inline fun cross(p1: Point, p2: Point): Double {
+        // we negate the usual `dx1*dy2 - dx2*dy1` formula cuz of left-hand-ness
+        return -(p1.x - x)*(p2.y - y) + (p1.y - y)*(p2.x - x)
+    }
+
     companion object {
         /** All lines pass through this point, it's a stereographic projection of the North pole */
         val CONFORMAL_INFINITY =
@@ -224,15 +230,15 @@ data class Point(
         inline fun dot(p1: Point, p2: Point, p3: Point, p4: Point): Double =
             (p2.x - p1.x)*(p4.x - p4.x) + (p2.y - p1.y)*(p4.y - p3.y)
 
-        /** cross product `p1->p2 x p1->p3` */
-        inline fun cross(p1: Point, p2: Point, p3: Point): Double {
+        /** cross product `p1->p2 x p3->p4`, projected on Oz */
+        inline fun cross(p1: Point, p2: Point, p3: Point, p4: Point): Double {
             // we negate the usual `dx1*dy2 - dx2*dy1` formula cuz of left-hand-ness
-            return -(p2.x-p1.x)*(p3.y-p1.y) + (p2.y-p1.y)*(p3.x-p1.x)
+            return -(p2.x - p1.x)*(p4.y - p3.y) + (p2.y - p1.y)*(p4.x - p3.x)
         }
 
         /** counterclockwise -> true, clockwise -> false */
         fun calculateOrientation(p1: Point, p2: Point, p3: Point): Boolean {
-            return cross(p1, p2, p3) >= 0.0
+            return p1.cross(p2, p3) >= 0.0
         }
     }
 }
