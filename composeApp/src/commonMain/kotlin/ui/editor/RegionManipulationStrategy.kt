@@ -7,8 +7,11 @@ import dodeclusters.composeapp.generated.resources.add_circle
 import dodeclusters.composeapp.generated.resources.delta
 import dodeclusters.composeapp.generated.resources.erase
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_add
+import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_add_postfix
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_erase
+import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_erase_postfix
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_replace
+import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_replace_postfix
 import domain.filterIndices
 import domain.model.LogicalRegion
 import domain.model.RegionConstraints
@@ -25,21 +28,25 @@ import org.jetbrains.compose.resources.StringResource
 enum class RegionManipulationStrategy(
     val iconResource: DrawableResource,
     val descriptionResource: StringResource,
+    val descriptionPostfixResource: StringResource,
 ) {
     /** When clicking into an existing region, intelligently prefer XOR-style replacing */
     REPLACE(
         Res.drawable.delta,
         Res.string.region_manipulation_strategy_replace,
+        Res.string.region_manipulation_strategy_replace_postfix,
     ),
     /** Only & always add new regions within set of delimiters */
     ADD(
         Res.drawable.add_circle,
         Res.string.region_manipulation_strategy_add,
+        Res.string.region_manipulation_strategy_add_postfix,
     ),
     /** Only & always erase minimal existing outer regions */
     ERASE(
         Res.drawable.erase,
-        Res.string.region_manipulation_strategy_erase
+        Res.string.region_manipulation_strategy_erase,
+        Res.string.region_manipulation_strategy_erase_postfix,
     ),
     ;
 

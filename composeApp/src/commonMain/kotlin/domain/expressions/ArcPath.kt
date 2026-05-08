@@ -44,6 +44,9 @@ sealed interface ArcPath : Expr.Conformal.OneToOne {
     val arcs: List<Arc>
 
     @Stable
+    val midpoints: List<Ix?> get() =
+        arcs.map { (it as? Arc.By3Points)?.middlePointIndex }
+    @Stable
     val dependencies: Set<Ix> get() =
         vertices.toSet() + arcs.filterIsInstance<Arc.By3Points>().map { it.middlePointIndex }
 

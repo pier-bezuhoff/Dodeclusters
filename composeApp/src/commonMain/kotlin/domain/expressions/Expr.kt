@@ -83,6 +83,9 @@ sealed interface Expr {
         val nSteps: Int
     }
 
+    @Serializable
+    sealed interface Adjustable : HasParameters
+
     // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr
     //  p' = f(Δ(f⁻¹(p)), where point p on dependent carrier f(<free>) moves to p' when <free> is affected by Δ
 
@@ -182,7 +185,7 @@ sealed interface Expr {
         override val parameters: InterpolationParameters,
         val startCircle: Ix,
         val endCircle: Ix,
-    ) : Conformal.OneToMany, HasParameters
+    ) : Conformal.OneToMany, HasParameters, Adjustable
 
     @Serializable
     @SerialName("PointInterpolation")
@@ -190,7 +193,7 @@ sealed interface Expr {
         override val parameters: InterpolationParameters,
         val startPoint: Ix,
         val endPoint: Ix,
-    ) : Conformal.OneToMany, Projective.OneToMany, HasParameters
+    ) : Conformal.OneToMany, Projective.OneToMany, HasParameters, Adjustable
 
     // NOTE: deprecated, since BiInversion is more general
     @Serializable
@@ -207,7 +210,7 @@ sealed interface Expr {
         override val parameters: RotationParameters,
         val pivot: Ix,
         override val target: Ix,
-    ) : Conformal.OneToMany, Projective.OneToMany, HasParameters, TransformLike {
+    ) : Conformal.OneToMany, Projective.OneToMany, HasParameters, TransformLike, Adjustable {
         @Transient
         override val nSteps: Int = parameters.nSteps
     }
@@ -219,7 +222,7 @@ sealed interface Expr {
         val engine1: Ix,
         val engine2: Ix,
         override val target: Ix,
-    ) : Conformal.OneToMany, HasParameters, TransformLike {
+    ) : Conformal.OneToMany, HasParameters, TransformLike, Adjustable {
         @Transient
         override val nSteps: Int = parameters.nSteps
     }
@@ -241,7 +244,7 @@ sealed interface Expr {
         val convergencePoint: Ix,
         override val target: Ix,
         val otherHalfStart: Ix? = null,
-    ) : Conformal.OneToMany, HasParameters, TransformLike {
+    ) : Conformal.OneToMany, HasParameters, TransformLike, Adjustable {
         @Transient
         override val nSteps: Int = parameters.nSteps
     }
@@ -598,11 +601,11 @@ inline fun <reified EXPR : Expr> EXPR.copyWithNewParameters(
         } as EXPR
     } else this
 
-fun Expr.TransformLike.changeTarget(
+inline fun <reified E : Expr.TransformLike> E.changeTarget(
     newTarget: Ix
-): Expr.TransformLike = when (this) {
+): E = when (this) {
     is CircleInversion -> copy(target = newTarget)
     is Rotation -> copy(target = newTarget)
     is BiInversion -> copy(target = newTarget)
     is LoxodromicMotion -> copy(target = newTarget)
-}
+} as E

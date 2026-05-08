@@ -203,6 +203,7 @@ fun EditorScreen(
                     ToolDescription(
                         tool = viewModel.toolbarState.activeTool,
                         toolIsEnabled = viewModel.toolPredicate(viewModel.toolbarState.activeTool),
+                        regionManipulationStrategy = viewModel.regionManipulationStrategy,
                         partialArgList = viewModel.partialArgList,
                         modifier = Modifier.align(Alignment.TopStart),
                     )
@@ -554,10 +555,10 @@ private fun preloadIcons() {
 fun ToolDescription(
     tool: Tool,
     toolIsEnabled: Boolean,
+    regionManipulationStrategy: RegionManipulationStrategy,
     partialArgList: PartialArgList?,
     modifier: Modifier = Modifier
 ) {
-//    val regionManipulation = tool is Tool.Region || tool is Tool.FlowFill
     val isCompact = MaterialTheme.adaptiveSizing.isCompact
     val isLandscape = MaterialTheme.adaptiveSizing.isLandscape
     val textStyle =
@@ -572,6 +573,9 @@ fun ToolDescription(
     ) {
         Crossfade(Pair(tool, toolIsEnabled)) { (currentTool, currentToolIsEnabled) ->
             val description = when (currentTool) {
+                Tool.Region, Tool.FlowFill ->
+                    stringResource(currentTool.description) + " | " +
+                        stringResource(regionManipulationStrategy.descriptionPostfixResource)
                 is ITool.BinaryToggle ->
                     if (currentToolIsEnabled)
                         stringResource(currentTool.description)

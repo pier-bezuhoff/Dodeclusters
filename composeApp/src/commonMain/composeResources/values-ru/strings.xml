@@ -199,8 +199,11 @@
 
     <!-- region manipulation strategies -->
     <string name="region_manipulation_strategy_replace">Замена</string>
+    <string name="region_manipulation_strategy_replace_postfix">Замена</string>
     <string name="region_manipulation_strategy_add">Добавление</string>
+    <string name="region_manipulation_strategy_add_postfix">Добавление</string>
     <string name="region_manipulation_strategy_erase">Стирание</string>
+    <string name="region_manipulation_strategy_erase_postfix">Стирание</string>
 
     <!-- dialog commons -->
     <string name="hex_hash">hex #</string>

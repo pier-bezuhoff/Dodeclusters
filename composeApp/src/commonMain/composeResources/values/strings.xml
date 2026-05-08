@@ -202,11 +202,11 @@
 
     <!-- region manipulation strategies -->
     <string name="region_manipulation_strategy_replace">Replace</string>
-    <string name="region_manipulation_strategy_replace_postfix">Replacement</string>
+    <string name="region_manipulation_strategy_replace_postfix">Replacing</string>
     <string name="region_manipulation_strategy_add">Add</string>
-    <string name="region_manipulation_strategy_add_postfix">Union</string>
+    <string name="region_manipulation_strategy_add_postfix">Adding</string>
     <string name="region_manipulation_strategy_erase">Erase</string>
-    <string name="region_manipulation_strategy_erase_postfix">Erasure</string>
+    <string name="region_manipulation_strategy_erase_postfix">Erasing</string>
 
     <!-- dialog commons -->
     <string name="hex_hash">hex #</string>

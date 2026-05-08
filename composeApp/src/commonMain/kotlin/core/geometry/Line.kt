@@ -373,7 +373,7 @@ data class Line(
             if (point.isInfinite)
                 return start
             val l2 = start.distance2From(end)
-            if (l2.isInfinite())
+            if (l2.isInfinite() || l2.isNaN())
                 return Point.CONFORMAL_INFINITY
             val dx = end.x - start.x
             val dy = end.y - start.y

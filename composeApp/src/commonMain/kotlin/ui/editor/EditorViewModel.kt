@@ -61,6 +61,7 @@ import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.Parameters
 import domain.expressions.RotationParameters
+import domain.expressions.changeTarget
 import domain.expressions.computeArcPathIncidenceOrder
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeIntersection
@@ -1770,92 +1771,176 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    // TODO: transformed arc-paths
-    inline val showAdjustExprButton: Boolean get() {
-        val sel = selection.gCircles
-        return sel.isNotEmpty() && (exprOf(sel[0])?.let { expr0 ->
-            (expr0 is Expr.CircleInterpolation ||
-                expr0 is Expr.PointInterpolation ||
-                expr0 is Expr.Rotation ||
-                expr0 is Expr.BiInversion ||
-                expr0 is Expr.LoxodromicMotion) &&
-            sel.all { exprOf(it) == expr0 }
-        } == true)
+    private fun findProtoArcPath(arcPathIndex: Ix): Ix? {
+        val arcPath: ArcPath = objectModel.getArcPath(arcPathIndex)
+            ?: return null
+        val protoVertices = arcPath.vertices.map {
+            (exprOf(it) as? Expr.TransformLike)?.target
+                ?: return null
+        }
+        val protoMidpoints = arcPath.midpoints.map { midpointIndex ->
+            if (midpointIndex == null)
+                return null
+            (exprOf(midpointIndex) as? Expr.TransformLike)?.target
+                ?: return null
+        }
+        return objectModel.arcPathIndices.firstOrNull { ix ->
+            val protoArcPath = objectModel.getArcPath(ix)
+            protoArcPath != null &&
+            protoArcPath.vertices == protoVertices &&
+            protoArcPath.midpoints == protoMidpoints
+        }
     }
 
+    private fun areAdjustableExprIndices(indices: List<Ix>): Boolean =
+        indices.isNotEmpty() && (exprOf(indices.first())?.let { expr0 ->
+            expr0 is Expr.Adjustable &&
+            indices.all { exprOf(it) == expr0 }
+        } == true)
+
+    /**
+     * @param[indices] we test all of these, whether they originate from the same [Expr] or
+     * from similar [Expr.TransformLike] exprs but with differing targets/preimages
+     * @return (true/false, preimages of [Expr.TransformLike])
+     */
+    private fun areExpressionsAdjustable(
+        indices: List<Ix> = selection.indices,
+    ): Pair<Boolean, List<Expr.Adjustable>> {
+        val exprs: MutableSet<Expr.Adjustable> = mutableSetOf()
+        if (indices.isEmpty())
+            return Pair(false, emptyList())
+        val expr0 = when (val expr = exprOf(indices.first())) {
+            is ArcPath -> exprOf(expr.vertices.first())
+            else -> expr
+        }
+        if (expr0 !is Expr.Adjustable)
+            return Pair(false, emptyList())
+        val yes = when (expr0) {
+            is Expr.TransformLike -> {
+                indices.all { ix ->
+                    when (val expr = exprOf(ix)) {
+                        is ArcPath -> {
+                            expr.arcs.all { it is ArcPath.Arc.By3Points } &&
+                            expr.dependencies.all {
+                                val e = exprOf(it) as? Expr.TransformLike
+                                    ?: return@all false
+                                exprs.add(e as Expr.Adjustable)
+                                e.changeTarget<Expr.TransformLike>(expr0.target) == expr0
+                            }
+                        }
+                        else -> if (expr is Expr.TransformLike) {
+                            exprs.add(expr as Expr.Adjustable)
+                            expr == expr0
+                        } else false
+                    }
+                }
+            }
+            is Expr.PointInterpolation, is Expr.CircleInterpolation -> {
+                // point or circle interpolations
+                exprs.add(expr0 as Expr.Adjustable)
+                indices.all { ix ->
+                    val expr = exprOf(ix)
+                    expr == expr0
+                }
+            }
+            else -> false
+        }
+        return Pair(yes, if (yes) exprs.toList() else emptyList())
+    }
+
+    // TODO: transformed arc-paths
+    val showAdjustExprButton: Boolean get() =
+//        areExpressionsAdjustable(selection.indices)
+        areAdjustableExprIndices(selection.gCircles)
+
     fun startExprAdjustmentOfSelection() {
-        // TODO: adjust expr of transformed arc-paths
-        val firstSelected = selection.indices.firstOrNull() ?: return
-        val expr = exprOf(firstSelected)
+        val (yes, exprs) = areExpressionsAdjustable()
+        require(yes)
+        val expr0 = exprs.first()
+        val preimages = exprs.mapNotNull { (it as? Expr.TransformLike)?.target }
         val tool: Tool.MultiArg
-        val sourceIndex: Ix
         val args: List<Arg>
-        when (expr) {
+        when (expr0) {
             is Expr.CircleInterpolation -> {
                 tool = Tool.CircleOrPointInterpolation
-                sourceIndex = expr.startCircle
                 args = listOf(
-                    Arg.IndexOf(expr.startCircle, objects[expr.startCircle] as GCircle),
-                    Arg.IndexOf(expr.endCircle, objects[expr.endCircle] as GCircle),
+                    Arg.IndexOf(expr0.startCircle, objects[expr0.startCircle] as GCircle),
+                    Arg.IndexOf(expr0.endCircle, objects[expr0.endCircle] as GCircle),
                 )
-                defaultInterpolationParameters = DefaultInterpolationParameters(expr.parameters)
+                defaultInterpolationParameters = DefaultInterpolationParameters(expr0.parameters)
             }
             is Expr.PointInterpolation -> {
                 tool = Tool.CircleOrPointInterpolation
-                sourceIndex = expr.startPoint
-                args = listOf(Arg.PointIndex(expr.startPoint), Arg.PointIndex(expr.endPoint))
-                defaultInterpolationParameters = DefaultInterpolationParameters(expr.parameters)
+                args = listOf(Arg.PointIndex(expr0.startPoint), Arg.PointIndex(expr0.endPoint))
+                defaultInterpolationParameters = DefaultInterpolationParameters(expr0.parameters)
             }
             is Expr.Rotation -> {
                 tool = Tool.Rotation
-                sourceIndex = expr.target
-                args = listOf(Arg.Indices(listOf(expr.target)), Arg.PointIndex(expr.pivot))
-                defaultRotationParameters = DefaultRotationParameters(expr.parameters)
+                args = listOf(Arg.Indices(preimages), Arg.PointIndex(expr0.pivot))
+                defaultRotationParameters = DefaultRotationParameters(expr0.parameters)
             }
             is Expr.BiInversion -> {
                 tool = Tool.BiInversion
-                sourceIndex = expr.target
                 args = listOf(
-                    Arg.Indices(listOf(expr.target)),
-                    Arg.IndexOf(expr.engine1, objects[expr.engine1] as GCircle),
-                    Arg.IndexOf(expr.engine2, objects[expr.engine2] as GCircle),
+                    Arg.Indices(preimages),
+                    Arg.IndexOf(expr0.engine1, objects[expr0.engine1] as GCircle),
+                    Arg.IndexOf(expr0.engine2, objects[expr0.engine2] as GCircle),
                 )
-                defaultBiInversionParameters = DefaultBiInversionParameters(expr.parameters)
+                defaultBiInversionParameters = DefaultBiInversionParameters(expr0.parameters)
             }
             is Expr.LoxodromicMotion -> {
                 tool = Tool.LoxodromicMotion
-                sourceIndex = expr.target
                 args = listOf(
-                    Arg.Indices(listOf(expr.target)),
-                    Arg.PointIndex(expr.divergencePoint),
-                    Arg.PointIndex(expr.convergencePoint),
+                    Arg.Indices(preimages),
+                    Arg.PointIndex(expr0.divergencePoint),
+                    Arg.PointIndex(expr0.convergencePoint),
                 )
                 // bidirectionality might be overridden further down
                 defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
-                    expr.parameters,
+                    expr0.parameters,
                     bidirectional = false
                 )
             }
-            else -> return
         }
-        val outputIndices = expressions.findExpr(expr)
-        val adjustables = mutableListOf(AdjustableExpr(
-            expr, sourceIndex, outputIndices, outputIndices
-        ))
-        if (expr is Expr.LoxodromicMotion && expr.otherHalfStart != null) {
-            val complementaryExpr = exprOf(expr.otherHalfStart)
-            if (complementaryExpr is Expr.LoxodromicMotion) {
-                val complementaryOutputIndices = expressions.findExpr(complementaryExpr)
-                adjustables += listOf(AdjustableExpr(
-                    complementaryExpr,
-                    sourceIndex,
-                    complementaryOutputIndices, complementaryOutputIndices
+        val adjustables = mutableListOf<AdjustableExpr<*>>()
+        if (expr0 is Expr.TransformLike) {
+            for (expr in exprs) {
+                val sourceIndex = (expr as Expr.TransformLike).target
+                val outputIndices = expressions.findExpr(expr as Expr.Conformal)
+                adjustables.add(AdjustableExpr(
+                    expr0, sourceIndex, outputIndices, outputIndices
                 ))
-                defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
-                    expr.parameters,
-                    bidirectional = true,
-                )
+                if (expr is Expr.LoxodromicMotion && expr.otherHalfStart != null) {
+                    val complementaryExpr = exprOf(expr.otherHalfStart)
+                    if (complementaryExpr is Expr.LoxodromicMotion) {
+                        val complementaryOutputIndices = expressions.findExpr(complementaryExpr)
+                        adjustables.add(AdjustableExpr(
+                            complementaryExpr,
+                            sourceIndex,
+                            complementaryOutputIndices, complementaryOutputIndices
+                        ))
+                        defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
+                            expr.parameters,
+                            bidirectional = true,
+                        )
+                    }
+                }
             }
+            val protoArcPaths = selection.arcPaths
+                .groupBy { findProtoArcPath(it) }
+            val arcPathAdjustables = protoArcPaths.keys.map { protoArcPathIndex ->
+                // find whole trajectory
+            }
+            // TODO: add path adjustables and regions
+        } else {
+            val sourceIndex = when (expr0) {
+                is Expr.PointInterpolation -> expr0.startPoint
+                is Expr.CircleInterpolation -> expr0.startCircle
+            }
+            val outputIndices = expressions.findExpr(expr0)
+            adjustables.add(AdjustableExpr(
+                expr0, sourceIndex, outputIndices, outputIndices
+            ))
         }
         partialArgList = PartialArgList(tool.signature, tool.nonEqualityConditions, args)
         submode = SubMode.ExprAdjustment(adjustables)

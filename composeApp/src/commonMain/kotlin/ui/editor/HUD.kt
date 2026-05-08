@@ -40,12 +40,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
@@ -84,7 +84,7 @@ import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.OnOffButton
@@ -531,14 +531,6 @@ fun InterpolationInterface(
         valueRange = defaults.nInterjacentsRange
     ) }
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
-    val params = InterpolationParameters(
-        nInterjacents = sliderState.value.roundToInt(),
-        inBetween = interpolateInBetween,
-        complementary =
-            if (interpolateCircles) {
-                if (circlesAreCoDirected) !interpolateInBetween else interpolateInBetween
-            } else interpolateInBetween
-    )
     val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
     val sliderColors = SliderDefaults.colors(
@@ -606,12 +598,26 @@ fun InterpolationInterface(
             )
         }
     }
-    val coroutineScope = rememberCoroutineScope()
-    // TODO: use snapshotFlow instead
-    key(params) { // this feels hacky, `key(params)` serves only a semantic purpose btw
-        coroutineScope.launch {
-            updateParameters(params)
+    LaunchedEffect(interpolateCircles, circlesAreCoDirected, updateParameters) {
+        snapshotFlow {
+            InterpolationParameters(
+                nInterjacents = sliderState.value.roundToInt(),
+                inBetween = interpolateInBetween,
+                complementary =
+                    if (interpolateCircles) {
+                        if (circlesAreCoDirected)
+                            !interpolateInBetween
+                        else
+                            interpolateInBetween
+                    } else {
+                        interpolateInBetween
+                    }
+            )
         }
+            .distinctUntilChanged()
+            .collect { params ->
+                updateParameters(params)
+            }
     }
 }
 
@@ -635,14 +641,6 @@ fun RotationInterface(
         steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
         valueRange = defaults.stepsRange
     ) }
-    val params = RotationParameters(
-        angle = round( // we round cuz all angles coming from the slider are supposed to be integers
-            if (rotateClockwise)
-                360f - angleSliderState.value
-            else angleSliderState.value
-        ),
-        nSteps = stepsSliderState.value.roundToInt(),
-    )
     val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
     val sliderColors = SliderDefaults.colors(
@@ -708,11 +706,21 @@ fun RotationInterface(
             )
         }
     }
-    val coroutineScope = rememberCoroutineScope()
-    key(params) { // this feels hacky, `key(params)` serves only a semantic purpose btw
-        coroutineScope.launch {
-            updateParameters(params)
+    LaunchedEffect(updateParameters) {
+        snapshotFlow {
+             RotationParameters(
+                angle = round( // we round cuz all angles coming from the slider are supposed to be integers
+                    if (rotateClockwise)
+                        360f - angleSliderState.value
+                    else angleSliderState.value
+                ),
+                nSteps = stepsSliderState.value.roundToInt(),
+            )
         }
+            .distinctUntilChanged()
+            .collect { params ->
+                updateParameters(params)
+            }
     }
 }
 
@@ -744,11 +752,6 @@ fun BiInversionInterface(
         steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
         valueRange = defaults.stepsRange
     ) }
-    val params = BiInversionParameters(
-        speed = (if (negateSpeed) -1 else +1) * k1*sinh(k2*speedSliderState.value),
-        nSteps = stepsSliderState.value.roundToInt(),
-        reverseSecondEngine = defaults.reverseSecondEngine,
-    )
     val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
     val sliderColors = SliderDefaults.colors(
@@ -814,11 +817,18 @@ fun BiInversionInterface(
             )
         }
     }
-    val coroutineScope = rememberCoroutineScope()
-    key(params) { // this feels hacky, `key(params)` serves only a semantic purpose btw
-        coroutineScope.launch {
-            updateParameters(params)
+    LaunchedEffect(defaults, updateParameters) {
+        snapshotFlow {
+            BiInversionParameters(
+                speed = (if (negateSpeed) -1 else +1) * k1*sinh(k2*speedSliderState.value),
+                nSteps = stepsSliderState.value.roundToInt(),
+                reverseSecondEngine = defaults.reverseSecondEngine,
+            )
         }
+            .distinctUntilChanged()
+            .collect { params ->
+                updateParameters(params)
+            }
     }
 }
 
@@ -849,11 +859,6 @@ fun LoxodromicMotionInterface(
         steps = defaults.maxNSteps - defaults.minNSteps - 1, // only counts intermediates
         valueRange = defaults.stepsRange,
     ) }
-    val params = LoxodromicMotionParameters.fromDifferential(
-        anglePerStep = (if (reverseDirection) -1 else +1) * angleSliderState.value,
-        dilationPerStep = (if (reverseDirection) -1 else +1) * dilationSliderState.value.toDouble(),
-        nTotalSteps = stepsSliderState.value.roundToInt(),
-    )
     val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
     val sliderColors = SliderDefaults.colors(
@@ -952,11 +957,18 @@ fun LoxodromicMotionInterface(
             )
         }
     }
-    val coroutineScope = rememberCoroutineScope()
-    key(params) { // this feels hacky, `key(params)` serves only a semantic purpose btw
-        coroutineScope.launch {
-            updateParameters(params)
+    LaunchedEffect(updateParameters) {
+        snapshotFlow {
+            LoxodromicMotionParameters.fromDifferential(
+                anglePerStep = (if (reverseDirection) -1 else +1) * angleSliderState.value,
+                dilationPerStep = (if (reverseDirection) -1 else +1) * dilationSliderState.value.toDouble(),
+                nTotalSteps = stepsSliderState.value.roundToInt(),
+            )
         }
+            .distinctUntilChanged()
+            .collect { params ->
+                updateParameters(params)
+            }
     }
 }
 
