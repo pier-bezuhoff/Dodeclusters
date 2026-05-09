@@ -1467,17 +1467,23 @@ class EditorViewModel : ViewModel() {
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
         showCircles = true
-        val allCLPIndices = expressions.gCircleIndices.filter { objects[it] is CircleOrLineOrPoint }
-        val allArcPathIndices = expressions.arcPathIndices.filter { objects[it] is ConcreteArcPath }
-        val everythingIsSelected = selection.gCircles.containsAll(allCLPIndices)
+        val allCLPIndices = expressions.gCircleIndices.filter {
+            objects[it] is CircleOrLineOrPoint
+        }
+        val allArcPathIndices = expressions.arcPathIndices.filter {
+            objects[it] is ConcreteArcPath
+        }
+        val everythingIsSelected = selection.gCircles.containsAll(
+            allCLPIndices - phantoms
+        )
         selection =
             if (everythingIsSelected)
                 Selection()
             else
                 Selection(
                     // maybe select imaginary too
-                    gCircles = allCLPIndices,
-                    arcPaths = allArcPathIndices,
+                    gCircles = allCLPIndices.filter { showPhantomObjects || it !in phantoms },
+                    arcPaths = allArcPathIndices.filter { showPhantomObjects || it !in phantoms },
                 )
     }
 
@@ -2564,12 +2570,6 @@ class EditorViewModel : ViewModel() {
                     if (fullConstraints.insides.isEmpty()) {
                         // if we clicked outside of everything, toggle select all
                         toggleSelectAll()
-                        if (!showPhantomObjects) {
-                            selection = selection.copy(
-                                gCircles = selection.gCircles.filter { it !in phantoms },
-                                arcPaths = selection.arcPaths.filter { it !in phantoms },
-                            )
-                        }
                     } else {
                         val selectedBounds = selection.indices.filter { ix ->
                             val o = objects[ix]
