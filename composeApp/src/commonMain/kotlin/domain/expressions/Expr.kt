@@ -601,7 +601,17 @@ inline fun <reified EXPR : Expr> EXPR.copyWithNewParameters(
         } as EXPR
     } else this
 
-inline fun <reified E : Expr.TransformLike> E.changeTarget(
+fun Expr.TransformLike.changeTarget(
+    newTarget: Ix
+): Expr.TransformLike = when (this) {
+    is CircleInversion -> copy(target = newTarget)
+    is Rotation -> copy(target = newTarget)
+    is BiInversion -> copy(target = newTarget)
+    is LoxodromicMotion -> copy(target = newTarget)
+}
+
+// this version is NG cuz E is often a type intersection and it causes an annoying prompt
+private inline fun <reified E : Expr.TransformLike> E._changeTarget(
     newTarget: Ix
 ): E = when (this) {
     is CircleInversion -> copy(target = newTarget)

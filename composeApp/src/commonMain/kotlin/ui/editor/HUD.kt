@@ -1,3 +1,5 @@
+@file:OptIn(FlowPreview::class)
+
 package ui.editor
 
 import androidx.compose.foundation.BorderStroke
@@ -84,6 +86,8 @@ import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -107,12 +111,16 @@ import kotlin.math.asinh
 import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.math.sinh
+import kotlin.time.Duration.Companion.milliseconds
 
 // MAYBE: expanded mode with icon+label
 
 private val buttonModifier = Modifier
     .padding(8.dp)
     .size(36.dp)
+
+// 16.67 ms is 60 FPS
+private val UPDATE_PARAMETERS_DEBOUNCE_DELTA = 15.milliseconds
 
 @Composable
 fun BoxScope.SelectionContextActions(
@@ -389,7 +397,6 @@ fun BoxScope.ArcPathContextActions(
         Column(
             verticalArrangement = Arrangement.Center,
         ) {
-            // TODO: this condition doesnt work
             if (showAdjustExprButton) {
                 SimpleToolButtonWithTooltip(
                     Tool.AdjustExpr,
@@ -615,6 +622,7 @@ fun InterpolationInterface(
             )
         }
             .distinctUntilChanged()
+            .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
             .collect { params ->
                 updateParameters(params)
             }
@@ -718,6 +726,7 @@ fun RotationInterface(
             )
         }
             .distinctUntilChanged()
+            .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
             .collect { params ->
                 updateParameters(params)
             }
@@ -826,6 +835,7 @@ fun BiInversionInterface(
             )
         }
             .distinctUntilChanged()
+            .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
             .collect { params ->
                 updateParameters(params)
             }
@@ -966,6 +976,7 @@ fun LoxodromicMotionInterface(
             )
         }
             .distinctUntilChanged()
+            .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
             .collect { params ->
                 updateParameters(params)
             }
