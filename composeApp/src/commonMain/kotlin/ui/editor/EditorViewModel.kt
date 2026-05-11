@@ -61,6 +61,7 @@ import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.Parameters
 import domain.expressions.RotationParameters
+import domain.expressions.areCompatibleTransforms
 import domain.expressions.changeTarget
 import domain.expressions.computeArcPathIncidenceOrder
 import domain.expressions.computeCircleByCenterAndRadius
@@ -1832,10 +1833,10 @@ class EditorViewModel : ViewModel() {
                     val e = expressions[vertex]
                     val expr = e?.expr
                     val isImage =
-                        e is ExprOutput.OneOf && e.outputIndex == e0.outputIndex &&
+                        e is ExprOutput.OneOf &&
+                        ExprOutput.areSameStageTransforms(e0, e) &&
                         expr is Expr.TransformLike &&
-                        expr.target == protoVertex &&
-                        expr == expr0.changeTarget(protoVertex)
+                        expr.target == protoVertex
                     if (!isImage)
                         return@mapNotNull null
                 }
@@ -1845,10 +1846,10 @@ class EditorViewModel : ViewModel() {
                     val e = expressions[midpoint]
                     val expr = e?.expr
                     val isImage =
-                        e is ExprOutput.OneOf && e.outputIndex == e0.outputIndex &&
+                        e is ExprOutput.OneOf &&
+                        ExprOutput.areSameStageTransforms(e0, e) &&
                         expr is Expr.TransformLike &&
-                        expr.target == protoMidpoint &&
-                        expr == expr0.changeTarget(protoMidpoint)
+                        expr.target == protoMidpoint
                     if (!isImage)
                         return@mapNotNull null
                 }
@@ -1887,22 +1888,26 @@ class EditorViewModel : ViewModel() {
                         is ArcPath -> {
                             expr.arcs.all { it is ArcPath.Arc.By3Points } &&
                             expr.dependencies.let { deps ->
-                                val outputIndex =
-                                    (expressions[deps.first()] as? ExprOutput.OneOf)?.outputIndex
+                                val e1 = expressions[deps.first()] as? ExprOutput.OneOf
+                                val expr1 = e1?.expr
+                                val outputIndex = e1?.outputIndex
+                                expr1 is Expr.TransformLike &&
+                                Expr.areCompatibleTransforms(expr0, expr1) &&
                                 deps.all {
                                     val e = expressions[it] as? ExprOutput.OneOf
                                         ?: return@all false
+                                    if (e.outputIndex != outputIndex)
+                                        return@all false
                                     val depExpr = e.expr as? Expr.TransformLike
                                         ?: return@all false
                                     exprs.add(depExpr as Expr.Adjustable)
-                                    e.outputIndex == outputIndex &&
-                                    depExpr == expr0.changeTarget(depExpr.target)
+                                    ExprOutput.areSameStageTransforms(e1, e)
                                 }
                             }
                         }
                         else -> if (expr is Expr.TransformLike) {
                             exprs.add(expr as Expr.Adjustable)
-                            expr == expr0.changeTarget(expr.target)
+                            Expr.areCompatibleTransforms(expr0, expr)
                         } else false
                     }
                 }
@@ -3426,31 +3431,43 @@ class EditorViewModel : ViewModel() {
     // TODO: instead perma-highlight parents with 2 colors
     /** Signals locked state to the user with animation & snackbar message */
     private fun highlightSelectionParents() {
-        val allParents = selection.indices.flatMap { ix ->
+        val sel = selection.indices.toSet()
+        val parents = sel.flatMap { ix ->
             if (isConstrained(ix)) emptyList() // exclude semi-free incident points
             else expressions.getImmediateParents(ix)
-                .minus(selection.indices.toSet())
+                .minus(sel)
         }
-            .distinct()
             .filter { ix ->
-                (showPhantomObjects || ix !in phantoms) && objects[ix] is GCircleOrConcreteAcPath
-            }
-        if (allParents.isNotEmpty()) {
-            val arcPathPreimages = selection.arcPaths.mapNotNull { ix ->
+                (showPhantomObjects || ix !in phantoms) &&
+                objects[ix] is GCircleOrConcreteAcPath
+            }.toMutableSet()
+        if (parents.isNotEmpty()) {
+            val protoArcPaths = selection.arcPaths.mapNotNull { ix ->
                 val arcPath = objectModel.getArcPath(ix) ?: return@mapNotNull null
                 if (arcPath.dependencies.any { ix ->
                     exprOf(ix) !is Expr.TransformLike
                 })
                     return@mapNotNull null
-                val vertexPreimages = arcPath.vertices.mapNotNull { vertexIndex ->
+                val protoVertices = arcPath.vertices.mapNotNull { vertexIndex ->
                     (exprOf(vertexIndex) as? Expr.TransformLike)?.target
                 }
-                vertexPreimages.mapNotNull { expressions.children[it] }
-                    // common children of vertices
+                protoVertices.mapNotNull { expressions.children[it] }
+                    // common children of all proto vertices
                     .reduceOrNull { a, b -> a.intersect(b) }
-                    ?.firstOrNull { exprOf(it) is ArcPath }
+                    // first arc-path common child
+                    ?.firstOrNull { ix ->
+                        exprOf(ix) is ArcPath && ix !in sel
+                    }
+                    ?.also { // if there is a proto arc-path, highlight all parents of vertices
+                        parents += arcPath.vertices.flatMap {
+                            expressions.getImmediateParents(it)
+                                .filter { ix ->
+                                    ix !in sel && (showPhantomObjects || ix !in phantoms)
+                                }
+                        }
+                    }
             }
-            val ix2o = (allParents + arcPathPreimages)
+            val ix2o = (parents + protoArcPaths)
                 .mapNotNull { ix ->
                     objects[ix]?.let { ix to it }
                 }.toMap()

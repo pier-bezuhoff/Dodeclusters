@@ -619,3 +619,33 @@ private inline fun <reified E : Expr.TransformLike> E._changeTarget(
     is BiInversion -> copy(target = newTarget)
     is LoxodromicMotion -> copy(target = newTarget)
 } as E
+
+/** whether [expr1] and [expr2] are of the same [Expr] type,
+ *  but with possibly differing targets */
+fun Expr.Companion.areCompatibleTransforms(
+    expr1: Expr.TransformLike,
+    expr2: Expr.TransformLike
+): Boolean =
+    when (expr1) {
+        is LoxodromicMotion ->
+            when (expr2) {
+                is LoxodromicMotion ->
+                    when (expr1) {
+                        expr2.copy(
+                            target = expr1.target,
+                            otherHalfStart = expr1.otherHalfStart,
+                        ) -> true
+                        expr2.copy( // other half-spiral
+                            divergencePoint = expr2.convergencePoint,
+                            convergencePoint = expr2.divergencePoint,
+                            target = expr1.target,
+                            otherHalfStart = expr1.otherHalfStart,
+                        ) -> true
+                        else -> false
+                    }
+                else -> false
+            }
+        else ->
+            expr1 == expr2.changeTarget(expr1.target)
+    }
+

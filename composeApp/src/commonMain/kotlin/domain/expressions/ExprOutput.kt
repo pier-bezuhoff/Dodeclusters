@@ -30,29 +30,32 @@ sealed interface ExprOutput {
     ) : ExprOutput
 
     companion object {
-        fun testIfTrajectoryStage(outputs: List<ExprOutput>): Boolean {
-            val output0 = outputs.first()
-            val expr0 = output0.expr
-            if (expr0 !is Expr.TransformLike)
-                return false
-            when (output0) {
-                is Just -> {
-                    if (outputs.any { it is OneOf })
-                        return false
-                }
-                is OneOf -> {
-                    if (outputs.any {
-                        it is Just || (it as OneOf).outputIndex != output0.outputIndex
-                    })
-                        return false
-                }
+        /** whether `e1.expr` and `e2.expr` are [Expr.TransformLike], of the
+         * same [Expr] type (possibly with differing targets) and
+         * [e1] & [e2] have the same `outputIndex` */
+        fun areSameStageTransforms(e1: OneOf, e2: OneOf): Boolean =
+            e1.outputIndex == e2.outputIndex &&
+            when (val expr1 = e1.expr) {
+                is Expr.LoxodromicMotion ->
+                    when (val expr2 = e2.expr) {
+                        is Expr.LoxodromicMotion ->
+                            when (expr1) {
+                                expr2.copy(
+                                    target = expr1.target,
+                                    otherHalfStart = expr1.otherHalfStart,
+                                ) -> true
+                                else -> false
+                            }
+                        else -> false
+                    }
+                is Expr.TransformLike ->
+                    when (val expr2 = e2.expr) {
+                        is Expr.TransformLike ->
+                            expr1 == expr2.changeTarget(expr1.target)
+                        else -> false
+                    }
+                else -> false
             }
-            // all are transforms with same output index and only differing targets
-            return outputs.all {
-                val expr = it.expr
-                expr is Expr.TransformLike && expr.changeTarget(expr0.target) == expr0
-            }
-        }
     }
 }
 
