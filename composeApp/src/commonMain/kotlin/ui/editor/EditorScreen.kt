@@ -157,7 +157,8 @@ fun EditorScreen(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
-                    actionColor = MaterialTheme.colorScheme.primary,
+                    actionContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
+                    actionColor = MaterialTheme.colorScheme.onSecondary,
                     dismissActionContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }

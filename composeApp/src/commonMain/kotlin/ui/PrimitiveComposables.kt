@@ -786,6 +786,7 @@ fun BoxScope.LoadingOverlay(
     }
 }
 
+// NOTE: their is a weird inner border/shadow in light mode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SnackbarWithHighlightMarkdown(
@@ -796,6 +797,7 @@ fun SnackbarWithHighlightMarkdown(
     containerColor: Color = SnackbarDefaults.color,
     contentColor: Color = SnackbarDefaults.contentColor,
     highlightColor: Color = MaterialTheme.colorScheme.secondary,
+    actionContainerColor: Color = SnackbarDefaults.color,
     actionColor: Color = SnackbarDefaults.actionColor,
     dismissActionContentColor: Color = SnackbarDefaults.dismissActionContentColor,
 ) {
@@ -807,16 +809,14 @@ fun SnackbarWithHighlightMarkdown(
         if (actionLabel != null) {
             @Composable {
                 TextButton(
-                    colors = ButtonDefaults.textButtonColors(contentColor = actionColor),
+                    colors = ButtonDefaults.textButtonColors(
+                        containerColor = actionContainerColor,
+                        contentColor = actionColor,
+                    ),
                     onClick = { snackbarData.performAction() },
                     content = {
-                        val boldActionLabel = buildAnnotatedString {
-                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                                append(actionLabel)
-                            }
-                        }
                         // MAYBE: pass actionLabelTextStyle as an arg
-                        Text(boldActionLabel)
+                        Text(actionLabel)
                     },
                 )
             }
