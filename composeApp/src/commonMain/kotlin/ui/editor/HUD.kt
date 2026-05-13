@@ -374,6 +374,7 @@ fun BoxScope.PointContextActions(
 fun BoxScope.ArcPathContextActions(
     someAreClosed: Boolean,
     showAdjustExprButton: Boolean,
+    isLocked: Boolean,
     mostCommonBorderColor: Color?,
     mostCommonFillColor: Color?,
     toolAction: (Tool) -> Unit,
@@ -383,6 +384,7 @@ fun BoxScope.ArcPathContextActions(
     // swap direction?
     // layer up/down
     // style = path effect
+    // unlock if is a transform
     val defaultBorderColor = MaterialTheme.extendedColorScheme.highAccentColor
     val defaultFillColor = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
     Surface(
@@ -421,6 +423,13 @@ fun BoxScope.ArcPathContextActions(
                 )
             }
             // close/cut loop button
+            if (isLocked) {
+                SimpleToolButtonWithTooltip(
+                    Tool.Detach,
+                    buttonModifier,
+                    onClick = toolAction
+                )
+            }
             SimpleToolButtonWithTooltip(
                 Tool.Duplicate,
                 buttonModifier,

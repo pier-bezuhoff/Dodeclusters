@@ -816,7 +816,10 @@ fun SnackbarWithHighlightMarkdown(
                     onClick = { snackbarData.performAction() },
                     content = {
                         // MAYBE: pass actionLabelTextStyle as an arg
-                        Text(actionLabel)
+                        Text(actionLabel,
+                            style = MaterialTheme.adaptiveTypography.label,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
                     },
                 )
             }
@@ -861,8 +864,8 @@ fun SnackbarWithHighlightMarkdown(
         actionContentColor = actionColor,
         dismissActionContentColor = dismissActionContentColor,
         content = {
-            Text(
-                text = annotatedMessage
+            Text(annotatedMessage,
+                style = MaterialTheme.adaptiveTypography.label,
             )
         },
     )

@@ -272,7 +272,11 @@ class EditorViewModel : ViewModel() {
     val selectionIsLocked: Boolean get() {
         hug(objectModel.propertyInvalidations)
         // NOTE: isFree depends on expressions, so propertyInvalidations is not enough
-        return selection.gCircles.all { objects[it] == null || !isFree(it) }
+        return selection.gCircles.toSet()
+            .plus(selection.arcPaths.flatMap {
+                objectModel.getArcPath(it)?.dependencies ?: emptySet()
+            })
+            .all { objects[it] == null || !isFree(it) }
     }
 
     val undoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
@@ -1726,7 +1730,11 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun detachEverySelectedObject() {
-        for (ix in objectSelection) {
+        val indicesToFree =
+            selection.gCircles.toSet() + selection.arcPaths.flatMap { ix ->
+                objectModel.getArcPath(ix)?.dependencies ?: emptySet()
+            }
+        for (ix in indicesToFree) {
             expressions.changeToFree(ix)
         }
         objectModel.invalidate()
@@ -2858,7 +2866,18 @@ class EditorViewModel : ViewModel() {
     ) {
         val carrier = objectModel.downscaledObjects[carrierIndex] as? CircleOrLine ?: return
         val point = Point.fromOffset(absolutePointerPosition).downscale()
-        val newPoint = carrier.project(point)
+        val projectedPoint = carrier.project(point)
+        val upscaledProjectedPoint = projectedPoint.upscale()
+        val snap = snapped(upscaledProjectedPoint.toOffset(),
+            excludePoints = true,
+            excludedIndices = if (showPhantomObjects) emptySet() else phantoms,
+        )
+        val newPoint = when (snap) {
+            is PointSnapResult.Intersection
+                if (snap.circle1Index == carrierIndex || snap.circle2index == carrierIndex) ->
+                    snap.result.downscale()
+            else -> projectedPoint
+        }
         val order = carrier.point2order(newPoint)
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
         val changedIndices = objectModel.changeExpr(pointIndex, newExpr).toSet()
