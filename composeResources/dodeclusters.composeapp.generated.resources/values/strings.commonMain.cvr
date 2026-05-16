@@ -82,6 +82,7 @@ string|color_picker_save_color_description|U2F2ZSBjdXJyZW50IGNvbG9y
 string|color_picker_title|UGljayBhIGNvbG9y
 string|color_picker_used_and_saved_colors_label|Q29sb3JzIGluIHVzZSArIFNhdmVkIGNvbG9ycw==
 string|colors_category_name|Q29sb3Jz
+string|complete_arc_path_prompt|RmluYWxpemUgY3VycmVudCBhcmMtcGF0aD8=
 string|complete_arc_path|Q29tcGxldGUgYXJjLXBhdGg=
 string|confirm|Q29uZmlybQ==
 string|copy_link_description|Q29weSBsaW5r
