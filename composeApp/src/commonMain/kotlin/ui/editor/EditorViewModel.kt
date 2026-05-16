@@ -2663,6 +2663,7 @@ class EditorViewModel : ViewModel() {
                         )
                     ) {
                         partialArcPath = pArcPath.connectLastToFirst()
+                        showSnackbarMessage(SnackbarMessage.COMPLETE_ARC_PATH_PROMPT)
                     }
                 }
                 else -> {}
@@ -3252,9 +3253,13 @@ class EditorViewModel : ViewModel() {
             when {
                 nextVertexIndex in closeVertices -> {
                     pArcPath = pArcPath.fuseSubsequentVertices(focus.vertexIndex)
+                    if (partialArcPath?.isClosed == false && pArcPath.isClosed)
+                        showSnackbarMessage(SnackbarMessage.COMPLETE_ARC_PATH_PROMPT)
                 }
                 previousVertexIndex in closeVertices -> {
                     pArcPath = pArcPath.fuseSubsequentVertices(previousVertexIndex)
+                    if (partialArcPath?.isClosed == false && pArcPath.isClosed)
+                        showSnackbarMessage(SnackbarMessage.COMPLETE_ARC_PATH_PROMPT)
                 }
                 else -> {
                     // we can also snap 2 non-neighboring vertices, but it's prob not a good idea
@@ -3426,6 +3431,8 @@ class EditorViewModel : ViewModel() {
         when (snackbarMessage) {
             SnackbarMessage.ACT_ON_SELECTION_PROMPT ->
                 setActiveSelectionAsToolArg()
+            SnackbarMessage.COMPLETE_ARC_PATH_PROMPT ->
+                toolAction(Tool.CompleteArcPath)
             else -> {}
         }
     }

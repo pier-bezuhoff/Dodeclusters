@@ -2,6 +2,7 @@ package ui.editor
 
 import androidx.compose.material3.SnackbarDuration
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.complete_arc_path_prompt
 import dodeclusters.composeapp.generated.resources.failed_open_notice
 import dodeclusters.composeapp.generated.resources.failed_save_notice
 import dodeclusters.composeapp.generated.resources.imaginary_circle_notice
@@ -48,5 +49,10 @@ enum class SnackbarMessage(
         actionLabelResource = Res.string.yes,
         withDismissAction = true,
         duration = SnackbarDuration.Long
+    ),
+    COMPLETE_ARC_PATH_PROMPT(Res.string.complete_arc_path_prompt,
+        actionLabelResource = Res.string.yes,
+        withDismissAction = true,
+        duration = SnackbarDuration.Short // we dont want it to outlive p-arc-path editing
     ),
 }

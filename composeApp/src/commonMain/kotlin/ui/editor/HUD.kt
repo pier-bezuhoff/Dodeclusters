@@ -384,7 +384,6 @@ fun BoxScope.ArcPathContextActions(
     // swap direction?
     // layer up/down
     // style = path effect
-    // unlock if is a transform
     val defaultBorderColor = MaterialTheme.extendedColorScheme.highAccentColor
     val defaultFillColor = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
     Surface(
@@ -506,23 +505,6 @@ fun BoxScope.SelectionChoices(
             }
         }
     }
-}
-
-@Composable
-fun BoxScope.PartialArcPathContextActions() {
-    // +scale/rotate handles
-    // border color
-    // if closed: fill color
-
-    // when vertex is focused:
-    // delete
-
-    // when midpoint is focused
-    // *textual*
-    // smoothen arc start
-    // smoothen arc end
-    // straighten arc
-    // if non-free: unpin
 }
 
 /**
@@ -1015,6 +997,23 @@ private fun ReverseDirectionToggle(
             )
         }
     }
+}
+
+@Composable
+private fun BoxScope._PartialArcPathContextActions() {
+    // +scale/rotate handles
+    // border color
+    // if closed: fill color
+
+    // when vertex is focused:
+    // delete
+
+    // when midpoint is focused
+    // *textual*
+    // smoothen arc start
+    // smoothen arc end
+    // straighten arc
+    // if non-free: unpin
 }
 
 // TODO: move it somewhere else, this location is bad

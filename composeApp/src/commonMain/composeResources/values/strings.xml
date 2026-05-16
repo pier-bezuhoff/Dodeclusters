@@ -312,6 +312,7 @@
     <string name="failed_save_notice">Failed to save ^"%1$s"^%2$s</string>
     <string name="phantom_object_explanation">No ^phantom objects^. To mark an object as ^'phantom'^ (= invisible), select it and click the 'eye' icon on the bottom-right</string>
     <string name="set_selection_as_tool_arg_prompt">Use active selection as 1st argument?</string>
+    <string name="complete_arc_path_prompt">Finalize current arc-path?</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

@@ -373,7 +373,6 @@ data class PartialArcPath(
         alignmentLines = emptyList(),
     )
 
-    // FIX: some weirdness is possible still
     /** fuse vertex `firstVertexIndex+1` into [firstVertexIndex] */
     fun fuseSubsequentVertices(firstVertexIndex: Int): PartialArcPath =
         if (!isClosed && firstVertexIndex > arcs.lastIndex)
@@ -381,28 +380,35 @@ data class PartialArcPath(
         else
             collapseArc(firstVertexIndex)
 
-    // BUG: sometimes every straight arc becomes bent
     /** fuse arc-end vertex into arc-start */
     fun collapseArc(arcIndex: Int): PartialArcPath {
-        val nextVertexIndex = (arcIndex + 1).mod(vertices.size)
-        return if (arcIndex == arcs.lastIndex) {
+        return if (!isClosed && arcIndex == arcs.lastIndex) { // when collapsing the last arc
             copy(
-                vertices = vertices.withoutElementAt(nextVertexIndex),
+                vertices = vertices.dropLast(1),
                 arcs = arcs.dropLast(1),
             )
         } else {
-            val nextArc = arcs[arcIndex + 1]
+            val nextVertexIndex = (arcIndex + 1).mod(vertices.size)
+            val nextArcIndex = (arcIndex + 1).mod(arcs.size)
+            val nextArc = arcs[nextArcIndex]
             val nextArcStart = arcIndex2startVertex(arcIndex).point
-            val oldNextArcEnd = arcIndex2startVertex(arcIndex + 1).point
-            val nextArcEnd = arcIndex2endVertex(arcIndex + 1).point
+            val oldNextArcStart = arcIndex2startVertex(nextArcIndex).point
+            val nextArcEnd = arcIndex2endVertex(nextArcIndex).point
             val newNextArc = when (val snap = nextArc.midpointSnap) {
                 is PointSnapResult.Free -> if (nextArc.circle == null) {
-                    Arc(circle = null, middlePoint = nextArcStart.middle(nextArcEnd))
+                    Arc(
+                        circle = null,
+                        middlePoint = nextArcStart.middle(nextArcEnd),
+                    )
                 } else {
-                    val sr = computeSagittaRatio(nextArc.circle, nextArcStart, oldNextArcEnd)
-                    val newCircle = computeCircleBy2PointsAndSagittaRatio(
-                        SagittaRatioParameters(sr),
-                        nextArcStart, nextArcEnd
+//                    val sr = computeSagittaRatio(nextArc.circle, nextArcStart, oldNextArcStart)
+                    // new arc inherits sagitta ratio
+//                    val newCircle = computeCircleBy2PointsAndSagittaRatio(
+//                        SagittaRatioParameters(sr),
+//                        nextArcStart, nextArcEnd
+//                    ) as? Circle
+                    val newCircle = computeCircleBy3Points(
+                        nextArcStart, snap.result, nextArcEnd
                     ) as? Circle
                     val newStartAngle =
                         newCircle?.calculateStartAngle(nextArcStart) ?: 0.0
@@ -427,21 +433,33 @@ data class PartialArcPath(
                 }
             }
             copy(
-                vertices = vertices.withoutElementAt(nextVertexIndex),
-                arcs = arcs.withoutElementAt(arcIndex).updated(arcIndex, newNextArc),
+                vertices =
+                    if (nextVertexIndex == 0)
+                        vertices
+                            .updated(0, vertices.last())
+                            .dropLast(1)
+                    else
+                        vertices.withoutElementAt(nextVertexIndex)
+                ,
+                arcs = arcs
+                    .updated(nextArcIndex, newNextArc)
+                    .withoutElementAt(arcIndex)
+                ,
             )
         }
     }
 
     fun connectLastToFirst(): PartialArcPath {
-        require(!isClosed)
-        return copy(
-            arcs = arcs + Arc(
-                circle = null,
-                middlePoint = vertices.last().point.middle(vertices.first().point)
-            ),
-            isClosed = true,
-        )
+        return if (isClosed)
+            this
+        else
+            copy(
+                arcs = arcs + Arc(
+                    circle = null,
+                    middlePoint = vertices.last().point.middle(vertices.first().point)
+                ),
+                isClosed = true,
+            )
     }
 
     fun removeVertex(vertexIndex: Int): PartialArcPath {
