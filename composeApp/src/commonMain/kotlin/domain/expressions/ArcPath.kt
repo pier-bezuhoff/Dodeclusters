@@ -123,13 +123,14 @@ fun ArcPath.moveArcMidpoint(allObjects: List<*>, arcIndex: Int, midpoint: Point)
     }
 }
 
+// for now we ignore inf-p vertices
 private fun Any?.asFinitePoint(): Point? =
     if (this is Point && this.isFinite)
         this
     else
         null
 
-fun ArcPath.toConcreteArcPath(objects: List<*>): ConcreteArcPath {
+fun ArcPath.toConcreteArcPath(objects: List<*>): ConcreteArcPath? {
     val realVertices = mutableListOf<Point>()
     val realArcs = mutableListOf<ConcreteArcPath.Arc>()
     // NOTE: null-null collapsed arcs are still present in concrete arc-paths
@@ -172,6 +173,8 @@ fun ArcPath.toConcreteArcPath(objects: List<*>): ConcreteArcPath {
             }
             if (realArcs.size < realVertices.size)
                 realArcs.add(ConcreteArcPath.Arc(null, null))
+            if (realVertices.isEmpty())
+                return null
             return ConcreteArcPath(
                 vertices = realVertices,
                 arcs = realArcs,
@@ -218,6 +221,8 @@ fun ArcPath.toConcreteArcPath(objects: List<*>): ConcreteArcPath {
                     }
                 }
             }
+            if (realVertices.isEmpty())
+                return null
             return ConcreteArcPath(
                 vertices = realVertices,
                 arcs = realArcs,

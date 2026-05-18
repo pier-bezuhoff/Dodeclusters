@@ -1313,28 +1313,36 @@ class EditorViewModel : ViewModel() {
         val point = Point.fromOffset(absolutePosition)
         val toPoints = !excludePoints && mode != ToolMode.POINT
         if (toPoints) {
-            // TODO: use objectModel.pointIndices etc
             val snap = Snapping.snapPointToPoints(point, objects,
+                snapTargets =
+                    if (showPhantomObjects)
+                        objectModel.pointIndices
+                    else
+                        objectModel.pointIndices - phantoms
+                ,
                 snapDistance = snapDistance,
-                excludedIndices = if (showPhantomObjects) emptySet() else phantoms
             )
             if (snap is PointSnapResult.Eq)
                 return snap
         }
         val toCircles = showCircles // no snapping to invisibles
         if (toCircles) {
-            val snap = Snapping.snapPointToCircles(point, objects,
-                snapDistance = snapDistance,
-                excludedIndices =
+            val snap = Snapping.snapPointToCirclesOrLines(point, objects,
+                snapTargets = objectModel.circleOrLineIndices.minus(
                     if (showPhantomObjects) excludedIndices
                     else excludedIndices.union(phantoms)
+                ),
+                snapDistance = snapDistance,
             )
             if (!snap.isFree)
                 return snap
         }
         val snap = Snapping.snapPointToArcPaths(point, objects,
+            snapTargets = objectModel.arcPathIndices.minus(
+                if (showPhantomObjects) excludedIndices
+                else excludedIndices.union(phantoms)
+            ),
             snapDistance = snapDistance,
-            excludedIndices = excludedIndices,
         )
         if (snap is PointSnapResult.ArcPathIncidence)
             return snap
@@ -2807,10 +2815,15 @@ class EditorViewModel : ViewModel() {
                         center.x + canvasSize.width/2f, center.y + canvasSize.height/2f,
                     )
                 else null
-            val snap = Snapping.snapCircleToCircles(result0, objects,
+            val snap = Snapping.snapCircleToCirclesLinesOrPoints(result0, objects,
+                snapTargets = objectModel.gCircleIndices.minus(
+                    if (showPhantomObjects)
+                        excludedIndices
+                    else
+                        excludedIndices.union(phantoms)
+                ),
                 snapDistance = snapDistance,
                 visibleRect = absoluteVisibilityRect,
-                excludedIndices = excludedIndices,
             )
             val delta = result0 translationDelta snap.result
             transformWhatWeCan(listOf(selectedIndex), translation = translation + delta, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
@@ -2869,9 +2882,14 @@ class EditorViewModel : ViewModel() {
         val point = Point.fromOffset(absolutePointerPosition).downscale()
         val projectedPoint = carrier.project(point)
         val upscaledProjectedPoint = projectedPoint.upscale()
+        val allChildren = expressions.getAllChildren(pointIndex)
+        // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
         val snap = snapped(upscaledProjectedPoint.toOffset(),
             excludePoints = true,
-            excludedIndices = if (showPhantomObjects) emptySet() else phantoms,
+            excludedIndices = (allChildren + carrierIndex).union(
+                if (showPhantomObjects) emptySet()
+                else phantoms
+            ),
         )
         val newPoint = when (snap) {
             is PointSnapResult.Intersection

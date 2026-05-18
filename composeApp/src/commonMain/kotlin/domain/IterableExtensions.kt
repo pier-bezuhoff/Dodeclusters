@@ -6,8 +6,7 @@ inline fun <T> Iterable<T>.filterIndices(
     crossinline predicate: (T) -> Boolean
 ): List<Int> =
     this.withIndex()
-        .filter { (_, t) -> predicate(t) }
-        .map { (i, _) -> i }
+        .mapNotNull { (i, t) -> if (predicate(t)) i else null }
 
 inline fun <T> Iterable<T>.partitionIndices(
     crossinline predicate: (T) -> Boolean
@@ -213,9 +212,11 @@ inline fun <reified T> List<T>.bottomIndexBy(
 }
 
 // around 1x-1.5x times faster than built-in chain calls mapIndexed, sortedBy, etc on asSequence()
-inline fun <reified T> List<T>.bottom2IndicesBy(
+/** Among [this] indices of a collection of [T] [element]s, find bottom 2 using [measurer],
+ * measures of which also satisfy [measureFilter] */
+inline fun <reified T : Any> Collection<Int>.bottom2By(
+    crossinline element: (Int) -> T?,
     crossinline measurer: (T) -> Double,
-    crossinline indexFilter: (index: Int) -> Boolean = { true },
     crossinline elementFilter: (element: T) -> Boolean = { true },
     crossinline measureFilter: (measure: Double) -> Boolean = { true },
 ): List<Int> {
@@ -223,11 +224,9 @@ inline fun <reified T> List<T>.bottom2IndicesBy(
     var bottom2: Double = Double.POSITIVE_INFINITY
     var bottom1Index: Int? = null
     var bottom2Index: Int? = null
-    for (i in this.indices) {
-        if (!indexFilter(i))
-            continue
-        val element = this[i]
-        if (!elementFilter(element))
+    for (i in this) {
+        val element = element(i)
+        if (element == null || !elementFilter(element))
             continue
         val measure = measurer(element)
         if (!measureFilter(measure))
@@ -261,8 +260,12 @@ inline fun <reified T> List<T>.indicesSortedBy(
     crossinline sortingPriority: (index: Int, measure: Double) -> Double = { _, m -> m },
 ): List<Int> = indices
     .asSequence()
-    .map { index -> index to measurer(this[index]) }
-    .filter { (index, m) -> condition(index, m) }
+    .mapNotNull { index ->
+        val measure = measurer(this[index])
+        if (condition(index, measure))
+            index to measure
+        else null
+    }
     .sortedBy { (index, m) -> sortingPriority(index, m) }
     .map { (index, _) -> index }
     .toList()

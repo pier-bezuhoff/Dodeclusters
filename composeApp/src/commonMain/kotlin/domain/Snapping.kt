@@ -132,15 +132,21 @@ object Snapping {
     fun snapPointToPoints(
         point: Point,
         allObjects: List<*>,
+        snapTargets: Collection<Ix>,
         snapDistance: Double,
-        excludedIndices: Set<Ix> = emptySet(),
     ): PointSnapResult.PointToPoint {
-        val withinSnapDistance = allObjects.mapIndexed { ix, o ->
-            if (ix in excludedIndices || o !is Point)
-                ix to Double.POSITIVE_INFINITY
-            else
-                ix to o.distanceFrom(point)
-        }.filter { (_, d) -> d <= snapDistance }
+        val withinSnapDistance = snapTargets.mapNotNull { ix ->
+            when (val o = allObjects[ix]) {
+                is Point -> {
+                    val d = o.distanceFrom(point)
+                    if (d <= snapDistance)
+                        ix to d
+                    else
+                        null
+                }
+                else -> null
+            }
+        }
         if (withinSnapDistance.isEmpty())
             return PointSnapResult.Free(point)
         // because of triple-intersects, we want to resolve them uniformly
@@ -173,21 +179,16 @@ object Snapping {
      * @param[intersectionTolerance] how much easier it is to snap to an intersection than
      * to an individual circle
      * */
-    fun snapPointToCircles(
+    fun snapPointToCirclesOrLines(
         point: Point,
         allObjects: List<*>,
+        snapTargets: Collection<Ix>,
         snapDistance: Double,
         intersectionTolerance: Double = 1.5,
-        excludedIndices: Set<Ix> = emptySet(),
     ): PointSnapResult.PointToCircle {
-        val closestCircles: List<Ix> = allObjects.bottom2IndicesBy(
-            measurer = { o ->
-                if (o is CircleOrLine)
-                    o.distanceFrom(point)
-                else
-                    Double.POSITIVE_INFINITY
-            },
-            indexFilter = { it !in excludedIndices },
+        val closestCircles: List<Ix> = snapTargets.bottom2By(
+            element = { allObjects[it] as? CircleOrLine },
+            measurer = { it.distanceFrom(point) },
             measureFilter = { it <= snapDistance },
         ) // get 2 closest circles
         return if (closestCircles.isEmpty()) {
@@ -237,16 +238,14 @@ object Snapping {
     fun snapPointToArcPaths(
         point: Point,
         allObjects: List<*>,
+        snapTargets: Collection<Ix>,
         snapDistance: Double,
-        excludedIndices: Set<Int> = emptySet(),
     ): PointSnapResult.PointToArcPath {
         var arcPathIndex: Int? = null
         var distance: Double = Double.POSITIVE_INFINITY
         var snappedPoint = point
         var snappedArcIndex = 0
-        for (i in allObjects.indices) {
-            if (i in excludedIndices)
-                continue
+        for (i in snapTargets) {
             val concreteArcPath = allObjects[i] as? ConcreteArcPath ?: continue
             val (projectedPoint, arcIndex, _) = concreteArcPath.project(point)
             val d = point.distanceFrom(projectedPoint)
@@ -309,27 +308,23 @@ object Snapping {
      * NOTE: dont forget to exclude [circle], its immediate parents and all children from snappanbles
      * @param[allObjects] we care only about [CircleOrLineOrPoint]s
      */
-    fun snapCircleToCircles(
+    fun snapCircleToCirclesLinesOrPoints(
         circle: CircleOrLine,
         allObjects: List<*>,
+        snapTargets: Collection<Ix>,
         snapDistance: Double,
         bitangentTolerance: Double = 1.2,
         visibleRect: Rect? = null,
-        excludedIndices: Set<Int> = emptySet(),
     ): CircleSnapResult {
-        val closestCircles: List<Ix> = allObjects.bottom2IndicesBy(
+        val closestCircles: List<Ix> = snapTargets.bottom2By(
+            element = { allObjects[it] as? CircleOrLineOrPoint },
             measurer = { o ->
-                if (o is CircleOrLineOrPoint)
-                    abs(o.perpendicularDistance(circle))
-                else
-                    Double.POSITIVE_INFINITY
+                abs(o.perpendicularDistance(circle))
             },
-            indexFilter = { it !in excludedIndices },
             elementFilter = { o ->
-                o is CircleOrLineOrPoint &&
-                    (visibleRect == null || visibleRect.contains(
-                        circle.closestPerpendicularPoint(o).toOffset()
-                    ))
+                (visibleRect == null || visibleRect.contains(
+                    circle.closestPerpendicularPoint(o).toOffset()
+                ))
             },
             measureFilter = { it <= snapDistance },
         ) // get 2 closest circles
