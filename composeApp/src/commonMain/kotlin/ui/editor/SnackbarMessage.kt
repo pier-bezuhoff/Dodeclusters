@@ -3,6 +3,7 @@ package ui.editor
 import androidx.compose.material3.SnackbarDuration
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.complete_arc_path_prompt
+import dodeclusters.composeapp.generated.resources.detach
 import dodeclusters.composeapp.generated.resources.failed_open_notice
 import dodeclusters.composeapp.generated.resources.failed_save_notice
 import dodeclusters.composeapp.generated.resources.imaginary_circle_notice
@@ -31,8 +32,16 @@ enum class SnackbarMessage(
     STUB(Res.string.stub, duration = SnackbarDuration.Long),
     /** `$string` */
     PLACEHOLDER(Res.string.placeholder, duration = SnackbarDuration.Long),
-    LOCKED_OBJECTS_NOTICE(Res.string.locked_objects_notice, duration = SnackbarDuration.Long),
-    LOCKED_OBJECT_NOTICE(Res.string.locked_object_notice, duration = SnackbarDuration.Long),
+    LOCKED_OBJECTS_NOTICE(Res.string.locked_objects_notice,
+        actionLabelResource = Res.string.detach,
+        withDismissAction = true,
+        duration = SnackbarDuration.Long,
+    ),
+    LOCKED_OBJECT_NOTICE(Res.string.locked_object_notice,
+        actionLabelResource = Res.string.detach,
+        withDismissAction = true,
+        duration = SnackbarDuration.Long,
+    ),
     IMAGINARY_CIRCLE_NOTICE(Res.string.imaginary_circle_notice),
     /** `... "$filename"` */
     FAILED_OPEN(Res.string.failed_open_notice),
@@ -41,18 +50,18 @@ enum class SnackbarMessage(
     /** `... "$filename"$error` */
     FAILED_SAVE(Res.string.failed_save_notice),
     PHANTOM_OBJECT_EXPLANATION(Res.string.phantom_object_explanation,
-        duration = SnackbarDuration.Long
+        duration = SnackbarDuration.Long,
     ),
     SUCCESSFUL_SHARE(Res.string.share_new_done),
     SUCCESSFUL_SHARE_OVERWRITE(Res.string.overwrite_shared_done),
     ACT_ON_SELECTION_PROMPT(Res.string.set_selection_as_tool_arg_prompt,
         actionLabelResource = Res.string.yes,
         withDismissAction = true,
-        duration = SnackbarDuration.Long
+        duration = SnackbarDuration.Long,
     ),
     COMPLETE_ARC_PATH_PROMPT(Res.string.complete_arc_path_prompt,
         actionLabelResource = Res.string.yes,
         withDismissAction = true,
-        duration = SnackbarDuration.Short // we dont want it to outlive p-arc-path editing
+        duration = SnackbarDuration.Short, // we dont want it to outlive p-arc-path editing
     ),
 }

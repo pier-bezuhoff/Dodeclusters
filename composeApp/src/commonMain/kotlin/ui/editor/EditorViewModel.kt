@@ -1302,7 +1302,7 @@ class EditorViewModel : ViewModel() {
 
     /**
      * Try to snap [absolutePosition] to some existing object or their intersection.
-     * Snap priority: points > circles
+     * Snap priority: points > circles > arc-paths
      */
     fun snapped(
         absolutePosition: Offset,
@@ -1311,15 +1311,13 @@ class EditorViewModel : ViewModel() {
     ): PointSnapResult {
         val snapDistance = tapRadius.toDouble()
         val point = Point.fromOffset(absolutePosition)
-        val toPoints = !excludePoints && mode != ToolMode.POINT
+        val excluded =
+            if (showPhantomObjects) excludedIndices
+            else excludedIndices.union(phantoms)
+        val toPoints = !excludePoints
         if (toPoints) {
             val snap = Snapping.snapPointToPoints(point, objects,
-                snapTargets =
-                    if (showPhantomObjects)
-                        objectModel.pointIndices
-                    else
-                        objectModel.pointIndices - phantoms
-                ,
+                snapTargets = objectModel.pointIndices.minus(excluded),
                 snapDistance = snapDistance,
             )
             if (snap is PointSnapResult.Eq)
@@ -1328,20 +1326,14 @@ class EditorViewModel : ViewModel() {
         val toCircles = showCircles // no snapping to invisibles
         if (toCircles) {
             val snap = Snapping.snapPointToCirclesOrLines(point, objects,
-                snapTargets = objectModel.circleOrLineIndices.minus(
-                    if (showPhantomObjects) excludedIndices
-                    else excludedIndices.union(phantoms)
-                ),
+                snapTargets = objectModel.circleOrLineIndices.minus(excluded),
                 snapDistance = snapDistance,
             )
             if (!snap.isFree)
                 return snap
         }
         val snap = Snapping.snapPointToArcPaths(point, objects,
-            snapTargets = objectModel.arcPathIndices.minus(
-                if (showPhantomObjects) excludedIndices
-                else excludedIndices.union(phantoms)
-            ),
+            snapTargets = objectModel.arcPathIndices.minus(excluded),
             snapDistance = snapDistance,
         )
         if (snap is PointSnapResult.ArcPathIncidence)
@@ -2278,7 +2270,7 @@ class EditorViewModel : ViewModel() {
             var pointSnap: PointSnapResult? = null
             // try selecting an existing (indexed) point
             if (Arg.PointIndex in nextType.possibleTypes) {
-                pointSnap = snapped(absolutePosition)
+                pointSnap = snapped(absolutePosition, excludePoints = mode == ToolMode.POINT)
                 when (pointSnap) {
                     is PointSnapResult.Eq -> {
                         val newArg = Arg.PointIndex(pointSnap.pointIndex)
@@ -2326,7 +2318,8 @@ class EditorViewModel : ViewModel() {
             }
             // try selecting a new point
             if (!found && Arg.PointXY in nextType.possibleTypes) {
-                val snap = pointSnap ?: snapped(absolutePosition)
+                val snap = pointSnap
+                    ?: snapped(absolutePosition, excludePoints = mode == ToolMode.POINT)
                 if (inFastCenteredCircle && argList.currentArg == null) {
                     // we have to realize the first point here so we don't forget its
                     // snap after panning
@@ -2859,7 +2852,6 @@ class EditorViewModel : ViewModel() {
                 val allChildren = expressions.getAllChildren(ix)
                 // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
                 val parents = expressions.getAllParents(listOf(ix))
-                // NOTE: snap-exclusion calculation when dragging a point seems excessive tbh
                 val newPoint = snapped(
                     absoluteCentroid,
                     excludePoints = true,
@@ -2886,10 +2878,7 @@ class EditorViewModel : ViewModel() {
         // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
         val snap = snapped(upscaledProjectedPoint.toOffset(),
             excludePoints = true,
-            excludedIndices = (allChildren + carrierIndex).union(
-                if (showPhantomObjects) emptySet()
-                else phantoms
-            ),
+            excludedIndices = allChildren + carrierIndex,
         )
         val newPoint = when (snap) {
             is PointSnapResult.Intersection
@@ -2913,6 +2902,7 @@ class EditorViewModel : ViewModel() {
     ) {
         val carrier = objectModel.downscaledObjects[arcPathIndex] as? ConcreteArcPath ?: return
         val point = Point.fromOffset(absolutePointerPosition).downscale()
+        val allChildren = expressions.getAllChildren(pointIndex)
         val (_, arcIndex, arcPercentage) = carrier.project(point)
         val newExpr = Expr.ArcPathIncidence(
             ArcPathIncidenceParameters(arcIndex, arcPercentage),
@@ -3145,7 +3135,7 @@ class EditorViewModel : ViewModel() {
 
     /** @return whether a tool arg is actually updated */
     private fun tryUpdatingToolArg(absolutePosition: Offset): Boolean {
-        val snap = snapped(absolutePosition)
+        val snap = snapped(absolutePosition, excludePoints = mode == ToolMode.POINT)
         val absolutePoint = snap.result
         val argList = partialArgList
         val currentArg = argList?.currentArg
@@ -3294,7 +3284,9 @@ class EditorViewModel : ViewModel() {
             val newArg = when (argList?.currentArg) {
                 is Arg.Point -> visiblePosition?.let {
                     val args = argList.args
-                    val snap = snapped(absolute(visiblePosition))
+                    val snap = snapped(absolute(visiblePosition),
+                        excludePoints = mode == ToolMode.POINT,
+                    )
                     // we cant realize it here since for fast circles the first point already has been
                     // realized in 0nDown and we don't know yet if we moved far enough from it to
                     // create the second point
@@ -3447,6 +3439,8 @@ class EditorViewModel : ViewModel() {
 
     fun onSnackbarAction(snackbarMessage: SnackbarMessage) {
         when (snackbarMessage) {
+            SnackbarMessage.LOCKED_OBJECTS_NOTICE, SnackbarMessage.LOCKED_OBJECT_NOTICE ->
+                toolAction(Tool.Detach)
             SnackbarMessage.ACT_ON_SELECTION_PROMPT ->
                 setActiveSelectionAsToolArg()
             SnackbarMessage.COMPLETE_ARC_PATH_PROMPT ->

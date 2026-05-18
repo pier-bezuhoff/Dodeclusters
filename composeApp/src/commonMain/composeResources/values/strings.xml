@@ -303,8 +303,9 @@
     <!-- label input dialog -->
     <string name="label_input_title">Input point label</string>
     <!-- snackbar messages, surround with ^important^ for highlight -->
-    <string name="locked_objects_notice">These objects are ^locked^ (no degrees of freedom), ^detach^ them before altering (lock icon on the right panel)</string>
-    <string name="locked_object_notice">This object is ^locked^ (no degrees of freedom), ^detach^ it before altering (lock icon on the right panel)</string>
+    <string name="locked_objects_notice">These objects are ^locked^ (no degrees of freedom), ^detach^ them before altering</string>
+    <string name="locked_object_notice">This object is ^locked^ (no degrees of freedom), ^detach^ it before altering</string>
+    <string name="detach">Detach</string>
     <string name="imaginary_circle_notice">Construction resulted in an ^imaginary circle^</string>
     <string name="successful_restore_notice">Restored from autosave</string>
     <string name="failed_open_notice">Failed to load ^"%1$s"^</string>
