@@ -101,6 +101,8 @@ data class ConcreteArcPath(
     }
 
     fun distance2From(point: Point): Double {
+        if (point.isInfinite)
+            return Double.POSITIVE_INFINITY
         var distance2 = vertices.minOfOrNull {
             it.distance2From(point)
         } ?: Double.POSITIVE_INFINITY
@@ -138,6 +140,8 @@ data class ConcreteArcPath(
 
     /** assumes [vertices]`.size >= 1` */
     fun project(point: Point): ProjectionResult {
+        if (point.isInfinite)
+            return ProjectionResult(vertices.first(), 0, 0.0)
         var index = 0
         var projectedPoint = vertices.first()
         var arcPercentage = 0.0

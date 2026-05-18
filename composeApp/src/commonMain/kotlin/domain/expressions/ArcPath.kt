@@ -123,6 +123,12 @@ fun ArcPath.moveArcMidpoint(allObjects: List<*>, arcIndex: Int, midpoint: Point)
     }
 }
 
+private fun Any?.asFinitePoint(): Point? =
+    if (this is Point && this.isFinite)
+        this
+    else
+        null
+
 fun ArcPath.toConcreteArcPath(objects: List<*>): ConcreteArcPath {
     val realVertices = mutableListOf<Point>()
     val realArcs = mutableListOf<ConcreteArcPath.Arc>()
@@ -131,8 +137,8 @@ fun ArcPath.toConcreteArcPath(objects: List<*>): ConcreteArcPath {
         is ArcPath.Closed -> {
             var arcStart: Point? = null
             for (i in vertices.indices) {
-                val vertex = objects[vertices[i]] as? Point
-                val nextVertex = objects[vertices[(i + 1).mod(vertices.size)]] as? Point
+                val vertex = objects[vertices[i]].asFinitePoint()
+                val nextVertex = objects[vertices[(i + 1).mod(vertices.size)]].asFinitePoint()
                 when (vertex) {
                     null -> {
                         if (arcStart != null && nextVertex != null) {
@@ -175,12 +181,12 @@ fun ArcPath.toConcreteArcPath(objects: List<*>): ConcreteArcPath {
         is ArcPath.Open -> {
             var arcStart: Point? = null
             for (i in vertices.indices) {
-                val vertex = objects[vertices[i]] as? Point
+                val vertex = objects[vertices[i]].asFinitePoint()
                 val nextVertex =
                     if (i == vertices.lastIndex)
                         null
                     else
-                        objects[vertices[i + 1]] as? Point
+                        objects[vertices[i + 1]].asFinitePoint()
                 when (vertex) {
                     null -> {
                         if (arcStart != null && nextVertex != null) {
