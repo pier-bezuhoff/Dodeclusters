@@ -8,6 +8,7 @@ import core.geometry.GCircle
 import domain.Ix
 import domain.PathCache
 import domain.expressions.Expr
+import domain.expressions.ExprOutput
 import domain.expressions.Expressions
 
 /**
@@ -224,16 +225,14 @@ sealed class ObjectModel<R : Any, D : Any> {
         }
     }
 
-    /** Already includes [invalidatePositions]. [EXPR_ONE_TO_ONE] must be compatible with
+    /** Already includes [invalidatePositions]. [newExprOutput] type must be compatible with
      * the second type parameter of [expressions]
      * @return indices of all updated objects, sorted by tiers (including [index]) */
-    @Suppress("UNCHECKED_CAST")
-    fun <EXPR_ONE_TO_ONE : Expr.OneToOne> changeExpr(
+    fun changeExpr(
         index: Ix,
-        newExpr: EXPR_ONE_TO_ONE,
+        newExprOutput: ExprOutput,
     ): List<Ix> {
-        val newObject = (expressions as Expressions<*, EXPR_ONE_TO_ONE, *, R>)
-            .changeExpr(index, newExpr)
+        val newObject = expressions.changeExpr(index, newExprOutput)
         setDownscaledObject(index, newObject)
         val toBeUpdated = expressions.update(setOf(index))
         val changed = listOf(index) + toBeUpdated
@@ -241,6 +240,15 @@ sealed class ObjectModel<R : Any, D : Any> {
         invalidatePositions()
         return changed
     }
+
+    /** Already includes [invalidatePositions]. [newExpr] type must be compatible with
+     * the second type parameter of [expressions]
+     * @return indices of all updated objects, sorted by tiers (including [index]) */
+    fun changeExpr(
+        index: Ix,
+        newExpr: Expr.OneToOne,
+    ): List<Ix> =
+        changeExpr(index, ExprOutput.Just(newExpr))
 
     /** Already includes [invalidatePositions]
      * @return all changed indices

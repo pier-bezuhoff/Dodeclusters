@@ -20,6 +20,7 @@ import kotlin.math.sin
  *
  * NOTE: do NOT forget [Point.CONFORMAL_INFINITY] checks
  */
+@Suppress("NOTHING_TO_INLINE")
 @Immutable
 @Serializable
 @SerialName("point")

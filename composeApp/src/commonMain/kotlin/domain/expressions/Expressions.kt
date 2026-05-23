@@ -242,8 +242,9 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         }
     }
 
-    /** The new node still inherits its previous children */
-    fun changeExpr(index: Ix, newExpr: EXPR_ONE_TO_ONE): R? {
+    /** The new node still inherits its previous children. Call using ObjectModel from
+     * the outside */
+    fun changeExpr(index: Ix, newExprOutput: ExprOutput): R? {
         expressions[index]?.let { previousExpr ->
             previousExpr.expr.args.forEach { parentIx ->
                 children[parentIx] = (children[parentIx] ?: emptySet()) - index
@@ -252,13 +253,13 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         val previousTier = ix2tier[index]!!
         tier2ixs[previousTier] = tier2ixs[previousTier] - index
         ix2tier[index] = UNCALCULATED_TIER
-        expressions[index] = ExprOutput.Just(newExpr) as ExprOutput
-        setChildren(index, newExpr)
+        expressions[index] = newExprOutput
+        setChildren(index, newExprOutput.expr)
         val tier = computeTier(index)
         setTier(index, tier)
         recomputeChildrenTiers(index)
         parents2gluedIncidentPoints.clear()
-        val result = (newExpr as EXPR).evaluate(objects)
+        val result = (newExprOutput.expr as EXPR).evaluate(objects)
 //        println("change $ix -> $newExpr -> $result")
         updateObjectTypeAt(index)
         return result.firstOrNull()

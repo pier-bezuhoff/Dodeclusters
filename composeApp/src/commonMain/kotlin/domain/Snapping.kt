@@ -41,6 +41,7 @@ sealed interface PointSnapResult {
         val circleIndex: Ix,
     ) : PointToCircle
 
+    /** circle indices ordered by -distance to the point */
     data class Intersection(
         override val result: Point,
         val circle1Index: Ix,

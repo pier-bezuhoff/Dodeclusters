@@ -63,7 +63,6 @@ import domain.expressions.Parameters
 import domain.expressions.RotationParameters
 import domain.expressions.areCompatibleTransforms
 import domain.expressions.changeTarget
-import domain.expressions.computeArcPathIncidenceOrder
 import domain.expressions.computeCircleByCenterAndRadius
 import domain.expressions.computeIntersection
 import domain.expressions.computeSagittaRatio
@@ -87,10 +86,10 @@ import domain.model.ChangeHistory
 import domain.model.ChessboardPattern
 import domain.model.ConformalObjectModel
 import domain.model.ContinuousChange
-import domain.model.RegionConstraints
 import domain.model.LogicalRegion
 import domain.model.PartialArcPath
 import domain.model.PartialArgList
+import domain.model.RegionConstraints
 import domain.model.SaveState
 import domain.model.Selection
 import domain.mostCommonOf
@@ -133,6 +132,7 @@ import kotlin.time.Duration.Companion.seconds
 
 // this class is obviously too big
 // MAYBE: timed autosave (cron-like), e.g. every 10min
+@Suppress("NOTHING_TO_INLINE")
 class EditorViewModel : ViewModel() {
     val objectModel: ConformalObjectModel = ConformalObjectModel()
     val objects: List<GCircleOrConcreteAcPath?> = objectModel.displayObjects
@@ -930,7 +930,7 @@ class EditorViewModel : ViewModel() {
         }
         objectModel.removeObjectsAt(deletedIndices)
         // NOTE: changedIndices are ArcPaths with null-ed vertices
-        //  it may be sensible to remove those non-existent vertices altoghether now
+        //  it may be sensible to remove those non-existent vertices altogether now
         // cuz we might've deleted some arc-path vertices
         objectModel.forceUpdate(changedIndices)
         objectModel.invalidate()
@@ -1304,9 +1304,9 @@ class EditorViewModel : ViewModel() {
      * Try to snap [absolutePosition] to some existing object or their intersection.
      * Snap priority: points > circles > arc-paths
      */
-    fun snapped(
+    private fun snapped(
         absolutePosition: Offset,
-        excludePoints: Boolean = false,
+        includePoints: Boolean = true,
         excludedIndices: Set<Ix> = emptySet(),
     ): PointSnapResult {
         val snapDistance = tapRadius.toDouble()
@@ -1314,31 +1314,42 @@ class EditorViewModel : ViewModel() {
         val excluded =
             if (showPhantomObjects) excludedIndices
             else excludedIndices.union(phantoms)
-        val toPoints = !excludePoints
-        if (toPoints) {
-            val snap = Snapping.snapPointToPoints(point, objects,
+        var snap: PointSnapResult
+        if (includePoints) {
+            snap = Snapping.snapPointToPoints(point, objects,
                 snapTargets = objectModel.pointIndices.minus(excluded),
                 snapDistance = snapDistance,
             )
             if (snap is PointSnapResult.Eq)
                 return snap
         }
-        val toCircles = showCircles // no snapping to invisibles
-        if (toCircles) {
-            val snap = Snapping.snapPointToCirclesOrLines(point, objects,
+        if (showCircles) {
+            snap = Snapping.snapPointToCirclesOrLines(point, objects,
                 snapTargets = objectModel.circleOrLineIndices.minus(excluded),
                 snapDistance = snapDistance,
             )
             if (!snap.isFree)
                 return snap
         }
-        val snap = Snapping.snapPointToArcPaths(point, objects,
+        snap = Snapping.snapPointToArcPaths(point, objects,
             snapTargets = objectModel.arcPathIndices.minus(excluded),
             snapDistance = snapDistance,
         )
         if (snap is PointSnapResult.ArcPathIncidence)
             return snap
         return PointSnapResult.Free(point)
+    }
+
+    private fun snappedWithoutChildrenOrParents(
+        absolutePosition: Offset,
+        index: Ix,
+    ): PointSnapResult {
+        val allChildren: Set<Ix> = expressions.getAllChildren(index)
+        val allParents = expressions.getAllParents(listOf(index))
+        return snapped(absolutePosition,
+            includePoints = ENABLE_POINT_TO_POINT_SNAPPING,
+            excludedIndices = allChildren + allParents,
+        )
     }
 
     /** Adds a new point(s) with expression defined by [snapResult] when non-free
@@ -1413,8 +1424,7 @@ class EditorViewModel : ViewModel() {
             is PointSnapResult.ArcPathIncidence -> {
                 val concreteArcPath = objectModel.downscaledObjects[snapResult.arcPathIndex]
                     as? ConcreteArcPath ?: return snapResult.toFree()
-                val (arcIndex, order) = computeArcPathIncidenceOrder(
-                    concreteArcPath,
+                val (_, arcIndex, order) = concreteArcPath.project(
                     snapResult.result.downscale(),
                 )
                 if (arcIndex != snapResult.arcIndex)
@@ -2270,7 +2280,7 @@ class EditorViewModel : ViewModel() {
             var pointSnap: PointSnapResult? = null
             // try selecting an existing (indexed) point
             if (Arg.PointIndex in nextType.possibleTypes) {
-                pointSnap = snapped(absolutePosition, excludePoints = mode == ToolMode.POINT)
+                pointSnap = snapped(absolutePosition, includePoints = mode != ToolMode.POINT)
                 when (pointSnap) {
                     is PointSnapResult.Eq -> {
                         val newArg = Arg.PointIndex(pointSnap.pointIndex)
@@ -2319,7 +2329,7 @@ class EditorViewModel : ViewModel() {
             // try selecting a new point
             if (!found && Arg.PointXY in nextType.possibleTypes) {
                 val snap = pointSnap
-                    ?: snapped(absolutePosition, excludePoints = mode == ToolMode.POINT)
+                    ?: snapped(absolutePosition, includePoints = mode != ToolMode.POINT)
                 if (inFastCenteredCircle && argList.currentArg == null) {
                     // we have to realize the first point here so we don't forget its
                     // snap after panning
@@ -2849,13 +2859,8 @@ class EditorViewModel : ViewModel() {
                 )
             }
             else -> {
-                val allChildren = expressions.getAllChildren(ix)
-                // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
-                val parents = expressions.getAllParents(listOf(ix))
-                val newPoint = snapped(
-                    absoluteCentroid,
-                    excludePoints = true,
-                    excludedIndices = allChildren + parents,
+                val newPoint = snappedWithoutChildrenOrParents(absoluteCentroid,
+                    index = ix,
                 ).result
                 val actualTranslation = newPoint.toOffset() - point.toOffset()
                 transformWhatWeCan(listOf(ix), translation = actualTranslation)
@@ -2874,11 +2879,9 @@ class EditorViewModel : ViewModel() {
         val point = Point.fromOffset(absolutePointerPosition).downscale()
         val projectedPoint = carrier.project(point)
         val upscaledProjectedPoint = projectedPoint.upscale()
-        val allChildren = expressions.getAllChildren(pointIndex)
         // when we are dragging intersection of 2 free circles with IoC1 we don't want it to snap to them
-        val snap = snapped(upscaledProjectedPoint.toOffset(),
-            excludePoints = true,
-            excludedIndices = allChildren + carrierIndex,
+        val snap = snappedWithoutChildrenOrParents(upscaledProjectedPoint.toOffset(),
+            index = pointIndex,
         )
         val newPoint = when (snap) {
             is PointSnapResult.Intersection
@@ -2888,11 +2891,7 @@ class EditorViewModel : ViewModel() {
         }
         val order = carrier.point2order(newPoint)
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
-        val changedIndices = objectModel.changeExpr(pointIndex, newExpr).toSet()
-        history.accumulateChangedLocations(
-            objectIndices = changedIndices,
-            expressionIndices = setOf(pointIndex),
-        )
+        objectModel.changeExpr(pointIndex, newExpr).toSet()
     }
 
     private fun slidePointAcrossArcPath(
@@ -2902,17 +2901,13 @@ class EditorViewModel : ViewModel() {
     ) {
         val carrier = objectModel.downscaledObjects[arcPathIndex] as? ConcreteArcPath ?: return
         val point = Point.fromOffset(absolutePointerPosition).downscale()
-        val allChildren = expressions.getAllChildren(pointIndex)
         val (_, arcIndex, arcPercentage) = carrier.project(point)
+        // no snapping
         val newExpr = Expr.ArcPathIncidence(
             ArcPathIncidenceParameters(arcIndex, arcPercentage),
             arcPathIndex,
         )
-        val changedIndices = objectModel.changeExpr(pointIndex, newExpr).toSet()
-        history.accumulateChangedLocations(
-            objectIndices = changedIndices,
-            expressionIndices = setOf(pointIndex),
-        )
+        objectModel.changeExpr(pointIndex, newExpr).toSet()
     }
 
     private fun dragArcPaths(
@@ -3036,26 +3031,27 @@ class EditorViewModel : ViewModel() {
         rotationAngle: Float = 0f,
         continuousChange: ContinuousChange? = null,
     ) {
-        val actualTargets: List<Ix> =
-            when (INVERSION_OF_CONTROL) {
-                InversionOfControl.NONE ->
-                    targets.filter { isFree(it) }
-                InversionOfControl.LEVEL_1 -> {
-                    targets.flatMap { targetIx ->
-                        if (isFree(targetIx)) {
-                            listOf(targetIx)
-                        } else {
-                            val parents = expressions.getImmediateParents(targetIx)
-                            if (parents.all { isFree(it) })
-                                parents
-                            else emptyList()
-                        }
-                    }.distinct()
-                }
-                InversionOfControl.LEVEL_INFINITY -> {
-                    (targets.toSet() + expressions.getAllParents(targets)).distinct()
+        val actualTargets = mutableSetOf<Ix>()
+        when (INVERSION_OF_CONTROL) {
+            InversionOfControl.NONE ->
+                targets.filterTo(actualTargets) { isFree(it) }
+            InversionOfControl.LEVEL_1 -> {
+                targets.flatMapTo(actualTargets) { targetIx ->
+                    if (isFree(targetIx)) {
+                        listOf(targetIx)
+                    } else {
+                        val parents = expressions.getImmediateParents(targetIx)
+                        if (parents.all { isFree(it) })
+                            parents
+                        else emptyList()
+                    }
                 }
             }
+            InversionOfControl.LEVEL_INFINITY -> {
+                actualTargets.addAll(targets)
+                actualTargets.addAll(expressions.getAllParents(targets))
+            }
+        }
         if (actualTargets.isEmpty()) {
             if (targets.size == 1) // not sure this is the right place for snackbar messages
                 showSnackbarMessage(SnackbarMessage.LOCKED_OBJECT_NOTICE)
@@ -3063,7 +3059,7 @@ class EditorViewModel : ViewModel() {
                 showSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
             val changedIndices =
-                objectModel.transform(actualTargets, translation, focus, zoom, rotationAngle)
+                objectModel.transform(actualTargets.toList(), translation, focus, zoom, rotationAngle)
             history.accumulateChangedLocations(
                 objectIndices = changedIndices,
                 // zoom can change point-line incidence
@@ -3135,7 +3131,7 @@ class EditorViewModel : ViewModel() {
 
     /** @return whether a tool arg is actually updated */
     private fun tryUpdatingToolArg(absolutePosition: Offset): Boolean {
-        val snap = snapped(absolutePosition, excludePoints = mode == ToolMode.POINT)
+        val snap = snapped(absolutePosition, includePoints = mode != ToolMode.POINT)
         val absolutePoint = snap.result
         val argList = partialArgList
         val currentArg = argList?.currentArg
@@ -3285,7 +3281,7 @@ class EditorViewModel : ViewModel() {
                 is Arg.Point -> visiblePosition?.let {
                     val args = argList.args
                     val snap = snapped(absolute(visiblePosition),
-                        excludePoints = mode == ToolMode.POINT,
+                        includePoints = mode != ToolMode.POINT,
                     )
                     // we cant realize it here since for fast circles the first point already has been
                     // realized in 0nDown and we don't know yet if we moved far enough from it to
@@ -3355,9 +3351,30 @@ class EditorViewModel : ViewModel() {
         // history is recorded at the end of :onUp
         when (mode) {
             SelectionMode.Drag -> {
-                // MAYBE: try to re-attach free points / new pinning/sticky mode
-                if (movementAfterDown && submode == null && selection.gCircles.none { isFree(it) })
-                    highlightSelectionParents()
+                when (submode) {
+                    null -> if (movementAfterDown && showCircles) {
+                        if (selection.gCircles.none { isFree(it) }) {
+                            highlightSelectionParents()
+                        } else if (selection.gCircles.size == 1 && objects[selection.gCircles.first()] is Point) {
+                            // this point is implied to be free by the first if
+                            val pointIndex = selection.gCircles.first()
+                            val point = objects[pointIndex] as Point
+                            // MAYBE: sticky mode instead, which would allow to snap to points
+                            when (snappedWithoutChildrenOrParents(
+                                point.toOffset(),
+                                pointIndex,
+                            )) {
+                                is PointSnapResult.ArcPathIncidence,
+                                is PointSnapResult.Incidence,
+                                is PointSnapResult.Intersection -> {
+                                    showSnackbarMessage(SnackbarMessage.ATTACH_POINT_PROMPT)
+                                }
+                                else -> {}
+                            }
+                        }
+                    }
+                    else -> {}
+                }
             }
             SelectionMode.Multiselect -> {
                 when (submode) {
@@ -3367,8 +3384,10 @@ class EditorViewModel : ViewModel() {
                         println("flow-select -> $objectSelection")
                         toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
                     }
-                    null -> if (movementAfterDown && selection.gCircles.none { isFree(it) })
-                        highlightSelectionParents()
+                    null -> if (movementAfterDown && showCircles) {
+                        if (selection.gCircles.none { isFree(it) })
+                            highlightSelectionParents()
+                    }
                     else -> {}
                 }
             }
@@ -3445,24 +3464,56 @@ class EditorViewModel : ViewModel() {
                 setActiveSelectionAsToolArg()
             SnackbarMessage.COMPLETE_ARC_PATH_PROMPT ->
                 toolAction(Tool.CompleteArcPath)
+            SnackbarMessage.ATTACH_POINT_PROMPT ->
+                attachSelectedPoint()
             else -> {}
         }
     }
 
     fun setActiveSelectionAsToolArg() {
-        toolbarState.activeTool.let { tool ->
-            require(
-                tool is Tool.MultiArg &&
-                Arg.Indices in tool.signature.argTypes.first().possibleTypes &&
-                selection.isNotEmpty()
-            ) { "Illegal state in setActiveSelectionAsToolArg(): tool = $tool, selection == $selection" }
+        val argList = partialArgList
+        val validState = toolbarState.activeTool.let { tool ->
+            tool is Tool.MultiArg &&
+            Arg.Indices in tool.signature.argTypes.first().possibleTypes &&
+            selection.isNotEmpty() &&
+            argList != null
         }
-        partialArgList = partialArgList!!.addArg(
+        if (!validState) { // in case snackbar prompt outlives validity
+            println("Illegal state in setActiveSelectionAsToolArg(): tool = ${toolbarState.activeTool}, selection == $selection")
+            return
+        }
+        partialArgList = argList?.addArg(
             Arg.Indices(selection.indices),
             confirmThisArg = true
         )
-        if (partialArgList!!.isFull) {
+        if (partialArgList?.isFull == true) {
             completeToolMode()
+        }
+    }
+
+    private fun attachSelectedPoint() {
+        if (selection.gCircles.size != 1)
+            return
+        val pointIndex = selection.gCircles.first()
+        val point = objects[pointIndex] as? Point ?: return
+        when (val snap = snappedWithoutChildrenOrParents(point.toOffset(), pointIndex)) {
+            // idk how to deal with Eq snap, like fuse points into one?
+            is PointSnapResult.Intersection -> {
+                objectModel.changeToIntersection(pointIndex,
+                    carrier1Index = snap.circle1Index,
+                    carrier2Index = snap.circle2index,
+                )
+                recordHistory()
+            }
+            is PointSnapResult.Incidence -> {
+                objectModel.changeToIncidence(pointIndex, snap.circleIndex)
+                recordHistory()
+            }
+            is PointSnapResult.ArcPathIncidence -> {
+                objectModel.changeToArcPathIncidence(pointIndex, snap.arcPathIndex)
+                recordHistory()
+            }
+            else -> {}
         }
     }
 
@@ -3623,9 +3674,8 @@ class EditorViewModel : ViewModel() {
                 switchToCategory(Category.Drag)
             }
             is SelectionMode -> {
-                when (val sm = submode) {
+                when (submode) {
                     is SubMode.ExprAdjustment<*> -> {
-                        val indices = sm.adjustables.flatMap { it.reservedIndices }.toSet()
                         recordHistory()
                         undo() // contrived way to go to the before-adj savepoint
                     }
@@ -4961,6 +5011,7 @@ class EditorViewModel : ViewModel() {
         /** try aligning PartialArcPath vertices horizontally or
          * vertically to each other */
         const val ENABLE_ALIGNMENT_SNAPPING = true
+        const val ENABLE_POINT_TO_POINT_SNAPPING = false
         const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false

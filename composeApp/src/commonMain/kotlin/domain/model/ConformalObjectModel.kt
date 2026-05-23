@@ -1,6 +1,7 @@
 package domain.model
 
 import androidx.compose.ui.geometry.Offset
+import core.geometry.CircleOrLine
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
 import core.geometry.Point
@@ -10,13 +11,17 @@ import domain.cluster.Constellation
 import domain.expressions.ArcPath
 import core.geometry.GCircleOrConcreteAcPath
 import core.geometry.Line
+import domain.expressions.ArcPathIncidenceParameters
 import domain.expressions.ConformalExpressions
+import domain.expressions.Expr
+import domain.expressions.ExprOutput
+import domain.expressions.IncidenceParameters
 import domain.expressions.ObjectConstruct
+import domain.expressions.computeIntersection
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.iterator
 import kotlin.collections.set
-import kotlin.math.exp
 
 // MAYBE: additionally store GeneralizedCircle representations
 /**
@@ -53,6 +58,46 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
             objectChangedAt(ix)
         }
         return changedIndices
+    }
+
+    fun changeToIncidence(pointIndex: Ix, carrierIndex: Ix): List<Ix> {
+        val point = downscaledObjects[pointIndex] as? Point ?: return emptyList()
+        val carrier = downscaledObjects[carrierIndex] as? CircleOrLine ?: return emptyList()
+        val order = carrier.point2order(point)
+        val parameters = IncidenceParameters(order)
+        val expr = Expr.Incidence(parameters, carrierIndex)
+        val changes = changeExpr(pointIndex, expr)
+        invalidate()
+        return changes
+    }
+
+    fun changeToArcPathIncidence(pointIndex: Ix, arcPathIndex: Ix): List<Ix> {
+        val point = downscaledObjects[pointIndex] as? Point ?: return emptyList()
+        val arcPath = downscaledObjects[arcPathIndex] as? ConcreteArcPath ?: return emptyList()
+        val (_, arcIndex, arcPercentage) = arcPath.project(point)
+        val parameters = ArcPathIncidenceParameters(arcIndex, arcPercentage)
+        val expr = Expr.ArcPathIncidence(parameters, arcPathIndex)
+        val changes = changeExpr(pointIndex, expr)
+        invalidate()
+        return changes
+    }
+
+    fun changeToIntersection(pointIndex: Ix, carrier1Index: Ix, carrier2Index: Ix): List<Ix> {
+        val point = downscaledObjects[pointIndex] as? Point ?: return emptyList()
+        val carrier1 = downscaledObjects[carrier1Index] as? CircleOrLine ?: return emptyList()
+        val carrier2 = downscaledObjects[carrier2Index] as? CircleOrLine ?: return emptyList()
+        val (ip1, ip2) = computeIntersection(carrier1, carrier2)
+        if (ip1 == null && ip2 == null)
+            return emptyList()
+        val expr = Expr.Intersection(carrier1Index, carrier2Index)
+        val outputIndex = if (
+            ip2 == null ||
+            ip1 != null && point.distance2From(ip1) <= point.distance2From(ip2)
+        ) 0
+        else 1
+        val changes = changeExpr(pointIndex, ExprOutput.OneOf(expr, outputIndex))
+        invalidate()
+        return changes
     }
 
     fun update(changedIndices: Set<Ix>): List<Ix> {

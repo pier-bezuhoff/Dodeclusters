@@ -216,17 +216,7 @@ fun computeTangentialCircle(
 ): CircleOrLine? =
     computeCircleByPencilAndPoint(carrier, pointOnCarrier, anotherPoint) as? CircleOrLine
 
-/**
- * @return (arcIndex, arcPercentage)
- */
-fun computeArcPathIncidenceOrder(
-    concreteArcPath: ConcreteArcPath,
-    point: Point,
-): Pair<Int, Double> {
-    val (_, arcIndex, arcPercentage) = concreteArcPath.project(point)
-    return Pair(arcIndex, arcPercentage)
-}
-
+// use ConcreteArcPath.project to compute params
 fun computeArcPathIncidence(
     params: ArcPathIncidenceParameters,
     concreteArcPath: ConcreteArcPath,
