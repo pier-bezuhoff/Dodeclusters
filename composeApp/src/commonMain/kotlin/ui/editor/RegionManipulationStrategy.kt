@@ -21,8 +21,6 @@ import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 
-// TODO: symbols in place of descriptions (too long, use them as tooltips)
-//  and mb diff colors?
 @Immutable
 @Serializable
 enum class RegionManipulationStrategy(

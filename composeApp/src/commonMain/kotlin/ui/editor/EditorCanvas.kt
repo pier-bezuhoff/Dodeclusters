@@ -99,12 +99,14 @@ import ui.circle2cubicPath
 import ui.halfPlanePath
 import ui.reactiveCanvas
 import ui.region2pathWithCache
+import ui.theme.CustomColors
+import ui.theme.CustomStyles
+import ui.theme.DodeclustersColors
+import ui.theme.customColors
 import ui.theme.extendedColorScheme
 import ui.toPath
 import ui.tools.Tool
 import kotlin.math.min
-
-private val DOTTED_PATH_EFFECT = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
 
 // NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
 //  and for domain.io.Svg
@@ -114,57 +116,44 @@ fun BoxScope.EditorCanvas(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-    val strokeWidth = remember(density) {
-        with (density) { 2.dp.toPx() }
-    }
-    val circleStroke = remember(strokeWidth) { Stroke(width = strokeWidth) }
-    val thiccCircleStroke = remember(strokeWidth) { Stroke(width = 2 * strokeWidth) }
-    val dottedStroke = remember(strokeWidth) { Stroke(
-        width = strokeWidth,
-        pathEffect = DOTTED_PATH_EFFECT,
-    ) }
-    val thiccDottedStroke = remember(strokeWidth) { Stroke(
-        width = 2 * strokeWidth,
-        pathEffect = DOTTED_PATH_EFFECT,
-    ) }
-    val pathStroke = remember(strokeWidth) { Stroke(width = 2 * strokeWidth) }
-    val thiccPathStroke = remember(strokeWidth) { Stroke(
-        width = 5 * strokeWidth,
-        join = StrokeJoin.Round,
-    ) }
-    // handles stuff
-    val handleRadius = 8f // with (density) { 8.dp.toPx() }
-    val pointRadius = 2.5f * strokeWidth
+    val customStyles = remember(density) { CustomStyles.fromDensity(density) }
+    val strokeWidth = customStyles.strokeWidth
+    val circleStroke = customStyles.circleStroke
+    val thiccCircleStroke = customStyles.thiccCircleStroke
+    val dottedStroke = customStyles.dottedStroke
+    val thiccDottedStroke = customStyles.thiccDottedStroke
+    val pathStroke = customStyles.pathStroke
+    val thiccPathStroke = customStyles.thiccPathStroke
+    val handleRadius = customStyles.handleRadius
+    val pointRadius = customStyles.pointRadius
+    val arcMiddlePointRadius = customStyles.arcMiddlePointRadius
+    val iconDim = customStyles.iconDim
     val scaleIcon = painterResource(Res.drawable.zoom_in)
-    val scaleIconColor = MaterialTheme.colorScheme.secondary
-    val scaleIndicatorColor = MaterialTheme.extendedColorScheme.highlightColor
-    val iconDim = remember(density) {
-        with (density) { 24.dp.toPx() }
-    }
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
-    val rotateIconColor = MaterialTheme.colorScheme.secondary
-    val rotationIndicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
-    val rotationHandleBackgroundColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
-    val rotationHandleColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-    // MAYBE: black/dark grey for light scheme
-    val defaultCircleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
-    val defaultFreeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
-    val defaultPointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
-    val defaultSelectionColor = MaterialTheme.extendedColorScheme.selectionColor
-    val imaginaryCircleColor = MaterialTheme.extendedColorScheme.imaginaryCircleColor
-    val selectionMarkingsColor = MaterialTheme.colorScheme.outline // center-radius line / bounding rect of selection
-    val stereographicGridColor = MaterialTheme.colorScheme.secondary
-    val defaultArcPathColor = MaterialTheme.extendedColorScheme.highAccentColor
-    val arcMiddlePointColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
-    val creationColor = MaterialTheme.extendedColorScheme.creationColor
-    val copyingColor = MaterialTheme.extendedColorScheme.copyingColor
-    val deletionColor = MaterialTheme.extendedColorScheme.deletionColor
-    val highlightColor = MaterialTheme.extendedColorScheme.highlightColor
-    val defaultFreePointColor = defaultFreeCircleColor
-    val selectedArgColor = creationColor
-    val arcMiddlePointRadius = pointRadius
-    val thiccSelectedCircleAlpha = 0.9f
-    val thiccSelectedPathAlpha = 0.5f
+    val customColors = MaterialTheme.customColors
+    val scaleIconColor = customColors.scaleIconColor
+    val scaleIndicatorColor = customColors.scaleIndicatorColor
+    val rotateIconColor = customColors.rotateIconColor
+    val rotationIndicatorColor = customColors.rotationIndicatorColor
+    val rotationHandleBackgroundColor = customColors.rotationHandleBackgroundColor
+    val rotationHandleColor = customColors.rotationHandleColor
+    val defaultCircleColor = customColors.defaultCircleColor
+    val defaultFreeCircleColor = customColors.defaultFreeCircleColor
+    val defaultPointColor = customColors.defaultPointColor
+    val defaultSelectionColor = customColors.defaultSelectionColor
+    val imaginaryCircleColor = customColors.imaginaryCircleColor
+    val selectionMarkingsColor = customColors.selectionMarkingsColor
+    val stereographicGridColor = customColors.stereographicGridColor
+    val defaultArcPathColor = customColors.defaultArcPathColor
+    val arcMiddlePointColor = customColors.arcMiddlePointColor
+    val creationColor = customColors.creationColor
+    val copyingColor = customColors.copyingColor
+    val deletionColor = customColors.deletionColor
+    val highlightColor = customColors.highlightColor
+    val defaultFreePointColor = customColors.defaultFreePointColor
+    val selectedArgColor = customColors.selectedArgColor
+    val thiccSelectedCircleAlpha = CustomColors.thiccSelectedCircleAlpha
+    val thiccSelectedPathAlpha = CustomColors.thiccSelectedPathAlpha
     val textMeasurer = rememberTextMeasurer()
     val labelTextStyle = MaterialTheme.typography.headlineSmall
     val objectLabelLayouts = remember(viewModel.labels, textMeasurer, labelTextStyle) {
@@ -410,31 +399,26 @@ fun ScreenshotableCanvas(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-    val strokeWidth = with (density) { 2.dp.toPx() }
-    val circleStroke = remember(strokeWidth) { Stroke(width = strokeWidth) }
-    val thiccCircleStroke = remember(strokeWidth) { Stroke(width = 2 * strokeWidth) }
-    val dottedStroke = remember(strokeWidth) { Stroke(
-        width = strokeWidth,
-        pathEffect = DOTTED_PATH_EFFECT,
-    ) }
-    val thiccDottedStroke = remember(strokeWidth) { Stroke(
-        width = 2 * strokeWidth,
-        pathEffect = DOTTED_PATH_EFFECT,
-    ) }
-    val pathStroke = remember(strokeWidth) { Stroke(width = 2 * strokeWidth) }
-    val thiccPathStroke = remember(strokeWidth) { Stroke(width = 5 * strokeWidth) }
-    val pointRadius = 2.5f * strokeWidth
-    val defaultCircleColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.6f)
-    val defaultFreeCircleColor = MaterialTheme.extendedColorScheme.highAccentColor
-    val defaultPointColor = MaterialTheme.extendedColorScheme.accentColor.copy(alpha = 0.7f)
-    val defaultSelectionColor = MaterialTheme.extendedColorScheme.selectionColor
-    val imaginaryCircleColor = MaterialTheme.extendedColorScheme.imaginaryCircleColor
-    val defaultArcPathColor = MaterialTheme.extendedColorScheme.highAccentColor
-    val arcMiddlePointColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
-    val defaultFreePointColor = defaultFreeCircleColor
-    val arcMiddlePointRadius = pointRadius
-    val thiccSelectedCircleAlpha = 0.9f
-    val thiccSelectedPathAlpha = 0.5f
+    val customStyles = remember(density) { CustomStyles.fromDensity(density) }
+    val circleStroke = customStyles.circleStroke
+    val thiccCircleStroke = customStyles.thiccCircleStroke
+    val dottedStroke = customStyles.dottedStroke
+    val thiccDottedStroke = customStyles.thiccDottedStroke
+    val pathStroke = customStyles.pathStroke
+    val thiccPathStroke = customStyles.thiccPathStroke
+    val pointRadius = customStyles.pointRadius
+    val arcMiddlePointRadius = customStyles.arcMiddlePointRadius
+    val customColors = MaterialTheme.customColors
+    val defaultCircleColor = customColors.defaultCircleColor
+    val defaultFreeCircleColor = customColors.defaultFreeCircleColor
+    val defaultPointColor = customColors.defaultPointColor
+    val defaultSelectionColor = customColors.defaultSelectionColor
+    val imaginaryCircleColor = customColors.imaginaryCircleColor
+    val defaultArcPathColor = customColors.defaultArcPathColor
+    val arcMiddlePointColor = customColors.arcMiddlePointColor
+    val defaultFreePointColor = customColors.defaultFreePointColor
+    val thiccSelectedCircleAlpha = CustomColors.thiccSelectedCircleAlpha
+    val thiccSelectedPathAlpha = CustomColors.thiccSelectedPathAlpha
     val textMeasurer = rememberTextMeasurer()
     val labelTextStyle = MaterialTheme.typography.headlineSmall
     val objectLabelLayouts = remember(viewModel.labels, textMeasurer, labelTextStyle) {

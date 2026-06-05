@@ -15,6 +15,10 @@ import domain.model.SaveState
 import kotlinx.serialization.json.Json
 import ui.region2path
 import ui.theme.ExtendedColorScheme
+import ui.theme.defaultArcPathColor
+import ui.theme.defaultCircleColor
+import ui.theme.defaultFreeCircleColor
+import ui.theme.defaultPointColor
 import ui.toPath
 import kotlin.math.hypot
 
@@ -45,9 +49,6 @@ fun saveStateAsSvg(
     encodeCirclesAndPoints: Boolean = true,
     name: String? = null,
 ): String = buildString {
-    val accentColor = extendedColorScheme.accentColor
-    val highAccentColor = extendedColorScheme.highAccentColor
-    val defaultArcPathColor = extendedColorScheme.highAccentColor
     val visibleRect = Rect(0f, 0f, width, height)
     val inflatedVisibleRect = visibleRect.inflate(100f)
     val translation = Offset(
@@ -110,6 +111,7 @@ fun saveStateAsSvg(
         appendLine("""<path d="$pathData" fill="$fillColorString"/>""")
     }
     // always layer arc-paths underneath
+    val defaultArcPathColor = extendedColorScheme.defaultArcPathColor
     translatedObjects.forEachIndexed { ix, o ->
         when (o) {
             is ConcreteArcPath if (ix !in saveState.phantoms) -> {
@@ -124,9 +126,9 @@ fun saveStateAsSvg(
     }
     if (encodeCirclesAndPoints) {
         // colors mimic EditorCanvas setup
-        val circleColor = accentColor.copy(alpha = 0.6f)
-        val freeCircleColor = highAccentColor
-        val pointColor = accentColor.copy(alpha = 0.7f)
+        val circleColor = extendedColorScheme.defaultCircleColor
+        val freeCircleColor = extendedColorScheme.defaultFreeCircleColor
+        val pointColor = extendedColorScheme.defaultPointColor
         val pointRadius = 5f
         val highlightClassString = "" //"""class="$highlightClass" """
         val freeObjectIndices = saveState.objects.indices

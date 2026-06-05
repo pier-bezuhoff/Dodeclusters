@@ -216,13 +216,13 @@ data class ConcreteArcPath(
     /**
      * Checks scan-ray x>point.x, y=point.y intersections against every arc/segment,
      * up-crossing is +1, down-crossing is -1.
-     * @return `0` if the point is outside (#up crossings = #down crossings),
-     * `+1` if it's to the left side (inside CCW path),
-     * `-1` if it's to the right side (inside CW path)
+     * @return `0` mod2 if the point is outside (#up crossings = #down crossings),
+     * `+1` mod2 if it's to the left side (inside CCW path),
+     * `-1` mod2 if it's to the right side (inside CW path)
      */
     private fun calculateWindingNumber(point: Point): Int {
         if (!isClosed || point.isInfinite)
-            return 0
+            return 0 // actually it's definable for open path
         var windingNumber = 0
         val (x, y) = point
         for (arcIndex in arcs.indices) {

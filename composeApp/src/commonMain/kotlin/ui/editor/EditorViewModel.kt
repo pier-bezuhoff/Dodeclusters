@@ -149,13 +149,14 @@ class EditorViewModel : ViewModel() {
     /** Filled regions delimited by some objects from [objects] */
     var regions: List<LogicalRegion> by mutableStateOf(listOf())
         private set
+    var effects: List<Effect> by mutableStateOf(listOf())
+    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
     var backgroundColor: Color? by mutableStateOf(null)
     var chessboardColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
         private set
     var chessboardPattern: ChessboardPattern by mutableStateOf(ChessboardPattern.NONE)
         private set
-    var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
 
     // MAYBE: when circles are hidden select regions instead
     private val selectionState: MutableState<Selection> = mutableStateOf(Selection())
