@@ -921,7 +921,7 @@ class EditorViewModel : ViewModel() {
             objects[ix] is GCircleOrConcreteAcPath && (showPhantomObjects || ix !in phantoms)
         }
         if (visibleDeleted.isNotEmpty()) {
-            deleteRegionsBoundBy(visibleDeleted)
+            deleteRegionsBoundBy(visibleDeleted.toSet())
             val ix2o = visibleDeleted.associateWith { objects[it] as GCircleOrConcreteAcPath }
             animationInit(ix2o)?.let { circleAnimation ->
                 viewModelScope.launch {
@@ -937,7 +937,7 @@ class EditorViewModel : ViewModel() {
         objectModel.invalidate()
     }
 
-    private fun deleteRegionsBoundBy(indices: List<Ix>) {
+    private fun deleteRegionsBoundBy(indices: Set<Ix>) {
         val everyBound = indices.containsAll(
             objects.filterIndices { it is CircleOrLine || it is ConcreteArcPath }
         )
@@ -4124,10 +4124,12 @@ class EditorViewModel : ViewModel() {
         sm: SubMode.ExprAdjustment<Expr.Conformal.OneToMany>,
         parameters: Parameters,
     ): SubMode.ExprAdjustment<Expr.Conformal.OneToMany> {
-        for (arcPathAdjustable in sm.arcPathAdjustables)
-            objectModel.removeObjectsAt(arcPathAdjustable.occupiedIndices)
         regions = regions.withoutElementsAt(sm.regions.toSet())
+        for (arcPathAdjustable in sm.arcPathAdjustables) {
+            objectModel.removeObjectsAt(arcPathAdjustable.occupiedIndices)
+        }
         val newAdjustables = mutableListOf<AdjustableExpr<Expr.Conformal.OneToMany>>()
+        /** trajectories used to transfer regions */
         val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
         for ((expr, sourceIndex, occupiedIndices, reservedIndices) in sm.adjustables) {
             val newExpr = expr.copyWithNewParameters(parameters)
@@ -4154,9 +4156,7 @@ class EditorViewModel : ViewModel() {
                 sourceIndex,
                 newIndices, newReservedIndices
             ))
-            source2trajectory.add(
-                sourceIndex to newIndices
-            )
+            source2trajectory.add(sourceIndex to newIndices)
             objectModel.update(newIndices.toSet())
             objectModel.forceUpdate(changed)
         }
@@ -4189,6 +4189,7 @@ class EditorViewModel : ViewModel() {
                 sourceArcPathIndex,
                 newIndices, newReservedIndices
             ))
+            source2trajectory.add(sourceArcPathIndex to newIndices)
             objectModel.update(newIndices.toSet())
             objectModel.forceUpdate(changed)
         }
@@ -4197,6 +4198,7 @@ class EditorViewModel : ViewModel() {
                 defaultLoxodromicMotionParameters.bidirectional &&
                 source2trajectory.size >= 2
             ) {
+                // FIX: regions after adj are broken if bounded by arc-paths
                 // NOTE: assumption: bidirectional spiral adjustables must be laid out as {t^i}; {t^-i}
                 // s2t structure is
                 // t1^+1 .. t1^+n; t2^+1 .. t2^+n; ... tm^+1 .. tm^+n;
@@ -4318,6 +4320,7 @@ class EditorViewModel : ViewModel() {
         val gCircleSources = inputIndices.filter { objects[it] is GCircle }
         val arcPathSources = inputIndices.filter { objects[it] is ConcreteArcPath }
         val adjustables = mutableListOf<AdjustableExpr<EXPR>>()
+        /** trajectories used to transfer regions */
         val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
         for (sourceIndex in gCircleSources) {
             // row/trajectory - column/simul-slice order
@@ -4342,6 +4345,7 @@ class EditorViewModel : ViewModel() {
                     expr = blueprintArcPath.reIndex { startIndex + it },
                 )
             )
+            source2trajectory.add(sourceArcPathIndex to arcPathAdjustable.occupiedIndices)
         }
         val copiedRegions = copySourceRegionsOntoTrajectories(source2trajectory)
         return SubMode.ExprAdjustment(

@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.RadialGradient
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.StampedPathEffectStyle
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -855,9 +856,16 @@ private fun DrawScope.drawEffects(
                     is Effect.Glow.Preimage -> Color.Green
                 }
                 when (val obj = allObjects[effect.index]) {
-                    is Circle -> {}
-                    is Line -> {}
-                    is Point -> {}
+                    is Circle -> {
+                        // radial grad?
+                    }
+                    is Line -> {
+                        // linear grad?
+                    }
+                    is Point -> {
+                        Brush.radialGradient()
+                        // radial grad?
+                    }
                     else -> {}
                 }
             }
