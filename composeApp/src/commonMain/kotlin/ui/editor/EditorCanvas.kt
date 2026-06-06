@@ -30,6 +30,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -38,7 +39,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StampedPathEffectStyle
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -101,9 +101,7 @@ import ui.reactiveCanvas
 import ui.region2pathWithCache
 import ui.theme.CustomColors
 import ui.theme.CustomStyles
-import ui.theme.DodeclustersColors
 import ui.theme.customColors
-import ui.theme.extendedColorScheme
 import ui.toPath
 import ui.tools.Tool
 import kotlin.math.min
@@ -234,6 +232,7 @@ fun BoxScope.EditorCanvas(
             val visibleRect = size.toRect().translate(-viewModel.translation)
             drawRegions(allObjects = viewModel.objects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = viewModel.objectModel.pathCache, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, visibleRect = visibleRect, regionsOpacity = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, circleStroke = circleStroke)
             drawAnimation(animations = animations, pathCache = viewModel.objectModel.pathCache, creationColor = creationColor, copyingColor = copyingColor, deletionColor = deletionColor, highlightColor = highlightColor, visibleRect = visibleRect, strokeWidth = strokeWidth)
+            // draw effects
             // Q: the layering is debatable
             //  should the selected be layered at the top?
             //  even it's inside? what about rise/lower layer controls?
@@ -836,6 +835,29 @@ private fun DrawScope.drawAnimation(
                 is ConcreteArcPath -> {
                     val path = pathCache.getOrSet(ix) { o.toPath(it) }
                     drawPath(path, color, alpha, stroke)
+                }
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawEffects(
+    allObjects: List<*>,
+    effects: List<Effect>,
+    pathCache: PathCache,
+) {
+    for (effect in effects) {
+        when (effect) {
+            is Effect.Glow -> {
+                val color = when (effect) {
+                    is Effect.Glow.Parent -> Color.Blue
+                    is Effect.Glow.Preimage -> Color.Green
+                }
+                when (val obj = allObjects[effect.index]) {
+                    is Circle -> {}
+                    is Line -> {}
+                    is Point -> {}
+                    else -> {}
                 }
             }
         }

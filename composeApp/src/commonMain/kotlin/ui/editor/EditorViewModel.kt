@@ -544,8 +544,8 @@ class EditorViewModel : ViewModel() {
         println("selected arc-paths = $selectedArcPathsString")
         println(
             "regions bounded by some of selected objects = " + regions.filter {
-                it.insides.any { ix -> ix in objectSelection } ||
-                it.outsides.any { ix -> ix in objectSelection }
+                it.insides.any { ix -> ix in selection.indices } ||
+                it.outsides.any { ix -> ix in selection.indices }
             }.joinToString { it.toString() }
         )
         println("partialArcPath = $partialArcPath")
@@ -938,34 +938,29 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun deleteRegionsBoundBy(indices: List<Ix>) {
-        val circleOrLineIndices = indices
-            .filter { objects[it] is CircleOrLine }
-            .toSet()
-        if (circleOrLineIndices.isNotEmpty()) {
-            val everyBound = circleOrLineIndices.containsAll(
-                objects.filterIndices { it is CircleOrLine }
-            )
-            val oldRegions = regions.toList()
+        val everyBound = indices.containsAll(
+            objects.filterIndices { it is CircleOrLine || it is ConcreteArcPath }
+        )
+        val oldRegions = regions.toList()
+        if (everyBound) {
             regions = emptyList()
-            if (everyBound) {
-                if (chessboardPattern == ChessboardPattern.STARTS_COLORED) {
-                    chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
-                }
-            } else { // not everything
-                regions = oldRegions
-                    // to avoid stray chessboard selections
-                    .filterNot { (ins, _, _) ->
-                        ins.isNotEmpty() && ins.minus(circleOrLineIndices).isEmpty()
-                    }
-                    .map { (ins, outs, fillColor) ->
-                        LogicalRegion(
-                            insides = ins.minus(circleOrLineIndices),
-                            outsides = outs.minus(circleOrLineIndices),
-                            fillColor = fillColor
-                        )
-                    }
-                    .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
+            if (chessboardPattern == ChessboardPattern.STARTS_COLORED) {
+                chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
             }
+        } else { // not everything
+            regions = oldRegions
+                // to avoid stray chessboard selections
+                .filterNot { (ins, _, _) ->
+                    ins.isNotEmpty() && ins.minus(indices).isEmpty()
+                }
+                .map { (ins, outs, fillColor) ->
+                    LogicalRegion(
+                        insides = ins.minus(indices),
+                        outsides = outs.minus(indices),
+                        fillColor = fillColor
+                    )
+                }
+                .filter { (ins, outs) -> ins.isNotEmpty() || outs.isNotEmpty() }
         }
     }
 
