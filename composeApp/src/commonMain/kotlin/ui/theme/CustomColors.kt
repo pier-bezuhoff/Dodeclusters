@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import kotlin.Float
 
 @Immutable
 data class CustomColors(
@@ -29,12 +30,8 @@ data class CustomColors(
     val highlightColor: Color,
     val defaultFreePointColor: Color,
     val selectedArgColor: Color,
-) {
-    companion object {
-        const val thiccSelectedCircleAlpha = 0.9f
-        const val thiccSelectedPathAlpha = 0.5f
-    }
-}
+    val thiccSelectedAlpha: Float,
+)
 
 val ExtendedColorScheme.defaultCircleColor: Color get() = accentColor.copy(alpha = 0.6f)
 val ExtendedColorScheme.defaultPointColor: Color get() = accentColor.copy(alpha = 0.7f)
@@ -68,4 +65,5 @@ val MaterialTheme.customColors: CustomColors
         highlightColor = MaterialTheme.extendedColorScheme.highlightColor,
         defaultFreePointColor = MaterialTheme.extendedColorScheme.defaultFreePointColor,
         selectedArgColor = MaterialTheme.extendedColorScheme.creationColor,
+        thiccSelectedAlpha = 0.5f,
     )

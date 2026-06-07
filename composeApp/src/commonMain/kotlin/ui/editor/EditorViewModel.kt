@@ -4120,7 +4120,7 @@ class EditorViewModel : ViewModel() {
         ))
     }
 
-    private fun adjustTransformExprParameters(
+    private fun adjustTransformationParameters(
         sm: SubMode.ExprAdjustment<Expr.Conformal.OneToMany>,
         parameters: Parameters,
     ): SubMode.ExprAdjustment<Expr.Conformal.OneToMany> {
@@ -4129,8 +4129,8 @@ class EditorViewModel : ViewModel() {
             objectModel.removeObjectsAt(arcPathAdjustable.occupiedIndices)
         }
         val newAdjustables = mutableListOf<AdjustableExpr<Expr.Conformal.OneToMany>>()
-        /** trajectories used to transfer regions */
-        val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
+        /** object trajectories used to transfer regions */
+        val source2trajectory1 = mutableListOf<Pair<Ix, List<Ix>>>()
         for ((expr, sourceIndex, occupiedIndices, reservedIndices) in sm.adjustables) {
             val newExpr = expr.copyWithNewParameters(parameters)
             val (newIndices, newReservedIndices, newObjects, deleted, changed) = expressions.adjustMultiExpr(
@@ -4156,11 +4156,13 @@ class EditorViewModel : ViewModel() {
                 sourceIndex,
                 newIndices, newReservedIndices
             ))
-            source2trajectory.add(sourceIndex to newIndices)
+            source2trajectory1.add(sourceIndex to newIndices)
             objectModel.update(newIndices.toSet())
             objectModel.forceUpdate(changed)
         }
         val newTrajectorySize = newAdjustables.first().size
+        /** arc-path trajectories used to transfer regions */
+        val source2trajectory2 = mutableListOf<Pair<Ix, List<Ix>>>()
         // NOTE: children of the source arc-path are handled properly still, they become
         //  dependent on source children, not on children of the trajectory arc-paths
         val newArcPathAdjustables = mutableListOf<AdjustableExpr<ArcPath>>()
@@ -4189,37 +4191,42 @@ class EditorViewModel : ViewModel() {
                 sourceArcPathIndex,
                 newIndices, newReservedIndices
             ))
-            source2trajectory.add(sourceArcPathIndex to newIndices)
+            source2trajectory2.add(sourceArcPathIndex to newIndices)
             objectModel.update(newIndices.toSet())
             objectModel.forceUpdate(changed)
         }
-        val affectedRegions: List<Int> =
-            if (parameters is LoxodromicMotionParameters &&
-                defaultLoxodromicMotionParameters.bidirectional &&
-                source2trajectory.size >= 2
-            ) {
-                // FIX: regions after adj are broken if bounded by arc-paths
-                // NOTE: assumption: bidirectional spiral adjustables must be laid out as {t^i}; {t^-i}
-                // s2t structure is
-                // t1^+1 .. t1^+n; t2^+1 .. t2^+n; ... tm^+1 .. tm^+n;
-                // t1^-1 .. t1^-n; t2^-1 .. t2^-n; ... tm^-1 .. tm^-n;
-                // or alternatively,
-                // adjustables = [[forward trajectories], [backward trajectories]]
-                val halfSize = source2trajectory.size.div(2)
-                //  we have to do this to copy regions properly both forward and backward
-                val forwardSource2trajectory = source2trajectory.take(halfSize)
-                val backwardSource2trajectory = source2trajectory.drop(halfSize)
-                val source2fullTrajectory = forwardSource2trajectory.zip(
-                    backwardSource2trajectory
-                ) { (sourceIndex, forwardTrajectory), (_, backwardTrajectory) ->
-                    // the order of indices within full trajectory doesn't matter,
-                    // only that it is consistent across all of them
-                    sourceIndex to (backwardTrajectory + forwardTrajectory)
-                }
-                copySourceRegionsOntoTrajectories(source2fullTrajectory)
-            } else {
-                copySourceRegionsOntoTrajectories(source2trajectory)
+        val source2trajectory: List<Pair<Ix, List<Ix>>> = if (
+            parameters is LoxodromicMotionParameters &&
+            defaultLoxodromicMotionParameters.bidirectional &&
+            source2trajectory1.size.mod(2) == 0 &&
+            source2trajectory2.size.mod(2) == 0
+        ) {
+            // NOTE: assumption: bidirectional spiral adjustables must be laid out as {t^i}; {t^-i}
+            // s2t structure is
+            // t1^+1 .. t1^+n; t2^+1 .. t2^+n; ... tm^+1 .. tm^+n;
+            // t1^-1 .. t1^-n; t2^-1 .. t2^-n; ... tm^-1 .. tm^-n;
+            // or alternatively,
+            // adjustables = [[forward trajectories], [backward trajectories]]
+            val halfSize1 = source2trajectory1.size.div(2)
+            val halfSize2 = source2trajectory2.size.div(2)
+            //  we have to do this to copy regions properly both forward and backward
+            val forwardSource2trajectory =
+                source2trajectory1.take(halfSize1) + source2trajectory2.take(halfSize2)
+            val backwardSource2trajectory =
+                source2trajectory1.drop(halfSize1) + source2trajectory2.drop(halfSize2)
+            val source2fullTrajectory = forwardSource2trajectory.zip(
+                backwardSource2trajectory
+            ) { (sourceIndex1, forwardTrajectory), (sourceIndex2, backwardTrajectory) ->
+                require(sourceIndex1 == sourceIndex2)
+                // the order of indices within full trajectory doesn't matter,
+                // only that it is consistent across all of them
+                sourceIndex1 to (backwardTrajectory + forwardTrajectory)
             }
+            source2fullTrajectory
+        } else {
+            source2trajectory1 + source2trajectory2
+        }
+        val affectedRegions: List<Int> = copySourceRegionsOntoTrajectories(source2trajectory)
         return SubMode.ExprAdjustment(
             adjustables = newAdjustables,
             arcPathAdjustables = newArcPathAdjustables,
@@ -4243,7 +4250,7 @@ class EditorViewModel : ViewModel() {
                 is RotationParameters,
                 is BiInversionParameters,
                 is LoxodromicMotionParameters ->
-                    adjustTransformExprParameters(
+                    adjustTransformationParameters(
                         sm as SubMode.ExprAdjustment<Expr.Conformal.OneToMany>,
                         parameters
                     )
