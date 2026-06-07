@@ -1736,10 +1736,12 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun detachEverySelectedObject() {
-        val indicesToFree =
-            selection.gCircles.toSet() + selection.arcPaths.flatMap { ix ->
+        val indicesToFree = selection.gCircles
+            .filter { objects[it] is CircleOrLineOrPoint? } // ignore imaginary circles
+            .toSet()
+            .plus(selection.arcPaths.flatMap { ix ->
                 objectModel.getArcPath(ix)?.dependencies ?: emptySet()
-            }
+            })
         for (ix in indicesToFree) {
             expressions.changeToFree(ix)
         }
@@ -2795,9 +2797,9 @@ class EditorViewModel : ViewModel() {
         translation: Offset, zoom: Float, rotationAngle: Float
     ) {
         val selectedIndex = objectSelection.single()
-        if (ENABLE_TANGENT_SNAPPING) {
+        val circle = objects[selectedIndex] as? CircleOrLine
+        if (ENABLE_TANGENT_SNAPPING && circle != null) {
             // TODO: snap to arc-path arcs
-            val circle = objects[selectedIndex] as CircleOrLine
             val result0 = circle.transformed(translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
                 as CircleOrLine
             val snapDistance = tapRadius.toDouble()/TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR
@@ -2924,8 +2926,7 @@ class EditorViewModel : ViewModel() {
         rotationAngle: Float,
     ) {
         val targets = selection.gCircles.filter {
-            val obj = objects[it]
-            obj is CircleOrLine || obj is Point
+            objects[it] is CircleOrLineOrPoint
         }.plus(
             selection.arcPaths
                 .flatMap { objectModel.getArcPath(it)?.dependencies ?: emptySet() }
@@ -3185,7 +3186,7 @@ class EditorViewModel : ViewModel() {
         movementAfterDown = true
         /** absolute cursor/pointer position/centroid */
         val absoluteCentroid = absolute(centroid)
-        val selectedCircles = selection.gCircles.filter { objects[it] is CircleOrLineOrImaginaryCircle }
+        val selectedCircles = selection.gCircles.filter { objects[it] is CircleOrLine }
         val selectedPoints = selection.gCircles.filter { objects[it] is Point }
         when (val sm = submode) {
             is SubMode.Scale -> when (handleConfig) {
