@@ -3,6 +3,7 @@ package ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Shader
+import androidx.compose.ui.graphics.asComposeShader
 import org.jetbrains.skia.Matrix33
 import org.jetbrains.skia.RuntimeEffect
 import org.jetbrains.skia.RuntimeShaderBuilder
@@ -39,5 +40,5 @@ actual fun rememberShader(
                     Matrix33(*localMatrix)
         )
     }
-    return shader
+    return shader.asComposeShader()
 }

@@ -6,28 +6,28 @@ android-compileSdk = "36"
 android-minSdk = "24" # = Android 7.0 Nougat
 android-targetSdk = "36" # = Android 16
 
-kotlin = "2.3.20"
+kotlin = "2.4.10"
 # consult kmp-agp compatibility table:
 # https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility
 #noinspection AndroidGradlePluginVersion
 agp = "8.10.1"
-compose-multiplatform = "1.10.3"
+compose-multiplatform = "1.11.1"
 # check compose-multiplatform/release for version compatibility:
 # https://github.com/JetBrains/compose-multiplatform/releases/latest
 #noinspection GradleDependency
-jetpack-compose = "1.10.5"
-material3 = "1.10.0-alpha05"
-androidx-lifecycle = "2.10.0"
-kotlinx-serialization = "1.10.0"
+jetpack-compose = "1.11.2"
+material3 = "1.11.0-alpha07"
+androidx-lifecycle = "2.11.0-beta01"
 # ^ depend on compose-multiplatform
-kotlinx-coroutines = "1.10.2"
+kotlinx-serialization = "1.11.0"
+kotlinx-coroutines = "1.11.0"
 compose-activity = "1.13.0"
 material-icons = "1.7.3"
-androidx-core-ktx = "1.18.0"
+androidx-core-ktx = "1.18.0" # 1.19.0 requires target api 37 and agp 9.1
 window-size-klass = "0.5.0"
 colormath = "3.6.1"
 kaml = "0.104.0" # the repo is archived
-kstore = "1.0.0"
+kstore = "1.1.0"
 appdirs = "2.0.0"
 accompanist = "0.37.3"
 #collection = "1.5.0"
