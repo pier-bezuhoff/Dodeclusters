@@ -122,8 +122,8 @@ infix fun <T> Set<T>.xor(other: Set<T>): Set<T> =
 
 /** To be used in `when` pattern matching in cases that should NEVER be reached */
 @Throws(IllegalStateException::class)
-inline fun never(info: String = ""): Nothing =
-    throw IllegalStateException(if (info.isBlank()) "Never" else "Never ($info)")
+inline fun never(info: Any? = ""): Nothing =
+    throw IllegalStateException(if (info == "") "Never" else "Never ($info)")
 
 /** Does nothing. Forcefully introduce dependency on [something]'s state */
 fun hug(something: Any?) {}

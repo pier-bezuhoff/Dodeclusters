@@ -3,6 +3,8 @@ package domain.expressions
 import androidx.compose.runtime.Immutable
 import core.geometry.Circle
 import core.geometry.CircleOrLine
+import core.geometry.CircleOrLineOrPoint
+import core.geometry.CircleOrPoint
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
 import core.geometry.GCircleOrConcreteAcPath
@@ -330,7 +332,7 @@ sealed interface Expr {
 
     val resultTypes: Set<ResultType> get() = when (this) {
         is Intersection -> setOf(ResultType.POINT)
-        is CircleByCenterAndRadius -> setOf(ResultType.CIRCLE)
+        is CircleByCenterAndRadius -> setOf(ResultType.CIRCLE, ResultType.LINE)
         is CircleBy3Points -> ResultType.CLIPs
         is LineBy2Points -> setOf(ResultType.LINE)
         is Incidence -> setOf(ResultType.POINT)
@@ -372,9 +374,9 @@ fun Expr.Conformal.eval(objects: List<GCircleOrConcreteAcPath?>): ConformalExprR
                     parameters,
                     objects[carrier] as? CircleOrLine ?: return emptyList(),
                 )
-                is CircleByCenterAndRadius -> computeCircleByCenterAndRadius(
-                    objects[center] as? Point ?: return emptyList(),
-                    objects[radiusPoint] as? Point ?: return emptyList(),
+                is CircleByCenterAndRadius -> computeConcentricCircle(
+                    objects[center] as? CircleOrLineOrPoint ?: return emptyList(),
+                    objects[radiusPoint] as? CircleOrPoint ?: return emptyList(),
                 )
                 is CircleBy3Points -> computeCircleBy3Points(
                     objects[object1] as? GCircle ?: return emptyList(),

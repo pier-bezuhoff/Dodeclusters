@@ -2,6 +2,8 @@ package domain.expressions
 
 import core.geometry.Circle
 import core.geometry.CircleOrLine
+import core.geometry.CircleOrLineOrPoint
+import core.geometry.CircleOrPoint
 import core.geometry.ConcreteArcPath
 import core.geometry.EPSILON
 import core.geometry.GCircle
@@ -32,6 +34,22 @@ fun computeCircleByCenterAndRadius(
     }
 }
 
+/**
+ * Circle by center and radius-point, concentric circle or parallel line.
+ * @param[samePencilObject] should not be inf-p
+ * @param[point] should be finite
+ */
+fun computeConcentricCircle(
+    samePencilObject: CircleOrLineOrPoint,
+    point: CircleOrPoint, // no reason to input line since it always passes thru inf
+): CircleOrLine? {
+    return GeneralizedCircle.parallel2perp1(
+        GeneralizedCircle.fromGCircle(samePencilObject),
+        GeneralizedCircle.CONFORMAL_INFINITY,
+        GeneralizedCircle.fromGCircle(point),
+    )?.asCircleOrLine()
+}
+
 // NOTE: can produce non-CCW circle
 // if any 2 of the 3 are incident, the orientation is undefined (e.g. a circle and a point on it)
 fun computeCircleBy3Points(
@@ -45,7 +63,7 @@ fun computeCircleBy3Points(
         GeneralizedCircle.fromGCircle(point3),
     )?.times(-1)
     // we reverse orientation because of left-hand xOy
-    return perp3?.toGCircle()
+    return perp3?.asGCircle()
 }
 
 fun computeCircleByPencilAndPoint(
@@ -57,7 +75,7 @@ fun computeCircleByPencilAndPoint(
         GeneralizedCircle.fromGCircle(circle1),
         GeneralizedCircle.fromGCircle(circle2),
         GeneralizedCircle.fromGCircle(point),
-    )?.toGCircle()
+    )?.asGCircle()
 
 // for 2 intersecting lines the result is inf. point, but we return null
 // theoretically if any of the 2 is a line, the orientation is undefined (inf.p. lies on it)
@@ -68,9 +86,9 @@ fun computeLineBy2Points(
     val perp3 = GeneralizedCircle.perp3(
         GeneralizedCircle.fromGCircle(point1),
         GeneralizedCircle.fromGCircle(point2),
-        GeneralizedCircle.fromGCircle(Point.CONFORMAL_INFINITY),
+        GeneralizedCircle.CONFORMAL_INFINITY,
     )?.times(-1)
-    return perp3?.toGCircle() as? Line
+    return perp3?.asCircleOrLine() as? Line
 }
 
 fun computeCircleInversion(
@@ -83,7 +101,7 @@ fun computeCircleInversion(
     val engineGC = GeneralizedCircle.fromGCircle(engine)
     val targetGC = GeneralizedCircle.fromGCircle(target)
     val result = engineGC.applyTo(targetGC)
-    return result.toGCircleAs(target)
+    return result.asGCircle(target)
 }
 
 // incident points glued to a scaled line require additional care

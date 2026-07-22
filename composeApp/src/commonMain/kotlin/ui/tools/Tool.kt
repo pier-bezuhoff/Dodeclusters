@@ -27,7 +27,6 @@ import dodeclusters.composeapp.generated.resources.change_background_name
 import dodeclusters.composeapp.generated.resources.chessboard
 import dodeclusters.composeapp.generated.resources.chessboard_crossed
 import dodeclusters.composeapp.generated.resources.chessboard_reflected
-import dodeclusters.composeapp.generated.resources.circle
 import dodeclusters.composeapp.generated.resources.circle_3_points
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_arg_descriptions
 import dodeclusters.composeapp.generated.resources.circle_by_3_points_description
@@ -83,7 +82,6 @@ import dodeclusters.composeapp.generated.resources.fill_chessboard_pattern_name
 import dodeclusters.composeapp.generated.resources.fill_color_description
 import dodeclusters.composeapp.generated.resources.fill_region
 import dodeclusters.composeapp.generated.resources.fill_swiped_circles
-import dodeclusters.composeapp.generated.resources.filled_circle
 import dodeclusters.composeapp.generated.resources.flagged_point
 import dodeclusters.composeapp.generated.resources.flow_fill_description
 import dodeclusters.composeapp.generated.resources.flow_fill_name
@@ -181,8 +179,6 @@ import dodeclusters.composeapp.generated.resources.to_infinity
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_description
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_disabled_description
 import dodeclusters.composeapp.generated.resources.toggle_direction_arrows_name
-import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_description
-import dodeclusters.composeapp.generated.resources.toggle_filled_or_outline_name
 import dodeclusters.composeapp.generated.resources.toggle_objects_description
 import dodeclusters.composeapp.generated.resources.toggle_objects_disabled_description
 import dodeclusters.composeapp.generated.resources.toggle_objects_name
@@ -200,20 +196,9 @@ import dodeclusters.composeapp.generated.resources.upload
 import dodeclusters.composeapp.generated.resources.visible
 import dodeclusters.composeapp.generated.resources.visible_circle
 import dodeclusters.composeapp.generated.resources.visible_haired_arrow
-import domain.model.NonEqualityCondition
-import domain.model.SIGNATURE_1_FINITE_POINT
-import domain.model.SIGNATURE_2_CIRCLES
-import domain.model.SIGNATURE_2_GENERALIZED_FINITE_CIRCLES
-import domain.model.SIGNATURE_2_FINITE_POINTS
-import domain.model.SIGNATURE_3_GENERALIZED_CIRCLE
-import domain.model.SIGNATURE_INDICES_AND_2_CIRCLES
-import domain.model.SIGNATURE_INDICES_AND_2_POINTS
-import domain.model.SIGNATURE_INDICES_OR_INFINITY_AND_CIRCLE
-import domain.model.SIGNATURE_INDICES_AND_FINITE_POINT
-import domain.model.SIGNATURE_N_POINTS_PLACEHOLDER
-import domain.model.SIGNATURE_REAL_CIRCLE_AND_LINE_OR_FINITE_POINT
-import domain.model.Signature
 import domain.io.DdcV5
+import domain.model.NonEqualityCondition
+import domain.model.Signature
 import domain.model.nonEqualityConditionsOf
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
@@ -398,12 +383,6 @@ sealed class Tool(
         icon = Res.drawable.phantom,
         disabledIcon = Res.drawable.phantom_crossed,
     )
-    data object ToggleFilledOrOutline : Switch( // presently unused
-        name = Res.string.toggle_filled_or_outline_name,
-        description = Res.string.toggle_filled_or_outline_description,
-        icon = Res.drawable.filled_circle,
-        disabledIcon = Res.drawable.circle,
-    ) // TODO: instead adjust it for every part
     data object HideUI : Action(
         name = Res.string.hide_ui_name,
         description = Res.string.hide_ui_description,
@@ -438,7 +417,7 @@ sealed class Tool(
         description = Res.string.circle_inversion_description,
         argDescriptions = Res.array.circle_inversion_arg_descriptions,
         icon = Res.drawable.circle_inversion,
-        signature = SIGNATURE_INDICES_OR_INFINITY_AND_CIRCLE,
+        signature = Signature.INDICES_THEN_CIRCLE,
         nonEqualityConditions = nonEqualityConditionsOf(0 to 1),
     )
     data object CircleOrPointInterpolation : MultiArg(
@@ -446,7 +425,7 @@ sealed class Tool(
         description = Res.string.circle_interpolation_description,
         argDescriptions = Res.array.circle_interpolation_arg_descriptions,
         icon = Res.drawable.interpolate_lines,
-        signature = SIGNATURE_2_GENERALIZED_FINITE_CIRCLES,
+        signature = Signature.TWO_CIRCLES_OR_FINITE_POINTS,
         nonEqualityConditions = nonEqualityConditionsOf(0 to 1),
     )
     data object Rotation : MultiArg(
@@ -454,7 +433,7 @@ sealed class Tool(
         description = Res.string.rotation_description,
         argDescriptions = Res.array.rotation_arg_descriptions,
         icon = Res.drawable.rotation_around_point,
-        signature = SIGNATURE_INDICES_AND_FINITE_POINT,
+        signature = Signature.INDICES_THEN_FINITE_POINT,
         nonEqualityConditions = nonEqualityConditionsOf(0 to 1),
     )
     data object BiInversion : MultiArg(
@@ -462,7 +441,7 @@ sealed class Tool(
         description = Res.string.bi_inversion_description,
         argDescriptions = Res.array.bi_inversion_arg_descriptions,
         icon = Res.drawable.double_reflection,
-        signature = SIGNATURE_INDICES_AND_2_CIRCLES,
+        signature = Signature.INDICES_THEN_TWO_CIRCLES,
         nonEqualityConditions = nonEqualityConditionsOf(1 to 2),
     )
     data object LoxodromicMotion : MultiArg(
@@ -470,7 +449,7 @@ sealed class Tool(
         description = Res.string.loxodromic_motion_description,
         argDescriptions = Res.array.loxodromic_motion_arg_descriptions,
         icon = Res.drawable.spiral,
-        signature = SIGNATURE_INDICES_AND_2_POINTS,
+        signature = Signature.INDICES_THEN_TWO_POINTS,
         nonEqualityConditions = nonEqualityConditionsOf(0 to 1, 0 to 2, 1 to 2),
     )
     data object CircleExtrapolation : MultiArg(
@@ -478,7 +457,7 @@ sealed class Tool(
         description = Res.string.circle_extrapolation_description,
         argDescriptions = Res.array.circle_extrapolation_arg_descriptions,
         icon = Res.drawable.extrapolate_lines,
-        signature = SIGNATURE_2_CIRCLES,
+        signature = Signature.TWO_CIRCLES,
         nonEqualityConditions = nonEqualityConditionsOf(0 to 1),
     )
 
@@ -488,7 +467,7 @@ sealed class Tool(
         description = Res.string.circle_by_center_and_radius_description,
         argDescriptions = Res.array.circle_by_center_and_radius_arg_descriptions,
         icon = Res.drawable.circle_center_and_radius_point,
-        signature = SIGNATURE_2_FINITE_POINTS,
+        signature = Signature.REAL_CIRCLE_OR_LINE_OR_FINITE_POINT_THEN_REAL_CIRCLE_OR_FINITE_POINT,
         nonEqualityConditions = nonEqualityConditionsOf(0 to 1),
     )
     data object ConstructCircleBy3Points : MultiArg(
@@ -496,7 +475,7 @@ sealed class Tool(
         description = Res.string.circle_by_3_points_description,
         argDescriptions = Res.array.circle_by_3_points_arg_descriptions,
         icon = Res.drawable.circle_3_points,
-        signature = SIGNATURE_3_GENERALIZED_CIRCLE,
+        signature = Signature.THREE_CIRCLES_OR_POINTS,
         nonEqualityConditions = nonEqualityConditionsOf(0 to 1, 0 to 2, 1 to 2),
     )
     data object ConstructLineBy2Points : MultiArg(
@@ -504,7 +483,7 @@ sealed class Tool(
         description = Res.string.line_by_2_points_description,
         argDescriptions = Res.array.line_by_2_points_arg_descriptions,
         icon = Res.drawable.line_2_points,
-        signature = SIGNATURE_2_GENERALIZED_FINITE_CIRCLES,
+        signature = Signature.TWO_CIRCLES_OR_FINITE_POINTS,
         nonEqualityConditions = nonEqualityConditionsOf(0 to 1),
     )
     data object AddPoint : MultiArg(
@@ -512,14 +491,14 @@ sealed class Tool(
         description = Res.string.add_point_description,
         argDescriptions = Res.array.add_point_arg_descriptions,
         icon = Res.drawable.flagged_point,
-        signature = SIGNATURE_1_FINITE_POINT,
+        signature = Signature.ONE_FINITE_POINT,
     )
     data object ConstructCircleByPencilAndPoint : MultiArg(
         name = Res.string.circle_by_pencil_and_point_name,
         description = Res.string.circle_by_pencil_and_point_description,
         argDescriptions = Res.array.circle_by_pencil_and_point_arg_descriptions,
         icon = Res.drawable.propeller,
-        signature = SIGNATURE_3_GENERALIZED_CIRCLE,
+        signature = Signature.THREE_CIRCLES_OR_POINTS,
         nonEqualityConditions = nonEqualityConditionsOf(0 to 1),
     )
     data object ConstructPolarityByCircleAndLineOrPoint : MultiArg(
@@ -527,7 +506,7 @@ sealed class Tool(
         description = Res.string.polarity_by_circle_and_line_or_point_description,
         argDescriptions = Res.array.polarity_by_circle_and_line_or_point_arg_descriptions,
         icon = Res.drawable.circle_tangent,
-        signature = SIGNATURE_REAL_CIRCLE_AND_LINE_OR_FINITE_POINT,
+        signature = Signature.REAL_CIRCLE_THEN_LINE_OR_FINITE_POINT,
     )
     data object InsertCenteredCross : Action(
         name = Res.string.insert_centered_cross_name,
@@ -539,7 +518,7 @@ sealed class Tool(
         description = Res.string.arc_path_description,
         argDescriptions = Res.array.arc_path_arg_descriptions,
         icon = Res.drawable.shark_fin_striped,
-        signature = SIGNATURE_N_POINTS_PLACEHOLDER,
+        signature = Signature.N_POINTS_PLACEHOLDER,
         // none 2 should be equal
     )
     data object CompleteArcPath : ContextAction(

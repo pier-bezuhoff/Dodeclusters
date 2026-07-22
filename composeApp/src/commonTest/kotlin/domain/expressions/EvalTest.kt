@@ -16,7 +16,7 @@ class EvalTest {
     fun centerRadius() {
         assertAlmostEquals(
             Circle(10.0, 20.0, 5.0),
-            computeCircleByCenterAndRadius(Point(10.0, 20.0), Point(10.0, 25.0))
+            computeConcentricCircle(Point(10.0, 20.0), Point(10.0, 25.0))
         )
         repeat(100) {
             val point = randomPoint()
@@ -25,7 +25,7 @@ class EvalTest {
             if (d.isFinite() && d > EPSILON)
                 assertAlmostEquals(
                     Circle(point.x, point.y, d),
-                    computeCircleByCenterAndRadius(point, radiusPoint)
+                    computeConcentricCircle(point, radiusPoint)
                 )
         }
     }

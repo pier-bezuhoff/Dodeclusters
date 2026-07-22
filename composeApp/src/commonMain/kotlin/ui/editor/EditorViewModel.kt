@@ -63,7 +63,7 @@ import domain.expressions.Parameters
 import domain.expressions.RotationParameters
 import domain.expressions.areCompatibleTransforms
 import domain.expressions.changeTarget
-import domain.expressions.computeCircleByCenterAndRadius
+import domain.expressions.computeConcentricCircle
 import domain.expressions.computeIntersection
 import domain.expressions.computeSagittaRatio
 import domain.expressions.copy
@@ -974,7 +974,7 @@ class EditorViewModel : ViewModel() {
         }
 
     fun switchToMode(newMode: Mode) {
-        if (newMode.isSelectingObjects()) {
+        if (mode.isSelectingObjects() && newMode.isSelectingObjects()) {
             clearSelection()
         }
         if (newMode is ToolMode) {
@@ -988,12 +988,15 @@ class EditorViewModel : ViewModel() {
                 // keep selection for a bit in case we now switch to another mode that
                 // accepts selection as the first arg
             }
-            if (newMode == ToolMode.ARC_PATH) {
-                clearSelection()
-                partialArgList = null
-            } else {
-                showCircles = true
-                partialArgList = PartialArgList(newMode.signature, newMode.nonEqualityConditions)
+            when (newMode) {
+                ToolMode.ARC_PATH -> {
+                    clearSelection()
+                    partialArgList = null
+                }
+                else -> {
+                    showCircles = true
+                    partialArgList = PartialArgList(newMode.signature, newMode.nonEqualityConditions)
+                }
             }
         } else {
             partialArgList = null
@@ -2201,7 +2204,7 @@ class EditorViewModel : ViewModel() {
                     Selection(arcPaths = listOf(selectedArcPathIndex))
                 } else {
                     // we keep the previous selection in case we want to drag it
-                    // but it can still be discarded in :onTap
+                    // but it can still be discarded in :0nTap
                     selection
                 }
             }
@@ -2277,16 +2280,15 @@ class EditorViewModel : ViewModel() {
             var found = false
             var pointSnap: PointSnapResult? = null
             // try selecting an existing (indexed) point
-            if (Arg.PointIndex in nextType.possibleTypes) {
+            if (nextType.acceptsPointIndex) {
                 pointSnap = snapped(absolutePosition, includePoints = mode != ToolMode.POINT)
                 when (pointSnap) {
                     is PointSnapResult.Eq -> {
                         val newArg = Arg.PointIndex(pointSnap.pointIndex)
                         if (inFastCenteredCircle && argList.currentArg == null) {
-                            val newArg2 = Arg.PointXY(pointSnap.result)
                             partialArgList = argList
                                 .addArg(newArg, confirmThisArg = true)
-                                .addArg(newArg2, confirmThisArg = false)
+                                .addArg(Arg.PointXY(pointSnap.result), confirmThisArg = false)
                                 .copy(lastSnap = pointSnap)
                             found = true
                         } else {
@@ -2305,27 +2307,29 @@ class EditorViewModel : ViewModel() {
                 }
             }
             // try selecting an existing (indexed) object
-            if (!found &&
+            if (!found && nextType.acceptsCLI &&
                 (inInterpolationMode entails (argList.currentArg?.type !is Arg.Type.Point))
             ) {
-                val acceptsCircle = Arg.CircleIndex in nextType.possibleTypes
-                val acceptsLine = Arg.LineIndex in nextType.possibleTypes
-                val acceptsImaginaryCircle = Arg.ImaginaryCircleIndex in nextType.possibleTypes
-                val acceptsCLI = acceptsCircle || acceptsLine || acceptsImaginaryCircle
-                if (acceptsCLI) {
-                    getCirclesAround(absolutePosition).firstOrNull()?.let { ix ->
-                        val newArg = Arg.IndexOf(ix, objects[ix] as GCircle)
-                        // test non-equality conditions
-                        if (argList.validateNewArg(newArg)) {
+                getCirclesAround(absolutePosition).firstOrNull()?.let { ix ->
+                    val newArg = Arg.IndexOf(ix, objects[ix] as GCircle)
+                    // test non-equality conditions
+                    if (argList.validateNewArg(newArg)) {
+                        if (inFastCenteredCircle && argList.currentArg == null) {
+                            pointSnap = snapped(absolutePosition, excludedIndices = setOf(ix))
+                            partialArgList = argList
+                                .addArg(newArg, confirmThisArg = true)
+                                .addArg(Arg.PointXY(pointSnap.result), confirmThisArg = false)
+                                .copy(lastSnap = pointSnap)
+                        } else {
                             val confirm = !inInterpolationMode
                             partialArgList = argList.addArg(newArg, confirmThisArg = confirm)
                         }
-                        found = true
                     }
+                    found = true
                 }
             }
             // try selecting a new point
-            if (!found && Arg.PointXY in nextType.possibleTypes) {
+            if (!found && nextType.acceptsPointXY) {
                 val snap = pointSnap
                     ?: snapped(absolutePosition, includePoints = mode != ToolMode.POINT)
                 if (inFastCenteredCircle && argList.currentArg == null) {
@@ -2352,7 +2356,7 @@ class EditorViewModel : ViewModel() {
                 }
             }
             // try selecting an existing object (singular as a group)
-            if (!found && Arg.Indices in nextType.possibleTypes) {
+            if (!found && nextType.acceptsIndices) {
                 val selectedPointIndex = getPointsAround(absolutePosition).firstOrNull()
                 if (selectedPointIndex == null) {
                     val selectedCircleIndex = getCirclesAround(absolutePosition).firstOrNull()
@@ -2657,12 +2661,11 @@ class EditorViewModel : ViewModel() {
                     tapDuringMultiselect(absolutePosition = absolutePosition)
                 SelectionMode.Region -> {
                     when (submode) {
-                        is SubMode.FlowFill -> {} // see :onDown
+                        is SubMode.FlowFill -> {} // see :0nDown
                         else ->
                             tapDuringRegions(absolutePosition = absolutePosition)
                     }
                 }
-                ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> {}
                 ToolMode.ARC_PATH -> {
                     val pArcPath = partialArcPath
                     if (pArcPath != null && !pArcPath.isClosed && pArcPath.vertices.size >= 2 &&
@@ -2981,7 +2984,7 @@ class EditorViewModel : ViewModel() {
                 when (val o = objectModel.downscaledObjects[ix]) {
                     is GCircle -> {
                         val newObject = rotor.applyTo(GeneralizedCircle.fromGCircle(o))
-                            .toGCircleAs(o)
+                            .asGCircle(o)
                         objectModel.setDownscaledObject(ix, newObject)
                     }
                     else -> {}
@@ -2992,12 +2995,12 @@ class EditorViewModel : ViewModel() {
             objectModel.syncDisplayObjects(objects.indices)
             val newSouth = (rotor.applyTo(GeneralizedCircle.fromGCircle(
                 sm.south.downscale()
-            )).toGCircleAs(sm.south) as? Point)
+            )).asGCircle(sm.south) as? Point)
                 ?.upscale()
             val newGrid = sm.grid.mapNotNull { o ->
                 (rotor.applyTo(GeneralizedCircle.fromGCircle(
                     o.downscale()
-                )).toGCircleAs(o) as? CircleOrLine)
+                )).asGCircle(o) as? CircleOrLine)
                     ?.upscale()
             }
             submode = sm.copy(
@@ -3287,13 +3290,14 @@ class EditorViewModel : ViewModel() {
                         FAST_CENTERED_CIRCLE &&
                         args.size == 2
                     ) {
-                        val firstPoint: Point =
-                            when (val first = args.first() as Arg.Point) {
-                                is Arg.PointIndex -> objects[first.index] as Point
-                                is Arg.FixedPoint -> first.toPoint()
+                        val centerPoint: CircleOrLineOrPoint =
+                            when (val centerArg = args[0]) {
+                                is Arg.Index -> objects[centerArg.index] as CircleOrLineOrPoint
+                                is Arg.FixedPoint -> centerArg.toPoint()
+                                else -> never(centerArg)
                             }
-                        val pointsAreTooClose = firstPoint.distanceFrom(snap.result) < 1e-3
-                        if (pointsAreTooClose) { // haxxz
+                        val secondPointIsTooClose = centerPoint.distanceFrom(snap.result) < 1e-3
+                        if (secondPointIsTooClose) { // haxxz
                             argList = argList.copy(
                                 args = args.take(1),
                                 lastArgIsConfirmed = true,
@@ -3345,7 +3349,7 @@ class EditorViewModel : ViewModel() {
 
     /** @param[position] `null` if cancelled/OOB */
     fun onUp(position: Offset?) {
-        // history is recorded at the end of :onUp
+        // history is recorded at the end of :0nUp
         when (mode) {
             SelectionMode.Drag -> {
                 when (submode) {
@@ -3843,25 +3847,32 @@ class EditorViewModel : ViewModel() {
 
     private fun completeCircleByCenterAndRadius() {
         val argList = partialArgList ?: return
-        val args = argList.args.map { it as Arg.Point }
-        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && args.all { it is Arg.PointXY }) {
-            val newCircle = computeCircleByCenterAndRadius(
-                center = (args[0] as Arg.PointXY).toPoint().downscale(),
-                radiusPoint = (args[1] as Arg.PointXY).toPoint().downscale(),
+        val centerArg = argList.args[0]
+        val pointArg = argList.args[1]
+        require(centerArg is Arg.CircleIndex || centerArg is Arg.LineIndex || centerArg is Arg.PointIndex || centerArg is Arg.PointXY)
+        require(pointArg is Arg.CircleIndex || pointArg is Arg.PointIndex || pointArg is Arg.PointXY)
+        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && centerArg is Arg.PointXY  && pointArg is Arg.PointXY) {
+            val newCircle = computeConcentricCircle(
+                samePencilObject = centerArg.toPoint().downscale(),
+                point = pointArg.toPoint().downscale(),
             )?.upscale()
             createNewGCircle(newCircle)
             expressions.addFree()
         } else {
-            val realized = args.map { arg ->
-                when (arg) {
-                    is Arg.PointIndex -> arg.index
-                    is Arg.FixedPoint -> createNewFreePoint(arg.toPoint())
-                }
+            val realizedCenterArg = when (centerArg) {
+                is Arg.Index -> centerArg.index
+                is Arg.PointXY -> createNewFreePoint(centerArg.toPoint())
+                else -> never(centerArg)
+            }
+            val realizedPointArg = when (pointArg) {
+                is Arg.Index -> pointArg.index
+                is Arg.PointXY -> createNewFreePoint(pointArg.toPoint())
+                else -> never(pointArg)
             }
             val newCircle = expressions.addSoloExpr(
                 Expr.CircleByCenterAndRadius(
-                    center = realized[0],
-                    radiusPoint = realized[1]
+                    center = realizedCenterArg,
+                    radiusPoint = realizedPointArg,
                 ),
             ) as? CircleOrLine
             createNewGCircle(newCircle?.upscale())
@@ -4695,7 +4706,6 @@ class EditorViewModel : ViewModel() {
             Tool.InBetween -> {} // unused, potentially updateParams(...)
             Tool.ReverseDirection -> {}
             Tool.BidirectionalSpiral -> {}
-            Tool.ToggleFilledOrOutline -> TODO("presently unused")
             Tool.InfinitePoint -> addInfinitePointArg()
             Tool.MovePointToInfinity -> movePointToInfinity()
         }

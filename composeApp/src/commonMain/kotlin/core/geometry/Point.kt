@@ -27,7 +27,7 @@ import kotlin.math.sin
 data class Point(
     val x: Double,
     val y: Double
-) : LineOrPoint, CircleOrLineOrPoint, GCircle {
+) : LineOrPoint, CircleOrPoint {
 
     init {
         require(

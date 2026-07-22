@@ -40,7 +40,7 @@ fun computeCircleInterpolation(
             start.bisector(
                 if (params.complementary) -end else end,
                 nOfSections = n, index = i
-            ).toGCircle() // no casting cuz we'd lose (real, real) -> imaginary bisector
+            ).asGCircle() // no casting cuz we'd lose (real, real) -> imaginary bisector
         )
     }
     return newCircles
@@ -99,7 +99,7 @@ fun computeCircleExtrapolation(
         b = c
     }
     return newGeneralizedCircles
-        .map { it.toGCircle() as? CircleOrLine }
+        .map { it.asGCircle() as? CircleOrLine }
 }
 
 fun computeBiInversion(
@@ -119,7 +119,7 @@ fun computeBiInversion(
         // inlined t.biInversion(e1, e2, params.speed)
         val bivector = bivector0 * ((i + 1) * params.speed)
         val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
-        val result = rotor.applyTo(t).toGCircleAs(target)
+        val result = rotor.applyTo(t).asGCircle(target)
         trajectory.add(result)
     }
     return trajectory
@@ -164,7 +164,7 @@ fun computeLoxodromicMotion(
         trajectory.add(
             dilation.applyTo(
                 rotation.applyTo(targetGC)
-            ).toGCircleAs(target)
+            ).asGCircle(target)
         )
     }
     return trajectory

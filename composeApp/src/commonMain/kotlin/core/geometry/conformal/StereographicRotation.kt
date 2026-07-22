@@ -49,7 +49,7 @@ fun calculateStereographicRotationBiEngine(
     val greatCircleGC = GeneralizedCircle.perp3(startGC, start2GC, endGC)
     var antipode1: Point? = null
     var antipode2: Point? = null
-    when (val greatCircle = greatCircleGC?.toGCircle()) {
+    when (val greatCircle = greatCircleGC?.asGCircle()) {
         is Circle -> {
             // this simple formula only works for antipodes of Great circles
             antipode1 = Point(
@@ -71,10 +71,10 @@ fun calculateStereographicRotationBiEngine(
         return null
     val engine1 = GeneralizedCircle.perp3(
         startGC, GeneralizedCircle.fromGCircle(antipode1), GeneralizedCircle.fromGCircle(antipode2)
-    )?.toGCircle() as? CircleOrLine
+    )?.asGCircle() as? CircleOrLine
     val engine2 = GeneralizedCircle.perp3(
         endGC, GeneralizedCircle.fromGCircle(antipode1), GeneralizedCircle.fromGCircle(antipode2)
-    )?.toGCircle() as? CircleOrLine
+    )?.asGCircle() as? CircleOrLine
     return if (engine1 != null && engine2 != null)
         Pair(
             engine1
@@ -100,8 +100,8 @@ fun rotateStereographically(
     val rotor = bivector.exp() // alternatively bivector0.exp() * log(progress)
     return { target ->
         val t = GeneralizedCircle.fromGCircle(target)
-        rotor.applyTo(t).toGCircleAs(target)
-        rotor.applyTo(GeneralizedCircle.fromGCircle(target)).toGCircleAs(target)
+        rotor.applyTo(t).asGCircle(target)
+        rotor.applyTo(GeneralizedCircle.fromGCircle(target)).asGCircle(target)
     }
 }
 

@@ -59,14 +59,14 @@ class GeneralizedCircleTest {
             assertAlmostEquals(
                 b,
                 a.applyTo(a.applyTo(b)),
-                "a=$a, b=$b (after $it runs)\na=${a.toGCircle()}, b=${b.toGCircle()}",
+                "a=$a, b=$b (after $it runs)\na=${a.asGCircle()}, b=${b.asGCircle()}",
                 epsilon = 0.1,
             )
             // symmetry covariance
             assertAlmostEquals(
                 c.applyTo(a.applyTo(b)),
                 (c.applyTo(a)).applyTo(c.applyTo(b)),
-                "a=$a, b=$b, c=$c (after $it runs)\na=${a.toGCircle()}, b=${b.toGCircle()}, c=${c.toGCircle()}",
+                "a=$a, b=$b, c=$c (after $it runs)\na=${a.asGCircle()}, b=${b.asGCircle()}, c=${c.asGCircle()}",
                 epsilon = 0.1
             )
         }
@@ -80,7 +80,7 @@ class GeneralizedCircleTest {
             val bi1 = a.bisector(b)
             assertAlmostEquals(
                 b, bi1.applyTo(a),
-                "a=$a, b=$b, bi=$bi1\na=${a.toGCircle()}, b=${b.toGCircle()}, bi=${bi1.toGCircle()}",
+                "a=$a, b=$b, bi=$bi1\na=${a.asGCircle()}, b=${b.asGCircle()}, bi=${bi1.asGCircle()}",
                 epsilon = 0.1
             )
             val n = Random.nextInt(2..20)
@@ -89,7 +89,7 @@ class GeneralizedCircleTest {
             assertAlmostEquals(
                 a.bisector(b, n, k).applyTo(a.bisector(b, n, k - 1)),
                 a.bisector(b, n, k + 1),
-                "a=$a, b=$b, n=$n, k=$k\na=${a.toGCircle()}, b=${b.toGCircle()}",
+                "a=$a, b=$b, n=$n, k=$k\na=${a.asGCircle()}, b=${b.asGCircle()}",
                 epsilon = 0.1
             )
         }
@@ -120,7 +120,7 @@ class GeneralizedCircleTest {
         val imCircle = GeneralizedCircle.fromGCircle(ImaginaryCircle(20.0, 30.0, 40.0))
         // not losing too much accuracy when converting to and fro
         listOf(cInf, point, line, circle, imCircle).forEach { gc ->
-            assertAlmostEquals(gc, GeneralizedCircle.fromGCircle(gc.toGCircle()), "$gc")
+            assertAlmostEquals(gc, GeneralizedCircle.fromGCircle(gc.asGCircle()), "$gc")
         }
     }
 

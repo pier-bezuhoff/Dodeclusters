@@ -93,10 +93,10 @@
         <item>Конечную точку</item>
     </string-array>
     <string name="circle_by_center_and_radius_name">Окружность по центру и радиусу</string>
-    <string name="circle_by_center_and_radius_description">Построить окружность по центру и точке на ней</string>
+    <string name="circle_by_center_and_radius_description">Построить окружность/прямую по центру/параллели и точке на ней</string>
     <string-array name="circle_by_center_and_radius_arg_descriptions">
-        <item>Центр окружности</item>
-        <item>Точку на окружности</item>
+        <item>Центр окружности / концентрическая окружность / параллельная прямая</item>
+        <item>Точку на окружности / перпендикулярный объект</item>
     </string-array>
     <string name="circle_by_3_points_name">Окружность по трём точкам</string>
     <string name="circle_by_3_points_description">Построить окружность по трём точкам, лежащим на ней, или по трём объектам, перпендикулярным ей</string>

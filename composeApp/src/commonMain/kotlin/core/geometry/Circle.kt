@@ -50,7 +50,7 @@ data class Circle(
     val y: Double,
     val radius: Double,
     val isCCW: Boolean = true,
-) : CircleOrLine {
+) : CircleOrLine, CircleOrPoint {
     val center: Offset get() =
         Offset(x.toFloat(), y.toFloat())
 
@@ -608,7 +608,7 @@ data class Circle(
             val engine = GeneralizedCircle.fromGCircle(inverting).normalizedPreservingDirection()
             val target = GeneralizedCircle.fromGCircle(theOneBeingInverted).normalizedPreservingDirection()
             val result = engine.applyTo(target).normalizedPreservingDirection()
-            return result.toGCircle()
+            return result.asGCircle()
         }
 
         // we use superior technology in this house

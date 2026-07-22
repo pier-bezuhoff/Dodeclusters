@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import core.geometry.Circle
 import core.geometry.CircleOrLine
+import core.geometry.CircleOrLineOrPoint
+import core.geometry.CircleOrPoint
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
 import core.geometry.ImaginaryCircle
@@ -79,6 +81,7 @@ import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByPencilAndPoint
+import domain.expressions.computeConcentricCircle
 import domain.expressions.computeLineBy2Points
 import domain.hug
 import domain.model.AlignmentLine
@@ -1233,107 +1236,106 @@ private inline fun DrawScope.drawPartialConstructs(
         }
     }
     // custom previews for some tools
-    when (mode) {
-        ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> partialArgList!!.args.let { args ->
-            if (args.size == 2) {
-                val (center, radiusPoint) = args.map {
-                    getArg(it) as Point
-                }
-                val radius = center.distanceFrom(radiusPoint)
-                drawCircle(
-                    color = creationPrototypeColor,
-                    style = circleStroke,
-                    radius = radius.toFloat(),
-                    center = center.toOffset()
-                )
-            }
-        }
-        ToolMode.CIRCLE_BY_3_POINTS -> partialArgList!!.args.let { args ->
-            val gCircles = args.map { getArg(it)!! }
-            if (args.size == 2) {
-                val line = computeLineBy2Points(gCircles[0], gCircles[1])
-                if (line != null) {
-                    drawCircleOrLine(line, visibleRect, creationPrototypeColor,
-                        style = circleStroke
-                    )
-                }
-            } else if (args.size == 3) {
-                val circle = computeCircleBy3Points(gCircles[0], gCircles[1], gCircles[2]) as? CircleOrLine
-                if (circle != null) {
-                    drawCircleOrLine(circle, visibleRect, creationPrototypeColor,
+    partialArgList?.args?.let { args ->
+        when (mode) {
+            ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> {
+                if (args.size == 2) {
+                    val circleOrLine = computeConcentricCircle(
+                        getArg(args[0]) as? CircleOrLineOrPoint ?: return@let,
+                        getArg(args[1]) as? CircleOrPoint ?: return@let,
+                    ) ?: return@let
+                    drawCircleOrLine(circleOrLine, visibleRect, creationPrototypeColor,
                         style = circleStroke
                     )
                 }
             }
-        }
-        ToolMode.CIRCLE_BY_PENCIL_AND_POINT -> partialArgList!!.args.let { args ->
-            val gCircles = args.map { getArg(it)!! }
-            if (args.size == 2) {
-                val line = computeCircleByPencilAndPoint(gCircles[0], gCircles[1], Point.CONFORMAL_INFINITY) as? Line
-                if (line != null) {
-                    drawCircleOrLine(line, visibleRect, creationPrototypeColor, style = circleStroke)
-                }
-            } else if (args.size == 3) {
-                val circle = computeCircleByPencilAndPoint(gCircles[0], gCircles[1], gCircles[2]) as? CircleOrLine
-                if (circle != null) {
-                    drawCircleOrLine(circle, visibleRect, creationPrototypeColor,
-                        style = circleStroke
-                    )
-                }
-            }
-        }
-        ToolMode.LINE_BY_2_POINTS -> partialArgList!!.args.let { args ->
-            if (args.size == 2) {
-                val gCircles = args.map { getArg(it)!! }
-                val line = computeLineBy2Points(gCircles[0], gCircles[1])
-                if (line != null)
-                    drawCircleOrLine(line, visibleRect, creationPrototypeColor,
-                        style = circleStroke
-                    )
-            }
-        }
-        ToolMode.ARC_PATH -> partialArcPath?.let { pArcPath ->
-            val path = pArcPath.toPath()
-            for (alignmentLine in pArcPath.alignmentLines) {
-                when (alignmentLine) {
-                    is AlignmentLine.Horizontal ->
-                        drawLine(
-                            color = alignmentLineColor,
-                            start = Offset(alignmentLine.x.toFloat(), visibleRect.top - 10),
-                            end = Offset(alignmentLine.x.toFloat(), visibleRect.bottom + 10),
+            ToolMode.CIRCLE_BY_3_POINTS -> {
+                val gCircles = args.map { getArg(it) ?: return@let }
+                if (args.size == 2) {
+                    val line = computeLineBy2Points(gCircles[0], gCircles[1])
+                    if (line != null) {
+                        drawCircleOrLine(line, visibleRect, creationPrototypeColor,
+                            style = circleStroke
                         )
-                    is AlignmentLine.Vertical ->
-                        drawLine(
-                            color = alignmentLineColor,
-                            start = Offset(visibleRect.left - 10, alignmentLine.y.toFloat()),
-                            end = Offset(visibleRect.right + 10, alignmentLine.y.toFloat()),
+                    }
+                } else if (args.size == 3) {
+                    val circle = computeCircleBy3Points(gCircles[0], gCircles[1], gCircles[2]) as? CircleOrLine
+                    if (circle != null) {
+                        drawCircleOrLine(circle, visibleRect, creationPrototypeColor,
+                            style = circleStroke
+                        )
+                    }
+                }
+            }
+            ToolMode.CIRCLE_BY_PENCIL_AND_POINT -> {
+                val gCircles = args.map { getArg(it) ?: return@let }
+                if (args.size == 2) {
+                    val line = computeCircleByPencilAndPoint(gCircles[0], gCircles[1], Point.CONFORMAL_INFINITY) as? Line
+                    if (line != null) {
+                        drawCircleOrLine(line, visibleRect, creationPrototypeColor, style = circleStroke)
+                    }
+                } else if (args.size == 3) {
+                    val circle = computeCircleByPencilAndPoint(gCircles[0], gCircles[1], gCircles[2]) as? CircleOrLine
+                    if (circle != null) {
+                        drawCircleOrLine(circle, visibleRect, creationPrototypeColor,
+                            style = circleStroke
+                        )
+                    }
+                }
+            }
+            ToolMode.LINE_BY_2_POINTS -> {
+                if (args.size == 2) {
+                    val gCircles = args.map { getArg(it) ?: return@let }
+                    val line = computeLineBy2Points(gCircles[0], gCircles[1])
+                    if (line != null)
+                        drawCircleOrLine(line, visibleRect, creationPrototypeColor,
+                            style = circleStroke
                         )
                 }
             }
-            for (arcIndex in pArcPath.arcs.indices) { // for each arc: draw start & mid-point
-                val point = pArcPath.vertices[arcIndex].point.toOffset()
-                drawCircle(
-                    color = creationPrototypeColor,
-                    radius = creationPointRadius,
-                    center = point
-                )
-                drawCircle(
-                    color = creationPrototypeColor.copy(alpha = 0.4f),
-                    radius = creationPointRadius,
-                    center = pArcPath.arcs[arcIndex].middlePoint.toOffset()
-                )
+            ToolMode.ARC_PATH -> partialArcPath?.let { pArcPath ->
+                val path = pArcPath.toPath()
+                for (alignmentLine in pArcPath.alignmentLines) {
+                    when (alignmentLine) {
+                        is AlignmentLine.Horizontal ->
+                            drawLine(
+                                color = alignmentLineColor,
+                                start = Offset(alignmentLine.x.toFloat(), visibleRect.top - 10),
+                                end = Offset(alignmentLine.x.toFloat(), visibleRect.bottom + 10),
+                            )
+                        is AlignmentLine.Vertical ->
+                            drawLine(
+                                color = alignmentLineColor,
+                                start = Offset(visibleRect.left - 10, alignmentLine.y.toFloat()),
+                                end = Offset(visibleRect.right + 10, alignmentLine.y.toFloat()),
+                            )
+                    }
+                }
+                for (arcIndex in pArcPath.arcs.indices) { // for each arc: draw start & mid-point
+                    val point = pArcPath.vertices[arcIndex].point.toOffset()
+                    drawCircle(
+                        color = creationPrototypeColor,
+                        radius = creationPointRadius,
+                        center = point
+                    )
+                    drawCircle(
+                        color = creationPrototypeColor.copy(alpha = 0.4f),
+                        radius = creationPointRadius,
+                        center = pArcPath.arcs[arcIndex].middlePoint.toOffset()
+                    )
+                }
+                if (!pArcPath.isClosed) {
+                    val last = pArcPath.vertices.last().point.toOffset()
+                    drawCircle(
+                        color = creationPrototypeColor,
+                        radius = creationPointRadius,
+                        center = last
+                    )
+                }
+                drawPath(path, creationPrototypeColor, style = circleStroke)
             }
-            if (!pArcPath.isClosed) {
-                val last = pArcPath.vertices.last().point.toOffset()
-                drawCircle(
-                    color = creationPrototypeColor,
-                    radius = creationPointRadius,
-                    center = last
-                )
-            }
-            drawPath(path, creationPrototypeColor, style = circleStroke)
+            else -> {}
         }
-        else -> {}
     }
 }
 

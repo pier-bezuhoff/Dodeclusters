@@ -41,8 +41,8 @@ fun assertAlmostEquals(
     assertTrue(
         actualNormalized != null && (expectedNormalized.homogenousEquals(actualNormalized, epsilon) || run {
             // TODO: also include BIG circle <=> line equivalence
-            val a = expectedNormalized.toGCircle()
-            val b = actualNormalized.toGCircleAs(a)
+            val a = expectedNormalized.asGCircle()
+            val b = actualNormalized.asGCircle(a)
             // yes, im desperate
             a is Circle && b is Circle &&
                     abs(a.x - b.x) < epsilon + abs(b.x) *epsilon &&
@@ -57,8 +57,8 @@ fun assertAlmostEquals(
                     abs(a.y - b.y) < epsilon + abs(b.y) *epsilon
         }),
         "$actualNormalized shouldBe $expectedNormalized" +
-                "\n${actualNormalized?.toGCircle()} or ${actualNormalized?.toGCircleAs(expectedNormalized.toGCircle())} " +
-                "shouldBe ${expectedNormalized.toGCircle()}" +
+                "\n${actualNormalized?.asGCircle()} or ${actualNormalized?.asGCircle(expectedNormalized.asGCircle())} " +
+                "shouldBe ${expectedNormalized.asGCircle()}" +
                 "\n\n$message"
     )
 }

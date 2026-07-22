@@ -389,7 +389,7 @@ data class GeneralizedCircle(
         }
 
     /** Assumes normalization */
-    fun toGCircle(): GCircle =
+    fun asGCircle(): GCircle =
         if (abs(w) < EPSILON) {
 //            if (abs(z) > EPSILON && abs(x/z) < EPSILON && abs(y/z) < EPSILON) { // more accurate, less efficient
             if (abs(x) < EPSILON && abs(y) < EPSILON) // implies z > EPSILON
@@ -413,7 +413,7 @@ data class GeneralizedCircle(
         }
 
     /** Assumes normalization.
-     * Same as convert [toGCircle], but also force the result to be of the
+     * Same as convert [asGCircle], but also force the result to be of the
      * same type as [sameGCircleTypeAs], i.e.
      *
      * [Point] => [Point],
@@ -424,7 +424,7 @@ data class GeneralizedCircle(
      *
      * otherwise => `null`
      */
-    fun toGCircleAs(sameGCircleTypeAs: GCircle): GCircle? =
+    fun asGCircle(sameGCircleTypeAs: GCircle): GCircle? =
         if (abs(w) < EPSILON) {
 //            if (abs(z) > EPSILON && abs(x/z) < EPSILON && abs(y/z) < EPSILON) { // more accurate, less efficient
             if (abs(x) < EPSILON && abs(y) < EPSILON) {
@@ -432,9 +432,12 @@ data class GeneralizedCircle(
                     Point.CONFORMAL_INFINITY
                 else null
             } else {
-                if (sameGCircleTypeAs is CircleOrLine)
-                    Line(x, y, -z).normalized()
-                else null
+                if (sameGCircleTypeAs is CircleOrLine) {
+                    if (w < 0)
+                        Line(-x, -y, z).normalized()
+                    else
+                        Line(x, y, -z).normalized()
+                } else null
             }
         } else {
             val x0 = x/w
@@ -459,6 +462,29 @@ data class GeneralizedCircle(
                         ImaginaryCircle(x0, y0, sqrt(abs(r2)))
                     else null
             }
+        }
+
+    fun asCircleOrLine(): CircleOrLine? =
+        if (abs(w) < EPSILON) {
+//            if (abs(z) > EPSILON && abs(x/z) < EPSILON && abs(y/z) < EPSILON) { // more accurate, less efficient
+            if (abs(x) < EPSILON && abs(y) < EPSILON) {
+                null // inf-p
+            } else {
+                if (w < 0)
+                    Line(-x, -y, z).normalized()
+                else
+                    Line(x, y, -z).normalized()
+            }
+        } else {
+            val x0 = x/w
+            val y0 = y/w
+            val d2 = x0.pow(2) + y0.pow(2)
+            val r2 = d2 - 2*z/w
+            if (r2 >= EPSILON2) {
+                val r = sqrt(r2)
+                val isCCW = w >= 0
+                Circle(x0, y0, r, isCCW)
+            } else null
         }
 
     companion object {

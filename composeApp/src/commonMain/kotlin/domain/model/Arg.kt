@@ -152,6 +152,20 @@ data class ArgType(
     constructor(vararg possibleTypes: Arg.Type) :
         this(possibleTypes.toList())
 
+    val acceptsCLI: Boolean get() =
+        Arg.CircleIndex in possibleTypes ||
+        Arg.LineIndex in possibleTypes ||
+        Arg.ImaginaryCircleIndex in possibleTypes
+
+    val acceptsPointIndex: Boolean get() =
+        Arg.PointIndex in possibleTypes
+
+    val acceptsPointXY: Boolean get() =
+        Arg.PointXY in possibleTypes
+
+    val acceptsIndices: Boolean get() =
+        Arg.Indices in possibleTypes
+
     companion object {
         val CIRCLE = ArgType(Arg.CircleIndex)
         val FINITE_POINT = ArgType(Arg.PointIndex, Arg.PointXY)
@@ -175,6 +189,18 @@ data class ArgType(
         val CLI = ArgType(
             Arg.CircleIndex, Arg.LineIndex, Arg.ImaginaryCircleIndex,
         )
+        /** Circle, Line, or Finite Point */
+        val CLFP = ArgType(
+            Arg.PointIndex,
+            Arg.CircleIndex, Arg.LineIndex,
+            Arg.PointXY,
+        )
+        /** Circle or Finite Point */
+        val CFP = ArgType(
+            Arg.PointIndex,
+            Arg.CircleIndex,
+            Arg.PointXY,
+        )
         /** Line or Finite Point */
         val LFP = ArgType(
             Arg.PointIndex,
@@ -193,21 +219,28 @@ data class Signature(val argTypes: List<ArgType>) {
 
     @Transient
     val size: Int = argTypes.size
-}
 
-// cannot scope to Signature.Companion cuz many start with a number
-val SIGNATURE_1_FINITE_POINT = Signature(ArgType.FINITE_POINT)
-val SIGNATURE_2_FINITE_POINTS = Signature(ArgType.FINITE_POINT, ArgType.FINITE_POINT)
-val SIGNATURE_2_CIRCLES = Signature(ArgType.CLI, ArgType.CLI)
-val SIGNATURE_2_GENERALIZED_FINITE_CIRCLES = Signature(ArgType.CLIFP, ArgType.CLIFP)
-val SIGNATURE_2_GENERALIZED_CIRCLES = Signature(ArgType.CLIP, ArgType.CLIP)
-val SIGNATURE_3_GENERALIZED_CIRCLE = Signature(ArgType.CLIP, ArgType.CLIP, ArgType.CLIP)
-val SIGNATURE_REAL_CIRCLE_AND_LINE_OR_FINITE_POINT = Signature(ArgType.CIRCLE, ArgType.LFP)
-val SIGNATURE_INDICES_OR_INFINITY_AND_CIRCLE = Signature(ArgType.INDICES_OR_INFINITE_POINT, ArgType.CLI)
-val SIGNATURE_INDICES_AND_FINITE_POINT = Signature(ArgType.INDICES, ArgType.FINITE_POINT)
-val SIGNATURE_INDICES_AND_2_CIRCLES = Signature(ArgType.INDICES, ArgType.CLI, ArgType.CLI)
-val SIGNATURE_INDICES_AND_2_POINTS = Signature(ArgType.INDICES, ArgType.POINT, ArgType.POINT)
-val SIGNATURE_N_POINTS_PLACEHOLDER = Signature(ArgType.NOTHING)
+    companion object {
+        /* jargon:
+        circle = real circle, imaginary circle or line
+        x_then_y_or_z = (x, [y or z])
+        spell numbers with letters cuz they are often at the start
+        */
+        val ONE_FINITE_POINT = Signature(ArgType.FINITE_POINT)
+        val TWO_FINITE_POINTS = Signature(ArgType.FINITE_POINT, ArgType.FINITE_POINT)
+        val TWO_CIRCLES = Signature(ArgType.CLI, ArgType.CLI)
+        val TWO_CIRCLES_OR_FINITE_POINTS = Signature(ArgType.CLIFP, ArgType.CLIFP)
+        val TWO_CIRCLES_OR_POINTS = Signature(ArgType.CLIP, ArgType.CLIP)
+        val THREE_CIRCLES_OR_POINTS = Signature(ArgType.CLIP, ArgType.CLIP, ArgType.CLIP)
+        val REAL_CIRCLE_THEN_LINE_OR_FINITE_POINT = Signature(ArgType.CIRCLE, ArgType.LFP)
+        val REAL_CIRCLE_OR_LINE_OR_FINITE_POINT_THEN_REAL_CIRCLE_OR_FINITE_POINT = Signature(ArgType.CLFP, ArgType.CFP)
+        val INDICES_THEN_CIRCLE = Signature(ArgType.INDICES_OR_INFINITE_POINT, ArgType.CLI)
+        val INDICES_THEN_FINITE_POINT = Signature(ArgType.INDICES, ArgType.FINITE_POINT)
+        val INDICES_THEN_TWO_CIRCLES = Signature(ArgType.INDICES, ArgType.CLI, ArgType.CLI)
+        val INDICES_THEN_TWO_POINTS = Signature(ArgType.INDICES, ArgType.POINT, ArgType.POINT)
+        val N_POINTS_PLACEHOLDER = Signature(ArgType.NOTHING)
+    }
+}
 
 @Immutable
 @Serializable
