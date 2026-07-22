@@ -237,18 +237,18 @@ class EditorViewModel : ViewModel() {
 
     // these are NG
     inline val showGenericSelectionContextActions: Boolean get() =
-        mode.isSelectingCircles() && showCircles &&
+        mode.isSelectingObjects() && showCircles &&
             (selection.gCircles.any { objects[it] is CircleOrLineOrImaginaryCircle } ||
                 selection.arcPaths.isNotEmpty() &&
                 selection.gCircles.any { objects[it] is Point }
             )
     inline val showPointContextActions: Boolean get() =
-        showCircles && mode.isSelectingCircles() && selection.gCircles.any { objects[it] is Point }
+        showCircles && mode.isSelectingObjects() && selection.gCircles.any { objects[it] is Point }
     inline val showArcPathContextActions: Boolean get() =
-        mode.isSelectingCircles() && selection.arcPaths.isNotEmpty()
+        mode.isSelectingObjects() && selection.arcPaths.isNotEmpty()
 
     val handleConfig: HandleConfig? get() =
-        if (mode.isSelectingCircles())
+        if (mode.isSelectingObjects())
             when {
                 selection.gCircles.size == 1 && selection.arcPaths.isEmpty() ->
                     HandleConfig.SINGLE_CIRCLE
@@ -582,7 +582,7 @@ class EditorViewModel : ViewModel() {
         translation = Offset.Zero
         loadConstellation(updatedConstellation)
         println("loaded new constellation")
-        if (!mode.isSelectingCircles()) {
+        if (!mode.isSelectingObjects()) {
             selectTool(Tool.Drag)
         }
     }
@@ -618,6 +618,7 @@ class EditorViewModel : ViewModel() {
 
     private fun resetTransients() {
         submode = null
+        partialArcPath = null
     }
 
     private fun loadState(state: SaveState) {
@@ -763,7 +764,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun duplicateSelection() {
-        if (mode.isSelectingCircles()) {
+        if (mode.isSelectingObjects()) {
             val gCirclesToCopy = selection.gCircles
             val arcPathsToCopy = expressions.sortedByTier(selection.arcPaths)
             val deps = arcPathsToCopy.flatMap {
@@ -885,7 +886,7 @@ class EditorViewModel : ViewModel() {
         val gCirclesToDelete = selection.gCircles
         val arcPathsToDelete = selection.arcPaths
         if ((showCircles && gCirclesToDelete.isNotEmpty() || arcPathsToDelete.isNotEmpty()) &&
-            (mode.isSelectingCircles() || mode == ToolMode.ARC_PATH) // allow instant arc-path deletion
+            (mode.isSelectingObjects() || mode == ToolMode.ARC_PATH) // allow instant arc-path deletion
         ) {
             deleteObjectsWithDependenciesColorsAndRegions(selection.indices)
             recordHistory()
@@ -973,8 +974,7 @@ class EditorViewModel : ViewModel() {
         }
 
     fun switchToMode(newMode: Mode) {
-        // NOTE: these altering shortcuts are unused for now so that they don't confuse category-expand buttons
-        if (selection.size > 1 && newMode == SelectionMode.Drag) {
+        if (newMode.isSelectingObjects()) {
             clearSelection()
         }
         if (newMode is ToolMode) {
@@ -1467,7 +1467,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun forceSelectAll() {
-        if (!mode.isSelectingCircles() || !showCircles) { // more intuitive behavior
+        if (!mode.isSelectingObjects() || !showCircles) { // more intuitive behavior
             // forces to select all instead of toggling
             clearSelection()
         }
@@ -1700,7 +1700,7 @@ class EditorViewModel : ViewModel() {
             // weird history shenanigans... cuz we want to pin-record on the first zoom
             // action in a sequence
             val firstZoom = history.newContinuousChange(ContinuousChange.ZOOM)
-            if (mode.isSelectingCircles() &&
+            if (mode.isSelectingObjects() &&
                 (showCircles && selection.gCircles.isNotEmpty() || selection.arcPaths.isNotEmpty())
             ) {
                 val rect = calculateSelectionRect()
@@ -2136,7 +2136,7 @@ class EditorViewModel : ViewModel() {
     // might be useful for duplication with dependencies
     /** For each object in [objectSelection], add to selection its siblings and parents */
     private fun expandSelectionToFamily() {
-        if (mode.isSelectingCircles()) {
+        if (mode.isSelectingObjects()) {
             val familyMembers = objectSelection.flatMap { ix ->
                 listOf(ix) + findSiblingsAndParents(ix)
             }.distinct()
@@ -3574,6 +3574,10 @@ class EditorViewModel : ViewModel() {
     }
 
     fun selectTool(tool: Tool, togglePanel: Boolean = false) {
+        // automatically complete unfinished arc-path, since losing it is annoying
+        if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
+            completeArcPath()
+        }
         val category: Category
         if (tool is Tool.AppliedColor) {
             category = Category.Colors
@@ -4890,7 +4894,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun restoreFromState(state: SaveState) {
-        if (!mode.isSelectingCircles()) {
+        if (!mode.isSelectingObjects()) {
             switchToMode(SelectionMode.Drag)
         }
         loadState(state)

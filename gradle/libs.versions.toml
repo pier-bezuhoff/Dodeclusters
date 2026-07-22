@@ -1,5 +1,5 @@
 [versions]
-dodeclusters-version = "0.5.3"
+dodeclusters-version = "0.5.4"
 dodeclusters-android-versionCode = "11"
 dodeclusters-desktop-packageVersion = "1.0.5" # cannot start with 0 it seems
 android-compileSdk = "36"
@@ -15,7 +15,6 @@ compose-multiplatform = "1.11.1"
 # check compose-multiplatform/release for version compatibility:
 # https://github.com/JetBrains/compose-multiplatform/releases/latest
 #noinspection GradleDependency
-jetpack-compose = "1.11.2"
 material3 = "1.11.0-alpha07"
 androidx-lifecycle = "2.11.0-beta01"
 # ^ depend on compose-multiplatform
@@ -37,11 +36,11 @@ compose-ui-graphics = { module = "org.jetbrains.compose.ui:ui-graphics", version
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "compose-multiplatform" }
 compose-ui-toolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
 compose-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
 compose-lifecycle-runtime = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 compose-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "jetpack-compose" }
 compose-activity = { module = "androidx.activity:activity-compose", version.ref = "compose-activity" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidx-core-ktx" }
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }

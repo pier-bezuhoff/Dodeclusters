@@ -181,7 +181,7 @@ fun BoxScope.EditorCanvas(
         }
     }
     val gCircleSelectionIsActive = remember(viewModel.mode, viewModel.selection) {
-        viewModel.mode.isSelectingCircles() && viewModel.selection.gCircles.isNotEmpty()
+        viewModel.mode.isSelectingObjects() && viewModel.selection.gCircles.isNotEmpty()
     }
     val hiddenObjectIndices = remember(viewModel.showPhantomObjects, viewModel.objectModel.propertyInvalidations) {
         if (viewModel.showPhantomObjects)
@@ -449,7 +449,7 @@ fun ScreenshotableCanvas(
                     val hiddenObjectIndices = if (viewModel.showPhantomObjects) emptySet() else viewModel.phantoms
                     drawRegions(allObjects = viewModel.objects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = viewModel.objectModel.pathCache, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, visibleRect = visibleRect, regionsOpacity = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, pathStroke = pathStroke)
                     if (viewModel.showCircles) {
-                        val selectionIsActive = viewModel.mode.isSelectingCircles() && viewModel.objectSelection.isNotEmpty()
+                        val selectionIsActive = viewModel.mode.isSelectingObjects() && viewModel.objectSelection.isNotEmpty()
                         val visibleNonSelectedObjectIndices = if (selectionIsActive) viewModel.objects.indices - hiddenObjectIndices - viewModel.selection.gCircles.toSet() else viewModel.objects.indices - hiddenObjectIndices
                         drawArcPaths(allObjects = viewModel.objects, indices = (viewModel.objectModel.arcPathIndices - viewModel.selection.arcPaths.toSet()).toList(), borderColors = viewModel.objectModel.borderColors, fillColors = viewModel.objectModel.fillColors, pathCache = viewModel.objectModel.pathCache, defaultArcPathColor = defaultArcPathColor, arcPathFillOpacity = viewModel.regionsOpacity, arcPathStroke = pathStroke)
                         drawGCircles(indices = visibleNonSelectedObjectIndices, allObjects = viewModel.objects, objectColors = viewModel.objectModel.borderColors, isObjectFree = { viewModel.isFree(it) }, pathCache = viewModel.objectModel.pathCache, visibleRect = visibleRect, defaultCircleColor = defaultCircleColor, defaultFreeCircleColor = defaultFreeCircleColor, circleStroke = pathStroke, defaultPointColor = defaultPointColor, defaultFreePointColor = defaultFreePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)

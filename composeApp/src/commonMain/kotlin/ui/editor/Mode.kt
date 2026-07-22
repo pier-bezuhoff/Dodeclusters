@@ -12,7 +12,7 @@ import kotlin.jvm.Transient
 sealed interface Mode {
     val tool: Tool
 
-    fun isSelectingCircles(): Boolean =
+    fun isSelectingObjects(): Boolean =
         this == SelectionMode.Drag || this == SelectionMode.Multiselect
 }
 
@@ -22,9 +22,9 @@ enum class SelectionMode(
     @Transient
     override val tool: Tool
 ) : Mode {
-    /** Select & drag singular circles */
+    /** Select & drag singular objects */
     Drag(Tool.Drag),
-    /** Select multiple circles */
+    /** Select multiple objects */
     Multiselect(Tool.Multiselect),
     /** Select regions to create new [LogicalRegion]s */
     Region(Tool.Region),
