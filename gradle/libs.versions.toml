@@ -4,18 +4,19 @@ dodeclusters-android-versionCode = "11"
 dodeclusters-desktop-packageVersion = "1.0.5" # cannot start with 0 it seems
 android-compileSdk = "37"
 android-minSdk = "24" # = Android 7.0 Nougat
-android-targetSdk = "36" # = Android 16
+android-targetSdk = "36" # = Android 16, sdk 37 requires agp 9
 
 kotlin = "2.4.10"
 # consult kmp-agp compatibility table:
 # https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility
 #noinspection AndroidGradlePluginVersion
-agp = "8.13.2" # sdk 37 requires agp 9
+agp = "8.13.2" # target sdk 37 requires agp 9
 compose-multiplatform = "1.11.1"
 # check compose-multiplatform/release for version compatibility:
 # https://github.com/JetBrains/compose-multiplatform/releases/latest
 #noinspection GradleDependency
 material3 = "1.11.0-alpha07"
+material3-adaptive = "1.2.0"
 androidx-lifecycle = "2.11.0-beta01" # 2.11.0 requires sdk 37 and agp 9
 # ^ depend on compose-multiplatform
 kotlinx-serialization = "1.11.0"
@@ -30,6 +31,8 @@ kstore = "1.1.0"
 appdirs = "2.0.0"
 accompanist = "0.37.3"
 #collection = "1.5.0"
+navigation3 = "1.1.1"
+navigation3-browser = "1.1.0"
 
 [libraries]
 compose-ui-graphics = { module = "org.jetbrains.compose.ui:ui-graphics", version.ref = "compose-multiplatform" }
@@ -41,16 +44,21 @@ compose-ui-toolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-prev
 compose-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
 compose-lifecycle-runtime = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 compose-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
+compose-lifecycle-viewmodelNavigation3 = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "androidx-lifecycle" }
 compose-activity = { module = "androidx.activity:activity-compose", version.ref = "compose-activity" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidx-core-ktx" }
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
-compose-material-icons = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "material-icons" }
+compose-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "material3-adaptive" }
+compose-material3-adaptiveNavigation3 = { module = "org.jetbrains.compose.material3.adaptive:adaptive-navigation3", version.ref = "material3-adaptive" }
 # official window-size-class is still worse
 #compose-material3-window-size-klass = { module = "org.jetbrains.compose.material3:material3-window-size-class", version.ref = "material3" }
 compose-material3-window-size-klass = { module = "dev.chrisbanes.material3:material3-window-size-class-multiplatform", version.ref = "window-size-klass" }
+compose-material-icons = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "material-icons" }
+compose-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+compose-navigation3-browser = { module = "com.github.terrakok:navigation3-browser", version.ref = "navigation3-browser" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization"}
 colormath = { module = "com.github.ajalt.colormath:colormath", version.ref = "colormath" }
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
