@@ -263,9 +263,9 @@ fun BoxScope.SelectionContextActions(
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
                 painterResource(Tool.MarkAsPhantoms.disabledIcon),
-                description = stringResource(Tool.MarkAsPhantoms.description),
-                disabledDescription = stringResource(Tool.MarkAsPhantoms.disabledDescription),
-                name = stringResource(Tool.MarkAsPhantoms.name),
+                tooltip = stringResource(Tool.MarkAsPhantoms.description),
+                disabledTooltip = stringResource(Tool.MarkAsPhantoms.disabledDescription),
+                contentDescription = stringResource(Tool.MarkAsPhantoms.name),
                 enabled = toolPredicate(Tool.MarkAsPhantoms),
                 modifier = buttonModifier,
                 onClick = { toolAction(Tool.MarkAsPhantoms) }
@@ -340,9 +340,9 @@ fun BoxScope.PointContextActions(
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
                 painterResource(Tool.MarkAsPhantoms.disabledIcon),
-                description = stringResource(Tool.MarkAsPhantoms.description),
-                disabledDescription = stringResource(Tool.MarkAsPhantoms.disabledDescription),
-                name = stringResource(Tool.MarkAsPhantoms.name),
+                tooltip = stringResource(Tool.MarkAsPhantoms.description),
+                disabledTooltip = stringResource(Tool.MarkAsPhantoms.disabledDescription),
+                contentDescription = stringResource(Tool.MarkAsPhantoms.name),
                 enabled = toolPredicate(Tool.MarkAsPhantoms),
                 modifier = buttonModifier,
                 onClick = { toolAction(Tool.MarkAsPhantoms) }

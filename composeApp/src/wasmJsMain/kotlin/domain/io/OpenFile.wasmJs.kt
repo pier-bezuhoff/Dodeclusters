@@ -22,6 +22,7 @@ actual fun OpenFileButton(
     contentDescription: String,
     lookupData: LookupData,
     modifier: Modifier,
+    iconModifier: Modifier,
     openRequests: SharedFlow<Unit>?,
     onOpen: (content: String?, filename: String?) -> Unit
 ) {
@@ -31,7 +32,7 @@ actual fun OpenFileButton(
         },
         modifier = modifier
     ) {
-        Icon(iconPainter, contentDescription, modifier)
+        Icon(iconPainter, contentDescription, iconModifier)
     }
     LaunchedEffect(openRequests) {
         openRequests?.collect {

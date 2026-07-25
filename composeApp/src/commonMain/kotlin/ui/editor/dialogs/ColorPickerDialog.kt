@@ -268,8 +268,8 @@ fun ColorPickerDialog(
                                 TwoIconButtonWithTooltip(
                                     iconPainter = painterResource(Res.drawable.add_circle),
                                     disabledIconPainter = painterResource(Res.drawable.delete_forever),
-                                    description = stringResource(Res.string.color_picker_save_color_description),
-                                    disabledDescription = stringResource(Res.string.color_picker_forget_color_description),
+                                    tooltip = stringResource(Res.string.color_picker_save_color_description),
+                                    disabledTooltip = stringResource(Res.string.color_picker_forget_color_description),
                                     enabled = newUnsavedColor,
                                     positionModifier = Modifier.align(Alignment.CenterVertically),
                                     contentColor = MaterialTheme.colorScheme.secondary
@@ -383,8 +383,8 @@ fun ColorPickerDialog(
                                 TwoIconButtonWithTooltip(
                                     iconPainter = painterResource(Res.drawable.add_circle),
                                     disabledIconPainter = painterResource(Res.drawable.delete_forever),
-                                    description = stringResource(Res.string.color_picker_save_color_description),
-                                    disabledDescription = stringResource(Res.string.color_picker_forget_color_description),
+                                    tooltip = stringResource(Res.string.color_picker_save_color_description),
+                                    disabledTooltip = stringResource(Res.string.color_picker_forget_color_description),
                                     enabled = newUnsavedColor,
                                     positionModifier = Modifier.align(Alignment.CenterVertically),
                                     contentColor = MaterialTheme.colorScheme.secondary

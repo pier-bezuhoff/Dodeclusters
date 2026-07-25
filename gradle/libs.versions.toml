@@ -2,7 +2,7 @@
 dodeclusters-version = "0.5.4"
 dodeclusters-android-versionCode = "11"
 dodeclusters-desktop-packageVersion = "1.0.5" # cannot start with 0 it seems
-android-compileSdk = "36"
+android-compileSdk = "37"
 android-minSdk = "24" # = Android 7.0 Nougat
 android-targetSdk = "36" # = Android 16
 
@@ -10,13 +10,13 @@ kotlin = "2.4.10"
 # consult kmp-agp compatibility table:
 # https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility
 #noinspection AndroidGradlePluginVersion
-agp = "8.10.1"
+agp = "8.13.2" # sdk 37 requires agp 9
 compose-multiplatform = "1.11.1"
 # check compose-multiplatform/release for version compatibility:
 # https://github.com/JetBrains/compose-multiplatform/releases/latest
 #noinspection GradleDependency
 material3 = "1.11.0-alpha07"
-androidx-lifecycle = "2.11.0-beta01"
+androidx-lifecycle = "2.11.0-beta01" # 2.11.0 requires sdk 37 and agp 9
 # ^ depend on compose-multiplatform
 kotlinx-serialization = "1.11.0"
 kotlinx-coroutines = "1.11.0"

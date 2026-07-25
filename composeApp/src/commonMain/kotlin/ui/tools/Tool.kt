@@ -120,6 +120,8 @@ import dodeclusters.composeapp.generated.resources.move_point_to_infinity_name
 import dodeclusters.composeapp.generated.resources.multiselect
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_name
+import dodeclusters.composeapp.generated.resources.new_blank_name
+import dodeclusters.composeapp.generated.resources.new_document
 import dodeclusters.composeapp.generated.resources.open_file
 import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.open_region
@@ -157,6 +159,7 @@ import dodeclusters.composeapp.generated.resources.rotation_description
 import dodeclusters.composeapp.generated.resources.rotation_name
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
+import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.screenshot_pc
 import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.set_label_description
@@ -252,12 +255,13 @@ sealed class Tool(
 
 
     // top toolbar
-    data object ToggleMenu : CustomAction(
-        Res.string.stub,
-        icon = Res.drawable.menu,
+    data object NewBlank : CustomAction(
+        name = Res.string.new_blank_name,
+        icon = Res.drawable.new_document,
     )
     data object SaveCluster : CustomAction(
-        Res.string.save_cluster_name,
+        name = Res.string.save_cluster_name,
+        description = Res.string.save_name,
         icon = Res.drawable.save
     ) {
         const val DEFAULT_NAME = DdcV5.DEFAULT_NAME
@@ -295,6 +299,10 @@ sealed class Tool(
     data object Redo : Action(
         name = Res.string.redo_name,
         icon = Res.drawable.redo,
+    )
+    data object ToggleMenu : CustomAction(
+        name = Res.string.stub,
+        icon = Res.drawable.menu,
     )
 
     // bottom/left toolbar

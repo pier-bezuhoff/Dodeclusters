@@ -69,10 +69,7 @@ import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.confirm
-import dodeclusters.composeapp.generated.resources.new_blank_name
-import dodeclusters.composeapp.generated.resources.new_document
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
-import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.save_prompt_after_blank_description
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
@@ -675,17 +672,6 @@ fun EditorTopBar(
     val contentColor = MaterialTheme.colorScheme.onSurface
     val toolbarHeight = if (isCompact) 48.dp else 64.dp
     // bad in portrait, fine in landscape
-//    SimpleToolButtonWithTooltip(
-//        Tool.ToggleMenu,
-//        Modifier
-//            .offset(y = 8.dp)
-//        ,
-//        iconModifier = iconModifier,
-//        contentColor = MaterialTheme.colorScheme.secondary,
-//        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f),
-//    ) {
-//        println("hi")
-//    }
     Row(modifier
         // NOTE: i might be hallucinating but ive seen this break tooltip positioning, now it works tho (?)
         .offset(x = 24.dp, y = -24.dp) // leave only 1, bottom-left rounded corner
@@ -706,18 +692,18 @@ fun EditorTopBar(
             // MAYBE: button to create new [empty?] document
             //  (maybe only on wide-width screens)
             // TODO: move it to context slidesheet
-            WithTooltip(stringResource(Res.string.new_blank_name)) {
+            WithTooltip(stringResource(Tool.NewBlank.description)) {
                 SimpleButton(
-                    painterResource(Res.drawable.new_document),
-                    stringResource(Res.string.new_blank_name),
+                    painterResource(Tool.NewBlank.icon),
+                    stringResource(Tool.NewBlank.name),
+                    iconModifier = iconModifier,
                     onClick = openNewBlank,
                 )
             }
-            WithTooltip(stringResource(Res.string.save_name)) {
+            WithTooltip(stringResource(Tool.SaveCluster.description)) {
                 SimpleButton(
                     painterResource(Tool.SaveCluster.icon),
                     stringResource(Tool.SaveCluster.name),
-                    modifier = iconModifier,
                     iconModifier = iconModifier,
                     onClick = showSaveOptionsDialog
                 )
@@ -727,17 +713,22 @@ fun EditorTopBar(
                     painterResource(Tool.OpenFile.icon),
                     stringResource(Tool.OpenFile.name),
                     LookupData.YAML.copy(directory = saveConfig.directory),
-                    modifier = iconModifier,
+                    iconModifier = iconModifier,
                     openRequests = openFileRequests,
                     onOpen = loadFromYaml,
                 )
             }
+            VerticalDivider(Modifier
+                .padding(horizontal = 8.dp)
+                .fillMaxHeight(0.6f)
+                .align(Alignment.CenterVertically)
+            )
             WithTooltip(stringResource(Tool.Undo.description)) {
                 DisableableButton(
                     painterResource(Tool.Undo.icon),
                     stringResource(Tool.Undo.name),
-                    undoIsEnabled,
-                    iconModifier,
+                    enabled = undoIsEnabled,
+                    iconModifier = iconModifier,
                     onClick = undo
                 )
             }
@@ -745,9 +736,24 @@ fun EditorTopBar(
                 DisableableButton(
                     painterResource(Tool.Redo.icon),
                     stringResource(Tool.Redo.name),
-                    redoIsEnabled,
-                    iconModifier,
+                    enabled = redoIsEnabled,
+                    iconModifier = iconModifier,
                     onClick = redo
+                )
+            }
+            VerticalDivider(Modifier
+                .padding(horizontal = 8.dp)
+                .fillMaxHeight(0.6f)
+                .align(Alignment.CenterVertically)
+            )
+            WithTooltip(stringResource(Tool.ToggleMenu.description)) {
+                SimpleButton(
+                    painterResource(Tool.ToggleMenu.icon),
+                    stringResource(Tool.ToggleMenu.name),
+                    iconModifier = iconModifier,
+                    onClick = {
+                        println("menu")
+                    },
                 )
             }
         }
@@ -1158,7 +1164,7 @@ fun ToolButton(
                     iconPainter = icon,
                     alternativeIconPainter = painterResource(tool.alternativeIcon),
                     disabledIconPainter = painterResource(tool.disabledIcon),
-                    name = name,
+                    contentDescription = name,
                     enabled = enabled,
                     alternative = alternative,
                     modifier = modifier,
@@ -1179,7 +1185,7 @@ fun ToolButton(
                 if (tool.disabledIcon == null) {
                     OnOffButton(
                         iconPainter = icon,
-                        name = name,
+                        contentDescription = name,
                         isOn = enabled,
                         modifier = modifier,
                         iconModifier = modifier,
@@ -1190,7 +1196,7 @@ fun ToolButton(
                     TwoIconButton(
                         iconPainter = icon,
                         disabledIconPainter = painterResource(tool.disabledIcon!!),
-                        name = name,
+                        contentDescription = name,
                         enabled = enabled,
                         modifier = modifier,
                         iconModifier = modifier,

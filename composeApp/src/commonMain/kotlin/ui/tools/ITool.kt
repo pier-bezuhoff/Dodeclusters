@@ -7,7 +7,11 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
 import org.jetbrains.compose.resources.StringResource
 
-/** Describes metadata associated with toolbar's tools (no algorithms per se, pattern-match for the algo) */
+/**
+ * Describes metadata associated with toolbar's tools (no algorithms per se, pattern-match for the algo)
+ * @property[name] used as an icon contentDescription
+ * @property[description] used as a tooltip
+ */
 sealed interface ITool { // pls. i dont know how to name it.. (semantically)
     val name: StringResource
     val icon: DrawableResource

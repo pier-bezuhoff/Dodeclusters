@@ -55,7 +55,6 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -165,7 +164,7 @@ inline fun <reified T> SimpleToolButtonWithTooltip(
 @Composable
 fun SimpleFilledButton(
     iconPainter: Painter,
-    name: String,
+    contentDescription: String,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
@@ -182,20 +181,17 @@ fun SimpleFilledButton(
         interactionSource = interactionSource,
         modifier = modifier,
     ) {
-        Icon(
-            iconPainter,
-            contentDescription = name,
-            modifier = iconModifier,
-        )
+        Icon(iconPainter, contentDescription, modifier)
     }
 }
 
 @Composable
 fun DisableableButton(
     iconPainter: Painter,
-    name: String,
+    contentDescription: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -205,13 +201,7 @@ fun DisableableButton(
         colors = IconButtonDefaults.iconButtonColors().copy(contentColor = contentColor),
         enabled = enabled,
     ) {
-        Icon(
-            iconPainter,
-            contentDescription = name,
-            // NOTE: using the same modifier for Icon can have
-            //  drastic consequences
-            modifier = modifier
-        )
+        Icon(iconPainter, contentDescription, iconModifier)
     }
 }
 
@@ -219,7 +209,7 @@ fun DisableableButton(
 fun TwoIconButton(
     iconPainter: Painter,
     disabledIconPainter: Painter,
-    name: String,
+    contentDescription: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
@@ -239,7 +229,7 @@ fun TwoIconButton(
         Icon(
             if (enabled) iconPainter
             else disabledIconPainter,
-            contentDescription = name,
+            contentDescription = contentDescription,
             modifier = iconModifier
         )
     }
@@ -249,10 +239,10 @@ fun TwoIconButton(
 fun TwoIconButtonWithTooltip(
     iconPainter: Painter,
     disabledIconPainter: Painter,
-    description: String,
     enabled: Boolean,
-    disabledDescription: String = description,
-    name: String = description,
+    tooltip: String,
+    disabledTooltip: String = tooltip,
+    contentDescription: String = tooltip,
     modifier: Modifier = Modifier,
     positionModifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
@@ -261,12 +251,12 @@ fun TwoIconButtonWithTooltip(
 ) {
     Box(positionModifier) {
         WithTooltip(
-            if (enabled) description else disabledDescription
+            if (enabled) tooltip else disabledTooltip
         ) {
             TwoIconButton(
                 iconPainter = iconPainter,
                 disabledIconPainter = disabledIconPainter,
-                name = name,
+                contentDescription = contentDescription,
                 enabled = enabled,
                 modifier = modifier,
                 iconModifier = iconModifier,
@@ -287,10 +277,11 @@ fun ThreeIconButton(
     iconPainter: Painter,
     alternativeIconPainter: Painter,
     disabledIconPainter: Painter,
-    name: String,
+    contentDescription: String,
     enabled: Boolean,
     alternative: Boolean,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -308,8 +299,8 @@ fun ThreeIconButton(
                 else iconPainter
             }
             else disabledIconPainter,
-            contentDescription = name,
-            modifier = modifier
+            contentDescription = contentDescription,
+            modifier = iconModifier
         )
     }
 }
@@ -317,7 +308,7 @@ fun ThreeIconButton(
 @Composable
 fun OnOffButton(
     iconPainter: Painter,
-    name: String,
+    contentDescription: String,
     isOn: Boolean,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
@@ -346,11 +337,7 @@ fun OnOffButton(
         },
         border = if (isOn) BorderStroke(2.dp, MaterialTheme.colorScheme.outline) else null
     ) {
-        Icon(
-            iconPainter,
-            contentDescription = name,
-            modifier = iconModifier,
-        )
+        Icon(iconPainter, contentDescription, iconModifier)
     }
 }
 
