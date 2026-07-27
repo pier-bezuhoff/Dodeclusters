@@ -82,14 +82,13 @@ kotlin {
             implementation(libs.compose.ui.graphics)
             implementation(libs.compose.material3)
             implementation(libs.compose.material3.adaptive)
-            implementation(libs.compose.material3.adaptiveNavigation3)
+//            implementation(libs.compose.material3.adaptive.navigation3)
             implementation(libs.compose.material3.window.size.klass)
             implementation(libs.compose.material.icons)
             implementation(libs.compose.lifecycle.runtime)
             implementation(libs.compose.lifecycle.viewmodel)
-            implementation(libs.compose.lifecycle.viewmodelNavigation3)
+            implementation(libs.compose.lifecycle.viewmodel.navigation3)
             implementation(libs.compose.navigation3.ui)
-            implementation(libs.compose.navigation3.browser)
             implementation(libs.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.colormath)
@@ -112,6 +111,7 @@ kotlin {
         }
         wasmJsMain.dependencies {
             implementation(libs.kstore.storage)
+            implementation(libs.compose.navigation3.browser)
             implementation(npm("js-yaml", "4.1.0"))
         }
         commonTest.dependencies {

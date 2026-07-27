@@ -343,6 +343,7 @@ class EditorViewModel : ViewModel() {
     private var movementAfterDown = false
 
     init {
+        println("VM.init")
         viewModelScope.launch {
             restoreFromDisk()
         }
@@ -4840,20 +4841,15 @@ class EditorViewModel : ViewModel() {
             restoration.update { ProgressState.IN_PROGRESS }
             val platform = getPlatform()
             val restoreLastSave = RESTORE_LAST_SAVE_ON_LOAD
-            val restoreSettings = true
             if (restoreLastSave) {
-                val saveState = runCatching {
-                    // NOTE: can crash when the underlying format changes
-                    platform.autosaveStore.get()
-                }
+                // NOTE: can crash when the underlying format changes
+                val saveState = runCatching { platform.autosaveStore.get() }
                     .onFailure { it.printStackTrace() }
                     .getOrNull()
                 if (saveState != null) {
                     restoreFromState(saveState)
                 } else {
-                    val vmState = runCatching {
-                        platform.lastStateStore.get()
-                    }
+                    val vmState = runCatching { platform.lastStateStore.get() }
                         .onFailure { it.printStackTrace() }
                         .getOrNull()
                     if (vmState == null) {
@@ -4867,21 +4863,15 @@ class EditorViewModel : ViewModel() {
             } else {
                 restoreFromVMState(State.SAMPLE)
             }
-            if (restoreSettings) {
-                runCatching {
-                    platform.settingsStore.get()
+            runCatching { platform.settingsStore.get() }
+                .onFailure { it.printStackTrace() }
+                .getOrNull()?.also { settings ->
+                    loadSettings(settings)
                 }
-                    .onFailure { it.printStackTrace() }
-                    .getOrNull()?.let { settings ->
-                        loadSettings(settings)
-                    }
-            }
             if (restoreLastSave) {
-                runCatching {
-                    platform.historyStore.get()
-                }
+                runCatching { platform.historyStore.get() }
                     .onFailure { it.printStackTrace() }
-                    .getOrNull()?.let { historyState ->
+                    .getOrNull()?.also { historyState ->
                         history = historyState.load(undoIsEnabled, redoIsEnabled)
                     }
             }
@@ -4889,7 +4879,7 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun loadSettings(settings: Settings) {
+    fun loadSettings(settings: Settings) {
         regionsOpacity = settings.regionsOpacity
         regionsBlendModeType = settings.regionsBlendModeType
         colorPickerParameters = colorPickerParameters.copy(savedColors = settings.savedColors)

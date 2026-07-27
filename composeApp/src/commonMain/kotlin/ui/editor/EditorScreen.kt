@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import core.geometry.CircleOrLine
@@ -81,6 +82,7 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
 import domain.model.PartialArgList
+import getPlatform
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
@@ -124,10 +126,13 @@ import kotlin.math.min
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun EditorScreen(
+    openSettings: () -> Unit = {},
     ddcContent: LoadingState<String>? = null,
     keyboardActions: SharedFlow<KeyboardAction>? = null,
     lifecycleEvents: SharedFlow<LifecycleEvent>? = null,
     ddcSharing: DdcSharing? = null,
+    // MAYBE: hoist VM before NavDisplay for persistence?
+    viewModel: EditorViewModel = viewModel(factory = EditorViewModel.Factory),
 ) {
     val isLandscape = MaterialTheme.adaptiveSizing.isLandscape
     val coroutineScope = rememberCoroutineScope()
@@ -138,9 +143,6 @@ fun EditorScreen(
             else -> null
         }
     }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
-    val viewModel: EditorViewModel = viewModel(
-        factory = EditorViewModel.Factory
-    )
     val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
     Scaffold(
@@ -217,6 +219,10 @@ fun EditorScreen(
                         },
                         undo = viewModel::undo,
                         redo = viewModel::redo,
+                        openMenu = {
+                            println("open menu")
+                            openSettings()
+                        },
                         saveConfig = viewModel.saveConfig,
                         modifier = Modifier.align(Alignment.TopEnd),
                         openFileRequests = viewModel.openFileRequests,
@@ -423,7 +429,7 @@ fun EditorScreen(
         null -> {}
     }
     val density = LocalDensity.current
-    LaunchedEffect(density) {
+    LaunchedEffect(viewModel, density) {
         viewModel.setEpsilon(density)
     }
     LaunchedEffect(ddcContent, vmRestoration) {
@@ -444,6 +450,14 @@ fun EditorScreen(
                 }
             }
             else -> {}
+        }
+    }
+    LaunchedEffect(viewModel) {
+        // settings can be updated externally from the SettingsScreen
+        getPlatform().settingsStore.updates.collect { settings ->
+            if (settings != null) {
+                viewModel.loadSettings(settings)
+            }
         }
     }
     LaunchedEffect(keyboardActions) {
@@ -660,6 +674,7 @@ fun EditorTopBar(
     loadFromYaml: (content: String?, filename: String?) -> Unit,
     undo: () -> Unit,
     redo: () -> Unit,
+    openMenu: () -> Unit,
     saveConfig: SaveConfig,
     modifier: Modifier = Modifier,
     openFileRequests: SharedFlow<Unit>? = null,
@@ -751,9 +766,7 @@ fun EditorTopBar(
                     painterResource(Tool.ToggleMenu.icon),
                     stringResource(Tool.ToggleMenu.name),
                     iconModifier = iconModifier,
-                    onClick = {
-                        println("menu")
-                    },
+                    onClick = openMenu,
                 )
             }
         }

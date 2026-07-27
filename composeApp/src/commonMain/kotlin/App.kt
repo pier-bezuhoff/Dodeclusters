@@ -6,8 +6,8 @@ import domain.io.DdcSharing
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import ui.LifecycleEvent
-import ui.editor.EditorScreen
 import ui.editor.KeyboardAction
+import ui.navigation.NavigationRoot
 import ui.theme.ColorTheme
 import ui.theme.DEFAULT_COLOR_THEME
 import ui.theme.DodeclustersTheme
@@ -23,8 +23,10 @@ fun App(
 ) {
     val colorTheme by themeFlow.collectAsStateWithLifecycle()
     DodeclustersTheme(colorTheme) {
-        EditorScreen(
+        NavigationRoot(
             ddcContent = ddcContent,
+            themeFlow = themeFlow,
+            titleFlow = titleFlow,
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,
             ddcSharing = ddcSharing,
