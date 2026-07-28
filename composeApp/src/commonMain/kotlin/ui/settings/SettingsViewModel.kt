@@ -35,6 +35,7 @@ class SettingsViewModel : ViewModel() {
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
+            // this hack is here to stop initial animation
             (settingsStore.cached?.colorTheme ?: DEFAULT_COLOR_THEME).let { colorTheme ->
                 DEFAULT_COLOR_THEMES_DATA.map { it.copy(enabled = colorTheme == it.colorTheme) }
             }

@@ -203,6 +203,7 @@ class EditorViewModel : ViewModel() {
     var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
         private set
 
+    private var loadedSettings: Settings = Settings()
     /** currently selected color */
     var regionColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
         private set
@@ -4882,6 +4883,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun loadSettings(settings: Settings) {
+        loadedSettings = settings
         regionsOpacity = settings.regionsOpacity
         regionsBlendModeType = settings.regionsBlendModeType
         colorPickerParameters = colorPickerParameters.copy(savedColors = settings.savedColors)
@@ -4941,7 +4943,7 @@ class EditorViewModel : ViewModel() {
     @OptIn(ExperimentalKStoreApi::class)
     private fun getCurrentSettings(): Settings {
         // we dont want to call suspend store.get here
-        val settings = getPlatform().settingsStore.cached ?: Settings()
+        val settings = getPlatform().settingsStore.cached ?: loadedSettings
         return settings.copy(
             regionsOpacity = regionsOpacity,
             regionsBlendModeType = regionsBlendModeType,
