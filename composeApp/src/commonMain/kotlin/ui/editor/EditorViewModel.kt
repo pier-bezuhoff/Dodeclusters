@@ -103,6 +103,8 @@ import domain.updated
 import domain.withoutElementsAt
 import domain.xor
 import getPlatform
+import io.github.xxfast.kstore.extensions.cached
+import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -343,7 +345,7 @@ class EditorViewModel : ViewModel() {
     private var movementAfterDown = false
 
     init {
-        println("VM.init")
+//        println("VM.init")
         viewModelScope.launch {
             restoreFromDisk()
         }
@@ -4936,8 +4938,11 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun getCurrentSettings(): Settings =
-        Settings(
+    @OptIn(ExperimentalKStoreApi::class)
+    private fun getCurrentSettings(): Settings {
+        // we dont want to call suspend store.get here
+        val settings = getPlatform().settingsStore.cached ?: Settings()
+        return settings.copy(
             regionsOpacity = regionsOpacity,
             regionsBlendModeType = regionsBlendModeType,
             savedColors = colorPickerParameters.savedColors,
@@ -4949,6 +4954,7 @@ class EditorViewModel : ViewModel() {
             saveDirectory = saveConfig.directory,
             showDirectionArrows = showDirectionArrows,
         )
+    }
 
     // NOTE: i never seen this proc on Android or Wasm tbh, only on Desktop
     //  so i had to create Flow<LifecycleEvent> to manually trigger caching

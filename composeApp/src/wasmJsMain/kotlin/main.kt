@@ -12,6 +12,7 @@ import dodeclusters.composeapp.generated.resources.loading_sample_progress
 import domain.LoadingState
 import domain.io.DdcRepository
 import domain.io.WebDdcSharing
+import domain.settings.Settings
 import kotlinx.browser.document
 import kotlinx.browser.localStorage
 import kotlinx.browser.window
@@ -28,7 +29,6 @@ import org.w3c.dom.url.URL
 import ui.LifecycleEvent
 import ui.editor.KeyboardAction
 import ui.theme.ColorTheme
-import ui.theme.DEFAULT_COLOR_THEME
 
 object SearchParamKeys {
     const val THEME = "theme"
@@ -53,11 +53,11 @@ fun main() {
     // example:
     // https://pier-bezuhoff.github.io/Dodeclusters?theme=dark&sample=apollonius
     val url = URL(window.location.href)
-    val colorTheme: ColorTheme = when (url.searchParams.get(SearchParamKeys.THEME)?.lowercase()) {
+    val colorTheme: ColorTheme? = when (url.searchParams.get(SearchParamKeys.THEME)?.lowercase()) {
         "light" -> ColorTheme.LIGHT
         "dark" -> ColorTheme.DARK
         "auto" -> ColorTheme.AUTO
-        else -> DEFAULT_COLOR_THEME
+        else -> null
     }
     val sharePerm: String? = url.searchParams.get(SearchParamKeys.SHARE_PERM)
     val sharedId: String? = url.searchParams.get(SearchParamKeys.SHARED_ID)
@@ -69,13 +69,21 @@ fun main() {
         }
     }
     val coroutineScope = CoroutineScope(Dispatchers.Default)
-    val themeFlow = MutableStateFlow(colorTheme)
     val titleFlow: MutableStateFlow<String> = MutableStateFlow(
         "Dodeclusters" // &#1421; = ֍
     )
     coroutineScope.launch {
         titleFlow.collect { newTitle ->
             setTitle(newTitle)
+        }
+    }
+    coroutineScope.launch {
+        if (colorTheme != null) {
+            WasmPlatform.settingsStore.update {
+                (it ?: Settings()).copy(
+                    colorTheme = colorTheme
+                )
+            }
         }
     }
     val keyboardActions: MutableSharedFlow<KeyboardAction> = MutableSharedFlow(replay = 1)
@@ -165,7 +173,6 @@ fun main() {
         }
         App(
             ddcContent = sharedDdcContent ?: sampleDdcContent,
-            themeFlow = themeFlow,
             titleFlow = titleFlow,
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,

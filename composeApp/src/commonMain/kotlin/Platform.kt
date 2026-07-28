@@ -1,9 +1,18 @@
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ClipEntry
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import domain.model.ChangeHistory
 import domain.model.SaveState
 import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
+import kotlinx.coroutines.flow.map
 import ui.editor.EditorViewModel
+import ui.theme.ColorTheme
+import ui.theme.DEFAULT_COLOR_THEME
 
 val MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS: Float =
     getPlatform().minCircleToCubicApproximationRadius
@@ -50,6 +59,18 @@ interface Platform {
     fun saveHistory(historyState: ChangeHistory.State)
 
     fun scrollToZoom(yDelta: Float): Float
+
+    @Composable
+    fun colorThemeAsState(): State<ColorTheme> {
+        val themeFlowFromSettings = remember {
+            getPlatform().settingsStore.updates
+                .map { it?.colorTheme ?: DEFAULT_COLOR_THEME }
+        }
+        return themeFlowFromSettings.collectAsStateWithLifecycle(
+            DEFAULT_COLOR_THEME,
+            LocalLifecycleOwner.current,
+        )
+    }
 
     companion object {
         @Deprecated("Migrate to SaveState")

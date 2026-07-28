@@ -15,11 +15,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,17 +29,17 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import domain.LoadingState
 import domain.io.readFromUri
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import setFilesDir
 import ui.LifecycleEvent
-import ui.theme.ColorTheme
 import ui.theme.DEFAULT_COLOR_THEME
-import ui.theme.DodeclustersColors
 import java.io.File
 import java.io.FileNotFoundException
 
@@ -138,12 +138,11 @@ class MainActivity : ComponentActivity() {
                         }
                     }
             }
-            val view = LocalView.current
-            val themeFlow = MutableStateFlow<ColorTheme>(DEFAULT_COLOR_THEME)
-            val theme by themeFlow.collectAsStateWithLifecycle()
-            val isDarkTheme = theme.isDark()
-            val scheme = theme.toColorScheme()
+            val colorTheme by AndroidPlatform.colorThemeAsState()
+            val isDarkTheme = colorTheme.isDark()
+            val scheme = colorTheme.toColorScheme()
             val statusBarColor = scheme.primary.toArgb()
+            val view = LocalView.current
             if (!view.isInEditMode) {
                 SideEffect {
                     val window = (view.context as Activity).window
@@ -157,7 +156,6 @@ class MainActivity : ComponentActivity() {
             }
             App(
                 ddcContent = ddcContent,
-                themeFlow = themeFlow,
                 // i think it's recommended to do some .flowWithLifecycle hopping but idc
                 lifecycleEvents = lifecycleEvents,
             )

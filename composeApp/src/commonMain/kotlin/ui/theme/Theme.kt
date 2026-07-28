@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.sp
 enum class ColorTheme {
     LIGHT, DARK,
     /** Black on white, intended for presentations */
-    HIGH_CONTRAST,
+//    HIGH_CONTRAST,
     /** Automatically detect current system color theme */
     AUTO
     ;
@@ -31,7 +31,7 @@ enum class ColorTheme {
     fun isLight(): Boolean =
         when (this) {
             LIGHT -> true
-            HIGH_CONTRAST -> true
+//            HIGH_CONTRAST -> true
             DARK -> false
             AUTO -> !isSystemInDarkTheme()
         }
@@ -40,7 +40,7 @@ enum class ColorTheme {
     fun isDark(): Boolean =
         when (this) {
             LIGHT -> false
-            HIGH_CONTRAST -> false
+//            HIGH_CONTRAST -> false
             DARK -> true
             AUTO -> isSystemInDarkTheme()
         }
@@ -49,7 +49,7 @@ enum class ColorTheme {
     fun toColorScheme(): ColorScheme {
         val isLight = when (this) {
             LIGHT -> true
-            HIGH_CONTRAST -> true // TODO: custom colors
+//            HIGH_CONTRAST -> true // TODO: custom colors
             DARK -> false
             AUTO -> !isSystemInDarkTheme()
         }
@@ -68,12 +68,7 @@ fun DodeclustersTheme(
     colorTheme: ColorTheme = DEFAULT_COLOR_THEME,
     content: @Composable () -> Unit
 ) {
-    val isLight = when (colorTheme) {
-        ColorTheme.LIGHT -> true
-        ColorTheme.HIGH_CONTRAST -> true // TODO: custom colors
-        ColorTheme.DARK -> false
-        ColorTheme.AUTO -> !isSystemInDarkTheme()
-    }
+    val isLight = colorTheme.isLight()
     val scheme =
         if (isLight) DodeclustersColors.lightScheme
         else DodeclustersColors.darkScheme

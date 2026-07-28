@@ -57,9 +57,3 @@ fun main() = application {
         )
     }
 }
-
-@Preview
-@Composable
-fun AppDesktopPreview() {
-    App()
-}

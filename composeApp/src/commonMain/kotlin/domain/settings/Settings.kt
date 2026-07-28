@@ -9,6 +9,8 @@ import ui.editor.dialogs.DefaultBiInversionParameters
 import ui.editor.dialogs.DefaultInterpolationParameters
 import ui.editor.dialogs.DefaultLoxodromicMotionParameters
 import ui.editor.dialogs.DefaultRotationParameters
+import ui.theme.ColorTheme
+import ui.theme.DEFAULT_COLOR_THEME
 
 /**
  * [savedColors] user-defined & saved in the color picker as part of [ColorPickerParameters]
@@ -34,6 +36,8 @@ data class Settings(
     val defaultLoxodromicMotionParameters: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
     val categoryDefaultIndices: List<Int?> = ToolbarState().categoryDefaultIndices,
     val saveDirectory: String? = null,
+    // adjustable in settings screen
+    val colorTheme: ColorTheme = DEFAULT_COLOR_THEME,
 ) {
     companion object {
         val JSON_FORMAT = Json {
