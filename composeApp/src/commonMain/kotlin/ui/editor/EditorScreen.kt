@@ -28,6 +28,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -37,6 +41,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -44,6 +51,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -92,6 +100,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
@@ -150,7 +159,6 @@ fun EditorScreenRoot(
     // MAYBE: hoist VM before NavDisplay for persistence?
     viewModel: EditorViewModel = viewModel(factory = EditorViewModel.Factory),
 ) {
-    val isLandscape = MaterialTheme.adaptiveSizing.isLandscape
     val coroutineScope = rememberCoroutineScope()
     val dialogActions = keyboardActions?.mapNotNull {
         when (it) {
@@ -162,10 +170,14 @@ fun EditorScreenRoot(
     val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
     val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle(null)
     val snackbarHostState = remember { SnackbarHostState() }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
     EditorScreen(
         openMenu = {
             println("open menu")
-            openSettings()
+//            openSettings()
+            coroutineScope.launch {
+                drawerState.open()
+            }
         },
         hidePanel = viewModel::hidePanel,
         showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
@@ -183,9 +195,10 @@ fun EditorScreenRoot(
         selectTool = { viewModel.selectTool(it, togglePanel = true) },
         getColorsByMostUsed = viewModel::getColorsByMostUsed,
         snackbarHostState = snackbarHostState,
+        drawerState = drawerState,
         toolbarState = viewModel.toolbarState,
         ddcContent = ddcContent,
-        isLandscape = isLandscape,
+        isLandscape = MaterialTheme.adaptiveSizing.isLandscape,
         showUI = viewModel.showUI,
         showPanel = viewModel.showPanel,
         regionColor = viewModel.regionColor,
@@ -455,7 +468,7 @@ fun EditorScreenRoot(
 }
 
 @Composable
-fun EditorScreen(
+private fun EditorScreen(
     openMenu: () -> Unit = {},
     hidePanel: () -> Unit = {},
     openNewBlank: () -> Unit = {},
@@ -469,11 +482,12 @@ fun EditorScreen(
     selectTool: (Tool) -> Unit = {},
     getColorsByMostUsed: () -> List<Color>,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
     toolbarState: ToolbarState,
     ddcContent: LoadingState<String>? = null,
-    isLandscape: Boolean,
+    isLandscape: Boolean = MaterialTheme.adaptiveSizing.isLandscape,
     showUI: Boolean,
-    showPanel: Boolean,
+    showPanel: Boolean = toolbarState.panelNeedsToBeShown,
     regionColor: Color,
     backgroundColor: Color?,
     regionManipulationStrategy: RegionManipulationStrategy,
@@ -485,63 +499,113 @@ fun EditorScreen(
     modifier: Modifier = Modifier,
     editorCanvas: @Composable (BoxScope.() -> Unit),
 ) {
-    Scaffold(
-        // ig this may only be useful on android with kbd lol
-        modifier = modifier,
-        snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
-                SnackbarWithHighlightMarkdown(data,
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
-                    actionContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
-                    actionColor = MaterialTheme.colorScheme.onSecondary,
-                    dismissActionContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
+    ModalNavigationDrawer(
+        drawerContent = {
+            ModalDrawerSheet {
+                Column(
+                    Modifier
+                        .padding(horizontal = 16.dp)
+                        .verticalScroll(rememberScrollState())
+                    ,
+                ) {
+                    // new blank
+                    // open
+                    // save
+                    // light/dark
+                    // settings
+                    // about
+                    Spacer(Modifier.height(12.dp))
+                    Text("Drawer Title", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge)
+                    HorizontalDivider()
+                    Text("Section 1", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+                    NavigationDrawerItem(
+                        label = { Text("Item 1") },
+                        selected = false,
+                        onClick = { /* Handle click */ }
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Item 2") },
+                        selected = false,
+                        onClick = { /* Handle click */ }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Text("Section 2", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+                    NavigationDrawerItem(
+                        label = { Text("Settings") },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
+                        badge = { Text("20") }, // Placeholder
+                        onClick = { /* Handle click */ }
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Help and feedback") },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
+                        onClick = { /* Handle click */ },
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
             }
         },
-        floatingActionButton = {
-            if (!isLandscape && showUI) {
-                // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
-                FAB(
-                    switchToCreateCategory = { switchToCategory(Category.Create) },
-                )
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End
+        drawerState = drawerState,
     ) {
-        Surface {
-            Box(Modifier.drawBehind {
-                backgroundColor?.let { backgroundColor ->
-                    drawRect(backgroundColor, size = size)
+        Scaffold(
+            modifier = modifier,
+            snackbarHost = {
+                SnackbarHost(snackbarHostState) { data ->
+                    SnackbarWithHighlightMarkdown(data,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
+                        actionContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
+                        actionColor = MaterialTheme.colorScheme.onSecondary,
+                        dismissActionContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
                 }
-            }) {
-                editorCanvas()
-                if (showUI) {
-                    ToolDescription(
-                        tool = toolbarState.activeTool,
-                        toolIsEnabled = isToolEnabled(toolbarState.activeTool),
-                        regionManipulationStrategy = regionManipulationStrategy,
-                        partialArgList = partialArgList,
-                        modifier = Modifier.align(Alignment.TopStart),
+            },
+            floatingActionButton = {
+                if (!isLandscape && showUI) {
+                    // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
+                    FAB(
+                        switchToCreateCategory = { switchToCategory(Category.Create) },
                     )
-                    EditorTopBar(undoIsEnabled = undoIsEnabled, redoIsEnabled = redoIsEnabled, showSaveOptionsDialog = showSaveOptionsDialog, openNewBlank = openNewBlank, loadFromYaml = loadFromYaml, undo = undo, redo = redo, openMenu = openMenu, saveConfig = saveConfig, openFileRequests = openFileRequests,
-                        modifier = Modifier.align(Alignment.TopEnd),
-                    )
-                    if (isLandscape) {
-                        ToolbarLandscape(toolbarState = toolbarState, showPanel = showPanel, regionColor = regionColor, hidePanel = hidePanel, isToolEnabled = isToolEnabled, isToolAlternativeEnabled = isToolAlternativeEnabled, switchToCategory = switchToCategory, selectTool = selectTool, getColorsByMostUsed = getColorsByMostUsed,
-                            modifier = Modifier.align(Alignment.CenterStart),
-                        )
-                    } else {
-                        ToolbarPortrait(toolbarState = toolbarState, showPanel = showPanel, regionColor = regionColor, hidePanel = hidePanel, isToolEnabled = isToolEnabled, isToolAlternativeEnabled = isToolAlternativeEnabled, switchToCategory = switchToCategory, selectTool = selectTool, getColorsByMostUsed = getColorsByMostUsed,
-                            modifier = Modifier.align(Alignment.BottomStart),
-                        )
+                }
+            },
+            floatingActionButtonPosition = FabPosition.End
+        ) {
+            Surface {
+                Box(Modifier.drawBehind {
+                    backgroundColor?.let { backgroundColor ->
+                        drawRect(backgroundColor, size = size)
                     }
-                }
-                when (ddcContent) {
-                    is LoadingState.InProgress ->
-                        LoadingOverlay(ddcContent)
-                    else -> {}
+                }) {
+                    editorCanvas()
+                    if (showUI) {
+                        ToolDescription(
+                            tool = toolbarState.activeTool,
+                            toolIsEnabled = isToolEnabled(toolbarState.activeTool),
+                            regionManipulationStrategy = regionManipulationStrategy,
+                            partialArgList = partialArgList,
+                            modifier = Modifier.align(Alignment.TopStart),
+                        )
+                        EditorTopBar(undoIsEnabled = undoIsEnabled, redoIsEnabled = redoIsEnabled, showSaveOptionsDialog = showSaveOptionsDialog, openNewBlank = openNewBlank, loadFromYaml = loadFromYaml, undo = undo, redo = redo, openMenu = openMenu, saveConfig = saveConfig, openFileRequests = openFileRequests,
+                            modifier = Modifier.align(Alignment.TopEnd),
+                        )
+                        if (isLandscape) {
+                            ToolbarLandscape(toolbarState = toolbarState, showPanel = showPanel, regionColor = regionColor, hidePanel = hidePanel, isToolEnabled = isToolEnabled, isToolAlternativeEnabled = isToolAlternativeEnabled, switchToCategory = switchToCategory, selectTool = selectTool, getColorsByMostUsed = getColorsByMostUsed,
+                                modifier = Modifier.align(Alignment.CenterStart),
+                            )
+                        } else {
+                            ToolbarPortrait(toolbarState = toolbarState, showPanel = showPanel, regionColor = regionColor, hidePanel = hidePanel, isToolEnabled = isToolEnabled, isToolAlternativeEnabled = isToolAlternativeEnabled, switchToCategory = switchToCategory, selectTool = selectTool, getColorsByMostUsed = getColorsByMostUsed,
+                                modifier = Modifier.align(Alignment.BottomStart),
+                            )
+                        }
+                    }
+                    when (ddcContent) {
+                        is LoadingState.InProgress ->
+                            LoadingOverlay(ddcContent)
+                        else -> {}
+                    }
                 }
             }
         }
@@ -550,7 +614,7 @@ fun EditorScreen(
 
 @Preview
 @Composable
-fun EditorScreenPreview() {
+private fun EditorScreenPreview() {
     DodeclustersTheme(ColorTheme.DARK) {
         val toolbarState = ToolbarState(
             activeCategory = Category.Drag,
@@ -559,7 +623,6 @@ fun EditorScreenPreview() {
         EditorScreen(
             toolbarState = toolbarState,
             showPanel = false, // cannot show panel when in drag category
-            isLandscape = true,
             showUI = true,
             regionColor = Color.Blue,
             backgroundColor = null,
