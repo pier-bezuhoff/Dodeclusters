@@ -3,7 +3,6 @@
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
 import dodeclusters.composeapp.generated.resources.Res
@@ -21,15 +20,12 @@ import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
@@ -167,6 +163,7 @@ fun main() {
         val ddcFlow: StateFlow<LoadingState<String>?> = sharedDdcFlow.combine(sampleDdcFlow) { sharedDdc, sampleDdc ->
             sharedDdc ?: sampleDdc
         }.stateIn(coroutineScope, SharingStarted.WhileSubscribed(5_000), null)
+        // idk if to make it flow
         val weHaveSharePerm: Boolean by produceState(
             WebDdcSharing.testSharePermission(),
             key1 = sharePerm,

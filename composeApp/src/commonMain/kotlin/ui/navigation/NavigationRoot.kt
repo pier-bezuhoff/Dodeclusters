@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.serializer
 import ui.LifecycleEvent
-import ui.editor.EditorScreen
+import ui.editor.EditorScreenRoot
 import ui.editor.KeyboardAction
 import ui.settings.SettingsScreenRoot
 
@@ -40,7 +40,7 @@ fun NavigationRoot(
         ),
         entryProvider = entryProvider {
             entry<Route.Editor> {
-                EditorScreen(
+                EditorScreenRoot(
                     openSettings = {
                         backStack.add(Route.Settings)
                     },
