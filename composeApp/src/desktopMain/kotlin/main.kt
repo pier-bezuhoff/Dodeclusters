@@ -1,9 +1,7 @@
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
@@ -20,6 +18,8 @@ import ui.LifecycleEvent
 import ui.editor.KeyboardAction
 import ui.editor.KeyboardActionMapping
 import kotlin.time.Duration.Companion.milliseconds
+
+private val MAX_DURATION_FOR_SAVING_UI_STATE = 100.milliseconds
 
 fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
@@ -40,8 +40,8 @@ fun main() = application {
         onCloseRequest = {
             runBlocking {
                 lifecycleEvents.emit(LifecycleEvent.SaveUIState)
-                // we forcefully allot some time to save state
-                delay(100.milliseconds)
+                // we forcefully allot some time to save our state
+                delay(MAX_DURATION_FOR_SAVING_UI_STATE)
             }
             exitApplication()
         },

@@ -1,20 +1,19 @@
 package ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
-import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import androidx.savedstate.serialization.SavedStateConfiguration
 import domain.LoadingState
 import domain.io.DdcSharing
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.serializer
 import ui.LifecycleEvent
 import ui.editor.EditorScreen
 import ui.editor.KeyboardAction
@@ -23,27 +22,18 @@ import ui.settings.SettingsScreenRoot
 @OptIn(ExperimentalSerializationApi::class)
 @Composable
 fun NavigationRoot(
-    ddcContent: LoadingState<String>?,
-    titleFlow: MutableStateFlow<String>,
-    keyboardActions: SharedFlow<KeyboardAction>?,
-    lifecycleEvents: SharedFlow<LifecycleEvent>?,
-    ddcSharing: DdcSharing?,
+    titleFlow: MutableStateFlow<String> = MutableStateFlow("Dodeclusters"),
+    ddcFlow: SharedFlow<LoadingState<String>?> = MutableSharedFlow(),
+    keyboardActions: SharedFlow<KeyboardAction>? = null,
+    lifecycleEvents: SharedFlow<LifecycleEvent> = MutableSharedFlow(),
+    ddcSharing: DdcSharing? = null,
 ) {
-    val backStack = rememberNavBackStack(
-        SavedStateConfiguration {
-            serializersModule = SerializersModule {
-                polymorphic(NavKey::class) {
-                    subclassesOfSealed<Route>()
-                }
-            }
-        },
-        Route.Editor
-    )
+    // this way of init preserves my sealed interface type
+    val backStack: NavBackStack<Route> = rememberSerializable(serializer = serializer()) {
+        NavBackStack(Route.Editor)
+    }
     NavDisplay(
         backStack = backStack,
-        onBack = {
-            backStack.removeLastOrNull()
-        },
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
             rememberViewModelStoreNavEntryDecorator(),
@@ -51,13 +41,13 @@ fun NavigationRoot(
         entryProvider = entryProvider {
             entry<Route.Editor> {
                 EditorScreen(
-                    ddcContent = ddcContent,
-                    keyboardActions = keyboardActions,
-                    lifecycleEvents = lifecycleEvents,
-                    ddcSharing = ddcSharing,
                     openSettings = {
                         backStack.add(Route.Settings)
                     },
+                    ddcFlow = ddcFlow,
+                    keyboardActions = keyboardActions,
+                    lifecycleEvents = lifecycleEvents,
+                    ddcSharing = ddcSharing,
                 )
             }
             entry<Route.Settings> {

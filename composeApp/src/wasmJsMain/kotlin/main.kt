@@ -2,6 +2,8 @@
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
 import dodeclusters.composeapp.generated.resources.Res
@@ -10,6 +12,7 @@ import dodeclusters.composeapp.generated.resources.fetching_shared_progress
 import dodeclusters.composeapp.generated.resources.loading_sample_error
 import dodeclusters.composeapp.generated.resources.loading_sample_progress
 import domain.LoadingState
+import domain.io.DdcContent
 import domain.io.DdcRepository
 import domain.io.WebDdcSharing
 import domain.settings.Settings
@@ -18,8 +21,16 @@ import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.w3c.dom.events.Event
@@ -110,41 +121,52 @@ fun main() {
             isA11YEnabled = false // for performance
         }
     ) {
-        val sharedDdcContent: LoadingState<String>? by produceState(
-            initialValue = null,
-            key1 = sharedId,
-        ) {
-            if (sharedId != null) {
-                value = LoadingState.InProgress(
-                    getString(Res.string.fetching_shared_progress, sharedId)
-                )
-                val ddcContentAndOwned = WebDdcSharing.fetchSharedDdc(sharedId).getOrNull()
-                println("finished fetching shared ddc @$sharedId, owned=${ddcContentAndOwned?.second}")
-                value = if (ddcContentAndOwned == null) {
-                    LoadingState.Error(Error(getString(Res.string.fetching_shared_error, sharedId)))
+        val sharedDdcFlow: StateFlow<LoadingState<DdcContent>?> = remember {
+            flow {
+                if (sharedId != null) {
+                    val inProgressState = LoadingState.InProgress(
+                        getString(Res.string.fetching_shared_progress, sharedId)
+                    )
+                    emit(inProgressState)
+                    val ddcContentAndOwned = WebDdcSharing.fetchSharedDdc(sharedId).getOrNull()
+                    println("finished fetching shared ddc @$sharedId, owned=${ddcContentAndOwned?.second}")
+                    val endState = if (ddcContentAndOwned == null) {
+                        LoadingState.Error(Error(
+                            getString(Res.string.fetching_shared_error, sharedId)
+                        ))
+                    } else {
+                        val (ddcContent, owned) = ddcContentAndOwned
+                        WebDdcSharing.shared = Pair(sharedId, owned)
+                        LoadingState.Completed(ddcContent)
+                    }
+                    emit(endState)
                 } else {
-                    val (ddcContent, owned) = ddcContentAndOwned
-                    WebDdcSharing.shared = Pair(sharedId, owned)
-                    LoadingState.Completed(ddcContent)
+                    emit(null)
                 }
-            }
+            }.stateIn(coroutineScope, SharingStarted.Eagerly, null)
         }
-        val sampleDdcContent: LoadingState<String>? by produceState(
-            initialValue = null,
-            key1 = sampleName,
-        ) {
-            if (sampleName != null) {
-                value = LoadingState.InProgress(
-                    getString(Res.string.loading_sample_progress, sampleName)
-                )
-                val ddcContent = DdcRepository.loadSampleClusterYaml(sampleName)
-                println("finished loading sample ddc $sampleName")
-                value = if (ddcContent == null)
-                    LoadingState.Error(Error(getString(Res.string.loading_sample_error, sampleName)))
-                else
-                    LoadingState.Completed(ddcContent)
-            }
+        val sampleDdcFlow: StateFlow<LoadingState<String>?> = remember {
+            flow {
+                if (sampleName != null) {
+                    val inProgressState = LoadingState.InProgress(
+                        getString(Res.string.loading_sample_progress, sampleName)
+                    )
+                    emit(inProgressState)
+                    val ddcContent = DdcRepository.loadSampleClusterYaml(sampleName)
+                    println("finished loading sample ddc $sampleName")
+                    val endState = if (ddcContent == null)
+                        LoadingState.Error(Error(getString(Res.string.loading_sample_error, sampleName)))
+                    else
+                        LoadingState.Completed(ddcContent)
+                    emit(endState)
+                } else {
+                    emit(null)
+                }
+            }.stateIn(coroutineScope, SharingStarted.Eagerly, null)
         }
+        val ddcFlow: StateFlow<LoadingState<String>?> = sharedDdcFlow.combine(sampleDdcFlow) { sharedDdc, sampleDdc ->
+            sharedDdc ?: sampleDdc
+        }.stateIn(coroutineScope, SharingStarted.WhileSubscribed(5_000), null)
         val weHaveSharePerm: Boolean by produceState(
             WebDdcSharing.testSharePermission(),
             key1 = sharePerm,
@@ -172,8 +194,8 @@ fun main() {
             }
         }
         App(
-            ddcContent = sharedDdcContent ?: sampleDdcContent,
             titleFlow = titleFlow,
+            ddcFlow = ddcFlow,
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,
             ddcSharing = if (weHaveSharePerm) WebDdcSharing else null,

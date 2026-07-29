@@ -4878,6 +4878,14 @@ class EditorViewModel : ViewModel() {
                         history = historyState.load(undoIsEnabled, redoIsEnabled)
                     }
             }
+            viewModelScope.launch {
+                // settings can be updated externally from the SettingsScreen
+                platform.settingsStore.updates.collect { settings ->
+                    if (settings != null) {
+                        loadSettings(settings)
+                    }
+                }
+            }
             restoration.update { ProgressState.COMPLETED }
         }
     }
@@ -4956,14 +4964,6 @@ class EditorViewModel : ViewModel() {
             saveDirectory = saveConfig.directory,
             showDirectionArrows = showDirectionArrows,
         )
-    }
-
-    // NOTE: i never seen this proc on Android or Wasm tbh, only on Desktop
-    //  so i had to create Flow<LifecycleEvent> to manually trigger caching
-    override fun onCleared() {
-        println("VM.onCleared")
-        cacheState()
-        super.onCleared()
     }
 
     // TODO: fully migrate to SaveState eventually

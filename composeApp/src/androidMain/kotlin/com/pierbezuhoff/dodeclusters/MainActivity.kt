@@ -1,5 +1,6 @@
 package com.pierbezuhoff.dodeclusters
 
+import AndroidPlatform
 import App
 import android.app.Activity
 import android.app.RecoverableSecurityException
@@ -15,39 +16,34 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import domain.LoadingState
 import domain.io.readFromUri
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import setFilesDir
 import ui.LifecycleEvent
-import ui.theme.DEFAULT_COLOR_THEME
 import java.io.File
 import java.io.FileNotFoundException
 
 class MainActivity : ComponentActivity() {
     private val lifecycleEvents: MutableSharedFlow<LifecycleEvent> =
         MutableSharedFlow(replay = 1)
-    private val ddcFlow: MutableStateFlow<LoadingState<String>?> = MutableStateFlow(null)
-    private val anchorUriFlow: MutableStateFlow<Uri?> = MutableStateFlow(null)
+    private val ddcFlow: MutableStateFlow<LoadingState<String>?> =
+        MutableStateFlow(null)
+    private val anchorUriFlow: MutableStateFlow<Uri?> =
+        MutableStateFlow(null)
     private val altLauncher: ActivityResultLauncher<Array<String>> = registerForActivityResult(
         contract = object : ActivityResultContracts.OpenDocument() {
             override fun createIntent(context: Context, input: Array<String>): Intent {
@@ -127,16 +123,15 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             // this horrendous mess looks smart but is actually very stupid
-//            var ddcContent by remember { mutableStateOf<String?>(null) }
-            val ddcContent by ddcFlow.collectAsStateWithLifecycle()
             LaunchedEffect(Unit) {
-                if (intent.action in setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT))
+                if (intent.action in setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT)) {
                     intent.data?.let {
                         val newDdcContent = getContentFromExternalImplicitIntent(it)
                         if (newDdcContent != null) {
                             ddcFlow.update { LoadingState.Completed(newDdcContent) }
                         }
                     }
+                }
             }
             val colorTheme by AndroidPlatform.colorThemeAsState()
             val isDarkTheme = colorTheme.isDark()
@@ -155,8 +150,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             App(
-                ddcContent = ddcContent,
-                // i think it's recommended to do some .flowWithLifecycle hopping but idc
+                ddcFlow = ddcFlow,
                 lifecycleEvents = lifecycleEvents,
             )
         }
@@ -240,10 +234,4 @@ class MainActivity : ComponentActivity() {
         }
         return content
     }
-}
-
-@Preview
-@Composable
-fun AppAndroidPreview() {
-    App()
 }

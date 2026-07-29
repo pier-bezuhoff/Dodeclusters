@@ -57,7 +57,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import core.geometry.CircleOrLine
@@ -82,7 +81,7 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
 import domain.model.PartialArgList
-import getPlatform
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
@@ -123,13 +122,23 @@ import ui.tools.Tool
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * @param[ddcFlow] external ddc requests (url params or android implicit intent)
+ * @param[keyboardActions] used to pipe keyboard events, null means they will be caught using
+ * `Modifier.onPreviewKeyEvent
+ * @param[lifecycleEvents] emits SaveUiState events that prompt to autosave the current state,
+ * mechanism, analogous to SavedStateHand
+ * @param[ddcSharing] state-backed ddc-sharing implementation, presently only
+ * supplied on Wasm after the request to register current user is answered
+ * (null -> smol delay -> real implementation)
+ */
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun EditorScreen(
-    openSettings: () -> Unit = {},
-    ddcContent: LoadingState<String>? = null,
+    openSettings: () -> Unit,
+    ddcFlow: SharedFlow<LoadingState<String>?> = MutableSharedFlow(),
     keyboardActions: SharedFlow<KeyboardAction>? = null,
-    lifecycleEvents: SharedFlow<LifecycleEvent>? = null,
+    lifecycleEvents: SharedFlow<LifecycleEvent> = MutableSharedFlow(),
     ddcSharing: DdcSharing? = null,
     // MAYBE: hoist VM before NavDisplay for persistence?
     viewModel: EditorViewModel = viewModel(factory = EditorViewModel.Factory),
@@ -144,7 +153,8 @@ fun EditorScreen(
         }
     }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
     val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() } // hangs windows/chrome
+    val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle(null)
+    val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         // ig this may only be useful on android with kbd lol
         modifier = if (keyboardActions == null)
@@ -165,29 +175,11 @@ fun EditorScreen(
         floatingActionButton = {
             if (!isLandscape && viewModel.showUI) {
                 // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
-                val category = Category.Create
-                FloatingActionButton(
-                    onClick = {
-                        viewModel.switchToCategory(category, togglePanel = true)
+                FAB(
+                    switchToCreateCategory = {
+                        viewModel.switchToCategory(Category.Create, togglePanel = true)
                     },
-                    modifier =
-                        if (MaterialTheme.adaptiveSizing.isCompactVertically) Modifier
-                            .size(48.dp)
-                            .offset(x = 8.dp, y = 16.dp)
-                        else Modifier,
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    shape = CircleShape,
-                    elevation = FloatingActionButtonDefaults.elevation()
-                ) {
-                    Icon(
-                        Icons.Filled.Add,
-                        stringResource(category.name),
-                        Modifier
-                            .padding(4.dp)
-                            .size(40.dp)
-                    )
-                }
+                )
             }
         },
         floatingActionButtonPosition = FabPosition.End
@@ -239,9 +231,9 @@ fun EditorScreen(
                         )
                     }
                 }
-                when (ddcContent) {
+                when (val content = ddcContent) {
                     is LoadingState.InProgress ->
-                        LoadingOverlay(ddcContent)
+                        LoadingOverlay(content)
                     else -> {}
                 }
             }
@@ -432,18 +424,18 @@ fun EditorScreen(
     LaunchedEffect(viewModel, density) {
         viewModel.setEpsilon(density)
     }
-    LaunchedEffect(ddcContent, vmRestoration) {
+    LaunchedEffect(viewModel, ddcContent, vmRestoration) {
         when (vmRestoration) {
             ProgressState.COMPLETED -> {
-                when (ddcContent) {
+                when (val content = ddcContent) {
                     null -> {}
                     is LoadingState.InProgress -> {}
                     is LoadingState.Completed<String> -> {
-                        viewModel.loadDdc(ddcContent.result)
+                        viewModel.loadDdc(content.result)
                     }
                     is LoadingState.Error -> {
-                        println(ddcContent.exception.message ?: "Error")
-                        ddcContent.exception.message?.let { message ->
+                        println(content.exception.message ?: "Error")
+                        content.exception.message?.let { message ->
                             viewModel.showSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
                         }
                     }
@@ -452,35 +444,23 @@ fun EditorScreen(
             else -> {}
         }
     }
-    LaunchedEffect(viewModel) {
-        // settings can be updated externally from the SettingsScreen
-        getPlatform().settingsStore.updates.collect { settings ->
-            if (settings != null) {
-                viewModel.loadSettings(settings)
-            }
-        }
-    }
-    LaunchedEffect(keyboardActions) {
+    LaunchedEffect(viewModel, keyboardActions) {
         keyboardActions?.let {
             keyboardActions.collect { action ->
                 viewModel.processKeyboardAction(action)
             }
         }
     }
-    LaunchedEffect(lifecycleEvents) {
-        lifecycleEvents?.let {
-            // NOTE: technically it's better to call .flowWithLifecycle before .collect
-            //  specifically on Android
-            lifecycleEvents.collect { action ->
-                when (action) {
-                    LifecycleEvent.SaveUIState -> {
-                        viewModel.cacheState()
-                    }
+    LaunchedEffect(viewModel, lifecycleEvents) {
+        lifecycleEvents.collectLatest { action ->
+            when (action) {
+                LifecycleEvent.SaveUIState -> {
+                    viewModel.cacheState()
                 }
             }
         }
     }
-    LaunchedEffect(snackbarHostState) {
+    LaunchedEffect(viewModel, snackbarHostState) {
         viewModel.snackbarMessages.collectLatest { (message, formatArgs) ->
             val result = snackbarHostState.showSnackbar(
                 message = getString(message.messageResource, *formatArgs),
@@ -498,6 +478,7 @@ fun EditorScreen(
     val colorScheme = MaterialTheme.colorScheme
     val isDarkTheme = MaterialTheme.isDarkTheme
     LaunchedEffect(viewModel.backgroundColor, isDarkTheme, colorScheme) {
+        // ts doesnt work often
         if (viewModel.backgroundColor == null ||
             isDarkTheme && viewModel.backgroundColor == DodeclustersColors.lightScheme.surface ||
             !isDarkTheme && viewModel.backgroundColor == DodeclustersColors.darkScheme.surface
@@ -564,7 +545,35 @@ private fun preloadIcons() {
 }
 
 @Composable
-fun ToolDescription(
+private fun FAB(
+    switchToCreateCategory: () -> Unit,
+) {
+    // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
+    val category = Category.Create
+    FloatingActionButton(
+        onClick = switchToCreateCategory,
+        modifier =
+            if (MaterialTheme.adaptiveSizing.isCompactVertically) Modifier
+                .size(48.dp)
+                .offset(x = 8.dp, y = 16.dp)
+            else Modifier,
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        shape = CircleShape,
+        elevation = FloatingActionButtonDefaults.elevation()
+    ) {
+        Icon(
+            Icons.Filled.Add,
+            stringResource(category.name),
+            Modifier
+                .padding(4.dp)
+                .size(40.dp)
+        )
+    }
+}
+
+@Composable
+private fun ToolDescription(
     tool: Tool,
     toolIsEnabled: Boolean,
     regionManipulationStrategy: RegionManipulationStrategy,
@@ -666,7 +675,7 @@ fun ToolDescription(
 }
 
 @Composable
-fun EditorTopBar(
+private fun EditorTopBar(
     undoIsEnabled: Boolean,
     redoIsEnabled: Boolean,
     openNewBlank: () -> Unit,
