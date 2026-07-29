@@ -81,7 +81,13 @@ import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.confirm
+import dodeclusters.composeapp.generated.resources.new_blank_name
+import dodeclusters.composeapp.generated.resources.new_document
+import dodeclusters.composeapp.generated.resources.open_file
+import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
+import dodeclusters.composeapp.generated.resources.save
+import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.save_prompt_after_blank_description
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
@@ -173,15 +179,15 @@ fun EditorScreenRoot(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     EditorScreen(
         openMenu = {
-            println("open menu")
-//            openSettings()
             coroutineScope.launch {
                 drawerState.open()
             }
         },
         hidePanel = viewModel::hidePanel,
-        showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
         openNewBlank = viewModel::newBlank,
+        openFile = viewModel::requestOpenFile,
+        showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
+        openSettings = openSettings,
         loadFromYaml = { content, filename ->
             content?.let {
                 viewModel.loadDdc(content, filename)
@@ -472,7 +478,9 @@ private fun EditorScreen(
     openMenu: () -> Unit = {},
     hidePanel: () -> Unit = {},
     openNewBlank: () -> Unit = {},
+    openFile: () -> Unit = {},
     showSaveOptionsDialog: () -> Unit = {},
+    openSettings: () -> Unit = {},
     loadFromYaml: (content: String?, filename: String?) -> Unit = { _, _ -> },
     undo: () -> Unit = {},
     redo: () -> Unit = {},
@@ -508,41 +516,41 @@ private fun EditorScreen(
                         .verticalScroll(rememberScrollState())
                     ,
                 ) {
-                    // new blank
-                    // open
-                    // save
-                    // light/dark
-                    // settings
-                    // about
-                    Spacer(Modifier.height(12.dp))
-                    Text("Drawer Title", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge)
-                    HorizontalDivider()
-                    Text("Section 1", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+//                    Text("Section 1", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
                     NavigationDrawerItem(
-                        label = { Text("Item 1") },
+                        label = { Text(stringResource(Res.string.new_blank_name)) },
                         selected = false,
-                        onClick = { /* Handle click */ }
+                        onClick = openNewBlank,
+                        icon = { Icon(painterResource(Res.drawable.new_document), null) },
                     )
                     NavigationDrawerItem(
-                        label = { Text("Item 2") },
+                        label = { Text(stringResource(Res.string.open_file)) },
                         selected = false,
-                        onClick = { /* Handle click */ }
+                        onClick = openFile,
+                        icon = { Icon(painterResource(Res.drawable.open_file), null) },
+                    )
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(Res.string.save_name)) },
+                        selected = false,
+                        onClick = showSaveOptionsDialog,
+                        icon = { Icon(painterResource(Res.drawable.save), null) },
+//                        badge = { Icon(painterResource(Res.drawable.confirm), null) }
                     )
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    Text("Section 2", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+                    // light/dark toggle?
                     NavigationDrawerItem(
                         label = { Text("Settings") },
                         selected = false,
                         icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
-                        badge = { Text("20") }, // Placeholder
-                        onClick = { /* Handle click */ }
+                        onClick = openSettings,
                     )
-                    NavigationDrawerItem(
-                        label = { Text("Help and feedback") },
-                        selected = false,
-                        icon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
-                        onClick = { /* Handle click */ },
-                    )
+                    // about: circled question icon
+//                    NavigationDrawerItem(
+//                        label = { Text("Help and feedback") },
+//                        selected = false,
+//                        icon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
+//                        onClick = { },
+//                    )
                     Spacer(Modifier.height(12.dp))
                 }
             }
@@ -621,6 +629,7 @@ private fun EditorScreenPreview() {
             activeTool = Tool.Drag,
         )
         EditorScreen(
+            drawerState = rememberDrawerState(DrawerValue.Closed),
             toolbarState = toolbarState,
             showPanel = false, // cannot show panel when in drag category
             showUI = true,
@@ -864,17 +873,15 @@ private fun EditorTopBar(
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             Spacer(Modifier.width(16.dp))
-            // MAYBE: button to create new [empty?] document
-            //  (maybe only on wide-width screens)
-            // TODO: move it to context slidesheet
-            WithTooltip(stringResource(Tool.NewBlank.description)) {
-                SimpleButton(
-                    painterResource(Tool.NewBlank.icon),
-                    stringResource(Tool.NewBlank.name),
-                    iconModifier = iconModifier,
-                    onClick = openNewBlank,
-                )
-            }
+            // mb display only on wide screen
+//            WithTooltip(stringResource(Tool.NewBlank.description)) {
+//                SimpleButton(
+//                    painterResource(Tool.NewBlank.icon),
+//                    stringResource(Tool.NewBlank.name),
+//                    iconModifier = iconModifier,
+//                    onClick = openNewBlank,
+//                )
+//            }
             WithTooltip(stringResource(Tool.SaveCluster.description)) {
                 SimpleButton(
                     painterResource(Tool.SaveCluster.icon),
@@ -921,14 +928,14 @@ private fun EditorTopBar(
                 .fillMaxHeight(0.6f)
                 .align(Alignment.CenterVertically)
             )
-            WithTooltip(stringResource(Tool.ToggleMenu.description)) {
+//            WithTooltip(stringResource(Tool.ToggleMenu.description)) {
                 SimpleButton(
                     painterResource(Tool.ToggleMenu.icon),
                     stringResource(Tool.ToggleMenu.name),
                     iconModifier = iconModifier,
                     onClick = openMenu,
                 )
-            }
+//            }
         }
     }
 }

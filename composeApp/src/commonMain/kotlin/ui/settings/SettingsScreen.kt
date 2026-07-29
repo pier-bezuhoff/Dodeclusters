@@ -79,6 +79,7 @@ private fun SettingsScreen(
                     setColorTheme = setColorTheme,
                     colorThemesData = colorThemesData,
                 )
+                // snapping toggles (magnet icon)
             }
         }
     }
@@ -92,7 +93,7 @@ private fun TopBar(
     CenterAlignedTopAppBar(
         title = {
             Text("Settings",
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
             )
         },
         navigationIcon = {
@@ -131,8 +132,9 @@ private fun ColumnScope.ColorThemeSwitch(
     colorThemesData: List<ColorThemeData>,
 ) {
     Text("Color theme",
-        style = MaterialTheme.typography.headlineSmall,
+        style = MaterialTheme.typography.titleSmall,
     )
+    // add dark mode icon
     Spacer(Modifier.height(4.dp))
     Row(
         Modifier
@@ -164,7 +166,7 @@ private fun ColumnScope.ColorThemeSwitch(
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(description,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.labelMedium,
                 )
             }
         }
