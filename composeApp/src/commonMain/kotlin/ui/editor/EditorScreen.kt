@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -453,7 +455,7 @@ fun EditorScreenRoot(
 }
 
 @Composable
-private fun EditorScreen(
+fun EditorScreen(
     openMenu: () -> Unit = {},
     hidePanel: () -> Unit = {},
     openNewBlank: () -> Unit = {},
@@ -523,43 +525,15 @@ private fun EditorScreen(
                         partialArgList = partialArgList,
                         modifier = Modifier.align(Alignment.TopStart),
                     )
-                    EditorTopBar(
-                        undoIsEnabled = undoIsEnabled,
-                        redoIsEnabled = redoIsEnabled,
-                        showSaveOptionsDialog = showSaveOptionsDialog,
-                        openNewBlank = openNewBlank,
-                        loadFromYaml = loadFromYaml,
-                        undo = undo,
-                        redo = redo,
-                        openMenu = openMenu,
-                        saveConfig = saveConfig,
-                        openFileRequests = openFileRequests,
+                    EditorTopBar(undoIsEnabled = undoIsEnabled, redoIsEnabled = redoIsEnabled, showSaveOptionsDialog = showSaveOptionsDialog, openNewBlank = openNewBlank, loadFromYaml = loadFromYaml, undo = undo, redo = redo, openMenu = openMenu, saveConfig = saveConfig, openFileRequests = openFileRequests,
                         modifier = Modifier.align(Alignment.TopEnd),
                     )
                     if (isLandscape) {
-                        ToolbarLandscape(
-                            toolbarState = toolbarState,
-                            showPanel = showPanel,
-                            regionColor = regionColor,
-                            hidePanel = hidePanel,
-                            isToolEnabled = isToolEnabled,
-                            isToolAlternativeEnabled = isToolAlternativeEnabled,
-                            switchToCategory = switchToCategory,
-                            selectTool = selectTool,
-                            getColorsByMostUsed = getColorsByMostUsed,
+                        ToolbarLandscape(toolbarState = toolbarState, showPanel = showPanel, regionColor = regionColor, hidePanel = hidePanel, isToolEnabled = isToolEnabled, isToolAlternativeEnabled = isToolAlternativeEnabled, switchToCategory = switchToCategory, selectTool = selectTool, getColorsByMostUsed = getColorsByMostUsed,
                             modifier = Modifier.align(Alignment.CenterStart),
                         )
                     } else {
-                        ToolbarPortrait(
-                            toolbarState = toolbarState,
-                            showPanel = showPanel,
-                            regionColor = regionColor,
-                            hidePanel = hidePanel,
-                            isToolEnabled = isToolEnabled,
-                            isToolAlternativeEnabled = isToolAlternativeEnabled,
-                            switchToCategory = switchToCategory,
-                            selectTool = selectTool,
-                            getColorsByMostUsed = getColorsByMostUsed,
+                        ToolbarPortrait(toolbarState = toolbarState, showPanel = showPanel, regionColor = regionColor, hidePanel = hidePanel, isToolEnabled = isToolEnabled, isToolAlternativeEnabled = isToolAlternativeEnabled, switchToCategory = switchToCategory, selectTool = selectTool, getColorsByMostUsed = getColorsByMostUsed,
                             modifier = Modifier.align(Alignment.BottomStart),
                         )
                     }
@@ -578,11 +552,15 @@ private fun EditorScreen(
 @Composable
 fun EditorScreenPreview() {
     DodeclustersTheme(ColorTheme.DARK) {
+        val toolbarState = ToolbarState(
+            activeCategory = Category.Drag,
+            activeTool = Tool.Drag,
+        )
         EditorScreen(
-            toolbarState = ToolbarState(),
+            toolbarState = toolbarState,
+            showPanel = false, // cannot show panel when in drag category
             isLandscape = true,
             showUI = true,
-            showPanel = true,
             regionColor = Color.Blue,
             backgroundColor = null,
             regionManipulationStrategy = RegionManipulationStrategy.REPLACE,
@@ -592,7 +570,9 @@ fun EditorScreenPreview() {
             isToolEnabled = { false },
             isToolAlternativeEnabled = { false },
             getColorsByMostUsed = { emptyList() },
-            editorCanvas = {},
+            editorCanvas = {
+                Canvas(Modifier.fillMaxSize()) {}
+            },
         )
     }
 }
