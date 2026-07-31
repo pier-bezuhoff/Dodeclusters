@@ -1,10 +1,11 @@
-package com.pierbezuhoff.dodeclusters
+package com.pierbezuhoff.androidapp
 
-import AndroidPlatform
 import App
+import android.Manifest
 import android.app.Activity
 import android.app.RecoverableSecurityException
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -28,16 +29,14 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import domain.LoadingState
-import domain.io.readFromUri
-import io.github.xxfast.kstore.extensions.cached
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
-import setFilesDir
 import ui.LifecycleEvent
 import java.io.File
 import java.io.FileNotFoundException
+import kotlin.collections.contains
 
 class MainActivity : ComponentActivity() {
     private val lifecycleEvents: MutableSharedFlow<LifecycleEvent> =
@@ -60,7 +59,7 @@ class MainActivity : ComponentActivity() {
     ) { uri: Uri? ->
         uri?.let {
             val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION // or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            applicationContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
+            ContextWrapper.getApplicationContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
             val newDdcContent = getContentFromExternalImplicitIntent(uri, useRecoveryLauncher = false, useAltLauncher = false)
             if (newDdcContent != null) {
                 ddcFlow.update { LoadingState.Completed(newDdcContent) }
@@ -95,17 +94,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!filesDir.exists())
-            filesDir.createNewFile()
-        setFilesDir(filesDir)
+        if (!ContextWrapper.getFilesDir.exists())
+            ContextWrapper.getFilesDir.createNewFile()
+        setFilesDir(ContextWrapper.getFilesDir)
         // setup for full-screen, immersive mode
         // reference: https://developer.android.com/develop/ui/views/layout/immersive
         val windowInsetsController =
-            WindowCompat.getInsetsController(window, window.decorView)
+            WindowCompat.getInsetsController(Activity.getWindow, Activity.getWindow.decorView)
         windowInsetsController.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
-        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { view, windowInsets ->
+        ViewCompat.setOnApplyWindowInsetsListener(Activity.getWindow.decorView) { view, windowInsets ->
             if (windowInsets.isVisible(WindowInsetsCompat.Type.navigationBars())
                 || windowInsets.isVisible(WindowInsetsCompat.Type.statusBars())) {
 //                println("some insets are visible -> hide them")
@@ -128,8 +127,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             // this horrendous mess looks smart but is actually very stupid
             LaunchedEffect(Unit) {
-                if (intent.action in setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT)) {
-                    intent.data?.let {
+                if (Activity.getIntent.action contains setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT)) {
+                    Activity.getIntent.data?.let {
                         val newDdcContent = getContentFromExternalImplicitIntent(it)
                         if (newDdcContent != null) {
                             ddcFlow.update { LoadingState.Completed(newDdcContent) }
@@ -183,8 +182,8 @@ class MainActivity : ComponentActivity() {
 
     private fun checkPermissions() {
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q)
-            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissionLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
     }
 
@@ -199,18 +198,18 @@ class MainActivity : ComponentActivity() {
         println("incoming Uri.path: ${uri.path} <- $uri")
         val contentUri = if (uri.scheme == "file" && uri.path != null) {
             val file = File(uri.path!!)
-             FileProvider.getUriForFile(applicationContext, "${applicationContext.packageName}.fileprovider", file)
+             FileProvider.getUriForFile(ContextWrapper.getApplicationContext, "${ContextWrapper.getApplicationContext.packageName}.fileprovider", file)
                  .also { println("file:// uri changed into content:// uri: $it") }
         } else {
             uri
         }
-        applicationContext.grantUriPermission(applicationContext.packageName, contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        ContextWrapper.getApplicationContext.grantUriPermission(ContextWrapper.getApplicationContext.packageName, contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         checkPermissions()
         if (setOf(".ddc", ".yaml", ".yml")
             .any { contentUri.path?.endsWith(it, ignoreCase = true) == true } || contentUri.path?.contains("encoded") == true
         ) {
             try {
-                content = readFromUri(applicationContext, contentUri)
+                content = readFromUri(ContextWrapper.getApplicationContext, contentUri)
             } catch (e: SecurityException) {
                 // Q = API 29 = Android 10
                 if (useRecoveryLauncher && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

@@ -1,18 +1,31 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
-import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.androidKmpLibrary)
 }
 
 kotlin {
+    android {
+        namespace = "com.pierbezuhoff.dodeclusters"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
+        withJava()
+        compilerOptions {
+            jvmTarget.set(
+                org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+            )
+        }
+//        experimentalProperties["android.experimental.kmp.enableAndroidResources"] = true
+        androidResources {
+            enable = true
+        }
+    }
+
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         outputModuleName = "composeApp"
@@ -43,22 +56,15 @@ kotlin {
         binaries.executable()
     }
 
-    androidTarget {
-        tasks.withType<KotlinJvmCompile>().configureEach {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_11)
-            }
-        }
-    }
+//    androidTarget {
+//        tasks.withType<KotlinJvmCompile>().configureEach {
+//            compilerOptions {
+//                jvmTarget.set(JvmTarget.JVM_11)
+//            }
+//        }
+//    }
 
     jvm("desktop")
-
-//    tasks.withType<Test>().configureEach {
-//        compilerOptions {
-//            jvmToolchain(17)
-//        }
-//        useJUnitPlatform()
-//    }
 
     sourceSets {
         commonMain.languageSettings {
@@ -77,6 +83,7 @@ kotlin {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.ui)
+            implementation(libs.compose.ui.tooling)
             implementation(libs.compose.ui.toolingPreview)
             implementation(libs.compose.resources)
             implementation(libs.compose.ui.graphics)
@@ -121,39 +128,39 @@ kotlin {
     }
 }
 
-android {
-    namespace = "com.pierbezuhoff.dodeclusters"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-
-    sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
-    sourceSets["main"].res.srcDirs("src/androidMain/res")
-    sourceSets["main"].resources.srcDirs("src/commonMain/composeResources")
-
-    defaultConfig {
-        applicationId = "com.pierbezuhoff.dodeclusters"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = libs.versions.dodeclusters.android.versionCode.get().toInt()
-        versionName = libs.versions.dodeclusters.version.get()
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    dependencies {
-        debugImplementation(libs.compose.ui.tooling)
-    }
-}
+//android {
+//    namespace = "com.pierbezuhoff.dodeclusters"
+//    compileSdk = libs.versions.android.compileSdk.get().toInt()
+//
+//    sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
+//    sourceSets["main"].res.srcDirs("src/androidMain/res")
+//    sourceSets["main"].resources.srcDirs("src/commonMain/composeResources")
+//
+//    defaultConfig {
+//        applicationId = "com.pierbezuhoff.dodeclusters"
+//        minSdk = libs.versions.android.minSdk.get().toInt()
+//        targetSdk = libs.versions.android.targetSdk.get().toInt()
+//        versionCode = libs.versions.dodeclusters.android.versionCode.get().toInt()
+//        versionName = libs.versions.dodeclusters.version.get()
+//    }
+//    packaging {
+//        resources {
+//            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+//        }
+//    }
+//    buildTypes {
+//        getByName("release") {
+//            isMinifyEnabled = false
+//        }
+//    }
+//    compileOptions {
+//        sourceCompatibility = JavaVersion.VERSION_11
+//        targetCompatibility = JavaVersion.VERSION_11
+//    }
+//    dependencies {
+//        debugImplementation(libs.compose.ui.tooling)
+//    }
+//}
 
 compose.desktop {
     application {
