@@ -24,7 +24,7 @@ string|angle_fraction_numerator_placeholder|PG51bWVyYXRvcj4=
 string|angle_fraction_numerator_prefix|RnJhY3Rpb24=
 string|angle_fraction_numerator_suffix|Lw==
 string|angle_in_degrees_placeholder|PGFuZ2xlIGluIGRlZ3JlZXM+
-string|angle_snapping|U25hcCByb3RhdGlvbiBhbmdsZSB0byA0NcKwIG11bHRpcGxpZXM=
+string|angle_snapping|U25hcCByb3RhdGlvbiBhbmdsZSB0byBtdWx0aXBsZXMgb2YgNDXCsA==
 string|app_name|RG9kZWNsdXN0ZXJz
 string|appearance|QXBwZWFyYW5jZQ==
 string|applied_color_description|U3dpdGNoIHRvIHRoaXMgcmVjZW50bHkgdXNlZCBjb2xvcg==
@@ -143,7 +143,7 @@ string|insert_centered_cross_name|SW5zZXJ0IGEgY2VudGVyZWQgY3Jvc3M=
 string|inversion_of_control_level_1|T25seSBkaXJlY3QgcGFyZW50cw==
 string|inversion_of_control_level_infinity|QWxsIHBhcmVudHM=
 string|inversion_of_control_none|Tm8=
-string|inversion_of_control|RHJhZyBwYXJlbnQgd2l0aCBjaGlsZHJlbg==
+string|inversion_of_control|RHJhZyBwYXJlbnRzIHdpdGggY2hpbGRyZW4=
 string|label_input_title|SW5wdXQgcG9pbnQgbGFiZWw=
 string|light|TGlnaHQ=
 string|line_by_2_points_description|Q29uc3RydWN0IGEgbGluZSBieSAyIHBvaW50cyBvciBieSBvYmplY3RzIHBlcnBlbmRpY3VsYXIgdG8gaXQ=
@@ -178,9 +178,9 @@ string|multiselect_name|TXVsdGlzZWxlY3Q=
 string|n_steps_placeholder|PG51bWJlciBvZiBzdGVwcz4=
 string|n_steps_prompt|TnVtYmVyIG9mIHN0ZXBz
 string|name|TmFtZQ==
-string|new_blank_name|TmV3IGJsYW5rIGZpbGU=
+string|new_blank_name|TmV3IGJsYW5r
 string|ok|T0s=
-string|open_file_name|T3BlbiBEb2RlY2x1c3RlcnMgZmlsZQ==
+string|open_file_name|T3Blbg==
 string|open_file|T3BlbiBmaWxl
 string|overwrite_shared_done|U3VjY2Vzc2Z1bGx5IG92ZXJ3cml0dGVuLg==
 string|overwrite_shared_error|RmFpbGVkIHRvIG92ZXJ3cml0ZS4=
@@ -221,7 +221,7 @@ string|rotation_name|Um90YXRpb24=
 string|rotation_title|Q29uZmlndXJlIHJvdGF0aW9uIHBhcmFtZXRlcnM=
 string|save_cluster_name|U2F2ZSBhcyBEb2RlY2x1c3RlcnMgZmlsZQ==
 string|save_cluster_title|U2F2ZSB0aGlzIGNsdXN0ZXI=
-string|save_name|U2F2ZQ==
+string|save_name|U2F2ZSBhcw==
 string|save_prompt_after_blank_description|U2hvdWxkIHdlIHNhdmUgYmVmb3JlIG9wZW5pbmcgYSBuZXcgYmxhbmsgZmlsZT8=
 string|save_prompt_title|U2F2ZT8=
 string|save|U2F2ZQ==
