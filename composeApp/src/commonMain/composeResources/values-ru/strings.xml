@@ -5,6 +5,10 @@
     <string name="open_file_name">Открыть файл Dodeclusters</string>
     <string name="undo_name">Отменить действие</string>
     <string name="redo_name">Повторить действие</string>
+    <string name="menu">Меню</string>
+    <!-- drawer -->
+    <string name="actions">Действия</string>
+    <string name="settings">Настройки</string>
     <!-- tools -->
     <string name="collapse">Свернуть</string>
     <string name="drag_name">Перетаскивание</string>
@@ -311,5 +315,20 @@
     <string name="set_selection_as_tool_arg_prompt">Использовать выделение как 1ый параметр?</string>
     <string name="complete_arc_path_prompt">Завершить редактирование текущего пути?</string>
     <string name="attach_point_prompt">Прикрепить точку?</string>
+    <!-- settings screen -->
+    <string name="reset_to_defaults">Сбросить настройки</string>
+    <string name="appearance">Внешний вид</string>
+    <string name="color_theme">Цветовая тема</string>
+    <string name="light">Светлая</string>
+    <string name="dark">Тёмная</string>
+    <string name="auto">Автоматическая</string>
+    <string name="motion">Движение</string>
+    <string name="inversion_of_control">Перетаскивать родителей вместе с детьми</string>
+    <string name="inversion_of_control_none">Нет</string>
+    <string name="inversion_of_control_level_1">Только прямых родителей</string>
+    <string name="inversion_of_control_level_infinity">Всех родителей</string>
+    <string name="snapping">'Притяжение'</string>
+    <string name="tangent_snapping">Притяжение к касательным</string>
+    <string name="angle_snapping">Притяжение к углам поворота, кратным 45°</string>
 
 </resources>

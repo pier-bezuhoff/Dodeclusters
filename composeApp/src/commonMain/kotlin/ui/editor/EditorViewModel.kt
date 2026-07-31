@@ -114,7 +114,6 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import ui.editor.EditorViewModel.Companion.INVERSION_OF_CONTROL
 import ui.editor.dialogs.ColorPickerParameters
 import ui.editor.dialogs.DefaultBiInversionParameters
 import ui.editor.dialogs.DefaultExtrapolationParameters
@@ -2721,7 +2720,8 @@ class EditorViewModel : ViewModel() {
         val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
         val newAngle = sm.angle + angle
         val snappedAngle =
-            if (ENABLE_ANGLE_SNAPPING) Snapping.snapAngle(newAngle)
+            if (loadedSettings.enableAngleSnapping)
+                Snapping.snapAngle(newAngle)
             else newAngle
         val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
         transformWhatWeCan(listOf(ix), focus = center, rotationAngle = angle1)
@@ -2774,7 +2774,8 @@ class EditorViewModel : ViewModel() {
             is SubMode.Rotate -> {
                 val newAngle = newRotationAngle.toDouble()
                 val snappedAngle =
-                    if (ENABLE_ANGLE_SNAPPING) Snapping.snapAngle(newAngle)
+                    if (loadedSettings.enableAngleSnapping)
+                        Snapping.snapAngle(newAngle)
                     else newAngle
                 val dAngle = (snappedAngle - sm.snappedAngle).toFloat()
                 transformWhatWeCan(selectedIndices, focus = sm.center, rotationAngle = dAngle)
@@ -2791,7 +2792,8 @@ class EditorViewModel : ViewModel() {
         val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
         val newAngle = sm.angle + angle
         val snappedAngle =
-            if (ENABLE_ANGLE_SNAPPING) Snapping.snapAngle(newAngle)
+            if (loadedSettings.enableAngleSnapping)
+                Snapping.snapAngle(newAngle)
             else newAngle
         val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
         transformWhatWeCan(targets, focus = sm.center, rotationAngle = angle1)
@@ -2805,7 +2807,7 @@ class EditorViewModel : ViewModel() {
     ) {
         val selectedIndex = objectSelection.single()
         val circle = objects[selectedIndex] as? CircleOrLine
-        if (ENABLE_TANGENT_SNAPPING && circle != null) {
+        if (loadedSettings.enableTangentSnapping && circle != null) {
             // TODO: snap to arc-path arcs
             val result0 = circle.transformed(translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
                 as CircleOrLine
@@ -3017,7 +3019,7 @@ class EditorViewModel : ViewModel() {
     }
 
     /**
-     * Wrapper around [ConformalObjectModel.transform] that adjusts [targets] based on [INVERSION_OF_CONTROL].
+     * Wrapper around [ConformalObjectModel.transform] that adjusts [targets] based on [InversionOfControl].
      *
      * [ConformalObjectModel.transform] applies [translation];scaling;rotation
      * to [targets] (that are all assumed free).
@@ -3036,7 +3038,7 @@ class EditorViewModel : ViewModel() {
         continuousChange: ContinuousChange? = null,
     ) {
         val actualTargets = mutableSetOf<Ix>()
-        when (INVERSION_OF_CONTROL) {
+        when (loadedSettings.inversionOfControl) {
             InversionOfControl.NONE ->
                 targets.filterTo(actualTargets) { isFree(it) }
             InversionOfControl.LEVEL_1 -> {
@@ -3855,7 +3857,7 @@ class EditorViewModel : ViewModel() {
         val pointArg = argList.args[1]
         require(centerArg is Arg.CircleIndex || centerArg is Arg.LineIndex || centerArg is Arg.PointIndex || centerArg is Arg.PointXY)
         require(pointArg is Arg.CircleIndex || pointArg is Arg.PointIndex || pointArg is Arg.PointXY)
-        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && centerArg is Arg.PointXY  && pointArg is Arg.PointXY) {
+        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && centerArg is Arg.PointXY && pointArg is Arg.PointXY) {
             val newCircle = computeConcentricCircle(
                 samePencilObject = centerArg.toPoint().downscale(),
                 point = pointArg.toPoint().downscale(),
@@ -5025,30 +5027,28 @@ class EditorViewModel : ViewModel() {
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val INTERSECTION_SNAP_FACTOR = 1.5
         const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
-        const val FAST_CENTERED_CIRCLE = true
-        const val ENABLE_ANGLE_SNAPPING = false //true
-        const val ENABLE_TANGENT_SNAPPING = true
-        /** try aligning PartialArcPath vertices horizontally or
-         * vertically to each other */
-        const val ENABLE_ALIGNMENT_SNAPPING = true
-        const val ENABLE_POINT_TO_POINT_SNAPPING = false
-        const val RESTORE_LAST_SAVE_ON_LOAD = true
-        const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
-        const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
-        const val SHOW_IMAGINARY_CIRCLES = true
-        /** When several objects are close enough to the tap position,
-         * show the list of them to choose from */
-        const val SHOW_SELECTION_CHOICES = true
-        /** Allow moving non-free object IF all of it's lvl 1 parents=dependencies are free by
-         * moving all of its parent with it */ // ggbra-like
-        val INVERSION_OF_CONTROL = InversionOfControl.LEVEL_1
         /** When constructing an object depending on not-yet-existing points,
-         * always create them. In contrast to replacing its expression with a static, free circle */
+         * always create them. In contrast to replacing its expression with a static, free circle.
+         * (Should have more choices to make it a settings)
+         */
         const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
+        const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         // NOTE: changing this factor breaks all line-incident points (scale-dependence)
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = ConformalObjectModel.UPSCALING_FACTOR
         const val DOWNSCALING_FACTOR = ConformalObjectModel.DOWNSCALING_FACTOR
+
+        const val FAST_CENTERED_CIRCLE = true
+        /** try aligning PartialArcPath vertices horizontally or
+         * vertically to each other */
+        const val ENABLE_ALIGNMENT_SNAPPING = true // todo: pass this setting
+        const val ENABLE_POINT_TO_POINT_SNAPPING = false
+        const val RESTORE_LAST_SAVE_ON_LOAD = true
+        const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
+        const val SHOW_IMAGINARY_CIRCLES = true
+        /** When several objects are close enough to the tap position,
+         * show the list of them to choose from */
+        const val SHOW_SELECTION_CHOICES = true
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)

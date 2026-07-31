@@ -301,7 +301,7 @@ sealed class Tool(
         icon = Res.drawable.redo,
     )
     data object ToggleMenu : CustomAction(
-        name = Res.string.stub,
+        name = Res.string.menu,
         icon = Res.drawable.menu,
     )
 

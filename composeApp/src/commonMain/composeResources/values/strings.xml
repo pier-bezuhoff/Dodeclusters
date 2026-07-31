@@ -8,6 +8,10 @@
     <string name="open_file_name">Open Dodeclusters file</string>
     <string name="undo_name">Undo</string>
     <string name="redo_name">Redo</string>
+    <string name="menu">Menu</string>
+    <!-- drawer -->
+    <string name="actions">Actions</string>
+    <string name="settings">Settings</string>
     <!-- tools -->
     <string name="collapse">Collapse</string>
     <string name="drag_name">Drag</string>
@@ -315,6 +319,21 @@
     <string name="set_selection_as_tool_arg_prompt">Use active selection as 1st argument?</string>
     <string name="complete_arc_path_prompt">Finalize current arc-path?</string>
     <string name="attach_point_prompt">Attach this point?</string>
+    <!-- settings screen -->
+    <string name="reset_to_defaults">Reset to defaults</string>
+    <string name="appearance">Appearance</string>
+    <string name="color_theme">Color theme</string>
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="auto">Auto</string>
+    <string name="motion">Motion</string>
+    <string name="inversion_of_control">Drag parent with children</string>
+    <string name="inversion_of_control_none">No</string>
+    <string name="inversion_of_control_level_1">Only direct parents</string>
+    <string name="inversion_of_control_level_infinity">All parents</string>
+    <string name="snapping">Snapping</string>
+    <string name="tangent_snapping">Snap objects to tangents while dragging</string>
+    <string name="angle_snapping">Snap rotation angle to 45° multiplies</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

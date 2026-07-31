@@ -13,13 +13,14 @@ import ui.theme.ColorTheme
 import ui.theme.DEFAULT_COLOR_THEME
 
 /**
- * [savedColors] user-defined & saved in the color picker as part of [ColorPickerParameters]
+ * @param[savedColors] user-defined & saved in the color picker as part of [ColorPickerParameters]
+ * @param[inversionOfControl] Allow moving non-free object IF all of it's lvl 1 parents=dependencies are free by
+ * moving all of its parent with it // ggbra-like
  */
 @Immutable
 @Serializable
 data class Settings(
 //    val fastCenteredCircles: Boolean = true,
-//    val enableAngleSnapping: Boolean = true,
 //    val restoreLastSaveOnLoad: Boolean = true,
     val showDirectionArrows: Boolean = false,
 //    val showImaginaryCircles: Boolean = true,
@@ -38,6 +39,9 @@ data class Settings(
     val saveDirectory: String? = null,
     // adjustable in settings screen
     val colorTheme: ColorTheme = DEFAULT_COLOR_THEME,
+    val inversionOfControl: InversionOfControl = InversionOfControl.LEVEL_1,
+    val enableTangentSnapping: Boolean = true,
+    val enableAngleSnapping: Boolean = false,
 ) {
     companion object {
         val JSON_FORMAT = Json {

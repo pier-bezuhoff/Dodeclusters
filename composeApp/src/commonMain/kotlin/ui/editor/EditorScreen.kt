@@ -28,8 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.FabPosition
@@ -53,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -75,6 +74,7 @@ import core.geometry.CircleOrLine
 import core.geometry.ImaginaryCircle
 import core.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.actions
 import dodeclusters.composeapp.generated.resources.add_circle
 import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.collapse
@@ -84,11 +84,11 @@ import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.new_blank_name
 import dodeclusters.composeapp.generated.resources.new_document
 import dodeclusters.composeapp.generated.resources.open_file
-import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.save_prompt_after_blank_description
+import dodeclusters.composeapp.generated.resources.settings
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
@@ -99,7 +99,6 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
 import domain.model.PartialArgList
-import domain.model.SaveState
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -116,6 +115,7 @@ import ui.LifecycleEvent
 import ui.LoadingOverlay
 import ui.OnOffButton
 import ui.SimpleButton
+import ui.SimpleToolButtonWithTooltip
 import ui.SnackbarWithHighlightMarkdown
 import ui.ThreeIconButton
 import ui.TwoIconButton
@@ -183,11 +183,11 @@ fun EditorScreenRoot(
                 drawerState.open()
             }
         },
-        hidePanel = viewModel::hidePanel,
         openNewBlank = viewModel::newBlank,
         openFile = viewModel::requestOpenFile,
         showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
         openSettings = openSettings,
+        hidePanel = viewModel::hidePanel,
         loadFromYaml = { content, filename ->
             content?.let {
                 viewModel.loadDdc(content, filename)
@@ -476,11 +476,11 @@ fun EditorScreenRoot(
 @Composable
 private fun EditorScreen(
     openMenu: () -> Unit = {},
-    hidePanel: () -> Unit = {},
     openNewBlank: () -> Unit = {},
     openFile: () -> Unit = {},
     showSaveOptionsDialog: () -> Unit = {},
     openSettings: () -> Unit = {},
+    hidePanel: () -> Unit = {},
     loadFromYaml: (content: String?, filename: String?) -> Unit = { _, _ -> },
     undo: () -> Unit = {},
     redo: () -> Unit = {},
@@ -509,51 +509,7 @@ private fun EditorScreen(
 ) {
     ModalNavigationDrawer(
         drawerContent = {
-            ModalDrawerSheet {
-                Column(
-                    Modifier
-                        .padding(horizontal = 16.dp)
-                        .verticalScroll(rememberScrollState())
-                    ,
-                ) {
-//                    Text("Section 1", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
-                    NavigationDrawerItem(
-                        label = { Text(stringResource(Res.string.new_blank_name)) },
-                        selected = false,
-                        onClick = openNewBlank,
-                        icon = { Icon(painterResource(Res.drawable.new_document), null) },
-                    )
-                    NavigationDrawerItem(
-                        label = { Text(stringResource(Res.string.open_file)) },
-                        selected = false,
-                        onClick = openFile,
-                        icon = { Icon(painterResource(Res.drawable.open_file), null) },
-                    )
-                    NavigationDrawerItem(
-                        label = { Text(stringResource(Res.string.save_name)) },
-                        selected = false,
-                        onClick = showSaveOptionsDialog,
-                        icon = { Icon(painterResource(Res.drawable.save), null) },
-//                        badge = { Icon(painterResource(Res.drawable.confirm), null) }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    // light/dark toggle?
-                    NavigationDrawerItem(
-                        label = { Text("Settings") },
-                        selected = false,
-                        icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
-                        onClick = openSettings,
-                    )
-                    // about: circled question icon
-//                    NavigationDrawerItem(
-//                        label = { Text("Help and feedback") },
-//                        selected = false,
-//                        icon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
-//                        onClick = { },
-//                    )
-                    Spacer(Modifier.height(12.dp))
-                }
-            }
+            DrawerContent(openNewBlank = openNewBlank, openFile = openFile, showSaveOptionsDialog = showSaveOptionsDialog, openSettings = openSettings)
         },
         drawerState = drawerState,
     ) {
@@ -616,6 +572,57 @@ private fun EditorScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DrawerContent(
+    openNewBlank: () -> Unit = {},
+    openFile: () -> Unit = {},
+    showSaveOptionsDialog: () -> Unit = {},
+    openSettings: () -> Unit = {},
+) {
+    ModalDrawerSheet {
+        Column(
+            Modifier
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState())
+            ,
+        ) {
+            Spacer(Modifier.height(16.dp))
+            Text(stringResource(Res.string.actions),
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(Res.string.new_blank_name)) },
+                selected = false,
+                onClick = openNewBlank,
+                icon = { Icon(painterResource(Res.drawable.new_document), null) },
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(Res.string.open_file)) },
+                selected = false,
+                onClick = openFile,
+                icon = { Icon(painterResource(Res.drawable.open_file), null) },
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(Res.string.save_name)) },
+                selected = false,
+                onClick = showSaveOptionsDialog,
+                icon = { Icon(painterResource(Res.drawable.save), null) },
+//                badge = { Icon(painterResource(Res.drawable.confirm), null) },
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            // light/dark toggle?
+            NavigationDrawerItem(
+                label = { Text(stringResource(Res.string.settings)) },
+                selected = false,
+                icon = { Icon(painterResource(Res.drawable.settings), contentDescription = null) },
+                onClick = openSettings,
+            )
+            // about: circled question icon
         }
     }
 }
@@ -849,9 +856,11 @@ private fun EditorTopBar(
     openFileRequests: SharedFlow<Unit>? = null,
 ) {
     val isCompact = MaterialTheme.adaptiveSizing.isCompact
-    val iconModifier =
+    val displayAllActions =
+        MaterialTheme.adaptiveSizing.windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+    val buttonModifier =
         if (isCompact) Modifier.padding(4.dp).size(30.dp)
-        else Modifier.padding(8.dp, 4.dp).size(40.dp)
+        else Modifier.padding(6.dp, 4.dp).size(40.dp)
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
     val toolbarHeight = if (isCompact) 48.dp else 64.dp
@@ -873,44 +882,38 @@ private fun EditorTopBar(
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             Spacer(Modifier.width(16.dp))
-            // mb display only on wide screen
-//            WithTooltip(stringResource(Tool.NewBlank.description)) {
-//                SimpleButton(
-//                    painterResource(Tool.NewBlank.icon),
-//                    stringResource(Tool.NewBlank.name),
-//                    iconModifier = iconModifier,
-//                    onClick = openNewBlank,
-//                )
-//            }
-            WithTooltip(stringResource(Tool.SaveCluster.description)) {
-                SimpleButton(
-                    painterResource(Tool.SaveCluster.icon),
-                    stringResource(Tool.SaveCluster.name),
-                    iconModifier = iconModifier,
-                    onClick = showSaveOptionsDialog
+            if (displayAllActions) {
+                SimpleToolButtonWithTooltip(Tool.NewBlank,
+                    modifier = buttonModifier,
+                    onClick = { openNewBlank() },
                 )
             }
+            SimpleToolButtonWithTooltip(Tool.SaveCluster,
+                modifier = buttonModifier,
+                onClick = { showSaveOptionsDialog() },
+            )
             WithTooltip(stringResource(Tool.OpenFile.description)) {
                 OpenFileButton(
                     painterResource(Tool.OpenFile.icon),
                     stringResource(Tool.OpenFile.name),
                     LookupData.YAML.copy(directory = saveConfig.directory),
-                    iconModifier = iconModifier,
+                    modifier = buttonModifier,
                     openRequests = openFileRequests,
                     onOpen = loadFromYaml,
                 )
             }
-            VerticalDivider(Modifier
-                .padding(horizontal = 8.dp)
-                .fillMaxHeight(0.6f)
-                .align(Alignment.CenterVertically)
+            VerticalDivider(
+                Modifier
+                    .padding(horizontal = 8.dp)
+                    .fillMaxHeight(0.6f)
+                    .align(Alignment.CenterVertically)
             )
             WithTooltip(stringResource(Tool.Undo.description)) {
                 DisableableButton(
                     painterResource(Tool.Undo.icon),
                     stringResource(Tool.Undo.name),
                     enabled = undoIsEnabled,
-                    iconModifier = iconModifier,
+                    modifier = buttonModifier,
                     onClick = undo
                 )
             }
@@ -919,7 +922,7 @@ private fun EditorTopBar(
                     painterResource(Tool.Redo.icon),
                     stringResource(Tool.Redo.name),
                     enabled = redoIsEnabled,
-                    iconModifier = iconModifier,
+                    modifier = buttonModifier,
                     onClick = redo
                 )
             }
@@ -928,14 +931,10 @@ private fun EditorTopBar(
                 .fillMaxHeight(0.6f)
                 .align(Alignment.CenterVertically)
             )
-//            WithTooltip(stringResource(Tool.ToggleMenu.description)) {
-                SimpleButton(
-                    painterResource(Tool.ToggleMenu.icon),
-                    stringResource(Tool.ToggleMenu.name),
-                    iconModifier = iconModifier,
-                    onClick = openMenu,
-                )
-//            }
+            SimpleToolButtonWithTooltip(Tool.ToggleMenu,
+                modifier = buttonModifier,
+                onClick = { openMenu() },
+            )
         }
     }
 }
@@ -1152,18 +1151,19 @@ fun CategoryButton(
     isToolEnabled: (Tool) -> Boolean,
     switchToCategory: (Category) -> Unit,
     selectTool: (Tool) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
+        .padding(4.dp)
+        .size(
+            if (MaterialTheme.adaptiveSizing.isCompact) 36.dp
+            else 40.dp
+        )
+    ,
+    iconModifier: Modifier = modifier,
     tint: Color = LocalContentColor.current,
 ) {
     val isCompact = MaterialTheme.adaptiveSizing.isCompact
     if (!isCompact)
         Spacer(Modifier.size(12.dp, 12.dp))
-    val categoryModifier = modifier
-        .padding(4.dp)
-        .size(
-            if (isCompact) 36.dp
-            else 40.dp
-        )
     val defaultTool = toolbarState.getDefaultTool(category)
     if (defaultTool == null) {
         require(category.icon != null) { "no category.icon or category.default specified" }
@@ -1172,8 +1172,8 @@ fun CategoryButton(
             SimpleButton(
                 iconPainter = painterResource(category.icon),
                 contentDescription = name,
-                modifier = categoryModifier,
-                iconModifier = categoryModifier,
+                modifier = modifier,
+                iconModifier = iconModifier,
                 onClick = { switchToCategory(category) }
             )
         }
@@ -1184,7 +1184,8 @@ fun CategoryButton(
                 enabled = isToolEnabled(currentDefaultTool),
                 regionColor = regionColor,
                 tint = tint,
-                modifier = categoryModifier,
+                modifier = modifier,
+                iconModifier = iconModifier,
                 onClick = { selectTool(it) }
             )
         }
@@ -1340,6 +1341,7 @@ fun ToolButton(
     regionColor: Color,
     tint: Color = LocalContentColor.current,
     modifier: Modifier = Modifier.padding(4.dp),
+    iconModifier: Modifier = modifier,
     onClick: (Tool) -> Unit,
 ) {
     val icon = painterResource(tool.icon)
@@ -1363,7 +1365,12 @@ fun ToolButton(
     WithTooltip(description) {
         when (tool) {
             Tool.Palette -> {
-                PaletteButton(regionColor, modifier, callback)
+                PaletteButton(
+                    selectedColor = regionColor,
+                    modifier = modifier,
+                    iconModifier = iconModifier,
+                    onClick = callback
+                )
             }
             is Tool.AppliedColor -> {
                 IconButton(
@@ -1373,7 +1380,7 @@ fun ToolButton(
                     Icon(
                         painter = icon,
                         contentDescription = name,
-                        modifier = modifier,
+                        modifier = iconModifier,
                         tint = tool.color,
                     )
                 }
@@ -1387,6 +1394,7 @@ fun ToolButton(
                     enabled = enabled,
                     alternative = alternative,
                     modifier = modifier,
+                    iconModifier = iconModifier,
                     contentColor = tint,
                     onClick = callback
                 )
@@ -1396,6 +1404,7 @@ fun ToolButton(
                     iconPainter = icon,
                     contentDescription = name,
                     modifier = modifier,
+                    iconModifier = iconModifier,
                     contentColor = tint,
                     onClick = callback
                 )
@@ -1407,7 +1416,7 @@ fun ToolButton(
                         contentDescription = name,
                         isOn = enabled,
                         modifier = modifier,
-                        iconModifier = modifier,
+                        iconModifier = iconModifier,
                         contentColor = tint,
                         onClick = callback
                     )
@@ -1418,7 +1427,7 @@ fun ToolButton(
                         contentDescription = name,
                         enabled = enabled,
                         modifier = modifier,
-                        iconModifier = modifier,
+                        iconModifier = iconModifier,
                         contentColor = tint,
                         onClick = callback
                     )
@@ -1433,6 +1442,7 @@ fun ToolButton(
 fun PaletteButton(
     selectedColor: Color,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val iconColor =
@@ -1450,7 +1460,7 @@ fun PaletteButton(
         Icon(
             painterResource(Tool.Palette.icon),
             contentDescription = stringResource(Tool.Palette.name),
-            modifier = modifier,
+            modifier = iconModifier,
         )
     }
 }
