@@ -60,7 +60,7 @@ enum class ColorTheme {
     }
 }
 
-val DEFAULT_COLOR_THEME = ColorTheme.DARK
+val DEFAULT_COLOR_THEME = ColorTheme.AUTO
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable

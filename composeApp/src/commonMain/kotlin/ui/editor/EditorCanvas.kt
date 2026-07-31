@@ -1293,49 +1293,49 @@ private inline fun DrawScope.drawPartialConstructs(
                         )
                 }
             }
-            ToolMode.ARC_PATH -> partialArcPath?.let { pArcPath ->
-                val path = pArcPath.toPath()
-                for (alignmentLine in pArcPath.alignmentLines) {
-                    when (alignmentLine) {
-                        is AlignmentLine.Horizontal ->
-                            drawLine(
-                                color = alignmentLineColor,
-                                start = Offset(alignmentLine.x.toFloat(), visibleRect.top - 10),
-                                end = Offset(alignmentLine.x.toFloat(), visibleRect.bottom + 10),
-                            )
-                        is AlignmentLine.Vertical ->
-                            drawLine(
-                                color = alignmentLineColor,
-                                start = Offset(visibleRect.left - 10, alignmentLine.y.toFloat()),
-                                end = Offset(visibleRect.right + 10, alignmentLine.y.toFloat()),
-                            )
-                    }
-                }
-                for (arcIndex in pArcPath.arcs.indices) { // for each arc: draw start & mid-point
-                    val point = pArcPath.vertices[arcIndex].point.toOffset()
-                    drawCircle(
-                        color = creationPrototypeColor,
-                        radius = creationPointRadius,
-                        center = point
-                    )
-                    drawCircle(
-                        color = creationPrototypeColor.copy(alpha = 0.4f),
-                        radius = creationPointRadius,
-                        center = pArcPath.arcs[arcIndex].middlePoint.toOffset()
-                    )
-                }
-                if (!pArcPath.isClosed) {
-                    val last = pArcPath.vertices.last().point.toOffset()
-                    drawCircle(
-                        color = creationPrototypeColor,
-                        radius = creationPointRadius,
-                        center = last
-                    )
-                }
-                drawPath(path, creationPrototypeColor, style = circleStroke)
-            }
             else -> {}
         }
+    }
+    if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
+        val path = partialArcPath.toPath()
+        for (alignmentLine in partialArcPath.alignmentLines) {
+            when (alignmentLine) {
+                is AlignmentLine.Horizontal ->
+                    drawLine(
+                        color = alignmentLineColor,
+                        start = Offset(alignmentLine.x.toFloat(), visibleRect.top - 10),
+                        end = Offset(alignmentLine.x.toFloat(), visibleRect.bottom + 10),
+                    )
+                is AlignmentLine.Vertical ->
+                    drawLine(
+                        color = alignmentLineColor,
+                        start = Offset(visibleRect.left - 10, alignmentLine.y.toFloat()),
+                        end = Offset(visibleRect.right + 10, alignmentLine.y.toFloat()),
+                    )
+            }
+        }
+        for (arcIndex in partialArcPath.arcs.indices) { // for each arc: draw start & mid-point
+            val point = partialArcPath.vertices[arcIndex].point.toOffset()
+            drawCircle(
+                color = creationPrototypeColor,
+                radius = creationPointRadius,
+                center = point
+            )
+            drawCircle(
+                color = creationPrototypeColor.copy(alpha = 0.4f),
+                radius = creationPointRadius,
+                center = partialArcPath.arcs[arcIndex].middlePoint.toOffset()
+            )
+        }
+        if (!partialArcPath.isClosed) {
+            val last = partialArcPath.vertices.last().point.toOffset()
+            drawCircle(
+                color = creationPrototypeColor,
+                radius = creationPointRadius,
+                center = last
+            )
+        }
+        drawPath(path, creationPrototypeColor, style = circleStroke)
     }
 }
 

@@ -399,23 +399,20 @@ fun BoxScope.ArcPathContextActions(
             verticalArrangement = Arrangement.Center,
         ) {
             if (showAdjustExprButton) {
-                SimpleToolButtonWithTooltip(
-                    Tool.AdjustExpr,
+                SimpleToolButtonWithTooltip(Tool.AdjustExpr,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
             val borderColor = mostCommonBorderColor ?: defaultBorderColor
-            SimpleToolButtonWithTooltip(
-                Tool.BorderColor,
+            SimpleToolButtonWithTooltip(Tool.BorderColor,
                 buttonModifier,
                 contentColor = borderColor,
                 onClick = toolAction
             )
             val fillColor = mostCommonFillColor ?: defaultFillColor
             if (someAreClosed) {
-                SimpleToolButtonWithTooltip(
-                    Tool.FillColor,
+                SimpleToolButtonWithTooltip(Tool.FillColor,
                     buttonModifier,
                     contentColor = fillColor,
                     onClick = toolAction
@@ -423,19 +420,16 @@ fun BoxScope.ArcPathContextActions(
             }
             // close/cut loop button
             if (isLocked) {
-                SimpleToolButtonWithTooltip(
-                    Tool.Detach,
+                SimpleToolButtonWithTooltip(Tool.Detach,
                     buttonModifier,
                     onClick = toolAction
                 )
             }
-            SimpleToolButtonWithTooltip(
-                Tool.Duplicate,
+            SimpleToolButtonWithTooltip(Tool.Duplicate,
                 buttonModifier,
                 onClick = toolAction
             )
-            SimpleToolButtonWithTooltip(
-                Tool.Delete,
+            SimpleToolButtonWithTooltip(Tool.Delete,
                 buttonModifier,
                 onClick = toolAction
             )
