@@ -53,7 +53,10 @@ fun NavigationRoot(
             entry<Route.Settings> {
                 SettingsScreenRoot(
                     close = {
-                        backStack.removeLastOrNull()
+                        // this prevents unexpected behaviour on double click
+                        if (backStack.lastOrNull() is Route.Settings) {
+                            backStack.removeLastOrNull()
+                        }
                     },
                 )
             }

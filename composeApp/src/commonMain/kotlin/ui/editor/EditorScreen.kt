@@ -84,6 +84,7 @@ import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.new_blank_name
 import dodeclusters.composeapp.generated.resources.new_document
 import dodeclusters.composeapp.generated.resources.open_file
+import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_name
@@ -576,6 +577,35 @@ private fun EditorScreen(
     }
 }
 
+@Preview
+@Composable
+private fun EditorScreenPreview() {
+    DodeclustersTheme(ColorTheme.DARK) {
+        val toolbarState = ToolbarState(
+            activeCategory = Category.Drag,
+            activeTool = Tool.Drag,
+        )
+        EditorScreen(
+            drawerState = rememberDrawerState(DrawerValue.Open),
+            toolbarState = toolbarState,
+            showPanel = false, // cannot show panel when in drag category
+            showUI = true,
+            regionColor = Color.Blue,
+            backgroundColor = null,
+            regionManipulationStrategy = RegionManipulationStrategy.REPLACE,
+            partialArgList = null,
+            undoIsEnabled = true,
+            redoIsEnabled = false,
+            isToolEnabled = { false },
+            isToolAlternativeEnabled = { false },
+            getColorsByMostUsed = { emptyList() },
+            editorCanvas = {
+                Canvas(Modifier.fillMaxSize()) {}
+            },
+        )
+    }
+}
+
 @Composable
 private fun DrawerContent(
     openNewBlank: () -> Unit = {},
@@ -602,7 +632,7 @@ private fun DrawerContent(
                 icon = { Icon(painterResource(Res.drawable.new_document), null) },
             )
             NavigationDrawerItem(
-                label = { Text(stringResource(Res.string.open_file)) },
+                label = { Text(stringResource(Res.string.open_file_name)) },
                 selected = false,
                 onClick = openFile,
                 icon = { Icon(painterResource(Res.drawable.open_file), null) },
@@ -624,35 +654,6 @@ private fun DrawerContent(
             )
             // about: circled question icon
         }
-    }
-}
-
-@Preview
-@Composable
-private fun EditorScreenPreview() {
-    DodeclustersTheme(ColorTheme.DARK) {
-        val toolbarState = ToolbarState(
-            activeCategory = Category.Drag,
-            activeTool = Tool.Drag,
-        )
-        EditorScreen(
-            drawerState = rememberDrawerState(DrawerValue.Closed),
-            toolbarState = toolbarState,
-            showPanel = false, // cannot show panel when in drag category
-            showUI = true,
-            regionColor = Color.Blue,
-            backgroundColor = null,
-            regionManipulationStrategy = RegionManipulationStrategy.REPLACE,
-            partialArgList = null,
-            undoIsEnabled = true,
-            redoIsEnabled = false,
-            isToolEnabled = { false },
-            isToolAlternativeEnabled = { false },
-            getColorsByMostUsed = { emptyList() },
-            editorCanvas = {
-                Canvas(Modifier.fillMaxSize()) {}
-            },
-        )
     }
 }
 

@@ -1,6 +1,5 @@
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ClipEntry
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -9,6 +8,9 @@ import domain.model.ChangeHistory
 import domain.model.SaveState
 import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
+import io.github.xxfast.kstore.extensions.cached
+import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import ui.editor.EditorViewModel
 import ui.theme.ColorTheme
@@ -60,6 +62,9 @@ interface Platform {
 
     fun scrollToZoom(yDelta: Float): Float
 
+    /** In order to prevent initial animation preempt this with
+     * `runBlocking { settingsStore.get() }` */
+    @OptIn(ExperimentalKStoreApi::class)
     @Composable
     fun colorThemeAsState(): State<ColorTheme> {
         val themeFlowFromSettings = remember {
@@ -67,7 +72,7 @@ interface Platform {
                 .map { it?.colorTheme ?: DEFAULT_COLOR_THEME }
         }
         return themeFlowFromSettings.collectAsStateWithLifecycle(
-            DEFAULT_COLOR_THEME,
+            getPlatform().settingsStore.cached?.colorTheme ?:  DEFAULT_COLOR_THEME,
             LocalLifecycleOwner.current,
         )
     }

@@ -139,7 +139,7 @@ private fun SettingsScreen(
 @Preview
 @Composable
 private fun SettingsScreenPreview() {
-    DodeclustersTheme {
+    DodeclustersTheme(ColorTheme.DARK) {
         SettingsScreen(
             settings = Settings(),
         )
@@ -153,8 +153,7 @@ private fun TopBar(
 ) {
     CenterAlignedTopAppBar(
         title = {
-            Text(
-                stringResource(Res.string.settings),
+            Text(stringResource(Res.string.settings),
                 style = MaterialTheme.adaptiveTypography.title,
             )
         },

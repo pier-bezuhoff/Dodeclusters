@@ -41,6 +41,7 @@ class SettingsViewModel : ViewModel() {
         val defaultSettings = Settings()
         setSetting {
             it.copy(
+                // NOTE: don't forget to manually add all adjustable settings
                 colorTheme = defaultSettings.colorTheme,
                 inversionOfControl = defaultSettings.inversionOfControl,
                 enableTangentSnapping = defaultSettings.enableTangentSnapping,

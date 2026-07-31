@@ -84,13 +84,17 @@ fun main() {
             setTitle(newTitle)
         }
     }
-    coroutineScope.launch {
-        if (colorTheme != null) {
+    if (colorTheme != null) {
+        coroutineScope.launch {
             WasmPlatform.settingsStore.update {
                 (it ?: Settings()).copy(
                     colorTheme = colorTheme
                 )
             }
+        }
+    } else {
+        coroutineScope.launch(Dispatchers.Main.immediate) {
+            WasmPlatform.settingsStore.get()
         }
     }
     val keyboardActions: MutableSharedFlow<KeyboardAction> = MutableSharedFlow(replay = 1)

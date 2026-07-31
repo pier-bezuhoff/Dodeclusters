@@ -36,6 +36,7 @@ fun main() = application {
         }
     }
     val lifecycleEvents: MutableSharedFlow<LifecycleEvent> = MutableSharedFlow(replay = 1)
+//    runBlocking { JVMPlatform.settingsStore.get() }
     Window(
         onCloseRequest = {
             runBlocking {

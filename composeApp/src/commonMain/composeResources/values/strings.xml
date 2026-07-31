@@ -3,9 +3,9 @@
     <string name="stub">TBD</string>
     <string name="placeholder">%1$s</string>
     <!-- top toolbar -->
-    <string name="new_blank_name">New blank file</string>
-    <string name="save_name">Save</string>
-    <string name="open_file_name">Open Dodeclusters file</string>
+    <string name="new_blank_name">New blank</string>
+    <string name="save_name">Save as</string>
+    <string name="open_file_name">Open</string>
     <string name="undo_name">Undo</string>
     <string name="redo_name">Redo</string>
     <string name="menu">Menu</string>
@@ -327,13 +327,13 @@
     <string name="dark">Dark</string>
     <string name="auto">Auto</string>
     <string name="motion">Motion</string>
-    <string name="inversion_of_control">Drag parent with children</string>
+    <string name="inversion_of_control">Drag parents with children</string>
     <string name="inversion_of_control_none">No</string>
     <string name="inversion_of_control_level_1">Only direct parents</string>
     <string name="inversion_of_control_level_infinity">All parents</string>
     <string name="snapping">Snapping</string>
     <string name="tangent_snapping">Snap objects to tangents while dragging</string>
-    <string name="angle_snapping">Snap rotation angle to 45° multiplies</string>
+    <string name="angle_snapping">Snap rotation angle to multiples of 45°</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

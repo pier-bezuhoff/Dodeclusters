@@ -29,9 +29,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import domain.LoadingState
 import domain.io.readFromUri
+import io.github.xxfast.kstore.extensions.cached
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.runBlocking
 import setFilesDir
 import ui.LifecycleEvent
 import java.io.File
@@ -120,6 +122,8 @@ class MainActivity : ComponentActivity() {
             }
             ViewCompat.onApplyWindowInsets(view, windowInsets)
         }
+        // reads first cache value to prevent init animation default->current
+        runBlocking { AndroidPlatform.settingsStore.get() }
 
         setContent {
             // this horrendous mess looks smart but is actually very stupid

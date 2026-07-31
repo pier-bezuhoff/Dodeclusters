@@ -1,8 +1,8 @@
 <resources>
     <!-- top toolbar -->
     <string name="new_blank_name">Новый пустой файл</string>
-    <string name="save_name">Сохранить</string>
-    <string name="open_file_name">Открыть файл Dodeclusters</string>
+    <string name="save_name">Сохранить как</string>
+    <string name="open_file_name">Открыть</string>
     <string name="undo_name">Отменить действие</string>
     <string name="redo_name">Повторить действие</string>
     <string name="menu">Меню</string>
@@ -327,8 +327,8 @@
     <string name="inversion_of_control_none">Нет</string>
     <string name="inversion_of_control_level_1">Только прямых родителей</string>
     <string name="inversion_of_control_level_infinity">Всех родителей</string>
-    <string name="snapping">'Притяжение'</string>
-    <string name="tangent_snapping">Притяжение к касательным</string>
-    <string name="angle_snapping">Притяжение к углам поворота, кратным 45°</string>
+    <string name="snapping">Притяжение</string>
+    <string name="tangent_snapping">Притяжение перетаскиваемых объектов к касательным</string>
+    <string name="angle_snapping">Притяжение углов поворота к кратным 45°</string>
 
 </resources>
