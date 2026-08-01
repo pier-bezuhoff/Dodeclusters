@@ -1,4 +1,4 @@
-package com.pierbezuhoff.androidapp
+package com.pierbezuhoff.dodeclusters
 
 import AndroidPlatform
 import App

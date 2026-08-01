@@ -12,7 +12,7 @@ plugins {
 
 kotlin {
     android {
-        namespace = "com.pierbezuhoff.dodeclusters"
+        namespace = "com.pierbezuhoff.dodeclusters.shared"
         //noinspection GradleDependency
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -54,14 +54,6 @@ kotlin {
         }
         binaries.executable()
     }
-
-//    androidTarget {
-//        tasks.withType<KotlinJvmCompile>().configureEach {
-//            compilerOptions {
-//                jvmTarget.set(JvmTarget.JVM_11)
-//            }
-//        }
-//    }
 
     jvm("desktop")
 
@@ -111,8 +103,8 @@ kotlin {
             implementation(libs.accompanist)
         }
         desktopMain.dependencies {
-            implementation(libs.compose.ui.tooling)
             implementation(compose.desktop.currentOs)
+            implementation(libs.compose.ui.tooling)
             implementation(libs.coroutines.swing)
             implementation(libs.kstore.file)
             implementation(libs.appdirs)

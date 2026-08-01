@@ -1,7 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.androidBuiltInKotlin)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeMultiplatform)
@@ -14,8 +13,7 @@ kotlin {
 }
 
 android {
-    // awkward name, but changing it leads to ClassNotFoundException for MainActivity
-    namespace = "com.pierbezuhoff.androidapp"
+    namespace = "com.pierbezuhoff.dodeclusters"
     //noinspection GradleDependency
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
@@ -30,11 +28,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    sourceSets.named("main") {
-        manifest.srcFile("src/main/AndroidManifest.xml")
-        res.directories += "src/main/res"
-        resources.directories += "src/commonMain/composeResources"
-    }
+//    sourceSets.named("main") {
+//        manifest.srcFile("src/main/AndroidManifest.xml")
+//        res.directories += "src/main/res"
+//        resources.directories += "src/commonMain/composeResources"
+//    }
     buildFeatures {
         compose = true
     }
@@ -51,34 +49,35 @@ android {
 }
 
 dependencies {
+    // we only need deps used in MainActivity here
     implementation(projects.composeApp)
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)
     implementation(libs.compose.ui)
-    implementation(libs.compose.ui.toolingPreview)
-    implementation(libs.compose.resources)
-    implementation(libs.compose.ui.graphics)
+//    implementation(libs.compose.ui.toolingPreview)
+//    implementation(libs.compose.resources)
+//    implementation(libs.compose.ui.graphics)
     implementation(libs.compose.material3)
-    implementation(libs.compose.material3.adaptive)
+//    implementation(libs.compose.material3.adaptive)
 //    implementation(libs.compose.material3.adaptive.navigation3)
-    implementation(libs.compose.material3.window.size.klass)
-    implementation(libs.compose.material.icons)
+//    implementation(libs.compose.material3.window.size.klass)
+//    implementation(libs.compose.material.icons)
     implementation(libs.compose.lifecycle.runtime)
-    implementation(libs.compose.lifecycle.viewmodel)
-    implementation(libs.compose.lifecycle.viewmodel.navigation3)
-    implementation(libs.compose.navigation3.ui)
+//    implementation(libs.compose.lifecycle.viewmodel)
+//    implementation(libs.compose.lifecycle.viewmodel.navigation3)
+//    implementation(libs.compose.navigation3.ui)
     implementation(libs.coroutines.core)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.colormath)
-    implementation(libs.kaml)
+//    implementation(libs.kotlinx.serialization.json)
+//    implementation(libs.colormath)
+//    implementation(libs.kaml)
     implementation(libs.kstore)
     implementation(libs.compose.activity)
     // android-specific
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
+//    implementation(libs.androidx.appcompat)
     implementation(libs.coroutines.android)
     implementation(libs.kstore.file)
     implementation(libs.appdirs)
-    implementation(libs.accompanist)
+//    implementation(libs.accompanist)
     debugImplementation(libs.compose.ui.tooling)
 }
