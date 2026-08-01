@@ -100,9 +100,9 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
 import domain.model.PartialArgList
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
@@ -159,10 +159,10 @@ import kotlin.math.min
 @Composable
 fun EditorScreenRoot(
     openSettings: () -> Unit,
-    ddcFlow: SharedFlow<LoadingState<String>?> = MutableSharedFlow(),
-    keyboardActions: SharedFlow<KeyboardAction>? = null,
-    lifecycleEvents: SharedFlow<LifecycleEvent> = MutableSharedFlow(),
-    ddcSharing: DdcSharing? = null,
+    ddcFlow: StateFlow<LoadingState<String>?>,
+    keyboardActions: SharedFlow<KeyboardAction>?,
+    lifecycleEvents: SharedFlow<LifecycleEvent>,
+    ddcSharing: DdcSharing?,
     // MAYBE: hoist VM before NavDisplay for persistence?
     viewModel: EditorViewModel = viewModel(factory = EditorViewModel.Factory),
 ) {
@@ -175,7 +175,7 @@ fun EditorScreenRoot(
         }
     }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
     val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
-    val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle(null)
+    val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     EditorScreen(

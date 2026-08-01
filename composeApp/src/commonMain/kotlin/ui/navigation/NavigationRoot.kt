@@ -9,9 +9,9 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import domain.LoadingState
 import domain.io.DdcSharing
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.serializer
 import ui.LifecycleEvent
@@ -22,11 +22,11 @@ import ui.settings.SettingsScreenRoot
 @OptIn(ExperimentalSerializationApi::class)
 @Composable
 fun NavigationRoot(
-    titleFlow: MutableStateFlow<String> = MutableStateFlow("Dodeclusters"),
-    ddcFlow: SharedFlow<LoadingState<String>?> = MutableSharedFlow(),
-    keyboardActions: SharedFlow<KeyboardAction>? = null,
-    lifecycleEvents: SharedFlow<LifecycleEvent> = MutableSharedFlow(),
-    ddcSharing: DdcSharing? = null,
+    titleFlow: MutableStateFlow<String>,
+    ddcFlow: StateFlow<LoadingState<String>?>,
+    keyboardActions: SharedFlow<KeyboardAction>?,
+    lifecycleEvents: SharedFlow<LifecycleEvent>,
+    ddcSharing: DdcSharing?,
 ) {
     // this way of init preserves my sealed interface type
     val backStack: NavBackStack<Route> = rememberSerializable(serializer = serializer()) {

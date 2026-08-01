@@ -28,11 +28,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-//    sourceSets.named("main") {
+    sourceSets.named("main") {
 //        manifest.srcFile("src/main/AndroidManifest.xml")
 //        res.directories += "src/main/res"
 //        resources.directories += "src/commonMain/composeResources"
-//    }
+    }
     buildFeatures {
         compose = true
     }

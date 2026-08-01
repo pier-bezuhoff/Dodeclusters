@@ -1,11 +1,13 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.app_name
 import dodeclusters.composeapp.generated.resources.fetching_shared_error
 import dodeclusters.composeapp.generated.resources.fetching_shared_progress
 import dodeclusters.composeapp.generated.resources.loading_sample_error
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.w3c.dom.events.Event
@@ -81,7 +84,7 @@ fun main() {
     )
     coroutineScope.launch {
         titleFlow.collect { newTitle ->
-            setTitle(newTitle)
+            document.title = newTitle
         }
     }
     if (colorTheme != null) {
@@ -92,12 +95,12 @@ fun main() {
                 )
             }
         }
-    } else {
+    } else { // init settingsStore.cache
         coroutineScope.launch(Dispatchers.Main.immediate) {
             WasmPlatform.settingsStore.get()
         }
     }
-    val keyboardActions: MutableSharedFlow<KeyboardAction> = MutableSharedFlow(replay = 1)
+    val keyboardActions: MutableSharedFlow<KeyboardAction> = MutableSharedFlow()
     document.addEventListener("keydown") { event: Event ->
         (event as? KeyboardEvent)?.let { keyboardEvent ->
             val action = WebKeyboardActionMapping.event2action(keyboardEvent)
@@ -201,9 +204,10 @@ fun main() {
             lifecycleEvents = lifecycleEvents,
             ddcSharing = if (weHaveSharePerm) WebDdcSharing else null,
         )
+        LaunchedEffect(titleFlow) {
+            // we set localized title here
+            val title = getString(Res.string.app_name)
+            titleFlow.update { title }
+        }
     }
-}
-
-private fun setTitle(title: String) {
-    document.title = title
 }

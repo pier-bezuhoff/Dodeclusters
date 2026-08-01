@@ -106,6 +106,7 @@ import getPlatform
 import io.github.xxfast.kstore.extensions.cached
 import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

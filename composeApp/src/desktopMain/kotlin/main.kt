@@ -1,3 +1,4 @@
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -7,12 +8,15 @@ import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import dodeclusters.composeapp.generated.resources.Res
+import dodeclusters.composeapp.generated.resources.app_name
 import dodeclusters.composeapp.generated.resources.icon_256
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import ui.LifecycleEvent
 import ui.editor.KeyboardAction
@@ -27,7 +31,7 @@ fun main() = application {
 //    val icon = painterResource(Res.drawable.icon_128) // broken?
     val icon = painterResource(Res.drawable.icon_256) // looks fine
     val titleFlow: MutableStateFlow<String> = MutableStateFlow("Dodeclusters")
-    val title: String by titleFlow.collectAsState(initial = "Dodeclusters")
+    val title: String by titleFlow.collectAsState()
     val keyboardActions: MutableSharedFlow<KeyboardAction> = remember { MutableSharedFlow() }
     val keyboardActionsScope = rememberCoroutineScope()
     val keyEventHandler = KeyboardActionMapping.Default.keyEventHandler { action ->
@@ -36,7 +40,7 @@ fun main() = application {
         }
     }
     val lifecycleEvents: MutableSharedFlow<LifecycleEvent> = MutableSharedFlow(replay = 1)
-//    runBlocking { JVMPlatform.settingsStore.get() }
+//    runBlocking { JVMPlatform.settingsStore.get() } // unnecessary since the window resizes anyway
     Window(
         onCloseRequest = {
             runBlocking {
@@ -56,5 +60,10 @@ fun main() = application {
             keyboardActions = keyboardActions,
             lifecycleEvents = lifecycleEvents,
         )
+        LaunchedEffect(titleFlow) {
+            // we load localized title here
+            val title = getString(Res.string.app_name)
+            titleFlow.update { title }
+        }
     }
 }
