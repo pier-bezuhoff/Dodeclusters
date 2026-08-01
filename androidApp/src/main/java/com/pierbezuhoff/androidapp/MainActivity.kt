@@ -1,11 +1,11 @@
 package com.pierbezuhoff.androidapp
 
+import AndroidPlatform
 import App
 import android.Manifest
 import android.app.Activity
 import android.app.RecoverableSecurityException
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -29,14 +29,15 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import domain.LoadingState
+import domain.io.readFromUri
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
+import setFilesDir
 import ui.LifecycleEvent
 import java.io.File
 import java.io.FileNotFoundException
-import kotlin.collections.contains
 
 class MainActivity : ComponentActivity() {
     private val lifecycleEvents: MutableSharedFlow<LifecycleEvent> =
@@ -58,8 +59,9 @@ class MainActivity : ComponentActivity() {
         }
     ) { uri: Uri? ->
         uri?.let {
+            applicationContext
             val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION // or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            ContextWrapper.getApplicationContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
+            applicationContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
             val newDdcContent = getContentFromExternalImplicitIntent(uri, useRecoveryLauncher = false, useAltLauncher = false)
             if (newDdcContent != null) {
                 ddcFlow.update { LoadingState.Completed(newDdcContent) }
@@ -94,17 +96,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!ContextWrapper.getFilesDir.exists())
-            ContextWrapper.getFilesDir.createNewFile()
-        setFilesDir(ContextWrapper.getFilesDir)
+        if (!filesDir.exists())
+            filesDir.createNewFile()
+        setFilesDir(filesDir)
         // setup for full-screen, immersive mode
         // reference: https://developer.android.com/develop/ui/views/layout/immersive
         val windowInsetsController =
-            WindowCompat.getInsetsController(Activity.getWindow, Activity.getWindow.decorView)
+            WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
-        ViewCompat.setOnApplyWindowInsetsListener(Activity.getWindow.decorView) { view, windowInsets ->
+        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { view, windowInsets ->
             if (windowInsets.isVisible(WindowInsetsCompat.Type.navigationBars())
                 || windowInsets.isVisible(WindowInsetsCompat.Type.statusBars())) {
 //                println("some insets are visible -> hide them")
@@ -127,8 +129,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             // this horrendous mess looks smart but is actually very stupid
             LaunchedEffect(Unit) {
-                if (Activity.getIntent.action contains setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT)) {
-                    Activity.getIntent.data?.let {
+                if (intent.action in setOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT)) {
+                    intent.data?.let {
                         val newDdcContent = getContentFromExternalImplicitIntent(it)
                         if (newDdcContent != null) {
                             ddcFlow.update { LoadingState.Completed(newDdcContent) }
@@ -198,18 +200,18 @@ class MainActivity : ComponentActivity() {
         println("incoming Uri.path: ${uri.path} <- $uri")
         val contentUri = if (uri.scheme == "file" && uri.path != null) {
             val file = File(uri.path!!)
-             FileProvider.getUriForFile(ContextWrapper.getApplicationContext, "${ContextWrapper.getApplicationContext.packageName}.fileprovider", file)
+             FileProvider.getUriForFile(applicationContext, "${applicationContext.packageName}.fileprovider", file)
                  .also { println("file:// uri changed into content:// uri: $it") }
         } else {
             uri
         }
-        ContextWrapper.getApplicationContext.grantUriPermission(ContextWrapper.getApplicationContext.packageName, contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        applicationContext.grantUriPermission(applicationContext.packageName, contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         checkPermissions()
         if (setOf(".ddc", ".yaml", ".yml")
             .any { contentUri.path?.endsWith(it, ignoreCase = true) == true } || contentUri.path?.contains("encoded") == true
         ) {
             try {
-                content = readFromUri(ContextWrapper.getApplicationContext, contentUri)
+                content = readFromUri(applicationContext, contentUri)
             } catch (e: SecurityException) {
                 // Q = API 29 = Android 10
                 if (useRecoveryLauncher && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

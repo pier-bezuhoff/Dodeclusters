@@ -1,28 +1,27 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.androidKmpLibrary)
+    alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
     android {
         namespace = "com.pierbezuhoff.dodeclusters"
+        //noinspection GradleDependency
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         withJava()
-        compilerOptions {
-            jvmTarget.set(
-                org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
-            )
-        }
-//        experimentalProperties["android.experimental.kmp.enableAndroidResources"] = true
         androidResources {
             enable = true
+        }
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
         }
     }
 
@@ -83,7 +82,7 @@ kotlin {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.ui)
-            implementation(libs.compose.ui.tooling)
+//            implementation(libs.compose.ui.tooling) // cannot find 1.11.1 for wasm
             implementation(libs.compose.ui.toolingPreview)
             implementation(libs.compose.resources)
             implementation(libs.compose.ui.graphics)
@@ -103,6 +102,7 @@ kotlin {
             implementation(libs.kstore)
         }
         androidMain.dependencies {
+            implementation(libs.compose.ui.tooling)
             implementation(libs.compose.activity)
             implementation(libs.androidx.core.ktx)
             implementation(libs.coroutines.android)
@@ -111,6 +111,7 @@ kotlin {
             implementation(libs.accompanist)
         }
         desktopMain.dependencies {
+            implementation(libs.compose.ui.tooling)
             implementation(compose.desktop.currentOs)
             implementation(libs.coroutines.swing)
             implementation(libs.kstore.file)
@@ -127,40 +128,6 @@ kotlin {
         }
     }
 }
-
-//android {
-//    namespace = "com.pierbezuhoff.dodeclusters"
-//    compileSdk = libs.versions.android.compileSdk.get().toInt()
-//
-//    sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
-//    sourceSets["main"].res.srcDirs("src/androidMain/res")
-//    sourceSets["main"].resources.srcDirs("src/commonMain/composeResources")
-//
-//    defaultConfig {
-//        applicationId = "com.pierbezuhoff.dodeclusters"
-//        minSdk = libs.versions.android.minSdk.get().toInt()
-//        targetSdk = libs.versions.android.targetSdk.get().toInt()
-//        versionCode = libs.versions.dodeclusters.android.versionCode.get().toInt()
-//        versionName = libs.versions.dodeclusters.version.get()
-//    }
-//    packaging {
-//        resources {
-//            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-//        }
-//    }
-//    buildTypes {
-//        getByName("release") {
-//            isMinifyEnabled = false
-//        }
-//    }
-//    compileOptions {
-//        sourceCompatibility = JavaVersion.VERSION_11
-//        targetCompatibility = JavaVersion.VERSION_11
-//    }
-//    dependencies {
-//        debugImplementation(libs.compose.ui.tooling)
-//    }
-//}
 
 compose.desktop {
     application {

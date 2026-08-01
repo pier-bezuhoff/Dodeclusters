@@ -1,18 +1,27 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
-    alias(libs.plugins.androidApplication)
     alias(libs.plugins.androidBuiltInKotlin)
+    alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.composeMultiplatform)
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_11
+    }
 }
 
 android {
+    // awkward name, but changing it leads to ClassNotFoundException for MainActivity
     namespace = "com.pierbezuhoff.androidapp"
+    //noinspection GradleDependency
     compileSdk = libs.versions.android.compileSdk.get().toInt()
-//    compileSdk {
-//        version = release(36)
-//    }
     defaultConfig {
         applicationId = "com.pierbezuhoff.dodeclusters"
         minSdk = libs.versions.android.minSdk.get().toInt()
+        //noinspection OldTargetApi
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = libs.versions.dodeclusters.android.versionCode.get().toInt()
         versionName = libs.versions.dodeclusters.version.get()
@@ -20,6 +29,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+    sourceSets.named("main") {
+        manifest.srcFile("src/main/AndroidManifest.xml")
+        res.directories += "src/main/res"
+        resources.directories += "src/commonMain/composeResources"
     }
     buildFeatures {
         compose = true
@@ -38,19 +52,6 @@ android {
 
 dependencies {
     implementation(projects.composeApp)
-//
-//    implementation(platform(libs.androidx.compose.bom))
-//    debugImplementation(libs.androidx.compose.ui.tooling)
-//    debugImplementation(libs.androidx.compose.ui.tooling.preview)
-//    implementation(libs.compose.activity)
-//    implementation(libs.androidx.compose.ui)
-//    implementation(libs.androidx.compose.ui.graphics)
-////    implementation(libs.androidx.compose.ui.tooling.preview)
-//    implementation(libs.androidx.compose.material3)
-////    implementation(libs.androidx.core.ktx)
-//    implementation(libs.androidx.appcompat)
-//    implementation(libs.material)
-
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)
     implementation(libs.compose.ui)
@@ -59,7 +60,7 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.material3)
     implementation(libs.compose.material3.adaptive)
-//            implementation(libs.compose.material3.adaptive.navigation3)
+//    implementation(libs.compose.material3.adaptive.navigation3)
     implementation(libs.compose.material3.window.size.klass)
     implementation(libs.compose.material.icons)
     implementation(libs.compose.lifecycle.runtime)
@@ -74,6 +75,7 @@ dependencies {
     implementation(libs.compose.activity)
     // android-specific
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.coroutines.android)
     implementation(libs.kstore.file)
     implementation(libs.appdirs)

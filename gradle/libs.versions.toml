@@ -2,28 +2,32 @@
 dodeclusters-version = "0.5.4"
 dodeclusters-android-versionCode = "11"
 dodeclusters-desktop-packageVersion = "1.0.5" # cannot start with 0 it seems
-android-compileSdk = "36"
+#noinspection GradleDependency
+android-compileSdk = "36" # too early to migrate to 37, no sdk upgrade assistant even
 android-minSdk = "24" # = Android 7.0 Nougat
+#noinspection OldTargetApi
 android-targetSdk = "36" # = Android 16
 
 kotlin = "2.4.10"
 # consult kmp-agp compatibility table:
 # https://kotlinlang.org/docs/multiplatform-compatibility-guide.html#version-compatibility
-#noinspection AndroidGradlePluginVersion
-agp = "9.1.0"
+#noinspection GradleDependency,AndroidGradlePluginVersion
+agp = "9.1.0" # upper bound for kt 2.4.10
 compose-multiplatform = "1.11.1"
 # check compose-multiplatform/release for version compatibility:
 # https://github.com/JetBrains/compose-multiplatform/releases/latest
 #noinspection GradleDependency
 material3 = "1.11.0-alpha07"
 material3-adaptive = "1.2.0"
-androidx-lifecycle = "2.11.0-beta01" # 2.11.0 requires sdk 37 and agp 9
+#noinspection NewerVersionAvailable
+androidx-lifecycle = "2.11.0-beta01" # 2.11.0 requires sdk 37
 # ^ depend on compose-multiplatform
 kotlinx-serialization = "1.11.0"
 kotlinx-coroutines = "1.11.0"
 compose-activity = "1.13.0"
 material-icons = "1.7.3"
-androidx-core-ktx = "1.18.0" # 1.19.0 requires target api 37 and agp 9.1
+#noinspection GradleDependency
+androidx-core-ktx = "1.18.0" # 1.19.0 requires target api 37
 window-size-klass = "0.5.0"
 colormath = "3.6.1"
 kaml = "0.104.0" # the repo is archived
@@ -33,7 +37,6 @@ accompanist = "0.37.3"
 #collection = "1.5.0"
 navigation3 = "1.1.1"
 navigation3-browser = "1.1.0"
-androidBuiltInKotlin = "9.1.0" # should it match agp version?
 appcompat = "1.7.1"
 
 [libraries]
@@ -75,12 +78,10 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 
 [plugins]
-androidApplication = { id = "com.android.application", version.ref = "agp" }
-androidLibrary = { id = "com.android.library", version.ref = "agp" }
 androidKmpLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+androidBuiltInKotlin = { id = "com.android.built-in-kotlin", version.ref = "agp" }
+androidApplication = { id = "com.android.application", version.ref = "agp" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-androidBuiltInKotlin = { id = "com.android.built-in-kotlin", version.ref = "androidBuiltInKotlin" }
-kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
