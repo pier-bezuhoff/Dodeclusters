@@ -978,7 +978,7 @@ class EditorViewModel : ViewModel() {
         }
 
     fun switchToMode(newMode: Mode) {
-        if (mode.isSelectingObjects() && newMode.isSelectingObjects()) {
+        if (mode.isSelectingObjects() && newMode.isSelectingObjects() && newMode != mode) {
             clearSelection()
         }
         if (newMode is ToolMode) {
@@ -1692,7 +1692,7 @@ class EditorViewModel : ViewModel() {
         expressions.addFree()
         expressions.addFree()
         createNewGCircles(listOf(horizontalLine, verticalLine))
-        switchToMode(SelectionMode.Multiselect)
+        switchToMode(SelectionMode.Multiselect) // idk it's weird
         val indices = listOf(objects.size - 2, objects.size - 1)
         selection = Selection(gCircles = indices)
         recordHistory()
@@ -4672,7 +4672,11 @@ class EditorViewModel : ViewModel() {
             Tool.Redo -> redo()
             Tool.SaveCluster -> openedDialog = DialogType.SAVE_OPTIONS
             Tool.Drag -> switchToMode(SelectionMode.Drag)
-            Tool.Multiselect -> switchToMode(SelectionMode.Multiselect)
+            Tool.Multiselect -> {
+                if (mode == SelectionMode.Multiselect)
+                    clearSelection()
+                switchToMode(SelectionMode.Multiselect)
+            }
             Tool.RectangularSelect -> activateRectangularSelect()
             Tool.FlowSelect -> activateFlowSelect()
             Tool.ToggleSelectAll -> toggleSelectAll()
