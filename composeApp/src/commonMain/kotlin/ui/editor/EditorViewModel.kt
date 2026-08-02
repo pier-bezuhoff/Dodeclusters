@@ -84,6 +84,7 @@ import domain.io.saveStateAsSvg
 import domain.model.Arg
 import domain.model.ChangeHistory
 import domain.model.ChessboardPattern
+import domain.model.CompressedRegionConstraints
 import domain.model.ConformalObjectModel
 import domain.model.ContinuousChange
 import domain.model.LogicalRegion
@@ -557,7 +558,8 @@ class EditorViewModel : ViewModel() {
                 "propertyInvalidation #${objectModel.propertyInvalidations}"
         )
 //        val circle = objects[expressions.circleIndices.first()] as Circle
-//        val line = objects[expressions.lineIndices.first()] as Line
+        val line = objects[expressions.lineIndices.first()] as Line
+        val line2 = objects[expressions.lineIndices.last()] as Line
 //        val point = objects[expressions.pointIndices.first()] as Point
 //        val point2 = objects[expressions.pointIndices.toList()[1]] as Point
 //        val point3 = objects[expressions.pointIndices.last()] as Point
@@ -572,8 +574,8 @@ class EditorViewModel : ViewModel() {
                     appendLine("$selectedExpressionsString;")
                 if (selectedArcPathsString.isNotEmpty())
                     appendLine("$selectedArcPathsString;")
-//                clear() // tmp
-//                append(line.agreesWithOrientation(point, point3, point2))
+                clear() // tmp
+                append(line2.getRegionLocation(line))
             }
             showSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
         }
@@ -1195,7 +1197,7 @@ class EditorViewModel : ViewModel() {
     private fun getRegionSurrounding(
         absolutePosition: Offset,
         bounds: List<Ix>? = null
-    ): Pair<RegionConstraints, RegionConstraints> {
+    ): Pair<CompressedRegionConstraints, RegionConstraints> {
         val fullConstraints = getUncompressedRegionSurrounding(absolutePosition, bounds)
         val compressedConstraints = fullConstraints.compressConstraints(objects)
         return Pair(compressedConstraints, fullConstraints)
@@ -2679,7 +2681,7 @@ class EditorViewModel : ViewModel() {
                         )
                     ) {
                         partialArcPath = pArcPath.connectLastToFirst()
-                        showSnackbarMessage(SnackbarMessage.COMPLETE_ARC_PATH_PROMPT)
+//                        showSnackbarMessage(SnackbarMessage.COMPLETE_ARC_PATH_PROMPT)
                     }
                 }
                 else -> {}
@@ -3264,13 +3266,13 @@ class EditorViewModel : ViewModel() {
             when {
                 nextVertexIndex in closeVertices -> {
                     pArcPath = pArcPath.fuseSubsequentVertices(focus.vertexIndex)
-                    if (partialArcPath?.isClosed == false && pArcPath.isClosed)
-                        showSnackbarMessage(SnackbarMessage.COMPLETE_ARC_PATH_PROMPT)
+//                    if (partialArcPath?.isClosed == false && pArcPath.isClosed)
+//                        showSnackbarMessage(SnackbarMessage.COMPLETE_ARC_PATH_PROMPT)
                 }
                 previousVertexIndex in closeVertices -> {
                     pArcPath = pArcPath.fuseSubsequentVertices(previousVertexIndex)
-                    if (partialArcPath?.isClosed == false && pArcPath.isClosed)
-                        showSnackbarMessage(SnackbarMessage.COMPLETE_ARC_PATH_PROMPT)
+//                    if (partialArcPath?.isClosed == false && pArcPath.isClosed)
+//                        showSnackbarMessage(SnackbarMessage.COMPLETE_ARC_PATH_PROMPT)
                 }
                 else -> {
                     // we can also snap 2 non-neighboring vertices, but it's prob not a good idea

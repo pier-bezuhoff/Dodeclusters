@@ -1,3 +1,4 @@
+import org.gradle.kotlin.dsl.sourceSets
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -58,13 +59,22 @@ kotlin {
     jvm("desktop")
 
     sourceSets {
-        commonMain.languageSettings {
-            progressiveMode = true // cries about deprecations and stuff more
+        commonMain {
+            languageSettings {
+                progressiveMode = true // cries about deprecations and stuff more
+            }
         }
         all {
             languageSettings {
                 optIn("org.jetbrains.compose.resources.ExperimentalResourceApi")
             }
+        }
+        androidMain {
+            // this adds shared resources to 'Android' project view in AS
+            resources.srcDirs("src/commonMain/composeResources")
+        }
+        wasmJsMain {
+            resources.srcDir("src/wasnJsMain/resources") // dont work
         }
 
         val desktopMain by getting
@@ -160,4 +170,8 @@ compose.desktop {
 composeCompiler {
     reportsDestination = layout.buildDirectory.dir("compose_compiler")
     metricsDestination = layout.buildDirectory.dir("compose_compiler")
+}
+
+dependencies {
+    androidRuntimeClasspath(libs.compose.ui.tooling)
 }

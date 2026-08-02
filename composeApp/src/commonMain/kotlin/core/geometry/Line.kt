@@ -280,12 +280,12 @@ data class Line(
                 val (a1, b1, c1) = this.normalized()
                 val (a2, b2, c2) = region.normalized()
                 if (abs(a1 - a2) < EPSILON && abs(b1 - b2) < EPSILON) {
-                    if (c1 <= c2)
+                    if (c1 >= c2)
                         Region.RegionLocation.CONTAINS_INSIDE
                     else
                         Region.RegionLocation.IS_CONTAINED_INSIDE
                     // NOTE: anti-parallel line (l' == -l) cannot define a half-plane that is fully inside
-                } else if (abs(a1 + a2) < EPSILON && abs(b1 + b2) < EPSILON && c1 <= c2) {
+                } else if (abs(a1 + a2) < EPSILON && abs(b1 + b2) < EPSILON && c1 >= c2) {
                     Region.RegionLocation.NO_INTERSECTION
                 } else {
                     Region.RegionLocation.OVERLAPS

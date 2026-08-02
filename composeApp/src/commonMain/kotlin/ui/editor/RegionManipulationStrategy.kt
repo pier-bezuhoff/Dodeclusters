@@ -13,6 +13,7 @@ import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_replace
 import dodeclusters.composeapp.generated.resources.region_manipulation_strategy_replace_postfix
 import domain.filterIndices
+import domain.model.CompressedRegionConstraints
 import domain.model.LogicalRegion
 import domain.model.RegionConstraints
 import domain.updated
@@ -50,7 +51,7 @@ enum class RegionManipulationStrategy(
 
     companion object {
         fun updateRegionsAfterReselection(
-            constraints: RegionConstraints,
+            constraints: CompressedRegionConstraints,
             fullConstraints: RegionConstraints,
             allRegions: List<LogicalRegion>,
             regionManipulationStrategy: RegionManipulationStrategy,

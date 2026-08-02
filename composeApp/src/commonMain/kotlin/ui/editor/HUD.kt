@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -103,6 +104,7 @@ import ui.editor.dialogs.DefaultLoxodromicMotionParameters
 import ui.editor.dialogs.DefaultRotationParameters
 import ui.theme.DodeclustersColors
 import ui.theme.adaptiveSizing
+import ui.theme.adaptiveTypography
 import ui.theme.extendedColorScheme
 import ui.tools.Tool
 import kotlin.math.abs
@@ -165,8 +167,7 @@ fun BoxScope.SelectionContextActions(
             ,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SimpleToolButtonWithTooltip(
-                Tool.Expand,
+            SimpleToolButtonWithTooltip(Tool.Expand,
                 contentColor = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
@@ -185,8 +186,7 @@ fun BoxScope.SelectionContextActions(
                 onValueChangeFinished = onScaleFinished,
                 colors = sliderColors,
             )
-            SimpleToolButtonWithTooltip(
-                Tool.Shrink,
+            SimpleToolButtonWithTooltip(Tool.Shrink,
                 contentColor = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
@@ -247,14 +247,9 @@ fun BoxScope.SelectionContextActions(
             verticalArrangement = Arrangement.Center,
         ) {
             if (showAdjustExprButton) {
-                SimpleToolButtonWithTooltip(
-                    Tool.AdjustExpr,
-                    buttonModifier,
-                    onClick = toolAction
-                )
+                SimpleToolButtonWithTooltip(Tool.AdjustExpr, buttonModifier, onClick = toolAction)
             }
-            SimpleToolButtonWithTooltip(
-                Tool.BorderColor,
+            SimpleToolButtonWithTooltip(Tool.BorderColor,
                 buttonModifier,
                 contentColor = borderColor,
                 onClick = toolAction
@@ -271,29 +266,13 @@ fun BoxScope.SelectionContextActions(
                 onClick = { toolAction(Tool.MarkAsPhantoms) }
             )
             if (showOrientationToggle) {
-                SimpleToolButtonWithTooltip(
-                    Tool.SwapDirection,
-                    buttonModifier,
-                    onClick = toolAction
-                )
+                SimpleToolButtonWithTooltip(Tool.SwapDirection, buttonModifier, onClick = toolAction)
             }
             if (isLocked) {
-                SimpleToolButtonWithTooltip(
-                    Tool.Detach,
-                    buttonModifier,
-                    onClick = toolAction
-                )
+                SimpleToolButtonWithTooltip(Tool.Detach, buttonModifier, onClick = toolAction)
             }
-            SimpleToolButtonWithTooltip(
-                Tool.Duplicate,
-                buttonModifier,
-                onClick = toolAction
-            )
-            SimpleToolButtonWithTooltip(
-                Tool.Delete,
-                buttonModifier,
-                onClick = toolAction
-            )
+            SimpleToolButtonWithTooltip(Tool.Duplicate, buttonModifier, onClick = toolAction)
+            SimpleToolButtonWithTooltip(Tool.Delete, buttonModifier, onClick = toolAction)
         }
     }
 }
@@ -320,23 +299,14 @@ fun BoxScope.PointContextActions(
             verticalArrangement = Arrangement.Center,
         ) {
             if (showAdjustExprButton) {
-                SimpleToolButtonWithTooltip(
-                    Tool.AdjustExpr,
-                    buttonModifier,
-                    onClick = toolAction
-                )
+                SimpleToolButtonWithTooltip(Tool.AdjustExpr, buttonModifier, onClick = toolAction)
             }
-            SimpleToolButtonWithTooltip(
-                Tool.PointColor,
+            SimpleToolButtonWithTooltip(Tool.PointColor,
                 buttonModifier,
                 contentColor = pointColor,
                 onClick = toolAction
             )
-            SimpleToolButtonWithTooltip(
-                Tool.SetLabel,
-                buttonModifier,
-                onClick = toolAction
-            )
+            SimpleToolButtonWithTooltip(Tool.SetLabel, buttonModifier, onClick = toolAction)
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
                 painterResource(Tool.MarkAsPhantoms.disabledIcon),
@@ -348,24 +318,12 @@ fun BoxScope.PointContextActions(
                 onClick = { toolAction(Tool.MarkAsPhantoms) }
             )
             if (toolPredicate(Tool.MovePointToInfinity)) {
-                SimpleToolButtonWithTooltip(
-                    Tool.MovePointToInfinity,
-                    buttonModifier,
-                    onClick = toolAction
-                )
+                SimpleToolButtonWithTooltip(Tool.MovePointToInfinity, buttonModifier, onClick = toolAction)
             }
             if (isLocked) {
-                SimpleToolButtonWithTooltip(
-                    Tool.Detach,
-                    buttonModifier,
-                    onClick = toolAction
-                )
+                SimpleToolButtonWithTooltip(Tool.Detach, buttonModifier, onClick = toolAction)
             }
-            SimpleToolButtonWithTooltip(
-                Tool.Delete,
-                buttonModifier,
-                onClick = toolAction
-            )
+            SimpleToolButtonWithTooltip(Tool.Delete, buttonModifier, onClick = toolAction)
         }
     }
 }
@@ -399,14 +357,10 @@ fun BoxScope.ArcPathContextActions(
             verticalArrangement = Arrangement.Center,
         ) {
             if (showAdjustExprButton) {
-                SimpleToolButtonWithTooltip(Tool.AdjustExpr,
-                    buttonModifier,
-                    onClick = toolAction
-                )
+                SimpleToolButtonWithTooltip(Tool.AdjustExpr, buttonModifier, onClick = toolAction)
             }
             val borderColor = mostCommonBorderColor ?: defaultBorderColor
-            SimpleToolButtonWithTooltip(Tool.BorderColor,
-                buttonModifier,
+            SimpleToolButtonWithTooltip(Tool.BorderColor, buttonModifier,
                 contentColor = borderColor,
                 onClick = toolAction
             )
@@ -420,19 +374,10 @@ fun BoxScope.ArcPathContextActions(
             }
             // close/cut loop button
             if (isLocked) {
-                SimpleToolButtonWithTooltip(Tool.Detach,
-                    buttonModifier,
-                    onClick = toolAction
-                )
+                SimpleToolButtonWithTooltip(Tool.Detach, buttonModifier, onClick = toolAction)
             }
-            SimpleToolButtonWithTooltip(Tool.Duplicate,
-                buttonModifier,
-                onClick = toolAction
-            )
-            SimpleToolButtonWithTooltip(Tool.Delete,
-                buttonModifier,
-                onClick = toolAction
-            )
+            SimpleToolButtonWithTooltip(Tool.Duplicate, buttonModifier, onClick = toolAction)
+            SimpleToolButtonWithTooltip(Tool.Delete, buttonModifier, onClick = toolAction)
         }
     }
 }
@@ -464,7 +409,7 @@ fun BoxScope.SelectionChoices(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Spacer(Modifier.size(24.dp)) // manually balancing close-icon to center the title
-                Text(stringResource(Res.string.selection_choices_title), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(Res.string.selection_choices_title), style = MaterialTheme.adaptiveTypography.body)
                 IconButton(
                     onClick = { selectChoice(null) },
                 ) {
@@ -493,7 +438,7 @@ fun BoxScope.SelectionChoices(
                     Text(
                         text = label,
                         color = choice.borderColor ?: choice.fillColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.adaptiveTypography.label,
                     )
                 }
             }
@@ -559,38 +504,32 @@ fun InterpolationInterface(
                     }
                 }
             }
-            SimpleToolButtonWithTooltip(
-                Tool.DetailedAdjustment,
-                Modifier
-                    .background(buttonBackground, buttonShape)
-                ,
+            SimpleToolButtonWithTooltip(Tool.DetailedAdjustment,
+                Modifier.background(buttonBackground, buttonShape),
                 positionModifier = halfBottomRightModifier,
                 onClick = { openDetailsDialog() }
             )
             Icon(
                 painterResource(Res.drawable.three_dots_in_angle_brackets),
                 stringResource(Res.string.steps_slider_name),
-                preHorizontalSliderModifier
-                    .padding(vertical = 12.dp)
+                preHorizontalSliderModifier.padding(vertical = 12.dp),
             )
             Slider(
                 sliderState,
-                horizontalSliderModifier
-                    .width(horizontalSliderWidth)
-                ,
+                horizontalSliderModifier.width(horizontalSliderWidth),
                 colors = sliderColors,
             )
             SimpleFilledButton(
-                painterResource(Res.drawable.confirm),
-                stringResource(Res.string.ok),
-                bottomRightModifier,
+                iconPainter = painterResource(Res.drawable.confirm),
+                contentDescription = stringResource(Res.string.ok),
+                modifier = bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
                 containerColor = MaterialTheme.colorScheme.secondary,
                 onClick = confirmParameters
             )
         }
     }
-    LaunchedEffect(interpolateCircles, circlesAreCoDirected, updateParameters) {
+    val interpolationParametersFlow = remember(interpolateCircles, circlesAreCoDirected) {
         snapshotFlow {
             InterpolationParameters(
                 nInterjacents = sliderState.value.roundToInt(),
@@ -608,9 +547,11 @@ fun InterpolationInterface(
         }
             .distinctUntilChanged()
             .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
-            .collect { params ->
-                updateParameters(params)
-            }
+    }
+    LaunchedEffect(interpolationParametersFlow, updateParameters) {
+        interpolationParametersFlow.collect { params ->
+            updateParameters(params)
+        }
     }
 }
 
@@ -650,14 +591,11 @@ fun RotationInterface(
             Icon(
                 painterResource(Res.drawable.rotate_counterclockwise),
                 "angle slider",
-                topRightModifier
-                    .padding(start = 12.dp)
+                topRightModifier.padding(start = 12.dp),
             )
             VerticalSlider(
                 angleSliderState,
-                verticalSliderModifier
-                    .height(verticalSliderHeight)
-                ,
+                verticalSliderModifier.height(verticalSliderHeight),
                 colors = sliderColors,
             )
             ReverseDirectionToggle(
@@ -668,53 +606,48 @@ fun RotationInterface(
                 rotateClockwise = !rotateClockwise
                 // triggers params upd => triggers VM.updParams
             }
-            SimpleToolButtonWithTooltip(
-                Tool.DetailedAdjustment,
-                Modifier
-                    .background(buttonBackground, buttonShape)
-                ,
+            SimpleToolButtonWithTooltip(Tool.DetailedAdjustment,
+                Modifier.background(buttonBackground, buttonShape),
                 positionModifier = halfBottomRightModifier,
                 onClick = { openDetailsDialog() }
             )
             Icon(
                 painterResource(Res.drawable.three_dots_in_angle_brackets),
                 stringResource(Res.string.steps_slider_name),
-                preHorizontalSliderModifier
-                    .padding(vertical = 12.dp)
+                preHorizontalSliderModifier.padding(vertical = 12.dp),
             )
             Slider(
                 stepsSliderState,
-                horizontalSliderModifier
-                    .width(horizontalSliderWidth)
-                ,
-                colors = sliderColors
+                horizontalSliderModifier.width(horizontalSliderWidth),
+                colors = sliderColors,
             )
             SimpleFilledButton(
-                painterResource(Res.drawable.confirm),
-                stringResource(Res.string.ok),
-                bottomRightModifier,
+                iconPainter = painterResource(Res.drawable.confirm),
+                contentDescription = stringResource(Res.string.ok),
+                modifier = bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
                 containerColor = MaterialTheme.colorScheme.secondary,
                 onClick = confirmParameters
             )
         }
     }
-    LaunchedEffect(updateParameters) {
-        snapshotFlow {
-             RotationParameters(
-                angle = round( // we round cuz all angles coming from the slider are supposed to be integers
-                    if (rotateClockwise)
-                        360f - angleSliderState.value
-                    else angleSliderState.value
-                ),
-                nSteps = stepsSliderState.value.roundToInt(),
-            )
+    val rotationParametersFlow = remember { snapshotFlow {
+        RotationParameters(
+            angle = round( // we round cuz all angles coming from the slider are supposed to be integers
+                if (rotateClockwise)
+                    360f - angleSliderState.value
+                else angleSliderState.value
+            ),
+            nSteps = stepsSliderState.value.roundToInt(),
+        )
+    }
+        .distinctUntilChanged()
+        .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
+    }
+    LaunchedEffect(rotationParametersFlow, updateParameters) {
+        rotationParametersFlow.collect { params ->
+            updateParameters(params)
         }
-            .distinctUntilChanged()
-            .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
-            .collect { params ->
-                updateParameters(params)
-            }
     }
 }
 
@@ -780,26 +713,20 @@ fun BiInversionInterface(
                 negateSpeed = !negateSpeed
                 // triggers params upd => triggers VM.updParams
             }
-            SimpleToolButtonWithTooltip(
-                Tool.DetailedAdjustment,
-                Modifier
-                    .background(buttonBackground, buttonShape)
-                ,
+            SimpleToolButtonWithTooltip(Tool.DetailedAdjustment,
+                Modifier.background(buttonBackground, buttonShape),
                 positionModifier = halfBottomRightModifier,
                 onClick = { openDetailsDialog() }
             )
             Icon(
                 painterResource(Res.drawable.three_dots_in_angle_brackets),
                 stringResource(Res.string.steps_slider_name),
-                preHorizontalSliderModifier
-                    .padding(vertical = 12.dp)
+                preHorizontalSliderModifier.padding(vertical = 12.dp),
             )
             Slider(
                 stepsSliderState,
-                horizontalSliderModifier
-                    .width(horizontalSliderWidth)
-                ,
-                colors = sliderColors
+                horizontalSliderModifier.width(horizontalSliderWidth),
+                colors = sliderColors,
             )
             SimpleFilledButton(
                 painterResource(Res.drawable.confirm),
@@ -811,7 +738,7 @@ fun BiInversionInterface(
             )
         }
     }
-    LaunchedEffect(defaults, updateParameters) {
+    val biInversionParametersFlow = remember(defaults) {
         snapshotFlow {
             BiInversionParameters(
                 speed = (if (negateSpeed) -1 else +1) * k1*sinh(k2*speedSliderState.value),
@@ -821,9 +748,11 @@ fun BiInversionInterface(
         }
             .distinctUntilChanged()
             .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
-            .collect { params ->
-                updateParameters(params)
-            }
+    }
+    LaunchedEffect(biInversionParametersFlow, updateParameters) {
+        biInversionParametersFlow.collect { params ->
+            updateParameters(params)
+        }
     }
 }
 
@@ -943,16 +872,16 @@ fun LoxodromicMotionInterface(
                 colors = sliderColors
             )
             SimpleFilledButton(
-                painterResource(Res.drawable.confirm),
-                stringResource(Res.string.ok),
-                bottomRightModifier,
+                iconPainter = painterResource(Res.drawable.confirm),
+                contentDescription = stringResource(Res.string.ok),
+                modifier = bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
                 containerColor = MaterialTheme.colorScheme.secondary,
                 onClick = confirmParameters
             )
         }
     }
-    LaunchedEffect(updateParameters) {
+    val loxodromicMotionParametersFlow = remember {
         snapshotFlow {
             LoxodromicMotionParameters.fromDifferential(
                 anglePerStep = (if (reverseDirection) -1 else +1) * angleSliderState.value,
@@ -962,9 +891,11 @@ fun LoxodromicMotionInterface(
         }
             .distinctUntilChanged()
             .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
-            .collect { params ->
-                updateParameters(params)
-            }
+    }
+    LaunchedEffect(loxodromicMotionParametersFlow, updateParameters) {
+        loxodromicMotionParametersFlow.collect { params ->
+            updateParameters(params)
+        }
     }
 }
 
@@ -1040,7 +971,7 @@ fun BoxScope.PartialArcPathContextActions(
         Spacer(Modifier.width(16.dp))
         Text(
             stringResource(Tool.CompleteArcPath.description),
-            style = MaterialTheme.typography.titleSmall
+            style = MaterialTheme.adaptiveTypography.label
         )
     }
 }
@@ -1101,7 +1032,7 @@ private fun RegionManipulationStrategyChoice(
                     .padding(start = 16.dp)
                     .weight(1f),
                 color = color,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.adaptiveTypography.body,
             )
         }
     }
@@ -1141,18 +1072,11 @@ fun BoxScope.RegionManipulationStrategySelector(
 fun BoxScope.InfinitePointInput(
     toolAction: (Tool.InfinitePoint) -> Unit,
 ) {
-    SimpleToolButtonWithTooltip(
-        tool = Tool.InfinitePoint,
-        positionModifier = Modifier
-            .align(Alignment.CenterEnd)
-        ,
+    SimpleToolButtonWithTooltip(Tool.InfinitePoint,
+        positionModifier = Modifier.align(Alignment.CenterEnd),
         // the idea is that it would be colored the same as a normal point
-        containerColor =
-            MaterialTheme.extendedColorScheme.highAccentColor
-        ,
-        contentColor =
-            MaterialTheme.colorScheme.surface
-        ,
+        containerColor = MaterialTheme.extendedColorScheme.highAccentColor,
+        contentColor = MaterialTheme.colorScheme.surface,
         onClick = toolAction,
     )
 }

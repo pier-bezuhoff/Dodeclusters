@@ -518,6 +518,7 @@ private fun EditorScreen(
             DrawerContent(openNewBlank = openNewBlank, openFile = openFile, showSaveOptionsDialog = showSaveOptionsDialog, openSettings = openSettings)
         },
         drawerState = drawerState,
+        gesturesEnabled = false,
     ) {
         Scaffold(
             modifier = modifier,
@@ -904,6 +905,7 @@ private fun EditorTopBar(
                     stringResource(Tool.OpenFile.name),
                     LookupData.YAML.copy(directory = saveConfig.directory),
                     modifier = buttonModifier,
+                    iconModifier = Modifier,
                     openRequests = openFileRequests,
                     onOpen = loadFromYaml,
                 )
@@ -1151,8 +1153,11 @@ private fun LeftToolbar(
     }
 }
 
+/**
+ * @param[iconModifier] modifier applied to Icon, note that it is `= `[modifier] by default
+ */
 @Composable
-fun CategoryButton(
+private fun CategoryButton(
     category: Category,
     toolbarState: ToolbarState,
     regionColor: Color,
@@ -1251,18 +1256,19 @@ private fun HorizontalPanel(
             )
             val colorsByMostUsed = getColorsByMostUsed()
             for (color in colorsByMostUsed) {
-                AppliedColorButton(color, toolModifier, selectTool)
+                AppliedColorButton(
+                    color = color,
+                    modifier = toolModifier,
+                    iconModifier = toolModifier,
+                    onClick = selectTool
+                )
             }
         }
-        // hide panel button
-        WithTooltip(stringResource(Res.string.collapse)) {
-            SimpleButton(
-                painterResource(Res.drawable.collapse_down),
-                stringResource(Res.string.collapse),
-                toolModifier.padding(4.dp),
-                onClick = hidePanel
-            )
-        }
+        SimpleToolButtonWithTooltip(Tool.CollapseHorizontalPanel,
+            modifier = toolModifier.padding(4.dp),
+            iconModifier = toolModifier,
+            onClick = { hidePanel() }
+        )
     }
 //    LaunchedEffect(viewModel.activeTool) {
 //        scrollState.animateScrollTo(viewModel.activeCategory.tools) // probs?
@@ -1320,18 +1326,19 @@ private fun VerticalPanel(
             )
             val colorsByMostUsed = getColorsByMostUsed()
             for (color in colorsByMostUsed) {
-                AppliedColorButton(color, toolModifier, selectTool)
+                AppliedColorButton(
+                    color = color,
+                    modifier = toolModifier,
+                    iconModifier = toolModifier,
+                    onClick = selectTool
+                )
             }
         }
-        // hide panel button
-        WithTooltip(stringResource(Res.string.collapse)) {
-            SimpleButton(
-                painterResource(Res.drawable.collapse_left),
-                stringResource(Res.string.collapse),
-                toolModifier.padding(4.dp),
-                onClick = hidePanel
-            )
-        }
+        SimpleToolButtonWithTooltip(Tool.CollapseVerticalPanel,
+            modifier = toolModifier.padding(4.dp),
+            iconModifier = toolModifier,
+            onClick = { hidePanel() }
+        )
     }
 }
 
@@ -1340,9 +1347,10 @@ private fun VerticalPanel(
  * @param[regionColor] only used for Palette color
  * @param[alternative] only used for [ITool.TernaryToggle] in [ThreeIconButton], e.g.
  * the chessboard toggle
+ * @param[iconModifier] modifier applied to Icon, note that it is `= `[modifier] by default
  */
 @Composable
-fun ToolButton(
+private fun ToolButton(
     tool: Tool,
     enabled: Boolean,
     alternative: Boolean = false,
@@ -1447,7 +1455,7 @@ fun ToolButton(
 }
 
 @Composable
-fun PaletteButton(
+private fun PaletteButton(
     selectedColor: Color,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
@@ -1474,9 +1482,10 @@ fun PaletteButton(
 }
 
 @Composable
-fun AppliedColorButton(
+private fun AppliedColorButton(
     color: Color,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     onClick: (Tool.AppliedColor) -> Unit,
 ) {
     val tool = Tool.AppliedColor(color)
@@ -1491,7 +1500,7 @@ fun AppliedColorButton(
             Icon(
                 icon,
                 contentDescription = name,
-                modifier = modifier,
+                modifier = iconModifier,
                 tint = tool.color,
             )
         }

@@ -86,7 +86,7 @@ fun SimpleButton(
     iconPainter: Painter,
     contentDescription: String? = null,
     modifier: Modifier = Modifier,
-    iconModifier: Modifier = modifier,
+    iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
     containerColor: Color = Color.Unspecified,
     interactionSource: MutableInteractionSource? = null,
@@ -113,7 +113,7 @@ fun SimpleButton(
 inline fun <reified T> SimpleToolButton(
     tool: T,
     modifier: Modifier = Modifier,
-    iconModifier: Modifier = modifier,
+    iconModifier: Modifier = Modifier,
     contentColor: Color =
         if (tool is ITool.Tinted) tool.tint
         else LocalContentColor.current,
@@ -130,6 +130,7 @@ inline fun <reified T> SimpleToolButton(
 )
 
 /**
+ * @param[iconModifier] applied to Icon, note how it is NOT = [modifier] by default
  * @param[positionModifier] for proper tooltip positioning pass `Modifier.offset(...)` and
  * such separately from [modifier]
  */
@@ -137,7 +138,7 @@ inline fun <reified T> SimpleToolButton(
 inline fun <reified T> SimpleToolButtonWithTooltip(
     tool: T,
     modifier: Modifier = Modifier,
-    iconModifier: Modifier = modifier,
+    iconModifier: Modifier = Modifier,
     positionModifier: Modifier = Modifier,
     contentColor: Color =
         if (tool is ITool.Tinted) tool.tint
@@ -166,7 +167,7 @@ fun SimpleFilledButton(
     iconPainter: Painter,
     contentDescription: String,
     modifier: Modifier = Modifier,
-    iconModifier: Modifier = modifier,
+    iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
     containerColor: Color = Color.Unspecified,
     interactionSource: MutableInteractionSource? = null,
@@ -191,7 +192,7 @@ fun DisableableButton(
     contentDescription: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
-    iconModifier: Modifier = modifier,
+    iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -212,7 +213,7 @@ fun TwoIconButton(
     contentDescription: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
-    iconModifier: Modifier = modifier,
+    iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -245,7 +246,7 @@ fun TwoIconButtonWithTooltip(
     contentDescription: String = tooltip,
     modifier: Modifier = Modifier,
     positionModifier: Modifier = Modifier,
-    iconModifier: Modifier = modifier,
+    iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -281,7 +282,7 @@ fun ThreeIconButton(
     enabled: Boolean,
     alternative: Boolean,
     modifier: Modifier = Modifier,
-    iconModifier: Modifier = modifier,
+    iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -311,7 +312,7 @@ fun OnOffButton(
     contentDescription: String,
     isOn: Boolean,
     modifier: Modifier = Modifier,
-    iconModifier: Modifier = modifier,
+    iconModifier: Modifier = Modifier,
     contentColor: Color = LocalContentColor.current,
     checkedContentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
     disabledContentColor: Color = Color.Unspecified,

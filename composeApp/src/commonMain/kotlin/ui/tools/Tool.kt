@@ -50,6 +50,9 @@ import dodeclusters.composeapp.generated.resources.circle_inversion_description
 import dodeclusters.composeapp.generated.resources.circle_inversion_name
 import dodeclusters.composeapp.generated.resources.circle_tangent
 import dodeclusters.composeapp.generated.resources.circled_region
+import dodeclusters.composeapp.generated.resources.collapse
+import dodeclusters.composeapp.generated.resources.collapse_down
+import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.complete_arc_path
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.copy
@@ -638,5 +641,13 @@ sealed class Tool(
         name = Res.string.move_point_to_infinity_name,
         description = Res.string.move_point_to_infinity_description,
         icon = Res.drawable.to_infinity,
+    )
+    data object CollapseVerticalPanel : CustomAction(
+        name = Res.string.collapse,
+        icon = Res.drawable.collapse_left,
+    )
+    data object CollapseHorizontalPanel : CustomAction(
+        name = Res.string.collapse,
+        icon = Res.drawable.collapse_down,
     )
 }

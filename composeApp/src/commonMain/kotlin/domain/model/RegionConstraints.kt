@@ -32,6 +32,8 @@ interface Constrained {
         outsides.containsAll(other.outsides)
 }
 
+typealias CompressedRegionConstraints = RegionConstraints
+
 @Immutable
 data class RegionConstraints(
     override val insides: List<Ix>,
@@ -56,8 +58,12 @@ data class RegionConstraints(
      */
     fun compressConstraints(
         allObjects: List<*>,
-    ): RegionConstraints {
+    ): CompressedRegionConstraints {
         val (sievedIns, sievedOuts) = compressConstraintsByRelativeContainment(allObjects)
+            .also {
+                println("compressed $this -> $it")
+                return it
+            }
         val (essentialInsIxs, essentialOutsIxs) =
             compressConstraintsByIntersectionPoints(
                 sievedIns.map { ix ->
@@ -77,7 +83,7 @@ data class RegionConstraints(
      */
     private fun compressConstraintsByRelativeContainment(
         allObjects: List<*>,
-    ): RegionConstraints {
+    ): CompressedRegionConstraints {
         // NOTE: these do not take into account more complex
         //  "intersection is always inside x" type relationships,
         //  we leave it to compressRegionsByIntersectionPoints
@@ -116,6 +122,7 @@ private fun pointSatisfiesConstraints(
     inConstraints.all { point liesOnOrInside it } &&
     outConstraints.all { point liesOnOrOutside it }
 
+// FIX: parallel line compression
 // TODO: skip extremely small arcs (they can lead to display artifacts)
 /**
  * Filters out all unused 'in' and 'out' separators by checking intersection points.
@@ -124,7 +131,7 @@ private fun pointSatisfiesConstraints(
 private fun compressConstraintsByIntersectionPoints(
     inConstraints: List<CircleOrLineOrConcreteArcPath>,
     outConstraints: List<CircleOrLineOrConcreteArcPath>,
-): RegionConstraints {
+): CompressedRegionConstraints {
     val allConstraints = inConstraints + outConstraints
     val n = allConstraints.size
     val nIns = inConstraints.size
