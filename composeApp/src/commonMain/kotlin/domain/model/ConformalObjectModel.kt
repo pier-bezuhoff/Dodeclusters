@@ -4,13 +4,13 @@ import androidx.compose.ui.geometry.Offset
 import core.geometry.CircleOrLine
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
+import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.Line
 import core.geometry.Point
 import core.geometry.scaled00
 import domain.Ix
 import domain.cluster.Constellation
 import domain.expressions.ArcPath
-import core.geometry.GCircleOrConcreteAcPath
-import core.geometry.Line
 import domain.expressions.ArcPathIncidenceParameters
 import domain.expressions.ConformalExpressions
 import domain.expressions.Expr
@@ -18,10 +18,7 @@ import domain.expressions.ExprOutput
 import domain.expressions.IncidenceParameters
 import domain.expressions.ObjectConstruct
 import domain.expressions.computeIntersection
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.iterator
-import kotlin.collections.set
+import domain.setOrRemove
 
 // MAYBE: additionally store GeneralizedCircle representations
 /**
@@ -220,19 +217,12 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
             objects = downscaledObjects,
         )
         val objectSize = displayObjects.size
-        for ((ix, color) in state.borderColors) {
+        for ((ix, style) in state.styling) {
             if (ix < objectSize) {
-                borderColors[ix] = color
-            }
-        }
-        for ((ix, color) in state.fillColors) {
-            if (ix < objectSize) {
-                fillColors[ix] = color
-            }
-        }
-        for (phantomIndex in state.phantoms) {
-            if (phantomIndex < objectSize) {
-                phantomObjectIndices.add(phantomIndex)
+                borderColors.setOrRemove(ix, style.borderColor)
+                fillColors.setOrRemove(ix, style.fillColor)
+                if (style.isPhantom)
+                    phantomObjectIndices.add(ix)
             }
         }
         expressions.reEval()

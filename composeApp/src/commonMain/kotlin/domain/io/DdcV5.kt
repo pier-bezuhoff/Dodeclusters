@@ -17,6 +17,8 @@ import domain.expressions.ConformalExprOutput
 import domain.expressions.ExprOutput
 import domain.model.SaveState
 import domain.model.ChessboardPattern
+import domain.model.Styling
+import domain.update
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -72,10 +74,7 @@ data class DdcV5(
     fun toSaveState(): SaveState {
         val objs = mutableListOf<GCircle?>()
         val expressions = mutableMapOf<Ix, ConformalExprOutput?>()
-        val borderColors = mutableMapOf<Ix, Color>()
-        val fillColors = mutableMapOf<Ix, Color>()
-        val labels = mutableMapOf<Ix, String>()
-        val phantoms = mutableSetOf<Ix>()
+        val styling = mutableMapOf<Ix, Styling>()
         objects.entries
             .sortedBy { (ix, _) -> ix }
             .forEach { (ix, token) ->
@@ -84,28 +83,36 @@ data class DdcV5(
                         objs.add(token.representation)
                         expressions[ix] = token.expression
                         if (token.color != null)
-                            borderColors[ix] = token.color
+                            styling.update(ix, Styling()) {
+                                it.copy(borderColor = token.color)
+                            }
                         if (token.label != null)
-                            labels[ix] = token.label
+                            styling.update(ix, Styling()) {
+                                it.copy(label = token.label)
+                            }
                         if (token.isPhantom)
-                            phantoms.add(ix)
+                            styling.update(ix, Styling()) {
+                                it.copy(isPhantom = token.isPhantom)
+                            }
                     }
                     is ArcPathToken -> {
                         objs.add(null) // concrete path needs to be reEval'd given full context
                         expressions[ix] = ExprOutput.Just(token.arcPath)
                         if (token.borderColor != null)
-                            borderColors[ix] = token.borderColor
+                            styling.update(ix, Styling()) {
+                                it.copy(borderColor = token.borderColor)
+                            }
                         if (token.fillColor != null)
-                            fillColors[ix] = token.fillColor
+                            styling.update(ix, Styling()) {
+                                it.copy(fillColor = token.fillColor)
+                            }
                     }
                 }
             }
         return SaveState(
             objects = objs,
             expressions = expressions,
-            borderColors = borderColors,
-            fillColors = fillColors,
-            labels = labels,
+            styling = styling,
             regions = regions,
             backgroundColor = backgroundColor,
             chessboardPattern =
@@ -116,7 +123,6 @@ data class DdcV5(
                 } else ChessboardPattern.NONE
             ,
             chessboardColor = chessboardColor,
-            phantoms = phantoms,
             center =
                 if (bestCenterX != null && bestCenterY != null)
                     Offset(bestCenterX, bestCenterY)
@@ -157,15 +163,15 @@ data class DdcV5(
                         ix to when (obj) {
                             is ConcreteArcPath -> ArcPathToken(
                                 arcPath = expressions[ix]?.expr as ArcPath,
-                                borderColor = this.borderColors[ix],
-                                fillColor = this.fillColors[ix],
+                                borderColor = this.styling[ix]?.borderColor,
+                                fillColor = this.styling[ix]?.fillColor,
                             )
                             else -> GCircleToken(
                                 representation = obj as? GCircle,
                                 expression = expressions[ix],
-                                label = this.labels[ix],
-                                color = this.borderColors[ix],
-                                isPhantom = ix in phantoms,
+                                label = this.styling[ix]?.label,
+                                color = this.styling[ix]?.borderColor,
+                                isPhantom = this.styling[ix]?.isPhantom == true,
                             )
                         }
                     },

@@ -93,6 +93,7 @@ import domain.model.PartialArgList
 import domain.model.RegionConstraints
 import domain.model.SaveState
 import domain.model.Selection
+import domain.model.Styling
 import domain.mostCommonOf
 import domain.never
 import domain.settings.BlendModeType
@@ -100,6 +101,7 @@ import domain.settings.InversionOfControl
 import domain.settings.Settings
 import domain.sortedByFrequency
 import domain.transpose
+import domain.update
 import domain.updated
 import domain.withoutElementsAt
 import domain.xor
@@ -635,7 +637,9 @@ class EditorViewModel : ViewModel() {
         objectModel.loadState(state)
         regions = state.regions
         backgroundColor = state.backgroundColor
-        labels = state.labels
+        labels = state.styling.mapNotNull { (ix, style) ->
+            style.label?.let { ix to it }
+        }.toMap()
         val validSelection = state.selection.copy( // just in case
             gCircles = state.selection.gCircles.filter { it in objects.indices },
             arcPaths = state.selection.arcPaths.filter { it in objects.indices },
@@ -1775,14 +1779,16 @@ class EditorViewModel : ViewModel() {
 
     private fun markSelectedObjectsAsPhantoms() {
         objectModel.phantomObjectIndices.addAll(objectSelection)
-        // being able to instantly undo is prob better ux
+        selection = selection.copy(gCircles = emptyList())
         // showPhantomObjects = false // i think this behavior is confuzzling
         objectModel.invalidate()
+        recordHistory()
     }
 
     private fun unmarkSelectedObjectsAsPhantoms() {
         objectModel.phantomObjectIndices.removeAll(objectSelection.toSet())
         objectModel.invalidate()
+        recordHistory()
     }
 
     private fun swapOrientationsInSelection() {
@@ -4822,12 +4828,31 @@ class EditorViewModel : ViewModel() {
         val center = computeAbsoluteCenter() ?: Offset.Zero
         // NOTE: it's important to copy mutable collections
         val size = min(objects.size, expressions.expressions.size)
+        val styling = mutableMapOf<Ix, Styling>()
+        objectModel.borderColors.forEach { (ix, borderColor) ->
+            if (ix < size) {
+                styling.update(ix, Styling()) { it.copy(borderColor = borderColor) }
+            }
+        }
+        objectModel.fillColors.forEach { (ix, fillColor) ->
+            if (ix < size) {
+                styling.update(ix, Styling()) { it.copy(fillColor = fillColor) }
+            }
+        }
+        labels.forEach { (ix, label) ->
+            if (ix < size) {
+                styling.update(ix, Styling()) { it.copy(label = label) }
+            }
+        }
+        objectModel.phantomObjectIndices.forEach { ix ->
+            if (ix < size) {
+                styling.update(ix, Styling()) { it.copy(isPhantom = true) }
+            }
+        }
         return SaveState(
             objects = objectModel.displayObjects.take(size).toList(),
             expressions = expressions.expressions.filterKeys { it < size }.toMap(),
-            borderColors = objectModel.borderColors.filterKeys { it < size }.toMap(),
-            fillColors = objectModel.fillColors.filterKeys { it < size }.toMap(),
-            labels = labels.filterKeys { it < size }.toMap(),
+            styling = styling,
             regions = regions.mapNotNull { region ->
                 val insides = region.insides.filter { it < size }.toSet()
                 val outsides = region.outsides.filter { it < size }.toSet()
@@ -4842,7 +4867,6 @@ class EditorViewModel : ViewModel() {
             backgroundColor = backgroundColor,
             chessboardPattern = chessboardPattern,
             chessboardColor = chessboardColor,
-            phantoms = objectModel.phantomObjectIndices.filter { it < size }.toSet(),
             selection = selection.copy(
                 gCircles = selection.gCircles.filter { it < size },
                 arcPaths = selection.arcPaths.filter { it < size },

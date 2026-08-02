@@ -77,7 +77,9 @@ fun saveStateAsSvg(
                 appendLine(
                     chessboardPath(
                         translatedObjects
-                            .filterIndexed { ix, _ -> ix !in saveState.phantoms }
+                            .filterIndexed { ix, _ ->
+                                saveState.styling[ix]?.isPhantom != true
+                            }
                             .filterIsInstance<CircleOrLine>()
                         ,
                         color = saveState.chessboardColor,
@@ -90,7 +92,9 @@ fun saveStateAsSvg(
                 appendLine(
                     chessboardPath(
                         translatedObjects
-                            .filterIndexed { ix, _ -> ix !in saveState.phantoms }
+                            .filterIndexed { ix, _ ->
+                                saveState.styling[ix]?.isPhantom != true
+                            }
                             .filterIsInstance<CircleOrLine>()
                         ,
                         color = saveState.chessboardColor,
@@ -114,9 +118,9 @@ fun saveStateAsSvg(
     val defaultArcPathColor = extendedColorScheme.defaultArcPathColor
     translatedObjects.forEachIndexed { ix, o ->
         when (o) {
-            is ConcreteArcPath if (ix !in saveState.phantoms) -> {
-                val borderColor = saveState.borderColors[ix] ?: defaultArcPathColor
-                val fillColor = saveState.fillColors[ix]
+            is ConcreteArcPath if (saveState.styling[ix]?.isPhantom != true) -> {
+                val borderColor = saveState.styling[ix]?.borderColor ?: defaultArcPathColor
+                val fillColor = saveState.styling[ix]?.fillColor
                 appendLine(
                     formatArcPath(o, borderColor, fillColor)
                 )
@@ -134,11 +138,11 @@ fun saveStateAsSvg(
         val freeObjectIndices = saveState.objects.indices
             .filter { ix -> saveState.expressions[ix] == null }
         translatedObjects.forEachIndexed { ix, o ->
-            if (ix !in saveState.phantoms) {
+            if (saveState.styling[ix]?.isPhantom != true) {
                 val color = when {
                     o is Point -> pointColor // points cant be colored for now
-                    ix in freeObjectIndices -> saveState.borderColors[ix] ?: freeCircleColor
-                    else -> saveState.borderColors[ix] ?: circleColor
+                    ix in freeObjectIndices -> saveState.styling[ix]?.borderColor ?: freeCircleColor
+                    else -> saveState.styling[ix]?.borderColor ?: circleColor
                 }
                 val colorString = color.asCssString()
                 when (o) {

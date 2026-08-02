@@ -109,20 +109,16 @@ class ChangeHistory(
     /**
      * Optionally use for not-yet-recorded changes
      * @param[newIndices] shorthand for [objectIndices] + [expressionIndices]
-     * @param[allIndices] shorthand for [objectIndices] + [expressionIndices] +
-     * [borderColorIndices] + [fillColorIndices] + [labelIndices]
+     * @param[allIndices] shorthand for [objectIndices] + [expressionIndices] + [stylingIndices]
      */
     fun accumulateChangedLocations(
         objectIndices: Set<Ix> = emptySet(),
         expressionIndices: Set<Ix> = emptySet(),
-        borderColorIndices: Set<Ix> = emptySet(),
-        fillColorIndices: Set<Ix> = emptySet(),
-        labelIndices: Set<Ix> = emptySet(),
+        stylingIndices: Set<Ix> = emptySet(),
         regions: Boolean = false,
         backgroundColor: Boolean = false,
         chessboardPattern: Boolean = false,
         chessboardColor: Boolean = false,
-        phantoms: Boolean = false,
         selection: Boolean = false,
         center: Boolean = false,
         regionColor: Boolean = false,
@@ -136,14 +132,11 @@ class ChangeHistory(
             SaveState.Change.Locations(
                 objectIndices = objectIndices + newIndices + allIndices,
                 expressionIndices = expressionIndices + newIndices + allIndices,
-                borderColorIndices = borderColorIndices + allIndices,
-                fillColorIndices = fillColorIndices + allIndices,
-                labelIndices = labelIndices + allIndices,
+                stylingIndices = stylingIndices + allIndices,
                 regions = regions,
                 backgroundColor = backgroundColor,
                 chessboardPattern = chessboardPattern,
                 chessboardColor = chessboardColor,
-                phantoms = phantoms,
                 selection = selection,
                 center = center,
                 regionColor = regionColor,

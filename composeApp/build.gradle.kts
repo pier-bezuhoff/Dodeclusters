@@ -17,10 +17,10 @@ kotlin {
         //noinspection GradleDependency
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
-        withJava()
         androidResources {
             enable = true
         }
+        withJava()
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }

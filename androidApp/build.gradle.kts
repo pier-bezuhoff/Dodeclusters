@@ -43,6 +43,7 @@ android {
     }
 }
 
+// ive seen deps being put in kotlin block
 dependencies {
     // we only need deps used in MainActivity here
     implementation(projects.composeApp)

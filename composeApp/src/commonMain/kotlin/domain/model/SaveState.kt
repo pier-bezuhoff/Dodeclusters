@@ -17,6 +17,7 @@ import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.reIndex
 import domain.expressions.withoutPointsAt
 import domain.reindexingMap
+import domain.setOrRemove
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -24,7 +25,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 
 /** EditorViewModel's save-state for history.
- * [objects].indices must span all of [borderColors].keys and [labels].keys.
+ * [objects].indices must span all of [styling].keys.
  * And [objects].indices == [expressions].keys */
 @Immutable
 @Serializable
@@ -32,15 +33,12 @@ import kotlinx.serialization.modules.SerializersModule
 data class SaveState(
     val objects: List<GCircleOrConcreteAcPath?>,
     val expressions: Map<Ix, ConformalExprOutput?>,
-    val borderColors: Map<Ix, ColorAsCss> = emptyMap(),
-    val fillColors: Map<Ix, ColorAsCss> = emptyMap(),
-    val labels: Map<Ix, String> = emptyMap(),
+    val styling: Map<Ix, Styling> = emptyMap(),
     val regions: List<LogicalRegion> = emptyList(),
     val backgroundColor: ColorAsCss? = null,
     val chessboardPattern: ChessboardPattern = ChessboardPattern.NONE,
     val chessboardColor: ColorAsCss? = null,
-    val phantoms: Set<Ix> = emptySet(),
-    @SerialName("selections") // TMP: for backwards compat, diff name cuz the type changed
+    @SerialName("selections") // TMP: for backwards compat, diff name cuz the type has changed
     val selection: Selection = Selection(),
     val center: SerializableOffset = Offset.Zero,
     val regionColor: ColorAsCss? = null,
@@ -59,11 +57,7 @@ data class SaveState(
             @Serializable
             data class Expressions(val indices: Set<Ix>) : Location
             @Serializable
-            data class BorderColors(val indices: Set<Ix>) : Location
-            @Serializable
-            data class FillColors(val indices: Set<Ix>) : Location
-            @Serializable
-            data class Labels(val indices: Set<Ix>) : Location
+            data class Styling(val indices: Set<Ix>) : Location
             @Serializable
             data object Regions : Location
             @Serializable
@@ -72,8 +66,6 @@ data class SaveState(
             data object ChessboardPattern : Location
             @Serializable
             data object ChessboardColor : Location
-            @Serializable
-            data object Phantoms : Location
             @Serializable
             data object Selection : Location
             @Serializable
@@ -87,14 +79,11 @@ data class SaveState(
         data class Locations(
             val objectIndices: Set<Ix> = emptySet(),
             val expressionIndices: Set<Ix> = emptySet(),
-            val borderColorIndices: Set<Ix> = emptySet(),
-            val fillColorIndices: Set<Ix> = emptySet(),
-            val labelIndices: Set<Ix> = emptySet(),
+            val stylingIndices: Set<Ix> = emptySet(),
             val regions: Boolean = false,
             val backgroundColor: Boolean = false,
             val chessboardPattern: Boolean = false,
             val chessboardColor: Boolean = false,
-            val phantoms: Boolean = false,
             val selection: Boolean = false,
             val center: Boolean = false,
             val regionColor: Boolean = false,
@@ -103,12 +92,8 @@ data class SaveState(
                 if (objectIndices.isEmpty()) null else Location.Objects(objectIndices)
             inline val expressionsLocation: Location.Expressions? get() =
                 if (expressionIndices.isEmpty()) null else Location.Expressions(expressionIndices)
-            inline val borderColorsLocation: Location.BorderColors? get() =
-                if (borderColorIndices.isEmpty()) null else Location.BorderColors(borderColorIndices)
-            inline val fillColorsLocation: Location.FillColors? get() =
-                if (fillColorIndices.isEmpty()) null else Location.FillColors(fillColorIndices)
-            inline val labelsLocation: Location.Labels? get() =
-                if (labelIndices.isEmpty()) null else Location.Labels(labelIndices)
+            inline val stylingLocation: Location.Styling? get() =
+                if (stylingIndices.isEmpty()) null else Location.Styling(stylingIndices)
             inline val regionsLocation: Location.Regions? get() =
                 if (regions) Location.Regions else null
             inline val backgroundColorLocation: Location.BackgroundColor? get() =
@@ -117,8 +102,6 @@ data class SaveState(
                 if (chessboardPattern) Location.ChessboardPattern else null
             inline val chessboardColorLocation: Location.ChessboardColor? get() =
                 if (chessboardColor) Location.ChessboardColor else null
-            inline val phantomsLocation: Location.Phantoms? get() =
-                if (phantoms) Location.Phantoms else null
             inline val selectionLocation: Location.Selection? get() =
                 if (selection) Location.Selection else null
             inline val centerLocation: Location.Center? get() =
@@ -130,14 +113,11 @@ data class SaveState(
                 Locations(
                     objectIndices = objectIndices.union(locations.objectIndices),
                     expressionIndices = expressionIndices.union(locations.expressionIndices),
-                    borderColorIndices = borderColorIndices.union(locations.borderColorIndices),
-                    fillColorIndices = fillColorIndices.union(locations.fillColorIndices),
-                    labelIndices = labelIndices.union(locations.labelIndices),
+                    stylingIndices = stylingIndices.union(locations.stylingIndices),
                     regions = regions || locations.regions,
                     backgroundColor = backgroundColor || locations.backgroundColor,
                     chessboardPattern = chessboardPattern || locations.chessboardPattern,
                     chessboardColor = chessboardColor || locations.chessboardColor,
-                    phantoms = phantoms || locations.phantoms,
                     selection = selection || locations.selection,
                     center = center || locations.center,
                     regionColor = regionColor || locations.regionColor,
@@ -159,14 +139,8 @@ data class SaveState(
         @SerialName("Expressions")
         data class Expressions(val expressions: Map<Ix, ConformalExprOutput?>) : Update
         @Serializable
-        @SerialName("BorderColors")
-        data class BorderColors(val colors: Map<Ix, ColorAsCss?>) : Update
-        @Serializable
-        @SerialName("FillColors")
-        data class FillColors(val colors: Map<Ix, ColorAsCss?>) : Update
-        @Serializable
-        @SerialName("Labels")
-        data class Labels(val labels: Map<Ix, String?>) : Update
+        @SerialName("Styling")
+        data class Styling(val styling: Map<Ix, domain.model.Styling?>) : Update
         @Serializable
         @SerialName("Regions")
         data class Regions(val regions: List<LogicalRegion>) : Replacement
@@ -179,9 +153,6 @@ data class SaveState(
         @Serializable
         @SerialName("ChessboardColor")
         data class ChessboardColor(val color: ColorAsCss?) : Replacement
-        @Serializable
-        @SerialName("Phantoms")
-        data class Phantoms(val phantoms: Set<Ix>) : Replacement
         @Serializable
         @SerialName("Selection")
         data class Selection(val selection: domain.model.Selection) : Replacement
@@ -199,32 +170,26 @@ data class SaveState(
     data class Changes(
         val objects: Change.Objects? = null,
         val expressions: Change.Expressions? = null,
-        val borderColors: Change.BorderColors? = null,
-        val fillColors: Change.FillColors? = null,
-        val labels: Change.Labels? = null,
+        val styling: Change.Styling? = null,
         val regions: Change.Regions? = null,
         val backgroundColor: Change.BackgroundColor? = null,
         val chessboardPattern: Change.ChessboardPattern? = null,
         val chessboardColor: Change.ChessboardColor? = null,
-        val phantoms: Change.Phantoms? = null,
         val selection: Change.Selection? = null,
         val center: Change.Center? = null,
         val regionColor: Change.RegionColor? = null,
     ) {
         val changes: List<Change> get() = listOfNotNull(
-            objects, expressions, borderColors, fillColors, labels, regions, backgroundColor, chessboardPattern, chessboardColor, phantoms, selection, center, regionColor,
+            objects, expressions, styling, regions, backgroundColor, chessboardPattern, chessboardColor, selection, center, regionColor,
         )
         val locations: Change.Locations get() = Change.Locations(
             objectIndices = objects?.objects?.keys ?: emptySet(),
             expressionIndices = expressions?.expressions?.keys ?: emptySet(),
-            borderColorIndices = borderColors?.colors?.keys ?: emptySet(),
-            fillColorIndices = fillColors?.colors?.keys ?: emptySet(),
-            labelIndices = labels?.labels?.keys ?: emptySet(),
+            stylingIndices = styling?.styling?.keys ?: emptySet(),
             regions = regions != null,
             backgroundColor = backgroundColor != null,
             chessboardPattern = chessboardPattern != null,
             chessboardColor = chessboardColor != null,
-            phantoms = phantoms != null,
             selection = selection != null,
             center = center != null,
             regionColor = regionColor != null,
@@ -239,20 +204,13 @@ data class SaveState(
                 expressions = combineNullables(expressions, changes.expressions) { a, b ->
                     Change.Expressions(a.expressions + b.expressions)
                 },
-                borderColors = combineNullables(borderColors, changes.borderColors) { a, b ->
-                    Change.BorderColors(a.colors + b.colors)
-                },
-                fillColors = combineNullables(fillColors, changes.fillColors) { a, b ->
-                    Change.FillColors(a.colors + b.colors)
-                },
-                labels = combineNullables(labels, changes.labels) { a, b ->
-                    Change.Labels(a.labels + b.labels)
+                styling = combineNullables(styling, changes.styling) { a, b ->
+                    Change.Styling(a.styling + b.styling)
                 },
                 regions = changes.regions ?: regions,
                 backgroundColor = changes.backgroundColor ?: backgroundColor,
                 chessboardPattern = changes.chessboardPattern ?: chessboardPattern,
                 chessboardColor = changes.chessboardColor ?: chessboardColor,
-                phantoms = changes.phantoms ?: phantoms,
                 selection = changes.selection ?: selection,
                 center = changes.center ?: center,
                 regionColor = changes.regionColor ?: regionColor,
@@ -271,14 +229,8 @@ data class SaveState(
             expressions = locations.expressionsLocation?.let { changeLocation ->
                 Change.Expressions(changeLocation.indices.associateWith { ix -> expressions[ix] })
             },
-            borderColors = locations.borderColorsLocation?.let { changeLocation ->
-                Change.BorderColors(changeLocation.indices.associateWith { ix -> this@SaveState.borderColors[ix] })
-            },
-            fillColors = locations.fillColorsLocation?.let { changeLocation ->
-                Change.FillColors(changeLocation.indices.associateWith { ix -> this@SaveState.fillColors[ix] })
-            },
-            labels = locations.labelsLocation?.let { changeLocation ->
-                Change.Labels(changeLocation.indices.associateWith { ix -> this@SaveState.labels[ix] })
+            styling = locations.stylingLocation?.let { changeLocation ->
+                Change.Styling(changeLocation.indices.associateWith { ix -> styling[ix] })
             },
             regions =
                 if (locations.regions) Change.Regions(regions) else null,
@@ -288,8 +240,6 @@ data class SaveState(
                 if (locations.chessboardPattern) Change.ChessboardPattern(chessboardPattern) else null,
             chessboardColor =
                 if (locations.chessboardColor) Change.ChessboardColor(chessboardColor) else null,
-            phantoms =
-                if (locations.phantoms) Change.Phantoms(phantoms) else null,
             selection =
                 if (locations.selection) Change.Selection(selection) else null,
             center =
@@ -304,12 +254,8 @@ data class SaveState(
                 Change.Objects(change.objects.mapValues { (ix, _) -> objects.getOrNull(ix) })
             is Change.Expressions ->
                 Change.Expressions(change.expressions.mapValues { (ix, _) -> expressions[ix] })
-            is Change.BorderColors ->
-                Change.BorderColors(change.colors.mapValues { (ix, _) -> this@SaveState.borderColors[ix] })
-            is Change.FillColors ->
-                Change.FillColors(change.colors.mapValues { (ix, _) -> this@SaveState.fillColors[ix] })
-            is Change.Labels ->
-                Change.Labels(change.labels.mapValues { (ix, _) -> this@SaveState.labels[ix] })
+            is Change.Styling ->
+                Change.Styling(change.styling.mapValues { (ix, _) -> this@SaveState.styling[ix] })
             is Change.Regions ->
                 Change.Regions(regions)
             is Change.BackgroundColor ->
@@ -318,8 +264,6 @@ data class SaveState(
                 Change.ChessboardPattern(chessboardPattern)
             is Change.ChessboardColor ->
                 Change.ChessboardColor(chessboardColor)
-            is Change.Phantoms ->
-                Change.Phantoms(phantoms)
             is Change.Selection ->
                 Change.Selection(selection)
             is Change.Center ->
@@ -334,14 +278,11 @@ data class SaveState(
     fun applyChanges(changes: List<Change>): SaveState {
         val objects: MutableList<GCircleOrConcreteAcPath?> = this.objects.toMutableList()
         val expressions: MutableMap<Ix, ConformalExprOutput?> = this.expressions.toMutableMap()
-        val borderColors: MutableMap<Ix, ColorAsCss> = this.borderColors.toMutableMap()
-        val fillColors: MutableMap<Ix, ColorAsCss> = this.fillColors.toMutableMap()
-        val labels: MutableMap<Ix, String> = this.labels.toMutableMap()
+        val styling: MutableMap<Ix, Styling> = this.styling.toMutableMap()
         var regions: List<LogicalRegion> = this.regions
         var backgroundColor: Color? = this.backgroundColor
         var chessboardPattern: ChessboardPattern = this.chessboardPattern
         var chessboardColor: Color? = this.chessboardColor
-        var phantoms: Set<Ix> = this.phantoms
         var selection: Selection = this.selection
         var center: Offset = this.center
         var regionColor: Color? = this.regionColor
@@ -364,38 +305,15 @@ data class SaveState(
                 is Change.Expressions -> {
                     expressions.putAll(change.expressions)
                 }
-                is Change.BorderColors -> {
-                    for ((ix, color) in change.colors) {
-                        if (color == null) {
-                            borderColors.remove(ix)
-                        } else {
-                            borderColors[ix] = color
-                        }
-                    }
-                }
-                is Change.FillColors -> {
-                    for ((ix, color) in change.colors) {
-                        if (color == null) {
-                            fillColors.remove(ix)
-                        } else {
-                            fillColors[ix] = color
-                        }
-                    }
-                }
-                is Change.Labels -> {
-                    for ((ix, label) in change.labels) {
-                        if (label == null) {
-                            labels.remove(ix)
-                        } else {
-                            labels[ix] = label
-                        }
+                is Change.Styling -> {
+                    for ((ix, style) in change.styling) {
+                        styling.setOrRemove(ix, style)
                     }
                 }
                 is Change.Regions -> regions = change.regions
                 is Change.BackgroundColor -> backgroundColor = change.color
                 is Change.ChessboardPattern -> chessboardPattern = change.pattern
                 is Change.ChessboardColor -> chessboardColor = change.color
-                is Change.Phantoms -> phantoms = change.phantoms
                 is Change.Selection -> selection = change.selection
                 is Change.Center -> center = change.center
                 is Change.RegionColor -> regionColor = change.color
@@ -404,14 +322,11 @@ data class SaveState(
         return SaveState(
             objects = objects,
             expressions = expressions,
-            borderColors = borderColors,
-            fillColors = fillColors,
-            labels = labels,
+            styling = styling,
             regions = regions,
             backgroundColor = backgroundColor,
             chessboardPattern = chessboardPattern,
             chessboardColor = chessboardColor,
-            phantoms = phantoms,
             selection = selection,
             center = center,
             regionColor = regionColor
@@ -450,35 +365,17 @@ data class SaveState(
                     else
                         Change.Expressions(changedIndices.associateWith { expressions[it] })
                 },
-            borderColors =
-                if (this@SaveState.borderColors == earlierState.borderColors) null
+            styling =
+                if (this@SaveState.styling == earlierState.styling) null
                 else {
-                    val indices: Set<Ix> = this@SaveState.borderColors.keys + earlierState.borderColors.keys
-                    val changedIndices = indices.filter { this@SaveState.borderColors[it] != earlierState.borderColors[it] }
+                    val indices: Set<Ix> = this@SaveState.styling.keys + earlierState.styling.keys
+                    val changedIndices = indices.filter {
+                        this@SaveState.styling[it] != earlierState.styling[it]
+                    }
                     if (changedIndices.isEmpty())
                         null
                     else
-                        Change.BorderColors(changedIndices.associateWith { this@SaveState.borderColors[it] })
-                },
-            fillColors =
-                if (this@SaveState.fillColors == earlierState.fillColors) null
-                else {
-                    val indices: Set<Ix> = this@SaveState.fillColors.keys + earlierState.fillColors.keys
-                    val changedIndices = indices.filter { this@SaveState.fillColors[it] != earlierState.fillColors[it] }
-                    if (changedIndices.isEmpty())
-                        null
-                    else
-                        Change.FillColors(changedIndices.associateWith { this@SaveState.fillColors[it] })
-                },
-            labels =
-                if (this@SaveState.labels == earlierState.labels) null
-                else {
-                    val indices: Set<Ix> = this@SaveState.labels.keys + earlierState.labels.keys
-                    val changedIndices = indices.filter { this@SaveState.labels[it] != earlierState.labels[it] }
-                    if (changedIndices.isEmpty())
-                        null
-                    else
-                        Change.Labels(changedIndices.associateWith { this@SaveState.labels[it] })
+                        Change.Styling(changedIndices.associateWith { this@SaveState.styling[it] })
                 },
             regions =
                 if (regions == earlierState.regions) null
@@ -492,9 +389,6 @@ data class SaveState(
             chessboardColor =
                 if (chessboardColor == earlierState.chessboardColor) null
                 else Change.ChessboardColor(chessboardColor),
-            phantoms =
-                if (phantoms == earlierState.phantoms) null
-                else Change.Phantoms(phantoms),
             selection =
                 if (selection == earlierState.selection) null
                 else Change.Selection(selection),
@@ -541,17 +435,9 @@ data class SaveState(
                             newIndex to expression?.reIndex { reindexing[it]!! }
                     }
                 }.toMap(),
-            borderColors = this@SaveState.borderColors
-                .mapNotNull { (oldIndex, color) ->
-                    reindexing[oldIndex]?.let { it to color }
-                }.toMap(),
-            fillColors = this@SaveState.fillColors
-                .mapNotNull { (oldIndex, color) ->
-                    reindexing[oldIndex]?.let { it to color }
-                }.toMap(),
-            labels = this@SaveState.labels
-                .mapNotNull { (oldIndex, label) ->
-                    reindexing[oldIndex]?.let { it to label }
+            styling = this@SaveState.styling
+                .mapNotNull { (oldIndex, style) ->
+                    reindexing[oldIndex]?.let { it to style }
                 }.toMap(),
             regions = regions
                 .mapNotNull { region ->
@@ -563,7 +449,6 @@ data class SaveState(
                         region.copy(insides = insides, outsides = outsides)
                 }
             ,
-            phantoms = phantoms.mapNotNull { reindexing[it] }.toSet(),
             selection = selection.copy(
                 gCircles = selection.gCircles.mapNotNull { reindexing[it] },
                 arcPaths = selection.arcPaths.mapNotNull { reindexing[it] },
@@ -636,14 +521,11 @@ data class SaveState(
             SaveState(
                 objects = objects,
                 expressions = expressions,
-                borderColors = emptyMap(),
-                fillColors = emptyMap(),
-                labels = emptyMap(),
+                styling = emptyMap(),
                 regions = emptyList(),
                 backgroundColor = null,
                 chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT,
                 chessboardColor = Color(56, 136, 116),
-                phantoms = emptySet(),
                 selection = Selection(),
                 center = Offset.Zero,
                 regionColor = null,

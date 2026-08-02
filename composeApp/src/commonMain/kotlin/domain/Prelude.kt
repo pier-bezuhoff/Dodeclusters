@@ -109,13 +109,6 @@ inline fun <reified A, reified B> tryCatch2(
     }
 }
 
-inline fun <K, V : Any> MutableMap<K, V>.setOrRemove(key: K, value: V?) {
-    if (value == null)
-        remove(key)
-    else
-        set(key, value)
-}
-
 /** `(A \ B) U (B \ A)`, symmetric difference */
 infix fun <T> Set<T>.xor(other: Set<T>): Set<T> =
     (this - other).union(other - this)
