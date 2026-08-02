@@ -77,7 +77,6 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.actions
 import dodeclusters.composeapp.generated.resources.add_circle
 import dodeclusters.composeapp.generated.resources.cancel
-import dodeclusters.composeapp.generated.resources.collapse
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.confirm

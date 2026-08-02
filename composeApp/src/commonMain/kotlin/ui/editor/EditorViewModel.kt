@@ -558,8 +558,8 @@ class EditorViewModel : ViewModel() {
                 "propertyInvalidation #${objectModel.propertyInvalidations}"
         )
 //        val circle = objects[expressions.circleIndices.first()] as Circle
-        val line = objects[expressions.lineIndices.first()] as Line
-        val line2 = objects[expressions.lineIndices.last()] as Line
+//        val line = objects[expressions.lineIndices.first()] as Line
+//        val line2 = objects[expressions.lineIndices.last()] as Line
 //        val point = objects[expressions.pointIndices.first()] as Point
 //        val point2 = objects[expressions.pointIndices.toList()[1]] as Point
 //        val point3 = objects[expressions.pointIndices.last()] as Point
@@ -574,8 +574,8 @@ class EditorViewModel : ViewModel() {
                     appendLine("$selectedExpressionsString;")
                 if (selectedArcPathsString.isNotEmpty())
                     appendLine("$selectedArcPathsString;")
-                clear() // tmp
-                append(line2.getRegionLocation(line))
+//                clear() // tmp
+//                append(line2.getRegionLocation(line))
             }
             showSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
         }
@@ -1200,6 +1200,7 @@ class EditorViewModel : ViewModel() {
     ): Pair<CompressedRegionConstraints, RegionConstraints> {
         val fullConstraints = getUncompressedRegionSurrounding(absolutePosition, bounds)
         val compressedConstraints = fullConstraints.compressConstraints(objects)
+//        println("compressed $fullConstraints -> $compressedConstraints")
         return Pair(compressedConstraints, fullConstraints)
     }
 
@@ -3693,13 +3694,16 @@ class EditorViewModel : ViewModel() {
                         recordHistory()
                         undo() // contrived way to go to the before-adj savepoint
                     }
-                    is SubMode.RectangularSelect,
+                    is SubMode.RectangularSelect -> {
+                        clearSelection()
+                        submode = SubMode.RectangularSelect()
+                    }
                     is SubMode.SelectionChoices ->
                         submode = null
                     else -> {
                         when (mode) {
                             SelectionMode.Multiselect -> {
-                                if (objectSelection.isNotEmpty()) {
+                                if (selection.isNotEmpty()) {
                                     submode = null
                                     clearSelection()
                                 } else {

@@ -60,10 +60,6 @@ data class RegionConstraints(
         allObjects: List<*>,
     ): CompressedRegionConstraints {
         val (sievedIns, sievedOuts) = compressConstraintsByRelativeContainment(allObjects)
-            .also {
-                println("compressed $this -> $it")
-                return it
-            }
         val (essentialInsIxs, essentialOutsIxs) =
             compressConstraintsByIntersectionPoints(
                 sievedIns.map { ix ->
@@ -122,7 +118,6 @@ private fun pointSatisfiesConstraints(
     inConstraints.all { point liesOnOrInside it } &&
     outConstraints.all { point liesOnOrOutside it }
 
-// FIX: parallel line compression
 // TODO: skip extremely small arcs (they can lead to display artifacts)
 /**
  * Filters out all unused 'in' and 'out' separators by checking intersection points.
