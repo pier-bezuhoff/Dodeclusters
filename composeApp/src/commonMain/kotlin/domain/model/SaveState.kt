@@ -7,6 +7,7 @@ import core.geometry.Circle
 import core.geometry.GCircleOrConcreteAcPath
 import core.geometry.Point
 import domain.ColorAsCss
+import domain.ColorCssSerializer
 import domain.Ix
 import domain.SerializableOffset
 import domain.expressions.ArcPath
@@ -18,17 +19,20 @@ import domain.expressions.reIndex
 import domain.expressions.withoutPointsAt
 import domain.reindexingMap
 import domain.setOrRemove
+import domain.update
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KeepGeneratedSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonTransformingSerializer
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.modules.SerializersModule
 
@@ -38,8 +42,8 @@ import kotlinx.serialization.modules.SerializersModule
  * And [objects].indices == [expressions].keys */
 @OptIn(ExperimentalSerializationApi::class)
 @Immutable
-//@KeepGeneratedSerializer
-@Serializable//(with = SaveState.CompatSerializer::class)
+@KeepGeneratedSerializer
+@Serializable(with = SaveState.CompatSerializer::class)
 @SerialName("SaveState")
 data class SaveState(
     val objects: List<GCircleOrConcreteAcPath?>,
@@ -491,20 +495,75 @@ data class SaveState(
     }
 
     object CompatSerializer : JsonTransformingSerializer<SaveState>(
-        serializer() //generatedSerializer()
+        generatedSerializer()
     ) {
-        override fun transformDeserialize(element: JsonElement): JsonElement {
-            val jsonObject = element.jsonObject
-            return when {
-                "objectss" in jsonObject -> {
-                    val jsonMap = jsonObject.toMutableMap()
-                    jsonMap["objects"] = jsonMap["objectss"]!!
-                    jsonMap.remove("objectss")
-                    JsonObject(jsonMap)
-                }
-                else -> jsonObject
-            }
+        private val json = Json {
+            encodeDefaults = false
         }
+        override fun transformDeserialize(element: JsonElement): JsonElement =
+            when (element) {
+                is JsonObject -> when {
+                    "styling" !in element -> {
+                        val state = element.toMutableMap()
+                        // indices are strings
+                        val styling = mutableMapOf<String, Styling>()
+                        when (val borderColors = element["borderColors"]) {
+                            is JsonObject if (borderColors.all { (_, color) -> color is JsonPrimitive }) -> {
+                                borderColors.forEach { (ix, color) ->
+                                    styling.update(ix, Styling()) {
+                                        it.copy(borderColor = json.decodeFromJsonElement(ColorCssSerializer, color))
+                                    }
+                                }
+                                state.remove("borderColors")
+                            }
+                            else -> {}
+                        }
+                        when (val fillColors = element["fillColors"]) {
+                            is JsonObject if (fillColors.all { (_, color) -> color is JsonPrimitive }) -> {
+                                fillColors.forEach { (ix, color) ->
+                                    styling.update(ix, Styling()) {
+                                        it.copy(fillColor = json.decodeFromJsonElement(ColorCssSerializer, color))
+                                    }
+                                }
+                                state.remove("fillColors")
+                            }
+                            else -> {}
+                        }
+                        when (val labels = element["labels"]) {
+                            is JsonObject if (labels.all { (_, label) -> label is JsonPrimitive }) -> {
+                                labels.forEach { (ix, label) ->
+                                    styling.update(ix, Styling()) {
+                                        it.copy(label = Styling.Label(label.jsonPrimitive.content))
+                                    }
+                                }
+                                state.remove("labels")
+                            }
+                            else -> {}
+                        }
+                        when (val phantoms = element["phantoms"]) {
+                            is JsonArray if (phantoms.all { it is JsonPrimitive }) -> {
+                                phantoms.forEach { ix ->
+                                    styling.update(ix.jsonPrimitive.content, Styling()) {
+                                        it.copy(isPhantom = true)
+                                    }
+                                }
+                                state.remove("phantoms")
+                            }
+                            else -> {}
+                        }
+                        if (styling.isEmpty()) {
+                            element
+                        } else {
+                            state["styling"] = JsonObject(styling.mapValues {
+                                json.encodeToJsonElement(it)
+                            })
+                            JsonObject(state)
+                        }
+                    }
+                    else -> element
+                }
+                else -> element
+            }
     }
 
     companion object {
