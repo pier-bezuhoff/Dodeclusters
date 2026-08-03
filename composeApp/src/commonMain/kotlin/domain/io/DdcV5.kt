@@ -88,7 +88,7 @@ data class DdcV5(
                             }
                         if (token.label != null)
                             styling.update(ix, Styling()) {
-                                it.copy(label = token.label)
+                                it.copy(label = Styling.Label(token.label))
                             }
                         if (token.isPhantom)
                             styling.update(ix, Styling()) {
@@ -169,7 +169,7 @@ data class DdcV5(
                             else -> GCircleToken(
                                 representation = obj as? GCircle,
                                 expression = expressions[ix],
-                                label = this.styling[ix]?.label,
+                                label = this.styling[ix]?.label?.content,
                                 color = this.styling[ix]?.borderColor,
                                 isPhantom = this.styling[ix]?.isPhantom == true,
                             )

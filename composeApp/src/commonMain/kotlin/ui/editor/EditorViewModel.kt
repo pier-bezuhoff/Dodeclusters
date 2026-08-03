@@ -9,6 +9,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -142,19 +143,17 @@ class EditorViewModel : ViewModel() {
     val objects: List<GCircleOrConcreteAcPath?> = objectModel.displayObjects
     inline val expressions: ConformalExpressions get() =
         objectModel.expressions
-    val borderColors: Map<Ix, Color> = objectModel.borderColors
-    val fillColors: Map<Ix, Color> = objectModel.fillColors
-    // not in objectModel cuz i want it to be state-backed for nicer caching
-    var labels: Map<Ix, String> by mutableStateOf(mapOf())
-        private set
-    // alt name: ghost[ed] objects
-    val phantoms: Set<Ix> = objectModel.phantomObjectIndices
+    val styling: Map<Ix, Styling> = objectModel.styling
     // MAYBE: encapsulate regions into ObjectModel
     /** Filled regions delimited by some objects from [objects] */
     var regions: List<LogicalRegion> by mutableStateOf(listOf())
         private set
     var effects: List<Effect> by mutableStateOf(listOf())
     var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
+    val phantoms: Set<Ix> get() =
+        objectModel.styling.mapNotNull { (ix, style) ->
+            if (style.isPhantom) ix else null
+        }.toSet()
 
     var backgroundColor: Color? by mutableStateOf(null)
     var chessboardColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
@@ -206,6 +205,7 @@ class EditorViewModel : ViewModel() {
         private set
 
     private var loadedSettings: Settings = Settings()
+    // MAYBE: it's reasonable to keep the follwoing as a single Settings objects
     /** currently selected color */
     var regionColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
         private set
@@ -596,7 +596,6 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun loadConstellation(constellation: Constellation) {
-        labels = emptyMap()
         regions = emptyList() // important, since draws are async (otherwise can crash)
         clearSelection()
         objectModel.loadConstellation(constellation)
@@ -606,7 +605,6 @@ class EditorViewModel : ViewModel() {
             part.outsides.all { it in objectIndices }
         }
         backgroundColor = constellation.backgroundColor
-        labels = constellation.objectLabels
         objectModel.invalidate()
     }
 
@@ -631,15 +629,11 @@ class EditorViewModel : ViewModel() {
 
     private fun loadState(state: SaveState) {
         resetTransients()
-        labels = emptyMap()
         regions = emptyList() // important, since draws are async (otherwise can crash)
         clearSelection()
         objectModel.loadState(state)
         regions = state.regions
         backgroundColor = state.backgroundColor
-        labels = state.styling.mapNotNull { (ix, style) ->
-            style.label?.let { ix to it }
-        }.toMap()
         val validSelection = state.selection.copy( // just in case
             gCircles = state.selection.gCircles.filter { it in objects.indices },
             arcPaths = state.selection.arcPaths.filter { it in objects.indices },
@@ -831,8 +825,10 @@ class EditorViewModel : ViewModel() {
         sourceIndex: Ix,
         destinationIndex: Ix,
     ) {
-        objectModel.borderColors[sourceIndex]?.let { color ->
-            objectModel.borderColors[destinationIndex] = color
+        objectModel.styling[sourceIndex]?.borderColor?.let { color ->
+            objectModel.updateStyle(destinationIndex) {
+                it.copy(borderColor = color)
+            }
         }
     }
 
@@ -840,19 +836,23 @@ class EditorViewModel : ViewModel() {
         sourceIndex: Ix,
         destinationIndex: Ix,
     ) {
-        objectModel.fillColors[sourceIndex]?.let { color ->
-            objectModel.fillColors[destinationIndex] = color
+        objectModel.styling[sourceIndex]?.fillColor?.let { color ->
+            objectModel.updateStyle(destinationIndex) {
+                it.copy(fillColor = color)
+            }
         }
     }
 
+    /** copies [Styling] with empty label */
     private fun copyStyle(
         sourceIndex: Ix,
         destinationIndex: Ix,
     ) {
-        copyBorderColor(sourceIndex, destinationIndex)
-        copyFillColor(sourceIndex, destinationIndex)
-        if (sourceIndex in objectModel.phantomObjectIndices)
-            objectModel.phantomObjectIndices.add(destinationIndex)
+        objectModel.styling[sourceIndex]?.let { style ->
+            objectModel.updateStyle(destinationIndex) {
+                style.copy(label = null)
+            }
+        }
     }
 
     /**
@@ -1132,7 +1132,7 @@ class EditorViewModel : ViewModel() {
             val concreteArcPath = objects[ix] as? ConcreteArcPath
             concreteArcPath != null &&
                 concreteArcPath.isClosed &&
-                (notFilledIsOk || objectModel.fillColors[ix] != null) &&
+                (notFilledIsOk || styling[ix]?.fillColor != null) &&
                 absolutePosition liesInside concreteArcPath
         }
     }
@@ -1144,8 +1144,8 @@ class EditorViewModel : ViewModel() {
     ): Ix? {
         return getClosedArcPathsSurrounding(absolutePosition, potentialIndices, hasToBeFilled)
             .maxWithOrNull(Comparator { ix1: Ix, ix2: Ix ->
-                val filled1 = objectModel.fillColors[ix1] != null
-                val filled2 = objectModel.fillColors[ix2] != null
+                val filled1 = styling[ix1]?.fillColor != null
+                val filled2 = styling[ix2]?.fillColor != null
                 if (filled1) {
                     if (filled2) {
                         ix1.compareTo(ix2) // last index wins when both filled
@@ -1218,11 +1218,10 @@ class EditorViewModel : ViewModel() {
         else
             getClosedArcPathSurrounding(absolutePosition, bounds)
         if (ix != null) {
-            val fillColor = objectModel.fillColors[ix]
-            if (fillColor != regionColor) {
-                objectModel.fillColors[ix] = regionColor
-            } else {
-                objectModel.fillColors.remove(ix)
+            objectModel.updateStyle(ix) {
+                it.copy(fillColor =
+                    if (it.fillColor != regionColor) regionColor else null
+                )
             }
             return Unit
         }
@@ -1297,17 +1296,21 @@ class EditorViewModel : ViewModel() {
     // MAYBE: also add backgroundColor (tho it is MT.surface by default and thus 0-contrast)
     fun getColorsByMostUsed(): List<Color> {
         hug(objectModel.propertyInvalidations)
-        val regionBorderColors = regions.mapNotNull { it.borderColor }
-        val regionFillColors = regions.map { it.fillColor }
-        val borderColors = objectModel.borderColors.values
-        val fillColors = objectModel.fillColors.values
-        val chessboardColors =
-            if (chessboardPattern == ChessboardPattern.NONE)
-                emptyList()
-            else
-                listOf(chessboardColor)
-        return (regionBorderColors + regionFillColors + borderColors + fillColors + chessboardColors)
-            .sortedByFrequency()
+        val allColors = mutableListOf<Color>()
+        for (region in regions) {
+            if (region.borderColor != null)
+                allColors.add(region.borderColor)
+            allColors.add(region.fillColor)
+        }
+        for (style in styling.values) {
+            if (style.borderColor != null)
+                allColors.add(style.borderColor)
+            if (style.fillColor != null)
+                allColors.add(style.fillColor)
+        }
+        if (chessboardPattern != ChessboardPattern.NONE)
+            allColors.add(chessboardColor)
+        return allColors.sortedByFrequency()
     }
 
     /**
@@ -1612,7 +1615,9 @@ class EditorViewModel : ViewModel() {
     fun concludeBorderColorPicker(colorPickerParameters: ColorPickerParameters) {
         val color = colorPickerParameters.currentColor
         for (ix in selection.indices) {
-            objectModel.borderColors[ix] = color
+            objectModel.updateStyle(ix) {
+                it.copy(borderColor = color)
+            }
         }
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
@@ -1623,12 +1628,12 @@ class EditorViewModel : ViewModel() {
     fun concludeFillColorPicker(colorPickerParameters: ColorPickerParameters) {
         val color = colorPickerParameters.currentColor
         for (ix in selection.arcPaths) {
-            val borderColor = objectModel.borderColors[ix]
-            // or if borderColor == null?
-            if (borderColor == objectModel.fillColors[ix]) {
-                objectModel.borderColors[ix] = color
+            objectModel.updateStyle(ix) {
+                it.copy(
+                    borderColor = if (it.borderColor == it.fillColor) color else it.borderColor,
+                    fillColor = color,
+                )
             }
-            objectModel.fillColors[ix] = color
         }
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
@@ -1662,14 +1667,14 @@ class EditorViewModel : ViewModel() {
     fun getMostCommonBorderColorInSelection(): Color? {
         hug(objectModel.propertyInvalidations)
         return selection.indices
-            .map { objectModel.borderColors[it] }
+            .map { styling[it]?.borderColor }
             .mostCommonOf { it }
     }
 
     fun getMostCommonFillColorInSelection(): Color? {
         hug(objectModel.propertyInvalidations)
         return selection.arcPaths
-            .map { objectModel.fillColors[it] }
+            .map { styling[it]?.fillColor }
             .mostCommonOf { it }
     }
 
@@ -1764,21 +1769,21 @@ class EditorViewModel : ViewModel() {
     }
 
     fun setLabel(label: String?) {
-        val labels = labels.toMutableMap()
-        if (label == null) {
-            labels -= objectSelection.toSet()
-        } else {
-            for (ix in objectSelection) {
-                labels[ix] = label
-            }
+        for (ix in objectSelection) {
+            // idt we need to forget label shift when removing the label
+            objectModel.updateStyle(ix) { style -> style.copy(
+                label = label?.let { Styling.Label(it) }
+            ) }
         }
-        this@EditorViewModel.labels = labels.toMap()
         openedDialog = null
+        objectModel.invalidate()
         recordHistory()
     }
 
     private fun markSelectedObjectsAsPhantoms() {
-        objectModel.phantomObjectIndices.addAll(objectSelection)
+        for (ix in objectSelection) {
+            objectModel.updateStyle(ix) { it.copy(isPhantom = true) }
+        }
         selection = selection.copy(gCircles = emptyList())
         // showPhantomObjects = false // i think this behavior is confuzzling
         objectModel.invalidate()
@@ -1786,7 +1791,9 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun unmarkSelectedObjectsAsPhantoms() {
-        objectModel.phantomObjectIndices.removeAll(objectSelection.toSet())
+        for (ix in objectSelection) {
+            objectModel.updateStyle(ix) { it.copy(isPhantom = false) }
+        }
         objectModel.invalidate()
         recordHistory()
     }
@@ -2533,14 +2540,14 @@ class EditorViewModel : ViewModel() {
                 submode = SubMode.SelectionChoices(
                     (selectablePoints + selectableCircles).mapNotNull { ix ->
                         val obj = (objects[ix] as? GCircle) ?: return@mapNotNull null
-                        val color = objectModel.borderColors[ix]
+                        val color = styling[ix]?.borderColor
                         SubMode.SelectionChoices.Choice(
                             index = ix, objectOrArcPath = obj,
                             borderColor = color, fillColor = color,
                         )
                     } + selectableArcPaths.map { ix ->
-                        val borderColor = objectModel.borderColors[ix]
-                        val fillColor = objectModel.fillColors[ix]
+                        val borderColor = styling[ix]?.borderColor
+                        val fillColor = styling[ix]?.fillColor
                         SubMode.SelectionChoices.Choice(
                             index = ix, objectOrArcPath = null,
                             borderColor = borderColor, fillColor = fillColor,
@@ -3744,7 +3751,7 @@ class EditorViewModel : ViewModel() {
                     val midpointIndex = if (existingMidpointIndex == null) {
                         val midpoint = expressions.addSoloExpr(midpointExpr) as? Point
                         val ix = objectModel.addDownscaledObject(midpoint)
-                        objectModel.phantomObjectIndices.add(ix)
+                        objectModel.updateStyle(ix) { it.copy(isPhantom = true) }
                         ix
                     } else existingMidpointIndex
                     ArcPath.Arc.By3Points(middlePointIndex = midpointIndex)
@@ -4828,41 +4835,17 @@ class EditorViewModel : ViewModel() {
         val center = computeAbsoluteCenter() ?: Offset.Zero
         // NOTE: it's important to copy mutable collections
         val size = min(objects.size, expressions.expressions.size)
-        val styling = mutableMapOf<Ix, Styling>()
-        objectModel.borderColors.forEach { (ix, borderColor) ->
-            if (ix < size) {
-                styling.update(ix, Styling()) { it.copy(borderColor = borderColor) }
-            }
-        }
-        objectModel.fillColors.forEach { (ix, fillColor) ->
-            if (ix < size) {
-                styling.update(ix, Styling()) { it.copy(fillColor = fillColor) }
-            }
-        }
-        labels.forEach { (ix, label) ->
-            if (ix < size) {
-                styling.update(ix, Styling()) { it.copy(label = label) }
-            }
-        }
-        objectModel.phantomObjectIndices.forEach { ix ->
-            if (ix < size) {
-                styling.update(ix, Styling()) { it.copy(isPhantom = true) }
-            }
-        }
         return SaveState(
             objects = objectModel.displayObjects.take(size).toList(),
             expressions = expressions.expressions.filterKeys { it < size }.toMap(),
-            styling = styling,
+            styling = objectModel.styling.filterKeys { it < size },
             regions = regions.mapNotNull { region ->
                 val insides = region.insides.filter { it < size }.toSet()
                 val outsides = region.outsides.filter { it < size }.toSet()
                 if (insides.isEmpty() && outsides.isEmpty())
                     null
                 else
-                    region.copy(
-                        insides = insides,
-                        outsides = outsides,
-                    )
+                    region.copy(insides = insides, outsides = outsides)
             },
             backgroundColor = backgroundColor,
             chessboardPattern = chessboardPattern,
@@ -4884,13 +4867,20 @@ class EditorViewModel : ViewModel() {
             if (restoreLastSave) {
                 // NOTE: can crash when the underlying format changes
                 val saveState = runCatching { platform.autosaveStore.get() }
-                    .onFailure { it.printStackTrace() }
+                    .onFailure {
+                        println("VM.restoreFromDisk: failed to retrieve autosave")
+                        it.printStackTrace()
+                    }
                     .getOrNull()
                 if (saveState != null) {
                     restoreFromState(saveState)
                 } else {
+                    println("fallback to last VM.state")
                     val vmState = runCatching { platform.lastStateStore.get() }
-                        .onFailure { it.printStackTrace() }
+                        .onFailure {
+                            println("VM.restoreFromDisk: failed to retrieve last state")
+                            it.printStackTrace()
+                        }
                         .getOrNull()
                     if (vmState == null) {
                         // i'd like to replace it with SaveState.SAMPLE
@@ -4904,13 +4894,19 @@ class EditorViewModel : ViewModel() {
                 restoreFromVMState(State.SAMPLE)
             }
             runCatching { platform.settingsStore.get() }
-                .onFailure { it.printStackTrace() }
+                .onFailure {
+                    println("VM.restoreFromDisk: failed to retrieve settings")
+                    it.printStackTrace()
+                }
                 .getOrNull()?.also { settings ->
                     loadSettings(settings)
                 }
             if (restoreLastSave) {
                 runCatching { platform.historyStore.get() }
-                    .onFailure { it.printStackTrace() }
+                    .onFailure {
+                        println("VM.restoreFromDisk: failed to retrieve history")
+                        it.printStackTrace()
+                    }
                     .getOrNull()?.also { historyState ->
                         history = historyState.load(undoIsEnabled, redoIsEnabled)
                     }

@@ -393,7 +393,7 @@ fun EditorScreenRoot(
         DialogType.LABEL_INPUT -> {
             LabelInputDialog(
                 previousLabel = viewModel.objectSelection
-                    .firstNotNullOfOrNull { viewModel.labels[it] }
+                    .firstNotNullOfOrNull { viewModel.styling[it]?.label?.content }
                 ,
                 // for debug
 //                details = "expr[${viewModel.selection.firstOrNull()}] = ${

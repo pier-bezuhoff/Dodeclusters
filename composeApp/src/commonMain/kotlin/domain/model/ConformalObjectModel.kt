@@ -18,7 +18,7 @@ import domain.expressions.ExprOutput
 import domain.expressions.IncidenceParameters
 import domain.expressions.ObjectConstruct
 import domain.expressions.computeIntersection
-import domain.setOrRemove
+import domain.update
 
 // MAYBE: additionally store GeneralizedCircle representations
 /**
@@ -26,9 +26,6 @@ import domain.setOrRemove
  * Very mutable, track [invalidationsState]/[invalidations] for changes and use with care.
  */
 class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcreteAcPath>() {
-
-    // layer order
-    private val layering: MutableList<Ix> = mutableListOf()
 
     override var expressions: ConformalExpressions =
         ConformalExpressions(emptyMap(), mutableListOf())
@@ -182,12 +179,16 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
         val objectSize = displayObjects.size
         for ((ix, color) in constellation.objectColors) {
             if (ix < objectSize) {
-                borderColors[ix] = color
+                styling.update(ix, Styling()) {
+                    it.copy(borderColor = color)
+                }
             }
         }
         for (phantomIndex in constellation.phantoms) {
             if (phantomIndex < objectSize) {
-                phantomObjectIndices.add(phantomIndex)
+                styling.update(phantomIndex, Styling()) {
+                    it.copy(isPhantom = true)
+                }
             }
         }
     }
@@ -217,14 +218,7 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
             objects = downscaledObjects,
         )
         val objectSize = displayObjects.size
-        for ((ix, style) in state.styling) {
-            if (ix < objectSize) {
-                borderColors.setOrRemove(ix, style.borderColor)
-                fillColors.setOrRemove(ix, style.fillColor)
-                if (style.isPhantom)
-                    phantomObjectIndices.add(ix)
-            }
-        }
+        state.styling.filterTo(styling) { (ix, _) -> ix < objectSize }
         expressions.reEval()
         syncDisplayObjects(displayObjects.indices)
     }

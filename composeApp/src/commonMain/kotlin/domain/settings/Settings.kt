@@ -27,7 +27,7 @@ data class Settings(
 //    val inversionOfControl: InversionOfControl = InversionOfControl.LEVEL_1,
 //    val alwaysCreateAdditionalPoints: Boolean = false,
     // upscaling factor
-    val regionsOpacity: Float = 1f,
+    val regionsOpacity: Float = 1.0f,
     val regionsBlendModeType: BlendModeType = BlendModeType.SRC_OVER,
     // default tools for categories
     val savedColors: List<ColorAsCss> = emptyList(),

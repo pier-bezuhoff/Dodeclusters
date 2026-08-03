@@ -19,16 +19,27 @@ import domain.expressions.withoutPointsAt
 import domain.reindexingMap
 import domain.setOrRemove
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KeepGeneratedSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonTransformingSerializer
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.modules.SerializersModule
 
+// autosave location on Linux: ~/.local/share/Dodeclusters/autosave.json
 /** EditorViewModel's save-state for history.
  * [objects].indices must span all of [styling].keys.
  * And [objects].indices == [expressions].keys */
+@OptIn(ExperimentalSerializationApi::class)
 @Immutable
-@Serializable
+//@KeepGeneratedSerializer
+@Serializable//(with = SaveState.CompatSerializer::class)
 @SerialName("SaveState")
 data class SaveState(
     val objects: List<GCircleOrConcreteAcPath?>,
@@ -163,6 +174,29 @@ data class SaveState(
         @Serializable
         @SerialName("RegionColor")
         data class RegionColor(val color: ColorAsCss?) : Replacement
+
+        object CompatSerializer : JsonTransformingSerializer<Change>(
+            serializer() // generatedSerializer()
+        ) {
+            override fun transformDeserialize(element: JsonElement): JsonElement =
+                when (element) {
+                    is JsonObject -> when (element["type"]) {
+                        JsonPrimitive("BorderColor") if (element["colors"] is JsonObject) -> {
+                            val colors = element["colors"] as JsonObject
+                            buildJsonObject {
+                                put("type", "Styling")
+                                put("styling", JsonObject(
+                                    colors.mapValues { (_, color) ->
+                                        JsonObject(mapOf("borderColor" to color))
+                                    }
+                                ))
+                            }
+                        }
+                        else -> element
+                    }
+                    else -> element
+                }
+        }
     }
 
     @Immutable
@@ -454,6 +488,23 @@ data class SaveState(
                 arcPaths = selection.arcPaths.mapNotNull { reindexing[it] },
             ),
         )
+    }
+
+    object CompatSerializer : JsonTransformingSerializer<SaveState>(
+        serializer() //generatedSerializer()
+    ) {
+        override fun transformDeserialize(element: JsonElement): JsonElement {
+            val jsonObject = element.jsonObject
+            return when {
+                "objectss" in jsonObject -> {
+                    val jsonMap = jsonObject.toMutableMap()
+                    jsonMap["objects"] = jsonMap["objectss"]!!
+                    jsonMap.remove("objectss")
+                    JsonObject(jsonMap)
+                }
+                else -> jsonObject
+            }
+        }
     }
 
     companion object {

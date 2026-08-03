@@ -3,13 +3,13 @@ package domain.model
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import core.geometry.GCircle
 import domain.Ix
 import domain.PathCache
 import domain.expressions.Expr
 import domain.expressions.ExprOutput
 import domain.expressions.Expressions
+import domain.update
 
 /**
  * Purports to encapsulate & manage [displayObjects] and object-related properties.
@@ -19,6 +19,7 @@ import domain.expressions.Expressions
  * @param[D] display object type
  */
 sealed class ObjectModel<R : Any, D : Any> {
+    abstract val expressions: Expressions<*, *, *, R>
     /**
      * All existing objects; `null`s correspond either to unrealized outputs of
      * [domain.expressions.Expr.OneToMany], or to forever deleted objects (they have `null` `VM.expressions`),
@@ -33,13 +34,9 @@ sealed class ObjectModel<R : Any, D : Any> {
      * NOTE: u are responsible for MANUALLY sync-ing them
      */
     val downscaledObjects: MutableList<R?> = mutableListOf()
-    /** [displayObjects] border colors (for points, circles, lines, etc) */
-    val borderColors: MutableMap<Ix, Color> = mutableMapOf()
-    /** [displayObjects] fill colors (only for arc-paths) */
-    val fillColors: MutableMap<Ix, Color> = mutableMapOf()
-    val phantomObjectIndices: MutableSet<Int> = mutableSetOf()
-
-    abstract val expressions: Expressions<*, *, *, R>
+    val styling: MutableMap<Ix, Styling> = mutableMapOf()
+    /** layer order */
+    val layering: MutableList<Ix> = mutableListOf()
 
     val invalidationsState: MutableIntState = mutableIntStateOf(0)
     /**
@@ -152,9 +149,7 @@ sealed class ObjectModel<R : Any, D : Any> {
     fun removeObjectAt(index: Ix) {
         displayObjects[index] = null
         downscaledObjects[index] = null
-        borderColors.remove(index)
-        fillColors.remove(index)
-        phantomObjectIndices.remove(index)
+        styling.remove(index)
         pathCache.removeObjectAt(index)
         expressions.updateObjectTypeAt(index)
     }
@@ -171,9 +166,7 @@ sealed class ObjectModel<R : Any, D : Any> {
     open fun clear() {
         displayObjects.clear()
         downscaledObjects.clear()
-        borderColors.clear()
-        fillColors.clear()
-        phantomObjectIndices.clear()
+        styling.clear()
         pathCache.clear()
     }
 
@@ -193,30 +186,29 @@ sealed class ObjectModel<R : Any, D : Any> {
         }
     }
 
+    inline fun updateStyle(index: Ix, crossinline update: (Styling) -> Styling) {
+        styling.update(index, Styling(), update)
+    }
+
     /**
-     * Copy [borderColors] from source indices onto trajectories specified
+     * Copy [styling] from source indices onto trajectories specified
      * by [sourceIndex2NewTrajectory]. Trajectory objects are assumed to be laid out in
      * row-column order of [sourceIndex2NewTrajectory]`.flatten` starting from [startIndex]
      * @param[sourceIndex2NewTrajectory] `[(original index ~ style source, [new trajectory of objects])]`
      *
      * Don't forget to [invalidate] post factum
      */
-    fun copySourceColorsOntoTrajectories(
+    fun copySourceStylesOntoTrajectories(
         sourceIndex2NewTrajectory: List<Pair<Ix, List<GCircle?>>>,
         startIndex: Ix,
     ) {
         var outputIndex = startIndex
         sourceIndex2NewTrajectory.forEach { (sourceIndex, trajectory) ->
-            val sourceColor = borderColors[sourceIndex]
-            val sourceFillColor = fillColors[sourceIndex]
-            if (sourceColor != null || sourceFillColor != null) {
+            val sourceStyle = styling[sourceIndex]
+                ?.copy(label = null)
+            if (sourceStyle != null) {
                 trajectory.forEach { _ ->
-                    sourceColor?.let {
-                        borderColors[outputIndex] = sourceColor
-                    }
-                    sourceFillColor?.let {
-                        fillColors[outputIndex] = sourceFillColor
-                    }
+                    styling[outputIndex] = sourceStyle
                     outputIndex += 1
                 }
             } else {
