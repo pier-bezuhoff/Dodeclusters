@@ -180,69 +180,10 @@ data class SaveState(
         @Serializable
         @SerialName("RegionColor")
         data class RegionColor(val color: ColorAsCss?) : Replacement
-
-        // this dont work
-        object CompatSerializer : JsonTransformingSerializer<Change>(
-            serializer()
-        ) {
-            override fun transformDeserialize(element: JsonElement): JsonElement =
-                when (element) {
-                    is JsonObject -> when (element["type"]) {
-                        JsonPrimitive("BorderColors") if (element["colors"] is JsonObject) -> {
-                            val colors = element["colors"] as JsonObject
-                            buildJsonObject {
-                                put("type", "Styling")
-                                put("styling", JsonObject(
-                                    colors.mapValues { (_, color) ->
-                                        JsonObject(mapOf("borderColor" to color))
-                                    }
-                                ))
-                            }
-                        }
-                        JsonPrimitive("FillColors") if (element["colors"] is JsonObject) -> {
-                            val colors = element["colors"] as JsonObject
-                            buildJsonObject {
-                                put("type", "Styling")
-                                put("styling", JsonObject(
-                                    colors.mapValues { (_, color) ->
-                                        JsonObject(mapOf("fillColor" to color))
-                                    }
-                                ))
-                            }
-                        }
-                        JsonPrimitive("Labels") if (element["labels"] is JsonObject) -> {
-                            val labels = element["labels"] as JsonObject
-                            buildJsonObject {
-                                put("type", "Styling")
-                                put("styling", JsonObject(
-                                    labels.mapValues { (_, label) ->
-                                        val labelObject =
-                                            if (label is JsonNull) JsonNull
-                                            else JsonObject(mapOf("content" to label))
-                                        JsonObject(mapOf("label" to labelObject))
-                                    }
-                                ))
-                            }
-                        }
-                        JsonPrimitive("Phantoms") if (element["phantoms"] is JsonArray) -> {
-                            val phantoms = element["phantoms"] as JsonArray
-                            buildJsonObject {
-                                put("type", "Styling")
-                                put("styling", JsonObject(
-                                    phantoms.associate { ix ->
-                                        val style = JsonObject(mapOf("isPhantom" to JsonPrimitive(true)))
-                                        // ideally all non-phantoms should have isPhantom=false set
-                                        // since Phantoms change was replacement-type
-                                        ix.jsonPrimitive.content to style
-                                    }
-                                ))
-                            }
-                        }
-                        else -> element
-                    }
-                    else -> element
-                }
-        }
+        /** Nothing Every Happens, left as default for changes, removed in the future */
+        @Serializable
+        @SerialName("No")
+        data object No : Update
     }
 
     @Immutable
@@ -350,6 +291,8 @@ data class SaveState(
                 Change.Center(center)
             is Change.RegionColor ->
                 Change.RegionColor(regionColor)
+            is Change.No ->
+                Change.No
         }
 
     /**
@@ -397,6 +340,7 @@ data class SaveState(
                 is Change.Selection -> selection = change.selection
                 is Change.Center -> center = change.center
                 is Change.RegionColor -> regionColor = change.color
+                is Change.No -> {}
             }
         }
         return SaveState(

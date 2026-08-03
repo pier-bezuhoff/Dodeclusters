@@ -3,9 +3,15 @@ package domain.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import domain.Ix
+import domain.model.SaveState.Change
+import domain.model.SaveState.Change.No
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.plus
+import kotlinx.serialization.modules.polymorphic
 
 /** [SaveState.Change] group for a singular undo/redo step.
  * It is assumed that all grouped changes are 'perpendicular' */
@@ -60,11 +66,18 @@ class ChangeHistory(
             )
 
         companion object {
+            @OptIn(ExperimentalSerializationApi::class)
             val JSON_FORMAT = Json {
                 ignoreUnknownKeys = true
                 encodeDefaults = false
                 // SaveState <- GCircle <- Point <-- can contain infinity
                 allowSpecialFloatingPointValues = true
+                serializersModule += SerializersModule {
+                    polymorphic(Change::class) {
+                        subclassesOfSealed<Change>()
+                        defaultDeserializer { No.serializer() }
+                    }
+                }
             }
         }
     }
