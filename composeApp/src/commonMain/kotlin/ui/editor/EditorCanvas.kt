@@ -1498,7 +1498,7 @@ private fun DrawScope.drawLabels(
             val style = styling[ix]
             val color = style?.borderColor ?: freePointColor
             val halfWidth = layoutResult.size.width/2f
-            var topLeft = Offset(o.x.toFloat() - halfWidth, o.y.toFloat())
+            val topLeft = Offset(o.x.toFloat() - halfWidth, o.y.toFloat())
 //            style?.label?.let {
 //                topLeft += it.positionShift
 //            }

@@ -27,6 +27,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonTransformingSerializer
@@ -35,6 +36,7 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
 
 // autosave location on Linux: ~/.local/share/Dodeclusters/autosave.json
 /** EditorViewModel's save-state for history.
@@ -179,19 +181,59 @@ data class SaveState(
         @SerialName("RegionColor")
         data class RegionColor(val color: ColorAsCss?) : Replacement
 
+        // this dont work
         object CompatSerializer : JsonTransformingSerializer<Change>(
-            serializer() // generatedSerializer()
+            serializer()
         ) {
             override fun transformDeserialize(element: JsonElement): JsonElement =
                 when (element) {
                     is JsonObject -> when (element["type"]) {
-                        JsonPrimitive("BorderColor") if (element["colors"] is JsonObject) -> {
+                        JsonPrimitive("BorderColors") if (element["colors"] is JsonObject) -> {
                             val colors = element["colors"] as JsonObject
                             buildJsonObject {
                                 put("type", "Styling")
                                 put("styling", JsonObject(
                                     colors.mapValues { (_, color) ->
                                         JsonObject(mapOf("borderColor" to color))
+                                    }
+                                ))
+                            }
+                        }
+                        JsonPrimitive("FillColors") if (element["colors"] is JsonObject) -> {
+                            val colors = element["colors"] as JsonObject
+                            buildJsonObject {
+                                put("type", "Styling")
+                                put("styling", JsonObject(
+                                    colors.mapValues { (_, color) ->
+                                        JsonObject(mapOf("fillColor" to color))
+                                    }
+                                ))
+                            }
+                        }
+                        JsonPrimitive("Labels") if (element["labels"] is JsonObject) -> {
+                            val labels = element["labels"] as JsonObject
+                            buildJsonObject {
+                                put("type", "Styling")
+                                put("styling", JsonObject(
+                                    labels.mapValues { (_, label) ->
+                                        val labelObject =
+                                            if (label is JsonNull) JsonNull
+                                            else JsonObject(mapOf("content" to label))
+                                        JsonObject(mapOf("label" to labelObject))
+                                    }
+                                ))
+                            }
+                        }
+                        JsonPrimitive("Phantoms") if (element["phantoms"] is JsonArray) -> {
+                            val phantoms = element["phantoms"] as JsonArray
+                            buildJsonObject {
+                                put("type", "Styling")
+                                put("styling", JsonObject(
+                                    phantoms.associate { ix ->
+                                        val style = JsonObject(mapOf("isPhantom" to JsonPrimitive(true)))
+                                        // ideally all non-phantoms should have isPhantom=false set
+                                        // since Phantoms change was replacement-type
+                                        ix.jsonPrimitive.content to style
                                     }
                                 ))
                             }
@@ -554,8 +596,8 @@ data class SaveState(
                         if (styling.isEmpty()) {
                             element
                         } else {
-                            state["styling"] = JsonObject(styling.mapValues {
-                                json.encodeToJsonElement(it)
+                            state["styling"] = JsonObject(styling.mapValues { (_, style) ->
+                                json.encodeToJsonElement(style)
                             })
                             JsonObject(state)
                         }
