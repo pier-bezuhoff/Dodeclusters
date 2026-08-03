@@ -517,7 +517,8 @@ private fun EditorScreen(
             DrawerContent(openNewBlank = openNewBlank, openFile = openFile, showSaveOptionsDialog = showSaveOptionsDialog, openSettings = openSettings)
         },
         drawerState = drawerState,
-        gesturesEnabled = false,
+        // disabling gestures makes the drawer unclosable
+        gesturesEnabled = true,
     ) {
         Scaffold(
             modifier = modifier,
