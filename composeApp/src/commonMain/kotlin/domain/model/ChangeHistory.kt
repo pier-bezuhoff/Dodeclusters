@@ -74,7 +74,7 @@ class ChangeHistory(
                 allowSpecialFloatingPointValues = true
                 serializersModule += SerializersModule {
                     polymorphic(Change::class) {
-                        subclassesOfSealed<Change>()
+//                        subclassesOfSealed<Change>()
                         defaultDeserializer { No.serializer() }
                     }
                 }
