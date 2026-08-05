@@ -6,10 +6,8 @@ import core.geometry.EPSILON
 import core.geometry.Point
 import domain.PointSnapResult
 import domain.Snapping
-import domain.expressions.SagittaRatioParameters
-import domain.expressions.computeCircleBy2PointsAndSagittaRatio
 import domain.expressions.computeCircleBy3Points
-import domain.expressions.computeSagittaRatio
+import domain.settings.Settings
 import domain.signNonZero
 import domain.squareSum
 import domain.updated
@@ -33,10 +31,6 @@ data class PartialArcPath(
 ) {
     @Immutable
     data class Vertex(val snap: PointSnapResult) {
-        constructor(
-            point: Point
-        ) : this(PointSnapResult.Free(point))
-
         val point: Point get() = snap.result
     }
 
@@ -99,10 +93,12 @@ data class PartialArcPath(
     fun moveFocus(
         snap: PointSnapResult,
         snapDistance: Double,
+        enabledVertexSnapping: Boolean = Settings.ENABLE_ARCPATH_VERTEX_TO_VERTEX_SNAPPING,
+        enableAlignmentSnapping: Boolean = Settings.ENABLE_ARCPATH_VERTEX_ALIGNMENT_SNAPPING,
     ): PartialArcPath = when (focus) {
         is Focus.Vertex -> {
             when (snap) {
-                is PointSnapResult.Free if (ENABLE_VERTEX_SNAPPING) -> {
+                is PointSnapResult.Free if (enabledVertexSnapping) -> {
                     val point = snap.result // free
                     val neighborhood = setOfNotNull(
                         (focus.vertexIndex - 1).mod(vertices.size)
@@ -121,7 +117,7 @@ data class PartialArcPath(
                         snapDistance = snapDistance,
                     )
                     when (snapToVertices) {
-                        is PointSnapResult.Free if (ENABLE_ALIGNMENT_SNAPPING) -> {
+                        is PointSnapResult.Free if (enableAlignmentSnapping) -> {
                             val vertexPoints = vertices
                                 .withoutElementAt(focus.vertexIndex)
                                 .map { it.point }
@@ -165,7 +161,7 @@ data class PartialArcPath(
         }
         is Focus.MidPoint -> {
             when (snap) {
-                is PointSnapResult.Free if (ENABLE_ALIGNMENT_SNAPPING) -> {
+                is PointSnapResult.Free if (enableAlignmentSnapping) -> {
                     val arcStart = arcIndex2startVertex(focus.arcIndex).point
                     val arcEnd = arcIndex2endVertex(focus.arcIndex).point
                     val onSegment = projectPointOnSegment(snap.result, arcStart, arcEnd)
@@ -502,12 +498,6 @@ data class PartialArcPath(
                 ) + arcs.drop(vertexIndex + 1),
             )
         }
-    }
-
-    companion object {
-        const val ENABLE_VERTEX_SNAPPING = true
-        const val ENABLE_ALIGNMENT_SNAPPING = true
-        const val FIX_SNAPPED_MIDPOINTS_WHEN_MOVING_VERTEX = true
     }
 }
 

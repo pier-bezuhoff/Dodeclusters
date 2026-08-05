@@ -20,12 +20,7 @@ import ui.theme.DEFAULT_COLOR_THEME
 @Immutable
 @Serializable
 data class Settings(
-//    val fastCenteredCircles: Boolean = true,
-//    val restoreLastSaveOnLoad: Boolean = true,
     val showDirectionArrows: Boolean = false,
-//    val showImaginaryCircles: Boolean = true,
-//    val inversionOfControl: InversionOfControl = InversionOfControl.LEVEL_1,
-//    val alwaysCreateAdditionalPoints: Boolean = false,
     // upscaling factor
     val regionsOpacity: Float = 1.0f,
     val regionsBlendModeType: BlendModeType = BlendModeType.SRC_OVER,
@@ -48,5 +43,22 @@ data class Settings(
             ignoreUnknownKeys = true
             encodeDefaults = true
         }
+
+        /** When constructing an object depending on not-yet-existing points,
+         * always create them. In contrast to replacing its expression with a static, free circle.
+         * (Should have more choices to make it a settings)
+         */
+        const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
+        const val FAST_CENTERED_CIRCLE = true
+        const val ENABLE_POINT_TO_POINT_SNAPPING = false
+        const val RESTORE_LAST_STATE_ON_LOAD = true
+        const val SHOW_IMAGINARY_CIRCLES = true
+        /** When several objects are close enough to the tap position,
+         * show the list of them to choose from */
+        const val SHOW_SELECTION_CHOICES = true
+        /** try aligning PartialArcPath vertices horizontally or
+         * vertically to each other */
+        const val ENABLE_ARCPATH_VERTEX_ALIGNMENT_SNAPPING = true
+        const val ENABLE_ARCPATH_VERTEX_TO_VERTEX_SNAPPING = true
     }
 }

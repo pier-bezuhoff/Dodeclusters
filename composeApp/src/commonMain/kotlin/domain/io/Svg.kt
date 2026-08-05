@@ -3,24 +3,25 @@ package domain.io
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import com.github.ajalt.colormath.model.RGB
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
+import core.geometry.GCircleOrConcreteAcPath
 import core.geometry.Line
 import core.geometry.Point
+import domain.ColorAsCss
 import domain.ColorCssSerializer
 import domain.model.ChessboardPattern
 import domain.model.SaveState
+import domain.model.Styling
 import kotlinx.serialization.json.Json
 import ui.region2path
-import ui.theme.ExtendedColorScheme
-import ui.theme.defaultArcPathColor
-import ui.theme.defaultCircleColor
-import ui.theme.defaultFreeCircleColor
-import ui.theme.defaultPointColor
+import ui.theme.CustomColors
 import ui.toPath
 import kotlin.math.hypot
+import kotlin.text.appendLine
 
 // MAYBE: implement https://stackoverflow.com/a/4756461/7143065
 //  <svg ... role="img" aria-label="{title + description}" >
@@ -31,21 +32,14 @@ private fun title(name: String) =
 private const val desc =
     """<desc>Created in Dodeclusters.</desc>"""
 private const val highlightClass = "highlightable"
-// kinda funi but since lines are 1px wide it's hard to hover over them intentionally
-private const val defs = """<defs>
-    <style><![CDATA[
-        .$highlightClass:hover { filter: brightness(150%); }
-    ]]></style>
-</defs>"""
 private const val svgClose = "</svg>"
 
 // NOTE: "For reliable results cross-browser, use numbers with no more
 //  than 2 digits after the decimal and four digits before it." -- im gonna ignore this >.<
-// MAYBE: encode point labels
 fun saveStateAsSvg(
     saveState: SaveState,
     width: Float, height: Float,
-    extendedColorScheme: ExtendedColorScheme,
+    customColors: CustomColors,
     encodeCirclesAndPoints: Boolean = true,
     name: String? = null,
 ): String = buildString {
@@ -55,7 +49,7 @@ fun saveStateAsSvg(
         x = width/2f - saveState.center.x,
         y = height/2f - saveState.center.y,
     )
-    val translatedObjects = saveState.objects.map { o ->
+    val translatedObjects: List<GCircleOrConcreteAcPath?> = saveState.objects.map { o ->
         when (o) {
             is ConcreteArcPath -> o.translated(translation)
             is GCircle -> o.translated(translation)
@@ -66,10 +60,69 @@ fun saveStateAsSvg(
     if (name != null)
         appendLine(title(name))
     appendLine(desc)
-//    appendLine(defs)
+    val labelClasses = appendDefs(saveState.styling, customColors.defaultFreePointColor)
     saveState.backgroundColor?.let {
         appendLine(formatRect(visibleRect, it.asCssString()))
     }
+    appendChessboard(saveState, visibleRect, translatedObjects)
+    appendRegions(saveState, visibleRect, translatedObjects)
+    appendArcPaths(saveState, translatedObjects, customColors.defaultArcPathColor)
+    if (encodeCirclesAndPoints) {
+        // colors mimic EditorCanvas setup
+        appendGCircles(saveState, inflatedVisibleRect, translatedObjects,
+            circleColor = customColors.defaultCircleColor,
+            freeCircleColor = customColors.defaultFreeCircleColor,
+            pointColor = customColors.defaultPointColor,
+            freePointColor = customColors.defaultFreePointColor,
+        )
+    }
+    appendLabels(translatedObjects, saveState.styling, labelClasses)
+    appendLine(svgClose)
+}
+
+private fun StringBuilder.appendDefs(
+    styling: Map<Int, Styling>,
+    freePointColor: Color,
+): Map<Int, String> {
+    val ix2color: Map<Int, Color> = styling.entries.mapNotNull { (ix, style) ->
+        if (style.label != null)
+            ix to (style.borderColor ?: freePointColor)
+        else null
+    }.toMap()
+    val color2class: Map<Color, String> = ix2color.values.toSet().mapIndexed { index, color ->
+        val cls = "label-${index+1}"
+        color to cls
+    }.toMap()
+    val labelClasses: Map<Int, String> = ix2color.mapValues { (_, color) -> color2class[color]!! }
+    appendLine("<defs>")
+    appendLine(value =
+"""    <style><![CDATA["""
+    )
+    // kinda funi but since lines are 1px wide it's hard to hover over them intentionally
+    appendLine(value =
+"""
+        .$highlightClass:hover { filter: brightness(150%); }
+         
+        text.label { font: icon; }
+"""
+    )
+    for ((color, cls) in color2class) {
+        appendLine(value =
+"""        text.label.$cls { fill: ${color.asCssString()}; } """
+        )
+    }
+    appendLine(value =
+"""    ]]></style>"""
+    )
+    appendLine("</defs>")
+    return labelClasses
+}
+
+private fun StringBuilder.appendChessboard(
+    saveState: SaveState,
+    visibleRect: Rect,
+    translatedObjects: List<GCircleOrConcreteAcPath?>,
+) {
     if (saveState.chessboardColor != null) {
         when (saveState.chessboardPattern) {
             ChessboardPattern.NONE -> {}
@@ -105,6 +158,13 @@ fun saveStateAsSvg(
             }
         }
     }
+}
+
+private fun StringBuilder.appendRegions(
+    saveState: SaveState,
+    visibleRect: Rect,
+    translatedObjects: List<GCircleOrConcreteAcPath?>,
+) {
     saveState.regions.forEach { region ->
         val fillColorString = region.fillColor.asCssString()
 //        val strokeColorString = region.borderColor.asCssString()
@@ -114,8 +174,13 @@ fun saveStateAsSvg(
         val pathData = path.toCircularSvg()
         appendLine("""<path d="$pathData" fill="$fillColorString"/>""")
     }
-    // always layer arc-paths underneath
-    val defaultArcPathColor = extendedColorScheme.defaultArcPathColor
+}
+
+private fun StringBuilder.appendArcPaths(
+    saveState: SaveState,
+    translatedObjects: List<GCircleOrConcreteAcPath?>,
+    defaultArcPathColor: Color,
+) {
     translatedObjects.forEachIndexed { ix, o ->
         when (o) {
             is ConcreteArcPath if (saveState.styling[ix]?.isPhantom != true) -> {
@@ -128,45 +193,69 @@ fun saveStateAsSvg(
             else -> {}
         }
     }
-    if (encodeCirclesAndPoints) {
-        // colors mimic EditorCanvas setup
-        val circleColor = extendedColorScheme.defaultCircleColor
-        val freeCircleColor = extendedColorScheme.defaultFreeCircleColor
-        val pointColor = extendedColorScheme.defaultPointColor
-        val pointRadius = 5f
-        val highlightClassString = "" //"""class="$highlightClass" """
-        val freeObjectIndices = saveState.objects.indices
-            .filter { ix -> saveState.expressions[ix] == null }
-        translatedObjects.forEachIndexed { ix, o ->
-            if (saveState.styling[ix]?.isPhantom != true) {
-                val color = when {
-                    o is Point -> pointColor // points cant be colored for now
-                    ix in freeObjectIndices -> saveState.styling[ix]?.borderColor ?: freeCircleColor
-                    else -> saveState.styling[ix]?.borderColor ?: circleColor
-                }
-                val colorString = color.asCssString()
-                when (o) {
-                    is CircleOrLine -> appendLine(
-                        formatCircleOrLineStroke(o,
-                            visibleRect = inflatedVisibleRect,
-                            stroke = colorString,
-                            prefix = highlightClassString
-                        )
+}
+
+private fun StringBuilder.appendGCircles(
+    saveState: SaveState,
+    inflatedVisibleRect: Rect,
+    translatedObjects: List<GCircleOrConcreteAcPath?>,
+    circleColor: Color,
+    freeCircleColor: Color,
+    pointColor: Color,
+    freePointColor: Color,
+) {
+    val pointRadius = 5f
+    val highlightClassString = "" //"""class="$highlightClass" """
+    val freeObjectIndices = saveState.objects.indices
+        .filter { ix -> saveState.expressions[ix] == null }
+    translatedObjects.forEachIndexed { ix, o ->
+        if (saveState.styling[ix]?.isPhantom != true) {
+            val color = saveState.styling[ix]?.borderColor ?: when {
+                o is Point -> if (ix in freeObjectIndices) freePointColor else pointColor
+                ix in freeObjectIndices -> freeCircleColor
+                else -> circleColor
+            }
+            val colorString = color.asCssString()
+            when (o) {
+                is CircleOrLine -> appendLine(
+                    formatCircleOrLineStroke(o,
+                        visibleRect = inflatedVisibleRect,
+                        stroke = colorString,
+                        prefix = highlightClassString
                     )
-                    is Point -> appendLine(
-                        """<circle ${highlightClassString}cx="${o.x}" cy="${o.y}" r="$pointRadius" fill="$colorString"/>"""
-                    )
-                    else -> {}
-                }
+                )
+                is Point -> appendLine(
+                    """<circle ${highlightClassString}cx="${o.x}" cy="${o.y}" r="$pointRadius" fill="$colorString"/>"""
+                )
+                else -> {}
             }
         }
     }
-    appendLine(svgClose)
+}
+
+private const val charWidth = 10f
+private const val charHeight = 20f
+private fun StringBuilder.appendLabels(
+    translatedObjects: List<GCircleOrConcreteAcPath?>,
+    styling: Map<Int, Styling>,
+    labelClasses: Map<Int, String>,
+) {
+    for ((ix, cls) in labelClasses) {
+        val point = translatedObjects[ix] as? Point ?: continue
+        val style = styling[ix] ?: continue
+        val label = style.label ?: continue
+        // on canvas y is topLeft and x centers the texts
+        val x = point.x - label.content.length * charWidth/2f
+        val y = point.y + charHeight
+        appendLine(value =
+            """<text x="$x" y="$y" class="label $cls">${label.content}</text>"""
+        )
+    }
 }
 
 /** @return css color string without quotes */
 private fun Color.asCssString(): String =
-    Json.encodeToString(ColorCssSerializer, this).trim('"')
+    RGB(red, green, blue, alpha).toHex()
 
 private fun chessboardPath(
     circles: List<CircleOrLine>,
@@ -262,12 +351,13 @@ private fun formatCircleOrLineStroke(
     visibleRect: Rect,
     stroke: String,
     fill: String = "none",
+    strokeWidth: Int = 2,
     prefix: String = "",
     postfix: String = "",
 ): String {
     val pre = if (prefix.isBlank()) "" else "$prefix "
     return when (circle) {
-        is Circle -> """<circle ${pre}cx="${circle.x}" cy="${circle.y}" r="${circle.radius}" fill="$fill" stroke="$stroke" $postfix/>"""
+        is Circle -> """<circle ${pre}cx="${circle.x}" cy="${circle.y}" r="${circle.radius}" fill="$fill" stroke="$stroke" stroke-width="$strokeWidth" $postfix/>"""
         is Line -> {
             val pointClosestToScreenCenter = circle.project(visibleRect.center)
             val direction = circle.directionVector
@@ -276,7 +366,7 @@ private fun formatCircleOrLineStroke(
             val farForward = pointClosestToScreenCenter + direction * diagonal
             val d = "M ${farBack.x} ${farBack.y} " +
                     "L ${farForward.x} ${farForward.y} "
-            """<path ${pre}d="$d" stroke="$stroke" $postfix/>"""
+            """<path ${pre}d="$d" stroke="$stroke" stroke-width="$strokeWidth" $postfix/>"""
         }
     }
 }
@@ -285,6 +375,7 @@ private fun formatArcPath(
     concreteArcPath: ConcreteArcPath,
     borderColor: Color,
     fillColor: Color?,
+    strokeWidth: Int = 2,
     prefix: String = "",
     postfix: String = "",
 ): String {
@@ -292,5 +383,5 @@ private fun formatArcPath(
     val strokeString = """stroke="${borderColor.asCssString()}""""
     val fillString = """fill="${fillColor?.asCssString() ?: "none"}""""
     val d = concreteArcPath.toPath().toCircularSvg()
-    return """<path ${pre}d="$d" fill-rule="evenodd" $strokeString $fillString stroke-width="2" fill-opacity="1.0" $postfix/>"""
+    return """<path ${pre}d="$d" fill-rule="evenodd" $strokeString $fillString stroke-width="$strokeWidth" fill-opacity="1.0" $postfix/>"""
 }

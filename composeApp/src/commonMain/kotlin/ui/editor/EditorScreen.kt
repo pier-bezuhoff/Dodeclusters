@@ -136,6 +136,7 @@ import ui.theme.ColorTheme
 import ui.theme.DodeclustersColors
 import ui.theme.DodeclustersTheme
 import ui.theme.adaptiveSizing
+import ui.theme.customColors
 import ui.theme.extendedColorScheme
 import ui.theme.isDarkTheme
 import ui.tools.Category
@@ -227,7 +228,7 @@ fun EditorScreenRoot(
             Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
         else Modifier,
     )
-    val extendedColorScheme = MaterialTheme.extendedColorScheme
+    val customColors = MaterialTheme.customColors
     when (viewModel.openedDialog) {
         DialogType.REGION_FILL_COLOR_PICKER -> {
             ColorPickerDialog(
@@ -360,7 +361,7 @@ fun EditorScreenRoot(
                 exportAsSvg = { name ->
                     viewModel.exportAsSvg(
                         name = name,
-                        extendedColorScheme = extendedColorScheme
+                        customColors = customColors,
                     )
                 },
                 onCancel = viewModel::closeDialog,
@@ -592,7 +593,7 @@ private fun EditorScreenPreview() {
             activeTool = Tool.Drag,
         )
         EditorScreen(
-            drawerState = rememberDrawerState(DrawerValue.Open),
+            drawerState = rememberDrawerState(DrawerValue.Closed),
             toolbarState = toolbarState,
             showPanel = false, // cannot show panel when in drag category
             showUI = true,

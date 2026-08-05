@@ -3,10 +3,12 @@ package ui.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 
@@ -31,6 +33,12 @@ data class CustomStyles(
     val arcMiddlePointRadius: Float = pointRadius,
     val iconDim: Float,
 ) {
+    val labelTextStyle: TextStyle
+    @Composable
+    @ReadOnlyComposable
+    get() =
+        MaterialTheme.typography.headlineSmall
+
     companion object {
         fun fromDensity(density: Density): CustomStyles = CustomStyles(
             strokeWidth = with (density) { 2.dp.toPx() },

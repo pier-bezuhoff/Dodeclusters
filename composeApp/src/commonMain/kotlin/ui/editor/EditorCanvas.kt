@@ -21,7 +21,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
@@ -94,6 +93,7 @@ import domain.model.Styling
 import domain.mostCommonOf
 import domain.rotateBy
 import domain.rotateByAround
+import domain.settings.Settings
 import getPlatform
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
@@ -126,6 +126,7 @@ fun BoxScope.EditorCanvas(
     val pointRadius = customStyles.pointRadius
     val arcMiddlePointRadius = customStyles.arcMiddlePointRadius
     val iconDim = customStyles.iconDim
+    val labelTextStyle = customStyles.labelTextStyle
     val scaleIcon = painterResource(Res.drawable.zoom_in)
     val rotateIcon = painterResource(Res.drawable.rotate_counterclockwise)
     val customColors = MaterialTheme.customColors
@@ -152,7 +153,6 @@ fun BoxScope.EditorCanvas(
     val selectedArgColor = customColors.selectedArgColor
     val thiccSelectedAlpha = customColors.thiccSelectedAlpha
     val textMeasurer = rememberTextMeasurer()
-    val labelTextStyle = MaterialTheme.typography.headlineSmall
     val objectLabelLayouts = remember(viewModel.objectModel.propertyInvalidations, textMeasurer, labelTextStyle) {
         val r = mutableMapOf<Ix, TextLayoutResult>()
         for ((ix, style) in viewModel.styling) {
@@ -166,8 +166,7 @@ fun BoxScope.EditorCanvas(
     }
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableStateMapOf() }
-    val coroutineScope = rememberCoroutineScope()
-    coroutineScope.launch { // listen to animations
+    LaunchedEffect(viewModel) { // listen to animations
         viewModel.animations.collect { event ->
             when (event) {
                 is ColoredContourAnimation -> launch { // parallel multiplexer structure
@@ -220,7 +219,7 @@ fun BoxScope.EditorCanvas(
 //                onLongDragEnd = viewModel::onLongDragEnd,
             )
             .onSizeChanged { size ->
-                viewModel.changeCanvasSize(size)
+                viewModel.onCanvasSizeChange(size)
             }
             .fillMaxSize()
             .graphicsLayer(
@@ -889,7 +888,7 @@ private inline fun DrawScope.drawGCircles(
     imaginaryCircleColor: Color,
     imaginaryCircleStroke: Stroke,
 ) {
-    val showImaginaryCircles = EditorViewModel.SHOW_IMAGINARY_CIRCLES
+    val showImaginaryCircles = Settings.SHOW_IMAGINARY_CIRCLES
     for (ix in indices) {
         val objectColor = styling[ix]?.borderColor
         when (val o = allObjects[ix]) {
@@ -944,7 +943,7 @@ private fun DrawScope.drawSelectedGCircles(
 ) {
     val showPoints = selectionIsActive
     val showCircles = selectionIsActive || mode == SelectionMode.Region && restrictRegionsToSelection
-    val showImaginaryCircles = EditorViewModel.SHOW_IMAGINARY_CIRCLES
+    val showImaginaryCircles = Settings.SHOW_IMAGINARY_CIRCLES
     for (ix in indices) {
         val objectColor = styling[ix]?.borderColor
         when (val o = allObjects[ix]) {

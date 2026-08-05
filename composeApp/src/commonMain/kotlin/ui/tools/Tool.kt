@@ -264,7 +264,6 @@ sealed class Tool(
     )
     data object SaveCluster : CustomAction(
         name = Res.string.save_cluster_name,
-        description = Res.string.save_name,
         icon = Res.drawable.save
     ) {
         const val DEFAULT_NAME = DdcV5.DEFAULT_NAME

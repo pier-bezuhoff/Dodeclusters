@@ -9,7 +9,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -102,7 +101,6 @@ import domain.settings.InversionOfControl
 import domain.settings.Settings
 import domain.sortedByFrequency
 import domain.transpose
-import domain.update
 import domain.updated
 import domain.withoutElementsAt
 import domain.xor
@@ -125,6 +123,7 @@ import ui.editor.dialogs.DefaultInterpolationParameters
 import ui.editor.dialogs.DefaultLoxodromicMotionParameters
 import ui.editor.dialogs.DefaultRotationParameters
 import ui.editor.dialogs.DialogType
+import ui.theme.CustomColors
 import ui.theme.DodeclustersColors
 import ui.theme.ExtendedColorScheme
 import ui.tools.Category
@@ -219,7 +218,7 @@ class EditorViewModel : ViewModel() {
     var showPhantomObjects: Boolean by mutableStateOf(false)
         private set
     /** which style to use when drawing regions: true = stroke, false = fill */
-    var showDirectionArrows: Boolean by mutableStateOf(DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES)
+    var showDirectionArrows: Boolean by mutableStateOf(Settings().showDirectionArrows)
         private set
     var regionManipulationStrategy: RegionManipulationStrategy by mutableStateOf(RegionManipulationStrategy.REPLACE)
         private set
@@ -366,7 +365,7 @@ class EditorViewModel : ViewModel() {
         selection = Selection()
     }
 
-    fun changeCanvasSize(newCanvasSize: IntSize) {
+    fun onCanvasSizeChange(newCanvasSize: IntSize) {
         val prevCenter = Offset(canvasSize.width/2f, canvasSize.height/2f)
         val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
         translation += (newCenter - prevCenter)
@@ -386,7 +385,7 @@ class EditorViewModel : ViewModel() {
 
     fun exportAsSvg(
         name: String = DdcV5.DEFAULT_NAME,
-        extendedColorScheme: ExtendedColorScheme = DodeclustersColors.extendedDarkScheme,
+        customColors: CustomColors,
     ): String {
         val svgString = saveStateAsSvg(
             saveState = saveState(),
@@ -394,7 +393,7 @@ class EditorViewModel : ViewModel() {
             height = canvasSize.height.toFloat(),
             encodeCirclesAndPoints = showCircles,
             name = name,
-            extendedColorScheme = extendedColorScheme,
+            customColors = customColors,
         )
         return svgString
     }
@@ -1360,7 +1359,7 @@ class EditorViewModel : ViewModel() {
         val allChildren: Set<Ix> = expressions.getAllChildren(index)
         val allParents = expressions.getAllParents(listOf(index))
         return snapped(absolutePosition,
-            includePoints = ENABLE_POINT_TO_POINT_SNAPPING,
+            includePoints = Settings.ENABLE_POINT_TO_POINT_SNAPPING,
             excludedIndices = allChildren + allParents,
         )
     }
@@ -2294,7 +2293,7 @@ class EditorViewModel : ViewModel() {
         if (nextType != null) {
             val inInterpolationMode = mode == ToolMode.CIRCLE_OR_POINT_INTERPOLATION
             val inFastCenteredCircle =
-                FAST_CENTERED_CIRCLE && mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS
+                Settings.FAST_CENTERED_CIRCLE && mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS
             /** flags whether we already selected/found an object and there's no
              * more need to proceed further */
             var found = false
@@ -2507,7 +2506,7 @@ class EditorViewModel : ViewModel() {
     private fun tapDuringDrag(absolutePosition: Offset) {
         // when multiple close candidates, show choice list
         // MAYBE: pass actionLabelTextStyle as an arg
-        if (SHOW_SELECTION_CHOICES) {
+        if (Settings.SHOW_SELECTION_CHOICES) {
             val selectablePoints = getPreferablyFreePointsAround(absolutePosition)
             var selectableCircles: List<Ix> = emptyList()
             var selectableArcPaths: List<Ix> = emptyList()
@@ -3310,7 +3309,7 @@ class EditorViewModel : ViewModel() {
                     // realized in 0nDown and we don't know yet if we moved far enough from it to
                     // create the second point
                     if (mode == ToolMode.CIRCLE_BY_CENTER_AND_RADIUS &&
-                        FAST_CENTERED_CIRCLE &&
+                        Settings.FAST_CENTERED_CIRCLE &&
                         args.size == 2
                     ) {
                         val centerPoint: CircleOrLineOrPoint =
@@ -3877,7 +3876,7 @@ class EditorViewModel : ViewModel() {
         val pointArg = argList.args[1]
         require(centerArg is Arg.CircleIndex || centerArg is Arg.LineIndex || centerArg is Arg.PointIndex || centerArg is Arg.PointXY)
         require(pointArg is Arg.CircleIndex || pointArg is Arg.PointIndex || pointArg is Arg.PointXY)
-        if (!ALWAYS_CREATE_ADDITIONAL_POINTS && centerArg is Arg.PointXY && pointArg is Arg.PointXY) {
+        if (!Settings.ALWAYS_CREATE_ADDITIONAL_POINTS && centerArg is Arg.PointXY && pointArg is Arg.PointXY) {
             val newCircle = computeConcentricCircle(
                 samePencilObject = centerArg.toPoint().downscale(),
                 point = pointArg.toPoint().downscale(),
@@ -4863,8 +4862,7 @@ class EditorViewModel : ViewModel() {
         if (restoration.value == ProgressState.NOT_STARTED) {
             restoration.update { ProgressState.IN_PROGRESS }
             val platform = getPlatform()
-            val restoreLastSave = RESTORE_LAST_SAVE_ON_LOAD
-            if (restoreLastSave) {
+            if (Settings.RESTORE_LAST_STATE_ON_LOAD) {
                 // NOTE: can crash when the underlying format changes
                 val saveState = runCatching { platform.autosaveStore.get() }
                     .onFailure {
@@ -4901,7 +4899,7 @@ class EditorViewModel : ViewModel() {
                 .getOrNull()?.also { settings ->
                     loadSettings(settings)
                 }
-            if (restoreLastSave) {
+            if (Settings.RESTORE_LAST_STATE_ON_LOAD) {
                 runCatching { platform.historyStore.get() }
                     .onFailure {
                         println("VM.restoreFromDisk: failed to retrieve history")
@@ -5058,28 +5056,14 @@ class EditorViewModel : ViewModel() {
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val INTERSECTION_SNAP_FACTOR = 1.5
         const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
-        /** When constructing an object depending on not-yet-existing points,
-         * always create them. In contrast to replacing its expression with a static, free circle.
-         * (Should have more choices to make it a settings)
-         */
-        const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
-        const val DEFAULT_SHOW_DIRECTION_ARROWS_ON_SELECTED_CIRCLES = false
         // NOTE: changing this factor breaks all line-incident points (scale-dependence)
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = ConformalObjectModel.UPSCALING_FACTOR
         const val DOWNSCALING_FACTOR = ConformalObjectModel.DOWNSCALING_FACTOR
 
-        const val FAST_CENTERED_CIRCLE = true
-        /** try aligning PartialArcPath vertices horizontally or
-         * vertically to each other */
-        const val ENABLE_ALIGNMENT_SNAPPING = true // todo: pass this setting
-        const val ENABLE_POINT_TO_POINT_SNAPPING = false
-        const val RESTORE_LAST_SAVE_ON_LOAD = true
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
-        const val SHOW_IMAGINARY_CIRCLES = true
         /** When several objects are close enough to the tap position,
          * show the list of them to choose from */
-        const val SHOW_SELECTION_CHOICES = true
 
         fun sliderPercentageDeltaToZoom(percentageDelta: Float): Float =
             MAX_SLIDER_ZOOM.pow(2*percentageDelta)

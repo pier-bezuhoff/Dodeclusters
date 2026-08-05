@@ -75,6 +75,7 @@ class ChangeHistory(
                 serializersModule += SerializersModule {
                     polymorphic(Change::class) {
 //                        subclassesOfSealed<Change>()
+                        // fallback for removed Change types
                         defaultDeserializer { No.serializer() }
                     }
                 }
