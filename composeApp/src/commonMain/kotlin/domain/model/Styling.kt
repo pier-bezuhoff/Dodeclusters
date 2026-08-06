@@ -44,7 +44,7 @@ data class Styling(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val label: Label? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val lineThickness: Int? = null,
+    val lineThickness: Float? = null,
     // line style: dotted etc
     // end style: arrows
 ) {
@@ -99,7 +99,7 @@ data class Styling(
                 if (value.label != null)
                     encodeNullableSerializableElement(descriptor, 3, Label.serializer(), value.label)
                 if (value.lineThickness != null)
-                    encodeNullableSerializableElement(descriptor, 4, Int.serializer().nullable, value.lineThickness)
+                    encodeNullableSerializableElement(descriptor, 4, Float.serializer().nullable, value.lineThickness)
             }
         }
 
@@ -110,13 +110,13 @@ data class Styling(
                     var fillColor: Color? = null
                     var isPhantom: Boolean = false
                     var label: Label? = null
-                    var lineThickness: Int? = null
+                    var lineThickness: Float? = null
                     if (decodeSequentially()) {
                         borderColor = decodeNullableSerializableElement(descriptor, 0, ColorCssSerializer)
                         fillColor = decodeNullableSerializableElement(descriptor, 1, ColorCssSerializer)
                         isPhantom = decodeBooleanElement(descriptor, 2)
                         label = decodeNullableSerializableElement(descriptor, 3, Label.serializer())
-                        lineThickness = decodeNullableSerializableElement(descriptor, 4, Int.serializer())
+                        lineThickness = decodeNullableSerializableElement(descriptor, 4, Float.serializer())
                     } else {
                         loop@ while (true) {
                             try {
@@ -125,7 +125,7 @@ data class Styling(
                                     1 -> fillColor = decodeNullableSerializableElement(descriptor, index, ColorCssSerializer)
                                     2 -> isPhantom = decodeBooleanElement(descriptor, index)
                                     3 -> label = decodeNullableSerializableElement(descriptor, index, Label.serializer())
-                                    4 -> lineThickness = decodeNullableSerializableElement(descriptor, index, Int.serializer())
+                                    4 -> lineThickness = decodeNullableSerializableElement(descriptor, index, Float.serializer())
                                     CompositeDecoder.DECODE_DONE -> break@loop
                                     CompositeDecoder.UNKNOWN_NAME -> {}
                                     else -> break@loop

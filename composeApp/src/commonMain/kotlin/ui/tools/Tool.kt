@@ -110,6 +110,7 @@ import dodeclusters.composeapp.generated.resources.line_2_points
 import dodeclusters.composeapp.generated.resources.line_by_2_points_arg_descriptions
 import dodeclusters.composeapp.generated.resources.line_by_2_points_description
 import dodeclusters.composeapp.generated.resources.line_by_2_points_name
+import dodeclusters.composeapp.generated.resources.line_thickness
 import dodeclusters.composeapp.generated.resources.lock_open
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_arg_descriptions
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_description
@@ -167,6 +168,7 @@ import dodeclusters.composeapp.generated.resources.screenshot_pc
 import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.set_label_description
 import dodeclusters.composeapp.generated.resources.set_label_name
+import dodeclusters.composeapp.generated.resources.set_line_thickness
 import dodeclusters.composeapp.generated.resources.shark_fin_striped
 import dodeclusters.composeapp.generated.resources.shrink
 import dodeclusters.composeapp.generated.resources.shrink_description
@@ -640,6 +642,10 @@ sealed class Tool(
         name = Res.string.move_point_to_infinity_name,
         description = Res.string.move_point_to_infinity_description,
         icon = Res.drawable.to_infinity,
+    )
+    data object SetLineThickness : ContextAction(
+        name = Res.string.set_line_thickness,
+        icon = Res.drawable.line_thickness,
     )
     data object CollapseVerticalPanel : CustomAction(
         name = Res.string.collapse,

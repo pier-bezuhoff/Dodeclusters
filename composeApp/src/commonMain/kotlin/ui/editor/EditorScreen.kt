@@ -99,6 +99,7 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
 import domain.model.PartialArgList
+import domain.mostCommonOf
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -128,6 +129,7 @@ import ui.editor.dialogs.ColorPickerDialog
 import ui.editor.dialogs.DialogAction
 import ui.editor.dialogs.DialogType
 import ui.editor.dialogs.LabelInputDialog
+import ui.editor.dialogs.LineThicknessInputDialog
 import ui.editor.dialogs.LoxodromicMotionDialog
 import ui.editor.dialogs.RotationDialog
 import ui.editor.dialogs.SaveOptionsDialog
@@ -404,6 +406,17 @@ fun EditorScreenRoot(
 //                }",
                 onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::setLabel,
+                dialogActions = dialogActions,
+            )
+        }
+        DialogType.LINE_THICKNESS_INPUT -> {
+            LineThicknessInputDialog(
+                previousThickness = viewModel.selection.indices
+                    .mapNotNull { viewModel.styling[it]?.lineThickness }
+                    .mostCommonOf { it }
+                ,
+                onCancel = viewModel::closeDialog,
+                onConfirm = viewModel::setLineThickness,
                 dialogActions = dialogActions,
             )
         }

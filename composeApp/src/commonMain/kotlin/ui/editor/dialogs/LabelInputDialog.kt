@@ -23,6 +23,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -33,6 +34,8 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
 import ui.DialogTitle
+import ui.theme.ColorTheme
+import ui.theme.DodeclustersTheme
 import ui.theme.adaptiveTypography
 
 @Composable
@@ -40,8 +43,8 @@ fun LabelInputDialog(
     previousLabel: String?,
     /** debug */
     details: String? = null,
-    onCancel: () -> Unit,
-    onConfirm: (newLabel: String?) -> Unit,
+    onCancel: () -> Unit = {},
+    onConfirm: (newLabel: String?) -> Unit = {},
     dialogActions: SharedFlow<DialogAction>? = null,
 ) {
     var label: String? by remember { mutableStateOf(previousLabel) }
@@ -49,40 +52,13 @@ fun LabelInputDialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = true)
     ) {
-        Surface(
-            modifier = Modifier,
-            shape = MaterialTheme.shapes.large,
-        ) {
-            Column(
-                Modifier
-                    .width(IntrinsicSize.Max)
-                    .padding(32.dp)
-                ,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                DialogTitle(Res.string.label_input_title)
-                LabelTextField(
-                    label = label ?: "",
-                    onNewLabel = { newLabel ->
-                        label = newLabel.trim()
-                            .ifBlank { null }
-                    },
-                    modifier = Modifier
-                        .padding(bottom = 24.dp)
-                )
-                if (details != null) {
-                    Text(
-                        text = details,
-                        modifier = Modifier.padding(8.dp),
-                        color = Color(93, 163, 233)
-                    )
-                }
-                CancelOkRow(
-                    onCancel = onCancel,
-                    onOk = { onConfirm(label) },
-                )
-            }
-        }
+        LabelInputScreen(
+            label = label,
+            details = details,
+            setLabel = { label = it },
+            onCancel = onCancel,
+            onOk = { onConfirm(label) },
+        )
     }
     LaunchedEffect(dialogActions) {
         dialogActions?.collect { dialogAction ->
@@ -91,6 +67,63 @@ fun LabelInputDialog(
                 DialogAction.CONFIRM -> onConfirm(label)
             }
         }
+    }
+}
+
+@Composable
+private fun LabelInputScreen(
+    label: String?,
+    details: String? = null,
+    modifier: Modifier = Modifier,
+    setLabel: (String?) -> Unit = {},
+    onCancel: () -> Unit = {},
+    onOk: () -> Unit = {},
+) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(
+            Modifier
+                .width(IntrinsicSize.Max)
+                .padding(32.dp)
+            ,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            DialogTitle(Res.string.label_input_title)
+            LabelTextField(
+                label = label ?: "",
+                onNewLabel = { newLabel ->
+                    setLabel(
+                        newLabel.trim().ifBlank { null }
+                    )
+                },
+                modifier = Modifier
+                    .padding(bottom = 24.dp)
+            )
+            if (details != null) {
+                Text(
+                    text = details,
+                    modifier = Modifier.padding(8.dp),
+                    color = Color(93, 163, 233)
+                )
+            }
+            CancelOkRow(
+                onCancel = onCancel,
+                onOk = onOk,
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun LabelInputScreenPreview() {
+    DodeclustersTheme(ColorTheme.DARK) {
+        LabelInputScreen(
+            label = "label0",
+//            details = "more info: \n ohohoh..."
+        )
     }
 }
 

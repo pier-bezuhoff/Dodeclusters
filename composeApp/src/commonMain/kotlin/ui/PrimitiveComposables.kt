@@ -556,6 +556,7 @@ fun LabelColonBigValue(
 fun FloatTextField(
     value: Float,
     onNewValue: (newValue: Float) -> Unit,
+    validateValue: (Float) -> Boolean = { true },
     placeholderStringResource: StringResource? = null,
     suffixStringResource: StringResource? = null,
     nFractionalDigits: Int = 2,
@@ -566,20 +567,24 @@ fun FloatTextField(
         val s = value.formatDecimals(nFractionalDigits, showTrailingZeroes = false)
         mutableStateOf(TextFieldValue(s, TextRange(s.length)))
     }
+    var isError by remember(value) { mutableStateOf(!validateValue(value)) }
     OutlinedTextField(
         textFieldValue,
         onValueChange = { newTextFieldValue ->
             textFieldValue = newTextFieldValue
             val updatedValue = textFieldValue.text.toFloatOrNull()
             if (updatedValue != null && updatedValue != value) {
-                onNewValue(updatedValue)
+                if (validateValue(updatedValue))
+                    onNewValue(updatedValue)
+                else
+                    isError = true
             }
         },
         modifier = modifier,
         textStyle = textStyle,
         placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
         suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
-        isError = textFieldValue.text.toFloatOrNull()?.let { false } ?: true,
+        isError = textFieldValue.text.toFloatOrNull()?.let { isError } ?: true,
         singleLine = true,
     )
 }

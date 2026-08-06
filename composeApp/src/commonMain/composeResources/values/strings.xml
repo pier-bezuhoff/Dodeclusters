@@ -169,6 +169,7 @@
     <string name="duplicate_description">Duplicate selected objects</string>
     <string name="delete_name">Delete</string>
     <string name="delete_description">Delete selected objects</string>
+    <string name="set_line_thickness">Change line thickness</string>
     <!-- HUD adjustment interface -->
     <string name="detailed_adjustment_name">Detailed adjustment</string>
     <string name="detailed_adjustment_description">Open detailed parameter adjustment dialog</string>
@@ -306,6 +307,8 @@
     <string name="blend_mode_plus">Addition</string>
     <!-- label input dialog -->
     <string name="label_input_title">Input point label</string>
+    <!-- line thickness dialog -->
+    <string name="line_thickness_dialog_title">Set line thickness</string>
     <!-- snackbar messages, surround with ^important^ for highlight -->
     <string name="locked_objects_notice">These objects are ^locked^ (no degrees of freedom), ^detach^ them before altering</string>
     <string name="locked_object_notice">This object is ^locked^ (no degrees of freedom), ^detach^ it before altering</string>

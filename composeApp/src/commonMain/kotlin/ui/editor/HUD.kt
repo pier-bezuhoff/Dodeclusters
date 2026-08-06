@@ -253,6 +253,10 @@ fun BoxScope.SelectionContextActions(
                 contentColor = borderColor,
                 onClick = toolAction
             )
+            SimpleToolButtonWithTooltip(Tool.SetLineThickness,
+                buttonModifier,
+                onClick = toolAction,
+            )
             // MAYBE: fill color here too
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
@@ -371,6 +375,10 @@ fun BoxScope.ArcPathContextActions(
                     onClick = toolAction
                 )
             }
+            SimpleToolButtonWithTooltip(Tool.SetLineThickness,
+                buttonModifier,
+                onClick = toolAction,
+            )
             // close/cut loop button
             if (isLocked) {
                 SimpleToolButtonWithTooltip(Tool.Detach, buttonModifier, onClick = toolAction)

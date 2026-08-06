@@ -890,14 +890,16 @@ private inline fun DrawScope.drawGCircles(
 ) {
     val showImaginaryCircles = Settings.SHOW_IMAGINARY_CIRCLES
     for (ix in indices) {
-        val objectColor = styling[ix]?.borderColor
+        val style = styling[ix]
+        val objectColor = style?.borderColor
         when (val o = allObjects[ix]) {
             is CircleOrLine -> {
+                val stroke = style?.lineThickness?.let { circleStroke.copy(it) } ?: circleStroke
                 val color = objectColor ?:
                     if (isObjectFree(ix)) defaultFreeCircleColor
                     else defaultCircleColor
                 drawCircleOrLineWithCache(o, ix, pathCache, visibleRect, color,
-                    style = circleStroke,
+                    style = stroke,
                 )
             }
             is ImaginaryCircle -> {
@@ -945,18 +947,21 @@ private fun DrawScope.drawSelectedGCircles(
     val showCircles = selectionIsActive || mode == SelectionMode.Region && restrictRegionsToSelection
     val showImaginaryCircles = Settings.SHOW_IMAGINARY_CIRCLES
     for (ix in indices) {
-        val objectColor = styling[ix]?.borderColor
+        val style = styling[ix]
+        val objectColor = style?.borderColor
         when (val o = allObjects[ix]) {
             is CircleOrLine -> if (showCircles) {
+                val stroke = style?.lineThickness?.let { circleStroke.copy(it) } ?: circleStroke
+                val thiccStroke = style?.lineThickness?.let { circleThiccStroke.copy(it) } ?: circleThiccStroke
                 val color = objectColor ?: defaultSelectedCircleColor
                 drawCircleOrLineWithCache(
                     o, ix, pathCache, visibleRect, color,
                     alpha = thiccSelectionCircleAlpha,
-                    style = circleThiccStroke,
+                    style = thiccStroke,
                 )
                 drawCircleOrLineWithCache(
                     o, ix, pathCache, visibleRect, color,
-                    style = circleStroke,
+                    style = stroke,
                 )
                 if (showDirectionArrows) {
                     if (patchForAndroid)
@@ -1011,7 +1016,8 @@ private fun DrawScope.drawArcPaths(
     for (ix in indices) {
         val concreteArcPath = allObjects[ix] as? ConcreteArcPath ?: continue
         val path = pathCache.getOrSet(ix) { concreteArcPath.toPath(it) }
-        val fillColor = styling[ix]?.fillColor
+        val style = styling[ix]
+        val fillColor = style?.fillColor
         if (concreteArcPath.isClosed && fillColor != null) {
             drawPath(
                 path = path,
@@ -1020,11 +1026,12 @@ private fun DrawScope.drawArcPaths(
                 style = Fill,
             )
         }
-        val borderColor = styling[ix]?.borderColor ?: defaultArcPathColor
+        val borderColor = style?.borderColor ?: defaultArcPathColor
+        val stroke = style?.lineThickness?.let { arcPathStroke.copy(it) } ?: arcPathStroke
         drawPath(
             path = path,
             color = borderColor,
-            style = arcPathStroke,
+            style = stroke,
         )
     }
 }
@@ -1048,7 +1055,8 @@ private fun DrawScope.drawSelectedArcPaths(
     for (ix in indices) {
         val arcPath = allObjects[ix] as? ConcreteArcPath ?: continue
         val path = pathCache.getOrSet(ix) { arcPath.toPath(it) }
-        val fillColor = styling[ix]?.fillColor
+        val style = styling[ix]
+        val fillColor = style?.fillColor
         if (arcPath.isClosed && fillColor != null) {
             drawPath(
                 path = path,
@@ -1057,24 +1065,26 @@ private fun DrawScope.drawSelectedArcPaths(
                 style = Fill,
             )
         }
-        val borderColor = styling[ix]?.borderColor ?: defaultSelectedArcPathColor
+        val stroke = style?.lineThickness?.let { arcPathStroke.copy(it) } ?: arcPathStroke
+        val thiccStroke = style?.lineThickness?.let { thiccSelectedPathStroke.copy(it) } ?: thiccSelectedPathStroke
+        val borderColor = style?.borderColor ?: defaultSelectedArcPathColor
         if (DISPLAY_ARROWS_ALONG_SELECTED_ARC_PATH) {
             drawPath(
                 path = path,
                 color = borderColor,
-                style = Stroke(width = arcPathStroke.width, pathEffect = ARROWED_PATH_EFFECT),
+                style = Stroke(width = stroke.width, pathEffect = ARROWED_PATH_EFFECT),
             )
         }
         drawPath(
             path = path,
             color = borderColor,
             alpha = thiccSelectedPathAlpha,
-            style = thiccSelectedPathStroke,
+            style = thiccStroke,
         )
         drawPath(
             path = path,
             color = borderColor,
-            style = arcPathStroke,
+            style = stroke,
         )
         // TODO: dont show when not showCircles; layer above else
         for (arc in arcPath.arcs) {
@@ -1094,7 +1104,6 @@ private fun DrawScope.drawSelectedArcPaths(
  * except when used for [chessboardPattern], in that case it's defined by [chessboardColor]
  */
 private fun DrawScope.drawRegions(
-    // MAYBE: pass circle + line indices
     regions: List<LogicalRegion>,
     allObjects: List<*>,
     hiddenObjectIndices: Set<Ix>,
@@ -1118,6 +1127,7 @@ private fun DrawScope.drawRegions(
                 is CircleOrLine ->
                     drawCircleOrLineWithCache(o, ix,
                         pathCache, visibleRect, chessboardColor,
+                        style = Fill,
                         blendMode = BlendMode.Xor,
                         drawHalfPlanesForLines = true,
                     )
@@ -1139,7 +1149,7 @@ private fun DrawScope.drawRegions(
             allObjects,
             pathCache, visibleRect
         )
-        // the diff between cache/no-cache doesn't seem that big
+        // the diff between cache/no-cache doesn't seem that big (didnt check ram usage tho)
 //        val path = region2path(
 //            objects.map { it as? CircleOrLine }, region, visibleRect
 //        )
@@ -1703,3 +1713,11 @@ data class ConcreteOnScreenPositions(
         }
     }
 }
+
+private fun Stroke.copy(
+    newWidth: Float// = 0.0f,
+//    miter: Float = DefaultMiter,
+//    cap: StrokeCap = DefaultCap,
+//    join: StrokeJoin = DefaultJoin,
+//    pathEffect: PathEffect? = null,
+): Stroke = Stroke(newWidth, miter, cap, join, pathEffect)

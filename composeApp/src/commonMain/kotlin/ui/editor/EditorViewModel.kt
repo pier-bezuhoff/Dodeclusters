@@ -1779,6 +1779,17 @@ class EditorViewModel : ViewModel() {
         recordHistory()
     }
 
+    fun setLineThickness(thickness: Float?) {
+        for (ix in selection.indices) {
+            objectModel.updateStyle(ix) {
+                it.copy(lineThickness = thickness)
+            }
+        }
+        openedDialog = null
+        objectModel.invalidate()
+        recordHistory()
+    }
+
     private fun markSelectedObjectsAsPhantoms() {
         for (ix in objectSelection) {
             objectModel.updateStyle(ix) { it.copy(isPhantom = true) }
@@ -4725,6 +4736,7 @@ class EditorViewModel : ViewModel() {
             Tool.Duplicate -> duplicateSelection()
             Tool.BorderColor, Tool.PointColor -> openedDialog = DialogType.BORDER_COLOR_PICKER
             Tool.FillColor -> openedDialog = DialogType.FILL_COLOR_PICKER
+            Tool.SetLineThickness -> openedDialog = DialogType.LINE_THICKNESS_INPUT
             Tool.SetLabel -> openedDialog = DialogType.LABEL_INPUT
             Tool.Delete -> deleteSelection()
             is Tool.AppliedColor -> setNewRegionColorToSelectedColorSplash(tool.color)
