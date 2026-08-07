@@ -122,7 +122,7 @@ fun BiInversionDialog(
                     PreTextFieldLabel(Res.string.bi_inversion_speed_prompt)
                     FloatTextField(
                         value = speed.toFloat(),
-                        onNewValue = { speed = it.toDouble() },
+                        onValueChange = { speed = it.toDouble() },
                         nFractionalDigits = 4,
                     )
                 }
@@ -137,7 +137,7 @@ fun BiInversionDialog(
                         PreTextFieldLabel(Res.string.bi_inversion_angle_prompt)
                         FloatTextField(
                             value = dAngle,
-                            onNewValue = { speed = it.radians / inversiveAngle },
+                            onValueChange = { speed = it.radians / inversiveAngle },
                             placeholderStringResource = Res.string.angle_in_degrees_placeholder,
                             suffixStringResource = Res.string.degrees_suffix,
                             nFractionalDigits = 2,
@@ -154,7 +154,7 @@ fun BiInversionDialog(
                     PreTextFieldLabel(Res.string.n_steps_prompt)
                     IntTextField(
                         value = nSteps,
-                        onNewValue = { nSteps = it },
+                        onValueChange = { nSteps = it },
                         placeholderStringResource = Res.string.n_steps_placeholder,
                     )
                 }

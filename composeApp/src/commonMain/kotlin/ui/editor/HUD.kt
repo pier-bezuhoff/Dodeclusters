@@ -3,6 +3,7 @@
 package ui.editor
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.draggable2D
 import androidx.compose.foundation.gestures.rememberDraggable2DState
@@ -13,12 +14,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -59,10 +62,19 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import core.geometry.Circle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
@@ -74,7 +86,9 @@ import dodeclusters.composeapp.generated.resources.close
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.expand
 import dodeclusters.composeapp.generated.resources.imaginary_circle_number_label
+import dodeclusters.composeapp.generated.resources.label_input_placeholder
 import dodeclusters.composeapp.generated.resources.line_number_label
+import dodeclusters.composeapp.generated.resources.line_thickness_input_placeholder
 import dodeclusters.composeapp.generated.resources.ok
 import dodeclusters.composeapp.generated.resources.point_number_label
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
@@ -91,9 +105,12 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import ui.FloatTextField
+import ui.OkButton
 import ui.OnOffButton
 import ui.SimpleFilledButton
 import ui.SimpleToolButtonWithTooltip
+import ui.StringTextFieldWithConfirmOnEnter
 import ui.TwoIconButtonWithTooltip
 import ui.VerticalSlider
 import ui.WithTooltip
@@ -101,7 +118,9 @@ import ui.editor.dialogs.DefaultBiInversionParameters
 import ui.editor.dialogs.DefaultInterpolationParameters
 import ui.editor.dialogs.DefaultLoxodromicMotionParameters
 import ui.editor.dialogs.DefaultRotationParameters
+import ui.theme.ColorTheme
 import ui.theme.DodeclustersColors
+import ui.theme.DodeclustersTheme
 import ui.theme.adaptiveSizing
 import ui.theme.adaptiveTypography
 import ui.theme.extendedColorScheme
@@ -109,6 +128,7 @@ import ui.tools.Tool
 import kotlin.math.abs
 import kotlin.math.acosh
 import kotlin.math.asinh
+import kotlin.math.ceil
 import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.math.sinh
@@ -253,10 +273,10 @@ fun BoxScope.SelectionContextActions(
                 contentColor = borderColor,
                 onClick = toolAction
             )
-            SimpleToolButtonWithTooltip(Tool.SetLineThickness,
-                buttonModifier,
-                onClick = toolAction,
-            )
+//            SimpleToolButtonWithTooltip(Tool.SetLineThickness,
+//                buttonModifier,
+//                onClick = toolAction,
+//            )
             // MAYBE: fill color here too
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
@@ -280,15 +300,66 @@ fun BoxScope.SelectionContextActions(
     }
 }
 
+@Composable
+private fun ContextActionsWrapper(
+    content: @Composable (BoxScope.(ConcreteOnScreenPositions) -> Unit),
+) {
+    var intSize by remember { mutableStateOf(
+        IntSize(1000, 2000)
+    ) }
+    val density = LocalDensity.current
+    DodeclustersTheme(ColorTheme.DARK) {
+        Surface {
+            Box {
+                Canvas(
+                    Modifier
+                        .fillMaxSize()
+                        .onSizeChanged { newSize ->
+                            intSize = newSize
+                        }
+                ) {}
+                content(ConcreteOnScreenPositions(intSize.toSize(), density))
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun SelectionContextActionsPreview() {
+    ContextActionsWrapper { positions ->
+        SelectionContextActions(
+            positions,
+            50f,
+            rotationHandleAngle = 0f,
+            borderColor = Color.Blue,
+            showAdjustExprButton = true,
+            showOrientationToggle = true,
+            isLocked = false,
+            toolAction = {},
+            toolPredicate = { true },
+            onScale = {},
+            onScaleFinished = {},
+            onRotate = {},
+            onRotateStarted = {},
+            onRotateFinished = {},
+        )
+    }
+}
+
 // only points
 @Composable
 fun BoxScope.PointContextActions(
     pointColor: Color,
     showAdjustExprButton: Boolean,
     isLocked: Boolean,
+    label: String?,
     toolAction: (Tool) -> Unit,
     toolPredicate: (Tool) -> Boolean,
+    setLabel: (String) -> Unit,
+    dismissLabelInput: () -> Unit,
 ) {
+    val labelInputIsActive = toolPredicate(Tool.SetLabel)
     Surface(
         Modifier
             .align(Alignment.CenterEnd)
@@ -309,7 +380,30 @@ fun BoxScope.PointContextActions(
                 contentColor = pointColor,
                 onClick = toolAction
             )
-            SimpleToolButtonWithTooltip(Tool.SetLabel, buttonModifier, onClick = toolAction)
+            Row(
+                Modifier.background(color =
+                    if (labelInputIsActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                    else Color.Transparent,
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box { // popup container
+                    if (labelInputIsActive) {
+                        LabelInputPopup(
+                            previousLabel = label,
+                            setLabel = setLabel,
+                            dismiss = dismissLabelInput,
+                        )
+                    }
+                }
+                SimpleToolButtonWithTooltip(Tool.SetLabel,
+                    buttonModifier,
+//                    containerColor =
+//                        if (labelInputIsActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+//                        else Color.Unspecified,
+                    onClick = toolAction
+                )
+            }
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
                 painterResource(Tool.MarkAsPhantoms.disabledIcon),
@@ -332,13 +426,92 @@ fun BoxScope.PointContextActions(
 }
 
 @Composable
+private fun BoxScope.LabelInputPopup(
+    previousLabel: String?,
+    setLabel: (String) -> Unit,
+    dismiss: () -> Unit,
+) {
+    var label by remember { mutableStateOf(previousLabel ?: "") }
+    Popup(
+        popupPositionProvider = object : PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: IntRect,
+                windowSize: IntSize,
+                layoutDirection: LayoutDirection,
+                popupContentSize: IntSize
+            ): IntOffset = IntOffset(
+                x = anchorBounds.right - popupContentSize.width,
+                y = anchorBounds.top,
+            )
+        },
+        onDismissRequest = dismiss,
+        properties = PopupProperties(
+            focusable = true,
+        ),
+    ) {
+        Surface(
+            Modifier.padding(end = 8.dp),
+            shape = MaterialTheme.shapes.large,
+            contentColor = MaterialTheme.colorScheme.secondary,
+            tonalElevation = 4.dp,
+        ) {
+            Row(
+                Modifier.padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StringTextFieldWithConfirmOnEnter(
+                    value = label,
+                    onValueChange = {
+                        label = it
+                        setLabel(it)
+                    },
+                    onConfirm = dismiss,
+                    color = MaterialTheme.colorScheme.secondary,
+                    placeholderStringResource = Res.string.label_input_placeholder,
+                    captureFocus = true,
+                    confirmOnEnter = true,
+                )
+                OkButton(
+                    noText = true,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    onClick = dismiss,
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PointContextActionsPreview() {
+    ContextActionsWrapper {
+        PointContextActions(
+            pointColor = Color.Blue,
+            showAdjustExprButton = true,
+            isLocked = false,
+            label = null,
+            toolAction = {},
+            toolPredicate = { false },
+            setLabel = {},
+            dismissLabelInput = {},
+        )
+    }
+}
+
+@Composable
 fun BoxScope.ArcPathContextActions(
     someAreClosed: Boolean,
     showAdjustExprButton: Boolean,
     isLocked: Boolean,
     mostCommonBorderColor: Color?,
     mostCommonFillColor: Color?,
+    lineThickness: Float?,
     toolAction: (Tool) -> Unit,
+    toolPredicate: (Tool) -> Boolean,
+    setLineThickness: (Float) -> Unit,
+    dismissLineThicknessInput: () -> Unit,
     // grabbed midpoint <- submode
 ) {
     // scale/rotate handles
@@ -347,6 +520,7 @@ fun BoxScope.ArcPathContextActions(
     // style = path effect
     val defaultBorderColor = MaterialTheme.extendedColorScheme.highAccentColor
     val defaultFillColor = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
+    val lineThicknessInputIsActive = toolPredicate(Tool.SetLineThickness)
     Surface(
         Modifier
             .align(Alignment.CenterEnd)
@@ -375,10 +549,27 @@ fun BoxScope.ArcPathContextActions(
                     onClick = toolAction
                 )
             }
-            SimpleToolButtonWithTooltip(Tool.SetLineThickness,
-                buttonModifier,
-                onClick = toolAction,
-            )
+            Row(
+                Modifier.background(color =
+                    if (lineThicknessInputIsActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                    else Color.Transparent,
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box { // popup container
+                    if (lineThicknessInputIsActive) {
+                        LineThicknessInputPopup(
+                            previousLineThickness = lineThickness,
+                            setLineThickness = setLineThickness,
+                            dismiss = dismissLineThicknessInput,
+                        )
+                    }
+                }
+                SimpleToolButtonWithTooltip(Tool.SetLineThickness,
+                    buttonModifier,
+                    onClick = toolAction,
+                )
+            }
             // close/cut loop button
             if (isLocked) {
                 SimpleToolButtonWithTooltip(Tool.Detach, buttonModifier, onClick = toolAction)
@@ -389,9 +580,122 @@ fun BoxScope.ArcPathContextActions(
     }
 }
 
+private const val MIN_THICKNESS = 1f
+private const val MAX_THICKNESS = 50f
+private const val THICKNESS_DISCRETIZATION = 1f
+private val THICKNESS_RANGE = MIN_THICKNESS .. MAX_THICKNESS
+private val N_THICKNESS_DISCRETIZATION_STEPS =
+    ceil((MAX_THICKNESS - MIN_THICKNESS)/THICKNESS_DISCRETIZATION).toInt()
+
+@Composable
+private fun BoxScope.LineThicknessInputPopup(
+    previousLineThickness: Float?,
+    setLineThickness: (Float) -> Unit,
+    dismiss: () -> Unit,
+) {
+    var thickness by remember { mutableStateOf(previousLineThickness ?: 1f) }
+    // separate var so that tf doesnt re-format user input
+    var textFieldThickness by remember { mutableStateOf(previousLineThickness ?: 1f) }
+    val sliderColors = SliderDefaults.colors(
+        thumbColor = MaterialTheme.colorScheme.secondary,
+        activeTrackColor = MaterialTheme.colorScheme.secondary,
+        activeTickColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTickColor = MaterialTheme.colorScheme.secondary,
+    )
+    Popup(
+        popupPositionProvider = object : PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: IntRect,
+                windowSize: IntSize,
+                layoutDirection: LayoutDirection,
+                popupContentSize: IntSize
+            ): IntOffset = IntOffset(
+                x = anchorBounds.right - popupContentSize.width,
+                y = anchorBounds.top,
+            )
+        },
+        onDismissRequest = dismiss,
+        properties = PopupProperties(
+            focusable = true,
+        ),
+    ) {
+        Surface(
+            Modifier.padding(end = 8.dp),
+            shape = MaterialTheme.shapes.large,
+            contentColor = MaterialTheme.colorScheme.secondary,
+            tonalElevation = 4.dp,
+        ) {
+            Column(
+                Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Slider(
+                    value = thickness,
+                    onValueChange = {
+                        thickness = it
+                        textFieldThickness = it
+                        setLineThickness(it)
+                    },
+                    modifier = Modifier.widthIn(max = 300.dp),
+                    valueRange = THICKNESS_RANGE,
+                    steps = N_THICKNESS_DISCRETIZATION_STEPS - 1,
+                    colors = sliderColors,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    FloatTextField(
+                        value = textFieldThickness,
+                        onValueChange = {
+                            thickness = it
+                            setLineThickness(it)
+                        },
+                        validateValue = { it >= 0f },
+                        onConfirm = dismiss,
+//                        modifier = Modifier.widthIn(max = 200.dp),
+                        color = MaterialTheme.colorScheme.secondary,
+                        placeholderStringResource = Res.string.line_thickness_input_placeholder,
+                        captureFocus = true,
+                        confirmOnEnter = true,
+                        nFractionalDigits = 3,
+                    )
+                    OkButton(
+                        noText = true,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        onClick = dismiss,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun ArcPathContextActionsPreview() {
+    ContextActionsWrapper {
+        ArcPathContextActions(
+            someAreClosed = true,
+            showAdjustExprButton = true,
+            isLocked = false,
+            mostCommonBorderColor = Color.Gray,
+            mostCommonFillColor = Color.Yellow,
+            lineThickness = null,
+            toolAction = {},
+            toolPredicate = { false },
+            setLineThickness = {},
+            dismissLineThicknessInput = {},
+        )
+    }
+}
+
 @Composable
 fun BoxScope.SelectionChoices(
-    choices: List<SubMode.SelectionChoices.Choice>,
+    choices: List<Submode.SelectionChoices.Choice>,
     selectChoice: (indexAmongChoices: Int?) -> Unit,
 ) {
     Surface(
@@ -450,6 +754,26 @@ fun BoxScope.SelectionChoices(
                 }
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun SelectionChoicesPreview() {
+    ContextActionsWrapper {
+        SelectionChoices(
+            choices = listOf(
+                Submode.SelectionChoices.Choice(
+                    0, Circle(0.0, 0.0, 1.0),
+                    Color.Red, null
+                ),
+                Submode.SelectionChoices.Choice(
+                    1, Line(1.0, 0.0, 1.0),
+                    Color.Green, null
+                ),
+            ),
+            selectChoice = {},
+        )
     }
 }
 
@@ -562,6 +886,22 @@ fun InterpolationInterface(
     }
 }
 
+@Preview
+@Composable
+private fun InterpolationInterfacePreview() {
+    ContextActionsWrapper { positions ->
+        InterpolationInterface(
+            concretePositions = positions,
+            interpolateCircles = true,
+            circlesAreCoDirected = true,
+            defaults = DefaultInterpolationParameters(),
+            updateParameters = {},
+            openDetailsDialog = {},
+            confirmParameters = {},
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RotationInterface(
@@ -655,6 +995,20 @@ fun RotationInterface(
         rotationParametersFlow.collect { params ->
             updateParameters(params)
         }
+    }
+}
+
+@Preview
+@Composable
+private fun RotationInterfacePreview() {
+    ContextActionsWrapper { positions ->
+        RotationInterface(
+            concretePositions = positions,
+            defaults = DefaultRotationParameters(),
+            updateParameters = {},
+            openDetailsDialog = {},
+            confirmParameters = {},
+        )
     }
 }
 
@@ -760,6 +1114,20 @@ fun BiInversionInterface(
         biInversionParametersFlow.collect { params ->
             updateParameters(params)
         }
+    }
+}
+
+@Preview
+@Composable
+private fun BiInversionInterfacePreview() {
+    ContextActionsWrapper { positions ->
+        BiInversionInterface(
+            concretePositions = positions,
+            defaults = DefaultBiInversionParameters(),
+            updateParameters = {},
+            openDetailsDialog = {},
+            confirmParameters = {},
+        )
     }
 }
 
@@ -906,6 +1274,21 @@ fun LoxodromicMotionInterface(
     }
 }
 
+@Preview
+@Composable
+private fun LoxodromicMotionInterfacePreview() {
+    ContextActionsWrapper { positions ->
+        LoxodromicMotionInterface(
+            concretePositions = positions,
+            defaults = DefaultLoxodromicMotionParameters(),
+            updateParameters = {},
+            updateBidirectionality = {},
+            openDetailsDialog = {},
+            confirmParameters = {},
+        )
+    }
+}
+
 @Composable
 private fun ReverseDirectionToggle(
     isOn: Boolean,
@@ -979,6 +1362,19 @@ fun BoxScope.PartialArcPathContextActions(
         Text(
             stringResource(Tool.CompleteArcPath.description),
             style = MaterialTheme.adaptiveTypography.label
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PartialArcPathContextActionsPreview() {
+    ContextActionsWrapper { positions ->
+        PartialArcPathContextActions(
+            canvasSize = positions.size.let {
+                IntSize(it.width.roundToInt(), it.height.roundToInt())
+            },
+            toolAction = {},
         )
     }
 }
@@ -1072,6 +1468,17 @@ fun BoxScope.RegionManipulationStrategySelector(
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun RegionManipulationStrategySelectorPreview() {
+    ContextActionsWrapper {
+        RegionManipulationStrategySelector(
+            currentStrategy = RegionManipulationStrategy.ADD,
+            setStrategy = {},
+        )
     }
 }
 

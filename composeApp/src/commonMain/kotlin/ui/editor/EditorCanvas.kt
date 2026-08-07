@@ -285,14 +285,21 @@ fun BoxScope.EditorCanvas(
                 onRotateFinished = viewModel::finishHandleRotation,
             )
         } else if (viewModel.showPointContextActions) {
+            val label = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
+                 viewModel.objectSelection
+                    .firstNotNullOfOrNull { viewModel.styling[it]?.label?.content }
+            }
             PointContextActions(
                 // only points are selected
                 pointColor =
                     viewModel.getMostCommonBorderColorInSelection() ?: defaultFreePointColor,
                 showAdjustExprButton = viewModel.showAdjustExprButton,
                 isLocked = viewModel.selectionIsLocked,
+                label = label,
                 toolAction = viewModel::toolAction,
                 toolPredicate = viewModel::toolPredicate,
+                setLabel = viewModel::setLabel,
+                dismissLabelInput = viewModel::dismissInputSubmode,
             )
         } else if (viewModel.showArcPathContextActions) {
             val someAreClosed = remember(viewModel.selection) {
@@ -306,13 +313,22 @@ fun BoxScope.EditorCanvas(
             val mostCommonFillColor = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
                 viewModel.selection.arcPaths.mostCommonOf { viewModel.styling[it]?.fillColor }
             }
+            val lineThickness = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
+                viewModel.selection.indices
+                    .mapNotNull { viewModel.styling[it]?.lineThickness }
+                    .mostCommonOf { it }
+            }
             ArcPathContextActions(
                 someAreClosed = someAreClosed,
                 showAdjustExprButton = viewModel.showAdjustExprButton,
                 isLocked = viewModel.selectionIsLocked,
                 mostCommonBorderColor = mostCommonBorderColor,
                 mostCommonFillColor = mostCommonFillColor,
+                lineThickness = lineThickness,
                 toolAction = viewModel::toolAction,
+                toolPredicate = viewModel::toolPredicate,
+                setLineThickness = viewModel::setLineThickness,
+                dismissLineThicknessInput = viewModel::dismissInputSubmode,
             )
         } else if (
             viewModel.mode == ToolMode.ARC_PATH &&
@@ -322,7 +338,7 @@ fun BoxScope.EditorCanvas(
         } else {
             when (val sm = viewModel.submode) {
                 // TODO: confirm selection in rectangular-select
-                is SubMode.ExprAdjustment<*> -> when (sm.parameters) {
+                is Submode.ExprAdjustment<*> -> when (sm.parameters) {
                     is InterpolationParameters ->
                         InterpolationInterface(
                             concretePositions = concretePositions,
@@ -365,7 +381,7 @@ fun BoxScope.EditorCanvas(
         }
 
         when (val submode = viewModel.submode) {
-            is SubMode.SelectionChoices ->
+            is Submode.SelectionChoices ->
                 SelectionChoices(submode.choices, viewModel::selectFromChoices)
             else -> {}
         }
@@ -1356,7 +1372,7 @@ private inline fun DrawScope.drawPartialConstructs(
 private inline fun DrawScope.drawHandles(
     objects: List<*>,
     selection: List<Ix>,
-    submode: SubMode?,
+    submode: Submode?,
     handleConfig: HandleConfig?,
     crossinline getSelectionRect: () -> Rect?,
     showCircles: Boolean,
@@ -1391,7 +1407,7 @@ private inline fun DrawScope.drawHandles(
                 }
             }
             HandleConfig.SEVERAL_OBJECTS -> {
-                val rectSubmode = submode as? SubMode.RectangularSelect
+                val rectSubmode = submode as? Submode.RectangularSelect
                 val noHandles = rectSubmode?.corner1 != null && rectSubmode?.corner2 != null
                 if (!noHandles) {
                     getSelectionRect()?.let { selectionRect ->
@@ -1429,7 +1445,7 @@ private inline fun DrawScope.drawHandles(
             null -> {}
         }
         when (submode) {
-            is SubMode.RectangularSelect -> {
+            is Submode.RectangularSelect -> {
                 val (corner1, corner2) = submode
                 if (corner1 != null && corner2 != null) {
                     val rect = Rect.fromCorners(corner1, corner2)
@@ -1441,7 +1457,7 @@ private inline fun DrawScope.drawHandles(
                     )
                 }
             }
-            is SubMode.Rotate -> {
+            is Submode.Rotate -> {
                 val (center, angle) = submode
                 val currentDirection = Offset(0f, -1f).rotateBy(angle.toFloat())
                 val maxDim = size.maxDimension
@@ -1461,7 +1477,7 @@ private inline fun DrawScope.drawHandles(
 
 private fun DrawScope.drawGrids(
     visibleRect: Rect,
-    submode: SubMode?,
+    submode: Submode?,
     stereographicGridColor: Color,
     stereographicGridStroke: Stroke,
     southPointRadius: Float,
@@ -1470,7 +1486,7 @@ private fun DrawScope.drawGrids(
     southPointAlpha: Float = 0.8f,
 ) {
     when (submode) {
-        is SubMode.RotateStereographicSphere -> {
+        is Submode.RotateStereographicSphere -> {
             drawCircle(
                 color = stereographicGridColor,
                 alpha = southPointAlpha,
@@ -1480,7 +1496,7 @@ private fun DrawScope.drawGrids(
             for (i in submode.grid.indices) {
                 val circleOrLine = submode.grid[i]
                 val alpha =
-                    if (i == SubMode.RotateStereographicSphere.EQUATOR_GRID_INDEX)
+                    if (i == Submode.RotateStereographicSphere.EQUATOR_GRID_INDEX)
                         equatorGridLineAlpha
                     else gridLineAlpha
                 drawCircleOrLine(circleOrLine,

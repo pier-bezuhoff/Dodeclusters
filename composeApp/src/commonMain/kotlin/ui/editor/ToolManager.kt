@@ -26,14 +26,14 @@ import kotlin.collections.plusAssign
 class ToolManager(
     val objectModel: ConformalObjectModel,
     modeState: MutableState<Mode>,
-    submodeState: MutableState<SubMode?>,
+    submodeState: MutableState<Submode?>,
     selectionState: MutableState<Selection>,
     private val snackbarMessages: MutableSharedFlow<Pair<SnackbarMessage, Array<out Any>>>,
 ) {
     private var selection: Selection by selectionState
 
     private val mode: Mode by modeState
-    private var submode: SubMode? by submodeState
+    private var submode: Submode? by submodeState
 
     private val objects: List<GCircleOrConcreteAcPath?> = objectModel.displayObjects
     inline val expressions: ConformalExpressions get() =
@@ -149,7 +149,7 @@ class ToolManager(
             }
         }
         partialArgList = PartialArgList(tool.signature, tool.nonEqualityConditions, args)
-        submode = SubMode.ExprAdjustment(adjustables)
+        submode = Submode.ExprAdjustment(adjustables)
         clearSelection() // clear selection to hide selection HUD
     }
 

@@ -129,7 +129,7 @@ fun CircleOrPointInterpolationDialog(
                                 PreTextFieldLabel(Res.string.circle_interpolation_prompt)
                                 IntTextField(
                                     value = nInterjacents,
-                                    onNewValue = { nInterjacents = it },
+                                    onValueChange = { nInterjacents = it },
                                 )
                             }
                             Slider(
@@ -168,7 +168,7 @@ fun CircleOrPointInterpolationDialog(
                         PreTextFieldLabel(Res.string.circle_interpolation_prompt)
                         IntTextField(
                             value = nInterjacents,
-                            onNewValue = { nInterjacents = it },
+                            onValueChange = { nInterjacents = it },
                         )
                     }
                     Slider(

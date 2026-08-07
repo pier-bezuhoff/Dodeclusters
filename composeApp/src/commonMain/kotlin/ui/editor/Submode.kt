@@ -8,45 +8,45 @@ import core.geometry.GCircle
 import core.geometry.Point
 import domain.Ix
 import domain.expressions.ArcPath
-import domain.model.LogicalRegion
 import domain.expressions.Expr
 import domain.model.PartialArgList
 import domain.model.RegionConstraints
 
 @Immutable
 /** Additional mode accompanying [Mode] and
- * carrying [SubMode]-specific relevant data, also
+ * carrying [Submode]-specific relevant data, also
  * they have specific behavior for VM.onPanZoom */
-sealed interface SubMode {
-    sealed interface OnlyActiveWhenPressed : SubMode
+sealed interface Submode {
+    sealed interface OnlyActiveWhenPressed : Submode
+    sealed interface InputPopup : Submode
 
     // center uses absolute positioning
     /** Scale via top-right selection rect handle */
-    data class Scale(val center: Offset) : SubMode, OnlyActiveWhenPressed
+    data class Scale(val center: Offset) : Submode, OnlyActiveWhenPressed
     data class ScaleViaSlider(
         val center: Offset,
         val sliderPercentage: Float = 0.5f
-    ) : SubMode
+    ) : Submode
     data class Rotate(
         val center: Offset,
         val angle: Double = 0.0,
         val snappedAngle: Double = 0.0
-    ) : SubMode
+    ) : Submode
 
     data class RectangularSelect(
         val corner1: Offset? = null,
         val corner2: Offset? = null,
-    ) : SubMode
+    ) : Submode
     data class FlowSelect(
         val lastConstraints: RegionConstraints? = null,
-    ) : SubMode
+    ) : Submode
     data class FlowFill(
         val lastConstraints: RegionConstraints? = null,
-    ) : SubMode
+    ) : Submode
 
     data class SelectionChoices(
         val choices: List<Choice>,
-    ) : SubMode {
+    ) : Submode {
         /** @property[objectOrArcPath] null means arc-path */
         @Immutable
         data class Choice(
@@ -70,7 +70,7 @@ sealed interface SubMode {
         val grabbedTarget: Offset,
         val south: Point,
         val grid: List<CircleOrLine>,
-    ) : SubMode {
+    ) : Submode {
         companion object {
             /** in degrees */
             const val GRID_ANGLE_STEP = 15
@@ -97,7 +97,7 @@ sealed interface SubMode {
         val adjustables: List<AdjustableExpr<EXPR>>, // non-empty
         val arcPathAdjustables: List<AdjustableExpr<ArcPath>> = emptyList(),
         val regions: List<Int> = emptyList(),
-    ) : SubMode {
+    ) : Submode {
         val parameters = (adjustables[0].expr as? Expr.HasParameters)?.parameters
 
         init {
@@ -109,11 +109,19 @@ sealed interface SubMode {
         }
     }
 
-    /** [SubMode] of a [ToolMode] after it emitted a result and we may temporarily
+    data class GrabbedArcMidpoint(
+        val arcPathIndex: Ix,
+        val arcIndex: Int,
+    ) : Submode
+
+    data object LabelInput : InputPopup
+    data object LineThicknessInput : InputPopup
+
+    /** [Submode] of a [ToolMode] after it emitted a result and we may temporarily
      * want to drag it/change it properties */
     data class ToolResultPostprocessing(
         val resultIndices: List<Ix>,
-    ) : SubMode
+    ) : Submode
 
     /** Temporary leave tool mode to choose a selection argument and then go back */
     data class ToolSelectionInput(
@@ -121,10 +129,6 @@ sealed interface SubMode {
         val partialArgList: PartialArgList,
     )
 
-    data class GrabbedArcMidpoint(
-        val arcPathIndex: Ix,
-        val arcIndex: Int,
-    ) : SubMode
 }
 
 /** Adjustable [expr] with indices that are occupied by its outputs.

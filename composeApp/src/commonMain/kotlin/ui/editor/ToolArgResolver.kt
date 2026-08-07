@@ -12,12 +12,12 @@ import domain.model.PartialArgList
 // trying to extract tool-arg manip from VM
 class ToolArgResolver(
     val modeState: State<Mode>,
-    val submodeState: State<SubMode?>,
+    val submodeState: State<Submode?>,
 ) {
     inline val toolMode: ToolMode? get() =
         modeState.value as? ToolMode
-    inline val exprAdjustment: SubMode.ExprAdjustment<*>? get() =
-        submodeState.value as? SubMode.ExprAdjustment<*>
+    inline val exprAdjustment: Submode.ExprAdjustment<*>? get() =
+        submodeState.value as? Submode.ExprAdjustment<*>
     // NOTE: Arg.XYPoint & co use absolute positioning
     var partialArgList: PartialArgList? by mutableStateOf(null)
         private set

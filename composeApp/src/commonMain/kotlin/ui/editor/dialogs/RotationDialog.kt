@@ -3,17 +3,13 @@ package ui.editor.dialogs
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Label
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -29,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
@@ -44,7 +39,6 @@ import dodeclusters.composeapp.generated.resources.n_steps_placeholder
 import dodeclusters.composeapp.generated.resources.n_steps_prompt
 import dodeclusters.composeapp.generated.resources.rotation_angle_prompt
 import dodeclusters.composeapp.generated.resources.rotation_title
-import dodeclusters.composeapp.generated.resources.stub
 import domain.expressions.RotationParameters
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.Serializable
@@ -135,7 +129,7 @@ fun RotationDialog(
                     PreTextFieldLabel(Res.string.rotation_angle_prompt)
                     FloatTextField(
                         value = angle,
-                        onNewValue = {
+                        onValueChange = {
                             angle = it
                             angleNumerator = angle * angleDenominator / 360f
                         },
@@ -153,7 +147,7 @@ fun RotationDialog(
                     TextLabel(Res.string.angle_fraction_numerator_prefix)
                     FloatTextField(
                         value = angleNumerator,
-                        onNewValue = {
+                        onValueChange = {
                             angleNumerator = it
                             angle = (angleNumerator/angleDenominator) * 360f
                         },
@@ -169,12 +163,12 @@ fun RotationDialog(
                     )
                     IntTextField(
                         value = angleDenominator,
-                        onNewValue = {
+                        onValueChange = {
                             angleDenominator = it
                             angle = (angleNumerator/angleDenominator) * 360f
                         },
                         placeholderStringResource = Res.string.angle_fraction_denominator_placeholder,
-                        valueValidator = { it != 0 },
+                        validateValue = { it != 0 },
                         modifier = Modifier
                             .widthIn(max = 100.dp)
                     )
@@ -197,7 +191,7 @@ fun RotationDialog(
                     PreTextFieldLabel(Res.string.n_steps_prompt)
                     IntTextField(
                         value = nSteps,
-                        onNewValue = { nSteps = it },
+                        onValueChange = { nSteps = it },
                         placeholderStringResource = Res.string.n_steps_placeholder,
                     )
                 }

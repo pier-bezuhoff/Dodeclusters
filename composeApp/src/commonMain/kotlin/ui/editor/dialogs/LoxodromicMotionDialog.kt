@@ -140,7 +140,7 @@ fun LoxodromicMotionDialog(
                     PreTextFieldLabel(Res.string.loxodromic_motion_angle_prompt)
                     FloatTextField(
                         value = angle,
-                        onNewValue = { angle = it },
+                        onValueChange = { angle = it },
                         placeholderStringResource = Res.string.angle_in_degrees_placeholder,
                         suffixStringResource = Res.string.degrees_suffix,
                         nFractionalDigits = 1,
@@ -154,7 +154,7 @@ fun LoxodromicMotionDialog(
                     PreTextFieldLabel(Res.string.loxodromic_motion_hyperbolic_prompt)
                     DoubleTextField(
                         value = dilation,
-                        onNewValue = { dilation = it },
+                        onValueChange = { dilation = it },
                         placeholderStringResource = Res.string.dilation_placeholder,
                         nFractionalDigits = 3,
                     )
@@ -166,7 +166,7 @@ fun LoxodromicMotionDialog(
                     PreTextFieldLabel(Res.string.n_steps_prompt)
                     IntTextField(
                         value = nSteps,
-                        onNewValue = { nSteps = it },
+                        onValueChange = { nSteps = it },
                         placeholderStringResource = Res.string.n_steps_placeholder,
                     )
                 }

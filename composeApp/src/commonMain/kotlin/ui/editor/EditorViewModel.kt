@@ -125,7 +125,6 @@ import ui.editor.dialogs.DefaultRotationParameters
 import ui.editor.dialogs.DialogType
 import ui.theme.CustomColors
 import ui.theme.DodeclustersColors
-import ui.theme.ExtendedColorScheme
 import ui.tools.Category
 import ui.tools.Tool
 import kotlin.math.max
@@ -180,9 +179,9 @@ class EditorViewModel : ViewModel() {
     /** Major editing mode */
     var mode: Mode by modeState
         private set
-    private val submodeState: MutableState<SubMode?> = mutableStateOf(null)
+    private val submodeState: MutableState<Submode?> = mutableStateOf(null)
     /** Minor editing mode, bound to [mode]; can hold transient data */
-    var submode: SubMode? by submodeState
+    var submode: Submode? by submodeState
         private set
     // NOTE: Arg.XYPoint & co use absolute positioning
     /** Partly filled [Tool] arg-list during [ToolMode] */
@@ -264,13 +263,13 @@ class EditorViewModel : ViewModel() {
         else null
     inline val scaleSliderPercentage: Float get() =
         submode.let { sm ->
-            if (sm is SubMode.ScaleViaSlider)
+            if (sm is Submode.ScaleViaSlider)
                 sm.sliderPercentage
             else 0.5f
         }
     inline val rotationHandleAngle: Float get() =
         submode.let { sm ->
-            if (sm is SubMode.Rotate)
+            if (sm is Submode.Rotate)
                 sm.angle.toFloat()
             else 0f
         }
@@ -659,13 +658,13 @@ class EditorViewModel : ViewModel() {
             is ToolMode if (partialArgList?.args?.isNotEmpty() == true) -> {
                 // MAYBE: just pop the last arg
                 partialArgList = PartialArgList(mode.signature, mode.nonEqualityConditions)
-                if (submode is SubMode.ExprAdjustment<*>) {
+                if (submode is Submode.ExprAdjustment<*>) {
                     cancelExprAdjustment()
                 }
             }
             else -> {
                 when (submode) {
-                    is SubMode.RotateStereographicSphere -> switchToCategory(Category.Drag)
+                    is Submode.RotateStereographicSphere -> switchToCategory(Category.Drag)
                     else -> switchToMode(mode) // clears up stuff
                 }
                 clearSelection()
@@ -1468,18 +1467,18 @@ class EditorViewModel : ViewModel() {
     fun activateRectangularSelect() {
         switchToMode(SelectionMode.Multiselect)
         clearSelection()
-        submode = SubMode.RectangularSelect()
+        submode = Submode.RectangularSelect()
     }
 
     fun activateFlowSelect() {
         switchToMode(SelectionMode.Multiselect)
         clearSelection()
-        submode = SubMode.FlowSelect()
+        submode = Submode.FlowSelect()
     }
 
     fun activateFlowFill() {
         switchToMode(SelectionMode.Region)
-        submode = SubMode.FlowFill()
+        submode = Submode.FlowFill()
     }
 
     fun forceSelectAll() {
@@ -1540,13 +1539,13 @@ class EditorViewModel : ViewModel() {
                 // sphere radius == equator radius
                 min(canvasSize.width/2.0, canvasSize.height/2.0)
             )
-            submode = SubMode.RotateStereographicSphere(
+            submode = Submode.RotateStereographicSphere(
                 sphereRadius = sphereProjection.radius,
                 grabbedTarget = sphereProjection.center,
                 south = sphereProjection.centerPoint,
                 grid = generateSphereGrid(
                     sphereProjection,
-                    angleStep = SubMode.RotateStereographicSphere.GRID_ANGLE_STEP
+                    angleStep = Submode.RotateStereographicSphere.GRID_ANGLE_STEP
                 ),
             )
         }
@@ -1710,7 +1709,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun scaleSelection(zoom: Float) {
-        if (submode is SubMode.SelectionChoices)
+        if (submode is Submode.SelectionChoices)
             submode = null
         if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
             // scale pArcPath? not sure
@@ -1767,6 +1766,14 @@ class EditorViewModel : ViewModel() {
         recordHistory()
     }
 
+    fun dismissInputSubmode() {
+        if (submode is Submode.InputPopup) {
+            submode = null
+            objectModel.invalidate()
+            recordHistory()
+        }
+    }
+
     fun setLabel(label: String?) {
         for (ix in objectSelection) {
             // idt we need to forget label shift when removing the label
@@ -1774,9 +1781,7 @@ class EditorViewModel : ViewModel() {
                 label = label?.let { Styling.Label(it) }
             ) }
         }
-        openedDialog = null
         objectModel.invalidate()
-        recordHistory()
     }
 
     fun setLineThickness(thickness: Float?) {
@@ -1785,9 +1790,7 @@ class EditorViewModel : ViewModel() {
                 it.copy(lineThickness = thickness)
             }
         }
-        openedDialog = null
         objectModel.invalidate()
-        recordHistory()
     }
 
     private fun markSelectedObjectsAsPhantoms() {
@@ -2155,7 +2158,7 @@ class EditorViewModel : ViewModel() {
             ))
         }
         partialArgList = PartialArgList(tool.signature, tool.nonEqualityConditions, args)
-        submode = SubMode.ExprAdjustment(adjustables, arcPathAdjustables, adjustableRegions)
+        submode = Submode.ExprAdjustment(adjustables, arcPathAdjustables, adjustableRegions)
         clearSelection() // clear selection to hide selection HUD
     }
 
@@ -2186,7 +2189,7 @@ class EditorViewModel : ViewModel() {
             val radiusHandlePosition = circle.center + Offset(circle.radius.toFloat(), 0f)
             when {
                 isCloseEnoughToSelect(radiusHandlePosition, absolutePosition, lowAccuracy = true) ->
-                    submode = SubMode.Scale(circle.center)
+                    submode = Submode.Scale(circle.center)
             }
         }
     }
@@ -2197,9 +2200,9 @@ class EditorViewModel : ViewModel() {
             val rotateHandlePosition = rect.bottomRight
             when {
                 isCloseEnoughToSelect(scaleHandlePosition, absolutePosition, lowAccuracy = true) ->
-                    submode = SubMode.Scale(rect.center)
+                    submode = Submode.Scale(rect.center)
                 isCloseEnoughToSelect(rotateHandlePosition, absolutePosition, lowAccuracy = true) -> {
-                    submode = SubMode.Rotate(rect.center)
+                    submode = Submode.Rotate(rect.center)
                 }
             }
         }
@@ -2211,7 +2214,7 @@ class EditorViewModel : ViewModel() {
             for (arcIndex in concreteArcPath.arcs.indices) {
                 concreteArcPath.arcs[arcIndex].freeMidpoint?.let { midpoint ->
                     if (isCloseEnoughToSelect(midpoint.toOffset(), absolutePosition, lowAccuracy = true)) {
-                        submode = SubMode.GrabbedArcMidpoint(ix, arcIndex)
+                        submode = Submode.GrabbedArcMidpoint(ix, arcIndex)
                     }
                 }
             }
@@ -2242,24 +2245,24 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun downDuringRectangularSelect(absolutePosition: Offset) {
-        val (corner1, corner2) = submode as SubMode.RectangularSelect
+        val (corner1, corner2) = submode as Submode.RectangularSelect
         submode = if (corner1 == null) {
-            SubMode.RectangularSelect(absolutePosition)
+            Submode.RectangularSelect(absolutePosition)
         } else if (corner2 == null) {
-            SubMode.RectangularSelect(corner1, absolutePosition)
+            Submode.RectangularSelect(corner1, absolutePosition)
         } else {
-            SubMode.RectangularSelect(absolutePosition)
+            Submode.RectangularSelect(absolutePosition)
         }
     }
 
     private fun downDuringFlowSelect(absolutePosition: Offset) {
         val fullConstraints = getUncompressedRegionSurrounding(absolutePosition)
-        submode = SubMode.FlowSelect(lastConstraints = fullConstraints)
+        submode = Submode.FlowSelect(lastConstraints = fullConstraints)
     }
 
     private fun downDuringFlowFill(absolutePosition: Offset) {
         val fullConstraints = getUncompressedRegionSurrounding(absolutePosition)
-        submode = SubMode.FlowFill(lastConstraints = fullConstraints)
+        submode = Submode.FlowFill(lastConstraints = fullConstraints)
         val selectedBounds = selection.indices.filter {
             val o = objects[it]
             o is CircleOrLine || o is ConcreteArcPath && o.isClosed
@@ -2424,7 +2427,7 @@ class EditorViewModel : ViewModel() {
         }
         movementAfterDown = false
         val absolutePosition = absolute(position)
-        if (submode is SubMode.SelectionChoices)
+        if (submode is Submode.SelectionChoices)
             submode = null
         if (showCircles) { // TODO: allow arc-path selection when no circles shown
             when (handleConfig) {
@@ -2441,14 +2444,14 @@ class EditorViewModel : ViewModel() {
                 SelectionMode.Drag if (submode == null) ->
                     downDuringDrag(absolutePosition = absolutePosition)
                 SelectionMode.Multiselect -> when (submode) {
-                    is SubMode.RectangularSelect ->
+                    is Submode.RectangularSelect ->
                         downDuringRectangularSelect(absolutePosition = absolutePosition)
-                    is SubMode.FlowSelect ->
+                    is Submode.FlowSelect ->
                         downDuringFlowSelect(absolutePosition = absolutePosition)
                     else -> {}
                 }
                 SelectionMode.Region -> when (submode) {
-                    is SubMode.FlowFill ->
+                    is Submode.FlowFill ->
                         downDuringFlowFill(absolutePosition = absolutePosition)
                     else -> {}
                 }
@@ -2466,7 +2469,7 @@ class EditorViewModel : ViewModel() {
         }
         // should work independent of circle visibility
         when (val sm = submode) {
-            is SubMode.RotateStereographicSphere ->
+            is Submode.RotateStereographicSphere ->
                 submode = sm.copy(
                     grabbedTarget = absolutePosition,
                 )
@@ -2547,18 +2550,18 @@ class EditorViewModel : ViewModel() {
             val selectionIsAmbiguous = selectablePoints.size != 1 &&
                 selectablePoints.size + selectableCircles.size + selectableArcPaths.size > 1
             if (selectionIsAmbiguous) {
-                submode = SubMode.SelectionChoices(
+                submode = Submode.SelectionChoices(
                     (selectablePoints + selectableCircles).mapNotNull { ix ->
                         val obj = (objects[ix] as? GCircle) ?: return@mapNotNull null
                         val color = styling[ix]?.borderColor
-                        SubMode.SelectionChoices.Choice(
+                        Submode.SelectionChoices.Choice(
                             index = ix, objectOrArcPath = obj,
                             borderColor = color, fillColor = color,
                         )
                     } + selectableArcPaths.map { ix ->
                         val borderColor = styling[ix]?.borderColor
                         val fillColor = styling[ix]?.fillColor
-                        SubMode.SelectionChoices.Choice(
+                        Submode.SelectionChoices.Choice(
                             index = ix, objectOrArcPath = null,
                             borderColor = borderColor, fillColor = fillColor,
                         )
@@ -2691,7 +2694,7 @@ class EditorViewModel : ViewModel() {
                     tapDuringMultiselect(absolutePosition = absolutePosition)
                 SelectionMode.Region -> {
                     when (submode) {
-                        is SubMode.FlowFill -> {} // see :0nDown
+                        is Submode.FlowFill -> {} // see :0nDown
                         else ->
                             tapDuringRegions(absolutePosition = absolutePosition)
                     }
@@ -2714,7 +2717,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun selectFromChoices(indexAmongChoices: Int?) {
-        (submode as? SubMode.SelectionChoices)?.let { sm ->
+        (submode as? Submode.SelectionChoices)?.let { sm ->
             if (indexAmongChoices != null && indexAmongChoices != 0) { // index=0 is already selected
                 val newChoice = sm.choices[indexAmongChoices]
                 selection = when (newChoice.objectOrArcPath) {
@@ -2728,7 +2731,7 @@ class EditorViewModel : ViewModel() {
         submode = null
     }
 
-    private fun scaleSingleCircle(ix: Ix, absoluteCentroid: Offset, zoom: Float, sm: SubMode.Scale) {
+    private fun scaleSingleCircle(ix: Ix, absoluteCentroid: Offset, zoom: Float, sm: Submode.Scale) {
         val circle = objects[ix] as? CircleOrLine
         if (circle is Circle) {
             val center = sm.center
@@ -2740,7 +2743,7 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun rotateSingleCircle(ix: Ix, absoluteCentroid: Offset, pan: Offset, sm: SubMode.Rotate) {
+    private fun rotateSingleCircle(ix: Ix, absoluteCentroid: Offset, pan: Offset, sm: Submode.Rotate) {
         val center = sm.center
         val centerToCurrent = absoluteCentroid - center
         val centerToPreviousHandle = centerToCurrent - pan
@@ -2768,12 +2771,12 @@ class EditorViewModel : ViewModel() {
 
     fun scaleViaSlider(newSliderPercentage: Float) {
         val sm = when (val sm0 = submode) {
-            is SubMode.ScaleViaSlider -> sm0
+            is Submode.ScaleViaSlider -> sm0
             else -> {
                 val center =
                     calculateSelectionRect()?.center ?:
                     absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
-                SubMode.ScaleViaSlider(center)
+                Submode.ScaleViaSlider(center)
             }
         }
         val scaleFactor = sliderPercentageDeltaToZoom(newSliderPercentage - sm.sliderPercentage)
@@ -2788,7 +2791,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun startHandleRotation(center: Offset) {
-        submode = SubMode.Rotate(computeAbsoluteCenter() ?: Offset.Zero)
+        submode = Submode.Rotate(computeAbsoluteCenter() ?: Offset.Zero)
     }
 
     fun finishHandleRotation() {
@@ -2798,7 +2801,7 @@ class EditorViewModel : ViewModel() {
 
     fun rotateViaHandle(newRotationAngle: Float) {
         when (val sm = submode) {
-            is SubMode.Rotate -> {
+            is Submode.Rotate -> {
                 val newAngle = newRotationAngle.toDouble()
                 val snappedAngle =
                     if (loadedSettings.enableAngleSnapping)
@@ -2812,7 +2815,7 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun rotateSeveralCircles(targets: List<Ix>, absoluteCentroid: Offset, pan: Offset, sm: SubMode.Rotate) {
+    private fun rotateSeveralCircles(targets: List<Ix>, absoluteCentroid: Offset, pan: Offset, sm: Submode.Rotate) {
         val center = sm.center
         val centerToCurrent = absoluteCentroid - center
         val centerToPreviousHandle = centerToCurrent - pan
@@ -2973,7 +2976,7 @@ class EditorViewModel : ViewModel() {
 
     private fun dragGrabbedArcMidpoint(
         absoluteCentroid: Offset,
-        sm: SubMode.GrabbedArcMidpoint,
+        sm: Submode.GrabbedArcMidpoint,
     ) {
         val arcPath = objectModel.getArcPath(sm.arcPathIndex) ?: return
         val changedIndices = objectModel.modifyArcPath(
@@ -2994,7 +2997,7 @@ class EditorViewModel : ViewModel() {
     //  its carrier is moved it becomes line again
     private fun stereographicallyRotateEverything(
         absolutePointerPosition: Offset,
-        sm: SubMode.RotateStereographicSphere,
+        sm: Submode.RotateStereographicSphere,
     ) {
         // MAYBE: wrap in try-catch
         // MAYBE: snap North & South to screen center
@@ -3102,7 +3105,7 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun updateRectangleSelect(absolutePosition: Offset, sm: SubMode.RectangularSelect) {
+    private fun updateRectangleSelect(absolutePosition: Offset, sm: Submode.RectangularSelect) {
         val corner1 = sm.corner1
         val rect = Rect.fromCorners(corner1 ?: absolutePosition, absolutePosition)
         val selectables = objects.mapIndexed { ix, o ->
@@ -3114,13 +3117,13 @@ class EditorViewModel : ViewModel() {
             gCircles = rectSelection.filter { objects[it] is GCircle },
             arcPaths = rectSelection.filter { objects[it] is ConcreteArcPath },
         )
-        submode = SubMode.RectangularSelect(corner1, absolutePosition)
+        submode = Submode.RectangularSelect(corner1, absolutePosition)
     }
 
-    private fun updateFlowSelect(absolutePosition: Offset, sm: SubMode.FlowSelect) {
+    private fun updateFlowSelect(absolutePosition: Offset, sm: Submode.FlowSelect) {
         val fullConstraints = getUncompressedRegionSurrounding(absolutePosition)
         if (sm.lastConstraints == null) {
-            submode = SubMode.FlowSelect(lastConstraints = fullConstraints)
+            submode = Submode.FlowSelect(lastConstraints = fullConstraints)
         } else {
             val diff =
                 (fullConstraints.insides.toSet() xor sm.lastConstraints.insides.toSet()) union
@@ -3138,13 +3141,13 @@ class EditorViewModel : ViewModel() {
     private fun updateFlowFill(
         absolutePosition: Offset,
         selectedCircles: List<Ix>,
-        sm: SubMode.FlowFill
+        sm: Submode.FlowFill
     ) {
         val fullConstraints = getUncompressedRegionSurrounding(absolutePosition)
         if (sm.lastConstraints == null) {
-            submode = SubMode.FlowFill(lastConstraints = fullConstraints)
+            submode = Submode.FlowFill(lastConstraints = fullConstraints)
         } else {
-            var submode: SubMode.FlowFill = sm
+            var submode: Submode.FlowFill = sm
             if (sm.lastConstraints != fullConstraints) {
                 submode = sm.copy(lastConstraints = fullConstraints)
                 if (restrictRegionsToSelection && selectedCircles.isNotEmpty()) {
@@ -3225,29 +3228,29 @@ class EditorViewModel : ViewModel() {
         val selectedCircles = selection.gCircles.filter { objects[it] is CircleOrLine }
         val selectedPoints = selection.gCircles.filter { objects[it] is Point }
         when (val sm = submode) {
-            is SubMode.Scale -> when (handleConfig) {
+            is Submode.Scale -> when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
                     scaleSingleCircle(ix = selection.gCircles.single(), absoluteCentroid = absoluteCentroid, zoom = zoom, sm = sm)
                 HandleConfig.SEVERAL_OBJECTS ->
                     scaleSeveralCircles(targets = selectedIndices, pan = pan)
                 null -> {}
             }
-            is SubMode.Rotate -> when (handleConfig) {
+            is Submode.Rotate -> when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
                     rotateSingleCircle(ix = selection.gCircles.single(), pan = pan, absoluteCentroid = absoluteCentroid, sm = sm)
                 HandleConfig.SEVERAL_OBJECTS ->
                     rotateSeveralCircles(targets = selectedIndices, absoluteCentroid = absoluteCentroid, pan = pan, sm = sm)
                 null -> {}
             }
-            is SubMode.GrabbedArcMidpoint ->
+            is Submode.GrabbedArcMidpoint ->
                 dragGrabbedArcMidpoint(absoluteCentroid = absoluteCentroid, sm = sm)
-            is SubMode.RectangularSelect ->
+            is Submode.RectangularSelect ->
                 updateRectangleSelect(absolutePosition = absoluteCentroid, sm = sm)
-            is SubMode.FlowSelect ->
+            is Submode.FlowSelect ->
                 updateFlowSelect(absolutePosition = absoluteCentroid, sm = sm)
-            is SubMode.FlowFill ->
+            is Submode.FlowFill ->
                 updateFlowFill(absolutePosition = absoluteCentroid, selectedCircles = selectedCircles, sm = sm)
-            is SubMode.RotateStereographicSphere ->
+            is Submode.RotateStereographicSphere ->
                 stereographicallyRotateEverything(absolutePointerPosition = absoluteCentroid, sm = sm)
             null -> when (mode) {
                 SelectionMode.Drag if selectedCircles.isNotEmpty() && showCircles ->
@@ -3361,7 +3364,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun upRectangularSelect(visiblePosition: Offset?) {
-        val (corner1, corner2) = submode as SubMode.RectangularSelect
+        val (corner1, corner2) = submode as Submode.RectangularSelect
         if (visiblePosition != null && corner1 != null && corner2 != null) {
             val newCorner2 = absolute(visiblePosition)
             val rect = Rect.fromCorners(corner1, newCorner2)
@@ -3376,7 +3379,7 @@ class EditorViewModel : ViewModel() {
                 gCircles = rectSelection.filter { objects[it] is GCircle },
                 arcPaths = rectSelection.filter { objects[it] is ConcreteArcPath },
             )
-            submode = SubMode.RectangularSelect(corner1, corner2)
+            submode = Submode.RectangularSelect(corner1, corner2)
         }
     }
 
@@ -3412,9 +3415,9 @@ class EditorViewModel : ViewModel() {
             }
             SelectionMode.Multiselect -> {
                 when (submode) {
-                    is SubMode.RectangularSelect ->
+                    is Submode.RectangularSelect ->
                         upRectangularSelect(visiblePosition = position)
-                    is SubMode.FlowSelect -> { // haxx
+                    is Submode.FlowSelect -> { // haxx
                         println("flow-select -> $objectSelection")
                         toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
                     }
@@ -3440,12 +3443,12 @@ class EditorViewModel : ViewModel() {
             else -> {}
         }
         when (submode) { // history recordings
-            is SubMode.FlowFill,
-            is SubMode.RotateStereographicSphere,
-            is SubMode.Rotate,
-            is SubMode.Scale,
-            is SubMode.ScaleViaSlider,
-            is SubMode.GrabbedArcMidpoint ->
+            is Submode.FlowFill,
+            is Submode.RotateStereographicSphere,
+            is Submode.Rotate,
+            is Submode.Scale,
+            is Submode.ScaleViaSlider,
+            is Submode.GrabbedArcMidpoint ->
                 recordHistory()
             null -> when (mode) {
                 SelectionMode.Drag, SelectionMode.Multiselect -> {
@@ -3458,14 +3461,14 @@ class EditorViewModel : ViewModel() {
             else -> {}
         }
         when (submode) { // submode cleanup/reset
-            is SubMode.Rotate,
-            is SubMode.Scale,
-            is SubMode.ScaleViaSlider,
-            is SubMode.FlowSelect,
-            is SubMode.GrabbedArcMidpoint ->
+            is Submode.Rotate,
+            is Submode.Scale,
+            is Submode.ScaleViaSlider,
+            is Submode.FlowSelect,
+            is Submode.GrabbedArcMidpoint ->
                 submode = null
-            is SubMode.RectangularSelect ->
-                submode = SubMode.RectangularSelect()
+            is Submode.RectangularSelect ->
+                submode = Submode.RectangularSelect()
             else -> {}
         }
     }
@@ -3638,9 +3641,16 @@ class EditorViewModel : ViewModel() {
 
     fun processKeyboardAction(action: KeyboardAction) {
 //        println("processing $action")
-        if (submode is SubMode.SelectionChoices)
+        if (submode is Submode.SelectionChoices)
             submode = null
-        if (openedDialog == null) {
+        val activeTextInput = submode is Submode.InputPopup
+        if (activeTextInput) {
+            when (action) {
+                KeyboardAction.CANCEL ->
+                    submode = null
+                else -> {}
+            }
+        } else if (openedDialog == null) {
             when (action) {
                 KeyboardAction.SELECT_ALL -> forceSelectAll()
                 KeyboardAction.DELETE -> deleteSelection()
@@ -3698,7 +3708,7 @@ class EditorViewModel : ViewModel() {
                 if (submode == null && partialArgList?.args?.isNotEmpty() != true && partialArcPath == null) {
                     switchToCategory(Category.Drag)
                 } else {
-                    if (submode is SubMode.ExprAdjustment<*>) {
+                    if (submode is Submode.ExprAdjustment<*>) {
                         cancelExprAdjustment()
                         recordHistory()
                     }
@@ -3713,15 +3723,15 @@ class EditorViewModel : ViewModel() {
             }
             is SelectionMode -> {
                 when (submode) {
-                    is SubMode.ExprAdjustment<*> -> {
+                    is Submode.ExprAdjustment<*> -> {
                         recordHistory()
                         undo() // contrived way to go to the before-adj savepoint
                     }
-                    is SubMode.RectangularSelect -> {
+                    is Submode.RectangularSelect -> {
                         clearSelection()
-                        submode = SubMode.RectangularSelect()
+                        submode = Submode.RectangularSelect()
                     }
-                    is SubMode.SelectionChoices ->
+                    is Submode.SelectionChoices ->
                         submode = null
                     else -> {
                         when (mode) {
@@ -4081,7 +4091,7 @@ class EditorViewModel : ViewModel() {
             val newCircles = newGCircles.map { (it as? GCircle)?.upscale() }
             objectModel.addDisplayObjects(newCircles)
             val outputRange = (oldSize until objects.size).toList()
-            submode = SubMode.ExprAdjustment(listOf(
+            submode = Submode.ExprAdjustment(listOf(
                 // here sourceIndex is less meaningful
                 AdjustableExpr(expr,
                     sourceIndex = startArg.index,
@@ -4107,7 +4117,7 @@ class EditorViewModel : ViewModel() {
             val newPoints = newGCircles.map { (it as? Point)?.upscale() }
             objectModel.addDisplayObjects(newPoints)
             val outputRange = (oldSize until objects.size).toList()
-            submode = SubMode.ExprAdjustment(listOf(
+            submode = Submode.ExprAdjustment(listOf(
                 AdjustableExpr(expr,
                     sourceIndex = startPointIndex,
                     outputRange, outputRange
@@ -4143,9 +4153,9 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun adjustInterpolationParameters(
-        sm: SubMode.ExprAdjustment<Expr.Conformal.OneToMany>,
+        sm: Submode.ExprAdjustment<Expr.Conformal.OneToMany>,
         parameters: InterpolationParameters,
-    ): SubMode.ExprAdjustment<Expr.Conformal.OneToMany> {
+    ): Submode.ExprAdjustment<Expr.Conformal.OneToMany> {
         val (expr, sourceIndex, occupiedIndices, reservedIndices) = sm.adjustables[0]
         val newExpr = expr.copyWithNewParameters(parameters)
         val (newIndices, newReservedIndices, newObjects, deleted, changed) = expressions.adjustMultiExpr(
@@ -4167,15 +4177,15 @@ class EditorViewModel : ViewModel() {
         }
         objectModel.update(newIndices.toSet())
         objectModel.forceUpdate(changed)
-        return SubMode.ExprAdjustment(listOf(
+        return Submode.ExprAdjustment(listOf(
             AdjustableExpr(newExpr, sourceIndex, newIndices, newReservedIndices)
         ))
     }
 
     private fun adjustTransformationParameters(
-        sm: SubMode.ExprAdjustment<Expr.Conformal.OneToMany>,
+        sm: Submode.ExprAdjustment<Expr.Conformal.OneToMany>,
         parameters: Parameters,
-    ): SubMode.ExprAdjustment<Expr.Conformal.OneToMany> {
+    ): Submode.ExprAdjustment<Expr.Conformal.OneToMany> {
         regions = regions.withoutElementsAt(sm.regions.toSet())
         for (arcPathAdjustable in sm.arcPathAdjustables) {
             objectModel.removeObjectsAt(arcPathAdjustable.occupiedIndices)
@@ -4279,23 +4289,23 @@ class EditorViewModel : ViewModel() {
             source2trajectory1 + source2trajectory2
         }
         val affectedRegions: List<Int> = copySourceRegionsOntoTrajectories(source2trajectory)
-        return SubMode.ExprAdjustment(
+        return Submode.ExprAdjustment(
             adjustables = newAdjustables,
             arcPathAdjustables = newArcPathAdjustables,
             regions = affectedRegions,
         )
     }
 
-    /** When in [SubMode.ExprAdjustment], changes [submode]'s [Expr]s' parameters to
+    /** When in [Submode.ExprAdjustment], changes [submode]'s [Expr]s' parameters to
      * [parameters] and updates corresponding [objects] */
     @Suppress("UNCHECKED_CAST")
     fun adjustExprParameters(parameters: Parameters) {
         val sm = submode
-        if (sm is SubMode.ExprAdjustment<*> && parameters != sm.parameters) {
+        if (sm is Submode.ExprAdjustment<*> && parameters != sm.parameters) {
             submode = when (parameters) {
                 is InterpolationParameters -> // single adjustable expr case
                     adjustInterpolationParameters(
-                        sm as SubMode.ExprAdjustment<Expr.Conformal.OneToMany>,
+                        sm as Submode.ExprAdjustment<Expr.Conformal.OneToMany>,
                         parameters
                     )
                 // multiple adjustable exprs
@@ -4303,7 +4313,7 @@ class EditorViewModel : ViewModel() {
                 is BiInversionParameters,
                 is LoxodromicMotionParameters ->
                     adjustTransformationParameters(
-                        sm as SubMode.ExprAdjustment<Expr.Conformal.OneToMany>,
+                        sm as Submode.ExprAdjustment<Expr.Conformal.OneToMany>,
                         parameters
                     )
                 else -> sm
@@ -4333,7 +4343,7 @@ class EditorViewModel : ViewModel() {
             null
         }
         when (val sm = submode) {
-            is SubMode.ExprAdjustment<*> -> {
+            is Submode.ExprAdjustment<*> -> {
                 when (val parameters = sm.parameters) {
                     is InterpolationParameters ->
                         defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
@@ -4358,7 +4368,7 @@ class EditorViewModel : ViewModel() {
 
     fun cancelExprAdjustment() {
         when (val sm = submode) {
-            is SubMode.ExprAdjustment<*> -> {
+            is Submode.ExprAdjustment<*> -> {
                 val outputs =
                     sm.adjustables.flatMap { it.occupiedIndices } +
                     sm.arcPathAdjustables.flatMap { it.occupiedIndices }
@@ -4375,7 +4385,7 @@ class EditorViewModel : ViewModel() {
     private inline fun <reified EXPR : Expr.Conformal.OneToMany> populateExprAdjustmentSubmode(
         inputIndices: List<Ix>,
         crossinline mkExpr: (gCircleIndex: Ix) -> EXPR,
-    ): SubMode.ExprAdjustment<EXPR> {
+    ): Submode.ExprAdjustment<EXPR> {
         val gCircleSources = inputIndices.filter { objects[it] is GCircle }
         val arcPathSources = inputIndices.filter { objects[it] is ConcreteArcPath }
         val adjustables = mutableListOf<AdjustableExpr<EXPR>>()
@@ -4407,7 +4417,7 @@ class EditorViewModel : ViewModel() {
             source2trajectory.add(sourceArcPathIndex to arcPathAdjustable.occupiedIndices)
         }
         val copiedRegions = copySourceRegionsOntoTrajectories(source2trajectory)
-        return SubMode.ExprAdjustment(
+        return Submode.ExprAdjustment(
             adjustables = adjustables,
             arcPathAdjustables = arcPathAdjustables,
             regions = copiedRegions,
@@ -4508,7 +4518,7 @@ class EditorViewModel : ViewModel() {
                 }
             }
             val halfSize = forwardAdjustables.size
-            submode = SubMode.ExprAdjustment(
+            submode = Submode.ExprAdjustment(
                 adjustables = forwardAdjustables + backwardAdjustables,
                 arcPathAdjustables = arcPathAdjustables1 + arcPathAdjustables2.map { arcPathAdjustable ->
                     // we need to shift arc-path blueprint point indices, cuz adjustables are doubled
@@ -4531,7 +4541,7 @@ class EditorViewModel : ViewModel() {
 
     fun updateLoxodromicBidirectionality(bidirectional: Boolean) {
         val sm = submode
-        if (sm is SubMode.ExprAdjustment<*>) {
+        if (sm is Submode.ExprAdjustment<*>) {
             when (sm.parameters) {
                 is LoxodromicMotionParameters -> {
                     defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters.copy(
@@ -4621,11 +4631,11 @@ class EditorViewModel : ViewModel() {
             ToolMode.ARC_PATH ->
                 completeArcPath()
             else -> when (submode) {
-                is SubMode.ExprAdjustment<*> ->
+                is Submode.ExprAdjustment<*> ->
                     confirmAdjustedParameters()
                 // Enter for some reason simulates button click on the focused button...
                 // which breaks this
-                is SubMode.RectangularSelect ->
+                is Submode.RectangularSelect ->
                     submode = null
                 else -> {}
             }
@@ -4681,7 +4691,7 @@ class EditorViewModel : ViewModel() {
             ToolMode.BI_INVERSION -> DialogType.BI_INVERSION
             ToolMode.LOXODROMIC_MOTION -> DialogType.LOXODROMIC_MOTION
             else -> when (val sm = submode) {
-                is SubMode.ExprAdjustment<*> ->
+                is Submode.ExprAdjustment<*> ->
                     when (sm.parameters) {
                         is InterpolationParameters -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
                         is RotationParameters -> DialogType.ROTATION
@@ -4736,8 +4746,8 @@ class EditorViewModel : ViewModel() {
             Tool.Duplicate -> duplicateSelection()
             Tool.BorderColor, Tool.PointColor -> openedDialog = DialogType.BORDER_COLOR_PICKER
             Tool.FillColor -> openedDialog = DialogType.FILL_COLOR_PICKER
-            Tool.SetLineThickness -> openedDialog = DialogType.LINE_THICKNESS_INPUT
-            Tool.SetLabel -> openedDialog = DialogType.LABEL_INPUT
+            Tool.SetLineThickness -> submode = Submode.LineThicknessInput
+            Tool.SetLabel -> submode = Submode.LabelInput
             Tool.Delete -> deleteSelection()
             is Tool.AppliedColor -> setNewRegionColorToSelectedColorSplash(tool.color)
             is Tool.MultiArg -> switchToMode(ToolMode.correspondingTo(tool))
@@ -4750,7 +4760,7 @@ class EditorViewModel : ViewModel() {
             Tool.InfinitePoint -> addInfinitePointArg()
             Tool.MovePointToInfinity -> movePointToInfinity()
         }
-        if (submode is SubMode.SelectionChoices)
+        if (submode is Submode.SelectionChoices)
             submode = null
     }
 
@@ -4761,11 +4771,11 @@ class EditorViewModel : ViewModel() {
                 mode == SelectionMode.Drag
             Tool.Multiselect ->
                 mode == SelectionMode.Multiselect &&
-                submode !is SubMode.FlowSelect && submode !is SubMode.RectangularSelect
+                submode !is Submode.FlowSelect && submode !is Submode.RectangularSelect
             Tool.RectangularSelect ->
-                mode == SelectionMode.Multiselect && submode is SubMode.RectangularSelect
+                mode == SelectionMode.Multiselect && submode is Submode.RectangularSelect
             Tool.FlowSelect ->
-                mode == SelectionMode.Multiselect && submode is SubMode.FlowSelect
+                mode == SelectionMode.Multiselect && submode is Submode.FlowSelect
             Tool.ToggleSelectAll -> {
                 // idt we realistically ever need to track all invalidations.
                 // you'd have to move free objects in such a way that all others would
@@ -4775,9 +4785,9 @@ class EditorViewModel : ViewModel() {
                 objectSelection.containsAll(objects.filterIndices { it is CircleOrLineOrPoint })
             }
             Tool.Region ->
-                mode == SelectionMode.Region && submode !is SubMode.FlowFill
+                mode == SelectionMode.Region && submode !is Submode.FlowFill
             Tool.FlowFill ->
-                mode == SelectionMode.Region && submode is SubMode.FlowFill
+                mode == SelectionMode.Region && submode is Submode.FlowFill
             Tool.FillChessboardPattern ->
                 chessboardPattern != ChessboardPattern.NONE
             Tool.RestrictRegionToSelection ->
@@ -4821,6 +4831,8 @@ class EditorViewModel : ViewModel() {
                         (expr == null || expr is Expr.Incidence && objects[expr.carrier] is Line)
                 } == true
             }
+            Tool.SetLabel -> submode is Submode.LabelInput
+            Tool.SetLineThickness -> submode is Submode.LineThicknessInput
             is Tool.MultiArg ->
                 mode == ToolMode.correspondingTo(tool)
             else -> true

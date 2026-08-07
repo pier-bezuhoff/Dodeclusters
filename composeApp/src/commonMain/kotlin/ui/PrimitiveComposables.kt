@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconToggleButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
@@ -43,23 +47,32 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Constraints
@@ -387,13 +400,16 @@ fun OkButton(
     modifier: Modifier = Modifier,
     noText: Boolean = false,
     fontSize: TextUnit = MaterialTheme.adaptiveTypography.actionButtonFontSize,
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary,
     onClick: () -> Unit,
 ) {
     Button(
         onClick = onClick,
         modifier = modifier.padding(4.dp),
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+        border = BorderStroke(2.dp, containerColor),
         shape = CircleShape,
+        colors = ButtonDefaults.buttonColors(containerColor, contentColor),
     ) {
         if (noText) {
             Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok))
@@ -555,48 +571,83 @@ fun LabelColonBigValue(
 @Composable
 fun FloatTextField(
     value: Float,
-    onNewValue: (newValue: Float) -> Unit,
+    onValueChange: (newValue: Float) -> Unit,
     validateValue: (Float) -> Boolean = { true },
+    onConfirm: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
     placeholderStringResource: StringResource? = null,
+    captureFocus: Boolean = false,
+    confirmOnEnter: Boolean = false,
     suffixStringResource: StringResource? = null,
     nFractionalDigits: Int = 2,
-    modifier: Modifier = Modifier,
     textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
     var textFieldValue by remember(value, nFractionalDigits) {
         val s = value.formatDecimals(nFractionalDigits, showTrailingZeroes = false)
         mutableStateOf(TextFieldValue(s, TextRange(s.length)))
     }
-    var isError by remember(value) { mutableStateOf(!validateValue(value)) }
+    val focusRequester = remember { FocusRequester() }
     OutlinedTextField(
-        textFieldValue,
+        value = textFieldValue,
         onValueChange = { newTextFieldValue ->
             textFieldValue = newTextFieldValue
             val updatedValue = textFieldValue.text.toFloatOrNull()
-            if (updatedValue != null && updatedValue != value) {
-                if (validateValue(updatedValue))
-                    onNewValue(updatedValue)
-                else
-                    isError = true
+            if (updatedValue != null && updatedValue != value && validateValue(updatedValue)) {
+                onValueChange(updatedValue)
             }
         },
-        modifier = modifier,
+        modifier = modifier
+            .focusRequester(focusRequester)
+            .then(
+                if (confirmOnEnter)
+                    Modifier.onKeyEvent {
+                        if (it.key == Key.Enter) {
+                            onConfirm()
+                            true
+                        } else false
+                    }
+                else Modifier
+            )
+        ,
         textStyle = textStyle,
         placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
         suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
-        isError = textFieldValue.text.toFloatOrNull()?.let { isError } ?: true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Decimal,
+            imeAction = if (confirmOnEnter) ImeAction.Done else ImeAction.Unspecified,
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = { onConfirm() }
+        ),
+        isError = textFieldValue.text.toFloatOrNull()?.let { !validateValue(it) } ?: true,
         singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            cursorColor = color,
+            focusedLabelColor = color,
+            focusedBorderColor = color,
+            selectionColors = TextSelectionColors(
+                color,
+                color.copy(alpha = 0.4f),
+            )
+        ),
     )
+    LaunchedEffect(focusRequester, captureFocus) {
+        if (captureFocus) {
+            focusRequester.requestFocus(FocusDirection.Enter)
+        }
+    }
 }
 
 @Composable
 fun DoubleTextField(
     value: Double,
-    onNewValue: (newValue: Double) -> Unit,
+    onValueChange: (newValue: Double) -> Unit,
+    validateValue: (Double) -> Boolean = { true },
+    modifier: Modifier = Modifier,
     placeholderStringResource: StringResource? = null,
     suffixStringResource: StringResource? = null,
     nFractionalDigits: Int = 2,
-    modifier: Modifier = Modifier,
     textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
     var textFieldValue by remember(value, nFractionalDigits) {
@@ -604,19 +655,22 @@ fun DoubleTextField(
         mutableStateOf(TextFieldValue(s, TextRange(s.length)))
     }
     OutlinedTextField(
-        textFieldValue,
+        value = textFieldValue,
         onValueChange = { newTextFieldValue ->
             textFieldValue = newTextFieldValue
             val updatedValue = textFieldValue.text.toDoubleOrNull()
-            if (updatedValue != null && updatedValue != value) {
-                onNewValue(updatedValue)
+            if (updatedValue != null && updatedValue != value && validateValue(updatedValue)) {
+                onValueChange(updatedValue)
             }
         },
         modifier = modifier,
         textStyle = textStyle,
         placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
         suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
-        isError = textFieldValue.text.toDoubleOrNull()?.let { false } ?: true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Decimal,
+        ),
+        isError = textFieldValue.text.toDoubleOrNull()?.let { !validateValue(it) } ?: true,
         singleLine = true,
     )
 }
@@ -624,11 +678,11 @@ fun DoubleTextField(
 @Composable
 fun IntTextField(
     value: Int,
-    onNewValue: (newValue: Int) -> Unit,
+    onValueChange: (newValue: Int) -> Unit,
+    validateValue: (value: Int) -> Boolean = { it >= 0 },
+    modifier: Modifier = Modifier,
     placeholderStringResource: StringResource? = null,
     suffixStringResource: StringResource? = null,
-    valueValidator: (value: Int) -> Boolean = { it >= 0 },
-    modifier: Modifier = Modifier,
     textStyle: TextStyle = MaterialTheme.adaptiveTypography.body,
 ) {
     var textFieldValue by remember(value) {
@@ -636,21 +690,93 @@ fun IntTextField(
         mutableStateOf(TextFieldValue(s, TextRange(s.length)))
     }
     OutlinedTextField(
-        textFieldValue,
+        value = textFieldValue,
         onValueChange = { newTextFieldValue ->
             textFieldValue = newTextFieldValue
             val newValue = textFieldValue.text.toIntOrNull()
-            if (newValue != null && newValue != value && valueValidator(newValue)) {
-                onNewValue(newValue)
+            if (newValue != null && newValue != value && validateValue(newValue)) {
+                onValueChange(newValue)
             }
         },
         modifier = modifier,
         textStyle = textStyle,
         placeholder = placeholderStringResource?.let { { Text(stringResource(placeholderStringResource)) } },
         suffix = suffixStringResource?.let { { Text(stringResource(suffixStringResource)) } },
-        isError = textFieldValue.text.toIntOrNull()?.let { !valueValidator(it) } ?: true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+        ),
+        isError = textFieldValue.text.toIntOrNull()?.let { !validateValue(it) } ?: true,
         singleLine = true,
     )
+}
+
+@Composable
+fun StringTextFieldWithConfirmOnEnter(
+    value: String,
+    onValueChange: (String) -> Unit,
+    validateValue: (String) -> Boolean = { true },
+    onConfirm: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    placeholderStringResource: StringResource? = null,
+    captureFocus: Boolean = false,
+    confirmOnEnter: Boolean = false,
+) {
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(value, TextRange(value.length)))
+    }
+    val focusRequester = remember { FocusRequester() }
+    OutlinedTextField(
+        value = textFieldValue,
+        onValueChange = { newTextFieldValue ->
+            textFieldValue = newTextFieldValue
+            val s = newTextFieldValue.text
+            if (s != value && validateValue(s)) {
+                onValueChange(s)
+            }
+        },
+        modifier = modifier
+            .focusRequester(focusRequester)
+            .then(
+                if (confirmOnEnter)
+                    Modifier.onKeyEvent {
+                        if (it.key == Key.Enter) {
+                            onConfirm()
+                            true
+                        } else false
+                    }
+                else Modifier
+            )
+        ,
+        textStyle = MaterialTheme.adaptiveTypography.body,
+        placeholder = placeholderStringResource?.let {
+            { Text(stringResource(placeholderStringResource)) }
+        },
+        isError = !validateValue(textFieldValue.text),
+        keyboardOptions = KeyboardOptions(
+//            keyboardType = KeyboardType.Text,
+            imeAction = if (confirmOnEnter) ImeAction.Done else ImeAction.Unspecified,
+//            showKeyboardOnFocus = true,
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = { onConfirm() }
+        ),
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            cursorColor = color,
+            focusedLabelColor = color,
+            focusedBorderColor = color,
+            selectionColors = TextSelectionColors(
+                color,
+                color.copy(alpha = 0.4f),
+            )
+        ),
+    )
+    LaunchedEffect(focusRequester, captureFocus) {
+        if (captureFocus) {
+            focusRequester.requestFocus(FocusDirection.Enter)
+        }
+    }
 }
 
 // reference: https://stackoverflow.com/a/71129399

@@ -186,6 +186,8 @@
     <string name="move_point_to_infinity_name">Move to infinity</string>
     <string name="move_point_to_infinity_description">Move selected point to infinity</string>
     <string name="steps_slider_name">N steps</string>
+    <string name="label_input_placeholder">&lt;enter label&gt;</string>
+    <string name="line_thickness_input_placeholder">&lt;enter line thickness&gt;</string>
     <!-- HUD selection choices -->
     <string name="selection_choices_title">Alternative selections:</string>
     <string name="circle_number_label">Circle #%1$d</string>
@@ -305,10 +307,6 @@
     <string name="blend_mode_overlay">Overlay</string>
     <string name="blend_mode_difference">Difference</string>
     <string name="blend_mode_plus">Addition</string>
-    <!-- label input dialog -->
-    <string name="label_input_title">Input point label</string>
-    <!-- line thickness dialog -->
-    <string name="line_thickness_dialog_title">Set line thickness</string>
     <!-- snackbar messages, surround with ^important^ for highlight -->
     <string name="locked_objects_notice">These objects are ^locked^ (no degrees of freedom), ^detach^ them before altering</string>
     <string name="locked_object_notice">This object is ^locked^ (no degrees of freedom), ^detach^ it before altering</string>
