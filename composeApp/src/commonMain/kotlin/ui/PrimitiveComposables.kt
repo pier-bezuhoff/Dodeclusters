@@ -754,9 +754,9 @@ fun StringTextFieldWithConfirmOnEnter(
         },
         isError = !validateValue(textFieldValue.text),
         keyboardOptions = KeyboardOptions(
-//            keyboardType = KeyboardType.Text,
+            keyboardType = KeyboardType.Text,
             imeAction = if (confirmOnEnter) ImeAction.Done else ImeAction.Unspecified,
-//            showKeyboardOnFocus = true,
+            showKeyboardOnFocus = true,
         ),
         keyboardActions = KeyboardActions(
             onDone = { onConfirm() }

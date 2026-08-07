@@ -324,7 +324,7 @@ fun BoxScope.EditorCanvas(
                 isLocked = viewModel.selectionIsLocked,
                 mostCommonBorderColor = mostCommonBorderColor,
                 mostCommonFillColor = mostCommonFillColor,
-                lineThickness = lineThickness,
+                lineThickness = lineThickness ?: pathStroke.width,
                 toolAction = viewModel::toolAction,
                 toolPredicate = viewModel::toolPredicate,
                 setLineThickness = viewModel::setLineThickness,

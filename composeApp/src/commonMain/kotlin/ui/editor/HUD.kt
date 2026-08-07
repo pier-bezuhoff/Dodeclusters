@@ -106,7 +106,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.FloatTextField
-import ui.OkButton
 import ui.OnOffButton
 import ui.SimpleFilledButton
 import ui.SimpleToolButtonWithTooltip
@@ -387,7 +386,7 @@ fun BoxScope.PointContextActions(
                 ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box { // popup container
+                Box { // popup position root container
                     if (labelInputIsActive) {
                         LabelInputPopup(
                             previousLabel = label,
@@ -441,7 +440,7 @@ private fun BoxScope.LabelInputPopup(
                 popupContentSize: IntSize
             ): IntOffset = IntOffset(
                 x = anchorBounds.right - popupContentSize.width,
-                y = anchorBounds.top,
+                y = anchorBounds.top - popupContentSize.height/2,
             )
         },
         onDismissRequest = dismiss,
@@ -455,10 +454,8 @@ private fun BoxScope.LabelInputPopup(
             contentColor = MaterialTheme.colorScheme.secondary,
             tonalElevation = 4.dp,
         ) {
-            Row(
+            Box(
                 Modifier.padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
             ) {
                 StringTextFieldWithConfirmOnEnter(
                     value = label,
@@ -471,12 +468,6 @@ private fun BoxScope.LabelInputPopup(
                     placeholderStringResource = Res.string.label_input_placeholder,
                     captureFocus = true,
                     confirmOnEnter = true,
-                )
-                OkButton(
-                    noText = true,
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    onClick = dismiss,
                 )
             }
         }
@@ -507,7 +498,7 @@ fun BoxScope.ArcPathContextActions(
     isLocked: Boolean,
     mostCommonBorderColor: Color?,
     mostCommonFillColor: Color?,
-    lineThickness: Float?,
+    lineThickness: Float,
     toolAction: (Tool) -> Unit,
     toolPredicate: (Tool) -> Boolean,
     setLineThickness: (Float) -> Unit,
@@ -580,16 +571,18 @@ fun BoxScope.ArcPathContextActions(
     }
 }
 
-private const val MIN_THICKNESS = 1f
-private const val MAX_THICKNESS = 50f
-private const val THICKNESS_DISCRETIZATION = 1f
-private val THICKNESS_RANGE = MIN_THICKNESS .. MAX_THICKNESS
-private val N_THICKNESS_DISCRETIZATION_STEPS =
-    ceil((MAX_THICKNESS - MIN_THICKNESS)/THICKNESS_DISCRETIZATION).toInt()
+private object LineThicknessSliderDefaults {
+    const val MIN = 1f
+    const val MAX = 30f
+    const val DISCRETIZATION = 1f
+    val RANGE = MIN .. MAX
+    val N_DISCRETIZATION_STEPS =
+        ceil((MAX - MIN)/DISCRETIZATION).toInt()
+}
 
 @Composable
 private fun BoxScope.LineThicknessInputPopup(
-    previousLineThickness: Float?,
+    previousLineThickness: Float,
     setLineThickness: (Float) -> Unit,
     dismiss: () -> Unit,
 ) {
@@ -612,7 +605,7 @@ private fun BoxScope.LineThicknessInputPopup(
                 popupContentSize: IntSize
             ): IntOffset = IntOffset(
                 x = anchorBounds.right - popupContentSize.width,
-                y = anchorBounds.top,
+                y = anchorBounds.top - popupContentSize.height/2,
             )
         },
         onDismissRequest = dismiss,
@@ -639,36 +632,25 @@ private fun BoxScope.LineThicknessInputPopup(
                         setLineThickness(it)
                     },
                     modifier = Modifier.widthIn(max = 300.dp),
-                    valueRange = THICKNESS_RANGE,
-                    steps = N_THICKNESS_DISCRETIZATION_STEPS - 1,
+                    valueRange = LineThicknessSliderDefaults.RANGE,
+                    steps = LineThicknessSliderDefaults.N_DISCRETIZATION_STEPS - 1,
                     colors = sliderColors,
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    FloatTextField(
-                        value = textFieldThickness,
-                        onValueChange = {
-                            thickness = it
-                            setLineThickness(it)
-                        },
-                        validateValue = { it >= 0f },
-                        onConfirm = dismiss,
-//                        modifier = Modifier.widthIn(max = 200.dp),
-                        color = MaterialTheme.colorScheme.secondary,
-                        placeholderStringResource = Res.string.line_thickness_input_placeholder,
-                        captureFocus = true,
-                        confirmOnEnter = true,
-                        nFractionalDigits = 3,
-                    )
-                    OkButton(
-                        noText = true,
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        onClick = dismiss,
-                    )
-                }
+                FloatTextField(
+                    value = textFieldThickness,
+                    onValueChange = {
+                        thickness = it
+                        setLineThickness(it)
+                    },
+                    validateValue = { it >= 0f },
+                    onConfirm = dismiss,
+                    modifier = Modifier.widthIn(max = 200.dp),
+                    color = MaterialTheme.colorScheme.secondary,
+                    placeholderStringResource = Res.string.line_thickness_input_placeholder,
+                    captureFocus = false,
+                    confirmOnEnter = true,
+                    nFractionalDigits = 2,
+                )
             }
         }
     }
@@ -684,7 +666,7 @@ private fun ArcPathContextActionsPreview() {
             isLocked = false,
             mostCommonBorderColor = Color.Gray,
             mostCommonFillColor = Color.Yellow,
-            lineThickness = null,
+            lineThickness = 1f,
             toolAction = {},
             toolPredicate = { false },
             setLineThickness = {},
@@ -1366,19 +1348,6 @@ fun BoxScope.PartialArcPathContextActions(
     }
 }
 
-@Preview
-@Composable
-private fun PartialArcPathContextActionsPreview() {
-    ContextActionsWrapper { positions ->
-        PartialArcPathContextActions(
-            canvasSize = positions.size.let {
-                IntSize(it.width.roundToInt(), it.height.roundToInt())
-            },
-            toolAction = {},
-        )
-    }
-}
-
 @Composable
 private fun RegionManipulationStrategyChoice(
     strategy: RegionManipulationStrategy,
@@ -1476,7 +1445,7 @@ fun BoxScope.RegionManipulationStrategySelector(
 private fun RegionManipulationStrategySelectorPreview() {
     ContextActionsWrapper {
         RegionManipulationStrategySelector(
-            currentStrategy = RegionManipulationStrategy.ADD,
+            currentStrategy = RegionManipulationStrategy.REPLACE,
             setStrategy = {},
         )
     }

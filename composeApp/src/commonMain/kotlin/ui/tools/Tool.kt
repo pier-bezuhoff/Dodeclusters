@@ -597,8 +597,8 @@ sealed class Tool(
         name = Res.string.duplicate_name,
         description = Res.string.duplicate_description,
         icon = Res.drawable.copy
-    ), ITool.Tinted {
-        override val tint = DodeclustersColors.skyBlue.copy(alpha = 0.9f)
+    ) {
+//        override val tint = DodeclustersColors.skyBlue.copy(alpha = 0.9f)
     }
     // MAYBE: eraser-like mode
     data object Delete : ContextAction(
