@@ -1709,8 +1709,6 @@ class EditorViewModel : ViewModel() {
     }
 
     fun scaleSelection(zoom: Float) {
-        if (submode is Submode.SelectionChoices)
-            submode = null
         if (mode == ToolMode.ARC_PATH && partialArcPath != null) {
             // scale pArcPath? not sure
         } else {
@@ -1766,11 +1764,12 @@ class EditorViewModel : ViewModel() {
         recordHistory()
     }
 
-    fun dismissInputSubmode() {
+    fun dismissInputSubmode(recordHistory: Boolean = true) {
         if (submode is Submode.InputPopup) {
             submode = null
             objectModel.invalidate()
-            recordHistory()
+            if (recordHistory)
+                recordHistory()
         }
     }
 
@@ -2427,8 +2426,6 @@ class EditorViewModel : ViewModel() {
         }
         movementAfterDown = false
         val absolutePosition = absolute(position)
-        if (submode is Submode.SelectionChoices)
-            submode = null
         if (showCircles) { // TODO: allow arc-path selection when no circles shown
             when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
@@ -2550,18 +2547,18 @@ class EditorViewModel : ViewModel() {
             val selectionIsAmbiguous = selectablePoints.size != 1 &&
                 selectablePoints.size + selectableCircles.size + selectableArcPaths.size > 1
             if (selectionIsAmbiguous) {
-                submode = Submode.SelectionChoices(
+                submode = Submode.SelectionChoicesInput(
                     (selectablePoints + selectableCircles).mapNotNull { ix ->
                         val obj = (objects[ix] as? GCircle) ?: return@mapNotNull null
                         val color = styling[ix]?.borderColor
-                        Submode.SelectionChoices.Choice(
+                        Submode.SelectionChoicesInput.Choice(
                             index = ix, objectOrArcPath = obj,
                             borderColor = color, fillColor = color,
                         )
                     } + selectableArcPaths.map { ix ->
                         val borderColor = styling[ix]?.borderColor
                         val fillColor = styling[ix]?.fillColor
-                        Submode.SelectionChoices.Choice(
+                        Submode.SelectionChoicesInput.Choice(
                             index = ix, objectOrArcPath = null,
                             borderColor = borderColor, fillColor = fillColor,
                         )
@@ -2717,7 +2714,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun selectFromChoices(indexAmongChoices: Int?) {
-        (submode as? Submode.SelectionChoices)?.let { sm ->
+        (submode as? Submode.SelectionChoicesInput)?.let { sm ->
             if (indexAmongChoices != null && indexAmongChoices != 0) { // index=0 is already selected
                 val newChoice = sm.choices[indexAmongChoices]
                 selection = when (newChoice.objectOrArcPath) {
@@ -3641,10 +3638,7 @@ class EditorViewModel : ViewModel() {
 
     fun processKeyboardAction(action: KeyboardAction) {
 //        println("processing $action")
-        if (submode is Submode.SelectionChoices)
-            submode = null
-        val activeTextInput = submode is Submode.InputPopup
-        if (activeTextInput) {
+        if (submode is Submode.InputPopup) {
             when (action) {
                 KeyboardAction.CANCEL ->
                     submode = null
@@ -3731,8 +3725,6 @@ class EditorViewModel : ViewModel() {
                         clearSelection()
                         submode = Submode.RectangularSelect()
                     }
-                    is Submode.SelectionChoices ->
-                        submode = null
                     else -> {
                         when (mode) {
                             SelectionMode.Multiselect -> {
@@ -4760,8 +4752,6 @@ class EditorViewModel : ViewModel() {
             Tool.InfinitePoint -> addInfinitePointArg()
             Tool.MovePointToInfinity -> movePointToInfinity()
         }
-        if (submode is Submode.SelectionChoices)
-            submode = null
     }
 
     /** Is [tool] enabled? */

@@ -262,17 +262,18 @@ fun BoxScope.EditorCanvas(
     if (viewModel.showUI) { // HUD
         hug(viewModel.objectModel.propertyInvalidations)
         if (viewModel.showGenericSelectionContextActions) {
+            val borderColor = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
+                viewModel.getMostCommonBorderColorInSelection()
+                    ?: if (viewModel.objectSelection.all { viewModel.objects[it] is ImaginaryCircle })
+                        imaginaryCircleColor
+                    else
+                        defaultFreeCircleColor
+            }
             SelectionContextActions(
                 concretePositions = concretePositions,
                 scaleSliderPercentage = viewModel.scaleSliderPercentage,
                 rotationHandleAngle = viewModel.rotationHandleAngle,
-                borderColor =
-                    viewModel.getMostCommonBorderColorInSelection()
-                        ?: if (viewModel.objectSelection.all { viewModel.objects[it] is ImaginaryCircle })
-                            imaginaryCircleColor
-                        else
-                            defaultFreeCircleColor
-                ,
+                borderColor = borderColor,
                 showAdjustExprButton = viewModel.showAdjustExprButton,
                 showOrientationToggle = viewModel.showDirectionArrows && !viewModel.selectionIsLocked,
                 isLocked = viewModel.selectionIsLocked,
@@ -381,8 +382,12 @@ fun BoxScope.EditorCanvas(
         }
 
         when (val submode = viewModel.submode) {
-            is Submode.SelectionChoices ->
-                SelectionChoices(submode.choices, viewModel::selectFromChoices)
+            is Submode.SelectionChoicesInput ->
+                SelectionChoicesInputPopup(
+                    choices = submode.choices,
+                    selectChoice = viewModel::selectFromChoices,
+                    dismiss = viewModel::dismissInputSubmode,
+                )
             else -> {}
         }
         if (viewModel.mode == SelectionMode.Region) {

@@ -44,9 +44,9 @@ sealed interface Submode {
         val lastConstraints: RegionConstraints? = null,
     ) : Submode
 
-    data class SelectionChoices(
+    data class SelectionChoicesInput(
         val choices: List<Choice>,
-    ) : Submode {
+    ) : InputPopup {
         /** @property[objectOrArcPath] null means arc-path */
         @Immutable
         data class Choice(

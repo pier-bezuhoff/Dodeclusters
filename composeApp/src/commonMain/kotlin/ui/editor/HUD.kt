@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
@@ -142,6 +143,18 @@ private val buttonModifier = Modifier
 // 16.67 ms is 60 FPS
 private val UPDATE_PARAMETERS_DEBOUNCE_DELTA = 15.milliseconds
 
+private val sliderColorsSecondary: SliderColors
+@Composable
+//@ReadOnlyComposable
+get() =
+    SliderDefaults.colors( // .colors is not marked with read-only...
+        thumbColor = MaterialTheme.colorScheme.secondary,
+        activeTrackColor = MaterialTheme.colorScheme.secondary,
+        activeTickColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
+        inactiveTickColor = MaterialTheme.colorScheme.secondary,
+    )
+
 @Composable
 fun BoxScope.SelectionContextActions(
     concretePositions: ConcreteOnScreenPositions,
@@ -159,15 +172,7 @@ fun BoxScope.SelectionContextActions(
     onRotateStarted: (center: Offset) -> Unit,
     onRotateFinished: () -> Unit,
 ) {
-    // TODO: convert to arc-paths
     // rotate handle
-    val sliderColors = SliderDefaults.colors(
-        thumbColor = MaterialTheme.colorScheme.secondary,
-        activeTrackColor = MaterialTheme.colorScheme.secondary,
-        activeTickColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTickColor = MaterialTheme.colorScheme.secondary,
-    )
     val rotationHandleStripeColor = MaterialTheme.colorScheme.onSecondaryContainer
     // scale slider mid column is too far from the right
     with (concretePositions) {
@@ -177,7 +182,7 @@ fun BoxScope.SelectionContextActions(
             Modifier
                 .align(Alignment.TopEnd)
                 .offset(
-                    x = (-67).dp,
+                    x = -67.dp,
                     y = with (density) {
                         positions.top.toDp() - halfSize
                     }
@@ -202,7 +207,7 @@ fun BoxScope.SelectionContextActions(
                 trackModifier = Modifier.height(8.dp), // height is transposed into width
                 thumbModifier = Modifier.height(24.dp),
                 onValueChangeFinished = onScaleFinished,
-                colors = sliderColors,
+                colors = sliderColorsSecondary,
             )
             SimpleToolButtonWithTooltip(Tool.Shrink,
                 contentColor = MaterialTheme.colorScheme.secondary,
@@ -272,10 +277,6 @@ fun BoxScope.SelectionContextActions(
                 contentColor = borderColor,
                 onClick = toolAction
             )
-//            SimpleToolButtonWithTooltip(Tool.SetLineThickness,
-//                buttonModifier,
-//                onClick = toolAction,
-//            )
             // MAYBE: fill color here too
             TwoIconButtonWithTooltip(
                 painterResource(Tool.MarkAsPhantoms.icon),
@@ -452,7 +453,8 @@ private fun BoxScope.LabelInputPopup(
             Modifier.padding(end = 8.dp),
             shape = MaterialTheme.shapes.large,
             contentColor = MaterialTheme.colorScheme.secondary,
-            tonalElevation = 4.dp,
+            tonalElevation = 12.dp,
+            shadowElevation = 12.dp,
         ) {
             Box(
                 Modifier.padding(8.dp),
@@ -589,13 +591,6 @@ private fun BoxScope.LineThicknessInputPopup(
     var thickness by remember { mutableStateOf(previousLineThickness ?: 1f) }
     // separate var so that tf doesnt re-format user input
     var textFieldThickness by remember { mutableStateOf(previousLineThickness ?: 1f) }
-    val sliderColors = SliderDefaults.colors(
-        thumbColor = MaterialTheme.colorScheme.secondary,
-        activeTrackColor = MaterialTheme.colorScheme.secondary,
-        activeTickColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTickColor = MaterialTheme.colorScheme.secondary,
-    )
     Popup(
         popupPositionProvider = object : PopupPositionProvider {
             override fun calculatePosition(
@@ -617,7 +612,8 @@ private fun BoxScope.LineThicknessInputPopup(
             Modifier.padding(end = 8.dp),
             shape = MaterialTheme.shapes.large,
             contentColor = MaterialTheme.colorScheme.secondary,
-            tonalElevation = 4.dp,
+            tonalElevation = 12.dp,
+            shadowElevation = 12.dp,
         ) {
             Column(
                 Modifier.padding(12.dp),
@@ -634,7 +630,7 @@ private fun BoxScope.LineThicknessInputPopup(
                     modifier = Modifier.widthIn(max = 300.dp),
                     valueRange = LineThicknessSliderDefaults.RANGE,
                     steps = LineThicknessSliderDefaults.N_DISCRETIZATION_STEPS - 1,
-                    colors = sliderColors,
+                    colors = sliderColorsSecondary,
                 )
                 FloatTextField(
                     value = textFieldThickness,
@@ -676,14 +672,39 @@ private fun ArcPathContextActionsPreview() {
 }
 
 @Composable
-fun BoxScope.SelectionChoices(
-    choices: List<Submode.SelectionChoices.Choice>,
+fun BoxScope.SelectionChoicesInputPopup(
+    choices: List<Submode.SelectionChoicesInput.Choice>,
     selectChoice: (indexAmongChoices: Int?) -> Unit,
+    dismiss: () -> Unit,
+) {
+    Popup(
+        popupPositionProvider = object : PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: IntRect,
+                windowSize: IntSize,
+                layoutDirection: LayoutDirection,
+                popupContentSize: IntSize
+            ): IntOffset = IntOffset(
+                x = anchorBounds.center.x - popupContentSize.width/2,
+                y = anchorBounds.center.y - popupContentSize.height/2,
+            )
+        },
+        onDismissRequest = dismiss,
+        properties = PopupProperties(
+            focusable = true,
+        ),
+    ) {
+        SelectionChoices(choices, selectChoice)
+    }
+}
+
+@Composable
+private fun BoxScope.SelectionChoices(
+    choices: List<Submode.SelectionChoicesInput.Choice>,
+    selectChoice: (indexAmongChoices: Int?) -> Unit = {},
 ) {
     Surface(
-        modifier = Modifier
-            .align(Alignment.Center)
-        ,
+        modifier = Modifier,
         shape = MaterialTheme.shapes.large,
         tonalElevation = 12.dp,
         shadowElevation = 12.dp,
@@ -702,7 +723,10 @@ fun BoxScope.SelectionChoices(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Spacer(Modifier.size(24.dp)) // manually balancing close-icon to center the title
-                Text(stringResource(Res.string.selection_choices_title), style = MaterialTheme.adaptiveTypography.body)
+                Text(
+                    stringResource(Res.string.selection_choices_title),
+                    style = MaterialTheme.adaptiveTypography.body
+                )
                 IconButton(
                     onClick = { selectChoice(null) },
                 ) {
@@ -713,7 +737,11 @@ fun BoxScope.SelectionChoices(
                 val label = when (choice.objectOrArcPath) {
                     is Circle -> stringResource(Res.string.circle_number_label, choice.index)
                     is Line -> stringResource(Res.string.line_number_label, choice.index)
-                    is ImaginaryCircle -> stringResource(Res.string.imaginary_circle_number_label, choice.index)
+                    is ImaginaryCircle -> stringResource(
+                        Res.string.imaginary_circle_number_label,
+                        choice.index
+                    )
+
                     is Point -> stringResource(Res.string.point_number_label, choice.index)
                     null -> stringResource(Res.string.arc_path_number_label, choice.index)
                 }
@@ -723,14 +751,15 @@ fun BoxScope.SelectionChoices(
                     shape = MaterialTheme.shapes.medium,
                     border =
                         if (i == 0)
-                            // salad green is the default selection color
+                        // salad green is the default selection color
                             BorderStroke(2.dp, DodeclustersColors.strongSalad)
 //                                BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)
                         else null,
                 ) {
                     Text(
                         text = label,
-                        color = choice.borderColor ?: choice.fillColor ?: MaterialTheme.extendedColorScheme.highAccentColor,
+                        color = choice.borderColor ?: choice.fillColor
+                        ?: MaterialTheme.extendedColorScheme.highAccentColor,
                         style = MaterialTheme.adaptiveTypography.label,
                     )
                 }
@@ -743,19 +772,20 @@ fun BoxScope.SelectionChoices(
 @Composable
 private fun SelectionChoicesPreview() {
     ContextActionsWrapper {
-        SelectionChoices(
-            choices = listOf(
-                Submode.SelectionChoices.Choice(
-                    0, Circle(0.0, 0.0, 1.0),
-                    Color.Red, null
+        Box(Modifier.align(Alignment.Center)) {
+            SelectionChoices(
+                choices = listOf(
+                    Submode.SelectionChoicesInput.Choice(
+                        0, Circle(0.0, 0.0, 1.0),
+                        Color.Red, null
+                    ),
+                    Submode.SelectionChoicesInput.Choice(
+                        1, Line(1.0, 0.0, 1.0),
+                        Color.Green, null
+                    ),
                 ),
-                Submode.SelectionChoices.Choice(
-                    1, Line(1.0, 0.0, 1.0),
-                    Color.Green, null
-                ),
-            ),
-            selectChoice = {},
-        )
+            )
+        }
     }
 }
 
@@ -783,13 +813,6 @@ fun InterpolationInterface(
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
     val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-    val sliderColors = SliderDefaults.colors(
-        thumbColor = MaterialTheme.colorScheme.secondary,
-        activeTrackColor = MaterialTheme.colorScheme.secondary,
-        activeTickColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTickColor = MaterialTheme.colorScheme.secondary,
-    )
     with (concretePositions) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
@@ -830,7 +853,7 @@ fun InterpolationInterface(
             Slider(
                 sliderState,
                 horizontalSliderModifier.width(horizontalSliderWidth),
-                colors = sliderColors,
+                colors = sliderColorsSecondary,
             )
             SimpleFilledButton(
                 iconPainter = painterResource(Res.drawable.confirm),
@@ -906,13 +929,6 @@ fun RotationInterface(
     ) }
     val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-    val sliderColors = SliderDefaults.colors(
-        thumbColor = MaterialTheme.colorScheme.secondary,
-        activeTrackColor = MaterialTheme.colorScheme.secondary,
-        activeTickColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTickColor = MaterialTheme.colorScheme.secondary,
-    )
     with (concretePositions) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
@@ -925,7 +941,7 @@ fun RotationInterface(
             VerticalSlider(
                 angleSliderState,
                 verticalSliderModifier.height(verticalSliderHeight),
-                colors = sliderColors,
+                colors = sliderColorsSecondary,
             )
             ReverseDirectionToggle(
                 isOn = rotateClockwise,
@@ -948,7 +964,7 @@ fun RotationInterface(
             Slider(
                 stepsSliderState,
                 horizontalSliderModifier.width(horizontalSliderWidth),
-                colors = sliderColors,
+                colors = sliderColorsSecondary,
             )
             SimpleFilledButton(
                 iconPainter = painterResource(Res.drawable.confirm),
@@ -1024,13 +1040,6 @@ fun BiInversionInterface(
     ) }
     val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-    val sliderColors = SliderDefaults.colors(
-        thumbColor = MaterialTheme.colorScheme.secondary,
-        activeTrackColor = MaterialTheme.colorScheme.secondary,
-        activeTickColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTickColor = MaterialTheme.colorScheme.secondary,
-    )
     with (concretePositions) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
@@ -1046,7 +1055,7 @@ fun BiInversionInterface(
                 verticalSliderModifier
                     .height(verticalSliderHeight)
                 ,
-                colors = sliderColors,
+                colors = sliderColorsSecondary,
             )
             ReverseDirectionToggle(
                 isOn = negateSpeed,
@@ -1069,7 +1078,7 @@ fun BiInversionInterface(
             Slider(
                 stepsSliderState,
                 horizontalSliderModifier.width(horizontalSliderWidth),
-                colors = sliderColors,
+                colors = sliderColorsSecondary,
             )
             SimpleFilledButton(
                 painterResource(Res.drawable.confirm),
@@ -1142,13 +1151,6 @@ fun LoxodromicMotionInterface(
     ) }
     val buttonShape = CircleShape
     val buttonBackground = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-    val sliderColors = SliderDefaults.colors(
-        thumbColor = MaterialTheme.colorScheme.secondary,
-        activeTrackColor = MaterialTheme.colorScheme.secondary,
-        activeTickColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTickColor = MaterialTheme.colorScheme.secondary,
-    )
     with (concretePositions) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onSecondaryContainer
@@ -1164,7 +1166,7 @@ fun LoxodromicMotionInterface(
                 verticalSlider2Modifier
                     .height(verticalSliderHeight)
                 ,
-                colors = sliderColors,
+                colors = sliderColorsSecondary,
             )
             Icon(
                 painterResource(Res.drawable.rotate_counterclockwise),
@@ -1177,7 +1179,7 @@ fun LoxodromicMotionInterface(
                 verticalSliderModifier
                     .height(verticalSliderHeight)
                 ,
-                colors = sliderColors,
+                colors = sliderColorsSecondary,
             )
             Box(midUnderVerticalSliderModifier) {
                 WithTooltip(
@@ -1226,7 +1228,7 @@ fun LoxodromicMotionInterface(
                 horizontalSliderModifier
                     .width(horizontalSliderWidth)
                 ,
-                colors = sliderColors
+                colors = sliderColorsSecondary
             )
             SimpleFilledButton(
                 iconPainter = painterResource(Res.drawable.confirm),
