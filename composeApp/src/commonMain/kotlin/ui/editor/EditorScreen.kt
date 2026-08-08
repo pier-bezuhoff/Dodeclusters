@@ -461,7 +461,7 @@ fun EditorScreenRoot(
     val colorScheme = MaterialTheme.colorScheme
     val isDarkTheme = MaterialTheme.isDarkTheme
     LaunchedEffect(isDarkTheme, colorScheme) {
-        // kinda hacky
+        // kinda hacky, predefined bg colors are auto swapped to surface
         if (viewModel.backgroundColor == null ||
             isDarkTheme && viewModel.backgroundColor in listOf(
                 DodeclustersColors.lightScheme.surface,
@@ -470,6 +470,7 @@ fun EditorScreenRoot(
             !isDarkTheme && viewModel.backgroundColor in listOf(
                 DodeclustersColors.darkScheme.surface,
                 Color.Black,
+                Color(0xff_121212),
             )
         ) {
             viewModel.backgroundColor = colorScheme.surface
@@ -587,7 +588,7 @@ private fun EditorScreen(
 @Preview
 @Composable
 private fun EditorScreenPreview() {
-    DodeclustersTheme(ColorTheme.LIGHT) {
+    DodeclustersTheme(ColorTheme.DARK) {
         val toolbarState = ToolbarState(
             activeCategory = Category.Drag,
             activeTool = Tool.Drag,
