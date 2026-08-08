@@ -107,12 +107,14 @@ import domain.xor
 import getPlatform
 import io.github.xxfast.kstore.extensions.cached
 import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -131,6 +133,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 // this class is obviously too big
@@ -350,6 +353,8 @@ class EditorViewModel : ViewModel() {
 //        println("VM.init")
         viewModelScope.launch {
             restoreFromDisk()
+            if (AUTOSAVE_EVERY_5_MINUTES)
+                autosaveEvery5Minutes()
         }
     }
 
@@ -4984,12 +4989,23 @@ class EditorViewModel : ViewModel() {
             println("caching VM state...")
             val platform = getPlatform()
             val presentState = saveState()
+            val presentHistoryState = history.save()
+            val currentSettings = getCurrentSettings()
 //            println("caching state ${presentState.expressions}")
             platform.saveState(presentState)
-            platform.saveSettings(getCurrentSettings())
-            platform.saveHistory(history.save())
+            platform.saveSettings(currentSettings)
+            platform.saveHistory(presentHistoryState)
             cachingInProgress.update { false }
             println("cached.")
+        }
+    }
+
+    private suspend fun autosaveEvery5Minutes() {
+        withContext(Dispatchers.Default) {
+            while (true) {
+                delay(5.minutes)
+                cacheState()
+            }
         }
     }
 
@@ -5070,6 +5086,7 @@ class EditorViewModel : ViewModel() {
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val INTERSECTION_SNAP_FACTOR = 1.5
         const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
+        const val AUTOSAVE_EVERY_5_MINUTES = true
         // NOTE: changing this factor breaks all line-incident points (scale-dependence)
         /** [Double] arithmetic is best in range that is closer to 0 */
         const val UPSCALING_FACTOR = ConformalObjectModel.UPSCALING_FACTOR

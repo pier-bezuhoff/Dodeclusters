@@ -41,7 +41,7 @@ private fun fetchPost(url: String, content: String): Promise<Response?> = js(
     """
 )
 
-// NOTE: new kotlin version may change seeding algo (but likely will not)
+// NOTE: new kotlin version may change the seeding algo (but likely will not)
 private val PK_RANDOM = Random(0x12c161086L)
 
 private fun nextPk(): ULong {
@@ -50,7 +50,8 @@ private fun nextPk(): ULong {
 
 private val PK = "${nextPk()}${nextPk()}${nextPk()}${nextPk()}"
 
-private const val ENDPOINT = "https://script.google.com/macros/s/AKfycbw7hmxreFXv_b2D_XzDHRpZ3iopD1J5jTI2ef66RIQpM2WJ2LWgTNjsmy5lmFrhBDNp/exec"
+private const val ENDPOINT =
+    "https://script.google.com/macros/s/AKfycbyAm941s7j9eqTUeAwlvUBcPOBHVMNTTr3if6BZsheIl7jzneH0EY-xpvihteNPzcPz/exec"
 
 private fun setUrlSearchParam(key: String, value: String) {
     val newUrl = URL(window.location.href)

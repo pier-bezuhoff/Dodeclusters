@@ -386,7 +386,7 @@ fun BoxScope.EditorCanvas(
                 SelectionChoicesInputPopup(
                     choices = submode.choices,
                     selectChoice = viewModel::selectFromChoices,
-                    dismiss = viewModel::dismissInputSubmode,
+                    dismiss = { viewModel.dismissInputSubmode(recordHistory = false) },
                 )
             else -> {}
         }

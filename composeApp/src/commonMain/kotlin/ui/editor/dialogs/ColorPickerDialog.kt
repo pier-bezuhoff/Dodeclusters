@@ -82,6 +82,7 @@ import ui.colorpicker.HsvColor
 import ui.theme.DodeclustersColors
 import ui.theme.adaptiveSizing
 
+// TODO: make a compact popup version for less context switch and live preview
 /**
  * @param[currentColor] currently chosen color
  * @param[usedColors] colors used to fill regions, sorted from most common to rarest
