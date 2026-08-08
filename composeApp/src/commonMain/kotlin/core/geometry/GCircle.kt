@@ -6,13 +6,13 @@ import kotlinx.serialization.Serializable
 
 @Immutable
 @Serializable
-sealed interface GCircleOrConcreteAcPath
+sealed interface GCircleOrConcreteArcPath
 
 /** Conformal geometry generalization of a circle.
  * Unifies circles, lines, imaginary circles and points (CLIP for short) */
 @Immutable
 @Serializable
-sealed interface GCircle : GCircleOrConcreteAcPath {
+sealed interface GCircle : GCircleOrConcreteArcPath {
     fun translated(vector: Offset): GCircle
     fun translated(dx: Double, dy: Double): GCircle
     fun scaled(focusX: Double, focusY: Double, zoom: Double): GCircle

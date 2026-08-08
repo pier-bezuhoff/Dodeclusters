@@ -1,12 +1,12 @@
 package ui.editor
 
 import androidx.compose.runtime.Immutable
-import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.GCircleOrConcreteArcPath
 import domain.Ix
 
 @Immutable
 sealed interface ObjectAnimation {
-    val objects: Map<Ix, GCircleOrConcreteAcPath>
+    val objects: Map<Ix, GCircleOrConcreteArcPath>
 }
 
 /** Animation: alpha=0 .. alpha=[maxAlpha] .. alpha=0
@@ -24,7 +24,7 @@ sealed interface ColoredContourAnimation : ObjectAnimation {
 
 @Immutable
 data class HighlightAnimation(
-    override val objects: Map<Ix, GCircleOrConcreteAcPath>,
+    override val objects: Map<Ix, GCircleOrConcreteArcPath>,
 ) : ColoredContourAnimation {
     override val maxAlpha: Float = 0.6f
     override val alpha01Duration: Int = 20
@@ -34,7 +34,7 @@ data class HighlightAnimation(
 /** params for create/copy/delete animations */
 @Immutable
 sealed class AppearanceAnimation(
-    override val objects: Map<Ix, GCircleOrConcreteAcPath>,
+    override val objects: Map<Ix, GCircleOrConcreteArcPath>,
 ) : ColoredContourAnimation {
     override val maxAlpha: Float = 0.2f
     override val alpha01Duration: Int = 50
@@ -42,14 +42,14 @@ sealed class AppearanceAnimation(
 
     /** Animation for creating new objects */
     data class Entrance(
-        override val objects: Map<Ix, GCircleOrConcreteAcPath>
+        override val objects: Map<Ix, GCircleOrConcreteArcPath>
     ) : AppearanceAnimation(objects)
     /** Animation for duplicating objects */
     data class ReEntrance(
-        override val objects: Map<Ix, GCircleOrConcreteAcPath>
+        override val objects: Map<Ix, GCircleOrConcreteArcPath>
     ) : AppearanceAnimation(objects)
     /** Animation for deleting objects */
     data class Exit(
-        override val objects: Map<Ix, GCircleOrConcreteAcPath>
+        override val objects: Map<Ix, GCircleOrConcreteArcPath>
     ) : AppearanceAnimation(objects)
 }

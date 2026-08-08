@@ -24,7 +24,7 @@ data class ConcreteArcPath(
     val vertices: List<Point>,
     val arcs: List<Arc>,
     val isClosed: Boolean,
-) : GCircleOrConcreteAcPath, CircleOrLineOrConcreteArcPath {
+) : GCircleOrConcreteArcPath, CircleOrLineOrConcreteArcPath {
     /**
      * @param[arcIndex] index within [domain.expressions.ArcPath.arcs], `null` means
      * several arcs were fused because of `null` vertices

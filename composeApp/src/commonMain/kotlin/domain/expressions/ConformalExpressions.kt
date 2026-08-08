@@ -4,7 +4,7 @@ import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
-import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.GCircleOrConcreteArcPath
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
 import core.geometry.Point
@@ -19,8 +19,8 @@ import kotlin.math.abs
  */
 class ConformalExpressions(
     initialExpressions: Map<Ix, ConformalExprOutput?>,
-    objects: MutableList<GCircleOrConcreteAcPath?>,
-) : Expressions<Expr.Conformal, Expr.Conformal.OneToOne, Expr.Conformal.OneToMany, GCircleOrConcreteAcPath>(
+    objects: MutableList<GCircleOrConcreteArcPath?>,
+) : Expressions<Expr.Conformal, Expr.Conformal.OneToOne, Expr.Conformal.OneToMany, GCircleOrConcreteArcPath>(
     initialExpressions, objects
 ) {
     val circleIndices = mutableSetOf<Ix>()
@@ -46,7 +46,7 @@ class ConformalExpressions(
         arcPathIndices.clear()
     }
 
-    override fun updateObjectTypeAt(index: Ix, obj: GCircleOrConcreteAcPath?) {
+    override fun updateObjectTypeAt(index: Ix, obj: GCircleOrConcreteArcPath?) {
         gCircleIndices.remove(index)
         circleOrLineIndices.remove(index)
         circleIndices.remove(index)
@@ -109,12 +109,12 @@ class ConformalExpressions(
     }
 
     override fun Expr.evaluate(
-        objects: List<GCircleOrConcreteAcPath?>
-    ): List<GCircleOrConcreteAcPath?> = (this as Expr.Conformal).eval(objects)
+        objects: List<GCircleOrConcreteArcPath?>
+    ): List<GCircleOrConcreteArcPath?> = (this as Expr.Conformal).eval(objects)
 
     private fun Expr.Conformal.evaluate(
-        objects: List<GCircleOrConcreteAcPath?>
-    ): List<GCircleOrConcreteAcPath?> = eval(objects)
+        objects: List<GCircleOrConcreteArcPath?>
+    ): List<GCircleOrConcreteArcPath?> = eval(objects)
 
     override fun isExprPeriodic(expr: Expr.Conformal.OneToMany): Boolean =
         expr is Expr.LoxodromicMotion &&

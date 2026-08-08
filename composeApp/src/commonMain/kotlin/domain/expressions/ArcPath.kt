@@ -5,7 +5,6 @@ import androidx.compose.runtime.Stable
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.ConcreteArcPath
-import core.geometry.GCircleOrConcreteAcPath
 import core.geometry.Point
 import domain.Ix
 import domain.filterIndices
@@ -13,7 +12,7 @@ import domain.updated
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Blueprint for a dynamic path made of indices of specified [vertices] + [arcs] */
+/** Blueprint for a dynamic path made of indices of specified [vertices] + [arcs]' midpoints */
 @Immutable
 @Serializable
 @SerialName("ArcPath")
@@ -109,8 +108,9 @@ fun ArcPath.moveArcMidpoint(allObjects: List<*>, arcIndex: Int, midpoint: Point)
     val start = allObjects[arcStartIx] as? Point ?: return this
     val end = allObjects[arcEndIx] as? Point ?: return this
     val newCircle = computeCircleBy3Points(start, midpoint, end) as? Circle
-    val newSagittaRatio = if (newCircle == null) 0.0
-    else computeSagittaRatio(newCircle, start, end)
+    val newSagittaRatio =
+        if (newCircle == null) 0.0
+        else computeSagittaRatio(newCircle, start, end)
     return when (this) {
         is ArcPath.Closed ->
             copy(arcs = arcs.updated(arcIndex,

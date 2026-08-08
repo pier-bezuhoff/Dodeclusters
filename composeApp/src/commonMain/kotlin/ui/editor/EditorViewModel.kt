@@ -27,7 +27,7 @@ import core.geometry.CircleOrLineOrImaginaryCircle
 import core.geometry.CircleOrLineOrPoint
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
-import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.GCircleOrConcreteArcPath
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
 import core.geometry.Point
@@ -141,7 +141,7 @@ import kotlin.time.Duration.Companion.seconds
 @Suppress("NOTHING_TO_INLINE")
 class EditorViewModel : ViewModel() {
     val objectModel: ConformalObjectModel = ConformalObjectModel()
-    val objects: List<GCircleOrConcreteAcPath?> = objectModel.displayObjects
+    val objects: List<GCircleOrConcreteArcPath?> = objectModel.displayObjects
     inline val expressions: ConformalExpressions get() =
         objectModel.expressions
     val styling: Map<Ix, Styling> = objectModel.styling
@@ -908,7 +908,7 @@ class EditorViewModel : ViewModel() {
 
     private inline fun deleteObjectsWithDependenciesColorsAndRegions(
         indicesToDelete: List<Ix>,
-        crossinline animationInit: (Map<Ix, GCircleOrConcreteAcPath>) -> AppearanceAnimation? =
+        crossinline animationInit: (Map<Ix, GCircleOrConcreteArcPath>) -> AppearanceAnimation? =
             { deletedCircles ->
                 AppearanceAnimation.Exit(deletedCircles)
             },
@@ -932,11 +932,11 @@ class EditorViewModel : ViewModel() {
         val toDelete = indicesToDeleteSet + arcPathPointsToDelete
         val (deletedIndices, changedIndices) = expressions.deleteNodes(toDelete.toList())
         val visibleDeleted = deletedIndices.filter { ix ->
-            objects[ix] is GCircleOrConcreteAcPath && (showPhantomObjects || ix !in phantoms)
+            objects[ix] is GCircleOrConcreteArcPath && (showPhantomObjects || ix !in phantoms)
         }
         if (visibleDeleted.isNotEmpty()) {
             deleteRegionsBoundBy(visibleDeleted.toSet())
-            val ix2o = visibleDeleted.associateWith { objects[it] as GCircleOrConcreteAcPath }
+            val ix2o = visibleDeleted.associateWith { objects[it] as GCircleOrConcreteArcPath }
             animationInit(ix2o)?.let { circleAnimation ->
                 viewModelScope.launch {
                     animations.emit(circleAnimation)
@@ -1364,7 +1364,7 @@ class EditorViewModel : ViewModel() {
         val allParents = expressions.getAllParents(listOf(index))
         return snapped(absolutePosition,
             includePoints = Settings.ENABLE_POINT_TO_POINT_SNAPPING,
-            excludedIndices = allChildren + allParents,
+            excludedIndices = allChildren + allParents + setOf(index),
         )
     }
 
@@ -2996,11 +2996,12 @@ class EditorViewModel : ViewModel() {
         sm: Submode.GrabbedArcMidpoint,
     ) {
         val arcPath = objectModel.getArcPath(sm.arcPathIndex) ?: return
+        val newMidpoint = snapped(absoluteCentroid,
+            excludedIndices = expressions.getAllChildren(sm.arcPathIndex) + setOf(sm.arcPathIndex)
+        ).result
         val changedIndices = objectModel.modifyArcPath(
             sm.arcPathIndex,
-            arcPath.moveArcMidpoint(
-               objects,  sm.arcIndex, Point.fromOffset(absoluteCentroid)
-            )
+            arcPath.moveArcMidpoint(objects,  sm.arcIndex, newMidpoint)
         ).toSet()
         objectModel.invalidatePositions()
         history.accumulateChangedLocations(
@@ -3126,7 +3127,7 @@ class EditorViewModel : ViewModel() {
         val corner1 = sm.corner1
         val rect = Rect.fromCorners(corner1 ?: absolutePosition, absolutePosition)
         val selectables = objects.mapIndexed { ix, o ->
-            if (o is GCircleOrConcreteAcPath && (showPhantomObjects || ix !in phantoms)) o
+            if (o is GCircleOrConcreteArcPath && (showPhantomObjects || ix !in phantoms)) o
             else null
         }
         val rectSelection = RectangleCollider.selectWithRectangle(selectables, rect)
@@ -3569,6 +3570,7 @@ class EditorViewModel : ViewModel() {
             }
             else -> {}
         }
+        objectModel.invalidate()
     }
 
     // TODO: instead perma-highlight parents with 2 colors
@@ -3582,7 +3584,7 @@ class EditorViewModel : ViewModel() {
         }
             .filter { ix ->
                 (showPhantomObjects || ix !in phantoms) &&
-                objects[ix] is GCircleOrConcreteAcPath
+                objects[ix] is GCircleOrConcreteArcPath
             }.toMutableSet()
         if (parents.isNotEmpty()) {
             val protoArcPaths = selection.arcPaths.mapNotNull { ix ->

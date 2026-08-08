@@ -648,7 +648,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
 
     fun getAllChildren(parentIx: Ix): Set<Ix> {
         val directChildren = children[parentIx] ?: emptySet()
-        val stack = ArrayDeque<Ix>(directChildren)
+        val stack: ArrayDeque<Ix> = ArrayDeque(directChildren)
         val visited = mutableSetOf<Ix>()
         while (stack.isNotEmpty()) {
             val ix = stack.removeLast()
@@ -736,7 +736,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         for (child in childs) {
             directParents += getImmediateParents(child)
         }
-        val stack = ArrayDeque<Ix>(directParents)
+        val stack: ArrayDeque<Ix> = ArrayDeque(directParents)
         val visited = mutableSetOf<Ix>()
         while (stack.isNotEmpty()) {
             val ix = stack.removeLast()

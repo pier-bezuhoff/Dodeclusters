@@ -5,7 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import core.geometry.GCircle
-import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.GCircleOrConcreteArcPath
 import domain.Ix
 import domain.expressions.ConformalExpressions
 import domain.expressions.Expr
@@ -35,7 +35,7 @@ class ToolManager(
     private val mode: Mode by modeState
     private var submode: Submode? by submodeState
 
-    private val objects: List<GCircleOrConcreteAcPath?> = objectModel.displayObjects
+    private val objects: List<GCircleOrConcreteArcPath?> = objectModel.displayObjects
     inline val expressions: ConformalExpressions get() =
         objectModel.expressions
 

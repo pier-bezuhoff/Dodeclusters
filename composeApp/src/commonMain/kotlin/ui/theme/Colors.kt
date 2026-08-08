@@ -27,7 +27,7 @@ object DodeclustersColors {
     val onErrorContainerLight = Color(0xFF410002)
     val backgroundLight = Color(0xFFFFF7FA)
     val onBackgroundLight = Color(0xFF1F1A1F)
-    val surfaceLight = Color(0xFFFFF7FA)
+    val surfaceLight = Color(0xFF_FFF7FA)
     val onSurfaceLight = Color(0xFF1F1A1F)
     val surfaceVariantLight = Color(0xFFECDFE8)
     val onSurfaceVariantLight = Color(0xFF4D444C)

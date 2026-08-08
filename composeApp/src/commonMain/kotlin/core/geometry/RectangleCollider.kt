@@ -16,7 +16,7 @@ object RectangleCollider {
     fun selectWithRectangle(objects: List<*>, rect: Rect): List<Int> =
         objects.filterIndices { o ->
             when (o) {
-                is GCircleOrConcreteAcPath ->
+                is GCircleOrConcreteArcPath ->
                     objectRectangleCollisionTest(o, rect)
                 else -> false
             }
@@ -25,7 +25,7 @@ object RectangleCollider {
     /** Rectangle collider.
      * @return `true` if intersection of [obj]'s border and [rect] is
      * non-empty (including [rect]'s interior), otherwise `false` */
-    fun objectRectangleCollisionTest(obj: GCircleOrConcreteAcPath, rect: Rect): Boolean =
+    fun objectRectangleCollisionTest(obj: GCircleOrConcreteArcPath, rect: Rect): Boolean =
         when (obj) {
             is Circle -> {
                 circleRectCollisionTest(obj, rect)

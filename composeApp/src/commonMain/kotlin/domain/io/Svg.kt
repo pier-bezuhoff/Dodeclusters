@@ -8,15 +8,12 @@ import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
-import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.GCircleOrConcreteArcPath
 import core.geometry.Line
 import core.geometry.Point
-import domain.ColorAsCss
-import domain.ColorCssSerializer
 import domain.model.ChessboardPattern
 import domain.model.SaveState
 import domain.model.Styling
-import kotlinx.serialization.json.Json
 import ui.region2path
 import ui.theme.CustomColors
 import ui.toPath
@@ -49,7 +46,7 @@ fun saveStateAsSvg(
         x = width/2f - saveState.center.x,
         y = height/2f - saveState.center.y,
     )
-    val translatedObjects: List<GCircleOrConcreteAcPath?> = saveState.objects.map { o ->
+    val translatedObjects: List<GCircleOrConcreteArcPath?> = saveState.objects.map { o ->
         when (o) {
             is ConcreteArcPath -> o.translated(translation)
             is GCircle -> o.translated(translation)
@@ -121,7 +118,7 @@ private fun StringBuilder.appendDefs(
 private fun StringBuilder.appendChessboard(
     saveState: SaveState,
     visibleRect: Rect,
-    translatedObjects: List<GCircleOrConcreteAcPath?>,
+    translatedObjects: List<GCircleOrConcreteArcPath?>,
 ) {
     if (saveState.chessboardColor != null) {
         when (saveState.chessboardPattern) {
@@ -163,7 +160,7 @@ private fun StringBuilder.appendChessboard(
 private fun StringBuilder.appendRegions(
     saveState: SaveState,
     visibleRect: Rect,
-    translatedObjects: List<GCircleOrConcreteAcPath?>,
+    translatedObjects: List<GCircleOrConcreteArcPath?>,
 ) {
     saveState.regions.forEach { region ->
         val fillColorString = region.fillColor.asCssString()
@@ -178,7 +175,7 @@ private fun StringBuilder.appendRegions(
 
 private fun StringBuilder.appendArcPaths(
     saveState: SaveState,
-    translatedObjects: List<GCircleOrConcreteAcPath?>,
+    translatedObjects: List<GCircleOrConcreteArcPath?>,
     defaultArcPathColor: Color,
 ) {
     translatedObjects.forEachIndexed { ix, o ->
@@ -198,7 +195,7 @@ private fun StringBuilder.appendArcPaths(
 private fun StringBuilder.appendGCircles(
     saveState: SaveState,
     inflatedVisibleRect: Rect,
-    translatedObjects: List<GCircleOrConcreteAcPath?>,
+    translatedObjects: List<GCircleOrConcreteArcPath?>,
     circleColor: Color,
     freeCircleColor: Color,
     pointColor: Color,
@@ -236,7 +233,7 @@ private fun StringBuilder.appendGCircles(
 private const val charWidth = 10f
 private const val charHeight = 20f
 private fun StringBuilder.appendLabels(
-    translatedObjects: List<GCircleOrConcreteAcPath?>,
+    translatedObjects: List<GCircleOrConcreteArcPath?>,
     styling: Map<Int, Styling>,
     labelClasses: Map<Int, String>,
 ) {

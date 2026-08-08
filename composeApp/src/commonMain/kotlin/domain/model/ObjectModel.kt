@@ -64,7 +64,8 @@ sealed class ObjectModel<R : Any, D : Any> {
     val pathCache = PathCache()
 
     /**
-     * Invalidates the position-state (objects or expressions), use for continuous changes.
+     * Use for *continuous* changes.
+     * Invalidates the position-state (objects or expressions).
      * Triggers redraw.
      *
      * NOTE: Do not forget to manually call this AFTER finishing changing the position-state.
@@ -74,16 +75,13 @@ sealed class ObjectModel<R : Any, D : Any> {
     }
 
     /**
+     * Use for *discrete* changes.
      * Invalidates both the position-state AND the property-state. Triggers redraw.
      *
      * NOTE: Do not forget to manually call this AFTER finishing changing the state.
      */
     fun invalidate() {
         invalidationsState.value += 1
-        propertyInvalidationsState.value += 1
-    }
-
-    private fun invalidateProperties() {
         propertyInvalidationsState.value += 1
     }
 

@@ -7,7 +7,7 @@ import core.geometry.CircleOrLineOrPoint
 import core.geometry.CircleOrPoint
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
-import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.GCircleOrConcreteArcPath
 import core.geometry.Line
 import core.geometry.Point
 import domain.Ix
@@ -35,7 +35,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
-typealias ConformalExprResult = List<GCircleOrConcreteAcPath?>
+typealias ConformalExprResult = List<GCircleOrConcreteArcPath?>
 
 /**
  * Raw expression that can have one or several outputs:
@@ -365,7 +365,7 @@ sealed interface Expr {
 // BUT using direct access objects is much much faster (without downscale)
 // with array+downscale there is also not much difference
 // SO downscale is a bottleneck
-fun Expr.Conformal.eval(objects: List<GCircleOrConcreteAcPath?>): ConformalExprResult {
+fun Expr.Conformal.eval(objects: List<GCircleOrConcreteArcPath?>): ConformalExprResult {
     return when (this) {
         // idt it's worth to polymorphism eval
         is Expr.Conformal.OneToOne -> {

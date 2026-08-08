@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import core.geometry.Circle
-import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.GCircleOrConcreteArcPath
 import core.geometry.Point
 import domain.ColorAsCss
 import domain.ColorCssSerializer
@@ -27,16 +27,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonTransformingSerializer
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
 import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
 
 // autosave location on Linux: ~/.local/share/Dodeclusters/autosave.json
 /** EditorViewModel's save-state for history.
@@ -48,7 +44,7 @@ import kotlinx.serialization.modules.polymorphic
 @Serializable(with = SaveState.CompatSerializer::class)
 @SerialName("SaveState")
 data class SaveState(
-    val objects: List<GCircleOrConcreteAcPath?>,
+    val objects: List<GCircleOrConcreteArcPath?>,
     val expressions: Map<Ix, ConformalExprOutput?>,
     val styling: Map<Ix, Styling> = emptyMap(),
     val regions: List<LogicalRegion> = emptyList(),
@@ -151,7 +147,7 @@ data class SaveState(
         sealed interface Replacement : Change
         @Serializable
         @SerialName("Objects")
-        data class Objects(val objects: Map<Ix, GCircleOrConcreteAcPath?>) : Update
+        data class Objects(val objects: Map<Ix, GCircleOrConcreteArcPath?>) : Update
         @Serializable
         @SerialName("Expressions")
         data class Expressions(val expressions: Map<Ix, ConformalExprOutput?>) : Update
@@ -299,7 +295,7 @@ data class SaveState(
      * @param[changes] are applied in order
      */
     fun applyChanges(changes: List<Change>): SaveState {
-        val objects: MutableList<GCircleOrConcreteAcPath?> = this.objects.toMutableList()
+        val objects: MutableList<GCircleOrConcreteArcPath?> = this.objects.toMutableList()
         val expressions: MutableMap<Ix, ConformalExprOutput?> = this.expressions.toMutableMap()
         val styling: MutableMap<Ix, Styling> = this.styling.toMutableMap()
         var regions: List<LogicalRegion> = this.regions

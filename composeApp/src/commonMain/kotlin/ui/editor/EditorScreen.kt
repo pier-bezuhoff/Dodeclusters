@@ -99,10 +99,12 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
 import domain.model.PartialArgList
+import getPlatform
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
@@ -132,6 +134,7 @@ import ui.editor.dialogs.RotationDialog
 import ui.editor.dialogs.SaveOptionsDialog
 import ui.editor.dialogs.SavePromptDialog
 import ui.theme.ColorTheme
+import ui.theme.DEFAULT_COLOR_THEME
 import ui.theme.DodeclustersColors
 import ui.theme.DodeclustersTheme
 import ui.theme.adaptiveSizing
@@ -460,11 +463,17 @@ fun EditorScreenRoot(
     }
     val colorScheme = MaterialTheme.colorScheme
     val isDarkTheme = MaterialTheme.isDarkTheme
-    LaunchedEffect(viewModel.backgroundColor, isDarkTheme, colorScheme) {
-        // ts doesnt work often
+    LaunchedEffect(isDarkTheme, colorScheme) {
+        // kinda hacky
         if (viewModel.backgroundColor == null ||
-            isDarkTheme && viewModel.backgroundColor == DodeclustersColors.lightScheme.surface ||
-            !isDarkTheme && viewModel.backgroundColor == DodeclustersColors.darkScheme.surface
+            isDarkTheme && viewModel.backgroundColor in listOf(
+                DodeclustersColors.lightScheme.surface,
+                Color.White,
+            ) ||
+            !isDarkTheme && viewModel.backgroundColor in listOf(
+                DodeclustersColors.darkScheme.surface,
+                Color.Black
+            )
         ) {
             viewModel.backgroundColor = colorScheme.surface
         }
@@ -831,6 +840,7 @@ private fun ToolDescription(
 //                    highlightColor = MaterialTheme.extendedColorScheme.highAccentColor,
 //                )
                 if (!isCompact) {
+                    // NOTE: no background, so the contrast on changed bg color can go to zero
                     Text(argPrompt,
                         Modifier.padding(24.dp, 4.dp),
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),

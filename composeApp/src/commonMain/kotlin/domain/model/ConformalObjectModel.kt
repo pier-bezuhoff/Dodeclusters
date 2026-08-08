@@ -4,7 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import core.geometry.CircleOrLine
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
-import core.geometry.GCircleOrConcreteAcPath
+import core.geometry.GCircleOrConcreteArcPath
 import core.geometry.Line
 import core.geometry.Point
 import core.geometry.scaled00
@@ -25,7 +25,7 @@ import domain.update
  * Purports to encapsulate & manage all objects ([GCircle]s) and object-related properties.
  * Very mutable, track [invalidationsState]/[invalidations] for changes and use with care.
  */
-class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcreteAcPath>() {
+class ConformalObjectModel : ObjectModel<GCircleOrConcreteArcPath, GCircleOrConcreteArcPath>() {
 
     override var expressions: ConformalExpressions =
         ConformalExpressions(emptyMap(), mutableListOf())
@@ -223,7 +223,7 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
         syncDisplayObjects(displayObjects.indices)
     }
 
-    override fun GCircleOrConcreteAcPath.downscale(): GCircleOrConcreteAcPath =
+    override fun GCircleOrConcreteArcPath.downscale(): GCircleOrConcreteArcPath =
         when (this) {
             is GCircle ->
                 this.downscale()
@@ -231,7 +231,7 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteAcPath, GCircleOrConcr
                 this.downscale()
         }
 
-    override fun GCircleOrConcreteAcPath.upscale(): GCircleOrConcreteAcPath =
+    override fun GCircleOrConcreteArcPath.upscale(): GCircleOrConcreteArcPath =
         when (this) {
             is GCircle ->
                 this.upscale()
