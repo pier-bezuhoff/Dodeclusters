@@ -110,10 +110,10 @@ object DodeclustersColors {
     val teal = Color(0xFF_008080)
     val darkPurple = Color(0xFF_6A2C70)
 
-    val gray = Color.Gray
     // used for imaginary circles
     val fadedRed = Color.hsl(20f, 0.9f, 0.5f, alpha = 0.5f)
     val lightRed = Color(0xff_ff7777)
+    val darkRed = Color(0xff_a50000)
     val pinkish = Color(1f, 0.5f, 0.5f)
     val green = Color(0f, 1f, 0f)
     val darkGreen = Color(0f, 0.7f, 0f)
@@ -167,6 +167,7 @@ object DodeclustersColors {
         deletionColor = Color.Red,
         highlightColor = skyBlue,
         imaginaryCircleColor = fadedRed,
+        deletionToolColor = darkRed.copy(alpha = 0.9f)
     )
 
     val darkScheme = darkColorScheme(
@@ -216,6 +217,7 @@ object DodeclustersColors {
         deletionColor = Color.Red,
         highlightColor = skyBlue,
         imaginaryCircleColor = fadedRed,
+        deletionToolColor = lightRed.copy(alpha = 0.9f),
     )
 }
 

@@ -1,5 +1,7 @@
 package ui.tools
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import dodeclusters.composeapp.generated.resources.Res
@@ -212,6 +214,7 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
 import org.jetbrains.compose.resources.StringResource
 import ui.theme.DodeclustersColors
+import ui.theme.extendedColorScheme
 
 @Immutable
 sealed class Tool(
@@ -606,7 +609,8 @@ sealed class Tool(
         description = Res.string.delete_description,
         icon = Res.drawable.delete_forever
     ), ITool.Tinted {
-        override val tint = DodeclustersColors.lightRed.copy(alpha = 0.9f)
+        override val tint @Composable get() =
+            MaterialTheme.extendedColorScheme.deletionToolColor
     }
     data object DetailedAdjustment : ContextAction(
         name = Res.string.detailed_adjustment_name,

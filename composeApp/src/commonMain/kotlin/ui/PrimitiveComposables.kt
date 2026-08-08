@@ -45,6 +45,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -100,8 +101,8 @@ fun SimpleButton(
     contentDescription: String? = null,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
-    contentColor: Color = LocalContentColor.current,
     containerColor: Color = Color.Unspecified,
+    contentColor: Color = LocalContentColor.current,
     interactionSource: MutableInteractionSource? = null,
     onClick: () -> Unit
 ) {
@@ -122,26 +123,6 @@ fun SimpleButton(
     }
 }
 
-@Composable
-inline fun <reified T> SimpleToolButton(
-    tool: T,
-    modifier: Modifier = Modifier,
-    iconModifier: Modifier = Modifier,
-    contentColor: Color =
-        if (tool is ITool.Tinted) tool.tint
-        else LocalContentColor.current,
-    containerColor: Color = Color.Unspecified,
-    crossinline onClick: (tool: T) -> Unit
-) where T : ITool = SimpleButton(
-    iconPainter = painterResource(tool.icon),
-    contentDescription = stringResource(tool.name),
-    modifier = modifier,
-    iconModifier = iconModifier,
-    contentColor = contentColor,
-    containerColor = containerColor,
-    onClick = { onClick(tool) },
-)
-
 /**
  * @param[iconModifier] applied to Icon, note how it is NOT = [modifier] by default
  * @param[positionModifier] for proper tooltip positioning pass `Modifier.offset(...)` and
@@ -153,10 +134,10 @@ inline fun <reified T> SimpleToolButtonWithTooltip(
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
     positionModifier: Modifier = Modifier,
+    containerColor: Color = Color.Unspecified,
     contentColor: Color =
         if (tool is ITool.Tinted) tool.tint
         else LocalContentColor.current,
-    containerColor: Color = Color.Unspecified,
     crossinline onClick: (tool: T) -> Unit
 ) where T : ITool =
     Box(positionModifier) {
@@ -181,8 +162,8 @@ fun SimpleFilledButton(
     contentDescription: String,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
-    contentColor: Color = LocalContentColor.current,
     containerColor: Color = Color.Unspecified,
+    contentColor: Color = LocalContentColor.current,
     interactionSource: MutableInteractionSource? = null,
     onClick: () -> Unit
 ) {
@@ -206,13 +187,17 @@ fun DisableableButton(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
+    containerColor: Color = Color.Unspecified,
     contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
     IconButton(
         onClick = onClick,
         modifier = modifier,
-        colors = IconButtonDefaults.iconButtonColors().copy(contentColor = contentColor),
+        colors = IconButtonDefaults.iconButtonColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        ),
         enabled = enabled,
     ) {
         Icon(iconPainter, contentDescription, iconModifier)
@@ -227,6 +212,7 @@ fun TwoIconButton(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
+    containerColor: Color = Color.Unspecified,
     contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -235,9 +221,10 @@ fun TwoIconButton(
         onCheckedChange = { onClick() },
         modifier = modifier,
         colors = IconButtonDefaults.iconToggleButtonColors(
+            containerColor = containerColor,
             contentColor = contentColor,
-            disabledContentColor = contentColor,
-            checkedContentColor = contentColor, // no need for color variation since we have a diff icon
+            checkedContainerColor = containerColor,
+            checkedContentColor = contentColor, // no need for color variation since we have diff icons
         )
     ) {
         Icon(
@@ -260,6 +247,7 @@ fun TwoIconButtonWithTooltip(
     modifier: Modifier = Modifier,
     positionModifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
+    containerColor: Color = Color.Unspecified,
     contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -274,6 +262,7 @@ fun TwoIconButtonWithTooltip(
                 enabled = enabled,
                 modifier = modifier,
                 iconModifier = iconModifier,
+                containerColor = containerColor,
                 contentColor = contentColor,
                 onClick = onClick
             )
@@ -296,6 +285,7 @@ fun ThreeIconButton(
     alternative: Boolean,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
+    containerColor: Color = Color.Unspecified,
     contentColor: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) {
@@ -304,7 +294,10 @@ fun ThreeIconButton(
         onCheckedChange = { onClick() },
         modifier = modifier,
         colors = IconButtonDefaults.iconToggleButtonColors(
-            checkedContentColor = contentColor // no need for color variation since we have a diff icon
+            containerColor = containerColor,
+            contentColor = contentColor,
+            checkedContainerColor = containerColor,
+            checkedContentColor = contentColor, // no need for color variation since we have diff icons
         )
     ) {
         Icon(
@@ -326,12 +319,10 @@ fun OnOffButton(
     isOn: Boolean,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
+    containerColor: Color = Color.Unspecified,
     contentColor: Color = LocalContentColor.current,
-    checkedContentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
-    disabledContentColor: Color = Color.Unspecified,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     checkedContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
-    disabledContainerColor: Color = Color.Unspecified,
+    checkedContentColor: Color = contentColorFor(checkedContainerColor),
     onClick: () -> Unit
 ) {
     OutlinedIconToggleButton(
@@ -343,13 +334,11 @@ fun OnOffButton(
             contentColor = contentColor,
             checkedContainerColor = checkedContainerColor,
             checkedContentColor = checkedContentColor,
-            disabledContentColor = disabledContainerColor,
-        ).let {
-            if (disabledContentColor != Color.Unspecified)
-                it.copy(disabledContentColor = disabledContentColor)
-            else it
-        },
-        border = if (isOn) BorderStroke(2.dp, MaterialTheme.colorScheme.outline) else null
+        ),
+        border =
+            if (isOn)
+                BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
+            else null
     ) {
         Icon(iconPainter, contentDescription, iconModifier)
     }
@@ -441,18 +430,18 @@ fun CancelButton(
     modifier: Modifier = Modifier,
     noText: Boolean = false,
     fontSize: TextUnit = MaterialTheme.adaptiveTypography.actionButtonFontSize,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit,
 ) {
-    val color = MaterialTheme.colorScheme.onSurface
     OutlinedButton(
         onClick = onClick,
         modifier = modifier.padding(4.dp),
         colors = ButtonDefaults.outlinedButtonColors()
             .copy(
-                contentColor = color,
+                contentColor = contentColor,
             )
         ,
-        border = BorderStroke(2.dp, color),
+        border = BorderStroke(2.dp, contentColor),
         shape = CircleShape,
     ) {
         if (noText) {

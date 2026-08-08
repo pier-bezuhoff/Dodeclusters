@@ -144,16 +144,39 @@ private val buttonModifier = Modifier
 private val UPDATE_PARAMETERS_DEBOUNCE_DELTA = 15.milliseconds
 
 private val sliderColorsSecondary: SliderColors
+    @Composable /*@ReadOnlyComposable*/ get() =
+        SliderDefaults.colors( // .colors is not marked with read-only...
+            thumbColor = MaterialTheme.colorScheme.secondary,
+            activeTrackColor = MaterialTheme.colorScheme.secondary,
+            inactiveTickColor = MaterialTheme.colorScheme.secondary,
+            activeTickColor = MaterialTheme.colorScheme.secondaryContainer,
+            inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            // default was [primary x3, secondaryContainer x2]
+        )
+
 @Composable
-//@ReadOnlyComposable
-get() =
-    SliderDefaults.colors( // .colors is not marked with read-only...
-        thumbColor = MaterialTheme.colorScheme.secondary,
-        activeTrackColor = MaterialTheme.colorScheme.secondary,
-        activeTickColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTrackColor = MaterialTheme.colorScheme.onSecondary,
-        inactiveTickColor = MaterialTheme.colorScheme.secondary,
-    )
+private fun ContextActionsWrapper(
+    content: @Composable (BoxScope.(ConcreteOnScreenPositions) -> Unit),
+) {
+    var intSize by remember { mutableStateOf(
+        IntSize(1000, 2000)
+    ) }
+    val density = LocalDensity.current
+    DodeclustersTheme(ColorTheme.DARK) {
+        Surface {
+            Box {
+                Canvas(
+                    Modifier
+                        .fillMaxSize()
+                        .onSizeChanged { newSize ->
+                            intSize = newSize
+                        }
+                ) {}
+                content(ConcreteOnScreenPositions(intSize.toSize(), density))
+            }
+        }
+    }
+}
 
 @Composable
 fun BoxScope.SelectionContextActions(
@@ -300,37 +323,13 @@ fun BoxScope.SelectionContextActions(
     }
 }
 
-@Composable
-private fun ContextActionsWrapper(
-    content: @Composable (BoxScope.(ConcreteOnScreenPositions) -> Unit),
-) {
-    var intSize by remember { mutableStateOf(
-        IntSize(1000, 2000)
-    ) }
-    val density = LocalDensity.current
-    DodeclustersTheme(ColorTheme.DARK) {
-        Surface {
-            Box {
-                Canvas(
-                    Modifier
-                        .fillMaxSize()
-                        .onSizeChanged { newSize ->
-                            intSize = newSize
-                        }
-                ) {}
-                content(ConcreteOnScreenPositions(intSize.toSize(), density))
-            }
-        }
-    }
-}
-
 @Preview
 @Composable
 private fun SelectionContextActionsPreview() {
     ContextActionsWrapper { positions ->
         SelectionContextActions(
-            positions,
-            50f,
+            concretePositions = positions,
+            scaleSliderPercentage = 0.5f,
             rotationHandleAngle = 0f,
             borderColor = Color.Blue,
             showAdjustExprButton = true,
@@ -899,7 +898,9 @@ private fun InterpolationInterfacePreview() {
             concretePositions = positions,
             interpolateCircles = true,
             circlesAreCoDirected = true,
-            defaults = DefaultInterpolationParameters(),
+            defaults = DefaultInterpolationParameters(
+                nInterjacents = 5,
+            ),
             updateParameters = {},
             openDetailsDialog = {},
             confirmParameters = {},
@@ -1192,8 +1193,6 @@ fun LoxodromicMotionInterface(
                         painterResource(Tool.BidirectionalSpiral.icon),
                         stringResource(Tool.BidirectionalSpiral.name),
                         isOn = bidirectional,
-                        contentColor = MaterialTheme.colorScheme.secondary,
-                        checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                         containerColor = buttonBackground,
                         checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                     ) {
@@ -1279,6 +1278,7 @@ private fun ReverseDirectionToggle(
     positionModifier: Modifier = Modifier,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
+    checkedContainerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     onClick: () -> Unit,
 ) {
     Box(positionModifier) {
@@ -1288,10 +1288,8 @@ private fun ReverseDirectionToggle(
                 stringResource(Tool.ReverseDirection.name),
                 isOn = isOn,
                 modifier = modifier,
-                contentColor = MaterialTheme.colorScheme.secondary,
-                checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 containerColor = containerColor,
-                checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                checkedContainerColor = checkedContainerColor,
                 onClick = onClick
             )
         }
@@ -1356,13 +1354,15 @@ private fun RegionManipulationStrategyChoice(
     isActive: Boolean,
     iconOnly: Boolean,
     setStrategy: (RegionManipulationStrategy) -> Unit,
+    selectedColor: Color = MaterialTheme.colorScheme.secondary,
+    unselectedColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     val description = stringResource(strategy.descriptionResource)
     val color =
         if (isActive)
-            MaterialTheme.colorScheme.onSecondaryContainer
+            selectedColor
         else
-            MaterialTheme.colorScheme.onSurface
+            unselectedColor
     if (iconOnly) {
         WithTooltip(
             description,
@@ -1396,8 +1396,9 @@ private fun RegionManipulationStrategyChoice(
             RadioButton(
                 selected = isActive,
                 onClick = null, // null recommended for accessibility with screen readers
-                colors = RadioButtonDefaults.colors().copy(
-                    selectedColor = MaterialTheme.colorScheme.secondary,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = selectedColor,
+                    unselectedColor = unselectedColor,
                 )
             )
             Text(

@@ -1,5 +1,6 @@
 package ui.tools
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import domain.model.NonEqualityCondition
 import domain.model.Signature
@@ -55,6 +56,6 @@ sealed interface ITool { // pls. i dont know how to name it.. (semantically)
     }
 
     sealed interface Tinted : ITool {
-        val tint: Color
+        val tint: Color @Composable get() = Color.Unspecified
     }
 }

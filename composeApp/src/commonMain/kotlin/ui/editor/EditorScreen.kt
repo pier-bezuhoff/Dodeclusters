@@ -99,12 +99,10 @@ import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
 import domain.model.PartialArgList
-import getPlatform
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
@@ -134,7 +132,6 @@ import ui.editor.dialogs.RotationDialog
 import ui.editor.dialogs.SaveOptionsDialog
 import ui.editor.dialogs.SavePromptDialog
 import ui.theme.ColorTheme
-import ui.theme.DEFAULT_COLOR_THEME
 import ui.theme.DodeclustersColors
 import ui.theme.DodeclustersTheme
 import ui.theme.adaptiveSizing
@@ -472,7 +469,7 @@ fun EditorScreenRoot(
             ) ||
             !isDarkTheme && viewModel.backgroundColor in listOf(
                 DodeclustersColors.darkScheme.surface,
-                Color.Black
+                Color.Black,
             )
         ) {
             viewModel.backgroundColor = colorScheme.surface
@@ -590,7 +587,7 @@ private fun EditorScreen(
 @Preview
 @Composable
 private fun EditorScreenPreview() {
-    DodeclustersTheme(ColorTheme.DARK) {
+    DodeclustersTheme(ColorTheme.LIGHT) {
         val toolbarState = ToolbarState(
             activeCategory = Category.Drag,
             activeTool = Tool.Drag,
@@ -1123,7 +1120,7 @@ private fun LeftToolbar(
             .width(toolbarSize)
         ,
         Arrangement.Top,
-        Alignment.CenterHorizontally
+        Alignment.CenterHorizontally,
     ) {
         val dividerPaddings =
             if (isCompact) PaddingValues(vertical = 6.dp)
@@ -1177,7 +1174,8 @@ private fun CategoryButton(
         )
     ,
     iconModifier: Modifier = modifier,
-    tint: Color = LocalContentColor.current,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    contentColor: Color = LocalContentColor.current,
 ) {
     val isCompact = MaterialTheme.adaptiveSizing.isCompact
     if (!isCompact)
@@ -1192,6 +1190,8 @@ private fun CategoryButton(
                 contentDescription = name,
                 modifier = modifier,
                 iconModifier = iconModifier,
+                containerColor = containerColor,
+                contentColor = contentColor,
                 onClick = { switchToCategory(category) }
             )
         }
@@ -1201,9 +1201,10 @@ private fun CategoryButton(
                 tool = currentDefaultTool,
                 enabled = isToolEnabled(currentDefaultTool),
                 regionColor = regionColor,
-                tint = tint,
                 modifier = modifier,
                 iconModifier = iconModifier,
+                containerColor = containerColor,
+                contentColor = contentColor,
                 onClick = { selectToolAndTogglePanel(it) }
             )
         }
@@ -1360,9 +1361,10 @@ private fun ToolButton(
     enabled: Boolean,
     alternative: Boolean = false,
     regionColor: Color,
-    tint: Color = LocalContentColor.current,
     modifier: Modifier = Modifier.padding(4.dp),
     iconModifier: Modifier = modifier,
+    containerColor: Color = Color.Unspecified,
+    contentColor: Color = LocalContentColor.current,
     onClick: (Tool) -> Unit,
 ) {
     val icon = painterResource(tool.icon)
@@ -1397,6 +1399,10 @@ private fun ToolButton(
                 IconButton(
                     onClick = callback,
                     modifier = modifier,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = containerColor,
+                        contentColor = contentColor,
+                    )
                 ) {
                     Icon(
                         painter = icon,
@@ -1416,7 +1422,8 @@ private fun ToolButton(
                     alternative = alternative,
                     modifier = modifier,
                     iconModifier = iconModifier,
-                    contentColor = tint,
+                    containerColor = containerColor,
+                    contentColor = contentColor,
                     onClick = callback
                 )
             }
@@ -1426,7 +1433,8 @@ private fun ToolButton(
                     contentDescription = name,
                     modifier = modifier,
                     iconModifier = iconModifier,
-                    contentColor = tint,
+                    containerColor = containerColor,
+                    contentColor = contentColor,
                     onClick = callback
                 )
             }
@@ -1438,7 +1446,8 @@ private fun ToolButton(
                         isOn = enabled,
                         modifier = modifier,
                         iconModifier = iconModifier,
-                        contentColor = tint,
+                        containerColor = containerColor,
+                        contentColor = contentColor,
                         onClick = callback
                     )
                 } else {
@@ -1449,7 +1458,8 @@ private fun ToolButton(
                         enabled = enabled,
                         modifier = modifier,
                         iconModifier = iconModifier,
-                        contentColor = tint,
+                        containerColor = containerColor,
+                        contentColor = contentColor,
                         onClick = callback
                     )
                 }

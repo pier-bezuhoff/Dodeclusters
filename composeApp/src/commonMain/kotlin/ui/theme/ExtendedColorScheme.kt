@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
  * @param[copyingColor] blue for copying/duplicating
  * @param[deletionColor] red for deleting
  * @param[highlightColor] blue for highlighting parents and stuff
- * @param[imaginaryCircleColor] pink-red for imaginary cirles
+ * @param[imaginaryCircleColor] pink-red for imaginary circles
  */
 @Immutable
 data class ExtendedColorScheme(
@@ -26,6 +26,7 @@ data class ExtendedColorScheme(
     val deletionColor: Color,
     val highlightColor: Color,
     val imaginaryCircleColor: Color,
+    val deletionToolColor: Color,
 )
 
 val LocalExtendedColors = staticCompositionLocalOf {
@@ -39,6 +40,7 @@ val LocalExtendedColors = staticCompositionLocalOf {
         deletionColor = Color.Unspecified,
         highlightColor = Color.Unspecified,
         imaginaryCircleColor = Color.Unspecified,
+        deletionToolColor = Color.Unspecified,
     )
 }
 
