@@ -37,6 +37,7 @@ sealed interface Submode {
         val corner1: Offset? = null,
         val corner2: Offset? = null,
     ) : Submode
+    // MAYBE: contour select (press and drag to select sector until up)
     data class FlowSelect(
         val lastConstraints: RegionConstraints? = null,
     ) : Submode

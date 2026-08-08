@@ -136,7 +136,7 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         ix2tier[ix] = FREE_TIER
         // no need to clear glued cache
         if (tier2ixs.isEmpty())
-            tier2ixs += setOf(ix)
+            tier2ixs.add(setOf(ix))
         else
             tier2ixs[FREE_TIER] = tier2ixs[FREE_TIER] + ix
         return ix
@@ -677,7 +677,10 @@ sealed class Expressions<EXPR : Expr, EXPR_ONE_TO_ONE : Expr.OneToOne, EXPR_ONE_
         for (child in childs) {
             val tier = computeTier(child)
             ix2tier[child] = tier
-            tier2ixs[tier] = tier2ixs[tier] + child
+            if (tier < tier2ixs.size)
+                tier2ixs[tier] = tier2ixs[tier] + child
+            else
+                tier2ixs.add(setOf(child))
         }
     }
 

@@ -1771,6 +1771,18 @@ class EditorViewModel : ViewModel() {
 
     fun dismissInputSubmode(recordHistory: Boolean = true) {
         if (submode is Submode.InputPopup) {
+            when (submode) {
+                is Submode.LabelInput -> {
+                    for (ix in objectSelection)
+                        objectModel.updateStyle(ix) {
+                            it.copy(label =
+                                if (it.label?.content.isNullOrBlank() == true) null
+                                else it.label
+                            )
+                        }
+                }
+                else -> {}
+            }
             submode = null
             objectModel.invalidate()
             if (recordHistory)
@@ -1781,18 +1793,21 @@ class EditorViewModel : ViewModel() {
     fun setLabel(label: String?) {
         for (ix in objectSelection) {
             // idt we need to forget label shift when removing the label
-            objectModel.updateStyle(ix) { style -> style.copy(
-                label = label?.let { Styling.Label(it) }
-            ) }
+            objectModel.updateStyle(ix) {
+                it.copy(label =
+                    if (label == null)
+                        null
+                    else
+                        Styling.Label(label)
+                )
+            }
         }
         objectModel.invalidate()
     }
 
     fun setLineThickness(thickness: Float?) {
         for (ix in selection.indices) {
-            objectModel.updateStyle(ix) {
-                it.copy(lineThickness = thickness)
-            }
+            objectModel.updateStyle(ix) { it.copy(lineThickness = thickness) }
         }
         objectModel.invalidate()
     }
@@ -4595,7 +4610,6 @@ class EditorViewModel : ViewModel() {
                 ArcPath.Open(vertices = vertexIndices, arcs = arcs)
         )
         val ix = objectModel.addDownscaledObject(concreteArcPath)
-        selection = Selection(arcPaths = listOf(ix))
         // TODO: init SubMode.ToolResultPostprocessing
         objectModel.invalidate()
         recordHistory()
