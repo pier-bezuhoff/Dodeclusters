@@ -179,10 +179,10 @@ string|multiselect_name|TXVsdGlzZWxlY3Q=
 string|n_steps_placeholder|PG51bWJlciBvZiBzdGVwcz4=
 string|n_steps_prompt|TnVtYmVyIG9mIHN0ZXBz
 string|name|TmFtZQ==
-string|new_blank_name|TmV3IGJsYW5r
+string|new_blank|TmV3IGJsYW5r
 string|ok|T0s=
-string|open_file_name|T3Blbg==
 string|open_file|T3BlbiBmaWxl
+string|open|T3Blbg==
 string|overwrite_shared_done|U3VjY2Vzc2Z1bGx5IG92ZXJ3cml0dGVuLg==
 string|overwrite_shared_error|RmFpbGVkIHRvIG92ZXJ3cml0ZS4=
 string|overwrite_shared_name|T3ZlcndyaXRlIHNoYXJlZCBjbHVzdGVy
@@ -198,7 +198,7 @@ string|polarity_by_circle_and_line_or_point_description|Q29uc3RydWN0IGEgdGFuZ2Vu
 string|polarity_by_circle_and_line_or_point_name|UG9sYXJpdHkgYnkgY2lyY2xlIGFuZCBwb2ludC9saW5l
 string|rectangular_select_description|U2VsZWN0IG9iamVjdHMgd2l0aCByZWN0YW5ndWxhciBzZWxlY3Rpb24=
 string|rectangular_select_name|UmVjdGFuZ3VsYXIgc2VsZWN0aW9u
-string|redo_name|UmVkbw==
+string|redo|UmVkbw==
 string|region_category_name|UmVnaW9ucw==
 string|region_description|RmlsbCB3aXRoIGNvbG9yIHJlZ2lvbnMgYmV0d2VlbiBjaXJjbGVz
 string|region_manipulation_strategy_add_postfix|QWRkaW5n
@@ -220,9 +220,9 @@ string|rotation_angle_prompt|Um90YXRpb24gYW5nbGUgaW4gZGVncmVlcyBwZXIgc3RlcA==
 string|rotation_description|Um90YXRlIGFuIG9iamVjdCBhcm91bmQgYSBwb2ludA==
 string|rotation_name|Um90YXRpb24=
 string|rotation_title|Q29uZmlndXJlIHJvdGF0aW9uIHBhcmFtZXRlcnM=
+string|save_as|U2F2ZSBhcw==
 string|save_cluster_name|U2F2ZSBhcyBEb2RlY2x1c3RlcnMgZmlsZQ==
 string|save_cluster_title|U2F2ZSB0aGlzIGNsdXN0ZXI=
-string|save_name|U2F2ZSBhcw==
 string|save_prompt_after_blank_description|U2hvdWxkIHdlIHNhdmUgYmVmb3JlIG9wZW5pbmcgYSBuZXcgYmxhbmsgZmlsZT8=
 string|save_prompt_title|U2F2ZT8=
 string|save|U2F2ZQ==
@@ -267,6 +267,6 @@ string|toggle_select_all_name|U2VsZWN0L2Rlc2VsZWN0IGFsbA==
 string|tool_arg_input_prompt|UGxlYXNlIHNwZWNpZnk=
 string|tool_arg_parameter_adjustment_prompt|UGxlYXNlIGNvbmZpcm0gc2VsZWN0ZWQgcGFyYW1ldGVycw==
 string|transform_category_name|VHJhbnNmb3Jt
-string|undo_name|VW5kbw==
+string|undo|VW5kbw==
 string|visibility_category_name|Vmlldw==
 string|yes|WWVz
