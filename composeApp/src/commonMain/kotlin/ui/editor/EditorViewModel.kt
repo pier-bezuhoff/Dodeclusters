@@ -625,7 +625,7 @@ class EditorViewModel : ViewModel() {
         history.recordDiff(saveState())
     }
 
-    /** Forget unrecorded & unaccumulated changes until now */
+    /** Forgets unrecorded & unaccumulated changes until now */
     fun forgetUnrecordedChanges() {
         history.pushState(saveState())
     }
