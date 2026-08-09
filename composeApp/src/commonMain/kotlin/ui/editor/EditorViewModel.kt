@@ -621,8 +621,13 @@ class EditorViewModel : ViewModel() {
 
     /** Saves present state, diffs it with [history]`.lastRecordedState` and
      * records changes to [history]`.past`, enabling [undo]s */
-    private fun recordHistory() {
+    fun recordHistory() {
         history.recordDiff(saveState())
+    }
+
+    /** Forget unrecorded & unaccumulated changes until now */
+    fun forgetUnrecordedChanges() {
+        history.pushState(saveState())
     }
 
     private fun resetTransients() {

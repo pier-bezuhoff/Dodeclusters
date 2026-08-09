@@ -5,6 +5,7 @@ package ui.editor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.draggable2D
 import androidx.compose.foundation.gestures.rememberDraggable2DState
 import androidx.compose.foundation.layout.Arrangement
@@ -1355,7 +1356,7 @@ private fun RegionManipulationStrategyChoice(
     iconOnly: Boolean,
     setStrategy: (RegionManipulationStrategy) -> Unit,
     selectedColor: Color = MaterialTheme.colorScheme.secondary,
-    unselectedColor: Color = MaterialTheme.colorScheme.onSurface,
+    unselectedColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
 ) {
     val description = stringResource(strategy.descriptionResource)
     val color =
@@ -1385,7 +1386,7 @@ private fun RegionManipulationStrategyChoice(
                 .selectable(
                     selected = isActive,
                     onClick = { setStrategy(strategy) },
-                    role = Role.RadioButton
+                    role = Role.RadioButton,
                 )
                 .height(56.dp)
                 .padding(horizontal = 16.dp)
@@ -1406,7 +1407,7 @@ private fun RegionManipulationStrategyChoice(
                 modifier = Modifier
                     .padding(start = 16.dp)
                     .weight(1f),
-                color = color,
+                color = color.copy(alpha = 1f),
                 style = MaterialTheme.adaptiveTypography.body,
             )
         }

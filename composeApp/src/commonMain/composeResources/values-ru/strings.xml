@@ -1,11 +1,11 @@
 <resources>
     <string name="app_name">Dodeclusters</string>
     <!-- top toolbar -->
-    <string name="new_blank_name">Новый пустой файл</string>
-    <string name="save_name">Сохранить как</string>
-    <string name="open_file_name">Открыть</string>
-    <string name="undo_name">Отменить действие</string>
-    <string name="redo_name">Повторить действие</string>
+    <string name="new_blank">Новый пустой файл</string>
+    <string name="save_as">Сохранить как</string>
+    <string name="open">Открыть</string>
+    <string name="undo">Отменить действие</string>
+    <string name="redo">Повторить действие</string>
     <string name="menu">Меню</string>
     <!-- drawer -->
     <string name="actions">Действия</string>

@@ -5,6 +5,9 @@ import domain.Ix
 
 @Immutable
 sealed interface Effect {
+    /** Active whenever the selection is */
+    sealed interface SelectionBound : Effect
+
     @Immutable
     sealed interface Glow : Effect {
         val index: Ix

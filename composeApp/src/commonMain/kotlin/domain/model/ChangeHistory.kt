@@ -186,6 +186,11 @@ class ChangeHistory(
         }
     }
 
+    /** changes since [lastRecordedState] until [state] will not be recorded */
+    fun pushState(state: SaveState) {
+        lastRecordedState = state
+    }
+
     // not just selection, center and regionColor have changed
     private fun areChangesWorthRecording(changes: SaveState.Changes): Boolean =
         changes != SaveState.Changes.EMPTY.copy(

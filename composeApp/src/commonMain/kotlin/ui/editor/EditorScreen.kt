@@ -80,13 +80,13 @@ import dodeclusters.composeapp.generated.resources.cancel
 import dodeclusters.composeapp.generated.resources.collapse_down
 import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.confirm
-import dodeclusters.composeapp.generated.resources.new_blank_name
+import dodeclusters.composeapp.generated.resources.new_blank
 import dodeclusters.composeapp.generated.resources.new_document
+import dodeclusters.composeapp.generated.resources.open
 import dodeclusters.composeapp.generated.resources.open_file
-import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save
-import dodeclusters.composeapp.generated.resources.save_name
+import dodeclusters.composeapp.generated.resources.save_as
 import dodeclusters.composeapp.generated.resources.save_prompt_after_blank_description
 import dodeclusters.composeapp.generated.resources.settings
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
@@ -474,6 +474,7 @@ fun EditorScreenRoot(
             )
         ) {
             viewModel.backgroundColor = colorScheme.surface
+            viewModel.forgetUnrecordedChanges()
         }
     }
     preloadIcons()
@@ -634,19 +635,19 @@ private fun DrawerContent(
                 style = MaterialTheme.typography.titleMedium,
             )
             NavigationDrawerItem(
-                label = { Text(stringResource(Res.string.new_blank_name)) },
+                label = { Text(stringResource(Res.string.new_blank)) },
                 selected = false,
                 onClick = openNewBlank,
                 icon = { Icon(painterResource(Res.drawable.new_document), null) },
             )
             NavigationDrawerItem(
-                label = { Text(stringResource(Res.string.open_file_name)) },
+                label = { Text(stringResource(Res.string.open)) },
                 selected = false,
                 onClick = openFile,
                 icon = { Icon(painterResource(Res.drawable.open_file), null) },
             )
             NavigationDrawerItem(
-                label = { Text(stringResource(Res.string.save_name)) },
+                label = { Text(stringResource(Res.string.save_as)) },
                 selected = false,
                 onClick = showSaveOptionsDialog,
                 icon = { Icon(painterResource(Res.drawable.save), null) },
@@ -897,20 +898,24 @@ private fun EditorTopBar(
                     modifier = buttonModifier,
                     onClick = { openNewBlank() },
                 )
+                WithTooltip(stringResource(Tool.OpenFile.description)) {
+                    OpenFileButton(
+                        painterResource(Tool.OpenFile.icon),
+                        stringResource(Tool.OpenFile.name),
+                        LookupData.YAML.copy(directory = saveConfig.directory),
+                        modifier = buttonModifier,
+                        iconModifier = Modifier,
+                        openRequests = openFileRequests,
+                        onOpen = loadFromYaml,
+                    )
+                }
             }
-            SimpleToolButtonWithTooltip(Tool.SaveCluster,
-                modifier = buttonModifier,
-                onClick = { showSaveOptionsDialog() },
-            )
-            WithTooltip(stringResource(Tool.OpenFile.description)) {
-                OpenFileButton(
-                    painterResource(Tool.OpenFile.icon),
-                    stringResource(Tool.OpenFile.name),
-                    LookupData.YAML.copy(directory = saveConfig.directory),
+            WithTooltip(stringResource(Res.string.save_as)) {
+                SimpleButton(
+                    iconPainter = painterResource(Res.drawable.save),
+                    contentDescription = stringResource(Res.string.save_as),
                     modifier = buttonModifier,
-                    iconModifier = Modifier,
-                    openRequests = openFileRequests,
-                    onOpen = loadFromYaml,
+                    onClick = showSaveOptionsDialog,
                 )
             }
             VerticalDivider(
@@ -1146,9 +1151,7 @@ private fun LeftToolbar(
                 .fillMaxWidth(0.7f)
                 .align(Alignment.CenterHorizontally)
             )
-            CategoryButton(Category.Create, toolbarState, regionColor, isToolEnabled, switchToCategory, selectToolAndTogglePanel,
-//                tint = MaterialTheme.colorScheme.secondary
-            )
+            CategoryButton(Category.Create, toolbarState, regionColor, isToolEnabled, switchToCategory, selectToolAndTogglePanel)
             Spacer(Modifier.height(
                 if (isCompact) 6.dp else 12.dp
             ))
@@ -1175,7 +1178,7 @@ private fun CategoryButton(
         )
     ,
     iconModifier: Modifier = modifier,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    containerColor: Color = Color.Unspecified,
     contentColor: Color = LocalContentColor.current,
 ) {
     val isCompact = MaterialTheme.adaptiveSizing.isCompact

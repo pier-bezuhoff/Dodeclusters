@@ -126,10 +126,10 @@ import dodeclusters.composeapp.generated.resources.move_point_to_infinity_name
 import dodeclusters.composeapp.generated.resources.multiselect
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_name
-import dodeclusters.composeapp.generated.resources.new_blank_name
+import dodeclusters.composeapp.generated.resources.new_blank
 import dodeclusters.composeapp.generated.resources.new_document
+import dodeclusters.composeapp.generated.resources.open
 import dodeclusters.composeapp.generated.resources.open_file
-import dodeclusters.composeapp.generated.resources.open_file_name
 import dodeclusters.composeapp.generated.resources.open_region
 import dodeclusters.composeapp.generated.resources.paint_splash
 import dodeclusters.composeapp.generated.resources.paint_splash_border
@@ -147,7 +147,6 @@ import dodeclusters.composeapp.generated.resources.propeller
 import dodeclusters.composeapp.generated.resources.rectangular_select_description
 import dodeclusters.composeapp.generated.resources.rectangular_select_name
 import dodeclusters.composeapp.generated.resources.redo
-import dodeclusters.composeapp.generated.resources.redo_name
 import dodeclusters.composeapp.generated.resources.region_description
 import dodeclusters.composeapp.generated.resources.region_name
 import dodeclusters.composeapp.generated.resources.regions_blend_settings_description
@@ -165,7 +164,6 @@ import dodeclusters.composeapp.generated.resources.rotation_description
 import dodeclusters.composeapp.generated.resources.rotation_name
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_cluster_name
-import dodeclusters.composeapp.generated.resources.save_name
 import dodeclusters.composeapp.generated.resources.screenshot_pc
 import dodeclusters.composeapp.generated.resources.select_all
 import dodeclusters.composeapp.generated.resources.set_label_description
@@ -179,7 +177,6 @@ import dodeclusters.composeapp.generated.resources.spinning_sphere
 import dodeclusters.composeapp.generated.resources.spiral
 import dodeclusters.composeapp.generated.resources.stereographic_rotation_description
 import dodeclusters.composeapp.generated.resources.stereographic_rotation_name
-import dodeclusters.composeapp.generated.resources.stub
 import dodeclusters.composeapp.generated.resources.svg_export_name
 import dodeclusters.composeapp.generated.resources.swap_direction_description
 import dodeclusters.composeapp.generated.resources.swap_direction_name
@@ -201,7 +198,6 @@ import dodeclusters.composeapp.generated.resources.toggle_select_all_name
 import dodeclusters.composeapp.generated.resources.two_of_three_circles_connected
 import dodeclusters.composeapp.generated.resources.two_vertical_sliders
 import dodeclusters.composeapp.generated.resources.undo
-import dodeclusters.composeapp.generated.resources.undo_name
 import dodeclusters.composeapp.generated.resources.upload
 import dodeclusters.composeapp.generated.resources.visible
 import dodeclusters.composeapp.generated.resources.visible_circle
@@ -213,7 +209,6 @@ import domain.model.nonEqualityConditionsOf
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringArrayResource
 import org.jetbrains.compose.resources.StringResource
-import ui.theme.DodeclustersColors
 import ui.theme.extendedColorScheme
 
 @Immutable
@@ -264,7 +259,7 @@ sealed class Tool(
 
     // top toolbar
     data object NewBlank : CustomAction(
-        name = Res.string.new_blank_name,
+        name = Res.string.new_blank,
         icon = Res.drawable.new_document,
     )
     data object SaveCluster : CustomAction(
@@ -296,15 +291,15 @@ sealed class Tool(
         const val MIME_TYPE = "image/png"
     }
     data object OpenFile : CustomAction(
-        name = Res.string.open_file_name,
+        name = Res.string.open,
         icon = Res.drawable.open_file,
     )
     data object Undo : Action(
-        name = Res.string.undo_name,
+        name = Res.string.undo,
         icon = Res.drawable.undo,
     )
     data object Redo : Action(
-        name = Res.string.redo_name,
+        name = Res.string.redo,
         icon = Res.drawable.redo,
     )
     data object ToggleMenu : CustomAction(

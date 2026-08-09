@@ -3,11 +3,11 @@
     <string name="stub">TBD</string>
     <string name="placeholder">%1$s</string>
     <!-- top toolbar -->
-    <string name="new_blank_name">New blank</string>
-    <string name="save_name">Save as</string>
-    <string name="open_file_name">Open</string>
-    <string name="undo_name">Undo</string>
-    <string name="redo_name">Redo</string>
+    <string name="new_blank">New blank</string>
+    <string name="save_as">Save as</string>
+    <string name="open">Open</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
     <string name="menu">Menu</string>
     <!-- drawer -->
     <string name="actions">Actions</string>
