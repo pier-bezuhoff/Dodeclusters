@@ -57,7 +57,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -189,15 +188,12 @@ fun EditorScreenRoot(
         },
         openNewBlank = {
             viewModel.newBlank()
-            coroutineScope.launch { drawerState.close() }
         },
         openFile = {
             viewModel.requestOpenFile()
-            coroutineScope.launch { drawerState.close() }
         },
         showSaveOptionsDialog = {
             viewModel.toolAction(Tool.SaveCluster)
-            coroutineScope.launch { drawerState.close() }
         },
         openSettings = { openSettings() },
         hidePanel = { viewModel.hidePanel() },
@@ -921,14 +917,17 @@ private fun EditorTopBar(
                 )
                 WithTooltip(stringResource(Tool.OpenFile.description)) {
                     OpenFileButton(
-                        painterResource(Tool.OpenFile.icon),
-                        stringResource(Tool.OpenFile.name),
-                        LookupData.YAML.copy(directory = saveConfig.directory),
+                        lookupData = LookupData.YAML.copy(directory = saveConfig.directory),
                         modifier = buttonModifier,
-                        iconModifier = Modifier,
                         openRequests = openFileRequests,
                         onOpen = loadFromYaml,
-                    )
+                    ) {
+                        Icon(
+                            painter = painterResource(Tool.OpenFile.icon),
+                            contentDescription = stringResource(Tool.OpenFile.name),
+                            modifier = Modifier,
+                        )
+                    }
                 }
             }
             WithTooltip(stringResource(Res.string.save_as)) {

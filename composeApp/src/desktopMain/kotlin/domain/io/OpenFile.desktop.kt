@@ -1,6 +1,5 @@
 package domain.io
 
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,7 +10,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.AwtWindow
-import androidx.compose.ui.graphics.painter.Painter
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.open_file
 import kotlinx.coroutines.Dispatchers
@@ -26,13 +24,11 @@ import java.io.IOException
 // works on Linux, todo: test on Windows
 @Composable
 actual fun OpenFileButton(
-    iconPainter: Painter,
-    contentDescription: String,
     lookupData: LookupData,
     modifier: Modifier,
-    iconModifier: Modifier,
     openRequests: SharedFlow<Unit>?,
-    onOpen: (content: String?, filename: String?) -> Unit
+    onOpen: (content: String?, filename: String?) -> Unit,
+    iconContent: @Composable (() -> Unit),
 ) {
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
@@ -40,10 +36,9 @@ actual fun OpenFileButton(
         onClick = {
             fileDialogIsOpen = true
         },
-        modifier = modifier
-    ) {
-        Icon(iconPainter, contentDescription, iconModifier)
-    }
+        modifier = modifier,
+        content = iconContent,
+    )
     if (fileDialogIsOpen) {
         LoadFileDialog(lookupData) { directory, filename ->
             fileDialogIsOpen = false

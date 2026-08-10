@@ -1,5 +1,5 @@
 [versions]
-dodeclusters-version = "0.5.4"
+dodeclusters-version = "0.5.5"
 dodeclusters-android-versionCode = "11"
 dodeclusters-desktop-packageVersion = "1.0.5" # cannot start with 0 it seems
 #noinspection GradleDependency

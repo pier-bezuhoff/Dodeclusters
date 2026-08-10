@@ -4,12 +4,10 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -19,13 +17,11 @@ import java.io.IOException
 
 @Composable
 actual fun OpenFileButton(
-    iconPainter: Painter,
-    contentDescription: String,
     lookupData: LookupData,
     modifier: Modifier,
-    iconModifier: Modifier,
     openRequests: SharedFlow<Unit>?,
-    onOpen: (content: String?, filename: String?) -> Unit
+    onOpen: (content: String?, filename: String?) -> Unit,
+    iconContent: @Composable (() -> Unit),
 ) {
     val context = LocalContext.current
     // MAYBE: use OpenDocument instead of GetContent for persistent files only (no cloud etc)
@@ -43,10 +39,9 @@ actual fun OpenFileButton(
 //            launcher.launch("application/*") // casts a wide net, including .ddc, .yaml, ..., pdf..
 //        launcher.launch("application/yaml") // bugged
         },
-        modifier = modifier
-    ) {
-        Icon(iconPainter, contentDescription, iconModifier)
-    }
+        modifier = modifier,
+        content = iconContent,
+    )
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(openRequests) {
         openRequests

@@ -18,22 +18,19 @@ import org.w3c.files.get
 
 @Composable
 actual fun OpenFileButton(
-    iconPainter: Painter,
-    contentDescription: String,
     lookupData: LookupData,
     modifier: Modifier,
-    iconModifier: Modifier,
     openRequests: SharedFlow<Unit>?,
-    onOpen: (content: String?, filename: String?) -> Unit
+    onOpen: (content: String?, filename: String?) -> Unit,
+    iconContent: @Composable (() -> Unit),
 ) {
     IconButton(
         onClick = {
             onClick(lookupData, onOpen)
         },
-        modifier = modifier
-    ) {
-        Icon(iconPainter, contentDescription, iconModifier)
-    }
+        modifier = modifier,
+        content = iconContent,
+    )
     LaunchedEffect(openRequests) {
         openRequests?.collect {
             onClick(lookupData, onOpen)
