@@ -118,8 +118,11 @@ infix fun <T> Set<T>.xor(other: Set<T>): Set<T> =
 inline fun never(info: Any? = ""): Nothing =
     throw IllegalStateException(if (info == "") "Never" else "Never ($info)")
 
-/** Does nothing. Forcefully introduce dependency on [something]'s state */
+/**
+ * Allows you to feel when [something] changes.
+ *
+ * Does nothing, use it to manually introduce dependence on [something]'s state
+ * into the caller's scope.
+ */
 fun hug(something: Any?) {}
-/** Does nothing. Forcefully introduce dependency on [something]'s and [somethingElse]'s states */
-fun hug(something: Any?, somethingElse: Any?) {}
 

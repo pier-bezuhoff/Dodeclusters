@@ -2,6 +2,7 @@ package ui.editor
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -149,7 +150,6 @@ class EditorViewModel : ViewModel() {
     /** Filled regions delimited by some objects from [objects] */
     var regions: List<LogicalRegion> by mutableStateOf(listOf())
         private set
-    var effects: List<Effect> by mutableStateOf(listOf())
     var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
     val phantoms: Set<Ix> get() =
         objectModel.styling.mapNotNull { (ix, style) ->
@@ -162,14 +162,13 @@ class EditorViewModel : ViewModel() {
     var chessboardPattern: ChessboardPattern by mutableStateOf(ChessboardPattern.NONE)
         private set
 
-    // MAYBE: when circles are hidden select regions instead
     private val selectionState: MutableState<Selection> = mutableStateOf(Selection())
     /** indices of selected circles/lines/points & arc-paths */
     var selection: Selection by selectionState
         private set
     /** Distinct selected [GCircle]? indices +
      * indices of all vertices/midpoints of selected arc-paths */
-    inline val selectedIndices: List<Ix> get() =
+    val selectedIndices: List<Ix> get() =
         selection.gCircles.plus(
             selection.arcPaths.flatMap {
                 objectModel.getArcPath(it)?.dependencies ?: emptySet()
@@ -242,19 +241,30 @@ class EditorViewModel : ViewModel() {
     /** presently used to resolve save-before-new-blank situation by queueing [Action.NEW_BLANK] */
     private var queuedAction: Action? by mutableStateOf(null)
 
-    // these are NG
-    inline val showGenericSelectionContextActions: Boolean get() =
+    // boolean flags with somewhat frequently changing deps are wrapped in derivedStateOf
+    val showGenericSelectionContextActions: Boolean by derivedStateOf {
         mode.isSelectingObjects() && showCircles &&
-            (selection.gCircles.any { objects[it] is CircleOrLineOrImaginaryCircle } ||
-                selection.arcPaths.isNotEmpty() &&
-                selection.gCircles.any { objects[it] is Point }
-            )
-    inline val showPointContextActions: Boolean get() =
+        (selection.gCircles.any { objects[it] is CircleOrLineOrImaginaryCircle } ||
+            selection.arcPaths.isNotEmpty() &&
+            selection.gCircles.any { objects[it] is Point }
+        )
+    }
+    val showPointContextActions: Boolean by derivedStateOf {
         showCircles && mode.isSelectingObjects() && selection.gCircles.any { objects[it] is Point }
-    inline val showArcPathContextActions: Boolean get() =
+    }
+    val showArcPathContextActions: Boolean by derivedStateOf {
         mode.isSelectingObjects() && selection.arcPaths.isNotEmpty()
+    }
+    val selectionIsLocked: Boolean by derivedStateOf {
+        hug(objectModel.invalidations)
+        selection.gCircles.toSet()
+            .plus(selection.arcPaths.flatMap {
+                objectModel.getArcPath(it)?.dependencies ?: emptySet()
+            })
+            .all { objects[it] == null || !isFree(it) }
+    }
 
-    val handleConfig: HandleConfig? get() =
+    val handleConfig: HandleConfig? by derivedStateOf {
         if (mode.isSelectingObjects())
             when {
                 selection.gCircles.size == 1 && selection.arcPaths.isEmpty() ->
@@ -264,6 +274,7 @@ class EditorViewModel : ViewModel() {
                 else -> null
             }
         else null
+    }
     inline val scaleSliderPercentage: Float get() =
         submode.let { sm ->
             if (sm is Submode.ScaleViaSlider)
@@ -276,16 +287,6 @@ class EditorViewModel : ViewModel() {
                 sm.angle.toFloat()
             else 0f
         }
-    // MAYBE: show quick prompt/popup instead of a button
-    val selectionIsLocked: Boolean get() {
-        hug(objectModel.propertyInvalidations)
-        // NOTE: isFree depends on expressions, so propertyInvalidations is not enough
-        return selection.gCircles.toSet()
-            .plus(selection.arcPaths.flatMap {
-                objectModel.getArcPath(it)?.dependencies ?: emptySet()
-            })
-            .all { objects[it] == null || !isFree(it) }
-    }
 
     val undoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
     val redoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
@@ -559,8 +560,8 @@ class EditorViewModel : ViewModel() {
             }.joinToString { it.toString() }
         )
         println("partialArcPath = $partialArcPath")
-        println("invalidation #${objectModel.invalidations}\t " +
-                "propertyInvalidation #${objectModel.propertyInvalidations}"
+        println("invalidation #${objectModel.positionInvalidations}\t " +
+                "propertyInvalidation #${objectModel.invalidations}"
         )
 //        val circle = objects[expressions.circleIndices.first()] as Circle
 //        val line = objects[expressions.lineIndices.first()] as Line
@@ -1303,7 +1304,7 @@ class EditorViewModel : ViewModel() {
     //  tho from tests this function behaves the same way
     // MAYBE: also add backgroundColor (tho it is MT.surface by default and thus 0-contrast)
     fun getColorsByMostUsed(): List<Color> {
-        hug(objectModel.propertyInvalidations)
+        hug(objectModel.invalidations)
         val allColors = mutableListOf<Color>()
         for (region in regions) {
             if (region.borderColor != null)
@@ -1673,14 +1674,14 @@ class EditorViewModel : ViewModel() {
     }
 
     fun getMostCommonBorderColorInSelection(): Color? {
-        hug(objectModel.propertyInvalidations)
+        hug(objectModel.invalidations)
         return selection.indices
             .map { styling[it]?.borderColor }
             .mostCommonOf { it }
     }
 
     fun getMostCommonFillColorInSelection(): Color? {
-        hug(objectModel.propertyInvalidations)
+        hug(objectModel.invalidations)
         return selection.arcPaths
             .map { styling[it]?.fillColor }
             .mostCommonOf { it }
@@ -1744,6 +1745,7 @@ class EditorViewModel : ViewModel() {
                 // zooming ignores concrete-arc-paths
                 expressions.reEval() // overboard but w/e
                 objectModel.syncDisplayObjects(objects.indices)
+                objectModel.invalidatePositions()
                 history.accumulateChangedLocations(
                     objectIndices = changedIndices,
                     // zoom affects point-line incidence
@@ -1851,6 +1853,7 @@ class EditorViewModel : ViewModel() {
                     obj0.reversed()
                 }
             )
+            objectModel.invalidate()
             recordHistory()
         }
     }
@@ -2535,6 +2538,7 @@ class EditorViewModel : ViewModel() {
                     )
                 )
             }
+            objectModel.invalidate()
             recordHistory()
         }
     }
@@ -2951,6 +2955,7 @@ class EditorViewModel : ViewModel() {
         val order = carrier.point2order(newPoint)
         val newExpr = Expr.Incidence(IncidenceParameters(order), carrierIndex)
         objectModel.changeExpr(pointIndex, newExpr).toSet()
+        objectModel.invalidatePositions()
     }
 
     private fun slidePointAcrossArcPath(
@@ -2967,6 +2972,7 @@ class EditorViewModel : ViewModel() {
             arcPathIndex,
         )
         objectModel.changeExpr(pointIndex, newExpr).toSet()
+        objectModel.invalidatePositions()
     }
 
     private fun dragArcPaths(
@@ -3080,7 +3086,8 @@ class EditorViewModel : ViewModel() {
      * Scaling and rotation are w.r.t. fixed [focus] by the factor of
      * [zoom] and by [rotationAngle] degrees. If [focus] is [Offset.Unspecified] for
      * each circle choose its center, for each point -- itself, for each line -- screen center
-     * projected onto it
+     * projected onto it.
+     * Includes [ConformalObjectModel.invalidatePositions] call.
      */
     private fun transformWhatWeCan(
         targets: List<Ix>,
@@ -3117,8 +3124,8 @@ class EditorViewModel : ViewModel() {
             else
                 showSnackbarMessage(SnackbarMessage.LOCKED_OBJECTS_NOTICE)
         } else {
-            val changedIndices =
-                objectModel.transform(actualTargets.toList(), translation, focus, zoom, rotationAngle)
+            val changedIndices = objectModel.transform(actualTargets.toList(), translation, focus, zoom, rotationAngle)
+            objectModel.invalidatePositions()
             history.accumulateChangedLocations(
                 objectIndices = changedIndices,
                 // zoom can change point-line incidence
@@ -3563,19 +3570,21 @@ class EditorViewModel : ViewModel() {
                     carrier1Index = snap.circle1Index,
                     carrier2Index = snap.circle2index,
                 )
+                objectModel.invalidate()
                 recordHistory()
             }
             is PointSnapResult.Incidence -> {
                 objectModel.changeToIncidence(pointIndex, snap.circleIndex)
+                objectModel.invalidate()
                 recordHistory()
             }
             is PointSnapResult.ArcPathIncidence -> {
                 objectModel.changeToArcPathIncidence(pointIndex, snap.arcPathIndex)
+                objectModel.invalidate()
                 recordHistory()
             }
             else -> {}
         }
-        objectModel.invalidate()
     }
 
     // TODO: instead perma-highlight parents with 2 colors
@@ -4797,7 +4806,7 @@ class EditorViewModel : ViewModel() {
                 // you'd have to move free objects in such a way that all others would
                 // become imaginary/null
 //                hug(objectModel.invalidations)
-                hug(objectModel.propertyInvalidations)
+                hug(objectModel.invalidations)
                 objectSelection.containsAll(objects.filterIndices { it is CircleOrLineOrPoint })
             }
             Tool.Region ->
@@ -4817,7 +4826,7 @@ class EditorViewModel : ViewModel() {
             Tool.ToggleDirectionArrows ->
                 showDirectionArrows
             Tool.MarkAsPhantoms -> {
-                hug(objectModel.propertyInvalidations)
+                hug(objectModel.invalidations)
                 objectSelection.none { it in phantoms }
             }
             Tool.InfinitePoint -> { // whether to prompt infinite-point input

@@ -23,7 +23,7 @@ import domain.update
 // MAYBE: additionally store GeneralizedCircle representations
 /**
  * Purports to encapsulate & manage all objects ([GCircle]s) and object-related properties.
- * Very mutable, track [invalidationsState]/[invalidations] for changes and use with care.
+ * Very mutable, track [invalidationsState]/[positionInvalidations] for changes and use with care.
  */
 class ConformalObjectModel : ObjectModel<GCircleOrConcreteArcPath, GCircleOrConcreteArcPath>() {
 
@@ -45,7 +45,10 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteArcPath, GCircleOrConc
     inline fun getArcPath(index: Ix): ArcPath? =
         expressions.expressions[index]?.expr as? ArcPath
 
-    /** @return all changed indices */
+    /**
+     * Don't forget to [invalidatePositions] post factum.
+     * @return all changed indices
+     */
     fun modifyArcPath(index: Ix, arcPath: ArcPath): List<Ix> {
         val changedIndices = changeExpr(index, arcPath)
         for (ix in changedIndices) {
@@ -146,7 +149,6 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteArcPath, GCircleOrConc
         expressions.adjustIncidentPointExpressions(gluedIncidentPoints)
         // MAYBE: it's better to recalc glued atp (we transformed them, then adjusted the order)
         syncDisplayObjects(updatedIndices)
-        invalidatePositions()
         return targetsSet + updatedIndices
     }
 

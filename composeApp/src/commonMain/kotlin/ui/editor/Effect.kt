@@ -6,6 +6,7 @@ import domain.Ix
 @Immutable
 sealed interface Effect {
     /** Active whenever the selection is */
+    @Immutable
     sealed interface SelectionBound : Effect
 
     @Immutable

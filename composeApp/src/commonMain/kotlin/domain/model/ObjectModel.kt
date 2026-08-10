@@ -1,7 +1,8 @@
 package domain.model
 
-import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import core.geometry.GCircle
 import domain.Ix
@@ -14,7 +15,7 @@ import domain.update
 /**
  * Purports to encapsulate & manage [displayObjects] and object-related properties.
  *
- * Very mutable, track [invalidationsState]/[invalidations] for changes and use with care.
+ * Very mutable, track [invalidationsState]/[positionInvalidations] for changes and use with care.
  * @param[R] core object type, used in calculations (downscaled, eg [GCircle])
  * @param[D] display object type
  */
@@ -38,28 +39,26 @@ sealed class ObjectModel<R : Any, D : Any> {
     /** layer order */
     val layering: MutableList<Ix> = mutableListOf()
 
-    val invalidationsState: MutableIntState = mutableIntStateOf(0)
     /**
      * Monotonically increasing sequence, each update is to trigger redraw.
      * Call [invalidate] or [invalidatePositions] to trigger update at appropriate time.
      * Includes both potentially continuous position changes and discrete property changes.
      *
-     * See [propertyInvalidations] for properties-only changes.
+     * See [invalidations] for properties-only changes.
      */
-    inline val invalidations: Int get() =
-        invalidationsState.value
+    var positionInvalidations: Int by mutableIntStateOf(0)
+        protected set
 
-    val propertyInvalidationsState: MutableIntState = mutableIntStateOf(0)
     /**
-     * Monotonically increasing sequence, slower than [invalidations].
+     * Monotonically increasing sequence, slower than [positionInvalidations].
      * Call [invalidate] to trigger update at appropriate time.
      *
      * Tracks only discrete properties: color/label/phantom status.
      *
-     * Does NOT track expression changes at present (those can be continuous).
+     * Does NOT track continuous expression changes.
      */
-    inline val propertyInvalidations: Int get() =
-        propertyInvalidationsState.value
+    var invalidations: Int by mutableIntStateOf(0)
+        protected set
 
     val pathCache = PathCache()
 
@@ -71,7 +70,7 @@ sealed class ObjectModel<R : Any, D : Any> {
      * NOTE: Do not forget to manually call this AFTER finishing changing the position-state.
      */
     fun invalidatePositions() {
-        invalidationsState.value += 1
+        positionInvalidations += 1
     }
 
     /**
@@ -81,8 +80,8 @@ sealed class ObjectModel<R : Any, D : Any> {
      * NOTE: Do not forget to manually call this AFTER finishing changing the state.
      */
     fun invalidate() {
-        invalidationsState.value += 1
-        propertyInvalidationsState.value += 1
+        positionInvalidations += 1
+        invalidations += 1
     }
 
     /** called each time an object changes */
@@ -184,6 +183,7 @@ sealed class ObjectModel<R : Any, D : Any> {
         }
     }
 
+    /** Don't forget to [invalidatePositions] post factum */
     inline fun updateStyle(index: Ix, crossinline update: (Styling) -> Styling) {
         styling.update(index, Styling(), update)
     }
@@ -215,7 +215,11 @@ sealed class ObjectModel<R : Any, D : Any> {
         }
     }
 
-    /** Already includes [invalidatePositions]. [newExprOutput] type must be compatible with
+    /**
+     * Changes [ExprOutput] at [index] to [newExprOutput], and recalculates all
+     * children of [index].
+     * Don't forget to [invalidatePositions] post factum.
+     * @param[newExprOutput] its type must be compatible with
      * the second type parameter of [expressions]
      * @return indices of all updated objects, sorted by tiers (including [index]) */
     fun changeExpr(
@@ -227,11 +231,14 @@ sealed class ObjectModel<R : Any, D : Any> {
         val toBeUpdated = expressions.update(setOf(index))
         val changed = listOf(index) + toBeUpdated
         syncDisplayObjects(changed)
-        invalidatePositions()
         return changed
     }
 
-    /** Already includes [invalidatePositions]. [newExpr] type must be compatible with
+    /**
+     * Changes [ExprOutput] at [index] to Just([newExpr]), and recalculates all
+     * children of [index].
+     * Don't forget to [invalidatePositions] post factum.
+     * @param[newExpr] its type must be compatible with
      * the second type parameter of [expressions]
      * @return indices of all updated objects, sorted by tiers (including [index]) */
     fun changeExpr(
@@ -240,7 +247,8 @@ sealed class ObjectModel<R : Any, D : Any> {
     ): List<Ix> =
         changeExpr(index, ExprOutput.Just(newExpr))
 
-    /** Already includes [invalidatePositions]
+    /**
+     * Don't forget to [invalidatePositions] post factum.
      * @return all changed indices
      */
     fun setDisplayObjectsWithConsequences(changes: Map<Ix, D?>): List<Ix> {
@@ -250,11 +258,11 @@ sealed class ObjectModel<R : Any, D : Any> {
         val changeIndices = changes.keys
         val updatedIndices = expressions.update(changeIndices)
         syncDisplayObjects(updatedIndices)
-        invalidatePositions()
         return changeIndices.toList() + updatedIndices
     }
 
-    /** Already includes [invalidatePositions]
+    /**
+     * Don't forget to [invalidatePositions] post factum.
      * @return all indices of changed objects (including [index]) */
     fun setDisplayObjectWithConsequences(
         index: Ix,
@@ -263,7 +271,6 @@ sealed class ObjectModel<R : Any, D : Any> {
         setDisplayObject(index, newObject)
         val updatedIndices = expressions.update(setOf(index))
         syncDisplayObjects(updatedIndices)
-        invalidatePositions()
         return updatedIndices + index
     }
 
@@ -274,7 +281,7 @@ sealed class ObjectModel<R : Any, D : Any> {
      * Scaling and rotation are w.r.t. fixed [focus] by the factor of
      * [zoom] and by [rotationAngle] degrees.
      *
-     * Already includes [invalidatePositions]
+     * Don't forget to [invalidatePositions] post factum.
      *
      * @return indices of all changed objects/expressions
      */

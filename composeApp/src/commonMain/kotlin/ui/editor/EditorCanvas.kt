@@ -153,7 +153,7 @@ fun BoxScope.EditorCanvas(
     val selectedArgColor = customColors.selectedArgColor
     val thiccSelectedAlpha = customColors.thiccSelectedAlpha
     val textMeasurer = rememberTextMeasurer()
-    val objectLabelLayouts = remember(viewModel.objectModel.propertyInvalidations, textMeasurer, labelTextStyle) {
+    val objectLabelLayouts = remember(viewModel.objectModel.invalidations, textMeasurer, labelTextStyle) {
         val r = mutableMapOf<Ix, TextLayoutResult>()
         for ((ix, style) in viewModel.styling) {
             if (style.label != null)
@@ -189,19 +189,19 @@ fun BoxScope.EditorCanvas(
     val gCircleSelectionIsActive = remember(viewModel.mode, viewModel.selection) {
         viewModel.mode.isSelectingObjects() && viewModel.selection.gCircles.isNotEmpty()
     }
-    val hiddenObjectIndices = remember(viewModel.showPhantomObjects, viewModel.objectModel.propertyInvalidations) {
+    val hiddenObjectIndices = remember(viewModel.showPhantomObjects, viewModel.objectModel.invalidations) {
         if (viewModel.showPhantomObjects)
             emptySet()
         else
             viewModel.phantoms
     }
-    val visibleNonSelectedObjectIndices = remember(gCircleSelectionIsActive, hiddenObjectIndices, viewModel.selection, viewModel.objectModel.propertyInvalidations) {
+    val visibleNonSelectedObjectIndices = remember(gCircleSelectionIsActive, hiddenObjectIndices, viewModel.selection, viewModel.objectModel.invalidations) {
         if (gCircleSelectionIsActive)
             (viewModel.objectModel.gCircleIndices - hiddenObjectIndices - viewModel.selection.gCircles.toSet()).toList()
         else
             (viewModel.objectModel.gCircleIndices - hiddenObjectIndices).toList()
     }
-    val nonSelectedArcPathIndices = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
+    val nonSelectedArcPathIndices = remember(viewModel.selection, viewModel.objectModel.invalidations) {
         (viewModel.objectModel.arcPathIndices - viewModel.selection.arcPaths.toSet()).toList()
     }
     Canvas(
@@ -229,7 +229,7 @@ fun BoxScope.EditorCanvas(
     ) {
 //        measureAndPrintPerformancePercentiles("draw") { // | MEASURE START |
         translate(viewModel.translation.x, viewModel.translation.y) {
-            hug(viewModel.objectModel.invalidations)
+            hug(viewModel.objectModel.positionInvalidations)
             val visibleRect = size.toRect().translate(-viewModel.translation)
             drawRegions(allObjects = viewModel.objects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = viewModel.objectModel.pathCache, chessboardPattern = viewModel.chessboardPattern, chessboardColor = viewModel.chessboardColor, visibleRect = visibleRect, regionsOpacity = viewModel.regionsOpacity, regionsBlendMode = viewModel.regionsBlendModeType.blendMode, pathStroke = pathStroke)
             drawAnimation(animations = animations, pathCache = viewModel.objectModel.pathCache, creationColor = creationColor, copyingColor = copyingColor, deletionColor = deletionColor, highlightColor = highlightColor, visibleRect = visibleRect, strokeWidth = strokeWidth)
@@ -260,9 +260,9 @@ fun BoxScope.EditorCanvas(
 //        } // | MEASURE END | // not that long (2~4ms)
     }
     if (viewModel.showUI) { // HUD
-        hug(viewModel.objectModel.propertyInvalidations)
+        hug(viewModel.objectModel.invalidations)
         if (viewModel.showGenericSelectionContextActions) {
-            val borderColor = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
+            val borderColor = remember(viewModel.selection, viewModel.objectModel.invalidations) {
                 viewModel.getMostCommonBorderColorInSelection()
                     ?: if (viewModel.objectSelection.all { viewModel.objects[it] is ImaginaryCircle })
                         imaginaryCircleColor
@@ -286,7 +286,7 @@ fun BoxScope.EditorCanvas(
                 onRotateFinished = viewModel::finishHandleRotation,
             )
         } else if (viewModel.showPointContextActions) {
-            val label = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
+            val label = remember(viewModel.selection, viewModel.objectModel.invalidations) {
                  viewModel.objectSelection
                     .firstNotNullOfOrNull { viewModel.styling[it]?.label?.content }
             }
@@ -308,13 +308,13 @@ fun BoxScope.EditorCanvas(
                     viewModel.exprOf(it) is ArcPath.Closed
                 }
             }
-            val mostCommonBorderColor = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
+            val mostCommonBorderColor = remember(viewModel.selection, viewModel.objectModel.invalidations) {
                 viewModel.selection.arcPaths.mostCommonOf { viewModel.styling[it]?.borderColor }
             }
-            val mostCommonFillColor = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
+            val mostCommonFillColor = remember(viewModel.selection, viewModel.objectModel.invalidations) {
                 viewModel.selection.arcPaths.mostCommonOf { viewModel.styling[it]?.fillColor }
             }
-            val lineThickness = remember(viewModel.selection, viewModel.objectModel.propertyInvalidations) {
+            val lineThickness = remember(viewModel.selection, viewModel.objectModel.invalidations) {
                 viewModel.selection.indices
                     .mapNotNull { viewModel.styling[it]?.lineThickness }
                     .mostCommonOf { it }
@@ -439,7 +439,7 @@ fun ScreenshotableCanvas(
     val thiccSelectedAlpha = customColors.thiccSelectedAlpha
     val textMeasurer = rememberTextMeasurer()
     val labelTextStyle = MaterialTheme.typography.headlineSmall
-    val objectLabelLayouts = remember(viewModel.objectModel.propertyInvalidations, textMeasurer, labelTextStyle) {
+    val objectLabelLayouts = remember(viewModel.objectModel.invalidations, textMeasurer, labelTextStyle) {
         val r = mutableMapOf<Ix, TextLayoutResult>()
         for ((ix, style) in viewModel.styling) {
             if (style.label != null)
