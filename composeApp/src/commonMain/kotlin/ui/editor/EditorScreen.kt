@@ -57,6 +57,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -176,35 +177,43 @@ fun EditorScreenRoot(
     val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
+    // NOTE: that lambdas that capture some state trigger first order recompositions
+    //  as often as the state changes
     EditorScreen(
         modifier = if (keyboardActions == null)
         // ig it's only for android w/ keyboard
             Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
         else Modifier,
         openMenu = {
-            coroutineScope.launch {
-                drawerState.open()
-            }
+            coroutineScope.launch { drawerState.open() }
         },
-        // MAYBE: collapse VM callbacks into onAction pattern
-        openNewBlank = viewModel::newBlank,
-        openFile = viewModel::requestOpenFile,
-        showSaveOptionsDialog = { viewModel.toolAction(Tool.SaveCluster) },
-        openSettings = openSettings,
-        hidePanel = viewModel::hidePanel,
+        openNewBlank = {
+            viewModel.newBlank()
+            coroutineScope.launch { drawerState.close() }
+        },
+        openFile = {
+            viewModel.requestOpenFile()
+            coroutineScope.launch { drawerState.close() }
+        },
+        showSaveOptionsDialog = {
+            viewModel.toolAction(Tool.SaveCluster)
+            coroutineScope.launch { drawerState.close() }
+        },
+        openSettings = { openSettings() },
+        hidePanel = { viewModel.hidePanel() },
         loadFromYaml = { content, filename ->
             content?.let {
                 viewModel.loadDdc(content, filename)
             }
         },
-        undo = viewModel::undo,
-        redo = viewModel::redo,
-        isToolEnabled = viewModel::toolPredicate,
-        isToolAlternativeEnabled = viewModel::toolAlternativePredicate,
+        undo = { viewModel.undo() },
+        redo = { viewModel.redo() },
+        isToolEnabled = { viewModel.toolPredicate(it) },
+        isToolAlternativeEnabled = { viewModel.toolAlternativePredicate(it) },
         switchToCategory = { viewModel.switchToCategory(it, togglePanel = true) },
         selectTool = { viewModel.selectTool(it, togglePanel = false) },
         selectToolAndTogglePanel = { viewModel.selectTool(it, togglePanel = true) },
-        getColorsByMostUsed = viewModel::getColorsByMostUsed,
+        getColorsByMostUsed = { viewModel.getColorsByMostUsed() },
         snackbarHostState = snackbarHostState,
         drawerState = drawerState,
         toolbarState = viewModel.toolbarState,
@@ -981,12 +990,15 @@ private fun ToolbarPortrait(
     getColorsByMostUsed: () -> List<Color>,
     modifier: Modifier = Modifier,
 ) {
+    val targetState = remember(toolbarState, showPanel) {
+        Pair(toolbarState.activeCategory, showPanel)
+    }
     Column(
         modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.Bottom,
     ) {
         AnimatedContent(
-            Pair(toolbarState.activeCategory, showPanel),
+            targetState = targetState,
             transitionSpec = {
                 slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End)
                     .togetherWith(slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start))
@@ -1232,11 +1244,11 @@ private fun CategoryButton(
 private fun HorizontalPanel(
     activeCategory: Category,
     regionColor: Color,
-    isToolEnabled: (Tool) -> Boolean,
-    isToolAlternativeEnabled: (Tool) -> Boolean,
-    selectTool: (Tool) -> Unit,
-    getColorsByMostUsed: () -> List<Color>,
-    hidePanel: () -> Unit,
+    isToolEnabled: (Tool) -> Boolean = { true },
+    isToolAlternativeEnabled: (Tool) -> Boolean = { false },
+    selectTool: (Tool) -> Unit = {},
+    getColorsByMostUsed: () -> List<Color> = { emptyList() },
+    hidePanel: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // shown on the top of the bottom toolbar

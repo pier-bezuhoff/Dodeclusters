@@ -1,5 +1,7 @@
 package domain.io
 
+import androidx.compose.runtime.Immutable
+
 typealias DdcContent = String
 typealias UserId = String
 typealias SharedId = String
@@ -7,6 +9,7 @@ typealias OwnedStatus = Boolean
 typealias SharedIdAndOwnedStatus = Pair<SharedId, OwnedStatus>
 typealias DdcContentAndOwnedStatus = Pair<DdcContent, OwnedStatus>
 
+@Immutable
 interface DdcSharing {
     var shared: SharedIdAndOwnedStatus?
 

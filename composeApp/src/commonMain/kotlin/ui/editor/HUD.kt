@@ -48,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -102,6 +103,7 @@ import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.painterResource
@@ -178,11 +180,12 @@ private fun ContextActionsWrapper(
     }
 }
 
+// FIX: rotation handle on android sometimes pulls the navigation drawer instead of rotating
 @Composable
 fun BoxScope.SelectionContextActions(
     concretePositions: ConcreteOnScreenPositions,
-    scaleSliderPercentage: Float, // freq changes
-    rotationHandleAngle: Float, // freq changes
+    scaleSliderPercentage: Float,
+    rotationHandleAngle: Float,
     borderColor: Color,
     showAdjustExprButton: Boolean,
     showOrientationToggle: Boolean,
@@ -218,9 +221,9 @@ fun BoxScope.SelectionContextActions(
                 onClick = toolAction
             )
             VerticalSlider(
-                scaleSliderPercentage,
-                onScale,
-                Modifier
+                value = scaleSliderPercentage,
+                onValueChange = onScale,
+                modifier = Modifier
                     .height(
                         with (density) {
                             (0.2f * size.height).toDp()
@@ -263,7 +266,7 @@ fun BoxScope.SelectionContextActions(
                     }
                 }
                 .pointerHoverIcon(PointerIcon.Hand)
-                .draggable2D(
+                .draggable2D(state =
                     rememberDraggable2DState { delta ->
                         virtualRotationHandlePosition += delta
                         val newAngle = positions.center
@@ -500,10 +503,10 @@ fun BoxScope.ArcPathContextActions(
     mostCommonBorderColor: Color?,
     mostCommonFillColor: Color?,
     lineThickness: Float,
-    toolAction: (Tool) -> Unit,
-    toolPredicate: (Tool) -> Boolean,
-    setLineThickness: (Float) -> Unit,
-    dismissLineThicknessInput: () -> Unit,
+    toolAction: (Tool) -> Unit = {},
+    toolPredicate: (Tool) -> Boolean = { false },
+    setLineThickness: (Float) -> Unit = {},
+    dismissLineThicknessInput: () -> Unit = {},
     // grabbed midpoint <- submode
 ) {
     // scale/rotate handles

@@ -113,6 +113,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -137,7 +138,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-// this class is obviously too big
+// this class is obviously too big, maybe separate into CanvasViewModel and UiViewModel
 // MAYBE: timed autosave (cron-like), e.g. every 10min
 @Suppress("NOTHING_TO_INLINE")
 class EditorViewModel : ViewModel() {
@@ -166,6 +167,7 @@ class EditorViewModel : ViewModel() {
     /** indices of selected circles/lines/points & arc-paths */
     var selection: Selection by selectionState
         private set
+    // maybe make it derivedStateOf w/ invalidation dep
     /** Distinct selected [GCircle]? indices +
      * indices of all vertices/midpoints of selected arc-paths */
     val selectedIndices: List<Ix> get() =
@@ -177,14 +179,30 @@ class EditorViewModel : ViewModel() {
     inline val objectSelection: List<Ix> get() =
         selection.gCircles
 
-    private val modeState: MutableState<Mode> = mutableStateOf(SelectionMode.Drag)
     /** Major editing mode */
-    var mode: Mode by modeState
+    var mode: Mode by mutableStateOf(SelectionMode.Drag)
         private set
-    private val submodeState: MutableState<Submode?> = mutableStateOf(null)
     /** Minor editing mode, bound to [mode]; can hold transient data */
-    var submode: Submode? by submodeState // freq changes
+    var submode: Submode? by mutableStateOf(null) // freq changes
         private set
+    // we do this because submode can change continuously while its type only discretely
+    val submodeType: Submode.Type? by derivedStateOf { submode?.type }
+    val submodeSelectionChoicesInput: Submode.SelectionChoicesInput? by derivedStateOf {
+        submode as? Submode.SelectionChoicesInput
+    }
+    val exprAdjustmentType: Submode.ExprAdjustment.Type? by derivedStateOf {
+        when (val sm = submode) {
+            is Submode.ExprAdjustment<*> -> when (sm.parameters) {
+                is InterpolationParameters -> Submode.ExprAdjustment.Type.INTERPOLATION
+                is RotationParameters -> Submode.ExprAdjustment.Type.ROTATION
+                is BiInversionParameters -> Submode.ExprAdjustment.Type.BI_INVERSION
+                is LoxodromicMotionParameters -> Submode.ExprAdjustment.Type.LOXODROMIC_MOTION
+                else -> null
+            }
+            else -> null
+        }
+    }
+
     // NOTE: Arg.XYPoint & co use absolute positioning
     /** Partly filled [Tool] arg-list during [ToolMode] */
     var partialArgList: PartialArgList? by mutableStateOf(null)
@@ -257,6 +275,32 @@ class EditorViewModel : ViewModel() {
     val showArcPathContextActions: Boolean by derivedStateOf {
         mode.isSelectingObjects() && selection.arcPaths.isNotEmpty()
     }
+    val showPartialArcPathContextActions: Boolean by derivedStateOf {
+        mode == ToolMode.ARC_PATH &&
+        partialArcPath?.arcs?.size?.let { it >= 1 } == true
+    }
+    val showAdjustExprButton: Boolean by derivedStateOf {
+        hug(objectModel.invalidations)
+        getAdjustableExprs().isNotEmpty()
+//        areAdjustableExprIndices(selection.gCircles)
+    }
+    val showInfinitePoint: Boolean by derivedStateOf {
+        partialArgList?.let { argList ->
+            argList.nextArgType?.let { nextArgType ->
+                val acceptsInfinitePoint = Arg.InfinitePoint in nextArgType.possibleTypes
+                val acceptsIndices = Arg.Indices in nextArgType.possibleTypes
+                acceptsInfinitePoint &&
+                    objectModel.getInfinityIndex()?.let { ix ->
+                        val potentialNewArg = if (acceptsIndices)
+                            Arg.Indices(listOf(ix))
+                        else
+                            Arg.PointIndex(ix)
+                        argList.validateNewArg(potentialNewArg)
+                    } != false
+            } == true
+        } == true
+    }
+
     val selectionIsLocked: Boolean by derivedStateOf {
         hug(objectModel.invalidations)
         selection.gCircles.toSet()
@@ -292,12 +336,11 @@ class EditorViewModel : ViewModel() {
 
     val undoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
     val redoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
-    private var history: ChangeHistory =
-        ChangeHistory( // stub
-            initialState = SaveState.SAMPLE,
-            undoIsEnabled = undoIsEnabled,
-            redoIsEnabled = redoIsEnabled,
-        )
+    private var history: ChangeHistory = ChangeHistory( // stub
+        initialState = SaveState.SAMPLE,
+        undoIsEnabled = undoIsEnabled,
+        redoIsEnabled = redoIsEnabled,
+    )
 
     var colorPickerParameters by mutableStateOf(
         ColorPickerParameters(Color.Unspecified, emptyList())
@@ -1819,6 +1862,7 @@ class EditorViewModel : ViewModel() {
         for (ix in selection.indices) {
             objectModel.updateStyle(ix) { it.copy(lineThickness = thickness) }
         }
+        // NOTE: slider can continuously invalidate, which isn't ideal for recompositions
         objectModel.invalidate()
     }
 
@@ -2006,10 +2050,6 @@ class EditorViewModel : ViewModel() {
         }
         return if (areAdjustable) exprs.toList() else emptyList()
     }
-
-    val showAdjustExprButton: Boolean get() =
-        getAdjustableExprs().isNotEmpty()
-//        areAdjustableExprIndices(selection.gCircles)
 
     fun startExprAdjustmentOfSelection() {
         val exprs = getAdjustableExprs()
@@ -2772,6 +2812,17 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    private fun scaleSeveralCircles(targets: List<Ix>, pan: Offset) {
+        calculateSelectionRect()?.let { rect ->
+            val scaleHandlePosition = rect.topRight
+            val center = rect.center
+            val centerToHandle = scaleHandlePosition - center
+            val centerToCurrent = centerToHandle + pan
+            val scaleFactor = centerToCurrent.getDistance()/centerToHandle.getDistance()
+            transformWhatWeCan(targets, focus = center, zoom = scaleFactor)
+        }
+    }
+
     private fun rotateSingleCircle(ix: Ix, absoluteCentroid: Offset, pan: Offset, sm: Submode.Rotate) {
         val center = sm.center
         val centerToCurrent = absoluteCentroid - center
@@ -2787,15 +2838,19 @@ class EditorViewModel : ViewModel() {
         submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
     }
 
-    private fun scaleSeveralCircles(targets: List<Ix>, pan: Offset) {
-        calculateSelectionRect()?.let { rect ->
-            val scaleHandlePosition = rect.topRight
-            val center = rect.center
-            val centerToHandle = scaleHandlePosition - center
-            val centerToCurrent = centerToHandle + pan
-            val scaleFactor = centerToCurrent.getDistance()/centerToHandle.getDistance()
-            transformWhatWeCan(targets, focus = center, zoom = scaleFactor)
-        }
+    private fun rotateSeveralCircles(targets: List<Ix>, absoluteCentroid: Offset, pan: Offset, sm: Submode.Rotate) {
+        val center = sm.center
+        val centerToCurrent = absoluteCentroid - center
+        val centerToPreviousHandle = centerToCurrent - pan
+        val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
+        val newAngle = sm.angle + angle
+        val snappedAngle =
+            if (loadedSettings.enableAngleSnapping)
+                Snapping.snapAngle(newAngle)
+            else newAngle
+        val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
+        transformWhatWeCan(targets, focus = sm.center, rotationAngle = angle1)
+        submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
     }
 
     fun scaleViaSlider(newSliderPercentage: Float) {
@@ -2823,11 +2878,6 @@ class EditorViewModel : ViewModel() {
         submode = Submode.Rotate(computeAbsoluteCenter() ?: Offset.Zero)
     }
 
-    fun finishHandleRotation() {
-        submode = null
-        recordHistory()
-    }
-
     fun rotateViaHandle(newRotationAngle: Float) {
         when (val sm = submode) {
             is Submode.Rotate -> {
@@ -2844,19 +2894,9 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private fun rotateSeveralCircles(targets: List<Ix>, absoluteCentroid: Offset, pan: Offset, sm: Submode.Rotate) {
-        val center = sm.center
-        val centerToCurrent = absoluteCentroid - center
-        val centerToPreviousHandle = centerToCurrent - pan
-        val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
-        val newAngle = sm.angle + angle
-        val snappedAngle =
-            if (loadedSettings.enableAngleSnapping)
-                Snapping.snapAngle(newAngle)
-            else newAngle
-        val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
-        transformWhatWeCan(targets, focus = sm.center, rotationAngle = angle1)
-        submode = sm.copy(angle = newAngle, snappedAngle = snappedAngle)
+    fun finishHandleRotation() {
+        submode = null
+        recordHistory()
     }
 
     // dragging circle: move + scale radius & rotate [line]
@@ -3232,25 +3272,28 @@ class EditorViewModel : ViewModel() {
         if (zoom != 1.0f || rotationAngle != 0.0f) {
             val targets = objects.indices.toList()
 //            val center = computeAbsoluteCenter() ?: Offset.Zero
-            val changedIndices =
-                objectModel.transform(
-                    targets,
-                    focus = absoluteCentroid,
-                    zoom = zoom,
-                    rotationAngle = rotationAngle,
-                )
+            val changedIndices = objectModel.transform(
+                targets = targets,
+                focus = absoluteCentroid,
+                zoom = zoom,
+                rotationAngle = rotationAngle,
+            )
+            this.translation += translation // navigate canvas
+            objectModel.forceUpdate(objectModel.arcPathIndices)
+            // force-update arc-paths or recalc concrete arc-paths in objectModel.transform
+            objectModel.pathCache.invalidateAll() // sadly have to do this cuz we use visibleRect in path construction
+            objectModel.invalidatePositions()
             history.accumulateChangedLocations(
                 objectIndices = changedIndices,
                 // zoom can change point-line incidence
                 expressionIndices = changedIndices,
                 center = true,
             )
+        } else { // only translation
+            this.translation += translation // navigate canvas
+            objectModel.pathCache.invalidateAll() // sadly have to do this cuz we use visibleRect in path construction
+            objectModel.invalidatePositions()
         }
-        this.translation += translation // navigate canvas
-        objectModel.forceUpdate(objectModel.arcPathIndices)
-        // force-update arc-paths or recalc concrete arc-paths in objectModel.transform
-        objectModel.pathCache.invalidateAll() // sadly have to do this cuz we use visibleRect in path construction
-        objectModel.invalidate()
     }
 
     // MAYBE: handle key arrows as panning
@@ -4362,7 +4405,9 @@ class EditorViewModel : ViewModel() {
                     )
                 else -> {}
             }
-            objectModel.invalidate()
+            // NOTE: continuous invalidations from slider, not ideal for recompositions
+//            objectModel.invalidate()
+            objectModel.invalidatePositions()
         }
     }
 
@@ -4793,29 +4838,31 @@ class EditorViewModel : ViewModel() {
     }
 
     /** Is [tool] enabled? */
-    fun toolPredicate(tool: Tool): Boolean =
-        when (tool) {
+    fun toolPredicate(tool: Tool): Boolean {
+        hug(objectModel.invalidations)
+        return when (tool) {
             Tool.Drag ->
                 mode == SelectionMode.Drag
             Tool.Multiselect ->
                 mode == SelectionMode.Multiselect &&
-                submode !is Submode.FlowSelect && submode !is Submode.RectangularSelect
+                submodeType != Submode.Type.FLOW_SELECT &&
+                submodeType != Submode.Type.RECTANGULAR_SELECT
             Tool.RectangularSelect ->
-                mode == SelectionMode.Multiselect && submode is Submode.RectangularSelect
+                mode == SelectionMode.Multiselect &&
+                submodeType == Submode.Type.RECTANGULAR_SELECT
             Tool.FlowSelect ->
-                mode == SelectionMode.Multiselect && submode is Submode.FlowSelect
-            Tool.ToggleSelectAll -> {
-                // idt we realistically ever need to track all invalidations.
-                // you'd have to move free objects in such a way that all others would
-                // become imaginary/null
-//                hug(objectModel.invalidations)
-                hug(objectModel.invalidations)
-                objectSelection.containsAll(objects.filterIndices { it is CircleOrLineOrPoint })
-            }
+                mode == SelectionMode.Multiselect &&
+                submodeType == Submode.Type.FLOW_SELECT
+            Tool.ToggleSelectAll ->
+                objectSelection.containsAll(
+                    objects.filterIndices { it is CircleOrLineOrPoint }
+                )
             Tool.Region ->
-                mode == SelectionMode.Region && submode !is Submode.FlowFill
+                mode == SelectionMode.Region &&
+                submodeType != Submode.Type.FLOW_FILL
             Tool.FlowFill ->
-                mode == SelectionMode.Region && submode is Submode.FlowFill
+                mode == SelectionMode.Region &&
+                submodeType == Submode.Type.FLOW_FILL
             Tool.FillChessboardPattern ->
                 chessboardPattern != ChessboardPattern.NONE
             Tool.RestrictRegionToSelection ->
@@ -4828,43 +4875,29 @@ class EditorViewModel : ViewModel() {
                 showPhantomObjects
             Tool.ToggleDirectionArrows ->
                 showDirectionArrows
-            Tool.MarkAsPhantoms -> {
-                hug(objectModel.invalidations)
+            Tool.MarkAsPhantoms ->
                 objectSelection.none { it in phantoms }
-            }
-            Tool.InfinitePoint -> { // whether to prompt infinite-point input
-                partialArgList?.let { argList ->
-                    argList.nextArgType?.let { nextArgType ->
-                        val acceptsInfinitePoint = Arg.InfinitePoint in nextArgType.possibleTypes
-                        val acceptsIndices = Arg.Indices in nextArgType.possibleTypes
-                        acceptsInfinitePoint &&
-                                objectModel.getInfinityIndex()?.let { ix ->
-                                    val potentialNewArg = if (acceptsIndices)
-                                        Arg.Indices(listOf(ix))
-                                    else
-                                        Arg.PointIndex(ix)
-                                    argList.validateNewArg(potentialNewArg)
-                                } != false
-                    } == true
-                } == true
-            }
+            Tool.InfinitePoint -> // whether to prompt infinite-point input
+                showInfinitePoint
             Tool.MovePointToInfinity -> {
-                // NOTE: without changing selection, the only way to change the predicate is
+                // without changing selection, the only way to change the predicate is
                 //  after applying move-to-infinity or on detachment.
-                hug(objectModel.invalidations)
                 objectSelection.singleOrNull()?.let { ix ->
                     val o = objects[ix]
                     val expr = exprOf(ix)
                     o is Point && o != Point.CONFORMAL_INFINITY &&
-                        (expr == null || expr is Expr.Incidence && objects[expr.carrier] is Line)
+                    (expr == null || expr is Expr.Incidence && objects[expr.carrier] is Line)
                 } == true
             }
-            Tool.SetLabel -> submode is Submode.LabelInput
-            Tool.SetLineThickness -> submode is Submode.LineThicknessInput
+            Tool.SetLabel ->
+                submodeType == Submode.Type.LABEL_INPUT
+            Tool.SetLineThickness ->
+                submodeType == Submode.Type.LINE_THICKNESS_INPUT
             is Tool.MultiArg ->
                 mode == ToolMode.correspondingTo(tool)
             else -> true
         }
+    }
 
     /** alternative enabled, mainly for 3-state buttons */
     fun toolAlternativePredicate(tool: Tool): Boolean =

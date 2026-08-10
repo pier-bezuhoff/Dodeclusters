@@ -11,11 +11,26 @@ import domain.expressions.ArcPath
 import domain.expressions.Expr
 import domain.model.PartialArgList
 import domain.model.RegionConstraints
+import ui.editor.Submode.ExprAdjustment
+import ui.editor.Submode.FlowFill
+import ui.editor.Submode.FlowSelect
+import ui.editor.Submode.GrabbedArcMidpoint
+import ui.editor.Submode.LabelInput
+import ui.editor.Submode.LineThicknessInput
+import ui.editor.Submode.RectangularSelect
+import ui.editor.Submode.Rotate
+import ui.editor.Submode.RotateStereographicSphere
+import ui.editor.Submode.Scale
+import ui.editor.Submode.ScaleViaSlider
+import ui.editor.Submode.SelectionChoicesInput
+import ui.editor.Submode.Type
 
-@Immutable
+// problem: some submodes track continuous changes which means submode field is triggering
+// a lot of recompositions
 /** Additional mode accompanying [Mode] and
  * carrying [Submode]-specific relevant data, also
  * they have specific behavior for VM.onPanZoom */
+@Immutable
 sealed interface Submode {
     sealed interface OnlyActiveWhenPressed : Submode
     sealed interface InputPopup : Submode
@@ -27,7 +42,7 @@ sealed interface Submode {
         val center: Offset,
         val sliderPercentage: Float = 0.5f
     ) : Submode
-    data class Rotate(
+    data class Rotate( // via one of the handles
         val center: Offset,
         val angle: Double = 0.0,
         val snappedAngle: Double = 0.0
@@ -99,6 +114,11 @@ sealed interface Submode {
         val arcPathAdjustables: List<AdjustableExpr<ArcPath>> = emptyList(),
         val regions: List<Int> = emptyList(),
     ) : Submode {
+        @Immutable
+        enum class Type {
+            INTERPOLATION, ROTATION, BI_INVERSION, LOXODROMIC_MOTION
+        }
+
         val parameters = (adjustables[0].expr as? Expr.HasParameters)?.parameters
 
         init {
@@ -122,7 +142,7 @@ sealed interface Submode {
      * want to drag it/change it properties */
     data class ToolResultPostprocessing(
         val resultIndices: List<Ix>,
-    ) : Submode
+    )
 
     /** Temporary leave tool mode to choose a selection argument and then go back */
     data class ToolSelectionInput(
@@ -130,7 +150,34 @@ sealed interface Submode {
         val partialArgList: PartialArgList,
     )
 
+    @Immutable
+    enum class Type {
+        SCALE, SCALE_VIA_SLIDER, ROTATE,
+        RECTANGULAR_SELECT, FLOW_SELECT, FLOW_FILL,
+        SELECTION_CHOICES_INPUT,
+        ROTATE_STEREOGRAPHIC_SPHERE,
+        EXPR_ADJUSTMENT,
+        GRABBED_ARC_MIDPOINT,
+        LABEL_INPUT, LINE_THICKNESS_INPUT,
+    }
 }
+
+// alternatively we could pun-type with companion objects, but some of them are already used
+val Submode.type: Type get() =
+    when (this) {
+        is Scale -> Type.SCALE
+        is ScaleViaSlider -> Type.SCALE_VIA_SLIDER
+        is Rotate -> Type.ROTATE
+        is RectangularSelect -> Type.RECTANGULAR_SELECT
+        is FlowSelect -> Type.FLOW_SELECT
+        is FlowFill -> Type.FLOW_FILL
+        is SelectionChoicesInput -> Type.SELECTION_CHOICES_INPUT
+        is RotateStereographicSphere -> Type.ROTATE_STEREOGRAPHIC_SPHERE
+        is ExprAdjustment<*> -> Type.EXPR_ADJUSTMENT
+        is GrabbedArcMidpoint -> Type.GRABBED_ARC_MIDPOINT
+        LabelInput -> Type.LABEL_INPUT
+        LineThicknessInput -> Type.LINE_THICKNESS_INPUT
+    }
 
 /** Adjustable [expr] with indices that are occupied by its outputs.
  * @param[sourceIndex] index from which the style is copied onto the trajectory,

@@ -74,10 +74,6 @@ import domain.Ix
 import domain.PathCache
 import domain.angleDeg
 import domain.expressions.ArcPath
-import domain.expressions.BiInversionParameters
-import domain.expressions.InterpolationParameters
-import domain.expressions.LoxodromicMotionParameters
-import domain.expressions.RotationParameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeConcentricCircle
@@ -204,6 +200,7 @@ fun BoxScope.EditorCanvas(
     val nonSelectedArcPathIndices = remember(viewModel.selection, viewModel.objectModel.invalidations) {
         (viewModel.objectModel.arcPathIndices - viewModel.selection.arcPaths.toSet()).toList()
     }
+    // Q: why does canvas recompose each rect-select-submode update when selection is non-empty?
     Canvas(
         modifier
             .reactiveCanvas(
@@ -249,9 +246,9 @@ fun BoxScope.EditorCanvas(
                 drawSelectedArcPaths(allObjects = viewModel.objects, indices = viewModel.selection.arcPaths, styling = viewModel.styling, pathCache = viewModel.objectModel.pathCache, arcPathFillOpacity = viewModel.regionsOpacity, arcPathStroke = pathStroke, defaultSelectedArcPathColor = defaultSelectionColor, thiccSelectedPathAlpha = thiccSelectedAlpha, thiccSelectedPathStroke = thiccPathStroke, arcMiddlePointColor = arcMiddlePointColor, arcMiddlePointRadius = arcMiddlePointRadius)
             }
             drawPartialConstructs(allObjects = viewModel.objects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = pathStroke, imaginaryCircleStroke = dottedStroke, arcPathStroke = pathStroke, alignmentLineColor = selectionMarkingsColor, selectedArgColor = selectedArgColor, creationPrototypeColor = creationColor.copy(alpha = 0.7f))
-            drawGrids(visibleRect = visibleRect, submode = viewModel.submode, stereographicGridColor = stereographicGridColor, stereographicGridStroke = pathStroke, southPointRadius = handleRadius)
+            drawGrids(visibleRect = visibleRect, submode = viewModel.submode as? Submode.RotateStereographicSphere, stereographicGridColor = stereographicGridColor, stereographicGridStroke = pathStroke, southPointRadius = handleRadius)
             drawLabels(objects = viewModel.objects, styling = viewModel.styling, objectLabelLayouts = objectLabelLayouts, freePointColor = defaultFreePointColor)
-            drawHandles(objects = viewModel.objects, selection = viewModel.selectedIndices, submode = viewModel.submode, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.calculateSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
+            drawHandles(objects = viewModel.objects, selection = viewModel.selectedIndices, submodeRotate = viewModel.submode as? Submode.Rotate, submodeRectangularSelect = viewModel.submode as? Submode.RectangularSelect, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.calculateSelectionRect() }, showCircles = viewModel.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             drawDebugObjects(viewModel._debugObjects, visibleRect, pathStroke, pointRadius, rotateIconColor)
         }
         if (viewModel.showGenericSelectionContextActions) {
@@ -268,32 +265,32 @@ fun BoxScope.EditorCanvas(
                     else
                         defaultFreeCircleColor
             }
+            val showOrientationToggle = remember(viewModel.showDirectionArrows, viewModel.selectionIsLocked) {
+                viewModel.showDirectionArrows && !viewModel.selectionIsLocked
+            }
             SelectionContextActions(
                 concretePositions = concretePositions,
                 scaleSliderPercentage = viewModel.scaleSliderPercentage,
                 rotationHandleAngle = viewModel.rotationHandleAngle,
                 borderColor = borderColor,
                 showAdjustExprButton = viewModel.showAdjustExprButton,
-                showOrientationToggle = viewModel.showDirectionArrows && !viewModel.selectionIsLocked,
+                showOrientationToggle = showOrientationToggle,
                 isLocked = viewModel.selectionIsLocked,
-                // FIX: submode changes trigger recomposition downstream to IconButtons
-//                toolAction = { viewModel.toolAction(it) },
-//                toolPredicate = { viewModel.toolPredicate(it) },
-                onScale = { viewModel.scaleViaSlider(it) },
-                onScaleFinished = { viewModel.finishScalingViaSlider() },
-                onRotate = { viewModel.rotateViaHandle(it) },
-                onRotateStarted = { viewModel.startHandleRotation(it) },
-                onRotateFinished = { viewModel.finishHandleRotation() },
+                toolAction = viewModel::toolAction,
+                toolPredicate = viewModel::toolPredicate,
+                onScale = viewModel::scaleViaSlider,
+                onScaleFinished = viewModel::finishScalingViaSlider,
+                onRotate = viewModel::rotateViaHandle,
+                onRotateStarted = viewModel::startHandleRotation,
+                onRotateFinished = viewModel::finishHandleRotation,
             )
         } else if (viewModel.showPointContextActions) {
-//            val label = remember(viewModel.selection, viewModel.objectModel.invalidations) {
-//                 viewModel.objectSelection
-//                    .firstNotNullOfOrNull { viewModel.styling[it]?.label?.content }
-//            }
+            val pointColor = remember(viewModel.selection, viewModel.objectModel.invalidations, defaultFreePointColor) {
+                viewModel.getMostCommonBorderColorInSelection() ?: defaultFreePointColor
+            }
             PointContextActions(
                 // only points are selected
-                pointColor =
-                    viewModel.getMostCommonBorderColorInSelection() ?: defaultFreePointColor,
+                pointColor = pointColor,
                 showAdjustExprButton = viewModel.showAdjustExprButton,
                 isLocked = viewModel.selectionIsLocked,
                 labelProvider = {
@@ -334,59 +331,53 @@ fun BoxScope.EditorCanvas(
                 setLineThickness = viewModel::setLineThickness,
                 dismissLineThicknessInput = viewModel::dismissInputSubmode,
             )
-        } else if (
-            viewModel.mode == ToolMode.ARC_PATH &&
-            viewModel.partialArcPath?.arcs?.size?.let { it >= 1 } == true
-        ) {
+        } else if (viewModel.showPartialArcPathContextActions) {
             PartialArcPathContextActions(viewModel.canvasSize, viewModel::toolAction)
         } else {
-            when (val sm = viewModel.submode) {
+            when (viewModel.exprAdjustmentType) {
                 // TODO: confirm selection in rectangular-select
-                is Submode.ExprAdjustment<*> -> when (sm.parameters) {
-                    is InterpolationParameters ->
-                        InterpolationInterface(
-                            concretePositions = concretePositions,
-                            interpolateCircles = viewModel.interpolateCircles,
-                            circlesAreCoDirected = viewModel.circlesAreCoDirected,
-                            defaults = viewModel.defaultInterpolationParameters,
-                            updateParameters = viewModel::adjustExprParameters,
-                            openDetailsDialog = viewModel::openDetailsDialog,
-                            confirmParameters = viewModel::confirmAdjustedParameters,
-                        )
-                    is RotationParameters ->
-                        RotationInterface(
-                            concretePositions = concretePositions,
-                            defaults = viewModel.defaultRotationParameters,
-                            updateParameters = viewModel::adjustExprParameters,
-                            openDetailsDialog = viewModel::openDetailsDialog,
-                            confirmParameters = viewModel::confirmAdjustedParameters,
-                        )
-                    is BiInversionParameters ->
-                        BiInversionInterface(
-                            concretePositions = concretePositions,
-                            defaults = viewModel.defaultBiInversionParameters,
-                            updateParameters = viewModel::adjustExprParameters,
-                            openDetailsDialog = viewModel::openDetailsDialog,
-                            confirmParameters = viewModel::confirmAdjustedParameters,
-                        )
-                    is LoxodromicMotionParameters ->
-                        LoxodromicMotionInterface(
-                            concretePositions = concretePositions,
-                            defaults = viewModel.defaultLoxodromicMotionParameters,
-                            updateParameters = viewModel::adjustExprParameters,
-                            updateBidirectionality = viewModel::updateLoxodromicBidirectionality,
-                            openDetailsDialog = viewModel::openDetailsDialog,
-                            confirmParameters = viewModel::confirmAdjustedParameters,
-                        )
-                    else -> {}
-                }
+                Submode.ExprAdjustment.Type.INTERPOLATION ->
+                    InterpolationInterface(
+                        concretePositions = concretePositions,
+                        interpolateCircles = viewModel.interpolateCircles,
+                        circlesAreCoDirected = viewModel.circlesAreCoDirected,
+                        defaults = viewModel.defaultInterpolationParameters,
+                        updateParameters = viewModel::adjustExprParameters,
+                        openDetailsDialog = viewModel::openDetailsDialog,
+                        confirmParameters = viewModel::confirmAdjustedParameters,
+                    )
+                Submode.ExprAdjustment.Type.ROTATION ->
+                    RotationInterface(
+                        concretePositions = concretePositions,
+                        defaults = viewModel.defaultRotationParameters,
+                        updateParameters = viewModel::adjustExprParameters,
+                        openDetailsDialog = viewModel::openDetailsDialog,
+                        confirmParameters = viewModel::confirmAdjustedParameters,
+                    )
+                Submode.ExprAdjustment.Type.BI_INVERSION  ->
+                    BiInversionInterface(
+                        concretePositions = concretePositions,
+                        defaults = viewModel.defaultBiInversionParameters,
+                        updateParameters = viewModel::adjustExprParameters,
+                        openDetailsDialog = viewModel::openDetailsDialog,
+                        confirmParameters = viewModel::confirmAdjustedParameters,
+                    )
+                Submode.ExprAdjustment.Type.LOXODROMIC_MOTION   ->
+                    LoxodromicMotionInterface(
+                        concretePositions = concretePositions,
+                        defaults = viewModel.defaultLoxodromicMotionParameters,
+                        updateParameters = viewModel::adjustExprParameters,
+                        updateBidirectionality = viewModel::updateLoxodromicBidirectionality,
+                        openDetailsDialog = viewModel::openDetailsDialog,
+                        confirmParameters = viewModel::confirmAdjustedParameters,
+                    )
                 else -> {}
             }
         }
-        when (val submode = viewModel.submode) {
+        when (val sm = viewModel.submodeSelectionChoicesInput) {
             is Submode.SelectionChoicesInput ->
                 SelectionChoicesInputPopup(
-                    choices = submode.choices,
+                    choices = sm.choices,
                     selectChoice = { viewModel.selectFromChoices(it) },
                     dismiss = { viewModel.dismissInputSubmode(recordHistory = false) },
                 )
@@ -1379,7 +1370,9 @@ private inline fun DrawScope.drawPartialConstructs(
 private inline fun DrawScope.drawHandles(
     objects: List<*>,
     selection: List<Ix>,
-    submode: Submode?,
+    // we dont pass submode directly since it can change often
+    submodeRotate: Submode.Rotate?,
+    submodeRectangularSelect: Submode.RectangularSelect?,
     handleConfig: HandleConfig?,
     crossinline getSelectionRect: () -> Rect?,
     showCircles: Boolean,
@@ -1414,8 +1407,9 @@ private inline fun DrawScope.drawHandles(
                 }
             }
             HandleConfig.SEVERAL_OBJECTS -> {
-                val rectSubmode = submode as? Submode.RectangularSelect
-                val noHandles = rectSubmode?.corner1 != null && rectSubmode?.corner2 != null
+                val noHandles =
+                    submodeRectangularSelect?.corner1 != null &&
+                    submodeRectangularSelect?.corner2 != null
                 if (!noHandles) {
                     getSelectionRect()?.let { selectionRect ->
                         drawRect( // selection rect
@@ -1451,40 +1445,36 @@ private inline fun DrawScope.drawHandles(
             }
             null -> {}
         }
-        when (submode) {
-            is Submode.RectangularSelect -> {
-                val (corner1, corner2) = submode
-                if (corner1 != null && corner2 != null) {
-                    val rect = Rect.fromCorners(corner1, corner2)
-                    drawRect(
-                        color = selectionMarkingsColor,
-                        topLeft = rect.topLeft,
-                        size = rect.size,
-                        style = dottedStroke,
-                    )
-                }
-            }
-            is Submode.Rotate -> {
-                val (center, angle) = submode
-                val currentDirection = Offset(0f, -1f).rotateBy(angle.toFloat())
-                val maxDim = size.maxDimension
-                val sameDirectionFarAway =
-                    center + currentDirection * maxDim
-                drawLine(
-                    color = rotationIndicatorColor,
-                    start = center,
-                    end = sameDirectionFarAway,
-                    strokeWidth = 2f
+        if (submodeRectangularSelect != null) {
+            val (corner1, corner2) = submodeRectangularSelect
+            if (corner1 != null && corner2 != null) {
+                val rect = Rect.fromCorners(corner1, corner2)
+                drawRect(
+                    color = selectionMarkingsColor,
+                    topLeft = rect.topLeft,
+                    size = rect.size,
+                    style = dottedStroke,
                 )
             }
-            else -> {}
+        }
+        if (submodeRotate != null) {
+            val (center, angle) = submodeRotate
+            val currentDirection = Offset(0f, -1f).rotateBy(angle.toFloat())
+            val maxDim = size.maxDimension
+            val sameDirectionFarAway = center + currentDirection * maxDim
+            drawLine(
+                color = rotationIndicatorColor,
+                start = center,
+                end = sameDirectionFarAway,
+                strokeWidth = 2f
+            )
         }
     }
 }
 
 private fun DrawScope.drawGrids(
     visibleRect: Rect,
-    submode: Submode?,
+    submode: Submode.RotateStereographicSphere?,
     stereographicGridColor: Color,
     stereographicGridStroke: Stroke,
     southPointRadius: Float,
@@ -1492,29 +1482,26 @@ private fun DrawScope.drawGrids(
     equatorGridLineAlpha: Float = 0.7f,
     southPointAlpha: Float = 0.8f,
 ) {
-    when (submode) {
-        is Submode.RotateStereographicSphere -> {
-            drawCircle(
+    if (submode != null) {
+        drawCircle(
+            color = stereographicGridColor,
+            alpha = southPointAlpha,
+            radius = southPointRadius,
+            center = submode.south.toOffset(),
+        )
+        for (i in submode.grid.indices) {
+            val circleOrLine = submode.grid[i]
+            val alpha =
+                if (i == Submode.RotateStereographicSphere.EQUATOR_GRID_INDEX)
+                    equatorGridLineAlpha
+                else gridLineAlpha
+            drawCircleOrLine(circleOrLine,
+                visibleRect = visibleRect,
                 color = stereographicGridColor,
-                alpha = southPointAlpha,
-                radius = southPointRadius,
-                center = submode.south.toOffset(),
+                alpha = alpha,
+                style = stereographicGridStroke,
             )
-            for (i in submode.grid.indices) {
-                val circleOrLine = submode.grid[i]
-                val alpha =
-                    if (i == Submode.RotateStereographicSphere.EQUATOR_GRID_INDEX)
-                        equatorGridLineAlpha
-                    else gridLineAlpha
-                drawCircleOrLine(circleOrLine,
-                    visibleRect = visibleRect,
-                    color = stereographicGridColor,
-                    alpha = alpha,
-                    style = stereographicGridStroke,
-                )
-            }
         }
-        else -> {}
     }
 }
 
