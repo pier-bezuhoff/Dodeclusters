@@ -5,7 +5,6 @@ package ui.editor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.draggable2D
 import androidx.compose.foundation.gestures.rememberDraggable2DState
 import androidx.compose.foundation.layout.Arrangement
@@ -182,19 +181,19 @@ private fun ContextActionsWrapper(
 @Composable
 fun BoxScope.SelectionContextActions(
     concretePositions: ConcreteOnScreenPositions,
-    scaleSliderPercentage: Float,
-    rotationHandleAngle: Float,
+    scaleSliderPercentage: Float, // freq changes
+    rotationHandleAngle: Float, // freq changes
     borderColor: Color,
     showAdjustExprButton: Boolean,
     showOrientationToggle: Boolean,
     isLocked: Boolean,
-    toolAction: (Tool) -> Unit,
-    toolPredicate: (Tool) -> Boolean,
-    onScale: (newScaleSliderPercentage: Float) -> Unit,
-    onScaleFinished: () -> Unit,
-    onRotate: (newRotationAngle: Float) -> Unit,
-    onRotateStarted: (center: Offset) -> Unit,
-    onRotateFinished: () -> Unit,
+    toolAction: (Tool) -> Unit = {},
+    toolPredicate: (Tool) -> Boolean = { true },
+    onScale: (newScaleSliderPercentage: Float) -> Unit = {},
+    onScaleFinished: () -> Unit = {},
+    onRotate: (newRotationAngle: Float) -> Unit = {},
+    onRotateStarted: (center: Offset) -> Unit = {},
+    onRotateFinished: () -> Unit = {},
 ) {
     // rotate handle
     val rotationHandleStripeColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -303,8 +302,8 @@ fun BoxScope.SelectionContextActions(
             )
             // MAYBE: fill color here too
             TwoIconButtonWithTooltip(
-                painterResource(Tool.MarkAsPhantoms.icon),
-                painterResource(Tool.MarkAsPhantoms.disabledIcon),
+                iconResource = Tool.MarkAsPhantoms.icon,
+                disabledIconResource = Tool.MarkAsPhantoms.disabledIcon,
                 tooltip = stringResource(Tool.MarkAsPhantoms.description),
                 disabledTooltip = stringResource(Tool.MarkAsPhantoms.disabledDescription),
                 contentDescription = stringResource(Tool.MarkAsPhantoms.name),
@@ -353,7 +352,7 @@ fun BoxScope.PointContextActions(
     pointColor: Color,
     showAdjustExprButton: Boolean,
     isLocked: Boolean,
-    label: String?,
+    labelProvider: () -> String?,
     toolAction: (Tool) -> Unit,
     toolPredicate: (Tool) -> Boolean,
     setLabel: (String) -> Unit,
@@ -390,7 +389,7 @@ fun BoxScope.PointContextActions(
                 Box { // popup position root container
                     if (labelInputIsActive) {
                         LabelInputPopup(
-                            previousLabel = label,
+                            previousLabelProvider = labelProvider,
                             setLabel = setLabel,
                             dismiss = dismissLabelInput,
                         )
@@ -405,8 +404,8 @@ fun BoxScope.PointContextActions(
                 )
             }
             TwoIconButtonWithTooltip(
-                painterResource(Tool.MarkAsPhantoms.icon),
-                painterResource(Tool.MarkAsPhantoms.disabledIcon),
+                iconResource = Tool.MarkAsPhantoms.icon,
+                disabledIconResource = Tool.MarkAsPhantoms.disabledIcon,
                 tooltip = stringResource(Tool.MarkAsPhantoms.description),
                 disabledTooltip = stringResource(Tool.MarkAsPhantoms.disabledDescription),
                 contentDescription = stringResource(Tool.MarkAsPhantoms.name),
@@ -427,11 +426,11 @@ fun BoxScope.PointContextActions(
 
 @Composable
 private fun BoxScope.LabelInputPopup(
-    previousLabel: String?,
+    previousLabelProvider: () -> String?,
     setLabel: (String) -> Unit,
     dismiss: () -> Unit,
 ) {
-    var label by remember { mutableStateOf(previousLabel ?: "") }
+    var label by remember { mutableStateOf(previousLabelProvider() ?: "") }
     Popup(
         popupPositionProvider = object : PopupPositionProvider {
             override fun calculatePosition(
@@ -484,7 +483,7 @@ private fun PointContextActionsPreview() {
             pointColor = Color.Blue,
             showAdjustExprButton = true,
             isLocked = false,
-            label = null,
+            labelProvider = { null },
             toolAction = {},
             toolPredicate = { false },
             setLabel = {},
@@ -741,7 +740,6 @@ private fun BoxScope.SelectionChoices(
                         Res.string.imaginary_circle_number_label,
                         choice.index
                     )
-
                     is Point -> stringResource(Res.string.point_number_label, choice.index)
                     null -> stringResource(Res.string.arc_path_number_label, choice.index)
                 }
@@ -826,8 +824,8 @@ fun InterpolationInterface(
                             stringResource(Tool.InBetween.disabledDescription)
                     ) {
                         OnOffButton(
-                            painterResource(Tool.InBetween.icon),
-                            stringResource(Tool.InBetween.name),
+                            iconResource = Tool.InBetween.icon,
+                            contentDescription = stringResource(Tool.InBetween.name),
                             isOn = interpolateInBetween,
                             contentColor = MaterialTheme.colorScheme.secondary,
                             checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -856,7 +854,7 @@ fun InterpolationInterface(
                 colors = sliderColorsSecondary,
             )
             SimpleFilledButton(
-                iconPainter = painterResource(Res.drawable.confirm),
+                iconResource = Res.drawable.confirm,
                 contentDescription = stringResource(Res.string.ok),
                 modifier = bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
@@ -969,7 +967,7 @@ fun RotationInterface(
                 colors = sliderColorsSecondary,
             )
             SimpleFilledButton(
-                iconPainter = painterResource(Res.drawable.confirm),
+                iconResource = Res.drawable.confirm,
                 contentDescription = stringResource(Res.string.ok),
                 modifier = bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
@@ -1083,9 +1081,9 @@ fun BiInversionInterface(
                 colors = sliderColorsSecondary,
             )
             SimpleFilledButton(
-                painterResource(Res.drawable.confirm),
-                stringResource(Res.string.ok),
-                bottomRightModifier,
+                iconResource = Res.drawable.confirm,
+                contentDescription = stringResource(Res.string.ok),
+                modifier = bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
                 containerColor = MaterialTheme.colorScheme.secondary,
                 onClick = confirmParameters
@@ -1191,8 +1189,8 @@ fun LoxodromicMotionInterface(
                         stringResource(Tool.BidirectionalSpiral.disabledDescription)
                 ) {
                     OnOffButton(
-                        painterResource(Tool.BidirectionalSpiral.icon),
-                        stringResource(Tool.BidirectionalSpiral.name),
+                        iconResource = Tool.BidirectionalSpiral.icon,
+                        contentDescription = stringResource(Tool.BidirectionalSpiral.name),
                         isOn = bidirectional,
                         containerColor = buttonBackground,
                         checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -1231,7 +1229,7 @@ fun LoxodromicMotionInterface(
                 colors = sliderColorsSecondary
             )
             SimpleFilledButton(
-                iconPainter = painterResource(Res.drawable.confirm),
+                iconResource = Res.drawable.confirm,
                 contentDescription = stringResource(Res.string.ok),
                 modifier = bottomRightModifier,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
@@ -1285,8 +1283,8 @@ private fun ReverseDirectionToggle(
     Box(positionModifier) {
         WithTooltip(stringResource(Tool.ReverseDirection.description)) {
             OnOffButton(
-                painterResource(Tool.ReverseDirection.icon),
-                stringResource(Tool.ReverseDirection.name),
+                iconResource = Tool.ReverseDirection.icon,
+                contentDescription = stringResource(Tool.ReverseDirection.name),
                 isOn = isOn,
                 modifier = modifier,
                 containerColor = containerColor,
@@ -1457,7 +1455,7 @@ private fun RegionManipulationStrategySelectorPreview() {
 
 @Composable
 fun BoxScope.InfinitePointInput(
-    toolAction: (Tool.InfinitePoint) -> Unit,
+    toolAction: (Tool) -> Unit,
 ) {
     SimpleToolButtonWithTooltip(Tool.InfinitePoint,
         positionModifier = Modifier.align(Alignment.CenterEnd),

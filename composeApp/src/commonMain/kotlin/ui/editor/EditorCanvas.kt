@@ -154,12 +154,12 @@ fun BoxScope.EditorCanvas(
     val thiccSelectedAlpha = customColors.thiccSelectedAlpha
     val textMeasurer = rememberTextMeasurer()
     val objectLabelLayouts = remember(viewModel.objectModel.invalidations, textMeasurer, labelTextStyle) {
-        val r = mutableMapOf<Ix, TextLayoutResult>()
+        val results = mutableMapOf<Ix, TextLayoutResult>()
         for ((ix, style) in viewModel.styling) {
             if (style.label != null)
-                r[ix] = textMeasurer.measure(style.label.content, labelTextStyle)
+                results[ix] = textMeasurer.measure(style.label.content, labelTextStyle)
         }
-        r
+        results
     }
     val concretePositions = remember(viewModel.canvasSize, density) {
         ConcreteOnScreenPositions(viewModel.canvasSize.toSize(), density)
@@ -260,7 +260,6 @@ fun BoxScope.EditorCanvas(
 //        } // | MEASURE END | // not that long (2~4ms)
     }
     if (viewModel.showUI) { // HUD
-        hug(viewModel.objectModel.invalidations)
         if (viewModel.showGenericSelectionContextActions) {
             val borderColor = remember(viewModel.selection, viewModel.objectModel.invalidations) {
                 viewModel.getMostCommonBorderColorInSelection()
@@ -277,26 +276,30 @@ fun BoxScope.EditorCanvas(
                 showAdjustExprButton = viewModel.showAdjustExprButton,
                 showOrientationToggle = viewModel.showDirectionArrows && !viewModel.selectionIsLocked,
                 isLocked = viewModel.selectionIsLocked,
-                toolAction = viewModel::toolAction,
-                toolPredicate = viewModel::toolPredicate,
-                onScale = viewModel::scaleViaSlider,
-                onScaleFinished = viewModel::finishScalingViaSlider,
-                onRotate = viewModel::rotateViaHandle,
-                onRotateStarted = viewModel::startHandleRotation,
-                onRotateFinished = viewModel::finishHandleRotation,
+                // FIX: submode changes trigger recomposition downstream to IconButtons
+//                toolAction = { viewModel.toolAction(it) },
+//                toolPredicate = { viewModel.toolPredicate(it) },
+                onScale = { viewModel.scaleViaSlider(it) },
+                onScaleFinished = { viewModel.finishScalingViaSlider() },
+                onRotate = { viewModel.rotateViaHandle(it) },
+                onRotateStarted = { viewModel.startHandleRotation(it) },
+                onRotateFinished = { viewModel.finishHandleRotation() },
             )
         } else if (viewModel.showPointContextActions) {
-            val label = remember(viewModel.selection, viewModel.objectModel.invalidations) {
-                 viewModel.objectSelection
-                    .firstNotNullOfOrNull { viewModel.styling[it]?.label?.content }
-            }
+//            val label = remember(viewModel.selection, viewModel.objectModel.invalidations) {
+//                 viewModel.objectSelection
+//                    .firstNotNullOfOrNull { viewModel.styling[it]?.label?.content }
+//            }
             PointContextActions(
                 // only points are selected
                 pointColor =
                     viewModel.getMostCommonBorderColorInSelection() ?: defaultFreePointColor,
                 showAdjustExprButton = viewModel.showAdjustExprButton,
                 isLocked = viewModel.selectionIsLocked,
-                label = label,
+                labelProvider = {
+                    viewModel.objectSelection
+                        .firstNotNullOfOrNull { viewModel.styling[it]?.label?.content }
+                },
                 toolAction = viewModel::toolAction,
                 toolPredicate = viewModel::toolPredicate,
                 setLabel = viewModel::setLabel,
@@ -380,12 +383,11 @@ fun BoxScope.EditorCanvas(
                 else -> {}
             }
         }
-
         when (val submode = viewModel.submode) {
             is Submode.SelectionChoicesInput ->
                 SelectionChoicesInputPopup(
                     choices = submode.choices,
-                    selectChoice = viewModel::selectFromChoices,
+                    selectChoice = { viewModel.selectFromChoices(it) },
                     dismiss = { viewModel.dismissInputSubmode(recordHistory = false) },
                 )
             else -> {}
@@ -393,12 +395,12 @@ fun BoxScope.EditorCanvas(
         if (viewModel.mode == SelectionMode.Region) {
             RegionManipulationStrategySelector(
                 currentStrategy = viewModel.regionManipulationStrategy,
-                setStrategy = viewModel::setRegionsManipulationStrategy
+                setStrategy = { viewModel.setRegionsManipulationStrategy(it) }
             )
         }
         if (viewModel.toolPredicate(Tool.InfinitePoint)) {
             InfinitePointInput(
-                toolAction = viewModel::toolAction,
+                toolAction = { viewModel.toolAction(it) },
             )
         }
     }

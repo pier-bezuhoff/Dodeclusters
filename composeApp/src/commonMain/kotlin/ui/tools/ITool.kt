@@ -1,6 +1,7 @@
 package ui.tools
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import domain.model.NonEqualityCondition
 import domain.model.Signature
@@ -13,6 +14,7 @@ import org.jetbrains.compose.resources.StringResource
  * @property[name] used as an icon contentDescription
  * @property[description] used as a tooltip
  */
+@Immutable
 sealed interface ITool { // pls. i dont know how to name it.. (semantically)
     val name: StringResource
     val icon: DrawableResource

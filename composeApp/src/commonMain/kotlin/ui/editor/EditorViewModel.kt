@@ -183,7 +183,7 @@ class EditorViewModel : ViewModel() {
         private set
     private val submodeState: MutableState<Submode?> = mutableStateOf(null)
     /** Minor editing mode, bound to [mode]; can hold transient data */
-    var submode: Submode? by submodeState
+    var submode: Submode? by submodeState // freq changes
         private set
     // NOTE: Arg.XYPoint & co use absolute positioning
     /** Partly filled [Tool] arg-list during [ToolMode] */
@@ -221,7 +221,9 @@ class EditorViewModel : ViewModel() {
     /** which style to use when drawing regions: true = stroke, false = fill */
     var showDirectionArrows: Boolean by mutableStateOf(Settings().showDirectionArrows)
         private set
-    var regionManipulationStrategy: RegionManipulationStrategy by mutableStateOf(RegionManipulationStrategy.REPLACE)
+    var regionManipulationStrategy: RegionManipulationStrategy by mutableStateOf(
+        RegionManipulationStrategy.REPLACE
+    )
         private set
     /** applies to [SelectionMode.Region]:
      * only use circles present in the [objectSelection] to determine which regions to fill */
@@ -354,8 +356,9 @@ class EditorViewModel : ViewModel() {
 //        println("VM.init")
         viewModelScope.launch {
             restoreFromDisk()
-            if (AUTOSAVE_EVERY_5_MINUTES)
+            if (AUTOSAVE_EVERY_5_MINUTES) {
                 autosaveEvery5Minutes()
+            }
         }
     }
 

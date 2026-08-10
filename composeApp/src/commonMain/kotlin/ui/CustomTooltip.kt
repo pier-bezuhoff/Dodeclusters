@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
+import kotlin.time.Duration.Companion.milliseconds
 
 // i had to reimplement TooltipState to
 // be able to change tooltip duration... NotLikeThis
@@ -34,6 +35,7 @@ import kotlinx.coroutines.withTimeout
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 @ExperimentalMaterial3Api
+@Stable
 fun rememberMyTooltipState(
     initialIsVisible: Boolean = false,
     isPersistent: Boolean = false,
@@ -126,7 +128,7 @@ private class MyTooltipStateImpl(
                 if (isPersistent) {
                     cancellableShow()
                 } else {
-                    withTimeout(tooltipDuration) {
+                    withTimeout(tooltipDuration.milliseconds) {
                         cancellableShow()
                     }
                 }

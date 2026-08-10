@@ -45,6 +45,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.TooltipState
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
@@ -62,7 +63,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -89,15 +89,17 @@ import dodeclusters.composeapp.generated.resources.dismiss
 import dodeclusters.composeapp.generated.resources.ok
 import domain.LoadingState
 import domain.formatDecimals
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.theme.adaptiveTypography
 import ui.tools.ITool
+import ui.tools.Tool
 
 @Composable
 fun SimpleButton(
-    iconPainter: Painter,
+    iconResource: DrawableResource,
     contentDescription: String? = null,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
@@ -116,7 +118,7 @@ fun SimpleButton(
         modifier = modifier,
     ) {
         Icon(
-            iconPainter,
+            painterResource(iconResource),
             contentDescription = contentDescription,
             modifier = iconModifier,
         )
@@ -129,8 +131,8 @@ fun SimpleButton(
  * such separately from [modifier]
  */
 @Composable
-inline fun <reified T> SimpleToolButtonWithTooltip(
-    tool: T,
+fun SimpleToolButtonWithTooltip(
+    tool: Tool,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
     positionModifier: Modifier = Modifier,
@@ -138,14 +140,14 @@ inline fun <reified T> SimpleToolButtonWithTooltip(
     contentColor: Color =
         if (tool is ITool.Tinted) tool.tint
         else LocalContentColor.current,
-    crossinline onClick: (tool: T) -> Unit
-) where T : ITool =
+    onClick: (tool: Tool) -> Unit
+) {
     Box(positionModifier) {
         WithTooltip(
-            stringResource(tool.description),
+            stringResource(tool.description)
         ) {
             SimpleButton(
-                iconPainter = painterResource(tool.icon),
+                iconResource = tool.icon,
                 contentDescription = stringResource(tool.name),
                 modifier = modifier,
                 iconModifier = iconModifier,
@@ -155,10 +157,11 @@ inline fun <reified T> SimpleToolButtonWithTooltip(
             )
         }
     }
+}
 
 @Composable
 fun SimpleFilledButton(
-    iconPainter: Painter,
+    iconResource: DrawableResource,
     contentDescription: String,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
@@ -176,13 +179,13 @@ fun SimpleFilledButton(
         interactionSource = interactionSource,
         modifier = modifier,
     ) {
-        Icon(iconPainter, contentDescription, iconModifier)
+        Icon(painterResource(iconResource), contentDescription, iconModifier)
     }
 }
 
 @Composable
 fun DisableableButton(
-    iconPainter: Painter,
+    iconResource: DrawableResource,
     contentDescription: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -200,14 +203,14 @@ fun DisableableButton(
         ),
         enabled = enabled,
     ) {
-        Icon(iconPainter, contentDescription, iconModifier)
+        Icon(painterResource(iconResource), contentDescription, iconModifier)
     }
 }
 
 @Composable
 fun TwoIconButton(
-    iconPainter: Painter,
-    disabledIconPainter: Painter,
+    iconResource: DrawableResource,
+    disabledIconResource: DrawableResource,
     contentDescription: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -228,8 +231,9 @@ fun TwoIconButton(
         )
     ) {
         Icon(
-            if (enabled) iconPainter
-            else disabledIconPainter,
+            painter =
+                if (enabled) painterResource(iconResource)
+                else painterResource(disabledIconResource),
             contentDescription = contentDescription,
             modifier = iconModifier
         )
@@ -238,8 +242,8 @@ fun TwoIconButton(
 
 @Composable
 fun TwoIconButtonWithTooltip(
-    iconPainter: Painter,
-    disabledIconPainter: Painter,
+    iconResource: DrawableResource,
+    disabledIconResource: DrawableResource,
     enabled: Boolean,
     tooltip: String,
     disabledTooltip: String = tooltip,
@@ -256,8 +260,8 @@ fun TwoIconButtonWithTooltip(
             if (enabled) tooltip else disabledTooltip
         ) {
             TwoIconButton(
-                iconPainter = iconPainter,
-                disabledIconPainter = disabledIconPainter,
+                iconResource = iconResource,
+                disabledIconResource = disabledIconResource,
                 contentDescription = contentDescription,
                 enabled = enabled,
                 modifier = modifier,
@@ -277,9 +281,9 @@ fun TwoIconButtonWithTooltip(
  * */
 @Composable
 fun ThreeIconButton(
-    iconPainter: Painter,
-    alternativeIconPainter: Painter,
-    disabledIconPainter: Painter,
+    iconResource: DrawableResource,
+    alternativeIconResource: DrawableResource,
+    disabledIconResource: DrawableResource,
     contentDescription: String,
     enabled: Boolean,
     alternative: Boolean,
@@ -302,10 +306,10 @@ fun ThreeIconButton(
     ) {
         Icon(
             if (enabled) {
-                if (alternative) alternativeIconPainter
-                else iconPainter
-            }
-            else disabledIconPainter,
+                if (alternative)
+                    painterResource(alternativeIconResource)
+                else painterResource(iconResource)
+            } else painterResource(disabledIconResource),
             contentDescription = contentDescription,
             modifier = iconModifier
         )
@@ -314,7 +318,7 @@ fun ThreeIconButton(
 
 @Composable
 fun OnOffButton(
-    iconPainter: Painter,
+    iconResource: DrawableResource,
     contentDescription: String,
     isOn: Boolean,
     modifier: Modifier = Modifier,
@@ -340,10 +344,12 @@ fun OnOffButton(
                 BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
             else null
     ) {
-        Icon(iconPainter, contentDescription, iconModifier)
+        Icon(painterResource(iconResource), contentDescription, iconModifier)
     }
 }
 
+// @Composable inline is evil, only use with
+// `content: @Composable () -> Unit`
 /**
  * NOTE: if you use `Modifier.offset(...)` on the [content], instead wrap [WithTooltip] in
  *  a [Box] with that offset for proper tooltip positioning
@@ -352,16 +358,15 @@ fun OnOffButton(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WithTooltip(
+inline fun WithTooltip(
     description: String,
     modifier: Modifier = Modifier,
     tooltipDuration: Long = 5_000,
-    content: @Composable () -> Unit
+    crossinline content: @Composable () -> Unit
 ) {
     // NOTE: ironically tooltips work much better on desktop/in browser than
     //  on android (since it requires hover vs long-press there)
-
-    val tooltipState = rememberMyTooltipState(tooltipDuration = tooltipDuration)
+    val tooltipState: TooltipState = rememberMyTooltipState(tooltipDuration = tooltipDuration)
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
             positioning = TooltipAnchorPosition.Above,
@@ -772,7 +777,7 @@ fun StringTextFieldWithConfirmOnEnter(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VerticalSlider(
-    sliderState: SliderState,
+    sliderState: SliderState, // unstable!!!
     modifier: Modifier = Modifier, // often .weight(1f)
     enabled: Boolean = true,
     colors: SliderColors = SliderDefaults.colors(),
@@ -811,12 +816,14 @@ fun VerticalSlider(
     trackModifier: Modifier = Modifier,
     thumbModifier: Modifier = Modifier,
     enabled: Boolean = true,
-    valueRange: ClosedFloatingPointRange<Float> = 0f .. 1f,
+    minValue: Float = 0f,
+    maxValue: Float = 1f,
     steps: Int = 0,
     onValueChangeFinished: (() -> Unit)? = null,
     colors: SliderColors = SliderDefaults.colors(),
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
 ) {
+    val valueRange: ClosedFloatingPointRange<Float> = minValue..maxValue
     Slider(
         value = value,
         onValueChange = onValueChange,

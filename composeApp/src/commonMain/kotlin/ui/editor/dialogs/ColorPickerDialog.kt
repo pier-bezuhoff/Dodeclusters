@@ -70,7 +70,6 @@ import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.hex_hash
 import dodeclusters.composeapp.generated.resources.paint_splash
 import kotlinx.coroutines.flow.SharedFlow
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
 import ui.DialogTitle
@@ -259,7 +258,7 @@ fun ColorPickerDialog(
                             ) {
                                 for (clr in parameters.usedColors) {
                                     SimpleButton(
-                                        painterResource(Res.drawable.paint_splash),
+                                        Res.drawable.paint_splash,
                                         "used color",
                                         swatchBgModifier.align(Alignment.CenterVertically),
                                         splashIconModifier,
@@ -267,8 +266,8 @@ fun ColorPickerDialog(
                                     ) { setColor(clr) }
                                 }
                                 TwoIconButtonWithTooltip(
-                                    iconPainter = painterResource(Res.drawable.add_circle),
-                                    disabledIconPainter = painterResource(Res.drawable.delete_forever),
+                                    iconResource = Res.drawable.add_circle,
+                                    disabledIconResource = Res.drawable.delete_forever,
                                     tooltip = stringResource(Res.string.color_picker_save_color_description),
                                     disabledTooltip = stringResource(Res.string.color_picker_forget_color_description),
                                     enabled = newUnsavedColor,
@@ -282,10 +281,10 @@ fun ColorPickerDialog(
                                 }
                                 for (clr in savedColors.reversed()) { // newest-to-oldest
                                     SimpleButton(
-                                        painterResource(Res.drawable.paint_splash),
-                                        "saved color",
-                                        swatchBgModifier.align(Alignment.CenterVertically),
-                                        splashIconModifier,
+                                        iconResource = Res.drawable.paint_splash,
+                                        contentDescription = "saved color",
+                                        modifier = swatchBgModifier.align(Alignment.CenterVertically),
+                                        iconModifier = splashIconModifier,
                                         contentColor = clr,
                                     ) { setColor(clr) }
                                 }
@@ -305,10 +304,10 @@ fun ColorPickerDialog(
                             ) {
                                 for (clr in parameters.predefinedColors) {
                                     SimpleButton(
-                                        painterResource(Res.drawable.paint_splash),
-                                        "predefined color",
-                                        swatchBgModifier,
-                                        splashIconModifier,
+                                        iconResource = Res.drawable.paint_splash,
+                                        contentDescription = "predefined color",
+                                        modifier = swatchBgModifier,
+                                        iconModifier = splashIconModifier,
                                         contentColor = clr,
                                     ) { setColor(clr) }
                                 }
@@ -374,16 +373,16 @@ fun ColorPickerDialog(
                             ) {
                                 for (clr in parameters.usedColors) {
                                     SimpleButton(
-                                        painterResource(Res.drawable.paint_splash),
-                                        "used color",
-                                        swatchBgModifier.align(Alignment.CenterVertically),
-                                        splashIconModifier,
+                                        iconResource = Res.drawable.paint_splash,
+                                        contentDescription = "used color",
+                                        modifier = swatchBgModifier.align(Alignment.CenterVertically),
+                                        iconModifier = splashIconModifier,
                                         contentColor = clr,
                                     ) { setColor(clr) }
                                 }
                                 TwoIconButtonWithTooltip(
-                                    iconPainter = painterResource(Res.drawable.add_circle),
-                                    disabledIconPainter = painterResource(Res.drawable.delete_forever),
+                                    iconResource = Res.drawable.add_circle,
+                                    disabledIconResource = Res.drawable.delete_forever,
                                     tooltip = stringResource(Res.string.color_picker_save_color_description),
                                     disabledTooltip = stringResource(Res.string.color_picker_forget_color_description),
                                     enabled = newUnsavedColor,
@@ -397,10 +396,10 @@ fun ColorPickerDialog(
                                 }
                                 for (clr in savedColors.reversed()) { // newest-to-oldest
                                     SimpleButton(
-                                        painterResource(Res.drawable.paint_splash),
-                                        "saved color",
-                                        swatchBgModifier.align(Alignment.CenterVertically),
-                                        splashIconModifier,
+                                        iconResource = Res.drawable.paint_splash,
+                                        contentDescription = "saved color",
+                                        modifier = swatchBgModifier.align(Alignment.CenterVertically),
+                                        iconModifier = splashIconModifier,
                                         contentColor = clr,
                                     ) { setColor(clr) }
                                 }
@@ -420,10 +419,10 @@ fun ColorPickerDialog(
                             ) {
                                 for (clr in parameters.predefinedColors) {
                                     SimpleButton(
-                                        painterResource(Res.drawable.paint_splash),
-                                        "predefined color",
-                                        swatchBgModifier,
-                                        splashIconModifier,
+                                        iconResource = Res.drawable.paint_splash,
+                                        contentDescription = "predefined color",
+                                        modifier = swatchBgModifier,
+                                        iconModifier = splashIconModifier,
                                         contentColor = clr,
                                     ) { setColor(clr) }
                                 }

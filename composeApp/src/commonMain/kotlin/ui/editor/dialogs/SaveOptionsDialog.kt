@@ -411,7 +411,7 @@ private fun ColumnScope.SharedLink(
         }
         WithTooltip(copyLinkTooltip) {
             SimpleButton(
-                iconPainter = painterResource(Res.drawable.copy),
+                iconResource = Res.drawable.copy,
                 contentDescription = "Copy link",
                 modifier = Modifier,
                 contentColor = MaterialTheme.colorScheme.secondary,

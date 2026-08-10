@@ -50,7 +50,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -98,7 +97,6 @@ import domain.io.DdcSharing
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
-import domain.model.PartialArgList
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -156,7 +154,6 @@ import kotlin.math.min
  * supplied on Wasm after the request to register current user is answered
  * (null -> smol delay -> real implementation)
  */
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun EditorScreenRoot(
     openSettings: () -> Unit,
@@ -180,6 +177,10 @@ fun EditorScreenRoot(
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     EditorScreen(
+        modifier = if (keyboardActions == null)
+        // ig it's only for android w/ keyboard
+            Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
+        else Modifier,
         openMenu = {
             coroutineScope.launch {
                 drawerState.open()
@@ -208,13 +209,15 @@ fun EditorScreenRoot(
         drawerState = drawerState,
         toolbarState = viewModel.toolbarState,
         ddcContent = ddcContent,
-        isLandscape = MaterialTheme.adaptiveSizing.isLandscape,
         showUI = viewModel.showUI,
         showPanel = viewModel.showPanel,
         regionColor = viewModel.regionColor,
         backgroundColor = viewModel.backgroundColor,
         regionManipulationStrategy = viewModel.regionManipulationStrategy,
-        partialArgList = viewModel.partialArgList,
+        partialArgListIsNull = viewModel.partialArgList == null,
+        partialArgListArgsSize = viewModel.partialArgList?.args?.size ?: 0,
+        partialArgListIsFull = viewModel.partialArgList?.isFull == true,
+        partialArgListLastArgIsConfirmed = viewModel.partialArgList?.lastArgIsConfirmed == true,
         undoIsEnabled = viewModel.undoIsEnabled.value,
         redoIsEnabled = viewModel.redoIsEnabled.value,
         saveConfig = viewModel.saveConfig,
@@ -222,10 +225,6 @@ fun EditorScreenRoot(
         editorCanvas = {
             EditorCanvas(viewModel)
         },
-        modifier = if (keyboardActions == null)
-            // ig it's only for android w/ keyboard
-            Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
-        else Modifier,
     )
     val customColors = MaterialTheme.customColors
     when (viewModel.openedDialog) {
@@ -482,6 +481,7 @@ fun EditorScreenRoot(
 
 @Composable
 private fun EditorScreen(
+    modifier: Modifier = Modifier,
     openMenu: () -> Unit = {},
     openNewBlank: () -> Unit = {},
     openFile: () -> Unit = {},
@@ -501,20 +501,22 @@ private fun EditorScreen(
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
     toolbarState: ToolbarState,
     ddcContent: LoadingState<String>? = null,
-    isLandscape: Boolean = MaterialTheme.adaptiveSizing.isLandscape,
     showUI: Boolean,
     showPanel: Boolean = toolbarState.panelNeedsToBeShown,
     regionColor: Color,
     backgroundColor: Color?,
     regionManipulationStrategy: RegionManipulationStrategy,
-    partialArgList: PartialArgList?,
+    partialArgListIsNull: Boolean,
+    partialArgListArgsSize: Int,
+    partialArgListIsFull: Boolean,
+    partialArgListLastArgIsConfirmed: Boolean,
     undoIsEnabled: Boolean,
     redoIsEnabled: Boolean,
     saveConfig: SaveConfig = SaveConfig(),
     openFileRequests: SharedFlow<Unit>? = null,
-    modifier: Modifier = Modifier,
     editorCanvas: @Composable (BoxScope.() -> Unit),
 ) {
+    val isLandscape: Boolean = MaterialTheme.adaptiveSizing.isLandscape
     ModalNavigationDrawer(
         drawerContent = {
             DrawerContent(openNewBlank = openNewBlank, openFile = openFile, showSaveOptionsDialog = showSaveOptionsDialog, openSettings = openSettings)
@@ -559,7 +561,10 @@ private fun EditorScreen(
                             tool = toolbarState.activeTool,
                             toolIsEnabled = isToolEnabled(toolbarState.activeTool),
                             regionManipulationStrategy = regionManipulationStrategy,
-                            partialArgList = partialArgList,
+                            partialArgListIsNull = partialArgListIsNull,
+                            partialArgListArgsSize = partialArgListArgsSize,
+                            partialArgListIsFull = partialArgListIsFull,
+                            partialArgListLastArgIsConfirmed = partialArgListLastArgIsConfirmed,
                             modifier = Modifier.align(Alignment.TopStart),
                         )
                         EditorTopBar(undoIsEnabled = undoIsEnabled, redoIsEnabled = redoIsEnabled, showSaveOptionsDialog = showSaveOptionsDialog, openNewBlank = openNewBlank, loadFromYaml = loadFromYaml, undo = undo, redo = redo, openMenu = openMenu, saveConfig = saveConfig, openFileRequests = openFileRequests,
@@ -602,7 +607,10 @@ private fun EditorScreenPreview() {
             regionColor = Color.Blue,
             backgroundColor = null,
             regionManipulationStrategy = RegionManipulationStrategy.REPLACE,
-            partialArgList = null,
+            partialArgListIsNull = true,
+            partialArgListArgsSize = 0,
+            partialArgListIsFull = false,
+            partialArgListLastArgIsConfirmed = false,
             undoIsEnabled = true,
             redoIsEnabled = false,
             isToolEnabled = { false },
@@ -754,7 +762,11 @@ private fun ToolDescription(
     tool: Tool,
     toolIsEnabled: Boolean,
     regionManipulationStrategy: RegionManipulationStrategy,
-    partialArgList: PartialArgList?,
+    // we do not want to pass parglist itself since it can change continuously triggering recompositions
+    partialArgListIsNull: Boolean,
+    partialArgListArgsSize: Int,
+    partialArgListIsFull: Boolean,
+    partialArgListLastArgIsConfirmed: Boolean,
     modifier: Modifier = Modifier
 ) {
     val isCompact = MaterialTheme.adaptiveSizing.isCompact
@@ -808,17 +820,17 @@ private fun ToolDescription(
             stringArrayResource(it.argDescriptions)
         }
         val number =
-            if (partialArgList == null ||
+            if (partialArgListIsNull ||
                 tool !is Tool.MultiArg ||
-                partialArgList.isFull && !partialArgList.lastArgIsConfirmed
+                partialArgListIsFull && !partialArgListLastArgIsConfirmed
             )
                 null
-            else if (partialArgList.isFull && partialArgList.lastArgIsConfirmed)
+            else if (partialArgListIsFull && partialArgListLastArgIsConfirmed)
                 -1 // indicates expr-adj submode
-            else if (partialArgList.lastArgIsConfirmed)
-                min(partialArgList.args.size, tool.signature.argTypes.size - 1)
+            else if (partialArgListLastArgIsConfirmed)
+                min(partialArgListArgsSize, tool.signature.argTypes.size - 1)
             else
-                max(0, partialArgList.args.size - 1)
+                max(0, partialArgListArgsSize - 1)
         AnimatedContent(Pair(tool, number)) { (currentTool, currentNumber) ->
             if (currentTool is Tool.MultiArg &&
                 currentNumber != null &&
@@ -912,7 +924,7 @@ private fun EditorTopBar(
             }
             WithTooltip(stringResource(Res.string.save_as)) {
                 SimpleButton(
-                    iconPainter = painterResource(Res.drawable.save),
+                    iconResource = Res.drawable.save,
                     contentDescription = stringResource(Res.string.save_as),
                     modifier = buttonModifier,
                     onClick = showSaveOptionsDialog,
@@ -926,8 +938,8 @@ private fun EditorTopBar(
             )
             WithTooltip(stringResource(Tool.Undo.description)) {
                 DisableableButton(
-                    painterResource(Tool.Undo.icon),
-                    stringResource(Tool.Undo.name),
+                    iconResource = Tool.Undo.icon,
+                    contentDescription = stringResource(Tool.Undo.name),
                     enabled = undoIsEnabled,
                     modifier = buttonModifier,
                     onClick = undo
@@ -935,8 +947,8 @@ private fun EditorTopBar(
             }
             WithTooltip(stringResource(Tool.Redo.description)) {
                 DisableableButton(
-                    painterResource(Tool.Redo.icon),
-                    stringResource(Tool.Redo.name),
+                    iconResource = Tool.Redo.icon,
+                    contentDescription = stringResource(Tool.Redo.name),
                     enabled = redoIsEnabled,
                     modifier = buttonModifier,
                     onClick = redo
@@ -1190,7 +1202,7 @@ private fun CategoryButton(
         val name = stringResource(category.name)
         WithTooltip(name) {
             SimpleButton(
-                iconPainter = painterResource(category.icon),
+                iconResource = category.icon,
                 contentDescription = name,
                 modifier = modifier,
                 iconModifier = iconModifier,
@@ -1371,7 +1383,7 @@ private fun ToolButton(
     contentColor: Color = LocalContentColor.current,
     onClick: (Tool) -> Unit,
 ) {
-    val icon = painterResource(tool.icon)
+    val iconResource = tool.icon
     val name = stringResource(tool.name)
     val description = when (tool) {
         is ITool.TernaryToggle ->
@@ -1409,7 +1421,7 @@ private fun ToolButton(
                     )
                 ) {
                     Icon(
-                        painter = icon,
+                        painter = painterResource(iconResource),
                         contentDescription = name,
                         modifier = iconModifier,
                         tint = tool.color,
@@ -1418,9 +1430,9 @@ private fun ToolButton(
             }
             is ITool.TernaryToggle -> {
                 ThreeIconButton(
-                    iconPainter = icon,
-                    alternativeIconPainter = painterResource(tool.alternativeIcon),
-                    disabledIconPainter = painterResource(tool.disabledIcon),
+                    iconResource = iconResource,
+                    alternativeIconResource = tool.alternativeIcon,
+                    disabledIconResource = tool.disabledIcon,
                     contentDescription = name,
                     enabled = enabled,
                     alternative = alternative,
@@ -1433,7 +1445,7 @@ private fun ToolButton(
             }
             is ITool.InstantAction -> {
                 SimpleButton(
-                    iconPainter = icon,
+                    iconResource = iconResource,
                     contentDescription = name,
                     modifier = modifier,
                     iconModifier = iconModifier,
@@ -1445,7 +1457,7 @@ private fun ToolButton(
             is ITool.BinaryToggle -> {
                 if (tool.disabledIcon == null) {
                     OnOffButton(
-                        iconPainter = icon,
+                        iconResource = iconResource,
                         contentDescription = name,
                         isOn = enabled,
                         modifier = modifier,
@@ -1456,8 +1468,8 @@ private fun ToolButton(
                     )
                 } else {
                     TwoIconButton(
-                        iconPainter = icon,
-                        disabledIconPainter = painterResource(tool.disabledIcon!!),
+                        iconResource = iconResource,
+                        disabledIconResource = tool.disabledIcon!!,
                         contentDescription = name,
                         enabled = enabled,
                         modifier = modifier,
