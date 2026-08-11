@@ -70,12 +70,12 @@ import kotlin.math.roundToInt
 actual fun SaveBitmapAsPngButton(
     viewModel: EditorViewModel,
     saveData: SaveData<Unit>,
-    buttonContent: @Composable () -> Unit,
     modifier: Modifier,
-    shape: Shape,
+    onSaved: (SaveResult) -> Unit,
     containerColor: Color,
     contentColor: Color,
-    onSaved: (SaveResult) -> Unit
+    shape: Shape,
+    buttonContent: @Composable () -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
     var openDialog by remember { mutableStateOf(false) }

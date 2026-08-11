@@ -34,12 +34,12 @@ import java.io.FileOutputStream
 actual fun SaveBitmapAsPngButton(
     viewModel: EditorViewModel,
     saveData: SaveData<Unit>,
-    buttonContent: @Composable () -> Unit,
     modifier: Modifier,
-    shape: Shape,
+    onSaved: (SaveResult) -> Unit,
     containerColor: Color,
     contentColor: Color,
-    onSaved: (SaveResult) -> Unit
+    shape: Shape,
+    buttonContent: @Composable () -> Unit,
 ) {
 //    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()

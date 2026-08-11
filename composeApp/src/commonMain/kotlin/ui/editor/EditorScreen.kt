@@ -372,6 +372,12 @@ fun EditorScreenRoot(
                 onSaved = { saveResult ->
                     viewModel.onSaveFinished(saveResult)
                 },
+                onSuccessfulShare = {
+                    viewModel.showSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE)
+                },
+                onSuccessfulShareOverwrite = {
+                    viewModel.showSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE_OVERWRITE)
+                },
                 saveConfig = viewModel.saveConfig,
                 saveRequests = viewModel.saveFileRequests,
                 dialogActions = dialogActions,

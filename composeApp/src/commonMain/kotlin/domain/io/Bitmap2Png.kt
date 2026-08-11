@@ -11,13 +11,13 @@ import ui.editor.EditorViewModel
 
 @Composable
 expect fun SaveBitmapAsPngButton(
-    // not a good practice to pass VM around like this, but this is the simplest way
+    // not a good practice to pass VM around like this, it is used in ScreenshotableCanvas
     viewModel: EditorViewModel,
     saveData: SaveData<Unit>,
-    buttonContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(4.dp),
+    onSaved: (SaveResult) -> Unit = { },
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
-    onSaved: (SaveResult) -> Unit = { }
+    shape: Shape = RoundedCornerShape(4.dp),
+    buttonContent: @Composable () -> Unit,
 )

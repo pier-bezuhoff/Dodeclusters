@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -28,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -54,6 +56,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -78,8 +81,12 @@ import ui.SimpleButton
 import ui.TwoIconButtonWithTooltip
 import ui.colorpicker.ClassicColorPicker
 import ui.colorpicker.HsvColor
+import ui.theme.ColorTheme
 import ui.theme.DodeclustersColors
+import ui.theme.DodeclustersTheme
 import ui.theme.adaptiveSizing
+import kotlin.collections.minus
+import kotlin.collections.plus
 
 // TODO: make a compact popup version for less context switch and live preview
 /**
@@ -88,6 +95,7 @@ import ui.theme.adaptiveSizing
  * @param[savedColors] manually saved custom colors chosen during color-picking, latest to oldest
  * @param[predefinedColors] default palette
  */
+@Immutable
 data class ColorPickerParameters(
     val currentColor: Color,
     val usedColors: List<Color>,
@@ -130,8 +138,45 @@ fun ColorPickerDialog(
     val colorState = rememberSaveable(parameters, stateSaver = HsvColor.Saver) {
         mutableStateOf(HsvColor.from(parameters.currentColor))
     }
-    val color = colorState.value.toColor()
     val savedColorsState = remember(parameters) { mutableStateOf(parameters.savedColors) }
+
+    fun buildParameters(): ColorPickerParameters =
+        parameters.copy(
+            currentColor = colorState.value.toColor(),
+            savedColors = savedColorsState.value,
+        )
+
+    Dialog(
+        onDismissRequest = onCancel,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        ColorPickerScreen(
+            parameters = parameters,
+            colorState = colorState,
+            savedColorsState = savedColorsState,
+            onConfirm = { onConfirm(buildParameters()) },
+            onCancel = onCancel,
+        )
+    }
+    LaunchedEffect(dialogActions, parameters) {
+        dialogActions?.collect { dialogAction ->
+            when (dialogAction) {
+                DialogAction.DISMISS -> onCancel()
+                DialogAction.CONFIRM -> onConfirm(buildParameters())
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColorPickerScreen(
+    parameters: ColorPickerParameters,
+    colorState: MutableState<HsvColor>,
+    savedColorsState: MutableState<List<Color>>,
+    onConfirm: () -> Unit = {},
+    onCancel: () -> Unit = {},
+) {
+    val color = colorState.value.toColor()
     var savedColors by savedColorsState
     val setColor = remember(colorState) { { newColor: Color ->
         colorState.value = HsvColor.from(newColor)
@@ -168,177 +213,52 @@ fun ColorPickerDialog(
             else if (isExpanded) 40.dp
             else 32.dp
         )
-
-    fun buildParameters(): ColorPickerParameters =
-        parameters.copy(
-            currentColor = colorState.value.toColor(),
-            savedColors = savedColorsState.value,
-        )
-
-    Dialog(
-        onDismissRequest = onCancel,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+    Surface(
+        modifier = Modifier.padding(16.dp),
+        shape = MaterialTheme.shapes.extraLarge,
     ) {
-        Surface(
-            modifier = Modifier.padding(16.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-        ) {
-            if (isLandscape) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    DialogTitle(
-                        Res.string.color_picker_title,
-                        Modifier.align(Alignment.CenterHorizontally),
-                    )
-                    Row() {
-                        Column(horizontalAlignment = Alignment.End) {
-                            ColorPickerDisplay(
-                                colorState,
-                                Modifier.fillMaxHeight(0.8f),
-                            )
-                            Row(
-                                Modifier
-                                    .requiredHeightIn(50.dp, 100.dp) // desperation constraint
-                                ,
-                                horizontalArrangement = Arrangement.SpaceAround,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                HexInput(
-                                    color,
-                                    setColor = { colorState.value = HsvColor.from(it) },
-                                    onConfirm = { onConfirm(buildParameters()) }
-                                )
-                                CancelButton(onClick = onCancel)
-                                OkButton(onClick = { onConfirm(buildParameters()) })
-                            }
-                        }
-                        Column(
+        if (isLandscape) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                DialogTitle(
+                    Res.string.color_picker_title,
+                    Modifier.align(Alignment.CenterHorizontally),
+                )
+                Row() {
+                    Column(horizontalAlignment = Alignment.End) {
+                        ColorPickerDisplay(
+                            colorState,
+                            Modifier.fillMaxHeight(0.8f),
+                        )
+                        Row(
                             Modifier
-                                .verticalScroll(rememberScrollState())
-                                .padding(top = 12.dp, end = 8.dp),
+                                .requiredHeightIn(50.dp, 100.dp) // desperation constraint
+                            ,
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Box(
-                                Modifier
-                                    .padding(start = 4.dp, bottom = 8.dp) // outer offset
-                                    .background(
-                                        lightDarkVerticalGradientBrush,
-                                        MaterialTheme.shapes.medium
-                                    )
-                                    .padding(12.dp)
-                                    .padding(end = 40.dp) // adjust for 2nd circle-box offset
-                            ) {
-                                Box(
-                                    Modifier
-                                        .size(64.dp)
-                                        .clip(CircleShape)
-                                        .background(parameters.currentColor)
-                                        .clickable { setColor(parameters.currentColor) }
-                                ) {}
-                                Box(
-                                    Modifier
-                                        .offset(x = 40.dp)
-                                        .size(64.dp)
-                                        .clip(CircleShape)
-                                        .background(color)
-                                        .clickable(enabled = false, onClick = {}) // blocks thru-clicks
-                                ) {}
-                            }
-                            Text(
-                                text = stringResource(Res.string.color_picker_used_and_saved_colors_label),
-                                modifier = Modifier
-                                    .padding(start = 12.dp)
-                                    .offset(y = 4.dp)
-                                ,
-                                color = MaterialTheme.colorScheme.secondary,
-                                style = MaterialTheme.typography.labelSmall,
+                            HexInput(
+                                color,
+                                setColor = { colorState.value = HsvColor.from(it) },
+                                onConfirm = onConfirm,
                             )
-                            FlowRow(
-                                paletteModifier,
-                                verticalArrangement = Arrangement.Center,
-                                maxItemsInEachRow = maxColorsPerRowLandscape,
-                            ) {
-                                for (clr in parameters.usedColors) {
-                                    SimpleButton(
-                                        Res.drawable.paint_splash,
-                                        "used color",
-                                        swatchBgModifier.align(Alignment.CenterVertically),
-                                        splashIconModifier,
-                                        contentColor = clr,
-                                    ) { setColor(clr) }
-                                }
-                                TwoIconButtonWithTooltip(
-                                    iconResource = Res.drawable.add_circle,
-                                    disabledIconResource = Res.drawable.delete_forever,
-                                    tooltip = stringResource(Res.string.color_picker_save_color_description),
-                                    disabledTooltip = stringResource(Res.string.color_picker_forget_color_description),
-                                    enabled = newUnsavedColor,
-                                    positionModifier = Modifier.align(Alignment.CenterVertically),
-                                    contentColor = MaterialTheme.colorScheme.secondary
-                                ) {
-                                    if (newUnsavedColor)
-                                        savedColors += color
-                                    else
-                                        savedColors -= color
-                                }
-                                for (clr in savedColors.reversed()) { // newest-to-oldest
-                                    SimpleButton(
-                                        iconResource = Res.drawable.paint_splash,
-                                        contentDescription = "saved color",
-                                        modifier = swatchBgModifier.align(Alignment.CenterVertically),
-                                        iconModifier = splashIconModifier,
-                                        contentColor = clr,
-                                    ) { setColor(clr) }
-                                }
-                            }
-                            Text(
-                                text = stringResource(Res.string.color_picker_default_palette_label),
-                                modifier = Modifier
-                                    .padding(start = 12.dp)
-                                    .offset(y = 4.dp)
-                                ,
-                                color = MaterialTheme.colorScheme.secondary,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                            FlowRow(
-                                paletteModifier,
-                                maxItemsInEachRow = maxColorsPerRowLandscape,
-                            ) {
-                                for (clr in parameters.predefinedColors) {
-                                    SimpleButton(
-                                        iconResource = Res.drawable.paint_splash,
-                                        contentDescription = "predefined color",
-                                        modifier = swatchBgModifier,
-                                        iconModifier = splashIconModifier,
-                                        contentColor = clr,
-                                    ) { setColor(clr) }
-                                }
-                            }
+                            CancelButton(onClick = onCancel)
+                            OkButton(onClick = onConfirm)
                         }
                     }
-                }
-            } else { // portrait
-                Column(
-                    Modifier
-                        .verticalScroll(rememberScrollState())
-                    ,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    DialogTitle(
-                        Res.string.color_picker_title,
-                        Modifier.align(Alignment.CenterHorizontally),
-                    )
-                    ColorPickerDisplay(
-                        colorState,
-                        Modifier.fillMaxWidth(
-                            if (isMedium) 0.6f else 0.8f
-                        ),
-                    )
-                    Row() {
+                    Column(
+                        Modifier
+                            .verticalScroll(rememberScrollState())
+                            .padding(top = 12.dp, end = 8.dp),
+                    ) {
                         Box(
                             Modifier
-                                .padding(top = 4.dp, start = 4.dp, end = 8.dp)
-                                .background(lightDarkHorizontalGradientBrush, MaterialTheme.shapes.medium)
+                                .padding(start = 4.dp, bottom = 8.dp) // outer offset
+                                .background(
+                                    lightDarkVerticalGradientBrush,
+                                    MaterialTheme.shapes.medium
+                                )
                                 .padding(12.dp)
-                                .padding(bottom = 40.dp) // adjust for 2nd circle-box offset
+                                .padding(end = 40.dp) // adjust for 2nd circle-box offset
                         ) {
                             Box(
                                 Modifier
@@ -349,109 +269,230 @@ fun ColorPickerDialog(
                             ) {}
                             Box(
                                 Modifier
-                                    .offset(y = 40.dp)
+                                    .offset(x = 40.dp)
                                     .size(64.dp)
                                     .clip(CircleShape)
                                     .background(color)
                                     .clickable(enabled = false, onClick = {}) // blocks thru-clicks
                             ) {}
                         }
-                        Column() {
-                            Text(
-                                text = stringResource(Res.string.color_picker_used_and_saved_colors_label),
-                                modifier = Modifier
-                                    .padding(start = 12.dp)
-                                    .offset(y = 4.dp)
-                                ,
-                                color = MaterialTheme.colorScheme.secondary,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                            FlowRow(
-                                paletteModifier,
-                                verticalArrangement = Arrangement.Center,
-                                maxItemsInEachRow = maxColorsPerRowPortrait,
-                            ) {
-                                for (clr in parameters.usedColors) {
-                                    SimpleButton(
-                                        iconResource = Res.drawable.paint_splash,
-                                        contentDescription = "used color",
-                                        modifier = swatchBgModifier.align(Alignment.CenterVertically),
-                                        iconModifier = splashIconModifier,
-                                        contentColor = clr,
-                                    ) { setColor(clr) }
-                                }
-                                TwoIconButtonWithTooltip(
-                                    iconResource = Res.drawable.add_circle,
-                                    disabledIconResource = Res.drawable.delete_forever,
-                                    tooltip = stringResource(Res.string.color_picker_save_color_description),
-                                    disabledTooltip = stringResource(Res.string.color_picker_forget_color_description),
-                                    enabled = newUnsavedColor,
-                                    positionModifier = Modifier.align(Alignment.CenterVertically),
-                                    contentColor = MaterialTheme.colorScheme.secondary
-                                ) {
-                                    if (newUnsavedColor)
-                                        savedColors += color
-                                    else
-                                        savedColors -= color
-                                }
-                                for (clr in savedColors.reversed()) { // newest-to-oldest
-                                    SimpleButton(
-                                        iconResource = Res.drawable.paint_splash,
-                                        contentDescription = "saved color",
-                                        modifier = swatchBgModifier.align(Alignment.CenterVertically),
-                                        iconModifier = splashIconModifier,
-                                        contentColor = clr,
-                                    ) { setColor(clr) }
-                                }
+                        Text(
+                            text = stringResource(Res.string.color_picker_used_and_saved_colors_label),
+                            modifier = Modifier
+                                .padding(start = 12.dp)
+                                .offset(y = 4.dp)
+                            ,
+                            color = MaterialTheme.colorScheme.secondary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        FlowRow(
+                            paletteModifier,
+                            verticalArrangement = Arrangement.Center,
+                            maxItemsInEachRow = maxColorsPerRowLandscape,
+                        ) {
+                            for (clr in parameters.usedColors) {
+                                SimpleButton(
+                                    Res.drawable.paint_splash,
+                                    "used color",
+                                    swatchBgModifier.align(Alignment.CenterVertically),
+                                    splashIconModifier,
+                                    contentColor = clr,
+                                ) { setColor(clr) }
                             }
-                            Text(
-                                text = stringResource(Res.string.color_picker_default_palette_label),
-                                modifier = Modifier
-                                    .padding(start = 12.dp)
-                                    .offset(y = 4.dp)
-                                ,
-                                color = MaterialTheme.colorScheme.secondary,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                            FlowRow(
-                                paletteModifier,
-                                maxItemsInEachRow = maxColorsPerRowPortrait,
+                            TwoIconButtonWithTooltip(
+                                iconResource = Res.drawable.add_circle,
+                                disabledIconResource = Res.drawable.delete_forever,
+                                tooltip = stringResource(Res.string.color_picker_save_color_description),
+                                disabledTooltip = stringResource(Res.string.color_picker_forget_color_description),
+                                enabled = newUnsavedColor,
+                                positionModifier = Modifier.align(Alignment.CenterVertically),
+                                contentColor = MaterialTheme.colorScheme.secondary
                             ) {
-                                for (clr in parameters.predefinedColors) {
-                                    SimpleButton(
-                                        iconResource = Res.drawable.paint_splash,
-                                        contentDescription = "predefined color",
-                                        modifier = swatchBgModifier,
-                                        iconModifier = splashIconModifier,
-                                        contentColor = clr,
-                                    ) { setColor(clr) }
-                                }
+                                if (newUnsavedColor)
+                                    savedColors += color
+                                else
+                                    savedColors -= color
+                            }
+                            for (clr in savedColors.reversed()) { // newest-to-oldest
+                                SimpleButton(
+                                    iconResource = Res.drawable.paint_splash,
+                                    contentDescription = "saved color",
+                                    modifier = swatchBgModifier.align(Alignment.CenterVertically),
+                                    iconModifier = splashIconModifier,
+                                    contentColor = clr,
+                                ) { setColor(clr) }
+                            }
+                        }
+                        Text(
+                            text = stringResource(Res.string.color_picker_default_palette_label),
+                            modifier = Modifier
+                                .padding(start = 12.dp)
+                                .offset(y = 4.dp)
+                            ,
+                            color = MaterialTheme.colorScheme.secondary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        FlowRow(
+                            paletteModifier,
+                            maxItemsInEachRow = maxColorsPerRowLandscape,
+                        ) {
+                            for (clr in parameters.predefinedColors) {
+                                SimpleButton(
+                                    iconResource = Res.drawable.paint_splash,
+                                    contentDescription = "predefined color",
+                                    modifier = swatchBgModifier,
+                                    iconModifier = splashIconModifier,
+                                    contentColor = clr,
+                                ) { setColor(clr) }
                             }
                         }
                     }
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        verticalAlignment = Alignment.CenterVertically,
+                }
+            }
+        } else { // portrait
+            Column(
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                ,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                DialogTitle(
+                    Res.string.color_picker_title,
+                    Modifier.align(Alignment.CenterHorizontally),
+                )
+                ColorPickerDisplay(
+                    colorState,
+                    Modifier.fillMaxWidth(
+                        if (isMedium) 0.6f else 0.8f
+                    ),
+                )
+                Row() {
+                    Box(
+                        Modifier
+                            .padding(top = 4.dp, start = 4.dp, end = 8.dp)
+                            .background(lightDarkHorizontalGradientBrush, MaterialTheme.shapes.medium)
+                            .padding(12.dp)
+                            .padding(bottom = 40.dp) // adjust for 2nd circle-box offset
                     ) {
-                        HexInput(
-                            color,
-                            setColor = { colorState.value = HsvColor.from(it) },
-                            onConfirm = { onConfirm(buildParameters()) },
-                        )
-                        CancelButton(noText = isCompact, onClick = onCancel)
-                        OkButton(noText = isCompact, onClick = { onConfirm(buildParameters()) })
+                        Box(
+                            Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(parameters.currentColor)
+                                .clickable { setColor(parameters.currentColor) }
+                        ) {}
+                        Box(
+                            Modifier
+                                .offset(y = 40.dp)
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .clickable(enabled = false, onClick = {}) // blocks thru-clicks
+                        ) {}
                     }
+                    Column() {
+                        Text(
+                            text = stringResource(Res.string.color_picker_used_and_saved_colors_label),
+                            modifier = Modifier
+                                .padding(start = 12.dp)
+                                .offset(y = 4.dp)
+                            ,
+                            color = MaterialTheme.colorScheme.secondary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        FlowRow(
+                            paletteModifier,
+                            verticalArrangement = Arrangement.Center,
+                            maxItemsInEachRow = maxColorsPerRowPortrait,
+                        ) {
+                            for (clr in parameters.usedColors) {
+                                SimpleButton(
+                                    iconResource = Res.drawable.paint_splash,
+                                    contentDescription = "used color",
+                                    modifier = swatchBgModifier.align(Alignment.CenterVertically),
+                                    iconModifier = splashIconModifier,
+                                    contentColor = clr,
+                                ) { setColor(clr) }
+                            }
+                            TwoIconButtonWithTooltip(
+                                iconResource = Res.drawable.add_circle,
+                                disabledIconResource = Res.drawable.delete_forever,
+                                tooltip = stringResource(Res.string.color_picker_save_color_description),
+                                disabledTooltip = stringResource(Res.string.color_picker_forget_color_description),
+                                enabled = newUnsavedColor,
+                                positionModifier = Modifier.align(Alignment.CenterVertically),
+                                contentColor = MaterialTheme.colorScheme.secondary
+                            ) {
+                                if (newUnsavedColor)
+                                    savedColors += color
+                                else
+                                    savedColors -= color
+                            }
+                            for (clr in savedColors.reversed()) { // newest-to-oldest
+                                SimpleButton(
+                                    iconResource = Res.drawable.paint_splash,
+                                    contentDescription = "saved color",
+                                    modifier = swatchBgModifier.align(Alignment.CenterVertically),
+                                    iconModifier = splashIconModifier,
+                                    contentColor = clr,
+                                ) { setColor(clr) }
+                            }
+                        }
+                        Text(
+                            text = stringResource(Res.string.color_picker_default_palette_label),
+                            modifier = Modifier
+                                .padding(start = 12.dp)
+                                .offset(y = 4.dp)
+                            ,
+                            color = MaterialTheme.colorScheme.secondary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        FlowRow(
+                            paletteModifier,
+                            maxItemsInEachRow = maxColorsPerRowPortrait,
+                        ) {
+                            for (clr in parameters.predefinedColors) {
+                                SimpleButton(
+                                    iconResource = Res.drawable.paint_splash,
+                                    contentDescription = "predefined color",
+                                    modifier = swatchBgModifier,
+                                    iconModifier = splashIconModifier,
+                                    contentColor = clr,
+                                ) { setColor(clr) }
+                            }
+                        }
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    HexInput(
+                        color,
+                        setColor = { colorState.value = HsvColor.from(it) },
+                        onConfirm = onConfirm,
+                    )
+                    CancelButton(noText = isCompact, onClick = onCancel)
+                    OkButton(noText = isCompact, onClick = onConfirm)
                 }
             }
         }
     }
-    LaunchedEffect(dialogActions, parameters) {
-        dialogActions?.collect { dialogAction ->
-            when (dialogAction) {
-                DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm(buildParameters())
-            }
-        }
+}
+
+@Preview
+@Composable
+private fun ColorPickerScreenPreview() {
+    val parameters = ColorPickerParameters(
+        currentColor = Color.Blue,
+        usedColors = listOf(Color.White),
+    )
+    DodeclustersTheme(ColorTheme.DARK) {
+        ColorPickerScreen(
+            parameters = parameters,
+            colorState = remember { mutableStateOf(HsvColor.from(parameters.currentColor)) },
+            savedColorsState = remember { mutableStateOf(parameters.savedColors) },
+        )
     }
 }
 

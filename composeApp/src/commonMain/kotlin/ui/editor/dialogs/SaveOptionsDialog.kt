@@ -70,20 +70,22 @@ import ui.LoadingOverlay
 import ui.SimpleButton
 import ui.WithTooltip
 import ui.editor.EditorViewModel
-import ui.editor.SnackbarMessage
 import ui.tools.Tool
 
-// TODO:  distinct (fast) save and save as options
+// TODO: distinct (fast) save and save as options
 //  there is already saveRequests flow as arg of SaveFileButton
 @Composable
 fun SaveOptionsDialog(
+    // NG but vm is used in SaveBitmapAsPngButton for ScreenshotableCanvas
     viewModel: EditorViewModel,
-    ddcSharing: DdcSharing? = null,
     saveAsYaml: (name: String) -> String,
     exportAsSvg: (name: String) -> String,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
     onSaved: (SaveResult) -> Unit,
+    onSuccessfulShare: () -> Unit,
+    onSuccessfulShareOverwrite: () -> Unit,
+    ddcSharing: DdcSharing? = null,
     saveConfig: SaveConfig = SaveConfig(),
     saveRequests: SharedFlow<SaveRequest>? = null,
     dialogActions: SharedFlow<DialogAction>? = null,
@@ -140,7 +142,7 @@ fun SaveOptionsDialog(
                                 onShared = {
                                     ddcSharing.shared = it
                                     // we dont close the dialog cuz the user needs to grab the new link
-                                    viewModel.showSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE)
+                                    onSuccessfulShare()
                                 },
                             )
                             if (shared?.second == true) {
@@ -160,7 +162,7 @@ fun SaveOptionsDialog(
                                     setLoadingShared = { loadingShared = it },
                                     onShared = {
                                         ddcSharing.shared = it
-                                        viewModel.showSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE_OVERWRITE)
+                                        onSuccessfulShareOverwrite()
                                         onConfirm()
                                     },
                                 )
@@ -227,11 +229,12 @@ fun SaveOptionsDialog(
                             modifier = buttonModifier,
                             containerColor = containerColor,
                             contentColor = contentColor,
-                        ) { saveResult ->
-                            println(if (saveResult.isSuccess) "PNG exported" else "PNG not exported")
-                            onSaved(saveResult)
-                            onConfirm()
-                        }
+                            onSaved = { saveResult ->
+                                println(if (saveResult.isSuccess) "PNG exported" else "PNG not exported")
+                                onSaved(saveResult)
+                                onConfirm()
+                            }
+                        )
                         SaveFileButton(
                             saveData = SaveData(
                                 name = saveConfig.name ?: Tool.SvgExport.DEFAULT_NAME,
