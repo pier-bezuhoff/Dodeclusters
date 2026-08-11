@@ -63,7 +63,7 @@ actual fun SaveBitmapAsPngButton(
                 onDismissRequest = {},
                 properties = DialogProperties(usePlatformDefaultWidth = false)
             ) {
-                ScreenshotableCanvas(viewModel, bitmapFlow)
+                ScreenshotableCanvas(viewModel, bitmapFlow = bitmapFlow)
             }
         } else {
             SaveFileDialog(

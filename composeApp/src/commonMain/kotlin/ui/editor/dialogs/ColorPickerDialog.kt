@@ -213,6 +213,8 @@ private fun ColorPickerScreen(
             else if (isExpanded) 40.dp
             else 32.dp
         )
+    // tbh i dont like it being scrollable, its unintuitive
+    val scrollState = rememberScrollState()
     Surface(
         modifier = Modifier.padding(16.dp),
         shape = MaterialTheme.shapes.extraLarge,
@@ -352,7 +354,7 @@ private fun ColorPickerScreen(
         } else { // portrait
             Column(
                 Modifier
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                 ,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -477,6 +479,9 @@ private fun ColorPickerScreen(
                 }
             }
         }
+    }
+    LaunchedEffect(scrollState) {
+        scrollState.scrollTo(0)
     }
 }
 

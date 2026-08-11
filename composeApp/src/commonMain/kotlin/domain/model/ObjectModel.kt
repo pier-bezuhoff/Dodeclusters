@@ -11,6 +11,8 @@ import domain.expressions.Expr
 import domain.expressions.ExprOutput
 import domain.expressions.Expressions
 import domain.update
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 /**
  * Purports to encapsulate & manage [displayObjects] and object-related properties.
@@ -35,7 +37,14 @@ sealed class ObjectModel<R : Any, D : Any> {
      * NOTE: u are responsible for MANUALLY sync-ing them
      */
     val downscaledObjects: MutableList<R?> = mutableListOf()
+    val indices get() = displayObjects.indices
+
     val styling: MutableMap<Ix, Styling> = mutableMapOf()
+    val phantoms: Set<Ix> get() =
+        styling.mapNotNull { (ix, style) ->
+            if (style.isPhantom) ix else null
+        }.toSet()
+
     /** layer order */
     val layering: MutableList<Ix> = mutableListOf()
 

@@ -185,6 +185,9 @@ class EditorViewModel : ViewModel() {
     var submode: Submode? by mutableStateOf(null) // freq changes
         private set
     // we do this because submode can change continuously while its type only discretely
+    /** Use for decisions that don't depend on concrete [submode] parameters,
+     * only on its class. Changes discretely, slower than [submode], which can save
+     * recompositions */
     val submodeType: Submode.Type? by derivedStateOf { submode?.type }
     val submodeSelectionChoicesInput: Submode.SelectionChoicesInput? by derivedStateOf {
         submode as? Submode.SelectionChoicesInput

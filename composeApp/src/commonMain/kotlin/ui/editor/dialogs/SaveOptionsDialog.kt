@@ -74,9 +74,11 @@ import ui.tools.Tool
 
 // TODO: distinct (fast) save and save as options
 //  there is already saveRequests flow as arg of SaveFileButton
+/**
+ * @param[viewModel] NG but vm is used in SaveBitmapAsPngButton for ScreenshotableCanvas
+ */
 @Composable
 fun SaveOptionsDialog(
-    // NG but vm is used in SaveBitmapAsPngButton for ScreenshotableCanvas
     viewModel: EditorViewModel,
     saveAsYaml: (name: String) -> String,
     exportAsSvg: (name: String) -> String,
