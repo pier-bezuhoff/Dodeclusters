@@ -233,6 +233,7 @@ fun BoxScope.EditorCanvas(
                 compositingStrategy = CompositingStrategy.Offscreen, // crucial for proper alpha blending
 //                renderEffect = BlurEffect(20f, 20f) // funi
             )
+//            .also { println("canvas recomposition") }
     ) {
         val translation = viewModel.translation
 //        measureAndPrintPerformancePercentiles("draw") { // | MEASURE START |

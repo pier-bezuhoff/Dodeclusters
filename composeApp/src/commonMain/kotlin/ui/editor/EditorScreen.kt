@@ -166,13 +166,15 @@ fun EditorScreenRoot(
     viewModel: EditorViewModel = viewModel(factory = EditorViewModel.Factory),
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val dialogActions = keyboardActions?.mapNotNull {
-        when (it) {
-            KeyboardAction.CANCEL -> DialogAction.DISMISS
-            KeyboardAction.CONFIRM -> DialogAction.CONFIRM
-            else -> null
-        }
-    }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
+    val dialogActions = remember(keyboardActions) {
+        keyboardActions?.mapNotNull {
+            when (it) {
+                KeyboardAction.CANCEL -> DialogAction.DISMISS
+                KeyboardAction.CONFIRM -> DialogAction.CONFIRM
+                else -> null
+            }
+        }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
+    }
     val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle()
     val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
     val uiState = viewModel.uiState
