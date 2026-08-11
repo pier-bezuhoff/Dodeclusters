@@ -8,11 +8,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import ui.editor.EditorViewModel
+import ui.editor.ScreenshotableCanvasParameters
 
 @Composable
 expect fun SaveBitmapAsPngButton(
     // not a good practice to pass VM around like this, it is used in ScreenshotableCanvas
-    viewModel: EditorViewModel,
+    screenshotableCanvasParameters: ScreenshotableCanvasParameters,
     saveData: SaveData<Unit>,
     modifier: Modifier = Modifier,
     onSaved: (SaveResult) -> Unit = { },

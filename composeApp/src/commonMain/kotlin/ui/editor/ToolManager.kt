@@ -14,6 +14,7 @@ import domain.model.ConformalObjectModel
 import domain.model.PartialArcPath
 import domain.model.PartialArgList
 import domain.model.Selection
+import domain.model.Styling
 import kotlinx.coroutines.flow.MutableSharedFlow
 import ui.editor.dialogs.DefaultBiInversionParameters
 import ui.editor.dialogs.DefaultExtrapolationParameters
@@ -30,12 +31,21 @@ class ToolManager(
     selectionState: MutableState<Selection>,
     private val snackbarMessages: MutableSharedFlow<Pair<SnackbarMessage, Array<out Any>>>,
 ) {
-    private var selection: Selection by selectionState
+    val mode: Mode by modeState
+    var submode: Submode? by submodeState
 
-    private val mode: Mode by modeState
-    private var submode: Submode? by submodeState
+    var selection: Selection by selectionState
+    /** Distinct selected [GCircle]? indices +
+     * indices of all vertices/midpoints of selected arc-paths */
+    val selectedIndices: List<Ix> get() =
+        selection.gCircles.plus(
+            selection.arcPaths.flatMap {
+                objectModel.getArcPath(it)?.dependencies ?: emptySet()
+            }
+        ).distinct()
 
-    private val objects: List<GCircleOrConcreteArcPath?> = objectModel.displayObjects
+    val objects: List<GCircleOrConcreteArcPath?> = objectModel.displayObjects
+    val styling: Map<Ix, Styling> = objectModel.styling
     inline val expressions: ConformalExpressions get() =
         objectModel.expressions
 
@@ -67,12 +77,20 @@ class ToolManager(
     var showPromptToSetActiveSelectionAsToolArg: Boolean by mutableStateOf(false) // to be updated manually
         private set
 
+    private fun exprOf(index: Ix): Expr? =
+        expressions.expressions[index]?.expr
+
     private fun clearSelection() {
         selection = Selection()
     }
 
-    private fun exprOf(index: Ix): Expr? =
-        expressions.expressions[index]?.expr
+    fun resetToolMode(toolMode: ToolMode) {
+        partialArgList = PartialArgList(toolMode.signature, toolMode.nonEqualityConditions)
+    }
+
+    fun addIndicesArg(indices: List<Ix>) {
+        partialArgList = partialArgList?.addArg(Arg.Indices(indices), confirmThisArg = true)
+    }
 
     fun startExprAdjustmentOfSelection() {
         // TODO: adjust expr of transformed arc-paths

@@ -103,6 +103,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
@@ -172,8 +173,9 @@ fun EditorScreenRoot(
             else -> null
         }
     }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
-    val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
     val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle()
+    val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
+    val canvasState by viewModel.canvasStateFlow.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     // NOTE: that lambdas that capture some state trigger first order recompositions
@@ -217,7 +219,7 @@ fun EditorScreenRoot(
         showUI = viewModel.showUI,
         showPanel = viewModel.showPanel,
         regionColor = viewModel.regionColor,
-        backgroundColor = viewModel.backgroundColor,
+        backgroundColor = canvasState.backgroundColor,
         regionManipulationStrategy = viewModel.regionManipulationStrategy,
         partialArgListIsNull = viewModel.partialArgList == null,
         partialArgListArgsSize = viewModel.partialArgList?.args?.size ?: 0,
@@ -273,7 +275,7 @@ fun EditorScreenRoot(
             )
         }
         DialogType.BACKGROUND_COLOR_PICKER -> {
-            val initialColor = viewModel.backgroundColor ?: MaterialTheme.colorScheme.background
+            val initialColor = canvasState.backgroundColor ?: MaterialTheme.colorScheme.background
             ColorPickerDialog(
                 parameters = viewModel.colorPickerParameters.copy(
                     currentColor = initialColor,
@@ -357,8 +359,18 @@ fun EditorScreenRoot(
             }
         }
         DialogType.SAVE_OPTIONS -> {
+            val canvasState by viewModel.canvasStateFlow.collectAsStateWithLifecycle()
             SaveOptionsDialog(
-                viewModel = viewModel,
+                screenshotableCanvasParameters = ScreenshotableCanvasParameters(
+                    objectModel = viewModel.objectModel,
+                    canvasState = canvasState,
+                    translation = viewModel.translation,
+                    regions = viewModel.regions,
+                    mode = viewModel.mode,
+                    selection = viewModel.selection,
+                    restrictRegionsToSelection = viewModel.restrictRegionsToSelection,
+                    isObjectFree = viewModel::isFree,
+                ),
                 ddcSharing = ddcSharing,
                 saveAsYaml = viewModel::saveAsYaml,
                 exportAsSvg = { name ->
@@ -393,8 +405,8 @@ fun EditorScreenRoot(
         }
         DialogType.BLEND_SETTINGS -> {
             BlendSettingsDialog(
-                currentOpacity = viewModel.regionsOpacity,
-                currentBlendModeType = viewModel.regionsBlendModeType,
+                currentOpacity = canvasState.regionsOpacity,
+                currentBlendModeType = canvasState.regionsBlendModeType,
                 onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::setBlendSettings,
                 dialogActions = dialogActions,
@@ -468,22 +480,30 @@ fun EditorScreenRoot(
             }
         }
     }
+    LaunchedEffect(viewModel.drawerOpenCloseRequests, drawerState) {
+        viewModel.drawerOpenCloseRequests.collectLatest { drawerValue ->
+            when (drawerValue) {
+                DrawerValue.Open -> drawerState.open()
+                DrawerValue.Closed -> drawerState.close()
+            }
+        }
+    }
     val colorScheme = MaterialTheme.colorScheme
     val isDarkTheme = MaterialTheme.isDarkTheme
     LaunchedEffect(isDarkTheme, colorScheme) {
         // kinda hacky, predefined bg colors are auto swapped to surface
-        if (viewModel.backgroundColor == null ||
-            isDarkTheme && viewModel.backgroundColor in listOf(
+        if (canvasState.backgroundColor == null ||
+            isDarkTheme && canvasState.backgroundColor in listOf(
                 DodeclustersColors.lightScheme.surface,
                 Color.White,
             ) ||
-            !isDarkTheme && viewModel.backgroundColor in listOf(
+            !isDarkTheme && canvasState.backgroundColor in listOf(
                 DodeclustersColors.darkScheme.surface,
                 Color.Black,
                 Color(0xff_121212),
             )
         ) {
-            viewModel.backgroundColor = colorScheme.surface
+            viewModel.canvasStateFlow.update { it.copy(backgroundColor = colorScheme.surface) }
             viewModel.forgetUnrecordedChanges()
         }
     }

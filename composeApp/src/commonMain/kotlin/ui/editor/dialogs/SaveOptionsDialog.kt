@@ -69,17 +69,14 @@ import org.jetbrains.compose.resources.stringResource
 import ui.LoadingOverlay
 import ui.SimpleButton
 import ui.WithTooltip
-import ui.editor.EditorViewModel
+import ui.editor.ScreenshotableCanvasParameters
 import ui.tools.Tool
 
 // TODO: distinct (fast) save and save as options
 //  there is already saveRequests flow as arg of SaveFileButton
-/**
- * @param[viewModel] NG but vm is used in SaveBitmapAsPngButton for ScreenshotableCanvas
- */
 @Composable
 fun SaveOptionsDialog(
-    viewModel: EditorViewModel,
+    screenshotableCanvasParameters: ScreenshotableCanvasParameters,
     saveAsYaml: (name: String) -> String,
     exportAsSvg: (name: String) -> String,
     onCancel: () -> Unit,
@@ -209,14 +206,14 @@ fun SaveOptionsDialog(
                         // for one reason or another png export is quite slow on Web (desktop is quite fast,
                         // mobile is unimplemented)
                         SaveBitmapAsPngButton(
-                            viewModel = viewModel,
+                            screenshotableCanvasParameters = screenshotableCanvasParameters,
                             saveData = SaveData(
                                 name = saveConfig.name ?: Tool.PngExport.DEFAULT_NAME,
                                 extension = Tool.PngExport.EXTENSION,
                                 lastDirectory = saveConfig.directory,
                                 uri = saveConfig.uri,
                                 mimeType = Tool.PngExport.MIME_TYPE,
-                                prepareContent = { }
+                                prepareContent = { },
                             ),
                             buttonContent = {
                                 Row(

@@ -1,5 +1,6 @@
 package ui.editor
 
+import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -156,12 +157,6 @@ class EditorViewModel : ViewModel() {
             if (style.isPhantom) ix else null
         }.toSet()
 
-    var backgroundColor: Color? by mutableStateOf(null)
-    var chessboardColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
-        private set
-    var chessboardPattern: ChessboardPattern by mutableStateOf(ChessboardPattern.NONE)
-        private set
-
     private val selectionState: MutableState<Selection> = mutableStateOf(Selection())
     /** indices of selected circles/lines/points & arc-paths */
     var selection: Selection by selectionState
@@ -178,11 +173,13 @@ class EditorViewModel : ViewModel() {
     inline val objectSelection: List<Ix> get() =
         selection.gCircles
 
+    private val modeState: MutableState<Mode> = mutableStateOf(SelectionMode.Drag)
+    private val submodeState: MutableState<Submode?> = mutableStateOf(null)
     /** Major editing mode */
-    var mode: Mode by mutableStateOf(SelectionMode.Drag)
+    var mode: Mode by modeState
         private set
     /** Minor editing mode, bound to [mode]; can hold transient data */
-    var submode: Submode? by mutableStateOf(null) // freq changes
+    var submode: Submode? by submodeState // freq changes
         private set
     // we do this because submode can change continuously while its type only discretely
     /** Use for decisions that don't depend on concrete [submode] parameters,
@@ -219,28 +216,19 @@ class EditorViewModel : ViewModel() {
     var circlesAreCoDirected: Boolean by mutableStateOf(true)
         private set
 
+    val canvasStateFlow = MutableStateFlow(CanvasState())
+    private inline val canvasState: CanvasState get() = canvasStateFlow.value
+    // we dont include translation into canvasState since it usually changes continuously
     var translation: Offset by mutableStateOf(Offset.Zero)
-        private set
-    var canvasSize: IntSize by mutableStateOf(IntSize.Zero) // used when saving best-center
         private set
 
     private var loadedSettings: Settings = Settings()
-    // MAYBE: it's reasonable to keep the follwoing as a single Settings objects
+    // MAYBE: it's reasonable to keep the following as a single Settings objects
+
     /** currently selected color */
     var regionColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
         private set
-    /** `[0; 1]` transparency of non-chessboard [regions] */
-    var regionsOpacity: Float by mutableStateOf(1.0f)
-        private set
-    var regionsBlendModeType: BlendModeType by mutableStateOf(BlendModeType.SRC_OVER)
-        private set
-    var showCircles: Boolean by mutableStateOf(true)
-        private set
-    var showPhantomObjects: Boolean by mutableStateOf(false)
-        private set
-    /** which style to use when drawing regions: true = stroke, false = fill */
-    var showDirectionArrows: Boolean by mutableStateOf(Settings().showDirectionArrows)
-        private set
+
     var regionManipulationStrategy: RegionManipulationStrategy by mutableStateOf(
         RegionManipulationStrategy.REPLACE
     )
@@ -260,19 +248,20 @@ class EditorViewModel : ViewModel() {
 
     var openedDialog: DialogType? by mutableStateOf(null)
         private set
+
     /** presently used to resolve save-before-new-blank situation by queueing [Action.NEW_BLANK] */
     private var queuedAction: Action? by mutableStateOf(null)
 
     // boolean flags with somewhat frequently changing deps are wrapped in derivedStateOf
     val showGenericSelectionContextActions: Boolean by derivedStateOf {
-        mode.isSelectingObjects() && showCircles &&
+        mode.isSelectingObjects() && canvasState.showCircles &&
         (selection.gCircles.any { objects[it] is CircleOrLineOrImaginaryCircle } ||
             selection.arcPaths.isNotEmpty() &&
             selection.gCircles.any { objects[it] is Point }
         )
     }
     val showPointContextActions: Boolean by derivedStateOf {
-        showCircles && mode.isSelectingObjects() && selection.gCircles.any { objects[it] is Point }
+        canvasState.showCircles && mode.isSelectingObjects() && selection.gCircles.any { objects[it] is Point }
     }
     val showArcPathContextActions: Boolean by derivedStateOf {
         mode.isSelectingObjects() && selection.arcPaths.isNotEmpty()
@@ -381,6 +370,8 @@ class EditorViewModel : ViewModel() {
             replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
 
+    val drawerOpenCloseRequests: MutableSharedFlow<DrawerValue> = MutableSharedFlow()
+
     val restoration: MutableStateFlow<ProgressState> =
         MutableStateFlow(ProgressState.NOT_STARTED)
     private val cachingInProgress: MutableStateFlow<Boolean> =
@@ -419,10 +410,10 @@ class EditorViewModel : ViewModel() {
     }
 
     fun onCanvasSizeChange(newCanvasSize: IntSize) {
-        val prevCenter = Offset(canvasSize.width/2f, canvasSize.height/2f)
+        val prevCenter = canvasState.canvasCenter
         val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
         translation += (newCenter - prevCenter)
-        canvasSize = newCanvasSize
+        canvasStateFlow.update { it.copy(canvasSize = newCanvasSize) }
         objectModel.pathCache.invalidateAll()
         objectModel.invalidatePositions()
     }
@@ -442,9 +433,9 @@ class EditorViewModel : ViewModel() {
     ): String {
         val svgString = saveStateAsSvg(
             saveState = saveState(),
-            width = canvasSize.width.toFloat(),
-            height = canvasSize.height.toFloat(),
-            encodeCirclesAndPoints = showCircles,
+            width = canvasState.canvasSize.width.toFloat(),
+            height = canvasState.canvasSize.height.toFloat(),
+            encodeCirclesAndPoints = canvasState.showCircles,
             name = name,
             customColors = customColors,
         )
@@ -452,11 +443,10 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun computeAbsoluteCenter(): Offset? =
-        if (canvasSize == IntSize.Zero) {
+        if (canvasState.canvasSize == IntSize.Zero) {
             null
         } else {
-            val visibleCenter = Offset(canvasSize.width/2f, canvasSize.height/2f)
-            absolute(visibleCenter)
+            absolute(canvasState.canvasCenter)
         }
 
     private fun updateSaveConfig(
@@ -480,23 +470,25 @@ class EditorViewModel : ViewModel() {
                 val constellation = ddc4.toConstellation()
                 loadNewConstellation(constellation)
                 centerizeTo(ddc4.bestCenterX, ddc4.bestCenterY)
-                chessboardPattern =
-                    if (!ddc4.chessboardPattern) ChessboardPattern.NONE
-                    else if (ddc4.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
-                    else ChessboardPattern.STARTS_TRANSPARENT
-                ddc4.chessboardColor?.let {
-                    chessboardColor = it
-                }
+                canvasStateFlow.update { it.copy(
+                    chessboardColor = ddc4.chessboardColor ?: it.chessboardColor,
+                    chessboardPattern =
+                        if (!ddc4.chessboardPattern) ChessboardPattern.NONE
+                        else if (ddc4.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
+                        else ChessboardPattern.STARTS_TRANSPARENT
+                ) }
                 updateSaveConfig(filename)
             },
             onDdc3 = { ddc3 ->
                 val constellation = ddc3.toConstellation().toConstellation()
                 loadNewConstellation(constellation)
                 centerizeTo(ddc3.bestCenterX, ddc3.bestCenterY)
-                chessboardPattern =
-                    if (!ddc3.chessboardPattern) ChessboardPattern.NONE
-                    else if (ddc3.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
-                    else ChessboardPattern.STARTS_TRANSPARENT
+                canvasStateFlow.update { it.copy(
+                    chessboardPattern =
+                        if (!ddc3.chessboardPattern) ChessboardPattern.NONE
+                        else if (ddc3.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
+                        else ChessboardPattern.STARTS_TRANSPARENT
+                ) }
                 updateSaveConfig(filename)
             },
             onDdc2 = { ddc2 ->
@@ -508,10 +500,12 @@ class EditorViewModel : ViewModel() {
                     cluster.toConstellation()
                 )
                 centerizeTo(ddc2.bestCenterX, ddc2.bestCenterY)
-                chessboardPattern =
-                    if (!ddc2.chessboardPattern) ChessboardPattern.NONE
-                    else if (ddc2.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
-                    else ChessboardPattern.STARTS_TRANSPARENT
+                canvasStateFlow.update { it.copy(
+                    chessboardPattern =
+                        if (!ddc2.chessboardPattern) ChessboardPattern.NONE
+                        else if (ddc2.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
+                        else ChessboardPattern.STARTS_TRANSPARENT
+                ) }
                 updateSaveConfig(filename)
             },
             onDdc1 = { ddc1 ->
@@ -540,8 +534,8 @@ class EditorViewModel : ViewModel() {
 
     fun centerizeTo(centerX: Float?, centerY: Float?) {
         translation = -Offset(
-            centerX?.let { it - canvasSize.width/2f } ?: 0f,
-            centerY?.let { it - canvasSize.height/2f } ?: 0f,
+            centerX?.let { it - canvasStateFlow.value.canvasHalfWidth } ?: 0f,
+            centerY?.let { it - canvasStateFlow.value.canvasHalfHeight } ?: 0f,
         )
     }
 
@@ -565,7 +559,7 @@ class EditorViewModel : ViewModel() {
             SaveState(
                 objects = emptyList(),
                 expressions = emptyMap(),
-                backgroundColor = backgroundColor,
+                backgroundColor = canvasState.backgroundColor,
             )
         )
         resetHistory()
@@ -638,7 +632,9 @@ class EditorViewModel : ViewModel() {
     fun loadNewConstellation(constellation: Constellation) {
         val updatedConstellation = constellation.updated()
         resetTransients()
-        chessboardPattern = ChessboardPattern.NONE
+        canvasStateFlow.update { it.copy(
+            chessboardPattern = ChessboardPattern.NONE
+        ) }
         translation = Offset.Zero
         loadConstellation(updatedConstellation)
         println("loaded new constellation")
@@ -656,7 +652,7 @@ class EditorViewModel : ViewModel() {
             part.insides.all { it in objectIndices } &&
             part.outsides.all { it in objectIndices }
         }
-        backgroundColor = constellation.backgroundColor
+        canvasStateFlow.update { it.copy(backgroundColor = constellation.backgroundColor) }
         objectModel.invalidate()
     }
 
@@ -690,7 +686,7 @@ class EditorViewModel : ViewModel() {
         clearSelection()
         objectModel.loadState(state)
         regions = state.regions
-        backgroundColor = state.backgroundColor
+        canvasStateFlow.update { it.copy(backgroundColor = state.backgroundColor) }
         val validSelection = state.selection.copy( // just in case
             gCircles = state.selection.gCircles.filter { it in objects.indices },
             arcPaths = state.selection.arcPaths.filter { it in objects.indices },
@@ -701,9 +697,11 @@ class EditorViewModel : ViewModel() {
             centerizeTo(state.center.x, state.center.y)
         else
             translation = Offset.Zero
-        chessboardPattern = state.chessboardPattern
         regionColor = state.regionColor ?: regionColor
-        chessboardColor = state.chessboardColor ?: regionColor
+        canvasStateFlow.update { it.copy(
+            chessboardColor = state.chessboardColor ?: regionColor,
+            chessboardPattern = state.chessboardPattern,
+        ) }
         objectModel.invalidate()
         if (switchToMultiselect) {
             switchToMode(SelectionMode.Multiselect)
@@ -765,7 +763,9 @@ class EditorViewModel : ViewModel() {
     ): IntRange {
         val newIndices = objectModel.addDisplayObjects(newGCircles)
         if (newGCircles.isNotEmpty()) {
-            showCircles = true
+            canvasStateFlow.update { it.copy(
+                showCircles = true
+            ) }
             selection = Selection(gCircles = newIndices.filter { objects[it] is GCircle })
             val ix2o = newIndices.mapNotNull { ix ->
                 objects[ix]?.let { ix to it }
@@ -952,7 +952,7 @@ class EditorViewModel : ViewModel() {
     fun deleteSelection() {
         val gCirclesToDelete = selection.gCircles
         val arcPathsToDelete = selection.arcPaths
-        if ((showCircles && gCirclesToDelete.isNotEmpty() || arcPathsToDelete.isNotEmpty()) &&
+        if ((canvasState.showCircles && gCirclesToDelete.isNotEmpty() || arcPathsToDelete.isNotEmpty()) &&
             (mode.isSelectingObjects() || mode == ToolMode.ARC_PATH) // allow instant arc-path deletion
         ) {
             deleteObjectsWithDependenciesColorsAndRegions(selection.indices)
@@ -986,7 +986,7 @@ class EditorViewModel : ViewModel() {
         val toDelete = indicesToDeleteSet + arcPathPointsToDelete
         val (deletedIndices, changedIndices) = expressions.deleteNodes(toDelete.toList())
         val visibleDeleted = deletedIndices.filter { ix ->
-            objects[ix] is GCircleOrConcreteArcPath && (showPhantomObjects || ix !in phantoms)
+            objects[ix] is GCircleOrConcreteArcPath && (canvasState.showPhantomObjects || ix !in phantoms)
         }
         if (visibleDeleted.isNotEmpty()) {
             deleteRegionsBoundBy(visibleDeleted.toSet())
@@ -1012,9 +1012,12 @@ class EditorViewModel : ViewModel() {
         val oldRegions = regions.toList()
         if (everyBound) {
             regions = emptyList()
-            if (chessboardPattern == ChessboardPattern.STARTS_COLORED) {
-                chessboardPattern = ChessboardPattern.STARTS_TRANSPARENT
-            }
+            canvasStateFlow.update { it.copy(
+                chessboardPattern =
+                    if (it.chessboardPattern == ChessboardPattern.STARTS_COLORED)
+                        ChessboardPattern.STARTS_TRANSPARENT
+                    else it.chessboardPattern
+            ) }
         } else { // not everything
             regions = oldRegions
                 // to avoid stray chessboard selections
@@ -1061,7 +1064,9 @@ class EditorViewModel : ViewModel() {
                     partialArgList = null
                 }
                 else -> {
-                    showCircles = true
+                    canvasStateFlow.update { it.copy(
+                        showCircles = true
+                    ) }
                     partialArgList = PartialArgList(newMode.signature, newMode.nonEqualityConditions)
                 }
             }
@@ -1104,7 +1109,7 @@ class EditorViewModel : ViewModel() {
                 point.distanceFrom(absolutePosition)
             },
             condition = { ix, distance ->
-                distance <= tapRadius && (showPhantomObjects || ix !in phantoms)
+                distance <= tapRadius && (canvasState.showPhantomObjects || ix !in phantoms)
             },
             sortingPriority = { ix, distance ->
                 val priority =
@@ -1145,7 +1150,7 @@ class EditorViewModel : ViewModel() {
                 circle?.distanceFrom(absolutePosition) ?: Double.POSITIVE_INFINITY
             },
             condition = { ix, distance ->
-                distance <= tapRadius && (showPhantomObjects || ix !in phantoms)
+                distance <= tapRadius && (canvasState.showPhantomObjects || ix !in phantoms)
             },
             sortingPriority = { ix, distance ->
                 val priority =
@@ -1365,8 +1370,8 @@ class EditorViewModel : ViewModel() {
             if (style.fillColor != null)
                 allColors.add(style.fillColor)
         }
-        if (chessboardPattern != ChessboardPattern.NONE)
-            allColors.add(chessboardColor)
+        if (canvasState.chessboardPattern != ChessboardPattern.NONE)
+            allColors.add(canvasState.chessboardColor)
         return allColors.sortedByFrequency()
     }
 
@@ -1382,7 +1387,7 @@ class EditorViewModel : ViewModel() {
         val snapDistance = tapRadius.toDouble()
         val point = Point.fromOffset(absolutePosition)
         val excluded =
-            if (showPhantomObjects) excludedIndices
+            if (canvasState.showPhantomObjects) excludedIndices
             else excludedIndices.union(phantoms)
         var snap: PointSnapResult
         if (includePoints) {
@@ -1393,7 +1398,7 @@ class EditorViewModel : ViewModel() {
             if (snap is PointSnapResult.Eq)
                 return snap
         }
-        if (showCircles) {
+        if (canvasState.showCircles) {
             snap = Snapping.snapPointToCirclesOrLines(point, objects,
                 snapTargets = objectModel.circleOrLineIndices.minus(excluded),
                 snapDistance = snapDistance,
@@ -1541,7 +1546,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun forceSelectAll() {
-        if (!mode.isSelectingObjects() || !showCircles) { // more intuitive behavior
+        if (!mode.isSelectingObjects() || !canvasState.showCircles) { // more intuitive behavior
             // forces to select all instead of toggling
             clearSelection()
         }
@@ -1551,7 +1556,9 @@ class EditorViewModel : ViewModel() {
 
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
-        showCircles = true
+        canvasStateFlow.update { it.copy(
+            showCircles = true
+        ) }
         val allCLPIndices = expressions.gCircleIndices.filter {
             objects[it] is CircleOrLineOrPoint
         }
@@ -1567,20 +1574,24 @@ class EditorViewModel : ViewModel() {
             else
                 Selection(
                     // maybe select imaginary too
-                    gCircles = allCLPIndices.filter { showPhantomObjects || it !in phantoms },
-                    arcPaths = allArcPathIndices.filter { showPhantomObjects || it !in phantoms },
+                    gCircles = allCLPIndices.filter { canvasState.showPhantomObjects || it !in phantoms },
+                    arcPaths = allArcPathIndices.filter { canvasState.showPhantomObjects || it !in phantoms },
                 )
     }
 
     fun toggleShowCircles() {
-        showCircles = !showCircles
-        if (!showCircles && mode is ToolMode)
+        canvasStateFlow.update { it.copy(
+            showCircles = !it.showCircles
+        ) }
+        if (!canvasState.showCircles && mode is ToolMode)
             switchToMode(SelectionMode.Drag)
         clearSelection()
     }
 
     fun togglePhantomObjects() {
-        showPhantomObjects = !showPhantomObjects
+        canvasStateFlow.update { it.copy(
+            showPhantomObjects = !it.showPhantomObjects
+        ) }
         if (phantoms.isEmpty()) {
             showSnackbarMessage(SnackbarMessage.PHANTOM_OBJECT_EXPLANATION)
         }
@@ -1596,7 +1607,7 @@ class EditorViewModel : ViewModel() {
             val sphereProjection = Circle(
                 computeAbsoluteCenter() ?: Offset.Zero,
                 // sphere radius == equator radius
-                min(canvasSize.width/2.0, canvasSize.height/2.0)
+                min(canvasState.canvasSize.width/2.0, canvasState.canvasSize.height/2.0)
             )
             submode = Submode.RotateStereographicSphere(
                 sphereRadius = sphereProjection.radius,
@@ -1629,15 +1640,18 @@ class EditorViewModel : ViewModel() {
         restrictRegionsToSelection = !restrictRegionsToSelection
     }
 
-    fun toggleChessboardPattern() {
-        chessboardPattern = when (chessboardPattern) {
-            ChessboardPattern.NONE -> ChessboardPattern.STARTS_COLORED
-            ChessboardPattern.STARTS_COLORED -> ChessboardPattern.STARTS_TRANSPARENT
-            ChessboardPattern.STARTS_TRANSPARENT -> ChessboardPattern.NONE
-        }
-        if (chessboardPattern != ChessboardPattern.NONE) {
-            chessboardColor = regionColor
-        }
+    fun cycleChessboardPattern() {
+        canvasStateFlow.update { it.copy(
+            chessboardColor =
+                if (it.chessboardPattern != ChessboardPattern.STARTS_TRANSPARENT)
+                    regionColor // when new pattern is not none
+                else it.chessboardColor,
+            chessboardPattern = when (it.chessboardPattern) {
+                ChessboardPattern.NONE -> ChessboardPattern.STARTS_COLORED
+                ChessboardPattern.STARTS_COLORED -> ChessboardPattern.STARTS_TRANSPARENT
+                ChessboardPattern.STARTS_TRANSPARENT -> ChessboardPattern.NONE
+            },
+        ) }
         recordHistory()
     }
 
@@ -1699,7 +1713,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun concludeBackgroundColorPicker(colorPickerParameters: ColorPickerParameters) {
-        backgroundColor = colorPickerParameters.currentColor
+        canvasStateFlow.update { it.copy(backgroundColor = colorPickerParameters.currentColor) }
         openedDialog = null
         this.colorPickerParameters = colorPickerParameters
         recordHistory()
@@ -1737,7 +1751,9 @@ class EditorViewModel : ViewModel() {
 
     // MAYBE: replace with select-all->delete in invisible-circles region manipulation mode
     fun deleteAllRegions() {
-        chessboardPattern = ChessboardPattern.NONE
+        canvasStateFlow.update { it.copy(
+            chessboardPattern = ChessboardPattern.NONE
+        ) }
         regions = emptyList()
         recordHistory()
     }
@@ -1748,7 +1764,7 @@ class EditorViewModel : ViewModel() {
 
     // MAYBE: axis-aligned cross centered at a point
     fun insertCenteredCross() {
-        val (midX, midY) = canvasSize.toSize()/2f
+        val (midX, midY) = canvasState.canvasSize.toSize()/2f
         val horizontalLine = Line.by2Points(
             absolute(Offset(0f, midY)),
             absolute(Offset(2*midX, midY)),
@@ -1757,7 +1773,9 @@ class EditorViewModel : ViewModel() {
             absolute(Offset(midX, 0f)),
             absolute(Offset(midX, 2*midY)),
         )
-        showCircles = true
+        canvasStateFlow.update { it.copy(
+            showCircles = true
+        ) }
         expressions.addFree()
         expressions.addFree()
         createNewGCircles(listOf(horizontalLine, verticalLine))
@@ -1775,7 +1793,7 @@ class EditorViewModel : ViewModel() {
             // action in a sequence
             val firstZoom = history.newContinuousChange(ContinuousChange.ZOOM)
             if (mode.isSelectingObjects() &&
-                (showCircles && selection.gCircles.isNotEmpty() || selection.arcPaths.isNotEmpty())
+                (canvasState.showCircles && selection.gCircles.isNotEmpty() || selection.arcPaths.isNotEmpty())
             ) {
                 val rect = calculateSelectionRect()
                 val focus =
@@ -2499,7 +2517,7 @@ class EditorViewModel : ViewModel() {
         }
         movementAfterDown = false
         val absolutePosition = absolute(position)
-        if (showCircles) { // TODO: allow arc-path selection when no circles shown
+        if (canvasState.showCircles) { // TODO: allow arc-path selection when no circles shown
             when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
                     downSingleCircle(absolutePosition = absolutePosition)
@@ -2756,7 +2774,7 @@ class EditorViewModel : ViewModel() {
         if (TWO_FINGER_TAP_FOR_UNDO && pointerCount == 2) {
             if (undoIsEnabled.value)
                 undo()
-        } else if (showCircles) { // select circle(s)/region
+        } else if (canvasState.showCircles) { // select circle(s)/region
             val absolutePosition = absolute(position)
             when (mode) {
                 SelectionMode.Drag ->
@@ -2861,7 +2879,7 @@ class EditorViewModel : ViewModel() {
             else -> {
                 val center =
                     calculateSelectionRect()?.center ?:
-                    absolute(Offset(canvasSize.width/2f, canvasSize.height/2f))
+                    absolute(canvasState.canvasCenter)
                 Submode.ScaleViaSlider(center)
             }
         }
@@ -2915,20 +2933,23 @@ class EditorViewModel : ViewModel() {
             val snapDistance = tapRadius.toDouble()/TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR
             val excludedIndices =
                 setOf(selectedIndex) +
-                (if (showPhantomObjects) emptySet() else phantoms) +
+                (if (canvasState.showPhantomObjects) emptySet() else phantoms) +
                 expressions.getAllChildren(selectedIndex) +
                 expressions.getAllParents(listOf(selectedIndex))
             val center = computeAbsoluteCenter()
+            val canvasState = canvasState
             val absoluteVisibilityRect =
-                if (center != null && canvasSize != IntSize.Zero)
+                if (center != null && canvasState.canvasSize != IntSize.Zero) {
+                    val halfWidth = canvasState.canvasHalfWidth
+                    val halfHeight = canvasState.canvasHalfHeight
                     Rect(
-                        center.x - canvasSize.width/2f, center.y - canvasSize.height/2f,
-                        center.x + canvasSize.width/2f, center.y + canvasSize.height/2f,
+                        center.x - halfWidth, center.y - halfHeight,
+                        center.x + halfWidth, center.y + halfHeight,
                     )
-                else null
+                } else null
             val snap = Snapping.snapCircleToCirclesLinesOrPoints(result0, objects,
                 snapTargets = objectModel.gCircleIndices.minus(
-                    if (showPhantomObjects)
+                    if (canvasState.showPhantomObjects)
                         excludedIndices
                     else
                         excludedIndices.union(phantoms)
@@ -3184,7 +3205,7 @@ class EditorViewModel : ViewModel() {
         val corner1 = sm.corner1
         val rect = Rect.fromCorners(corner1 ?: absolutePosition, absolutePosition)
         val selectables = objects.mapIndexed { ix, o ->
-            if (o is GCircleOrConcreteArcPath && (showPhantomObjects || ix !in phantoms)) o
+            if (o is GCircleOrConcreteArcPath && (canvasState.showPhantomObjects || ix !in phantoms)) o
             else null
         }
         val rectSelection = RectangleCollider.selectWithRectangle(selectables, rect)
@@ -3204,7 +3225,7 @@ class EditorViewModel : ViewModel() {
                 (fullConstraints.insides.toSet() xor sm.lastConstraints.insides.toSet()) union
                 (fullConstraints.outsides.toSet() xor sm.lastConstraints.outsides.toSet())
             val additional = diff.filter {
-                it !in selection.indices && (showPhantomObjects || it !in phantoms)
+                it !in selection.indices && (canvasState.showPhantomObjects || it !in phantoms)
             }
             selection = Selection(
                 gCircles = selection.gCircles + additional.filter { objects[it] is GCircle },
@@ -3331,14 +3352,14 @@ class EditorViewModel : ViewModel() {
             is Submode.RotateStereographicSphere ->
                 stereographicallyRotateEverything(absolutePointerPosition = absoluteCentroid, sm = sm)
             null -> when (mode) {
-                SelectionMode.Drag if selectedCircles.isNotEmpty() && showCircles ->
+                SelectionMode.Drag if selectedCircles.isNotEmpty() && canvasState.showCircles ->
                     dragCircle(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
-                SelectionMode.Drag if selectedPoints.isNotEmpty() && showCircles ->
+                SelectionMode.Drag if selectedPoints.isNotEmpty() && canvasState.showCircles ->
                     dragPoint(absoluteCentroid = absoluteCentroid, translation = pan)
                 SelectionMode.Drag if selection.arcPaths.isNotEmpty() ->
                     dragArcPaths(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                 SelectionMode.Multiselect if (
-                    selectedCircles.isNotEmpty() && showCircles || selectedPoints.isNotEmpty() || selection.arcPaths.isNotEmpty()
+                    selectedCircles.isNotEmpty() && canvasState.showCircles || selectedPoints.isNotEmpty() || selection.arcPaths.isNotEmpty()
                 ) ->
                     dragSelection(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
                 ToolMode.ARC_PATH ->
@@ -3447,7 +3468,7 @@ class EditorViewModel : ViewModel() {
             val newCorner2 = absolute(visiblePosition)
             val rect = Rect.fromCorners(corner1, newCorner2)
             val selectables = objects.mapIndexed { ix, o ->
-                if (showPhantomObjects || ix !in phantoms) o else null
+                if (canvasState.showPhantomObjects || ix !in phantoms) o else null
             }
             val rectSelection = RectangleCollider.selectWithRectangle(selectables, rect)
                 .also {
@@ -3467,7 +3488,7 @@ class EditorViewModel : ViewModel() {
         when (mode) {
             SelectionMode.Drag -> {
                 when (submode) {
-                    null -> if (movementAfterDown && showCircles) {
+                    null -> if (movementAfterDown && canvasState.showCircles) {
                         if (selection.gCircles.none { isFree(it) }) {
                             highlightSelectionParents()
                         } else if (selection.gCircles.size == 1 && objects[selection.gCircles.first()] is Point) {
@@ -3499,7 +3520,7 @@ class EditorViewModel : ViewModel() {
                         println("flow-select -> $objectSelection")
                         toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
                     }
-                    null -> if (movementAfterDown && showCircles) {
+                    null -> if (movementAfterDown && canvasState.showCircles) {
                         if (selection.gCircles.none { isFree(it) })
                             highlightSelectionParents()
                     }
@@ -3645,7 +3666,7 @@ class EditorViewModel : ViewModel() {
                 .minus(sel)
         }
             .filter { ix ->
-                (showPhantomObjects || ix !in phantoms) &&
+                (canvasState.showPhantomObjects || ix !in phantoms) &&
                 objects[ix] is GCircleOrConcreteArcPath
             }.toMutableSet()
         if (parents.isNotEmpty()) {
@@ -3669,7 +3690,7 @@ class EditorViewModel : ViewModel() {
                         parents += arcPath.vertices.flatMap {
                             expressions.getImmediateParents(it)
                                 .filter { ix ->
-                                    ix !in sel && (showPhantomObjects || ix !in phantoms)
+                                    ix !in sel && (canvasState.showPhantomObjects || ix !in phantoms)
                                 }
                         }
                     }
@@ -4755,8 +4776,10 @@ class EditorViewModel : ViewModel() {
     }
 
     fun setBlendSettings(newRegionsOpacity: Float, newRegionsBlendModeType: BlendModeType) {
-        regionsOpacity = newRegionsOpacity
-        regionsBlendModeType = newRegionsBlendModeType
+        canvasStateFlow.update { it.copy(
+            regionsOpacity = newRegionsOpacity,
+            regionsBlendModeType = newRegionsBlendModeType,
+        ) }
         openedDialog = null
     }
 
@@ -4798,14 +4821,16 @@ class EditorViewModel : ViewModel() {
             Tool.ToggleSelectAll -> toggleSelectAll()
             Tool.Region -> switchToMode(SelectionMode.Region)
             Tool.FlowFill -> activateFlowFill()
-            Tool.FillChessboardPattern -> toggleChessboardPattern()
+            Tool.FillChessboardPattern -> cycleChessboardPattern()
             Tool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             Tool.DeleteAllParts -> deleteAllRegions()
             Tool.BlendSettings -> openedDialog = DialogType.BLEND_SETTINGS
             Tool.ToggleObjects -> toggleShowCircles()
             Tool.TogglePhantoms -> togglePhantomObjects()
             Tool.HideUI -> hideUIFor30s()
-            Tool.ToggleDirectionArrows -> showDirectionArrows = !showDirectionArrows
+            Tool.ToggleDirectionArrows -> canvasStateFlow.update { it.copy(
+                showDirectionArrows = !it.showDirectionArrows
+            ) }
             // TODO: 2 options: solid color or external image
             Tool.AddBackgroundImage -> openedDialog = DialogType.BACKGROUND_COLOR_PICKER
             Tool.StereographicRotation -> toggleStereographicRotationMode()
@@ -4866,17 +4891,17 @@ class EditorViewModel : ViewModel() {
                 mode == SelectionMode.Region &&
                 submodeType == Submode.Type.FLOW_FILL
             Tool.FillChessboardPattern ->
-                chessboardPattern != ChessboardPattern.NONE
+                canvasState.chessboardPattern != ChessboardPattern.NONE
             Tool.RestrictRegionToSelection ->
                 restrictRegionsToSelection
             Tool.StereographicRotation ->
                 mode == ViewMode.StereographicRotation
             Tool.ToggleObjects ->
-                showCircles
+                canvasState.showCircles
             Tool.TogglePhantoms ->
-                showPhantomObjects
+                canvasState.showPhantomObjects
             Tool.ToggleDirectionArrows ->
-                showDirectionArrows
+                canvasState.showDirectionArrows
             Tool.MarkAsPhantoms ->
                 objectSelection.none { it in phantoms }
             Tool.InfinitePoint -> // whether to prompt infinite-point input
@@ -4905,7 +4930,7 @@ class EditorViewModel : ViewModel() {
     fun toolAlternativePredicate(tool: Tool): Boolean =
         when (tool) {
             Tool.FillChessboardPattern ->
-                chessboardPattern == ChessboardPattern.STARTS_TRANSPARENT
+                canvasState.chessboardPattern == ChessboardPattern.STARTS_TRANSPARENT
             else -> false
         }
 
@@ -4933,9 +4958,9 @@ class EditorViewModel : ViewModel() {
                 else
                     region.copy(insides = insides, outsides = outsides)
             },
-            backgroundColor = backgroundColor,
-            chessboardPattern = chessboardPattern,
-            chessboardColor = chessboardColor,
+            backgroundColor = canvasState.backgroundColor,
+            chessboardPattern = canvasState.chessboardPattern,
+            chessboardColor = canvasState.chessboardColor,
             selection = selection.copy(
                 gCircles = selection.gCircles.filter { it < size },
                 arcPaths = selection.arcPaths.filter { it < size },
@@ -5010,8 +5035,11 @@ class EditorViewModel : ViewModel() {
 
     fun loadSettings(settings: Settings) {
         loadedSettings = settings
-        regionsOpacity = settings.regionsOpacity
-        regionsBlendModeType = settings.regionsBlendModeType
+        canvasStateFlow.update { it.copy(
+            showDirectionArrows = settings.showDirectionArrows,
+            regionsOpacity = settings.regionsOpacity,
+            regionsBlendModeType = settings.regionsBlendModeType,
+        ) }
         colorPickerParameters = colorPickerParameters.copy(savedColors = settings.savedColors)
         defaultInterpolationParameters = settings.defaultInterpolationParameters
         defaultRotationParameters = settings.defaultRotationParameters
@@ -5019,7 +5047,6 @@ class EditorViewModel : ViewModel() {
         defaultLoxodromicMotionParameters = settings.defaultLoxodromicMotionParameters
         saveConfig = saveConfig.copy(directory = settings.saveDirectory)
         toolbarState = toolbarState.copy(categoryDefaultIndices = settings.categoryDefaultIndices)
-        showDirectionArrows = settings.showDirectionArrows
         switchToCategory(toolbarState.activeCategory)
     }
 
@@ -5040,10 +5067,10 @@ class EditorViewModel : ViewModel() {
         state.regionColor?.let {
             regionColor = it
         }
-        chessboardPattern = state.chessboardPattern
-        state.chessboardColor?.let {
-            chessboardColor = it
-        }
+        canvasStateFlow.update { it.copy(
+            chessboardColor = state.chessboardColor ?: it.chessboardColor,
+            chessboardPattern = state.chessboardPattern,
+        ) }
         resetHistory()
         if (switchToMultiselect) {
             switchToMode(SelectionMode.Multiselect)
@@ -5082,8 +5109,8 @@ class EditorViewModel : ViewModel() {
         // we dont want to call suspend store.get here
         val settings = getPlatform().settingsStore.cached ?: loadedSettings
         return settings.copy(
-            regionsOpacity = regionsOpacity,
-            regionsBlendModeType = regionsBlendModeType,
+            regionsOpacity = canvasState.regionsOpacity,
+            regionsBlendModeType = canvasState.regionsBlendModeType,
             savedColors = colorPickerParameters.savedColors,
             defaultInterpolationParameters = defaultInterpolationParameters,
             defaultRotationParameters = defaultRotationParameters,
@@ -5091,7 +5118,7 @@ class EditorViewModel : ViewModel() {
             defaultLoxodromicMotionParameters = defaultLoxodromicMotionParameters,
             categoryDefaultIndices = toolbarState.categoryDefaultIndices,
             saveDirectory = saveConfig.directory,
-            showDirectionArrows = showDirectionArrows,
+            showDirectionArrows = canvasState.showDirectionArrows,
         )
     }
 

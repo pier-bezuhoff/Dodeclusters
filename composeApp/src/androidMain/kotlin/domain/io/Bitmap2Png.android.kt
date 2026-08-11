@@ -23,7 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import ui.editor.EditorViewModel
+import ui.editor.ScreenshotableCanvasParameters
 import java.io.File
 import java.io.FileOutputStream
 
@@ -32,7 +32,7 @@ import java.io.FileOutputStream
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 actual fun SaveBitmapAsPngButton(
-    viewModel: EditorViewModel,
+    screenshotableCanvasParameters: ScreenshotableCanvasParameters,
     saveData: SaveData<Unit>,
     modifier: Modifier,
     onSaved: (SaveResult) -> Unit,

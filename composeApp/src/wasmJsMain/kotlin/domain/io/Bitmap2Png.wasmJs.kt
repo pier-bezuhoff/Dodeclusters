@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.name
@@ -64,11 +65,12 @@ import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.url.URL
 import ui.editor.EditorViewModel
 import ui.editor.ScreenshotableCanvas
+import ui.editor.ScreenshotableCanvasParameters
 import kotlin.math.roundToInt
 
 @Composable
 actual fun SaveBitmapAsPngButton(
-    viewModel: EditorViewModel,
+    screenshotableCanvasParameters: ScreenshotableCanvasParameters,
     saveData: SaveData<Unit>,
     modifier: Modifier,
     onSaved: (SaveResult) -> Unit,
@@ -87,7 +89,7 @@ actual fun SaveBitmapAsPngButton(
     }
     val textFieldFocusRequester = remember { FocusRequester() }
     val bitmapFlow: MutableSharedFlow<ImageBitmap> = remember { MutableSharedFlow(replay = 1) }
-    val bitmapState: State<ImageBitmap?> = bitmapFlow.collectAsState(null)
+    val bitmapState: State<ImageBitmap?> = bitmapFlow.collectAsStateWithLifecycle(null)
 
     fun onConfirm() {
         openDialog = false
@@ -131,7 +133,10 @@ actual fun SaveBitmapAsPngButton(
                 onDismissRequest = {},
                 properties = DialogProperties(usePlatformDefaultWidth = false)
             ) {
-                ScreenshotableCanvas(viewModel, bitmapFlow = bitmapFlow)
+                ScreenshotableCanvas(
+                    screenshotableCanvasParameters = screenshotableCanvasParameters,
+                    bitmapFlow = bitmapFlow,
+                )
             }
         } else {
             // NOTE: for some only-god-knows-why reason when i try to use

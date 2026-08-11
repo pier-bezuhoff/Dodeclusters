@@ -17,12 +17,14 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import ui.editor.EditorViewModel
 import ui.editor.ScreenshotableCanvas
+import ui.editor.ScreenshotableCanvasParameters
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
@@ -30,7 +32,7 @@ import javax.imageio.ImageIO
 
 @Composable
 actual fun SaveBitmapAsPngButton(
-    viewModel: EditorViewModel,
+    screenshotableCanvasParameters: ScreenshotableCanvasParameters,
     saveData: SaveData<Unit>,
     modifier: Modifier,
     onSaved: (SaveResult) -> Unit,
@@ -63,7 +65,10 @@ actual fun SaveBitmapAsPngButton(
                 onDismissRequest = {},
                 properties = DialogProperties(usePlatformDefaultWidth = false)
             ) {
-                ScreenshotableCanvas(viewModel, bitmapFlow = bitmapFlow)
+                ScreenshotableCanvas(
+                    screenshotableCanvasParameters = screenshotableCanvasParameters,
+                    bitmapFlow = bitmapFlow,
+                )
             }
         } else {
             SaveFileDialog(
