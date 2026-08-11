@@ -20,6 +20,8 @@ import ui.toPath
 import kotlin.math.hypot
 import kotlin.text.appendLine
 
+// FIX: rabbit-losing-ears-in-svg (chessboard fill)
+
 // MAYBE: implement https://stackoverflow.com/a/4756461/7143065
 //  <svg ... role="img" aria-label="{title + description}" >
 private fun svgOpen(width: Float, height: Float) =

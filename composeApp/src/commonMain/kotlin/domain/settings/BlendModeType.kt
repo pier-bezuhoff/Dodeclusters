@@ -21,10 +21,10 @@ enum class BlendModeType(
     val nameStringResource: StringResource,
 ) {
     /** Default blend mode */
-    SRC_OVER(BlendMode.Companion.SrcOver, Res.string.blend_mode_src_over),
-    MULTIPLY(BlendMode.Companion.Multiply, Res.string.blend_mode_multiply),
-    SCREEN(BlendMode.Companion.Screen, Res.string.blend_mode_screen),
-    OVERLAY(BlendMode.Companion.Overlay, Res.string.blend_mode_overlay),
-    DIFFERENCE(BlendMode.Companion.Difference, Res.string.blend_mode_difference),
-    PlUS(BlendMode.Companion.Plus, Res.string.blend_mode_plus),
+    SRC_OVER(BlendMode.SrcOver, Res.string.blend_mode_src_over),
+    MULTIPLY(BlendMode.Multiply, Res.string.blend_mode_multiply),
+    SCREEN(BlendMode.Screen, Res.string.blend_mode_screen),
+    OVERLAY(BlendMode.Overlay, Res.string.blend_mode_overlay),
+    DIFFERENCE(BlendMode.Difference, Res.string.blend_mode_difference),
+    PlUS(BlendMode.Plus, Res.string.blend_mode_plus),
 }

@@ -147,15 +147,18 @@ class EditorViewModel : ViewModel() {
     inline val expressions: ConformalExpressions get() =
         objectModel.expressions
     val styling: Map<Ix, Styling> = objectModel.styling
+    val phantoms: Set<Ix> get() =
+        objectModel.phantoms
     // MAYBE: encapsulate regions into ObjectModel
     /** Filled regions delimited by some objects from [objects] */
     var regions: List<LogicalRegion> by mutableStateOf(listOf())
         private set
     var _debugObjects: List<GCircle> by mutableStateOf(emptyList())
-    val phantoms: Set<Ix> get() =
-        objectModel.styling.mapNotNull { (ix, style) ->
-            if (style.isPhantom) ix else null
-        }.toSet()
+
+    var canvasState: CanvasState by mutableStateOf(CanvasState())
+    // we dont include translation into canvasState since it usually changes continuously
+    var translation: Offset by mutableStateOf(Offset.Zero)
+        private set
 
     private val selectionState: MutableState<Selection> = mutableStateOf(Selection())
     /** indices of selected circles/lines/points & arc-paths */
@@ -170,8 +173,6 @@ class EditorViewModel : ViewModel() {
                 objectModel.getArcPath(it)?.dependencies ?: emptySet()
             }
         ).distinct()
-    inline val objectSelection: List<Ix> get() =
-        selection.gCircles
 
     private val modeState: MutableState<Mode> = mutableStateOf(SelectionMode.Drag)
     private val submodeState: MutableState<Submode?> = mutableStateOf(null)
@@ -210,20 +211,7 @@ class EditorViewModel : ViewModel() {
     var partialArcPath: PartialArcPath? by mutableStateOf(null)
         private set
 
-    // ahh.. to be set during startCircleOrPointInterpolationParameterAdjustment()
-    var interpolateCircles: Boolean by mutableStateOf(true)
-        private set
-    var circlesAreCoDirected: Boolean by mutableStateOf(true)
-        private set
-
-    val canvasStateFlow = MutableStateFlow(CanvasState())
-    private inline val canvasState: CanvasState get() = canvasStateFlow.value
-    // we dont include translation into canvasState since it usually changes continuously
-    var translation: Offset by mutableStateOf(Offset.Zero)
-        private set
-
     private var loadedSettings: Settings = Settings()
-    // MAYBE: it's reasonable to keep the following as a single Settings objects
 
     /** currently selected color */
     var regionColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
@@ -234,23 +222,14 @@ class EditorViewModel : ViewModel() {
     )
         private set
     /** applies to [SelectionMode.Region]:
-     * only use circles present in the [objectSelection] to determine which regions to fill */
+     * only use circles present in the [selection].gCircles to determine which regions to fill */
     var restrictRegionsToSelection: Boolean by mutableStateOf(false)
         private set
 
+    var uiState: UiState by mutableStateOf(UiState())
     /** encapsulates all category- and tool-related info */
-    var toolbarState: ToolbarState by mutableStateOf(ToolbarState())
-        private set
-    var showPanel: Boolean by mutableStateOf(toolbarState.panelNeedsToBeShown)
-        private set
-    var showUI: Boolean by mutableStateOf(true)
-        private set
-
-    var openedDialog: DialogType? by mutableStateOf(null)
-        private set
-
-    /** presently used to resolve save-before-new-blank situation by queueing [Action.NEW_BLANK] */
-    private var queuedAction: Action? by mutableStateOf(null)
+    val toolbarState: ToolbarState get() =
+        uiState.toolbarState
 
     // boolean flags with somewhat frequently changing deps are wrapped in derivedStateOf
     val showGenericSelectionContextActions: Boolean by derivedStateOf {
@@ -312,6 +291,7 @@ class EditorViewModel : ViewModel() {
             }
         else null
     }
+
     inline val scaleSliderPercentage: Float get() =
         submode.let { sm ->
             if (sm is Submode.ScaleViaSlider)
@@ -332,6 +312,12 @@ class EditorViewModel : ViewModel() {
         undoIsEnabled = undoIsEnabled,
         redoIsEnabled = redoIsEnabled,
     )
+
+    // ahh.. to be set during startCircleOrPointInterpolationParameterAdjustment()
+    var interpolateCircles: Boolean by mutableStateOf(true)
+        private set
+    var circlesAreCoDirected: Boolean by mutableStateOf(true)
+        private set
 
     var colorPickerParameters by mutableStateOf(
         ColorPickerParameters(Color.Unspecified, emptyList())
@@ -377,6 +363,11 @@ class EditorViewModel : ViewModel() {
     private val cachingInProgress: MutableStateFlow<Boolean> =
         MutableStateFlow(false)
 
+    /** presently used to resolve save-before-new-blank situation by queueing [Action.NEW_BLANK] */
+    private var queuedAction: Action? by mutableStateOf(null)
+
+    private var movementAfterDown = false
+
     /** min tap/grab distance to select an object */
     private var tapRadius =
         getPlatform().tapRadius
@@ -385,8 +376,6 @@ class EditorViewModel : ViewModel() {
         tapRadius*tapRadius
     private inline val lowAccuracyTapRadius2 get() =
         tapRadius*tapRadius*LOW_ACCURACY_FACTOR*LOW_ACCURACY_FACTOR
-
-    private var movementAfterDown = false
 
     init {
 //        println("VM.init")
@@ -405,6 +394,14 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    inline fun updateCanvasState(crossinline transform: (CanvasState) -> CanvasState) {
+        canvasState = transform(canvasState)
+    }
+
+    inline fun updateUiState(crossinline transform: (UiState) -> UiState) {
+        uiState = transform(uiState)
+    }
+
     fun clearSelection() { // better for autocomplete
         selection = Selection()
     }
@@ -413,7 +410,7 @@ class EditorViewModel : ViewModel() {
         val prevCenter = canvasState.canvasCenter
         val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
         translation += (newCenter - prevCenter)
-        canvasStateFlow.update { it.copy(canvasSize = newCanvasSize) }
+        updateCanvasState { it.copy(canvasSize = newCanvasSize) }
         objectModel.pathCache.invalidateAll()
         objectModel.invalidatePositions()
     }
@@ -470,7 +467,7 @@ class EditorViewModel : ViewModel() {
                 val constellation = ddc4.toConstellation()
                 loadNewConstellation(constellation)
                 centerizeTo(ddc4.bestCenterX, ddc4.bestCenterY)
-                canvasStateFlow.update { it.copy(
+                updateCanvasState { it.copy(
                     chessboardColor = ddc4.chessboardColor ?: it.chessboardColor,
                     chessboardPattern =
                         if (!ddc4.chessboardPattern) ChessboardPattern.NONE
@@ -483,7 +480,7 @@ class EditorViewModel : ViewModel() {
                 val constellation = ddc3.toConstellation().toConstellation()
                 loadNewConstellation(constellation)
                 centerizeTo(ddc3.bestCenterX, ddc3.bestCenterY)
-                canvasStateFlow.update { it.copy(
+                updateCanvasState { it.copy(
                     chessboardPattern =
                         if (!ddc3.chessboardPattern) ChessboardPattern.NONE
                         else if (ddc3.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
@@ -500,7 +497,7 @@ class EditorViewModel : ViewModel() {
                     cluster.toConstellation()
                 )
                 centerizeTo(ddc2.bestCenterX, ddc2.bestCenterY)
-                canvasStateFlow.update { it.copy(
+                updateCanvasState { it.copy(
                     chessboardPattern =
                         if (!ddc2.chessboardPattern) ChessboardPattern.NONE
                         else if (ddc2.chessboardPatternStartsColored) ChessboardPattern.STARTS_COLORED
@@ -534,8 +531,8 @@ class EditorViewModel : ViewModel() {
 
     fun centerizeTo(centerX: Float?, centerY: Float?) {
         translation = -Offset(
-            centerX?.let { it - canvasStateFlow.value.canvasHalfWidth } ?: 0f,
-            centerY?.let { it - canvasStateFlow.value.canvasHalfHeight } ?: 0f,
+            centerX?.let { it - canvasState.canvasHalfWidth } ?: 0f,
+            centerY?.let { it - canvasState.canvasHalfHeight } ?: 0f,
         )
     }
 
@@ -589,7 +586,7 @@ class EditorViewModel : ViewModel() {
         println("partialArgList = $partialArgList")
         println("selection = $selection")
         println("selected objects = $selectedObjectsString")
-        println("selected objects downscaled = " + objectSelection.joinToString { ix ->
+        println("selected objects downscaled = " + selection.gCircles.joinToString { ix ->
             "$ix: " + objectModel.downscaledObjects[ix].toString()
         })
         println("selected objects expressions = $selectedExpressionsString")
@@ -632,7 +629,7 @@ class EditorViewModel : ViewModel() {
     fun loadNewConstellation(constellation: Constellation) {
         val updatedConstellation = constellation.updated()
         resetTransients()
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             chessboardPattern = ChessboardPattern.NONE
         ) }
         translation = Offset.Zero
@@ -652,7 +649,7 @@ class EditorViewModel : ViewModel() {
             part.insides.all { it in objectIndices } &&
             part.outsides.all { it in objectIndices }
         }
-        canvasStateFlow.update { it.copy(backgroundColor = constellation.backgroundColor) }
+        updateCanvasState { it.copy(backgroundColor = constellation.backgroundColor) }
         objectModel.invalidate()
     }
 
@@ -686,19 +683,19 @@ class EditorViewModel : ViewModel() {
         clearSelection()
         objectModel.loadState(state)
         regions = state.regions
-        canvasStateFlow.update { it.copy(backgroundColor = state.backgroundColor) }
+        updateCanvasState { it.copy(backgroundColor = state.backgroundColor) }
         val validSelection = state.selection.copy( // just in case
             gCircles = state.selection.gCircles.filter { it in objects.indices },
             arcPaths = state.selection.arcPaths.filter { it in objects.indices },
         )
-        val switchToMultiselect = objectSelection.size <= 1 && validSelection.gCircles.size > 1
+        val switchToMultiselect = selection.gCircles.size <= 1 && validSelection.gCircles.size > 1
         selection = validSelection
         if (state.center.isSpecified)
             centerizeTo(state.center.x, state.center.y)
         else
             translation = Offset.Zero
         regionColor = state.regionColor ?: regionColor
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             chessboardColor = state.chessboardColor ?: regionColor,
             chessboardPattern = state.chessboardPattern,
         ) }
@@ -763,7 +760,7 @@ class EditorViewModel : ViewModel() {
     ): IntRange {
         val newIndices = objectModel.addDisplayObjects(newGCircles)
         if (newGCircles.isNotEmpty()) {
-            canvasStateFlow.update { it.copy(
+            updateCanvasState { it.copy(
                 showCircles = true
             ) }
             selection = Selection(gCircles = newIndices.filter { objects[it] is GCircle })
@@ -1012,7 +1009,7 @@ class EditorViewModel : ViewModel() {
         val oldRegions = regions.toList()
         if (everyBound) {
             regions = emptyList()
-            canvasStateFlow.update { it.copy(
+            updateCanvasState { it.copy(
                 chessboardPattern =
                     if (it.chessboardPattern == ChessboardPattern.STARTS_COLORED)
                         ChessboardPattern.STARTS_TRANSPARENT
@@ -1064,7 +1061,7 @@ class EditorViewModel : ViewModel() {
                     partialArgList = null
                 }
                 else -> {
-                    canvasStateFlow.update { it.copy(
+                    updateCanvasState { it.copy(
                         showCircles = true
                     ) }
                     partialArgList = PartialArgList(newMode.signature, newMode.nonEqualityConditions)
@@ -1556,7 +1553,7 @@ class EditorViewModel : ViewModel() {
 
     fun toggleSelectAll() {
         switchToMode(SelectionMode.Multiselect)
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             showCircles = true
         ) }
         val allCLPIndices = expressions.gCircleIndices.filter {
@@ -1580,7 +1577,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun toggleShowCircles() {
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             showCircles = !it.showCircles
         ) }
         if (!canvasState.showCircles && mode is ToolMode)
@@ -1589,7 +1586,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun togglePhantomObjects() {
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             showPhantomObjects = !it.showPhantomObjects
         ) }
         if (phantoms.isEmpty()) {
@@ -1622,16 +1619,22 @@ class EditorViewModel : ViewModel() {
     }
 
     fun hidePanel() {
-        showPanel = false
+        updateUiState { it.copy(
+            showPanel = false
+        ) }
     }
 
     fun hideUIFor30s() {
-        if (showUI) {
-            showUI = false
+        if (uiState.showUI) {
+            updateUiState { it.copy(
+                showPanel = false
+            ) }
             viewModelScope.launch {
                 // MAYBE: also trigger fullscreen for desktop
                 delay(30.seconds)
-                showUI = true
+                updateUiState { it.copy(
+                    showPanel = true
+                ) }
             }
         }
     }
@@ -1641,7 +1644,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun cycleChessboardPattern() {
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             chessboardColor =
                 if (it.chessboardPattern != ChessboardPattern.STARTS_TRANSPARENT)
                     regionColor // when new pattern is not none
@@ -1662,7 +1665,9 @@ class EditorViewModel : ViewModel() {
     fun requestSaveFileAs() {
         // we have to open SaveOptionsDialog first so that
         // SaveFileButton starts listening to SaveRequests
-        openedDialog = DialogType.SAVE_OPTIONS
+        updateUiState { it.copy(
+            openedDialog = DialogType.SAVE_OPTIONS
+        ) }
         viewModelScope.launch {
             // have to delay a bit for the dialog to open
             delay(200.milliseconds)
@@ -1672,12 +1677,16 @@ class EditorViewModel : ViewModel() {
     }
 
     fun newBlank() {
-        openedDialog = DialogType.SAVE_PROMPT
+        updateUiState { it.copy(
+            openedDialog = DialogType.SAVE_PROMPT
+        ) }
         queuedAction = Action.NEW_BLANK
     }
 
     fun concludeRegionColorPicker(colorPickerParameters: ColorPickerParameters) {
-        openedDialog = null
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
         regionColor = colorPickerParameters.currentColor
         this.colorPickerParameters = colorPickerParameters
         switchToCategory(Category.Region)
@@ -1690,7 +1699,9 @@ class EditorViewModel : ViewModel() {
                 it.copy(borderColor = color)
             }
         }
-        openedDialog = null
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
         this.colorPickerParameters = colorPickerParameters
         objectModel.invalidate()
         recordHistory()
@@ -1706,33 +1717,43 @@ class EditorViewModel : ViewModel() {
                 )
             }
         }
-        openedDialog = null
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
         this.colorPickerParameters = colorPickerParameters
         objectModel.invalidate()
         recordHistory()
     }
 
     fun concludeBackgroundColorPicker(colorPickerParameters: ColorPickerParameters) {
-        canvasStateFlow.update { it.copy(backgroundColor = colorPickerParameters.currentColor) }
-        openedDialog = null
+        updateCanvasState { it.copy(
+            backgroundColor = colorPickerParameters.currentColor
+        ) }
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
         this.colorPickerParameters = colorPickerParameters
         recordHistory()
     }
 
     fun setNewRegionColorToSelectedColorSplash(color: Color) {
-        openedDialog = null
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
         regionColor = color
         switchToCategory(Category.Region)
     }
 
     fun dismissRegionColorPicker() {
-        openedDialog = null
         val tool = mode.tool
         val category = toolbarState.categories.firstOrNull { tool in it.tools }
         if (category != null) {
             selectCategory(category, togglePanel = true)
         }
-        toolbarState = toolbarState.copy(activeTool = tool)
+        updateUiState { it.copy(
+            toolbarState = it.toolbarState.copy(activeTool = tool),
+            openedDialog = null
+        ) }
     }
 
     fun getMostCommonBorderColorInSelection(): Color? {
@@ -1751,7 +1772,7 @@ class EditorViewModel : ViewModel() {
 
     // MAYBE: replace with select-all->delete in invisible-circles region manipulation mode
     fun deleteAllRegions() {
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             chessboardPattern = ChessboardPattern.NONE
         ) }
         regions = emptyList()
@@ -1773,7 +1794,7 @@ class EditorViewModel : ViewModel() {
             absolute(Offset(midX, 0f)),
             absolute(Offset(midX, 2*midY)),
         )
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             showCircles = true
         ) }
         expressions.addFree()
@@ -1846,7 +1867,7 @@ class EditorViewModel : ViewModel() {
         if (submode is Submode.InputPopup) {
             when (submode) {
                 is Submode.LabelInput -> {
-                    for (ix in objectSelection)
+                    for (ix in selection.gCircles)
                         objectModel.updateStyle(ix) {
                             it.copy(label =
                                 if (it.label?.content.isNullOrBlank() == true) null
@@ -1864,7 +1885,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun setLabel(label: String?) {
-        for (ix in objectSelection) {
+        for (ix in selection.gCircles) {
             // idt we need to forget label shift when removing the label
             objectModel.updateStyle(ix) {
                 it.copy(label =
@@ -1887,7 +1908,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun markSelectedObjectsAsPhantoms() {
-        for (ix in objectSelection) {
+        for (ix in selection.gCircles) {
             objectModel.updateStyle(ix) { it.copy(isPhantom = true) }
         }
         selection = selection.copy(gCircles = emptyList())
@@ -1897,7 +1918,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun unmarkSelectedObjectsAsPhantoms() {
-        for (ix in objectSelection) {
+        for (ix in selection.gCircles) {
             objectModel.updateStyle(ix) { it.copy(isPhantom = false) }
         }
         objectModel.invalidate()
@@ -2260,10 +2281,10 @@ class EditorViewModel : ViewModel() {
     }
 
     // might be useful for duplication with dependencies
-    /** For each object in [objectSelection], add to selection its siblings and parents */
+    /** For each object in [selection].gCircles, add to selection its siblings and parents */
     private fun expandSelectionToFamily() {
         if (mode.isSelectingObjects()) {
-            val familyMembers = objectSelection.flatMap { ix ->
+            val familyMembers = selection.gCircles.flatMap { ix ->
                 listOf(ix) + findSiblingsAndParents(ix)
             }.distinct()
             if (familyMembers.size > 1 && mode == SelectionMode.Drag) {
@@ -2924,7 +2945,7 @@ class EditorViewModel : ViewModel() {
         absoluteCentroid: Offset,
         translation: Offset, zoom: Float, rotationAngle: Float
     ) {
-        val selectedIndex = objectSelection.single()
+        val selectedIndex = selection.gCircles.single()
         val circle = objects[selectedIndex] as? CircleOrLine
         if (loadedSettings.enableTangentSnapping && circle != null) {
             // TODO: snap to arc-path arcs
@@ -3517,8 +3538,10 @@ class EditorViewModel : ViewModel() {
                     is Submode.RectangularSelect ->
                         upRectangularSelect(visiblePosition = position)
                     is Submode.FlowSelect -> { // haxx
-                        println("flow-select -> $objectSelection")
-                        toolbarState = toolbarState.copy(activeTool = Tool.Multiselect)
+                        println("flow-select -> ${selection.gCircles}")
+                        updateUiState { it.copy(
+                            toolbarState = it.toolbarState.copy(activeTool = Tool.Multiselect)
+                        ) }
                     }
                     null -> if (movementAfterDown && canvasState.showCircles) {
                         if (selection.gCircles.none { isFree(it) })
@@ -3705,13 +3728,28 @@ class EditorViewModel : ViewModel() {
         }
     }
 
+    fun switchToCategory(category: Category, togglePanel: Boolean = false) {
+        val defaultTool = toolbarState.getDefaultTool(category)
+        if (defaultTool == null) {
+            selectCategory(category, togglePanel = togglePanel)
+        } else {
+            selectTool(defaultTool, togglePanel = togglePanel)
+        }
+    }
+
     private fun selectCategory(category: Category, togglePanel: Boolean = false) {
-        val wasSelected = toolbarState.activeCategory == category
-        val panelWasShown = showPanel
-        toolbarState = toolbarState.copy(activeCategory = category)
-        showPanel = toolbarState.panelNeedsToBeShown
-        if (togglePanel && wasSelected && toolbarState.panelNeedsToBeShown) {
-            showPanel = !panelWasShown
+        updateUiState {
+            val wasSelected = it.toolbarState.activeCategory == category
+            val panelWasShown = it.showPanel
+            val toolbarStateWithUpdatedCategory = it.toolbarState.copy(activeCategory = category)
+            val panelNeedsToBeShown = toolbarStateWithUpdatedCategory.panelNeedsToBeShown
+            it.copy(
+                toolbarState = toolbarStateWithUpdatedCategory,
+                showPanel =
+                    if (togglePanel && wasSelected && panelNeedsToBeShown)
+                        !panelWasShown
+                    else panelNeedsToBeShown
+            )
         }
     }
 
@@ -3723,22 +3761,19 @@ class EditorViewModel : ViewModel() {
         val category: Category
         if (tool is Tool.AppliedColor) {
             category = Category.Colors
+            updateUiState { it.copy(
+                toolbarState = it.toolbarState.copy(activeTool = tool)
+            ) }
         } else {
             category = toolbarState.getCategory(tool)
-            toolbarState = toolbarState.updateDefault(category, tool)
+            updateUiState { it.copy(
+                toolbarState = it.toolbarState
+                    .updateDefault(category, tool)
+                    .copy(activeTool = tool)
+            ) }
         }
-        toolbarState = toolbarState.copy(activeTool = tool)
         selectCategory(category, togglePanel = togglePanel)
         toolAction(tool)
-    }
-
-    fun switchToCategory(category: Category, togglePanel: Boolean = false) {
-        val defaultTool = toolbarState.getDefaultTool(category)
-        if (defaultTool == null) {
-            selectCategory(category, togglePanel = togglePanel)
-        } else {
-            selectTool(defaultTool, togglePanel = togglePanel)
-        }
     }
 
     fun processKeyboardAction(action: KeyboardAction) {
@@ -3749,7 +3784,7 @@ class EditorViewModel : ViewModel() {
                     submode = null
                 else -> {}
             }
-        } else if (openedDialog == null) {
+        } else if (uiState.openedDialog == null) {
             when (action) {
                 KeyboardAction.SELECT_ALL -> forceSelectAll()
                 KeyboardAction.DELETE -> deleteSelection()
@@ -3788,7 +3823,9 @@ class EditorViewModel : ViewModel() {
             ToolMode.ROTATION -> startRotationParameterAdjustment()
             ToolMode.BI_INVERSION -> startBiInversionParameterAdjustment()
             ToolMode.LOXODROMIC_MOTION -> startLoxodromicMotionParameterAdjustment()
-            ToolMode.CIRCLE_EXTRAPOLATION -> openedDialog = DialogType.CIRCLE_EXTRAPOLATION
+            ToolMode.CIRCLE_EXTRAPOLATION -> updateUiState { it.copy(
+                openedDialog = DialogType.CIRCLE_EXTRAPOLATION
+            ) }
             // create
             ToolMode.CIRCLE_BY_CENTER_AND_RADIUS -> completeCircleByCenterAndRadius()
             ToolMode.CIRCLE_BY_3_POINTS -> completeCircleBy3Points()
@@ -4227,7 +4264,9 @@ class EditorViewModel : ViewModel() {
     fun completeCircleExtrapolation(
         params: ExtrapolationParameters,
     ) {
-        openedDialog = null
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
         val argList = partialArgList ?: return
         val startCircleIx = (argList.args[0] as Arg.CLI).index
         val endCircleIx = (argList.args[1] as Arg.CLI).index
@@ -4242,7 +4281,9 @@ class EditorViewModel : ViewModel() {
     }
 
     fun resetCircleExtrapolation() {
-        openedDialog = null
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
         partialArgList = PartialArgList(
             Tool.CircleExtrapolation.signature,
             Tool.CircleExtrapolation.nonEqualityConditions
@@ -4719,7 +4760,9 @@ class EditorViewModel : ViewModel() {
     fun confirmDialogSelectedParameters(
         parameters: Parameters
     ) {
-        openedDialog = null
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
         adjustExprParameters(parameters)
         confirmAdjustedParameters()
     }
@@ -4741,7 +4784,9 @@ class EditorViewModel : ViewModel() {
     }
 
     fun onSaveFinished(saveResult: SaveResult) {
-        openedDialog = null
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
         when (saveResult) {
             is SaveResult.Success -> {
                 saveConfig = saveResult.asSaveConfig()
@@ -4771,37 +4816,43 @@ class EditorViewModel : ViewModel() {
     }
 
     fun closeDialog() {
-        openedDialog = null
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
         queuedAction = null
     }
 
     fun setBlendSettings(newRegionsOpacity: Float, newRegionsBlendModeType: BlendModeType) {
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             regionsOpacity = newRegionsOpacity,
             regionsBlendModeType = newRegionsBlendModeType,
         ) }
-        openedDialog = null
+        updateUiState { it.copy(
+            openedDialog = null
+        ) }
     }
 
     // context: pArgList is full and we are in submode
     fun openDetailsDialog() {
-        openedDialog = when (mode) {
-            ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
-            ToolMode.CIRCLE_EXTRAPOLATION -> DialogType.CIRCLE_EXTRAPOLATION
-            ToolMode.BI_INVERSION -> DialogType.BI_INVERSION
-            ToolMode.LOXODROMIC_MOTION -> DialogType.LOXODROMIC_MOTION
-            else -> when (val sm = submode) {
-                is Submode.ExprAdjustment<*> ->
-                    when (sm.parameters) {
-                        is InterpolationParameters -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
-                        is RotationParameters -> DialogType.ROTATION
-                        is BiInversionParameters -> DialogType.BI_INVERSION
-                        is LoxodromicMotionParameters -> DialogType.LOXODROMIC_MOTION
-                        else -> null
-                    }
-                else -> null
+        updateUiState { it.copy(
+            openedDialog = when (mode) {
+                ToolMode.CIRCLE_OR_POINT_INTERPOLATION -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
+                ToolMode.CIRCLE_EXTRAPOLATION -> DialogType.CIRCLE_EXTRAPOLATION
+                ToolMode.BI_INVERSION -> DialogType.BI_INVERSION
+                ToolMode.LOXODROMIC_MOTION -> DialogType.LOXODROMIC_MOTION
+                else -> when (val sm = submode) {
+                    is Submode.ExprAdjustment<*> ->
+                        when (sm.parameters) {
+                            is InterpolationParameters -> DialogType.CIRCLE_OR_POINT_INTERPOLATION
+                            is RotationParameters -> DialogType.ROTATION
+                            is BiInversionParameters -> DialogType.BI_INVERSION
+                            is LoxodromicMotionParameters -> DialogType.LOXODROMIC_MOTION
+                            else -> null
+                        }
+                    else -> null
+                }
             }
-        }
+        ) }
     }
 
     fun toolAction(tool: Tool) {
@@ -4809,7 +4860,9 @@ class EditorViewModel : ViewModel() {
         when (tool) {
             Tool.Undo -> undo()
             Tool.Redo -> redo()
-            Tool.SaveCluster -> openedDialog = DialogType.SAVE_OPTIONS
+            Tool.SaveCluster -> updateUiState { it.copy(
+                openedDialog = DialogType.SAVE_OPTIONS
+            ) }
             Tool.Drag -> switchToMode(SelectionMode.Drag)
             Tool.Multiselect -> {
                 if (mode == SelectionMode.Multiselect)
@@ -4824,19 +4877,25 @@ class EditorViewModel : ViewModel() {
             Tool.FillChessboardPattern -> cycleChessboardPattern()
             Tool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
             Tool.DeleteAllParts -> deleteAllRegions()
-            Tool.BlendSettings -> openedDialog = DialogType.BLEND_SETTINGS
+            Tool.BlendSettings -> updateUiState { it.copy(
+                openedDialog = DialogType.BLEND_SETTINGS
+            ) }
             Tool.ToggleObjects -> toggleShowCircles()
             Tool.TogglePhantoms -> togglePhantomObjects()
             Tool.HideUI -> hideUIFor30s()
-            Tool.ToggleDirectionArrows -> canvasStateFlow.update { it.copy(
+            Tool.ToggleDirectionArrows -> updateCanvasState { it.copy(
                 showDirectionArrows = !it.showDirectionArrows
             ) }
             // TODO: 2 options: solid color or external image
-            Tool.AddBackgroundImage -> openedDialog = DialogType.BACKGROUND_COLOR_PICKER
+            Tool.AddBackgroundImage -> updateUiState { it.copy(
+                openedDialog = DialogType.BACKGROUND_COLOR_PICKER
+            ) }
             Tool.StereographicRotation -> toggleStereographicRotationMode()
             Tool.InsertCenteredCross -> insertCenteredCross()
             Tool.CompleteArcPath -> completeArcPath()
-            Tool.Palette -> openedDialog = DialogType.REGION_FILL_COLOR_PICKER
+            Tool.Palette -> updateUiState { it.copy(
+                openedDialog = DialogType.REGION_FILL_COLOR_PICKER
+            ) }
             Tool.Expand -> scaleSelection(HUD_ZOOM_INCREMENT)
             Tool.Shrink -> scaleSelection(1/HUD_ZOOM_INCREMENT)
             Tool.Detach -> detachEverySelectedObject()
@@ -4846,8 +4905,12 @@ class EditorViewModel : ViewModel() {
                     markSelectedObjectsAsPhantoms()
                 else unmarkSelectedObjectsAsPhantoms()
             Tool.Duplicate -> duplicateSelection()
-            Tool.BorderColor, Tool.PointColor -> openedDialog = DialogType.BORDER_COLOR_PICKER
-            Tool.FillColor -> openedDialog = DialogType.FILL_COLOR_PICKER
+            Tool.BorderColor, Tool.PointColor -> updateUiState { it.copy(
+                openedDialog = DialogType.BORDER_COLOR_PICKER
+            ) }
+            Tool.FillColor -> updateUiState { it.copy(
+                openedDialog = DialogType.FILL_COLOR_PICKER
+            ) }
             Tool.SetLineThickness -> submode = Submode.LineThicknessInput
             Tool.SetLabel -> submode = Submode.LabelInput
             Tool.Delete -> deleteSelection()
@@ -4881,7 +4944,7 @@ class EditorViewModel : ViewModel() {
                 mode == SelectionMode.Multiselect &&
                 submodeType == Submode.Type.FLOW_SELECT
             Tool.ToggleSelectAll ->
-                objectSelection.containsAll(
+                selection.gCircles.containsAll(
                     objects.filterIndices { it is CircleOrLineOrPoint }
                 )
             Tool.Region ->
@@ -4903,13 +4966,13 @@ class EditorViewModel : ViewModel() {
             Tool.ToggleDirectionArrows ->
                 canvasState.showDirectionArrows
             Tool.MarkAsPhantoms ->
-                objectSelection.none { it in phantoms }
+                selection.gCircles.none { it in phantoms }
             Tool.InfinitePoint -> // whether to prompt infinite-point input
                 showInfinitePoint
             Tool.MovePointToInfinity -> {
                 // without changing selection, the only way to change the predicate is
                 //  after applying move-to-infinity or on detachment.
-                objectSelection.singleOrNull()?.let { ix ->
+                selection.gCircles.singleOrNull()?.let { ix ->
                     val o = objects[ix]
                     val expr = exprOf(ix)
                     o is Point && o != Point.CONFORMAL_INFINITY &&
@@ -5035,7 +5098,7 @@ class EditorViewModel : ViewModel() {
 
     fun loadSettings(settings: Settings) {
         loadedSettings = settings
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             showDirectionArrows = settings.showDirectionArrows,
             regionsOpacity = settings.regionsOpacity,
             regionsBlendModeType = settings.regionsBlendModeType,
@@ -5046,7 +5109,9 @@ class EditorViewModel : ViewModel() {
         defaultBiInversionParameters = settings.defaultBiInversionParameters
         defaultLoxodromicMotionParameters = settings.defaultLoxodromicMotionParameters
         saveConfig = saveConfig.copy(directory = settings.saveDirectory)
-        toolbarState = toolbarState.copy(categoryDefaultIndices = settings.categoryDefaultIndices)
+        updateUiState { it.copy(
+            toolbarState = it.toolbarState.copy(categoryDefaultIndices = settings.categoryDefaultIndices)
+        ) }
         switchToCategory(toolbarState.activeCategory)
     }
 
@@ -5062,12 +5127,12 @@ class EditorViewModel : ViewModel() {
     private fun restoreFromVMState(state: State) {
         loadNewConstellation(state.constellation)
         centerizeTo(state.centerX, state.centerY)
-        val switchToMultiselect = state.selection.size > 1 && objectSelection.size <= 1
+        val switchToMultiselect = state.selection.size > 1 && selection.gCircles.size <= 1
         selection = Selection(gCircles = state.selection)
         state.regionColor?.let {
             regionColor = it
         }
-        canvasStateFlow.update { it.copy(
+        updateCanvasState { it.copy(
             chessboardColor = state.chessboardColor ?: it.chessboardColor,
             chessboardPattern = state.chessboardPattern,
         ) }

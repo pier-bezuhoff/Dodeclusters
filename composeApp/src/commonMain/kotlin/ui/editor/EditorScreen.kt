@@ -103,7 +103,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
@@ -155,6 +154,7 @@ import kotlin.math.min
  * supplied on Wasm after the request to register current user is answered
  * (null -> smol delay -> real implementation)
  */
+@Suppress("ParamsComparedByRef")
 @Composable
 fun EditorScreenRoot(
     openSettings: () -> Unit,
@@ -175,7 +175,8 @@ fun EditorScreenRoot(
     }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
     val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle()
     val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
-    val canvasState by viewModel.canvasStateFlow.collectAsStateWithLifecycle()
+    val uiState = viewModel.uiState
+    val canvasState = viewModel.canvasState
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     // NOTE: that lambdas that capture some state trigger first order recompositions
@@ -203,6 +204,7 @@ fun EditorScreenRoot(
             content?.let {
                 viewModel.loadDdc(content, filename)
             }
+            coroutineScope.launch { drawerState.close() }
         },
         undo = { viewModel.undo() },
         redo = { viewModel.redo() },
@@ -214,10 +216,10 @@ fun EditorScreenRoot(
         getColorsByMostUsed = { viewModel.getColorsByMostUsed() },
         snackbarHostState = snackbarHostState,
         drawerState = drawerState,
-        toolbarState = viewModel.toolbarState,
+        toolbarState = uiState.toolbarState,
         ddcContent = ddcContent,
-        showUI = viewModel.showUI,
-        showPanel = viewModel.showPanel,
+        showUI = uiState.showUI,
+        showPanel = uiState.showPanel,
         regionColor = viewModel.regionColor,
         backgroundColor = canvasState.backgroundColor,
         regionManipulationStrategy = viewModel.regionManipulationStrategy,
@@ -234,7 +236,7 @@ fun EditorScreenRoot(
         },
     )
     val customColors = MaterialTheme.customColors
-    when (viewModel.openedDialog) {
+    when (uiState.openedDialog) {
         DialogType.REGION_FILL_COLOR_PICKER -> {
             ColorPickerDialog(
                 parameters = viewModel.colorPickerParameters.copy(
@@ -248,7 +250,7 @@ fun EditorScreenRoot(
         }
         DialogType.BORDER_COLOR_PICKER -> {
             val initialColor = viewModel.getMostCommonBorderColorInSelection()
-                ?: if (viewModel.objectSelection.all { viewModel.objects[it] is ImaginaryCircle })
+                ?: if (viewModel.selection.gCircles.all { viewModel.objects[it] is ImaginaryCircle })
                     DodeclustersColors.fadedRed.copy(alpha = 1f) // imaginary circle
                 else
                     MaterialTheme.extendedColorScheme.highAccentColor // free real circle
@@ -359,7 +361,6 @@ fun EditorScreenRoot(
             }
         }
         DialogType.SAVE_OPTIONS -> {
-            val canvasState by viewModel.canvasStateFlow.collectAsStateWithLifecycle()
             SaveOptionsDialog(
                 screenshotableCanvasParameters = ScreenshotableCanvasParameters(
                     objectModel = viewModel.objectModel,
@@ -383,6 +384,7 @@ fun EditorScreenRoot(
                 onConfirm = viewModel::closeDialog,
                 onSaved = { saveResult ->
                     viewModel.onSaveFinished(saveResult)
+                    coroutineScope.launch { drawerState.close() }
                 },
                 onSuccessfulShare = {
                     viewModel.showSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE)
@@ -399,7 +401,10 @@ fun EditorScreenRoot(
             SavePromptDialog(
                 description = stringResource(Res.string.save_prompt_after_blank_description),
                 onCancel = viewModel::closeDialog,
-                onDontSave = viewModel::openNewBlank,
+                onDontSave = {
+                    viewModel.openNewBlank()
+                    coroutineScope.launch { drawerState.close() }
+                },
                 onSave = viewModel::requestSaveFileAs,
             )
         }
@@ -503,7 +508,9 @@ fun EditorScreenRoot(
                 Color(0xff_121212),
             )
         ) {
-            viewModel.canvasStateFlow.update { it.copy(backgroundColor = colorScheme.surface) }
+            viewModel.updateCanvasState { it.copy(
+                backgroundColor = colorScheme.surface,
+            ) }
             viewModel.forgetUnrecordedChanges()
         }
     }

@@ -163,13 +163,16 @@ fun BoxScope.EditorCanvas(
         }
         results
     }
-    val canvasState by viewModel.canvasStateFlow.collectAsStateWithLifecycle()
+    val canvasState = viewModel.canvasState
+    val uiState = viewModel.uiState
+    val mode = viewModel.mode
+    val selection = viewModel.selection
     val concretePositions = remember(canvasState.canvasSize, density) {
         ConcreteOnScreenPositions(canvasState.canvasSize.toSize(), density)
     }
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableStateMapOf() }
-    LaunchedEffect(viewModel) { // listen to animations
+    LaunchedEffect(viewModel.animations) { // listen to animations
         viewModel.animations.collect { event ->
             when (event) {
                 is ColoredContourAnimation -> launch { // parallel multiplexer structure
@@ -189,8 +192,8 @@ fun BoxScope.EditorCanvas(
             }
         }
     }
-    val gCircleSelectionIsActive = remember(viewModel.mode, viewModel.selection) {
-        viewModel.mode.isSelectingObjects() && viewModel.selection.gCircles.isNotEmpty()
+    val gCircleSelectionIsActive = remember(mode, selection) {
+        mode.isSelectingObjects() && selection.gCircles.isNotEmpty()
     }
     val hiddenObjectIndices = remember(canvasState.showPhantomObjects, objectModel.invalidations) {
         if (canvasState.showPhantomObjects)
@@ -198,14 +201,14 @@ fun BoxScope.EditorCanvas(
         else
             objectModel.phantoms
     }
-    val visibleNonSelectedObjectIndices = remember(gCircleSelectionIsActive, hiddenObjectIndices, viewModel.selection, objectModel.invalidations) {
+    val visibleNonSelectedObjectIndices = remember(gCircleSelectionIsActive, hiddenObjectIndices, selection, objectModel.invalidations) {
         if (gCircleSelectionIsActive)
-            (objectModel.gCircleIndices - hiddenObjectIndices - viewModel.selection.gCircles.toSet()).toList()
+            (objectModel.gCircleIndices - hiddenObjectIndices - selection.gCircles.toSet()).toList()
         else
             (objectModel.gCircleIndices - hiddenObjectIndices).toList()
     }
-    val nonSelectedArcPathIndices = remember(viewModel.selection, objectModel.invalidations) {
-        (objectModel.arcPathIndices - viewModel.selection.arcPaths.toSet()).toList()
+    val nonSelectedArcPathIndices = remember(selection, objectModel.invalidations) {
+        (objectModel.arcPathIndices - selection.arcPaths.toSet()).toList()
     }
     // Q: why does canvas recompose each rect-select-submode update when selection is non-empty?
     Canvas(
@@ -231,15 +234,19 @@ fun BoxScope.EditorCanvas(
 //                renderEffect = BlurEffect(20f, 20f) // funi
             )
     ) {
+        val translation = viewModel.translation
 //        measureAndPrintPerformancePercentiles("draw") { // | MEASURE START |
-        translate(viewModel.translation.x, viewModel.translation.y) {
+        translate(translation.x, translation.y) {
             hug(objectModel.positionInvalidations)
-            val visibleRect = size.toRect().translate(-viewModel.translation)
             val allObjects = objectModel.displayObjects
             val styling = objectModel.styling
+            val regions = viewModel.regions
+            val restrictRegionsToSelection = viewModel.restrictRegionsToSelection
+            val submode = viewModel.submode
             val pathCache = objectModel.pathCache
-            drawRegions(allObjects = allObjects, regions = viewModel.regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = objectModel.pathCache, chessboardPattern = canvasState.chessboardPattern, chessboardColor = canvasState.chessboardColor, visibleRect = visibleRect, regionsOpacity = canvasState.regionsOpacity, regionsBlendMode = canvasState.regionsBlendMode, pathStroke = pathStroke)
-            drawAnimation(animations = animations, pathCache = objectModel.pathCache, creationColor = creationColor, copyingColor = copyingColor, deletionColor = deletionColor, highlightColor = highlightColor, visibleRect = visibleRect, strokeWidth = strokeWidth)
+            val visibleRect = size.toRect().translate(-translation)
+            drawRegions(allObjects = allObjects, regions = regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = pathCache, chessboardPattern = canvasState.chessboardPattern, chessboardColor = canvasState.chessboardColor, visibleRect = visibleRect, regionsOpacity = canvasState.regionsOpacity, regionsBlendMode = canvasState.regionsBlendMode, pathStroke = pathStroke)
+            drawAnimation(animations = animations, pathCache = pathCache, creationColor = creationColor, copyingColor = copyingColor, deletionColor = deletionColor, highlightColor = highlightColor, visibleRect = visibleRect, strokeWidth = strokeWidth)
             // draw effects
             // Q: the layering is debatable
             //  should the selected be layered at the top?
@@ -248,17 +255,17 @@ fun BoxScope.EditorCanvas(
             // objects & arc-paths, newer higher
             if (canvasState.showCircles) {
                 drawArcPaths(allObjects = allObjects, indices = nonSelectedArcPathIndices, styling = styling, pathCache = pathCache, defaultArcPathColor = defaultArcPathColor, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke)
-                drawGCircles(allObjects = allObjects, indices = visibleNonSelectedObjectIndices, styling = styling, isObjectFree = { viewModel.isFree(it) }, pathCache = pathCache, visibleRect = visibleRect, defaultCircleColor = defaultCircleColor, defaultFreeCircleColor = defaultFreeCircleColor, circleStroke = pathStroke, defaultPointColor = defaultPointColor, defaultFreePointColor = defaultFreePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
-                drawSelectedArcPaths(allObjects = allObjects, indices = viewModel.selection.arcPaths, styling = styling, pathCache = pathCache, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke, defaultSelectedArcPathColor = defaultSelectionColor, thiccSelectedPathAlpha = thiccSelectedAlpha, thiccSelectedPathStroke = thiccPathStroke, arcMiddlePointColor = arcMiddlePointColor, arcMiddlePointRadius = arcMiddlePointRadius)
-                drawSelectedGCircles(allObjects = allObjects, styling = styling, indices = viewModel.objectSelection, mode = viewModel.mode, pathCache = pathCache, selectionIsActive = gCircleSelectionIsActive, restrictRegionsToSelection = viewModel.restrictRegionsToSelection, showDirectionArrows = canvasState.showDirectionArrows, visibleRect = visibleRect, defaultSelectedCircleColor = defaultSelectionColor, circleStroke = pathStroke, thiccSelectionCircleAlpha = thiccSelectedAlpha, circleThiccStroke = thiccPathStroke, freePointColor = defaultFreePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke, imaginaryCircleThiccStroke = thiccDottedStroke)
+                drawGCircles(allObjects = allObjects, indices = visibleNonSelectedObjectIndices, styling = styling, isObjectFree = viewModel::isFree, pathCache = pathCache, visibleRect = visibleRect, defaultCircleColor = defaultCircleColor, defaultFreeCircleColor = defaultFreeCircleColor, circleStroke = pathStroke, defaultPointColor = defaultPointColor, defaultFreePointColor = defaultFreePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
+                drawSelectedArcPaths(allObjects = allObjects, indices = selection.arcPaths, styling = styling, pathCache = pathCache, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke, defaultSelectedArcPathColor = defaultSelectionColor, thiccSelectedPathAlpha = thiccSelectedAlpha, thiccSelectedPathStroke = thiccPathStroke, arcMiddlePointColor = arcMiddlePointColor, arcMiddlePointRadius = arcMiddlePointRadius)
+                drawSelectedGCircles(allObjects = allObjects, styling = styling, indices = selection.gCircles, mode = mode, pathCache = pathCache, selectionIsActive = gCircleSelectionIsActive, restrictRegionsToSelection = restrictRegionsToSelection, showDirectionArrows = canvasState.showDirectionArrows, visibleRect = visibleRect, defaultSelectedCircleColor = defaultSelectionColor, circleStroke = pathStroke, thiccSelectionCircleAlpha = thiccSelectedAlpha, circleThiccStroke = thiccPathStroke, freePointColor = defaultFreePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke, imaginaryCircleThiccStroke = thiccDottedStroke)
             } else { // for layering selection above unselected
                 drawArcPaths(allObjects = allObjects, indices = nonSelectedArcPathIndices, styling = styling, pathCache = pathCache, defaultArcPathColor = defaultArcPathColor, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke)
-                drawSelectedArcPaths(allObjects = allObjects, indices = viewModel.selection.arcPaths, styling = styling, pathCache = pathCache, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke, defaultSelectedArcPathColor = defaultSelectionColor, thiccSelectedPathAlpha = thiccSelectedAlpha, thiccSelectedPathStroke = thiccPathStroke, arcMiddlePointColor = arcMiddlePointColor, arcMiddlePointRadius = arcMiddlePointRadius)
+                drawSelectedArcPaths(allObjects = allObjects, indices = selection.arcPaths, styling = styling, pathCache = pathCache, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke, defaultSelectedArcPathColor = defaultSelectionColor, thiccSelectedPathAlpha = thiccSelectedAlpha, thiccSelectedPathStroke = thiccPathStroke, arcMiddlePointColor = arcMiddlePointColor, arcMiddlePointRadius = arcMiddlePointRadius)
             }
-            drawPartialConstructs(allObjects = allObjects, mode = viewModel.mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = { viewModel.getArg(it) }, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = pathStroke, imaginaryCircleStroke = dottedStroke, arcPathStroke = pathStroke, alignmentLineColor = selectionMarkingsColor, selectedArgColor = selectedArgColor, creationPrototypeColor = creationColor.copy(alpha = 0.7f))
-            drawGrids(visibleRect = visibleRect, submode = viewModel.submode as? Submode.RotateStereographicSphere, stereographicGridColor = stereographicGridColor, stereographicGridStroke = pathStroke, southPointRadius = handleRadius)
+            drawPartialConstructs(allObjects = allObjects, mode = mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = viewModel::getArg, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = pathStroke, imaginaryCircleStroke = dottedStroke, arcPathStroke = pathStroke, alignmentLineColor = selectionMarkingsColor, selectedArgColor = selectedArgColor, creationPrototypeColor = creationColor.copy(alpha = 0.7f))
+            drawGrids(visibleRect = visibleRect, submode = submode as? Submode.RotateStereographicSphere, stereographicGridColor = stereographicGridColor, stereographicGridStroke = pathStroke, southPointRadius = handleRadius)
             drawLabels(objects = allObjects, styling = styling, objectLabelLayouts = objectLabelLayouts, freePointColor = defaultFreePointColor)
-            drawHandles(objects = allObjects, selection = viewModel.selectedIndices, submodeRotate = viewModel.submode as? Submode.Rotate, submodeRectangularSelect = viewModel.submode as? Submode.RectangularSelect, handleConfig = viewModel.handleConfig, getSelectionRect = { viewModel.calculateSelectionRect() }, showCircles = canvasState.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
+            drawHandles(objects = allObjects, selection = viewModel.selectedIndices, submodeRotate = submode as? Submode.Rotate, submodeRectangularSelect = submode as? Submode.RectangularSelect, handleConfig = viewModel.handleConfig, getSelectionRect = viewModel::calculateSelectionRect, showCircles = canvasState.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             drawDebugObjects(viewModel._debugObjects, visibleRect, pathStroke, pointRadius, rotateIconColor)
         }
         if (viewModel.showGenericSelectionContextActions) {
@@ -266,11 +273,11 @@ fun BoxScope.EditorCanvas(
         }
 //        } // | MEASURE END | // not that long (2~4ms)
     }
-    if (viewModel.showUI) { // HUD
+    if (uiState.showUI) { // HUD
         if (viewModel.showGenericSelectionContextActions) {
-            val borderColor = remember(viewModel.selection, objectModel.invalidations) {
+            val borderColor = remember(selection, objectModel.invalidations) {
                 viewModel.getMostCommonBorderColorInSelection()
-                    ?: if (viewModel.objectSelection.all { viewModel.objects[it] is ImaginaryCircle })
+                    ?: if (selection.gCircles.all { objectModel.displayObjects[it] is ImaginaryCircle })
                         imaginaryCircleColor
                     else
                         defaultFreeCircleColor
@@ -295,7 +302,7 @@ fun BoxScope.EditorCanvas(
                 onRotateFinished = viewModel::finishHandleRotation,
             )
         } else if (viewModel.showPointContextActions) {
-            val pointColor = remember(viewModel.selection, objectModel.invalidations, defaultFreePointColor) {
+            val pointColor = remember(selection, objectModel.invalidations, defaultFreePointColor) {
                 viewModel.getMostCommonBorderColorInSelection() ?: defaultFreePointColor
             }
             PointContextActions(
@@ -304,7 +311,7 @@ fun BoxScope.EditorCanvas(
                 showAdjustExprButton = viewModel.showAdjustExprButton,
                 isLocked = viewModel.selectionIsLocked,
                 labelProvider = {
-                    viewModel.objectSelection
+                    selection.gCircles
                         .firstNotNullOfOrNull { objectModel.styling[it]?.label?.content }
                 },
                 toolAction = viewModel::toolAction,
@@ -313,19 +320,19 @@ fun BoxScope.EditorCanvas(
                 dismissLabelInput = viewModel::dismissInputSubmode,
             )
         } else if (viewModel.showArcPathContextActions) {
-            val someAreClosed = remember(viewModel.selection) {
-                viewModel.selection.arcPaths.any {
+            val someAreClosed = remember(selection) {
+                selection.arcPaths.any {
                     viewModel.exprOf(it) is ArcPath.Closed
                 }
             }
-            val mostCommonBorderColor = remember(viewModel.selection, objectModel.invalidations) {
-                viewModel.selection.arcPaths.mostCommonOf { objectModel.styling[it]?.borderColor }
+            val mostCommonBorderColor = remember(selection, objectModel.invalidations) {
+                selection.arcPaths.mostCommonOf { objectModel.styling[it]?.borderColor }
             }
-            val mostCommonFillColor = remember(viewModel.selection, objectModel.invalidations) {
-                viewModel.selection.arcPaths.mostCommonOf { objectModel.styling[it]?.fillColor }
+            val mostCommonFillColor = remember(selection, objectModel.invalidations) {
+                selection.arcPaths.mostCommonOf { objectModel.styling[it]?.fillColor }
             }
-            val lineThickness = remember(viewModel.selection, objectModel.invalidations) {
-                viewModel.selection.indices
+            val lineThickness = remember(selection, objectModel.invalidations) {
+                selection.indices
                     .mapNotNull { objectModel.styling[it]?.lineThickness }
                     .mostCommonOf { it }
             }
@@ -393,7 +400,7 @@ fun BoxScope.EditorCanvas(
                 )
             else -> {}
         }
-        if (viewModel.mode == SelectionMode.Region) {
+        if (mode == SelectionMode.Region) {
             RegionManipulationStrategySelector(
                 currentStrategy = viewModel.regionManipulationStrategy,
                 setStrategy = { viewModel.setRegionsManipulationStrategy(it) }

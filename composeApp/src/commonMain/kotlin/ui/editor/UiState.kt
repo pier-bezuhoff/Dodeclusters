@@ -1,9 +1,13 @@
 package ui.editor
 
-import androidx.compose.runtime.Immutable
-import androidx.compose.ui.graphics.Color
+import ui.editor.dialogs.DialogType
 
-@Immutable
+/**
+ * @param[toolbarState] encapsulates all category- and tool-related info
+ */
 data class UiState(
-    val regionColor: Color,
+    val toolbarState: ToolbarState = ToolbarState(),
+    val showPanel: Boolean = toolbarState.panelNeedsToBeShown,
+    val showUI: Boolean = true,
+    val openedDialog: DialogType? = null,
 )
