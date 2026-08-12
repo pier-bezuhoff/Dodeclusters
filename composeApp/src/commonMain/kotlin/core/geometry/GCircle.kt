@@ -3,8 +3,6 @@ package core.geometry
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import kotlinx.serialization.Serializable
-import ui.editor.EditorViewModel.Companion.DOWNSCALING_FACTOR
-import ui.editor.EditorViewModel.Companion.UPSCALING_FACTOR
 
 @Immutable
 @Serializable
