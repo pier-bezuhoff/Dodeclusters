@@ -192,7 +192,7 @@ fun EditorScreenRoot(
             coroutineScope.launch { drawerState.open() }
         },
         openNewBlank = {
-            viewModel.newBlank()
+            viewModel.showNewBlankPrompt()
         },
         openFile = {
             viewModel.requestOpenFile()

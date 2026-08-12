@@ -687,7 +687,7 @@ private fun normalOfLineSegment(start: Offset, end: Offset): Offset =
 private fun intersectCircleWithArc(
     center: Point,
     radius: Double,
-    r2: Double,
+    r2: Double = radius.pow2(),
     arcStart: Point,
     arcEnd: Point,
     arc: ConcreteArcPath.Arc,
@@ -712,6 +712,8 @@ private fun intersectCircleWithArc(
                 val d = sqrt(d2)
                 val a = (d2 + dr2)/(2 * d)
                 val h = sqrt(r12 - a * a)
+                if (h.isNaN()) // this is possible when the arc is a part of the circle
+                    return
                 val dc0x = dcx/d
                 val dc0y = dcy/d
                 val pcx = center.x + a * dc0x

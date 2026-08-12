@@ -35,6 +35,7 @@ import domain.never
 import domain.transpose
 import domain.updated
 import domain.withoutElementsAt
+import ui.editor.EditorViewModel.Companion.upscale
 import ui.editor.dialogs.DefaultBiInversionParameters
 import ui.editor.dialogs.DefaultInterpolationParameters
 import ui.editor.dialogs.DefaultLoxodromicMotionParameters
@@ -53,6 +54,9 @@ class ExprAdjustmentManager(
     private val objects: List<GCircleOrConcreteArcPath?> = objectModel.displayObjects
     private inline val expressions: ConformalExpressions get() =
         objectModel.expressions
+
+    private inline fun exprOf(index: Ix): Expr.Conformal? =
+        expressions[index]?.expr as? Expr.Conformal
 
     context(viewModel: EditorViewModel)
     fun startCircleOrPointInterpolationParameterAdjustment() {
@@ -76,9 +80,7 @@ class ExprAdjustmentManager(
             )
             val oldSize = objects.size
             val newGCircles = expressions.addMultiExpr(expr)
-            val newCircles = with (viewModel) {
-                newGCircles.map { (it as? GCircle)?.upscale() }
-            }
+            val newCircles = newGCircles.map { (it as? GCircle)?.upscale() }
             objectModel.addDisplayObjects(newCircles)
             val outputRange = (oldSize until objects.size).toList()
             submode = Submode.ExprAdjustment(listOf(
@@ -105,9 +107,7 @@ class ExprAdjustmentManager(
             viewModel.interpolateCircles = false
             val oldSize = objects.size
             val newGCircles = expressions.addMultiExpr(expr)
-            val newPoints = with (viewModel) {
-                newGCircles.map { (it as? Point)?.upscale() }
-            }
+            val newPoints = newGCircles.map { (it as? Point)?.upscale() }
             objectModel.addDisplayObjects(newPoints)
             val outputRange = (oldSize until objects.size).toList()
             submode = Submode.ExprAdjustment(listOf(
@@ -276,7 +276,7 @@ class ExprAdjustmentManager(
             )
             source2trajectory.add(sourceArcPathIndex to arcPathAdjustable.occupiedIndices)
         }
-        val copiedRegions = viewModel.copySourceRegionsOntoTrajectories(source2trajectory)
+        val copiedRegions = copySourceRegionsOntoTrajectories(source2trajectory)
         return Submode.ExprAdjustment(
             adjustables = adjustables,
             arcPathAdjustables = arcPathAdjustables,
@@ -358,6 +358,38 @@ class ExprAdjustmentManager(
         return Pair(arcPathAdjustable, adjustables)
     }
 
+    /**
+     * Copy `regions` from source indices onto trajectories specified
+     * by [source2trajectory].
+     * @param[source2trajectory] `[(original index ~ style source, [trajectory of indices of objects])]`,
+     * note that original indices CAN repeat (tho its regions will be copied only once even for the repeats).
+     * @return indices of copied regions within `regions`, flattened trajectory of regions
+     */
+    context(viewModel: EditorViewModel)
+    fun copySourceRegionsOntoTrajectories(
+        source2trajectory: List<Pair<Ix, List<Ix>>>,
+    ): List<Int> {
+        val newRegionIndices = source2trajectory
+            .map { (sourceIndex, trajectory) ->
+                trajectory.map { outputIndex ->
+                    sourceIndex to outputIndex
+                } // Column<Row<(OG Ix, new Ix)?>>
+            }.transpose()
+            .flatMap { trajectoryStageSlice ->
+                // Column<(OG Ix, new Ix)>
+                val nonNullSlice = trajectoryStageSlice.filterNotNull()
+                // for each stage in the trajectory we try to copy regions
+                if (nonNullSlice.isNotEmpty()) {
+                    viewModel.copyRegions(
+                        oldIndices = nonNullSlice.map { it.first },
+                        newIndices = nonNullSlice.map { it.second },
+                        flipInAndOut = false,
+                    )
+                } else emptyList()
+            }
+        return newRegionIndices
+    }
+
     context(viewModel: EditorViewModel)
     fun startExprAdjustmentOfSelection() {
         val exprs = getAdjustableExprs()
@@ -381,7 +413,7 @@ class ExprAdjustmentManager(
                     expr, sourceIndex, outputIndices, outputIndices
                 ))
                 if (expr is Expr.LoxodromicMotion && expr.otherHalfStart != null) {
-                    val complementaryExpr = viewModel.exprOf(expr.otherHalfStart)
+                    val complementaryExpr = exprOf(expr.otherHalfStart)
                     if (complementaryExpr is Expr.LoxodromicMotion) {
                         val complementaryOutputIndices = expressions.findExpr(complementaryExpr)
                             .sortedBy { (expressions[it] as ExprOutput.OneOf).outputIndex }
@@ -511,8 +543,8 @@ class ExprAdjustmentManager(
         val exprs: MutableSet<Expr.Adjustable> = mutableSetOf()
         if (indices.isEmpty())
             return emptyList()
-        val expr0 = when (val expr = viewModel.exprOf(indices.first())) {
-            is ArcPath -> viewModel.exprOf(expr.vertices.first())
+        val expr0 = when (val expr = exprOf(indices.first())) {
+            is ArcPath -> exprOf(expr.vertices.first())
             else -> expr
         }
         if (expr0 !is Expr.Adjustable)
@@ -520,7 +552,7 @@ class ExprAdjustmentManager(
         val areAdjustable = when (expr0) {
             is TransformLike -> {
                 indices.all { ix ->
-                    when (val expr = viewModel.exprOf(ix)) {
+                    when (val expr = exprOf(ix)) {
                         is ArcPath -> {
                             expr.arcs.all { it is ArcPath.Arc.By3Points } &&
                             expr.dependencies.let { deps ->
@@ -552,7 +584,7 @@ class ExprAdjustmentManager(
                 // point or circle interpolations
                 exprs.add(expr0 as Expr.Adjustable)
                 indices.all { ix ->
-                    val expr = viewModel.exprOf(ix)
+                    val expr = exprOf(ix)
                     expr == expr0
                 }
             }
@@ -736,8 +768,8 @@ class ExprAdjustmentManager(
                     )
                 else -> {}
             }
-//            objectModel.invalidate() // continuous invalidations from slider, not ideal for recompositions
-            objectModel.invalidatePositions()
+            // NOTE: nearly-continuous invalidations from slider, not ideal for recompositions
+            objectModel.invalidate()
         }
     }
 
@@ -879,7 +911,7 @@ class ExprAdjustmentManager(
         } else {
             source2trajectory1 + source2trajectory2
         }
-        val affectedRegions: List<Int> = viewModel.copySourceRegionsOntoTrajectories(source2trajectory)
+        val affectedRegions: List<Int> = copySourceRegionsOntoTrajectories(source2trajectory)
         return Submode.ExprAdjustment(
             adjustables = newAdjustables,
             arcPathAdjustables = newArcPathAdjustables,
