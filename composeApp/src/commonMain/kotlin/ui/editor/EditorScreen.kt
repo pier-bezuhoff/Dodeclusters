@@ -363,17 +363,18 @@ fun EditorScreenRoot(
             }
         }
         DialogType.SAVE_OPTIONS -> {
+            val screenshotableCanvasParameters = remember { ScreenshotableCanvasParameters(
+                objectModel = viewModel.objectModel,
+                canvasState = canvasState,
+                translation = viewModel.translation,
+                regions = viewModel.regions,
+                mode = viewModel.mode,
+                selection = viewModel.selection,
+                restrictRegionsToSelection = viewModel.restrictRegionsToSelection,
+                isObjectFree = viewModel::isFree,
+            ) }
             SaveOptionsDialog(
-                screenshotableCanvasParameters = ScreenshotableCanvasParameters(
-                    objectModel = viewModel.objectModel,
-                    canvasState = canvasState,
-                    translation = viewModel.translation,
-                    regions = viewModel.regions,
-                    mode = viewModel.mode,
-                    selection = viewModel.selection,
-                    restrictRegionsToSelection = viewModel.restrictRegionsToSelection,
-                    isObjectFree = viewModel::isFree,
-                ),
+                screenshotableCanvasParameters = screenshotableCanvasParameters,
                 ddcSharing = ddcSharing,
                 saveAsYaml = viewModel::saveAsYaml,
                 exportAsSvg = { name ->

@@ -1,14 +1,19 @@
 package ui.editor
 
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import core.geometry.GCircle
 import core.geometry.GCircleOrConcreteArcPath
 import domain.Ix
+import domain.expressions.ArcPath
+import domain.expressions.ArcPathArcMidpointParameters
 import domain.expressions.ConformalExpressions
 import domain.expressions.Expr
+import domain.expressions.ExprOutput
+import domain.expressions.areCompatibleTransforms
 import domain.model.Arg
 import domain.model.ConformalObjectModel
 import domain.model.PartialArcPath
@@ -22,18 +27,16 @@ import ui.editor.dialogs.DefaultInterpolationParameters
 import ui.editor.dialogs.DefaultLoxodromicMotionParameters
 import ui.editor.dialogs.DefaultRotationParameters
 import ui.tools.Tool
-import kotlin.collections.plusAssign
 
+@Stable
 class ToolManager(
     val objectModel: ConformalObjectModel,
     modeState: MutableState<Mode>,
     submodeState: MutableState<Submode?>,
     selectionState: MutableState<Selection>,
-    private val snackbarMessages: MutableSharedFlow<Pair<SnackbarMessage, Array<out Any>>>,
 ) {
     val mode: Mode by modeState
     var submode: Submode? by submodeState
-
     var selection: Selection by selectionState
     /** Distinct selected [GCircle]? indices +
      * indices of all vertices/midpoints of selected arc-paths */
@@ -90,85 +93,6 @@ class ToolManager(
 
     fun addIndicesArg(indices: List<Ix>) {
         partialArgList = partialArgList?.addArg(Arg.Indices(indices), confirmThisArg = true)
-    }
-
-    fun startExprAdjustmentOfSelection() {
-        // TODO: adjust expr of transformed arc-paths
-        val firstSelected = selection.indices.firstOrNull() ?: return
-        val expr = exprOf(firstSelected)
-        val tool: Tool.MultiArg
-        val sourceIndex: Ix
-        val args: List<Arg>
-        when (expr) {
-            is Expr.CircleInterpolation -> {
-                tool = Tool.CircleOrPointInterpolation
-                sourceIndex = expr.startCircle
-                args = listOf(
-                    Arg.IndexOf(expr.startCircle, objects[expr.startCircle] as GCircle),
-                    Arg.IndexOf(expr.endCircle, objects[expr.endCircle] as GCircle),
-                )
-                defaultInterpolationParameters = DefaultInterpolationParameters(expr.parameters)
-            }
-            is Expr.PointInterpolation -> {
-                tool = Tool.CircleOrPointInterpolation
-                sourceIndex = expr.startPoint
-                args = listOf(Arg.PointIndex(expr.startPoint), Arg.PointIndex(expr.endPoint))
-                defaultInterpolationParameters = DefaultInterpolationParameters(expr.parameters)
-            }
-            is Expr.Rotation -> {
-                tool = Tool.Rotation
-                sourceIndex = expr.target
-                args = listOf(Arg.Indices(listOf(expr.target)), Arg.PointIndex(expr.pivot))
-                defaultRotationParameters = DefaultRotationParameters(expr.parameters)
-            }
-            is Expr.BiInversion -> {
-                tool = Tool.BiInversion
-                sourceIndex = expr.target
-                args = listOf(
-                    Arg.Indices(listOf(expr.target)),
-                    Arg.IndexOf(expr.engine1, objects[expr.engine1] as GCircle),
-                    Arg.IndexOf(expr.engine2, objects[expr.engine2] as GCircle),
-                )
-                defaultBiInversionParameters = DefaultBiInversionParameters(expr.parameters)
-            }
-            is Expr.LoxodromicMotion -> {
-                tool = Tool.LoxodromicMotion
-                sourceIndex = expr.target
-                args = listOf(
-                    Arg.Indices(listOf(expr.target)),
-                    Arg.PointIndex(expr.divergencePoint),
-                    Arg.PointIndex(expr.convergencePoint),
-                )
-                // bidirectionality might be overridden further down
-                defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
-                    expr.parameters,
-                    bidirectional = false
-                )
-            }
-            else -> return
-        }
-        val outputIndices = expressions.findExpr(expr)
-        val adjustables = mutableListOf(AdjustableExpr(
-            expr, sourceIndex, outputIndices, outputIndices
-        ))
-        if (expr is Expr.LoxodromicMotion && expr.otherHalfStart != null) {
-            val complementaryExpr = exprOf(expr.otherHalfStart)
-            if (complementaryExpr is Expr.LoxodromicMotion) {
-                val complementaryOutputIndices = expressions.findExpr(complementaryExpr)
-                adjustables += listOf(AdjustableExpr(
-                    complementaryExpr,
-                    sourceIndex,
-                    complementaryOutputIndices, complementaryOutputIndices
-                ))
-                defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
-                    expr.parameters,
-                    bidirectional = true,
-                )
-            }
-        }
-        partialArgList = PartialArgList(tool.signature, tool.nonEqualityConditions, args)
-        submode = Submode.ExprAdjustment(adjustables)
-        clearSelection() // clear selection to hide selection HUD
     }
 
 }

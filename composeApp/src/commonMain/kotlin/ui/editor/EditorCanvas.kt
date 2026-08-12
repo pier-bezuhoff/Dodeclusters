@@ -436,6 +436,7 @@ data class ScreenshotableCanvasParameters(
  * NOTE: It is blocking and rather slow. Also idk why but the async _always_ happens on
  *  the main thread...
  */
+@Suppress("ParamsComparedByRef")
 @Composable
 fun ScreenshotableCanvas(
     screenshotableCanvasParameters: ScreenshotableCanvasParameters,
