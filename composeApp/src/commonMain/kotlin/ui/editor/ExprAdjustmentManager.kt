@@ -257,7 +257,7 @@ class ExprAdjustmentManager(
             val result = expressions.addMultiExpr(expr) // multi expr creates a whole trajectory at a time
             val outputIndices = objectModel.addDownscaledObjects(result).toList()
             for (outputIndex in outputIndices) {
-                viewModel.copyStyle(sourceIndex, outputIndex)
+                objectModel.copyStyle(sourceIndex, outputIndex)
             }
             adjustables.add(AdjustableExpr(expr, sourceIndex, outputIndices, outputIndices))
             source2trajectory.add(sourceIndex to outputIndices)
@@ -302,7 +302,7 @@ class ExprAdjustmentManager(
             val result = expressions.addMultiExpr(expr)
             val newIndices = objectModel.addDownscaledObjects(result).toList()
             for (newIndex in newIndices) {
-                viewModel.copyStyle(vertexIndex, newIndex)
+                objectModel.copyStyle(vertexIndex, newIndex)
             }
             adjustables.add(AdjustableExpr(expr,
                 vertexIndex,
@@ -320,7 +320,7 @@ class ExprAdjustmentManager(
                     val result = expressions.addMultiExpr(expr)
                     val newIndices = objectModel.addDownscaledObjects(result).toList()
                     for (newIndex in newIndices) {
-                        viewModel.copyStyle(sourceIndex, newIndex)
+                        objectModel.copyStyle(sourceIndex, newIndex)
                     }
                     adjustables.add(AdjustableExpr(expr,
                         sourceIndex,
@@ -342,7 +342,7 @@ class ExprAdjustmentManager(
                 sourceArcPath.copy(vertices = vertices, arcs = arcs)
             )
             val copiedArcPathIndex = objectModel.addDownscaledObject(concreteArcPath)
-            viewModel.copyStyle(sourceArcPathIndex, copiedArcPathIndex)
+            objectModel.copyStyle(sourceArcPathIndex, copiedArcPathIndex)
             copiedArcPathIndex
         }
         val arcPathAdjustable = AdjustableExpr(
@@ -366,7 +366,7 @@ class ExprAdjustmentManager(
      * @return indices of copied regions within `regions`, flattened trajectory of regions
      */
     context(viewModel: EditorViewModel)
-    fun copySourceRegionsOntoTrajectories(
+    private fun copySourceRegionsOntoTrajectories(
         source2trajectory: List<Pair<Ix, List<Ix>>>,
     ): List<Int> {
         val newRegionIndices = source2trajectory
@@ -390,6 +390,7 @@ class ExprAdjustmentManager(
         return newRegionIndices
     }
 
+    // TODO: add adjustable regions
     context(viewModel: EditorViewModel)
     fun startExprAdjustmentOfSelection() {
         val exprs = getAdjustableExprs()
@@ -399,7 +400,7 @@ class ExprAdjustmentManager(
         val transformTargets = exprs.mapNotNull { (it as? TransformLike)?.target }
         val tool: Tool.MultiArg = exprAdjustable2Tool(expr0)
         var args: List<Arg> = getExprAdjustmentArgs(expr0, transformTargets)
-        setExprParametersAsDefault(expr0)
+        setParametersAsDefault(expr0.parameters, bidirectional = false)
         val adjustables = mutableListOf<AdjustableExpr<*>>()
         val arcPathAdjustables = mutableListOf<AdjustableExpr<ArcPath>>()
         val adjustableRegions = mutableListOf<Int>()
@@ -529,6 +530,8 @@ class ExprAdjustmentManager(
         partialArgList = PartialArgList(tool.signature, tool.nonEqualityConditions, args)
         submode = Submode.ExprAdjustment(adjustables, arcPathAdjustables, adjustableRegions)
         viewModel.selection = Selection() // clear selection to hide selection HUD
+        println("args: $args")
+        println("submode: $submode")
     }
 
     /**
@@ -615,8 +618,10 @@ class ExprAdjustmentManager(
                 Arg.PointIndex(expr0.startPoint),
                 Arg.PointIndex(expr0.endPoint),
             )
-            is Expr.Rotation ->
-                listOf(Arg.Indices(transformTargets), Arg.PointIndex(expr0.pivot))
+            is Expr.Rotation -> listOf(
+                Arg.Indices(transformTargets),
+                Arg.PointIndex(expr0.pivot),
+            )
             is Expr.BiInversion -> listOf(
                 Arg.Indices(transformTargets),
                 Arg.IndexOf(expr0.engine1, objects[expr0.engine1] as GCircle),
@@ -630,22 +635,24 @@ class ExprAdjustmentManager(
         }
 
     context(viewModel: EditorViewModel)
-    private fun setExprParametersAsDefault(expr: Expr.Adjustable) {
-        when (expr) {
-            is Expr.CircleInterpolation ->
-                viewModel.defaultInterpolationParameters = DefaultInterpolationParameters(expr.parameters)
-            is Expr.PointInterpolation ->
-                viewModel.defaultInterpolationParameters = DefaultInterpolationParameters(expr.parameters)
-            is Expr.Rotation ->
-                viewModel.defaultRotationParameters = DefaultRotationParameters(expr.parameters)
-            is Expr.BiInversion ->
-                viewModel.defaultBiInversionParameters = DefaultBiInversionParameters(expr.parameters)
-            is Expr.LoxodromicMotion ->
+    private fun setParametersAsDefault(
+        parameters: Parameters?,
+        bidirectional: Boolean = viewModel.defaultLoxodromicMotionParameters.bidirectional
+    ) {
+        when (parameters) {
+            is InterpolationParameters ->
+                viewModel.defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
+            is RotationParameters ->
+                viewModel.defaultRotationParameters = DefaultRotationParameters(parameters)
+            is BiInversionParameters ->
+                viewModel.defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
+            is LoxodromicMotionParameters ->
                 // bidirectionality might be overridden further down
                 viewModel.defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
-                    expr.parameters,
-                    bidirectional = false
+                    parameters,
+                    bidirectional = bidirectional
                 )
+            else -> {}
         }
     }
 
@@ -755,25 +762,12 @@ class ExprAdjustmentManager(
                     )
                 else -> sm
             }
-            when (parameters) { // upd defaults for dialog, not sure it's sensible
-                is InterpolationParameters ->
-                    viewModel.defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
-                is RotationParameters ->
-                    viewModel.defaultRotationParameters = DefaultRotationParameters(parameters)
-                is BiInversionParameters ->
-                    viewModel.defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
-                is LoxodromicMotionParameters ->
-                    viewModel.defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(parameters,
-                        bidirectional = viewModel.defaultLoxodromicMotionParameters.bidirectional
-                    )
-                else -> {}
-            }
+            setParametersAsDefault(parameters) // upd defaults for dialog, not sure it's sensible
             // NOTE: nearly-continuous invalidations from slider, not ideal for recompositions
             objectModel.invalidate()
         }
     }
 
-    context(viewModel: EditorViewModel)
     private fun adjustInterpolationParameters(
         sm: Submode.ExprAdjustment<Expr.Conformal.OneToMany>,
         parameters: InterpolationParameters,
@@ -795,7 +789,7 @@ class ExprAdjustmentManager(
         }
         newIndices.zip(newObjects) { ix, o ->
             objectModel.setDownscaledObject(ix, o)
-            viewModel.copyStyle(sourceIndex, ix)
+            objectModel.copyStyle(sourceIndex, ix)
         }
         objectModel.update(newIndices.toSet())
         objectModel.forceUpdate(changed)
@@ -804,6 +798,7 @@ class ExprAdjustmentManager(
         ))
     }
 
+    // FIX: problems when shortening pre-existing traj
     context(viewModel: EditorViewModel)
     private fun adjustTransformationParameters(
         sm: Submode.ExprAdjustment<Expr.Conformal.OneToMany>,
@@ -835,7 +830,7 @@ class ExprAdjustmentManager(
             for (i in newIndices.indices) {
                 val ix = newIndices[i]
                 objectModel.setDownscaledObject(ix, newObjects[i])
-                viewModel.copyStyle(sourceIndex, ix)
+                objectModel.copyStyle(sourceIndex, ix)
             }
             newAdjustables.add(AdjustableExpr(newExpr,
                 sourceIndex,
@@ -870,7 +865,7 @@ class ExprAdjustmentManager(
             }
             newIndices.zip(newObjects) { ix, concreteArcPath ->
                 objectModel.setDownscaledObject(ix, concreteArcPath)
-                viewModel.copyStyle(sourceArcPathIndex, ix)
+                objectModel.copyStyle(sourceArcPathIndex, ix)
             }
             newArcPathAdjustables.add(AdjustableExpr(arcPathBlueprint,
                 sourceArcPathIndex,
@@ -917,6 +912,7 @@ class ExprAdjustmentManager(
             arcPathAdjustables = newArcPathAdjustables,
             regions = affectedRegions,
         )
+            .also { println("submode = $it") }
     }
 
     // completes tool modes with adjustable parameters
@@ -928,23 +924,8 @@ class ExprAdjustmentManager(
             null
         }
         when (val sm = submode) {
-            is Submode.ExprAdjustment<*> -> {
-                when (val parameters = sm.parameters) {
-                    is InterpolationParameters ->
-                        viewModel.defaultInterpolationParameters = DefaultInterpolationParameters(parameters)
-                    is RotationParameters ->
-                        viewModel.defaultRotationParameters = DefaultRotationParameters(parameters)
-                    is BiInversionParameters ->
-                        viewModel.defaultBiInversionParameters = DefaultBiInversionParameters(parameters)
-                    is LoxodromicMotionParameters -> {
-                        viewModel.defaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(
-                            parameters,
-                            bidirectional = viewModel.defaultLoxodromicMotionParameters.bidirectional
-                        )
-                    }
-                    else -> {}
-                }
-            }
+            is Submode.ExprAdjustment<*> ->
+                setParametersAsDefault(sm.parameters)
             else -> {}
         }
         submode = null

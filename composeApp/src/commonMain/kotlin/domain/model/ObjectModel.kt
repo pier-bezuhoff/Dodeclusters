@@ -167,6 +167,15 @@ sealed class ObjectModel<R : Any, D : Any> {
         }
     }
 
+    /** copies [Styling] with empty label */
+    fun copyStyle(sourceIndex: Ix, destinationIndex: Ix) {
+        styling[sourceIndex]?.let { style ->
+            updateStyle(destinationIndex) {
+                style.copy(label = null)
+            }
+        }
+    }
+
     /** Clears everything BUT [expressions].
      *  Don't forget to [invalidate] post factum */
     open fun clear() {

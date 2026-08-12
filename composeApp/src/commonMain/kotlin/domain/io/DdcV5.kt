@@ -68,7 +68,9 @@ data class DdcV5(
     ) : ObjectToken
 
     init {
-        require(objects.keys == (0 until objects.size).toSet()) { "Bad object indices" }
+        require(objects.keys == (0 until objects.size).toSet()) {
+            "Bad object indices: ${objects.keys} != ${(0 until objects.size).toSet()}"
+        }
     }
 
     fun toSaveState(): SaveState {
@@ -151,6 +153,36 @@ data class DdcV5(
 
         fun fromSaveState(state: SaveState): DdcV5 {
             return with (state.compressFreeIndices()) {
+                val objectTokens = mutableMapOf<Ix, ObjectToken>()
+                for (ix in objects.indices) {
+                    val token = when (val obj = objects[ix]) {
+                        is ConcreteArcPath -> {
+                            val arcPath = expressions[ix]?.expr as? ArcPath
+                            if (arcPath == null) {
+                                println("expression ${expressions[ix]} @ $ix expected to be ArcPath because object @ $ix is ConcreteArcPath; saving as null")
+                                GCircleToken(
+                                    representation = null,
+                                    expression = null,
+                                    color = this.styling[ix]?.borderColor,
+                                )
+                            } else {
+                                ArcPathToken(
+                                    arcPath = arcPath,
+                                    borderColor = this.styling[ix]?.borderColor,
+                                    fillColor = this.styling[ix]?.fillColor,
+                                )
+                            }
+                        }
+                        else -> GCircleToken(
+                            representation = obj as? GCircle,
+                            expression = expressions[ix],
+                            label = this.styling[ix]?.label?.content,
+                            color = this.styling[ix]?.borderColor,
+                            isPhantom = this.styling[ix]?.isPhantom == true,
+                        )
+                    }
+                    objectTokens += ix to token
+                }
                 DdcV5(
                     backgroundColor = backgroundColor,
                     bestCenterX = if (center.isSpecified) center.x else null,
@@ -159,22 +191,7 @@ data class DdcV5(
                     chessboardPatternStartsColored =
                         chessboardPattern != ChessboardPattern.STARTS_TRANSPARENT,
                     chessboardColor = chessboardColor,
-                    objects = objects.withIndex().associate { (ix, obj) ->
-                        ix to when (obj) {
-                            is ConcreteArcPath -> ArcPathToken(
-                                arcPath = expressions[ix]?.expr as ArcPath,
-                                borderColor = this.styling[ix]?.borderColor,
-                                fillColor = this.styling[ix]?.fillColor,
-                            )
-                            else -> GCircleToken(
-                                representation = obj as? GCircle,
-                                expression = expressions[ix],
-                                label = this.styling[ix]?.label?.content,
-                                color = this.styling[ix]?.borderColor,
-                                isPhantom = this.styling[ix]?.isPhantom == true,
-                            )
-                        }
-                    },
+                    objects = objectTokens,
                     regions = regions,
                 )
             }

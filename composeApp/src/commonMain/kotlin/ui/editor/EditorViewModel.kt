@@ -48,7 +48,6 @@ import domain.ProgressState
 import domain.Snapping
 import domain.angleDeg
 import domain.cluster.Constellation
-import domain.entails
 import domain.expressions.ArcPath
 import domain.expressions.ArcPathArcMidpointParameters
 import domain.expressions.ArcPathIncidenceParameters
@@ -62,9 +61,7 @@ import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.Parameters
 import domain.expressions.RotationParameters
-import domain.expressions.computeConcentricCircle
 import domain.expressions.computeIntersection
-import domain.expressions.computeSagittaRatio
 import domain.expressions.copy
 import domain.expressions.moveArcMidpoint
 import domain.filterIndices
@@ -92,7 +89,6 @@ import domain.model.SaveState
 import domain.model.Selection
 import domain.model.Styling
 import domain.mostCommonOf
-import domain.never
 import domain.settings.BlendModeType
 import domain.settings.InversionOfControl
 import domain.settings.Settings
@@ -861,18 +857,6 @@ class EditorViewModel : ViewModel() {
         objectModel.styling[sourceIndex]?.fillColor?.let { color ->
             objectModel.updateStyle(destinationIndex) {
                 it.copy(fillColor = color)
-            }
-        }
-    }
-
-    /** copies [Styling] with empty label */
-    fun copyStyle(
-        sourceIndex: Ix,
-        destinationIndex: Ix,
-    ) {
-        objectModel.styling[sourceIndex]?.let { style ->
-            objectModel.updateStyle(destinationIndex) {
-                style.copy(label = null)
             }
         }
     }

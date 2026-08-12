@@ -483,7 +483,7 @@ class ToolManager(
                 Expr.CircleInversion(sourceIndex, invertingCircleIndex),
             ) as? GCircle
             val newIndex = objectModel.addDownscaledObject(newGCircle)
-            viewModel.copyStyle(sourceIndex, newIndex)
+            objectModel.copyStyle(sourceIndex, newIndex)
         }
         val newIndices1 = oldSize until objects.size
         for (ix in arcPathSources) {
@@ -522,7 +522,7 @@ class ToolManager(
             val expr = mkExpr(vertexIndex)
             val result = expressions.addSoloExpr(expr) as? Point
             val newIndex = objectModel.addDownscaledObject(result)
-            viewModel.copyStyle(vertexIndex, newIndex)
+            objectModel.copyStyle(vertexIndex, newIndex)
             newIndex
         }
         val copiedArcs = sourceArcPath.arcs.map { arc ->
@@ -532,7 +532,7 @@ class ToolManager(
                     val expr = mkExpr(sourceIndex)
                     val result = expressions.addSoloExpr(expr) as? Point
                     val newIndex = objectModel.addDownscaledObject(result)
-                    viewModel.copyStyle(sourceIndex, newIndex)
+                    objectModel.copyStyle(sourceIndex, newIndex)
                     ArcPath.Arc.By3Points(middlePointIndex = newIndex)
                 }
                 is ArcPath.Arc.By2Points ->
@@ -546,7 +546,7 @@ class ToolManager(
             }
         )
         val copiedArcPathIndex = objectModel.addDownscaledObject(concreteArcPath)
-        viewModel.copyStyle(sourceArcPathIndex, copiedArcPathIndex)
+        objectModel.copyStyle(sourceArcPathIndex, copiedArcPathIndex)
     }
 
     context(viewModel: EditorViewModel)

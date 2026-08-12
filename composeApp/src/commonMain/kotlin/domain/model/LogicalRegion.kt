@@ -5,6 +5,7 @@ import domain.ColorAsCss
 import domain.Ix
 import domain.io.DdcV2
 import domain.toCssString
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 
 // MAYBE: allow arc-paths to bound regions
@@ -24,7 +25,8 @@ data class LogicalRegion(
     override val outsides: Set<Ix>,
     val fillColor: ColorAsCss = DdcV2.DEFAULT_CLUSTER_FILL_COLOR,
     // its use is debatable
-    val borderColor: ColorAsCss? = DdcV2.DEFAULT_CLUSTER_BORDER_COLOR,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val borderColor: ColorAsCss? = null,
 ) : Constrained {
 
     override fun toString(): String =
