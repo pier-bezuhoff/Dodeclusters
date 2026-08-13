@@ -42,8 +42,13 @@ class ConformalObjectModel : ObjectModel<GCircleOrConcreteArcPath, GCircleOrConc
         } else infinityIndex
     }
 
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun getExpr(index: Ix): Expr.Conformal? =
+        expressions[index]?.expr as? Expr.Conformal
+
+    @Suppress("NOTHING_TO_INLINE")
     inline fun getArcPath(index: Ix): ArcPath? =
-        expressions.expressions[index]?.expr as? ArcPath
+        expressions[index]?.expr as? ArcPath
 
     /**
      * Don't forget to [invalidatePositions] post factum.

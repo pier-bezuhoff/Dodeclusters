@@ -17,6 +17,7 @@ import domain.expressions.BiInversionParameters
 import domain.expressions.ConformalExpressions
 import domain.expressions.Expr
 import domain.expressions.Expr.TransformLike
+import domain.expressions.Expr.Adjustable
 import domain.expressions.ExprOutput
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
@@ -27,8 +28,10 @@ import domain.expressions.changeTarget
 import domain.expressions.copy
 import domain.expressions.copyWithNewParameters
 import domain.expressions.reIndex
+import domain.filterIndices
 import domain.model.Arg
 import domain.model.ConformalObjectModel
+import domain.model.LogicalRegion
 import domain.model.PartialArgList
 import domain.model.Selection
 import domain.never
@@ -54,9 +57,6 @@ class ExprAdjustmentManager(
     private val objects: List<GCircleOrConcreteArcPath?> = objectModel.displayObjects
     private inline val expressions: ConformalExpressions get() =
         objectModel.expressions
-
-    private inline fun exprOf(index: Ix): Expr.Conformal? =
-        expressions[index]?.expr as? Expr.Conformal
 
     context(viewModel: EditorViewModel)
     fun startCircleOrPointInterpolationParameterAdjustment() {
@@ -184,14 +184,14 @@ class ExprAdjustmentManager(
         )
         val parameters = viewModel.defaultLoxodromicMotionParameters.params
         if (bidirectional) { // 2 interdependent spiral halves
-            val (adjustables1, arcPathAdjustables1, regions1) =
+            val (adjustables1, arcPathAdjustables1) =
                 populateExprAdjustmentSubmode(objArg.indices) { ix ->
                     Expr.LoxodromicMotion(parameters,
                         divergencePointIndex, convergencePointIndex,
                         target = ix,
                     )
                 }
-            val (adjustables2, arcPathAdjustables2, regions2) =
+            val (adjustables2, arcPathAdjustables2) =
                 populateExprAdjustmentSubmode(objArg.indices) { ix ->
                     Expr.LoxodromicMotion(parameters,
                         convergencePointIndex, divergencePointIndex,
@@ -228,7 +228,6 @@ class ExprAdjustmentManager(
                         expr = arcPathAdjustable.expr.reIndex { it + halfSize }
                     )
                 },
-                regions = regions1 + regions2,
             )
             objectModel.invalidate()
         } else { // half-spiral
@@ -246,8 +245,12 @@ class ExprAdjustmentManager(
         inputIndices: List<Ix>,
         crossinline mkExpr: (gCircleIndex: Ix) -> EXPR,
     ): Submode.ExprAdjustment<EXPR> {
-        val gCircleSources = inputIndices.filter { objects[it] is GCircle }
-        val arcPathSources = inputIndices.filter { objects[it] is ConcreteArcPath }
+        val gCircleSources = inputIndices.filter { objects[it] is GCircle }.toMutableSet()
+        val arcPathSources = inputIndices.filter { objects[it] is ConcreteArcPath }.toMutableSet()
+        for (arcPathSource in arcPathSources) { // remove points that are already in arc paths
+            val arcPath = objectModel.getArcPath(arcPathSource) ?: continue
+            gCircleSources -= arcPath.dependencies
+        }
         val adjustables = mutableListOf<AdjustableExpr<EXPR>>()
         /** trajectories used to transfer regions */
         val source2trajectory = mutableListOf<Pair<Ix, List<Ix>>>()
@@ -276,11 +279,10 @@ class ExprAdjustmentManager(
             )
             source2trajectory.add(sourceArcPathIndex to arcPathAdjustable.occupiedIndices)
         }
-        val copiedRegions = copySourceRegionsOntoTrajectories(source2trajectory)
+        copySourceRegionsOntoTrajectories(source2trajectory)
         return Submode.ExprAdjustment(
             adjustables = adjustables,
             arcPathAdjustables = arcPathAdjustables,
-            regions = copiedRegions,
         )
     }
 
@@ -390,145 +392,71 @@ class ExprAdjustmentManager(
         return newRegionIndices
     }
 
-    // TODO: add adjustable regions
+    private fun getOccupiedRegions(
+        sm: Submode.ExprAdjustment<*>,
+        regions: List<LogicalRegion>,
+    ): List<Ix> {
+        return sm.adjustables.map { it.occupiedIndices }
+            .plus(sm.arcPathAdjustables.map { it.occupiedIndices })
+            .transpose()
+            .flatMap { trajectoryStageSlice ->
+                val nonNullSlice = trajectoryStageSlice.filterNotNull()
+                regions.filterIndices { nonNullSlice.containsAll(it.allContraints) }
+            }
+    }
+
+    // FIX: problems when shortening
+    //  + with trajectories with deleted interims
     context(viewModel: EditorViewModel)
     fun startExprAdjustmentOfSelection() {
-        val exprs = getAdjustableExprs()
-        if (exprs.isEmpty())
+        val exprs = getAdjustable(viewModel.selection.indices)
+        if (exprs.isEmpty()) {
+            println("startExprAdjustmentOfSelection: nothing to adjust")
             return
+        }
         val expr0 = exprs.first()
         val transformTargets = exprs.mapNotNull { (it as? TransformLike)?.target }
-        val tool: Tool.MultiArg = exprAdjustable2Tool(expr0)
-        var args: List<Arg> = getExprAdjustmentArgs(expr0, transformTargets)
+        val tool: Tool.MultiArg = expr2Tool(expr0)
+        var args: List<Arg> = expr2Args(expr0, transformTargets)
         setParametersAsDefault(expr0.parameters, bidirectional = false)
         val adjustables = mutableListOf<AdjustableExpr<*>>()
         val arcPathAdjustables = mutableListOf<AdjustableExpr<ArcPath>>()
-        val adjustableRegions = mutableListOf<Int>()
         if (expr0 is TransformLike) {
             val complementaryAdjustables = mutableListOf<AdjustableExpr<Expr.LoxodromicMotion>>()
             for (expr in exprs) {
-                val sourceIndex = (expr as TransformLike).target
-                val outputIndices = expressions.findExpr(expr as Expr.Conformal)
-                    .sortedBy { (expressions[it] as ExprOutput.OneOf).outputIndex }
-                adjustables.add(AdjustableExpr(
-                    expr, sourceIndex, outputIndices, outputIndices
-                ))
-                if (expr is Expr.LoxodromicMotion && expr.otherHalfStart != null) {
-                    val complementaryExpr = exprOf(expr.otherHalfStart)
-                    if (complementaryExpr is Expr.LoxodromicMotion) {
-                        val complementaryOutputIndices = expressions.findExpr(complementaryExpr)
-                            .sortedBy { (expressions[it] as ExprOutput.OneOf).outputIndex }
-                        complementaryAdjustables.add(AdjustableExpr(
-                            complementaryExpr,
-                            sourceIndex,
-                            complementaryOutputIndices, complementaryOutputIndices
-                        ))
-                        viewModel.defaultLoxodromicMotionParameters = viewModel.defaultLoxodromicMotionParameters.copy(
-                            bidirectional = true,
-                        )
-                    }
-                }
+                addExprAsAdjustable(
+                    expr = expr,
+                    adjustables = adjustables,
+                    complementaryAdjustables = complementaryAdjustables,
+                )
             }
             adjustables.addAll(complementaryAdjustables)
             val complementaryArcPathAdjustables = mutableListOf<AdjustableExpr<ArcPath>>()
             val protoArcPaths = mutableListOf<Ix>()
-            loop@ for (protoArcPathIndex in objectModel.arcPathIndices) {
-                val protoArcPath = objectModel.getArcPath(protoArcPathIndex) ?: continue
-                val protoMidpoints: List<Ix> = protoArcPath.midpoints.mapIndexed { arcIndex, midpointIndex ->
-                    if (midpointIndex == null) {
-                        val gluedMidpoints = expressions.findExpr(
-                            Expr.ArcPathArcMidpoint(
-                                ArcPathArcMidpointParameters(arcIndex),
-                                protoArcPathIndex
-                            )
-                        )
-                        if (gluedMidpoints.isEmpty())
-                            continue@loop
-                        gluedMidpoints.first()
-                    } else midpointIndex
-                }
-                if (transformTargets.containsAll(protoArcPath.vertices) &&
-                    transformTargets.containsAll(protoMidpoints)
-                ) {
-                    val ix2e0 = findTransformTrajectoryOfArcPath(protoArcPathIndex)
-                    if (ix2e0.isNotEmpty()) {
-                        protoArcPaths.add(protoArcPathIndex)
-                        val blueprintArcPath = protoArcPath.copy(
-                            vertices = protoArcPath.vertices.map { vertexIndex ->
-                                adjustables.indexOfFirst { it.sourceIndex == vertexIndex }
-                            },
-                            arcs = protoMidpoints.map { midpointIndex ->
-                                val i = adjustables.indexOfFirst { it.sourceIndex == midpointIndex }
-                                ArcPath.Arc.By3Points(i)
-                            },
-                        )
-                        val firstVertexExpr0 = ix2e0[0].second.expr
-                        if (firstVertexExpr0 is Expr.LoxodromicMotion &&
-                            firstVertexExpr0.otherHalfStart != null
-                        ) {
-                            val forward = mutableListOf<Pair<Ix, ExprOutput.OneOf>>()
-                            val backward = mutableListOf<Pair<Ix, ExprOutput.OneOf>>()
-                            val firstProtoVertex = protoArcPath.vertices.first()
-                            for ((ix, e0) in ix2e0) {
-                                if (e0.expr == expr0.changeTarget(firstProtoVertex)) {
-                                    forward.add(ix to e0)
-                                } else {
-                                    backward.add(ix to e0)
-                                }
-                            }
-                            forward.sortBy { (_, e0) -> e0.outputIndex }
-                            backward.sortBy { (_, e0) -> e0.outputIndex }
-                            val forwardTrajectory = forward.map { (ix, _) -> ix }
-                            arcPathAdjustables.add(AdjustableExpr(
-                                blueprintArcPath,
-                                protoArcPathIndex,
-                                forwardTrajectory, forwardTrajectory
-                            ))
-                            val backwardTrajectory = backward.map { (ix, _) -> ix }
-                            val blueprintArcPath2 = protoArcPath.copy(
-                                vertices = protoArcPath.vertices.map { vertexIndex ->
-                                    adjustables.indexOfLast { it.sourceIndex == vertexIndex }
-                                },
-                                arcs = protoMidpoints.map { midpointIndex ->
-                                    val i = adjustables.indexOfLast { it.sourceIndex == midpointIndex }
-                                    ArcPath.Arc.By3Points(i)
-                                },
-                            )
-                            complementaryArcPathAdjustables.add(AdjustableExpr(
-                                blueprintArcPath2,
-                                protoArcPathIndex,
-                                backwardTrajectory, backwardTrajectory
-                            ))
-                        } else {
-                            val trajectory = ix2e0
-                                .sortedBy { (_, e0) -> e0.outputIndex }
-                                .map { (ix, _) -> ix }
-                            arcPathAdjustables.add(AdjustableExpr(
-                                blueprintArcPath,
-                                protoArcPathIndex,
-                                trajectory, trajectory
-                            ))
-                        }
-                    }
-                }
+            for (protoArcPathIndex in objectModel.arcPathIndices) {
+                tryAddingProtoArcPathAsAdjustable(
+                    protoArcPathIndex = protoArcPathIndex,
+                    expr0 = expr0,
+                    transformTargets = transformTargets,
+                    protoArcPaths = protoArcPaths,
+                    adjustables = adjustables,
+                    arcPathAdjustables = arcPathAdjustables,
+                    complementaryArcPathAdjustables = complementaryArcPathAdjustables,
+                )
             }
             arcPathAdjustables.addAll(complementaryArcPathAdjustables)
             args = args.updated(0) { arg0 ->
                 Arg.Indices((arg0 as Arg.Indices).indices + protoArcPaths)
             }
-            // TODO: add adjustable regions
-        } else {
-            val sourceIndex = when (expr0) {
-                is Expr.PointInterpolation -> expr0.startPoint
-                is Expr.CircleInterpolation -> expr0.startCircle
-            }
-            val outputIndices = expressions.findExpr(expr0)
+        } else if (expr0 is Expr.Interpolation) {
+            val sourceIndex = expr0.start
+            val outputIndices = expressions.findExpr(expr0 as? Expr.Conformal)
             adjustables.add(AdjustableExpr(
                 expr0, sourceIndex, outputIndices, outputIndices
             ))
         }
         partialArgList = PartialArgList(tool.signature, tool.nonEqualityConditions, args)
-        submode = Submode.ExprAdjustment(adjustables, arcPathAdjustables, adjustableRegions)
+        submode = Submode.ExprAdjustment(adjustables, arcPathAdjustables)
         viewModel.selection = Selection() // clear selection to hide selection HUD
         println("args: $args")
         println("submode: $submode")
@@ -537,66 +465,91 @@ class ExprAdjustmentManager(
     /**
      * @param[indices] we test all of these, whether they originate from the same [Expr] or
      * from similar [TransformLike] exprs but with differing targets/preimages
-     * @return preimages
+     * @return if [indices] contain only similar adjustable exprs (possibly with their preimages),
+     * return those adjustable exprs; empty list otherwise
      */
-    context(viewModel: EditorViewModel)
-    fun getAdjustableExprs(
-        indices: List<Ix> = viewModel.selection.indices,
-    ): List<Expr.Adjustable> {
-        val exprs: MutableSet<Expr.Adjustable> = mutableSetOf()
+    fun getAdjustable(indices: List<Ix>): List<Adjustable> {
         if (indices.isEmpty())
             return emptyList()
-        val expr0 = when (val expr = exprOf(indices.first())) {
-            is ArcPath -> exprOf(expr.vertices.first())
-            else -> expr
-        }
-        if (expr0 !is Expr.Adjustable)
-            return emptyList()
-        val areAdjustable = when (expr0) {
+        // NOTE: ideally it should be order-independent, but we can stumble
+        //  upon adjustable preimage of others, which implies ambiguous intent
+        val expr0 = indices
+            .mapNotNull { ix ->
+                when (val expr = objectModel.getExpr(ix)) {
+                    is ArcPath -> objectModel.getExpr(expr.vertices.first())
+                    else -> expr
+                }
+            }
+            .firstOrNull { expr -> expr is Adjustable }
+            ?: return emptyList()
+        val adjustableExprs: MutableSet<Adjustable> = mutableSetOf()
+        val ng: MutableSet<Ix> = mutableSetOf()
+        when (expr0) {
             is TransformLike -> {
-                indices.all { ix ->
-                    when (val expr = exprOf(ix)) {
+                for (ix in indices) {
+                    when (val expr = objectModel.getExpr(ix)) {
                         is ArcPath -> {
-                            expr.arcs.all { it is ArcPath.Arc.By3Points } &&
-                            expr.dependencies.let { deps ->
-                                val e1 = expressions[deps.first()] as? ExprOutput.OneOf
-                                val expr1 = e1?.expr
-                                val outputIndex = e1?.outputIndex
-                                expr1 is TransformLike &&
-                                Expr.areCompatibleTransforms(expr0, expr1) &&
-                                deps.all {
-                                    val e = expressions[it] as? ExprOutput.OneOf
-                                        ?: return@all false
-                                    if (e.outputIndex != outputIndex)
-                                        return@all false
-                                    val depExpr = e.expr as? TransformLike
-                                        ?: return@all false
-                                    exprs.add(depExpr as Expr.Adjustable)
-                                    ExprOutput.areSameStageTransforms(e1, e)
+                            val depExpressions = expr.dependencies.map { expressions[it] }
+                            val good =
+                                expr.arcs.all { it is ArcPath.Arc.By3Points } &&
+                                run {
+                                    val e1 = depExpressions.first()
+                                    e1 is ExprOutput.OneOf &&
+                                    e1.expr is TransformLike && e1.expr is Adjustable &&
+                                    Expr.areCompatibleTransforms(expr0, e1.expr) &&
+                                    depExpressions.all { e ->
+                                        e is ExprOutput.OneOf &&
+                                        e.outputIndex == e1.outputIndex &&
+                                        e.expr is TransformLike && e.expr is Adjustable &&
+                                        ExprOutput.areSameStageTransforms(e1, e)
+                                    }
                                 }
+                            if (good) {
+                                depExpressions.mapNotNullTo(adjustableExprs) {
+                                    (it as? ExprOutput.OneOf)?.expr as? Adjustable
+                                }
+                            } else {
+                                ng.addAll(expr.dependencies)
                             }
                         }
-                        else -> if (expr is TransformLike) {
-                            exprs.add(expr as Expr.Adjustable)
+                        else -> if (
+                            expr is TransformLike && expr is Adjustable &&
                             Expr.areCompatibleTransforms(expr0, expr)
-                        } else false
+                        ) {
+                            adjustableExprs.add(expr)
+                        } else {
+                            ng.add(ix)
+                        }
                     }
                 }
             }
             is Expr.PointInterpolation, is Expr.CircleInterpolation -> {
-                // point or circle interpolations
-                exprs.add(expr0 as Expr.Adjustable)
-                indices.all { ix ->
-                    val expr = exprOf(ix)
-                    expr == expr0
+                adjustableExprs.add(expr0)
+                indices.filterTo(ng) { ix ->
+                    objectModel.getExpr(ix) != expr0
                 }
             }
-            else -> false
+            else -> {
+                ng.addAll(indices)
+            }
         }
-        return if (areAdjustable) exprs.toList() else emptyList()
+        val ngsArePreimages = ng.all { ix ->
+            adjustableExprs.any {
+                when (it) {
+                    is TransformLike ->
+                        ix == it.target
+                    is Expr.Interpolation ->
+                        ix == it.start || ix == it.end
+                    else -> false
+                }
+            }
+        }
+        return if (ngsArePreimages && adjustableExprs.isNotEmpty())
+            adjustableExprs.toList()
+        else emptyList()
     }
 
-    private fun exprAdjustable2Tool(expr: Expr.Adjustable): Tool.MultiArg =
+    private fun expr2Tool(expr: Adjustable): Tool.MultiArg =
         when (expr) {
             is Expr.CircleInterpolation -> Tool.CircleOrPointInterpolation
             is Expr.PointInterpolation -> Tool.CircleOrPointInterpolation
@@ -605,32 +558,39 @@ class ExprAdjustmentManager(
             is Expr.LoxodromicMotion -> Tool.LoxodromicMotion
         }
 
-    private fun getExprAdjustmentArgs(
-        expr0: Expr.Adjustable,
-        transformTargets: List<Ix>,
+    /**
+     * @param[transformTargets] if [expr] is [TransformLike],
+     * we use it as a skeleton with targets from [transformTargets]
+     */
+    private fun expr2Args(
+        expr: Adjustable,
+        transformTargets: List<Ix> =
+            if (expr is TransformLike)
+                listOf(expr.target)
+            else emptyList(),
     ): List<Arg> =
-        when (expr0) {
+        when (expr) {
             is Expr.CircleInterpolation -> listOf(
-                Arg.IndexOf(expr0.startCircle, objects[expr0.startCircle] as GCircle),
-                Arg.IndexOf(expr0.endCircle, objects[expr0.endCircle] as GCircle),
+                Arg.IndexOf(expr.startCircle, objects[expr.startCircle] as GCircle),
+                Arg.IndexOf(expr.endCircle, objects[expr.endCircle] as GCircle),
             )
             is Expr.PointInterpolation -> listOf(
-                Arg.PointIndex(expr0.startPoint),
-                Arg.PointIndex(expr0.endPoint),
+                Arg.PointIndex(expr.startPoint),
+                Arg.PointIndex(expr.endPoint),
             )
             is Expr.Rotation -> listOf(
                 Arg.Indices(transformTargets),
-                Arg.PointIndex(expr0.pivot),
+                Arg.PointIndex(expr.pivot),
             )
             is Expr.BiInversion -> listOf(
                 Arg.Indices(transformTargets),
-                Arg.IndexOf(expr0.engine1, objects[expr0.engine1] as GCircle),
-                Arg.IndexOf(expr0.engine2, objects[expr0.engine2] as GCircle),
+                Arg.IndexOf(expr.engine1, objects[expr.engine1] as GCircle),
+                Arg.IndexOf(expr.engine2, objects[expr.engine2] as GCircle),
             )
             is Expr.LoxodromicMotion -> listOf(
                 Arg.Indices(transformTargets),
-                Arg.PointIndex(expr0.divergencePoint),
-                Arg.PointIndex(expr0.convergencePoint),
+                Arg.PointIndex(expr.divergencePoint),
+                Arg.PointIndex(expr.convergencePoint),
             )
         }
 
@@ -656,8 +616,130 @@ class ExprAdjustmentManager(
         }
     }
 
-    /** finds all arc-path that are transforms of the proto arc-path at [protoArcPathIndex],
-     * returning their index and [ExprOutput] of the 1st vertex (sorted by index) */
+    context(viewModel: EditorViewModel)
+    private fun addExprAsAdjustable(
+        expr: Adjustable,
+        adjustables: MutableList<AdjustableExpr<*>>,
+        complementaryAdjustables: MutableList<AdjustableExpr<Expr.LoxodromicMotion>>,
+    ) {
+        val sourceIndex = (expr as TransformLike).target
+        val outputIndices = expressions.findExpr(expr as Expr.Conformal)
+            // choose only the first instance of same-expression duplicates
+            .distinctBy { (expressions[it] as ExprOutput.OneOf).outputIndex }
+            // what if some intermediate stages were deleted?
+            .sortedBy { (expressions[it] as ExprOutput.OneOf).outputIndex }
+        adjustables.add(AdjustableExpr(
+            expr, sourceIndex, outputIndices, outputIndices
+        ))
+        if (expr is Expr.LoxodromicMotion && expr.otherHalfStart != null) {
+            val complementaryExpr = objectModel.getExpr(expr.otherHalfStart)
+            if (complementaryExpr is Expr.LoxodromicMotion) {
+                val complementaryOutputIndices = expressions.findExpr(complementaryExpr)
+                    .distinctBy { (expressions[it] as ExprOutput.OneOf).outputIndex }
+                    .sortedBy { (expressions[it] as ExprOutput.OneOf).outputIndex }
+                complementaryAdjustables.add(AdjustableExpr(
+                    complementaryExpr,
+                    sourceIndex,
+                    complementaryOutputIndices, complementaryOutputIndices
+                ))
+                viewModel.defaultLoxodromicMotionParameters = viewModel.defaultLoxodromicMotionParameters.copy(
+                    bidirectional = true,
+                )
+            }
+        }
+    }
+
+    private fun tryAddingProtoArcPathAsAdjustable(
+        protoArcPathIndex: Ix,
+        expr0: TransformLike,
+        transformTargets: List<Ix>,
+        protoArcPaths: MutableList<Ix>,
+        adjustables: List<AdjustableExpr<*>>,
+        arcPathAdjustables: MutableList<AdjustableExpr<ArcPath>>,
+        complementaryArcPathAdjustables: MutableList<AdjustableExpr<ArcPath>>,
+    ) {
+        val protoArcPath = objectModel.getArcPath(protoArcPathIndex) ?: return
+        val protoMidpoints: List<Ix> = protoArcPath.midpoints.mapIndexed { arcIndex, midpointIndex ->
+            if (midpointIndex == null) {
+                val gluedMidpoints = expressions.findExpr(
+                    Expr.ArcPathArcMidpoint(
+                        ArcPathArcMidpointParameters(arcIndex),
+                        protoArcPathIndex
+                    )
+                )
+                gluedMidpoints.firstOrNull() ?: return
+            } else midpointIndex
+        }
+        if (transformTargets.containsAll(protoArcPath.vertices) &&
+            transformTargets.containsAll(protoMidpoints)
+        ) {
+            val ix2e0 = findTransformTrajectoryOfArcPath(protoArcPathIndex)
+            if (ix2e0.isNotEmpty()) {
+                protoArcPaths.add(protoArcPathIndex)
+                val blueprintArcPath = protoArcPath.copy(
+                    vertices = protoArcPath.vertices.map { vertexIndex ->
+                        adjustables.indexOfFirst { it.sourceIndex == vertexIndex }
+                    },
+                    arcs = protoMidpoints.map { midpointIndex ->
+                        val i = adjustables.indexOfFirst { it.sourceIndex == midpointIndex }
+                        ArcPath.Arc.By3Points(i)
+                    },
+                )
+                val firstVertexExpr0 = ix2e0[0].second.expr
+                if (firstVertexExpr0 is Expr.LoxodromicMotion &&
+                    firstVertexExpr0.otherHalfStart != null
+                ) {
+                    val forward = mutableListOf<Pair<Ix, ExprOutput.OneOf>>()
+                    val backward = mutableListOf<Pair<Ix, ExprOutput.OneOf>>()
+                    val firstProtoVertex = protoArcPath.vertices.first()
+                    for ((ix, e0) in ix2e0) {
+                        if (e0.expr == expr0.changeTarget(firstProtoVertex)) {
+                            forward.add(ix to e0)
+                        } else {
+                            backward.add(ix to e0)
+                        }
+                    }
+                    forward.sortBy { (_, e0) -> e0.outputIndex }
+                    backward.sortBy { (_, e0) -> e0.outputIndex }
+                    val forwardTrajectory = forward.map { (ix, _) -> ix }
+                    arcPathAdjustables.add(AdjustableExpr(
+                        blueprintArcPath,
+                        protoArcPathIndex,
+                        forwardTrajectory, forwardTrajectory
+                    ))
+                    val backwardTrajectory = backward.map { (ix, _) -> ix }
+                    val blueprintArcPath2 = protoArcPath.copy(
+                        vertices = protoArcPath.vertices.map { vertexIndex ->
+                            adjustables.indexOfLast { it.sourceIndex == vertexIndex }
+                        },
+                        arcs = protoMidpoints.map { midpointIndex ->
+                            val i = adjustables.indexOfLast { it.sourceIndex == midpointIndex }
+                            ArcPath.Arc.By3Points(i)
+                        },
+                    )
+                    complementaryArcPathAdjustables.add(AdjustableExpr(
+                        blueprintArcPath2,
+                        protoArcPathIndex,
+                        backwardTrajectory, backwardTrajectory
+                    ))
+                } else {
+                    val trajectory = ix2e0
+                        .sortedBy { (_, e0) -> e0.outputIndex }
+                        .map { (ix, _) -> ix }
+                    arcPathAdjustables.add(AdjustableExpr(
+                        blueprintArcPath,
+                        protoArcPathIndex,
+                        trajectory, trajectory
+                    ))
+                }
+            }
+        }
+    }
+
+    /**
+     * Finds all arc-paths that are transforms of the proto arc-path at [protoArcPathIndex]
+     * @return their indices and [ExprOutput] of the 1st vertex (sorted by index)
+     */
     private fun findTransformTrajectoryOfArcPath(
         protoArcPathIndex: Ix
     ): List<Pair<Ix, ExprOutput.OneOf>> {
@@ -682,7 +764,7 @@ class ExprAdjustmentManager(
             if (arcPath.vertices.size == protoArcPath.vertices.size &&
                 arcPath.arcs.size == protoArcPath.arcs.size &&
                 e0 is ExprOutput.OneOf &&
-                expr0 is TransformLike && expr0 is Expr.Adjustable &&
+                expr0 is TransformLike && expr0 is Adjustable &&
                 expr0.target == protoArcPath.vertices.first()
             ) {
                 arcPath.vertices.zip(protoArcPath.vertices) { vertex, protoVertex ->
@@ -723,11 +805,13 @@ class ExprAdjustmentManager(
                     viewModel.defaultLoxodromicMotionParameters = viewModel.defaultLoxodromicMotionParameters.copy(
                         bidirectional = bidirectional,
                     )
-                    viewModel.regions = viewModel.regions.withoutElementsAt(sm.regions.toSet())
+                    viewModel.regions = viewModel.regions.withoutElementsAt(
+                        getOccupiedRegions(sm, viewModel.regions).toSet()
+                    )
                     viewModel.deleteObjectsWithDependenciesColorsAndRegions(
                         indicesToDelete =
                             sm.adjustables.flatMap { it.occupiedIndices } +
-                                    sm.arcPathAdjustables.flatMap { it.occupiedIndices }
+                            sm.arcPathAdjustables.flatMap { it.occupiedIndices }
                         ,
                         animationInit = { null },
                     )
@@ -739,6 +823,7 @@ class ExprAdjustmentManager(
         }
     }
 
+    // MAYBE: also adj regions constrained solely by interpolating circles
     /** When in [Submode.ExprAdjustment], changes [submode]'s [Expr]s' parameters to
      * [parameters] and updates corresponding [objects] */
     @Suppress("UNCHECKED_CAST")
@@ -764,7 +849,7 @@ class ExprAdjustmentManager(
             }
             setParametersAsDefault(parameters) // upd defaults for dialog, not sure it's sensible
             // NOTE: nearly-continuous invalidations from slider, not ideal for recompositions
-            objectModel.invalidate()
+            objectModel.invalidate() // using invalidatePositions() leads to visual glitches
         }
     }
 
@@ -798,13 +883,14 @@ class ExprAdjustmentManager(
         ))
     }
 
-    // FIX: problems when shortening pre-existing traj
     context(viewModel: EditorViewModel)
     private fun adjustTransformationParameters(
         sm: Submode.ExprAdjustment<Expr.Conformal.OneToMany>,
         parameters: Parameters,
     ): Submode.ExprAdjustment<Expr.Conformal.OneToMany> {
-        viewModel.regions = viewModel.regions.withoutElementsAt(sm.regions.toSet())
+        viewModel.regions = viewModel.regions.withoutElementsAt(
+            getOccupiedRegions(sm, viewModel.regions).toSet()
+        )
         for (arcPathAdjustable in sm.arcPathAdjustables) {
             objectModel.removeObjectsAt(arcPathAdjustable.occupiedIndices)
         }
@@ -906,11 +992,10 @@ class ExprAdjustmentManager(
         } else {
             source2trajectory1 + source2trajectory2
         }
-        val affectedRegions: List<Int> = copySourceRegionsOntoTrajectories(source2trajectory)
+        copySourceRegionsOntoTrajectories(source2trajectory)
         return Submode.ExprAdjustment(
             adjustables = newAdjustables,
             arcPathAdjustables = newArcPathAdjustables,
-            regions = affectedRegions,
         )
             .also { println("submode = $it") }
     }

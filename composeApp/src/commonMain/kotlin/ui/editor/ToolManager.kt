@@ -27,7 +27,6 @@ import domain.model.Arg
 import domain.model.ConformalObjectModel
 import domain.model.PartialArgList
 import domain.model.Selection
-import domain.model.Styling
 import domain.never
 import domain.settings.Settings
 import kotlinx.coroutines.launch

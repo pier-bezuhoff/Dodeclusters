@@ -25,6 +25,9 @@ interface Constrained {
     val insides: Collection<Ix>
     val outsides: Collection<Ix>
 
+    val allContraints: Collection<Ix> get() =
+        insides + outsides
+
     /** ruff semiorder ⊆ on constrained regions; only goes off indices */
     infix fun isTriviallyInside(other: Constrained): Boolean =
         // the more intersections the smaller the delimited region is

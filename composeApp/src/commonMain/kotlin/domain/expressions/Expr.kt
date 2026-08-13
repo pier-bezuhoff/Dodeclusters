@@ -86,6 +86,12 @@ sealed interface Expr {
     }
 
     @Serializable
+    sealed interface Interpolation : Expr {
+        val start: Ix
+        val end: Ix
+    }
+
+    @Serializable
     sealed interface Adjustable : HasParameters
 
     // NOTE: proper handling of dependent carrier requires computation of inverse function for any expr
@@ -187,7 +193,10 @@ sealed interface Expr {
         override val parameters: InterpolationParameters,
         val startCircle: Ix,
         val endCircle: Ix,
-    ) : Conformal.OneToMany, HasParameters, Adjustable
+    ) : Conformal.OneToMany, HasParameters, Adjustable, Interpolation {
+        override val start: Ix = startCircle
+        override val end: Ix = endCircle
+    }
 
     @Serializable
     @SerialName("PointInterpolation")
@@ -195,7 +204,10 @@ sealed interface Expr {
         override val parameters: InterpolationParameters,
         val startPoint: Ix,
         val endPoint: Ix,
-    ) : Conformal.OneToMany, Projective.OneToMany, HasParameters, Adjustable
+    ) : Conformal.OneToMany, Projective.OneToMany, HasParameters, Adjustable, Interpolation {
+        override val start: Ix = startPoint
+        override val end: Ix = endPoint
+    }
 
     // NOTE: deprecated, since BiInversion is more general
     @Serializable

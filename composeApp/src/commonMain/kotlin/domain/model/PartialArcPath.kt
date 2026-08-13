@@ -183,6 +183,7 @@ data class PartialArcPath(
     }
 
     // TODO: snap to other arc-paths' arcs
+    // MAYBE: snap vertex to align with other midpoints for centering
     // MAYBE: dont move midpoint if it's Eq-snapped
     // MAYBE: snap midpoint so it can stay onto its carrier
     fun updateVertex(
@@ -388,7 +389,7 @@ data class PartialArcPath(
             val nextArcIndex = (arcIndex + 1).mod(arcs.size)
             val nextArc = arcs[nextArcIndex]
             val nextArcStart = arcIndex2startVertex(arcIndex).point
-            val oldNextArcStart = arcIndex2startVertex(nextArcIndex).point
+//            val oldNextArcStart = arcIndex2startVertex(nextArcIndex).point
             val nextArcEnd = arcIndex2endVertex(nextArcIndex).point
             val newNextArc = when (val snap = nextArc.midpointSnap) {
                 is PointSnapResult.Free -> if (nextArc.circle == null) {

@@ -236,8 +236,7 @@ class EditorViewModel : ViewModel() {
     }
     val showAdjustExprButton: Boolean by derivedStateOf {
         hug(objectModel.invalidations)
-        exprAdjustmentManager.getAdjustableExprs().isNotEmpty()
-//        areAdjustableExprIndices(selection.gCircles)
+        exprAdjustmentManager.getAdjustable(selection.indices).isNotEmpty()
     }
     val showInfinitePoint: Boolean by derivedStateOf {
         partialArgList?.let { argList ->
@@ -1277,14 +1276,11 @@ class EditorViewModel : ViewModel() {
         return Rect(left, top, right, bottom)
     }
 
-    inline fun exprOf(index: Ix): Expr.Conformal? =
-        expressions[index]?.expr as? Expr.Conformal
-
     inline fun isFree(index: Ix): Boolean =
         expressions[index] == null
 
     inline fun isConstrained(index: Ix): Boolean {
-        val expr = exprOf(index)
+        val expr = objectModel.getExpr(index)
         return expr is Expr.Incidence || expr is Expr.ArcPathIncidence
     }
 
@@ -1882,7 +1878,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun findSiblingsAndParents(ix: Ix): List<Ix> {
-        val expr = exprOf(ix) ?: return emptyList()
+        val expr = objectModel.getExpr(ix) ?: return emptyList()
         val parents = expr.args
         val siblings = expressions.findExpr(expr)
         return siblings + parents
@@ -2049,7 +2045,7 @@ class EditorViewModel : ViewModel() {
 
     private fun movePointToInfinity() {
         selection.gCircles.singleOrNull()?.let { ix ->
-            val expr = exprOf(ix)
+            val expr = objectModel.getExpr(ix)
             if (expr == null) {
                 objectModel.setDisplayObjectWithConsequences(ix, Point.CONFORMAL_INFINITY)
             } else if (expr is Expr.Incidence && objects[expr.carrier] is Line) {
@@ -2420,7 +2416,7 @@ class EditorViewModel : ViewModel() {
         val point = objects[ix] as Point
         if (point.isInfinite)
             return
-        when (val expr = exprOf(ix)) {
+        when (val expr = objectModel.getExpr(ix)) {
             is Expr.Incidence -> {
                 slidePointAcrossCarrier(
                     pointIndex = ix,
@@ -2987,18 +2983,18 @@ class EditorViewModel : ViewModel() {
             val protoArcPaths = selection.arcPaths.mapNotNull { ix ->
                 val arcPath = objectModel.getArcPath(ix) ?: return@mapNotNull null
                 if (arcPath.dependencies.any { ix ->
-                    exprOf(ix) !is Expr.TransformLike
+                    objectModel.getExpr(ix) !is Expr.TransformLike
                 })
                     return@mapNotNull null
                 val protoVertices = arcPath.vertices.mapNotNull { vertexIndex ->
-                    (exprOf(vertexIndex) as? Expr.TransformLike)?.target
+                    (objectModel.getExpr(vertexIndex) as? Expr.TransformLike)?.target
                 }
                 protoVertices.mapNotNull { expressions.children[it] }
                     // common children of all proto vertices
                     .reduceOrNull { a, b -> a.intersect(b) }
                     // first arc-path common child
                     ?.firstOrNull { ix ->
-                        exprOf(ix) is ArcPath && ix !in sel
+                        objectModel.getExpr(ix) is ArcPath && ix !in sel
                     }
                     ?.also { // if there is a proto arc-path, highlight all parents of vertices
                         parents += arcPath.vertices.flatMap {
@@ -3461,7 +3457,7 @@ class EditorViewModel : ViewModel() {
                 //  after applying move-to-infinity or on detachment.
                 selection.gCircles.singleOrNull()?.let { ix ->
                     val o = objects[ix]
-                    val expr = exprOf(ix)
+                    val expr = objectModel.getExpr(ix)
                     o is Point && o != Point.CONFORMAL_INFINITY &&
                     (expr == null || expr is Expr.Incidence && objects[expr.carrier] is Line)
                 } == true

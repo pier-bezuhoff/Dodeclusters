@@ -105,14 +105,11 @@ sealed interface Submode {
      * reserved output indices for each
      * @property[arcPathAdjustables] `adjustable.expr` here is a blueprint source arc-path,
      * with vertex/midpoint indices within [adjustables] point trajectories
-     * @property[regions] indices of regions resulted from the
-     * [adjustables] expressions, this number is generally divisible by the n-steps parameter
      * @property[parameters] should be shared by all [adjustables]
      */
     data class ExprAdjustment<EXPR : Expr>(
         val adjustables: List<AdjustableExpr<EXPR>>, // non-empty
         val arcPathAdjustables: List<AdjustableExpr<ArcPath>> = emptyList(),
-        val regions: List<Int> = emptyList(),
     ) : Submode {
         @Immutable
         enum class Type {
@@ -128,6 +125,13 @@ sealed interface Submode {
                 } */
             ) { "Invalid adjustables $adjustables" }
         }
+
+        override fun toString(): String = """Submode.ExprAdjustment(
+            |adjustables = [
+            |${adjustables.joinToString(",\n") { it.toString() }}],
+            |arcPathAdjustables = [
+            |${arcPathAdjustables.joinToString(",\n") { it.toString() }}]
+            |)""".trimMargin()
     }
 
     data class GrabbedArcMidpoint(
@@ -195,4 +199,11 @@ data class AdjustableExpr<out EXPR : Expr>(
     val reservedIndices: List<Ix>,
 ) {
     val size: Int get() = occupiedIndices.size
+
+    override fun toString(): String = """AdjustableExpr(
+        |expr = $expr,
+        |sourceIndex = $sourceIndex,
+        |occupiedIndices = $occupiedIndices,
+        |reservedIndices = $reservedIndices
+        |)""".trimMargin()
 }

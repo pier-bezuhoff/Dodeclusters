@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -58,7 +57,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import core.geometry.Circle
 import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrPoint
@@ -96,7 +94,6 @@ import domain.rotateByAround
 import domain.settings.Settings
 import getPlatform
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import ui.circle2cubicPath
@@ -323,7 +320,7 @@ fun BoxScope.EditorCanvas(
         } else if (viewModel.showArcPathContextActions) {
             val someAreClosed = remember(selection) {
                 selection.arcPaths.any {
-                    viewModel.exprOf(it) is ArcPath.Closed
+                    viewModel.getExpr(it) is ArcPath.Closed
                 }
             }
             val mostCommonBorderColor = remember(selection, objectModel.invalidations) {
