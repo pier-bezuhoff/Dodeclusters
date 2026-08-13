@@ -25,7 +25,7 @@ interface Constrained {
     val insides: Collection<Ix>
     val outsides: Collection<Ix>
 
-    val allContraints: Collection<Ix> get() =
+    val constraints: Collection<Ix> get() =
         insides + outsides
 
     /** ruff semiorder ⊆ on constrained regions; only goes off indices */

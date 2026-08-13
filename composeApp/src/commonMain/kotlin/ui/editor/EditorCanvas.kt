@@ -320,7 +320,7 @@ fun BoxScope.EditorCanvas(
         } else if (viewModel.showArcPathContextActions) {
             val someAreClosed = remember(selection) {
                 selection.arcPaths.any {
-                    viewModel.getExpr(it) is ArcPath.Closed
+                    objectModel.getExpr(it) is ArcPath.Closed
                 }
             }
             val mostCommonBorderColor = remember(selection, objectModel.invalidations) {

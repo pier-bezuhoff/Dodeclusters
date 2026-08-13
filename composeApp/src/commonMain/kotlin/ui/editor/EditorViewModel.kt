@@ -562,16 +562,16 @@ class EditorViewModel : ViewModel() {
 
     fun showDebugInfo() {
         val selectedObjectsString = selection.gCircles.joinToString { ix ->
-            "$ix: " + objects[ix].toString()
+            "$ix: " + objects[ix]
         }
         val selectedExpressionsString = selection.gCircles.joinToString { ix ->
-            "$ix: " + expressions[ix].toString()
+            "$ix: " + expressions[ix]
         }
-        val selectedConcreteArcPathsString = selection.arcPaths.joinToString { ix ->
-            "$ix: " + objects[ix].toString()
+        val selectedConcreteArcPathsString = selection.arcPaths.joinToString(",\n") { ix ->
+            "$ix: " + objects[ix]
         }
-        val selectedArcPathsString = selection.arcPaths.joinToString { ix ->
-            "$ix: " + expressions[ix].toString()
+        val selectedArcPathsString = selection.arcPaths.joinToString(",\n") { ix ->
+            "$ix: " + expressions[ix]
         }
         println("mode = $mode, submode = $submode")
         println("circles/lines @ ${objectModel.circleOrLineIndices}")
@@ -584,17 +584,21 @@ class EditorViewModel : ViewModel() {
             "$ix: " + objectModel.downscaledObjects[ix].toString()
         })
         println("selected objects expressions = $selectedExpressionsString")
-        println("selected concrete arc-paths = $selectedConcreteArcPathsString")
-        println("selected arc-paths = $selectedArcPathsString")
+        println("selected concrete arc-paths =\n$selectedConcreteArcPathsString")
+        println("selected arc-paths =\n$selectedArcPathsString")
         println(
-            "regions bounded by some of selected objects = " + regions.filter {
-                it.insides.any { ix -> ix in selection.indices } ||
-                it.outsides.any { ix -> ix in selection.indices }
-            }.joinToString { it.toString() }
+            "regions bounded by some of the selected =\n" + regions.filterIndices {
+                it.constraints.any { ix -> ix in selection.indices }
+            }.joinToString(",\n") { "$it: " + regions[it] }
+        )
+        println(
+            "regions bounded by all of the selected =\n" + regions.filterIndices {
+                it.constraints.all { ix -> ix in selection.indices }
+            }.joinToString(",\n") { "$it: " + regions[it] }
         )
         println("partialArcPath = $partialArcPath")
-        println("invalidation #${objectModel.positionInvalidations}\t " +
-                "propertyInvalidation #${objectModel.invalidations}"
+        println("positionInvalidation #${objectModel.positionInvalidations}\t " +
+                "invalidation #${objectModel.invalidations}"
         )
 //        val circle = objects[expressions.circleIndices.first()] as Circle
 //        val line = objects[expressions.lineIndices.first()] as Line
@@ -613,7 +617,7 @@ class EditorViewModel : ViewModel() {
                     appendLine("$selectedExpressionsString;")
                 if (selectedArcPathsString.isNotEmpty())
                     appendLine("$selectedArcPathsString;")
-//                clear() // tmp
+//                clear()
 //                append(line2.getRegionLocation(line))
             }
             showSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)

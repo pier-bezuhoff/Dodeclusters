@@ -113,7 +113,7 @@ enum class RegionManipulationStrategy(
                             // NOTE: this removes regions of the same color that lie under
                             //  others (potentially invisible), which can be counter-intuitive
                             resultingRegions = allRegions.filter { it !in outerRegionsOfTheSameColor }
-                            println("removed same color regions [${outerRegionsOfTheSameColor.joinToString(prefix = "\n", separator = ";\n")}]")
+                            println("removed same color regions [\n${outerRegionsOfTheSameColor.joinToString(";\n")}]")
                         } else { // there are several outer regions, but none of the color of region.fillColor
                             resultingRegions += constraints.toLogicalRegion(color)
                             println("added $constraints")
@@ -151,12 +151,12 @@ enum class RegionManipulationStrategy(
                 ERASE -> {
                     if (sameBoundsRegions.isNotEmpty()) {
                         resultingRegions = allRegions.filter { it !in sameBoundsRegions }
-                        println("removed [${sameBoundsRegionsIndices.joinToString(prefix = "\n", separator = ";\n")}] (same bounds ~ $constraints)")
+                        println("removed [\n${sameBoundsRegions.joinToString(";\n")}] (same bounds ~ $constraints)")
                     } else if (outerRegions.isNotEmpty()) {
                         // maybe find minimal and erase it OR remove last outer
                         // tho it would stop working like eraser then
                         resultingRegions = allRegions.filter { it !in outerRegions }
-                        println("removed outer [${outerRegions.joinToString(prefix = "\n", separator = ";\n")}]")
+                        println("removed outer [\n${outerRegions.joinToString(";\n")}]")
                     } // when clicking on nowhere nothing happens
                 }
             }

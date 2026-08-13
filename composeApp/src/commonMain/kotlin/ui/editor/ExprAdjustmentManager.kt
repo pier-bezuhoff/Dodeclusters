@@ -267,6 +267,7 @@ class ExprAdjustmentManager(
         }
         val arcPathAdjustables = mutableListOf<AdjustableExpr<ArcPath>>()
         for (sourceArcPathIndex in arcPathSources) {
+            // NOTE: if 2 source arc paths share vertices, they get duplicated
             val (arcPathAdjustable, arcPathPointsAdjustables) =
                 copyArcPathToMany(sourceArcPathIndex, mkExpr)
             val startIndex = adjustables.size
@@ -392,21 +393,19 @@ class ExprAdjustmentManager(
         return newRegionIndices
     }
 
-    private fun getOccupiedRegions(
+    private fun List<LogicalRegion>.withoutOccupiedRegions(
         sm: Submode.ExprAdjustment<*>,
-        regions: List<LogicalRegion>,
-    ): List<Ix> {
-        return sm.adjustables.map { it.occupiedIndices }
-            .plus(sm.arcPathAdjustables.map { it.occupiedIndices })
-            .transpose()
-            .flatMap { trajectoryStageSlice ->
-                val nonNullSlice = trajectoryStageSlice.filterNotNull()
-                regions.filterIndices { nonNullSlice.containsAll(it.allContraints) }
-            }
+    ): List<LogicalRegion> {
+        val constraints = mutableSetOf<Ix>()
+        sm.adjustables.flatMapTo(constraints) { it.occupiedIndices }
+        sm.arcPathAdjustables.flatMapTo(constraints) { it.occupiedIndices }
+        return filterNot { region ->
+            constraints.containsAll(region.constraints)
+        }
     }
 
     // FIX: problems when shortening
-    //  + with trajectories with deleted interims
+    //  undefined behaviour for trajectories with deleted interim stages
     context(viewModel: EditorViewModel)
     fun startExprAdjustmentOfSelection() {
         val exprs = getAdjustable(viewModel.selection.indices)
@@ -533,18 +532,10 @@ class ExprAdjustmentManager(
                 ng.addAll(indices)
             }
         }
-        val ngsArePreimages = ng.all { ix ->
-            adjustableExprs.any {
-                when (it) {
-                    is TransformLike ->
-                        ix == it.target
-                    is Expr.Interpolation ->
-                        ix == it.start || ix == it.end
-                    else -> false
-                }
-            }
+        val ngsAreArgs = ng.all { ix ->
+            adjustableExprs.any { ix in it.args }
         }
-        return if (ngsArePreimages && adjustableExprs.isNotEmpty())
+        return if (ngsAreArgs && adjustableExprs.isNotEmpty())
             adjustableExprs.toList()
         else emptyList()
     }
@@ -626,7 +617,7 @@ class ExprAdjustmentManager(
         val outputIndices = expressions.findExpr(expr as Expr.Conformal)
             // choose only the first instance of same-expression duplicates
             .distinctBy { (expressions[it] as ExprOutput.OneOf).outputIndex }
-            // what if some intermediate stages were deleted?
+            // NOTE: how interim stages might have been deleted atp
             .sortedBy { (expressions[it] as ExprOutput.OneOf).outputIndex }
         adjustables.add(AdjustableExpr(
             expr, sourceIndex, outputIndices, outputIndices
@@ -649,31 +640,26 @@ class ExprAdjustmentManager(
         }
     }
 
+    /**
+     * For arc path @[protoArcPathIndex]: if it's made of [transformTargets] try finding its
+     * transform trajectory, then add it to [protoArcPaths] and to [arcPathAdjustables] as
+     * a blueprint with the trajectory. For loxodromic spiral additionally add its other half.
+     */
     private fun tryAddingProtoArcPathAsAdjustable(
         protoArcPathIndex: Ix,
         expr0: TransformLike,
         transformTargets: List<Ix>,
-        protoArcPaths: MutableList<Ix>,
         adjustables: List<AdjustableExpr<*>>,
+        protoArcPaths: MutableList<Ix>,
         arcPathAdjustables: MutableList<AdjustableExpr<ArcPath>>,
         complementaryArcPathAdjustables: MutableList<AdjustableExpr<ArcPath>>,
     ) {
         val protoArcPath = objectModel.getArcPath(protoArcPathIndex) ?: return
-        val protoMidpoints: List<Ix> = protoArcPath.midpoints.mapIndexed { arcIndex, midpointIndex ->
-            if (midpointIndex == null) {
-                val gluedMidpoints = expressions.findExpr(
-                    Expr.ArcPathArcMidpoint(
-                        ArcPathArcMidpointParameters(arcIndex),
-                        protoArcPathIndex
-                    )
-                )
-                gluedMidpoints.firstOrNull() ?: return
-            } else midpointIndex
-        }
+        val protoMidpoints: List<Ix> = getArcPathMidpoints(protoArcPathIndex) ?: return
         if (transformTargets.containsAll(protoArcPath.vertices) &&
             transformTargets.containsAll(protoMidpoints)
         ) {
-            val ix2e0 = findTransformTrajectoryOfArcPath(protoArcPathIndex)
+            val ix2e0: List<Pair<Ix, ExprOutput.OneOf>> = findTransformTrajectoryOfArcPath(protoArcPathIndex)
             if (ix2e0.isNotEmpty()) {
                 protoArcPaths.add(protoArcPathIndex)
                 val blueprintArcPath = protoArcPath.copy(
@@ -685,10 +671,10 @@ class ExprAdjustmentManager(
                         ArcPath.Arc.By3Points(i)
                     },
                 )
-                val firstVertexExpr0 = ix2e0[0].second.expr
-                if (firstVertexExpr0 is Expr.LoxodromicMotion &&
-                    firstVertexExpr0.otherHalfStart != null
-                ) {
+                val expr00 = ix2e0[0].second.expr
+                val isBipartite =
+                    expr00 is Expr.LoxodromicMotion && expr00.otherHalfStart != null
+                if (isBipartite) {
                     val forward = mutableListOf<Pair<Ix, ExprOutput.OneOf>>()
                     val backward = mutableListOf<Pair<Ix, ExprOutput.OneOf>>()
                     val firstProtoVertex = protoArcPath.vertices.first()
@@ -699,6 +685,8 @@ class ExprAdjustmentManager(
                             backward.add(ix to e0)
                         }
                     }
+                    forward.distinctBy { (_, e0) -> e0.outputIndex }
+                    backward.distinctBy { (_, e0) -> e0.outputIndex }
                     forward.sortBy { (_, e0) -> e0.outputIndex }
                     backward.sortBy { (_, e0) -> e0.outputIndex }
                     val forwardTrajectory = forward.map { (ix, _) -> ix }
@@ -722,8 +710,10 @@ class ExprAdjustmentManager(
                         protoArcPathIndex,
                         backwardTrajectory, backwardTrajectory
                     ))
-                } else {
+                } else { // unipartite case
+                    // NOTE: how some trajectory stage could have been deleted atp
                     val trajectory = ix2e0
+                        .distinctBy { (_, e0) -> e0.outputIndex }
                         .sortedBy { (_, e0) -> e0.outputIndex }
                         .map { (ix, _) -> ix }
                     arcPathAdjustables.add(AdjustableExpr(
@@ -744,37 +734,23 @@ class ExprAdjustmentManager(
         protoArcPathIndex: Ix
     ): List<Pair<Ix, ExprOutput.OneOf>> {
         val protoArcPath = objectModel.getArcPath(protoArcPathIndex) ?: return emptyList()
-        val protoMidpoints: List<Ix> = protoArcPath.midpoints.mapIndexed { arcIndex, midpointIndex ->
-            if (midpointIndex == null) {
-                val gluedMidpoints = expressions.findExpr(
-                    Expr.ArcPathArcMidpoint(
-                        ArcPathArcMidpointParameters(arcIndex),
-                        protoArcPathIndex
-                    )
-                )
-                if (gluedMidpoints.isEmpty())
-                    return emptyList()
-                gluedMidpoints.first()
-            } else midpointIndex
-        }
+        val protoMidpoints: List<Ix> = getArcPathMidpoints(protoArcPathIndex) ?: return emptyList()
         return objectModel.arcPathIndices.mapNotNull { arcPathIndex ->
             val arcPath = objectModel.getArcPath(arcPathIndex) ?: return@mapNotNull null
             val e0 = expressions[arcPath.vertices.first()]
-            val expr0 = e0?.expr
             if (arcPath.vertices.size == protoArcPath.vertices.size &&
                 arcPath.arcs.size == protoArcPath.arcs.size &&
                 e0 is ExprOutput.OneOf &&
-                expr0 is TransformLike && expr0 is Adjustable &&
-                expr0.target == protoArcPath.vertices.first()
+                e0.expr is TransformLike && e0.expr is Adjustable &&
+                e0.expr.target == protoArcPath.vertices.first()
             ) {
                 arcPath.vertices.zip(protoArcPath.vertices) { vertex, protoVertex ->
                     val e = expressions[vertex]
-                    val expr = e?.expr
                     val isImage =
                         e is ExprOutput.OneOf &&
                         ExprOutput.areSameStageTransforms(e0, e) &&
-                        expr is TransformLike &&
-                        expr.target == protoVertex
+                        e.expr is TransformLike &&
+                        e.expr.target == protoVertex
                     if (!isImage)
                         return@mapNotNull null
                 }
@@ -782,17 +758,33 @@ class ExprAdjustmentManager(
                     if (midpoint == null)
                         return@mapNotNull null
                     val e = expressions[midpoint]
-                    val expr = e?.expr
                     val isImage =
                         e is ExprOutput.OneOf &&
                         ExprOutput.areSameStageTransforms(e0, e) &&
-                        expr is TransformLike &&
-                        expr.target == protoMidpoint
+                        e.expr is TransformLike &&
+                        e.expr.target == protoMidpoint
                     if (!isImage)
                         return@mapNotNull null
                 }
                 arcPathIndex to e0
             } else null
+        }
+    }
+
+    @Suppress("IfThenToElvis")
+    private fun getArcPathMidpoints(
+        arcPathIndex: Ix
+    ): List<Ix>? {
+        val arcPath = objectModel.getArcPath(arcPathIndex) ?: return null
+        return arcPath.midpoints.mapIndexed { arcIndex, midpointIndex ->
+            if (midpointIndex == null) {
+                expressions.findExpr(
+                    Expr.ArcPathArcMidpoint(
+                        ArcPathArcMidpointParameters(arcIndex),
+                        arcPathIndex
+                    )
+                ).firstOrNull() ?: return null
+            } else midpointIndex
         }
     }
 
@@ -805,9 +797,7 @@ class ExprAdjustmentManager(
                     viewModel.defaultLoxodromicMotionParameters = viewModel.defaultLoxodromicMotionParameters.copy(
                         bidirectional = bidirectional,
                     )
-                    viewModel.regions = viewModel.regions.withoutElementsAt(
-                        getOccupiedRegions(sm, viewModel.regions).toSet()
-                    )
+                    viewModel.regions = viewModel.regions.withoutOccupiedRegions(sm)
                     viewModel.deleteObjectsWithDependenciesColorsAndRegions(
                         indicesToDelete =
                             sm.adjustables.flatMap { it.occupiedIndices } +
@@ -888,9 +878,7 @@ class ExprAdjustmentManager(
         sm: Submode.ExprAdjustment<Expr.Conformal.OneToMany>,
         parameters: Parameters,
     ): Submode.ExprAdjustment<Expr.Conformal.OneToMany> {
-        viewModel.regions = viewModel.regions.withoutElementsAt(
-            getOccupiedRegions(sm, viewModel.regions).toSet()
-        )
+        viewModel.regions = viewModel.regions.withoutOccupiedRegions(sm)
         for (arcPathAdjustable in sm.arcPathAdjustables) {
             objectModel.removeObjectsAt(arcPathAdjustable.occupiedIndices)
         }
