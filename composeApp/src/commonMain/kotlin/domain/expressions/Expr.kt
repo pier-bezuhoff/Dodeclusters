@@ -89,6 +89,7 @@ sealed interface Expr {
     sealed interface Interpolation : Expr {
         val start: Ix
         val end: Ix
+        val parameters: InterpolationParameters
     }
 
     @Serializable

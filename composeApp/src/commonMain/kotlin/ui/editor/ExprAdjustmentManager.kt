@@ -3,12 +3,14 @@ package ui.editor
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrImaginaryCircle
 import core.geometry.ConcreteArcPath
 import core.geometry.GCircle
 import core.geometry.GCircleOrConcreteArcPath
 import core.geometry.ImaginaryCircle
 import core.geometry.Point
+import core.geometry.Region
 import core.geometry.conformal.GeneralizedCircle
 import domain.Ix
 import domain.expressions.ArcPath
@@ -28,7 +30,6 @@ import domain.expressions.changeTarget
 import domain.expressions.copy
 import domain.expressions.copyWithNewParameters
 import domain.expressions.reIndex
-import domain.filterIndices
 import domain.model.Arg
 import domain.model.ConformalObjectModel
 import domain.model.LogicalRegion
@@ -37,7 +38,6 @@ import domain.model.Selection
 import domain.never
 import domain.transpose
 import domain.updated
-import domain.withoutElementsAt
 import ui.editor.EditorViewModel.Companion.upscale
 import ui.editor.dialogs.DefaultBiInversionParameters
 import ui.editor.dialogs.DefaultInterpolationParameters
@@ -61,21 +61,31 @@ class ExprAdjustmentManager(
     context(viewModel: EditorViewModel)
     fun startCircleOrPointInterpolationParameterAdjustment() {
         val argList = partialArgList ?: return
+        val params = viewModel.defaultInterpolationParameters.params
         val (startArg, endArg) = argList.args.map { it as Arg.CLIP }
         if (startArg is Arg.CLI && endArg is Arg.CLI) {
             viewModel.interpolateCircles = true
+            val c1 = objects[startArg.index] as CircleOrLineOrImaginaryCircle
+            val c2 = objects[endArg.index] as CircleOrLineOrImaginaryCircle
             val scalarProduct =
-                GeneralizedCircle.fromGCircle(objects[startArg.index] as CircleOrLineOrImaginaryCircle) scalarProduct
-                GeneralizedCircle.fromGCircle(objects[endArg.index] as CircleOrLineOrImaginaryCircle)
-            viewModel.circlesAreCoDirected = scalarProduct >= 0.0
+                GeneralizedCircle.fromGCircle(c1) scalarProduct
+                GeneralizedCircle.fromGCircle(c2)
+            val coDirected = scalarProduct >= 0.0
+            val onlyInBetweenExists =
+                c1 is CircleOrLine && c2 is CircleOrLine &&
+                c1.getRegionLocation(c2) != Region.RegionLocation.OVERLAPS
+            val inBetween = onlyInBetweenExists || params.inBetween
+            viewModel.circlesAreCoDirected = coDirected
+            viewModel.defaultInterpolationParameters = viewModel.defaultInterpolationParameters.copy(
+                inBetween = inBetween
+            )
             val expr = Expr.CircleInterpolation(
-                viewModel.defaultInterpolationParameters.params.let {
-                    it.copy(
-                        complementary =
-                            if (viewModel.circlesAreCoDirected) !it.inBetween
-                            else it.inBetween
-                    )
-                },
+                params.copy(
+                    complementary =
+                        if (coDirected)
+                            !inBetween
+                        else inBetween
+                ),
                 startArg.index, endArg.index
             )
             val oldSize = objects.size
@@ -94,17 +104,14 @@ class ExprAdjustmentManager(
                 viewModel.showSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
             }
         } else if (startArg is Arg.Point && endArg is Arg.Point) {
+            viewModel.interpolateCircles = false
             val (startPointIndex, endPointIndex) = listOf(startArg, endArg).map { pointArg ->
                 when (pointArg) {
                     is Arg.PointIndex -> pointArg.index
                     is Arg.FixedPoint -> viewModel.createNewFreePoint(pointArg.toPoint())
                 }
             }
-            val expr = Expr.PointInterpolation(
-                viewModel.defaultInterpolationParameters.params,
-                startPointIndex, endPointIndex
-            )
-            viewModel.interpolateCircles = false
+            val expr = Expr.PointInterpolation(params, startPointIndex, endPointIndex)
             val oldSize = objects.size
             val newGCircles = expressions.addMultiExpr(expr)
             val newPoints = newGCircles.map { (it as? Point)?.upscale() }
@@ -116,6 +123,8 @@ class ExprAdjustmentManager(
                     outputRange, outputRange
                 )
             ))
+        } else {
+            println("startCircleOrPointInterpolationAdjustment: invalid args $argList")
         }
         objectModel.invalidate()
     }
@@ -449,7 +458,8 @@ class ExprAdjustmentManager(
             }
         } else if (expr0 is Expr.Interpolation) {
             val sourceIndex = expr0.start
-            val outputIndices = expressions.findExpr(expr0 as? Expr.Conformal)
+            val indices = expressions.findExpr(expr0 as? Expr.Conformal)
+            val outputIndices = fillMissingStages(indices)
             adjustables.add(AdjustableExpr(
                 expr0, sourceIndex, outputIndices, outputIndices
             ))
@@ -786,6 +796,48 @@ class ExprAdjustmentManager(
                 ).firstOrNull() ?: return null
             } else midpointIndex
         }
+    }
+
+    /**
+     * Apply to the output of `expressions.findExpr()`
+     * @param[indices] indices with `ExprOutput.OneOf` of the same `Expr`, can be in any order
+     * and with repeating `outputIndex`
+     * @param[size] of the resulting trajectory, `null` means maxOf(outputIndex)
+     * @return trajectory with no missing stage (OneOf.outputIndex), out of duplicate
+     * expressions @ [indices] the first one is chosen
+     */
+    private fun fillMissingStages(
+        indices: List<Ix>,
+        size: Int? = null,
+    ): List<Ix> {
+        require(indices.isNotEmpty())
+        val expr = objectModel.getExpr(indices[0])
+        require(expr is Expr.Conformal.OneToMany)
+        val trajectory = mutableListOf<Ix>()
+        // outputIndex -> index
+        val i2index = indices.asReversed().associateBy { ix ->
+            (expressions[ix] as ExprOutput.OneOf).outputIndex
+        }
+        val max = size ?: when (expr) {
+            is Expr.Interpolation -> expr.parameters.nInterjacents - 1
+            else -> i2index.keys.maxOrNull() ?: 0
+        }
+        for (i in 0 .. max) {
+            val index = i2index[i]
+            val ix =
+                if (index == null) {
+                    val o = expressions.addMultiExpression(
+                        ExprOutput.OneOf(expr, i)
+                    ) as GCircle?
+                    objectModel.addDisplayObject(o?.upscale())
+//                    expressions.addFree()
+//                    objectModel.addDisplayObject(null)
+                } else {
+                    index
+                }
+            trajectory.add(ix)
+        }
+        return trajectory
     }
 
     context(viewModel: EditorViewModel)

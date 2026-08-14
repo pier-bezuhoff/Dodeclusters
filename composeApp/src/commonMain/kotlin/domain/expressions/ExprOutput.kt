@@ -26,7 +26,7 @@ sealed interface ExprOutput {
     @SerialName("OneOf")
     data class OneOf(
         override val expr: Expr.OneToMany,
-        val outputIndex: Ix
+        val outputIndex: Int
     ) : ExprOutput
 
     companion object {
