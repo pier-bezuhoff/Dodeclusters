@@ -516,7 +516,7 @@ class ToolManager(
         crossinline mkExpr: (pointIndex: Ix) -> Expr.Conformal.OneToOne,
     ) {
         require(objectModel.getArcPath(sourceArcPathIndex) is ArcPath)
-        val sourceArcPath = viewModel.realizeArcPathMidpoints(sourceArcPathIndex)
+        val sourceArcPath = viewModel.arcPathWithRealizedMidpoints(sourceArcPathIndex)
         val copiedVertices = sourceArcPath.vertices.map { vertexIndex ->
             val expr = mkExpr(vertexIndex)
             val result = expressions.addSoloExpr(expr) as? Point

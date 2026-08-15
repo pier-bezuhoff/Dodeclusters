@@ -678,9 +678,9 @@ class EditorViewModel : ViewModel() {
     private fun loadState(state: SaveState) {
         resetTransients()
         regions = emptyList() // important, since draws are async (otherwise can crash)
-        clearSelection()
         objectModel.loadState(state)
-        regions = state.regions
+        clearSelection() // triggers redraw
+        regions = state.regions // triggers redraw
         val validSelection = state.selection.copy( // just in case
             gCircles = state.selection.gCircles.filter { it in objects.indices },
             arcPaths = state.selection.arcPaths.filter { it in objects.indices },
@@ -3191,7 +3191,10 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    fun realizeArcPathMidpoints(arcPathIndex: Ix): ArcPath {
+    /** Realizes all 2-point arcs as 3-point.
+     * @return arc path @ [arcPathIndex] but with all arcs replaced 3-point arcs,
+     * as a prep for transform */
+    fun arcPathWithRealizedMidpoints(arcPathIndex: Ix): ArcPath {
         val arcPath = objectModel.getArcPath(arcPathIndex)!!
         val arcs = arcPath.arcs.mapIndexed { arcIndex, arc ->
             when (arc) {

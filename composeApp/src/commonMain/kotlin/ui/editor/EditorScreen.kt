@@ -28,7 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -40,7 +39,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -49,7 +47,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -108,9 +105,11 @@ import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
+import ui.CustomModalNavigationDrawer
 import ui.DisableableButton
 import ui.LifecycleEvent
 import ui.LoadingOverlay
+import ui.MyDrawerState
 import ui.OnOffButton
 import ui.SimpleButton
 import ui.SimpleToolButtonWithTooltip
@@ -129,6 +128,7 @@ import ui.editor.dialogs.LoxodromicMotionDialog
 import ui.editor.dialogs.RotationDialog
 import ui.editor.dialogs.SaveOptionsDialog
 import ui.editor.dialogs.SavePromptDialog
+import ui.rememberMyDrawerState
 import ui.theme.ColorTheme
 import ui.theme.DodeclustersColors
 import ui.theme.DodeclustersTheme
@@ -180,7 +180,7 @@ fun EditorScreenRoot(
     val uiState = viewModel.uiState
     val canvasState = viewModel.canvasState
     val snackbarHostState = remember { SnackbarHostState() }
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val drawerState = rememberMyDrawerState(DrawerValue.Closed)
     // NOTE: that lambdas that capture some state trigger first order recompositions
     //  as often as the state changes
     EditorScreen(
@@ -539,7 +539,7 @@ private fun EditorScreen(
     selectToolAndTogglePanel: (Tool) -> Unit = {},
     getColorsByMostUsed: () -> List<Color>,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
+    drawerState: MyDrawerState = rememberMyDrawerState(DrawerValue.Closed),
     toolbarState: ToolbarState,
     ddcContent: LoadingState<String>? = null,
     showUI: Boolean,
@@ -558,13 +558,13 @@ private fun EditorScreen(
     editorCanvas: @Composable (BoxScope.() -> Unit),
 ) {
     val isLandscape: Boolean = MaterialTheme.adaptiveSizing.isLandscape
-    ModalNavigationDrawer(
+    // difference from built-in is no horizontal drag
+    CustomModalNavigationDrawer(
         drawerContent = {
             DrawerContent(openNewBlank = openNewBlank, openFile = openFile, showSaveOptionsDialog = showSaveOptionsDialog, openSettings = openSettings)
         },
         drawerState = drawerState,
-        // disabling gestures makes the drawer unclosable
-        gesturesEnabled = true,
+        // disabling gestures makes the drawer unclosable for built-in modal nav drawer
     ) {
         Scaffold(
             modifier = modifier,
@@ -641,7 +641,7 @@ private fun EditorScreenPreview() {
             activeTool = Tool.Drag,
         )
         EditorScreen(
-            drawerState = rememberDrawerState(DrawerValue.Closed),
+            drawerState = rememberMyDrawerState(DrawerValue.Closed),
             toolbarState = toolbarState,
             showPanel = false, // cannot show panel when in drag category
             showUI = true,
