@@ -375,8 +375,8 @@ class EditorViewModel : ViewModel() {
 //        println("VM.init")
         viewModelScope.launch {
             restoreFromDisk()
-            if (AUTOSAVE_EVERY_5_MINUTES) {
-                autosaveEvery5Minutes()
+            if (AUTOSAVE_EVERY_X_MINUTES) {
+                autosaveEveryXMinutes()
             }
         }
     }
@@ -3642,10 +3642,10 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private suspend fun autosaveEvery5Minutes() {
+    private suspend fun autosaveEveryXMinutes() {
         withContext(Dispatchers.Default) {
             while (true) {
-                delay(5.minutes)
+                delay(AUTOSAVE_DELAY)
                 cacheState()
             }
         }
@@ -3728,7 +3728,8 @@ class EditorViewModel : ViewModel() {
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val INTERSECTION_SNAP_FACTOR = 1.5
         const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
-        const val AUTOSAVE_EVERY_5_MINUTES = true
+        const val AUTOSAVE_EVERY_X_MINUTES = true
+        val AUTOSAVE_DELAY = 3.minutes
 
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         /** When several objects are close enough to the tap position,

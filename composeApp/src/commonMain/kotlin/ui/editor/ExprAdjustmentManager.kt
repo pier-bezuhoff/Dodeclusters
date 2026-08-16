@@ -421,10 +421,17 @@ class ExprAdjustmentManager(
                     complementaryAdjustables = complementaryAdjustables,
                 )
             }
+            if (complementaryAdjustables.isNotEmpty()) {
+                viewModel.defaultLoxodromicMotionParameters = viewModel.defaultLoxodromicMotionParameters.copy(
+                    bidirectional = true,
+                )
+            }
             adjustables.addAll(complementaryAdjustables)
             val complementaryArcPathAdjustables = mutableListOf<AdjustableExpr<ArcPath>>()
             val protoArcPaths = mutableListOf<Ix>()
             for (protoArcPathIndex in objectModel.arcPathIndices) {
+                // TODO: fill missing stages up until lastStage
+                //  and include arc paths into last-stage calc
                 tryAddingProtoArcPathAsAdjustable(
                     protoArcPathIndex = protoArcPathIndex,
                     expr0 = expr0,
@@ -451,6 +458,7 @@ class ExprAdjustmentManager(
         partialArgList = PartialArgList(tool.signature, tool.nonEqualityConditions, args)
         submode = Submode.ExprAdjustment(adjustables, arcPathAdjustables)
         viewModel.selection = Selection() // clear selection to hide selection HUD
+        objectModel.invalidate()
 //        println("args: $args")
 //        println("submode: $submode")
     }
@@ -485,8 +493,7 @@ class ExprAdjustmentManager(
                             val depExpressions = expr.dependencies.map { expressions[it] }
                             val good =
                                 expr.arcs.all { it is ArcPath.Arc.By3Points } &&
-                                run {
-                                    val e1 = depExpressions.first()
+                                depExpressions.first().let { e1 ->
                                     e1 is ExprOutput.OneOf &&
                                     e1.expr is TransformLike && e1.expr is Adjustable &&
                                     Expr.areCompatibleTransforms(expr0, e1.expr) &&
@@ -601,7 +608,10 @@ class ExprAdjustmentManager(
         }
     }
 
-    context(viewModel: EditorViewModel)
+    /**
+     * @param[lastStage] of the resulting trajectory =
+     * max outputIndex of ExprOutput.OneOf's
+     */
     private fun addExprAsAdjustable(
         expr: Adjustable,
         lastStage: Int? = null,
@@ -624,9 +634,6 @@ class ExprAdjustmentManager(
                     sourceIndex,
                     complementaryOutputIndices, complementaryOutputIndices
                 ))
-                viewModel.defaultLoxodromicMotionParameters = viewModel.defaultLoxodromicMotionParameters.copy(
-                    bidirectional = true,
-                )
             }
         }
     }
@@ -635,6 +642,8 @@ class ExprAdjustmentManager(
      * For arc path @[protoArcPathIndex]: if it's made of [transformTargets] try finding its
      * transform trajectory, then add it to [protoArcPaths] and to [arcPathAdjustables] as
      * a blueprint with the trajectory. For loxodromic spiral additionally add its other half.
+     * @param[lastStage] of the resulting trajectory =
+     * max outputIndex of ExprOutput.OneOf's
      */
     private fun tryAddingProtoArcPathAsAdjustable(
         protoArcPathIndex: Ix,
@@ -786,7 +795,7 @@ class ExprAdjustmentManager(
      * @param[indices] indices with `ExprOutput.OneOf` of the same `Expr`, can be in any order
      * and with repeating `outputIndex`
      * @param[lastStage] of the resulting trajectory, `null` means maxOf(outputIndex)
-     * @return trajectory with no missing stage (OneOf.outputIndex), out of duplicate
+     * @return trajectory with no missing stages (OneOf.outputIndex); out of the duplicate
      * expressions @ [indices] the first one is chosen
      */
     private fun fillMissingStages(
@@ -797,7 +806,7 @@ class ExprAdjustmentManager(
         val expr = objectModel.getExpr(indices[0])
         require(expr is Expr.Conformal.OneToMany)
         val trajectory = mutableListOf<Ix>()
-        // outputIndex -> index
+        // ExprOutput.OneOf.outputIndex -> index within objects
         val i2index = indices.asReversed().associateBy { ix ->
             (expressions[ix] as ExprOutput.OneOf).outputIndex
         }
@@ -812,7 +821,7 @@ class ExprAdjustmentManager(
                     val o = expressions.addMultiExpression(
                         ExprOutput.OneOf(expr, i)
                     ) as GCircle?
-                    objectModel.addDisplayObject(o?.upscale())
+                    objectModel.addDownscaledObject(o)
 //                    expressions.addFree()
 //                    objectModel.addDisplayObject(null)
                 } else {
@@ -872,7 +881,7 @@ class ExprAdjustmentManager(
                     )
                 else -> sm
             }
-            setParametersAsDefault(parameters) // upd defaults for dialog, not sure it's sensible
+            setParametersAsDefault(parameters) // upd defaults for dialogs
             // NOTE: nearly-continuous invalidations from slider, not ideal for recompositions
             objectModel.invalidate() // using invalidatePositions() leads to visual glitches
         }
