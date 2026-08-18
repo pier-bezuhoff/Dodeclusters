@@ -4,7 +4,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,10 +13,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -35,8 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,8 +48,6 @@ import dodeclusters.composeapp.generated.resources.auto
 import dodeclusters.composeapp.generated.resources.back
 import dodeclusters.composeapp.generated.resources.color_theme
 import dodeclusters.composeapp.generated.resources.create_additional_points_for_circle_by_3_points
-import dodeclusters.composeapp.generated.resources.create_additional_points_for_circle_by_center_and_radius
-import dodeclusters.composeapp.generated.resources.create_additional_points_for_line_by_2_points
 import dodeclusters.composeapp.generated.resources.dark
 import dodeclusters.composeapp.generated.resources.dashed_circle_around_point
 import dodeclusters.composeapp.generated.resources.drag_pan
@@ -138,6 +136,7 @@ private fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
+                        .verticalScroll(rememberScrollState())
                     ,
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceAround,
@@ -214,9 +213,11 @@ private fun TopBar(
             Button(
                 onClick = resetSettings,
                 colors = ButtonDefaults.buttonColors().copy(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
+                // default is 24, 8
+                contentPadding = PaddingValues(16.dp, 8.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -225,7 +226,7 @@ private fun TopBar(
                     Icon(painterResource(Res.drawable.reset_settings), "reset settings")
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(Res.string.reset_to_defaults),
-                        style = MaterialTheme.adaptiveTypography.label,
+                        style = MaterialTheme.typography.labelSmall,
                     )
                 }
             }
@@ -255,13 +256,14 @@ private fun ColumnScope.ColorThemeSwitch(
         Res.drawable.sun,
         Res.string.color_theme
     )
-    Row(
+    FlowRow(
         Modifier
             .fillMaxWidth()
             .selectableGroup()
         ,
         horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         colorThemes.forEach { (colorTheme0, descriptionResource) ->
             val enabled = colorTheme == colorTheme0
@@ -304,13 +306,14 @@ private fun ColumnScope.MotionSettings(
         style = MaterialTheme.adaptiveTypography.body,
     )
     Spacer(Modifier.height(8.dp))
-    Row(
+    FlowRow(
         Modifier
             .fillMaxWidth()
             .selectableGroup()
         ,
         horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         listOf(
             InversionOfControl.NONE to Res.string.inversion_of_control_none,
@@ -409,7 +412,10 @@ private fun CategoryTitle(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(painterResource(iconResource), null)
+        Icon(painterResource(iconResource),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
         Text(stringResource(descriptionResource),
             style = MaterialTheme.adaptiveTypography.title,
         )
