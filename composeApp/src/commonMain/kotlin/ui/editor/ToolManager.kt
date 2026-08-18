@@ -17,12 +17,15 @@ import core.geometry.Line
 import core.geometry.Point
 import domain.Ix
 import domain.PointSnapResult
+import domain.allAre
 import domain.entails
 import domain.expressions.ArcPath
 import domain.expressions.ConformalExpressions
 import domain.expressions.Expr
 import domain.expressions.ExtrapolationParameters
+import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeConcentricCircle
+import domain.expressions.computeLineBy2Points
 import domain.model.Arg
 import domain.model.ConformalObjectModel
 import domain.model.PartialArgList
@@ -304,9 +307,9 @@ class ToolManager(
 
     context(viewModel: EditorViewModel)
     fun addInfinitePointArg() {
-        val argList = partialArgList
+        val argList = partialArgList ?: return
         require(
-            argList != null && !argList.isFull &&
+            !argList.isFull &&
             argList.nextArgType?.let { nextArgType ->
                 Arg.InfinitePoint in nextArgType.possibleTypes
             } == true
@@ -329,36 +332,34 @@ class ToolManager(
     context(viewModel: EditorViewModel)
     fun completeCircleByCenterAndRadius() {
         val argList = partialArgList ?: return
-        val centerArg = argList.args[0]
-        val pointArg = argList.args[1]
-        require(centerArg is Arg.CircleIndex || centerArg is Arg.LineIndex || centerArg is Arg.PointIndex || centerArg is Arg.PointXY)
-        require(pointArg is Arg.CircleIndex || pointArg is Arg.PointIndex || pointArg is Arg.PointXY)
-        if (!Settings.ALWAYS_CREATE_ADDITIONAL_POINTS && centerArg is Arg.PointXY && pointArg is Arg.PointXY) {
-            val newCircle = computeConcentricCircle(
+        val args = argList.args
+        require(args.size == 2 && args.allAre<Arg.CLIP>())
+        val newCircle: GCircle?
+        if (!viewModel.settings.enableCreatingAdditionPointsForCircleByCenterAndRadius &&
+            args.allAre<Arg.PointXY>()
+        ) {
+            val (centerArg, pointArg) = args
+            newCircle = computeConcentricCircle(
                 samePencilObject = centerArg.toPoint().downscale(),
                 point = pointArg.toPoint().downscale(),
-            )?.upscale()
-            viewModel.createNewGCircle(newCircle)
+            )
             expressions.addFree()
         } else {
-            val realizedCenterArg = when (centerArg) {
-                is Arg.Index -> centerArg.index
-                is Arg.PointXY -> viewModel.createNewFreePoint(centerArg.toPoint())
-                else -> never(centerArg)
+            val (realizedCenterIx, realizedRadiusPointIx) = args.map {
+                when (it) {
+                    is Arg.Index -> it.index
+                    is Arg.PointXY -> viewModel.createNewFreePoint(it.toPoint())
+                    else -> never(it)
+                }
             }
-            val realizedPointArg = when (pointArg) {
-                is Arg.Index -> pointArg.index
-                is Arg.PointXY -> viewModel.createNewFreePoint(pointArg.toPoint())
-                else -> never(pointArg)
-            }
-            val newCircle = expressions.addSoloExpr(
+            newCircle = expressions.addSoloExpr(
                 Expr.CircleByCenterAndRadius(
-                    center = realizedCenterArg,
-                    radiusPoint = realizedPointArg,
+                    center = realizedCenterIx,
+                    radiusPoint = realizedRadiusPointIx,
                 ),
-            ) as? CircleOrLine
-            viewModel.createNewGCircle(newCircle?.upscale())
+            ) as? GCircle
         }
+        viewModel.createNewGCircle(newCircle?.upscale())
         partialArgList = argList.copyEmpty()
         viewModel.recordHistory()
     }
@@ -366,21 +367,31 @@ class ToolManager(
     context(viewModel: EditorViewModel)
     fun completeCircleBy3Points() {
         val argList = partialArgList ?: return
-        val args = argList.args.map { it as Arg.CLIP }
+        val args = argList.args
+        require(args.size == 3 && args.allAre<Arg.CLIP>())
         // i think circle by 3 implies we want to move these points later
-        val realized = args.map {
-            when (it) {
-                is Arg.Index -> it.index
-                is Arg.FixedPoint -> viewModel.createNewFreePoint(it.toPoint())
+        val newGCircle: GCircle?
+        if (!viewModel.settings.enableCreatingAdditionPointsForCircleBy3Points &&
+            args.allAre<Arg.PointXY>()
+        ) {
+            val (p1, p2, p3) = args.map { it.toPoint().downscale() }
+            newGCircle = computeCircleBy3Points(p1, p2, p3)
+            expressions.addFree()
+        } else {
+            val realized = args.map {
+                when (it) {
+                    is Arg.Index -> it.index
+                    is Arg.FixedPoint -> viewModel.createNewFreePoint(it.toPoint())
+                }
             }
+            newGCircle = expressions.addSoloExpr(
+                Expr.CircleBy3Points(
+                    object1 = realized[0],
+                    object2 = realized[1],
+                    object3 = realized[2],
+                ),
+            ) as? GCircle
         }
-        val newGCircle = expressions.addSoloExpr(
-            Expr.CircleBy3Points(
-                object1 = realized[0],
-                object2 = realized[1],
-                object3 = realized[2],
-            ),
-        ) as? GCircle
         viewModel.createNewGCircle(newGCircle?.upscale())
         if (newGCircle is ImaginaryCircle) {
             viewModel.showSnackbarMessage(SnackbarMessage.IMAGINARY_CIRCLE_NOTICE)
@@ -392,7 +403,8 @@ class ToolManager(
     context(viewModel: EditorViewModel)
     fun completeCircleByPencilAndPoint() {
         val argList = partialArgList ?: return
-        val args = argList.args.map { it as Arg.CLIP }
+        val args = argList.args
+        require(args.size == 3 && args.allAre<Arg.CLIP>())
         val realized = args.map {
             when (it) {
                 is Arg.Index -> it.index
@@ -417,23 +429,33 @@ class ToolManager(
     context(viewModel: EditorViewModel)
     fun completeLineBy2Points() {
         val argList = partialArgList ?: return
-        val args = argList.args.map { it as Arg.CLIP }
-        val realized = args.map {
-            when (it) {
-                is Arg.Index -> it.index
-                is Arg.FixedPoint -> viewModel.createNewFreePoint(it.toPoint())
+        val args = argList.args
+        require(args.size == 2 && args.allAre<Arg.CLIP>())
+        val newLine: Line?
+        if (!viewModel.settings.enableCreatingAdditionPointsForLineBy2Points &&
+            args.allAre<Arg.PointXY>()
+        ) {
+            val (p1, p2) = args.map { it.toPoint().downscale() }
+            newLine = computeLineBy2Points(p1, p2)
+            expressions.addFree()
+        } else {
+            val realized = args.map {
+                when (it) {
+                    is Arg.Index -> it.index
+                    is Arg.FixedPoint -> viewModel.createNewFreePoint(it.toPoint())
+                }
             }
+            val infinityIndex = objectModel.getInfinityIndex()
+                ?: viewModel.createNewFreePoint(Point.CONFORMAL_INFINITY)
+            newLine = expressions.addSoloExpr(
+                Expr.CircleBy3Points(
+                    object1 = realized[0],
+                    object2 = realized[1],
+                    object3 = infinityIndex,
+                ),
+            ) as? Line
         }
-        val infinityIndex = objectModel.getInfinityIndex()
-            ?: viewModel.createNewFreePoint(Point.CONFORMAL_INFINITY)
-        val newGCircle = expressions.addSoloExpr(
-            Expr.CircleBy3Points(
-                object1 = realized[0],
-                object2 = realized[1],
-                object3 = infinityIndex,
-            ),
-        ) as? GCircle
-        viewModel.createNewGCircle(newGCircle?.upscale())
+        viewModel.createNewGCircle(newLine?.upscale())
         partialArgList = argList.copyEmpty()
         viewModel.recordHistory()
     }
@@ -441,6 +463,7 @@ class ToolManager(
     context(viewModel: EditorViewModel)
     fun completePolarityByCircleAndLineOrPoint() {
         val argList = partialArgList ?: return
+        require(argList.args.size == 2)
         val circleArg = argList.args[0] as Arg.CircleIndex
         val lineOrPointArg = argList.args[1] as Arg.LP
         val newExpr = when (lineOrPointArg) {
@@ -470,16 +493,16 @@ class ToolManager(
     context(viewModel: EditorViewModel)
     fun completeCircleInversion() {
         val argList = partialArgList ?: return
-        val sources = expressions.sortedByTier(
-            (argList.args[0] as Arg.Indices).indices
-        )
+        require(argList.args.size == 2)
+        val indicesArg = argList.args[0] as Arg.Indices
+        val invertingCircleArg = argList.args[1] as Arg.CLI
+        val sources = expressions.sortedByTier(indicesArg.indices)
         val gCircleSources = sources.filter { objects[it] is GCircle }
         val arcPathSources = sources.filter { objects[it] is ConcreteArcPath }
-        val invertingCircleIndex = (argList.args[1] as Arg.CLI).index
         val oldSize = objects.size
         for (sourceIndex in gCircleSources) {
             val newGCircle = expressions.addSoloExpr(
-                Expr.CircleInversion(sourceIndex, invertingCircleIndex),
+                Expr.CircleInversion(sourceIndex, invertingCircleArg.index),
             ) as? GCircle
             val newIndex = objectModel.addDownscaledObject(newGCircle)
             objectModel.copyStyle(sourceIndex, newIndex)
@@ -487,7 +510,7 @@ class ToolManager(
         val newIndices1 = oldSize until objects.size
         for (ix in arcPathSources) {
             copyArcPath(ix) { pointIndex ->
-                Expr.CircleInversion(pointIndex, invertingCircleIndex)
+                Expr.CircleInversion(pointIndex, invertingCircleArg.index)
             }
         }
         val newIndices = oldSize until objects.size
@@ -556,10 +579,11 @@ class ToolManager(
             openedDialog = null
         ) }
         val argList = partialArgList ?: return
-        val startCircleIx = (argList.args[0] as Arg.CLI).index
-        val endCircleIx = (argList.args[1] as Arg.CLI).index
+        require(argList.args.size == 2)
+        val startCircle = argList.args[0] as Arg.CLI
+        val endCircle = argList.args[1] as Arg.CLI
         val newGCircles = expressions.addMultiExpr(
-            Expr.CircleExtrapolation(params, startCircleIx, endCircleIx),
+            Expr.CircleExtrapolation(params, startCircle.index, endCircle.index),
         ).map { (it as? GCircle)?.upscale() }
         viewModel.createNewGCircles(newGCircles)
         partialArgList = argList.copyEmpty()
@@ -571,14 +595,14 @@ class ToolManager(
     context(viewModel: EditorViewModel)
     fun completePoint() {
         val argList = partialArgList ?: return
-        val args = argList.args.map { it as Arg.Point }
-        val arg0 = args[0]
+        require(argList.args.size == 1)
+        val arg0 = argList.args[0] as Arg.Point
         if (arg0 is Arg.PointXY) {
             val newPoint = arg0.toPoint()
             val ix = viewModel.createNewFreePoint(newPoint)
             selection = Selection(gCircles = listOf(ix))
-           viewModel. recordHistory()
-        } // it could have already done it with realized PSR.Eq, which results in Arg.Point.Index
+            viewModel.recordHistory()
+        } // it could have already been done from realized PSR.Eq, which results in Arg.Point.Index
         partialArgList = argList.copyEmpty()
     }
 

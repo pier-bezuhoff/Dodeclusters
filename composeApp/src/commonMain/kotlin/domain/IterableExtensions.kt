@@ -2,6 +2,9 @@
 
 package domain
 
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+
 inline fun <T> Iterable<T>.filterIndices(
     crossinline predicate: (T) -> Boolean
 ): List<Int> =
@@ -269,3 +272,15 @@ inline fun <reified T> List<T>.indicesSortedBy(
     .sortedBy { (index, m) -> sortingPriority(index, m) }
     .map { (index, _) -> index }
     .toList()
+
+/**
+ * `allAre<ElementSubType>()` returns `all { it is ElemntSubType }`,
+ * and if true, 'contracts' that `this is Iterable<ElementSubType>`
+ */
+@OptIn(ExperimentalContracts::class)
+inline fun <reified T> List<*>.allAre(): Boolean {
+    contract {
+        returns(true) implies (this@allAre is List<T>)
+    }
+    return all { it is T }
+}

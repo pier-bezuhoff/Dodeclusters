@@ -332,5 +332,9 @@
     <string name="snapping">Притяжение</string>
     <string name="tangent_snapping">Притяжение перетаскиваемых объектов к касательным</string>
     <string name="angle_snapping">Притяжение углов поворота к кратным 45°</string>
+    <string name="additional_points">Дополнительные точки</string>
+    <string name="create_additional_points_for_circle_by_center_and_radius">Создавать дополнительные точки для Окружности по центру и радиусу</string>
+    <string name="create_additional_points_for_circle_by_3_points">Создавать дополнительные точки для Окружности по трём точкам</string>
+    <string name="create_additional_points_for_line_by_2_points">Создавать дополнительные точки для Прямой по двум точкам</string>
 
 </resources>

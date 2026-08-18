@@ -21,7 +21,7 @@ import ui.theme.DEFAULT_COLOR_THEME
 @Serializable
 data class Settings(
     val showDirectionArrows: Boolean = false,
-    // upscaling factor
+    // ?upscaling factor
     val regionsOpacity: Float = 1.0f,
     val regionsBlendModeType: BlendModeType = BlendModeType.SRC_OVER,
     // default tools for categories
@@ -37,6 +37,9 @@ data class Settings(
     val inversionOfControl: InversionOfControl = InversionOfControl.LEVEL_1,
     val enableTangentSnapping: Boolean = true,
     val enableAngleSnapping: Boolean = false,
+    val enableCreatingAdditionPointsForCircleByCenterAndRadius: Boolean = false,
+    val enableCreatingAdditionPointsForCircleBy3Points: Boolean = true,
+    val enableCreatingAdditionPointsForLineBy2Points: Boolean = true,
 ) {
     companion object {
         val JSON_FORMAT = Json {
@@ -48,7 +51,6 @@ data class Settings(
          * always create them. In contrast to replacing its expression with a static, free circle.
          * (Should have more choices to make it a settings)
          */
-        const val ALWAYS_CREATE_ADDITIONAL_POINTS = false
         const val FAST_CENTERED_CIRCLE = true
         const val ENABLE_POINT_TO_POINT_SNAPPING = false
         const val RESTORE_LAST_STATE_ON_LOAD = true

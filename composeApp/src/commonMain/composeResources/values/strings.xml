@@ -335,6 +335,10 @@
     <string name="snapping">Snapping</string>
     <string name="tangent_snapping">Snap objects to tangents while dragging</string>
     <string name="angle_snapping">Snap rotation angle to multiples of 45°</string>
+    <string name="additional_points">Additional points</string>
+    <string name="create_additional_points_for_circle_by_center_and_radius">Create additional points for Circle by center and radius</string>
+    <string name="create_additional_points_for_circle_by_3_points">Create additional points for Circle by 3 points</string>
+    <string name="create_additional_points_for_line_by_2_points">Create additional points for Line by 2 points</string>
 
     <!-- test -->
     <string name="hello">😊 Hello world!</string>

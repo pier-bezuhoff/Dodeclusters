@@ -196,7 +196,8 @@ class EditorViewModel : ViewModel() {
     /** Under-construction arc-path during [ToolMode.ARC_PATH] */
     var partialArcPath: PartialArcPath? by partialArcPathState
 
-    private var loadedSettings: Settings = Settings()
+    var settings: Settings by mutableStateOf(Settings())
+        private set
 
     /** currently selected color */
     var regionColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
@@ -2298,7 +2299,7 @@ class EditorViewModel : ViewModel() {
         val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
         val newAngle = sm.angle + angle
         val snappedAngle =
-            if (loadedSettings.enableAngleSnapping)
+            if (settings.enableAngleSnapping)
                 Snapping.snapAngle(newAngle)
             else newAngle
         val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
@@ -2313,7 +2314,7 @@ class EditorViewModel : ViewModel() {
         val angle = centerToPreviousHandle.angleDeg(centerToCurrent)
         val newAngle = sm.angle + angle
         val snappedAngle =
-            if (loadedSettings.enableAngleSnapping)
+            if (settings.enableAngleSnapping)
                 Snapping.snapAngle(newAngle)
             else newAngle
         val angle1 = (snappedAngle - sm.snappedAngle).toFloat()
@@ -2351,7 +2352,7 @@ class EditorViewModel : ViewModel() {
             is Submode.Rotate -> {
                 val newAngle = newRotationAngle.toDouble()
                 val snappedAngle =
-                    if (loadedSettings.enableAngleSnapping)
+                    if (settings.enableAngleSnapping)
                         Snapping.snapAngle(newAngle)
                     else newAngle
                 val dAngle = (snappedAngle - sm.snappedAngle).toFloat()
@@ -2374,7 +2375,7 @@ class EditorViewModel : ViewModel() {
     ) {
         val selectedIndex = selection.gCircles.single()
         val circle = objects[selectedIndex] as? CircleOrLine
-        if (loadedSettings.enableTangentSnapping && circle != null) {
+        if (settings.enableTangentSnapping && circle != null) {
             // TODO: snap to arc-path arcs
             val result0 = circle.transformed(translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
                 as CircleOrLine
@@ -2612,7 +2613,7 @@ class EditorViewModel : ViewModel() {
         continuousChange: ContinuousChange? = null,
     ) {
         val actualTargets = mutableSetOf<Ix>()
-        when (loadedSettings.inversionOfControl) {
+        when (settings.inversionOfControl) {
             InversionOfControl.NONE ->
                 targets.filterTo(actualTargets) { isFree(it) }
             InversionOfControl.LEVEL_1 -> {
@@ -3579,7 +3580,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun loadSettings(settings: Settings) {
-        loadedSettings = settings
+        this@EditorViewModel.settings = settings
         updateCanvasState { it.copy(
             showDirectionArrows = settings.showDirectionArrows,
             regionsOpacity = settings.regionsOpacity,
@@ -3654,7 +3655,7 @@ class EditorViewModel : ViewModel() {
     @OptIn(ExperimentalKStoreApi::class)
     private fun getCurrentSettings(): Settings {
         // we dont want to call suspend store.get here
-        val settings = getPlatform().settingsStore.cached ?: loadedSettings
+        val settings = getPlatform().settingsStore.cached ?: settings
         return settings.copy(
             regionsOpacity = canvasState.regionsOpacity,
             regionsBlendModeType = canvasState.regionsBlendModeType,
