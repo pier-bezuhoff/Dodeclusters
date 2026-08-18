@@ -16,6 +16,7 @@ string-array|str_arr|aXRlbSAx,aXRlbSAy,aXRlbSAz
 string|actions|QWN0aW9ucw==
 string|add_point_description|Q3JlYXRlIGFuIGFuY2hvciBwb2ludA==
 string|add_point_name|QWRkIHBvaW50
+string|additional_points|QWRkaXRpb25hbCBwb2ludHM=
 string|adjust_expr_description|QWRqdXN0IGV4cHJlc3Npb24gcGFyYW1ldGVycyBvZiBzZWxlY3RlZCBvYmplY3Rz
 string|adjust_expr_name|QWRqdXN0IGV4cHJlc3Npb24=
 string|angle_fraction_denominator_placeholder|PGRlbm9taW5hdG9yPg==
@@ -92,6 +93,9 @@ string|complete_arc_path_prompt|RmluYWxpemUgY3VycmVudCBhcmMtcGF0aD8=
 string|complete_arc_path|Q29tcGxldGUgYXJjLXBhdGg=
 string|confirm|Q29uZmlybQ==
 string|copy_link_description|Q29weSBsaW5r
+string|create_additional_points_for_circle_by_3_points|Q3JlYXRlIGFkZGl0aW9uYWwgcG9pbnRzIGZvciBDaXJjbGUgYnkgMyBwb2ludHM=
+string|create_additional_points_for_circle_by_center_and_radius|Q3JlYXRlIGFkZGl0aW9uYWwgcG9pbnRzIGZvciBDaXJjbGUgYnkgY2VudGVyIGFuZCByYWRpdXM=
+string|create_additional_points_for_line_by_2_points|Q3JlYXRlIGFkZGl0aW9uYWwgcG9pbnRzIGZvciBMaW5lIGJ5IDIgcG9pbnRz
 string|create_category_name|Q3JlYXRl
 string|dark|RGFyaw==
 string|degrees_suffix|wrA=
