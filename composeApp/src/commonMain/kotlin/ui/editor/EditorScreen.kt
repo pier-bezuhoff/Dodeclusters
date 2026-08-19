@@ -50,6 +50,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -94,6 +95,7 @@ import domain.io.DdcSharing
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
+import domain.model.ChessboardPattern
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -128,6 +130,7 @@ import ui.editor.dialogs.LoxodromicMotionDialog
 import ui.editor.dialogs.RotationDialog
 import ui.editor.dialogs.SaveOptionsDialog
 import ui.editor.dialogs.SavePromptDialog
+import ui.editor.dialogs.SelectionChoicesInputPopup
 import ui.rememberMyDrawerState
 import ui.theme.ColorTheme
 import ui.theme.DodeclustersColors
@@ -178,6 +181,7 @@ fun EditorScreenRoot(
     val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle()
     val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
     val uiState = viewModel.uiState
+    val toolsActiveness = viewModel.toolsActiveness
     val canvasState = viewModel.canvasState
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberMyDrawerState(DrawerValue.Closed)
@@ -188,6 +192,24 @@ fun EditorScreenRoot(
         // ig it's only for android w/ keyboard
             Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
         else Modifier,
+        snackbarHostState = snackbarHostState,
+        drawerState = drawerState,
+        toolbarState = uiState.toolbarState,
+        toolsActiveness = toolsActiveness,
+        ddcContent = ddcContent,
+        showUI = uiState.showUI,
+        showPanel = uiState.showPanel,
+        regionColor = viewModel.regionColor,
+        backgroundColor = canvasState.backgroundColor,
+        regionManipulationStrategy = viewModel.regionManipulationStrategy,
+        partialArgListIsNull = viewModel.partialArgList == null,
+        partialArgListArgsSize = viewModel.partialArgList?.args?.size ?: 0,
+        partialArgListIsFull = viewModel.partialArgList?.isFull == true,
+        partialArgListLastArgIsConfirmed = viewModel.partialArgList?.lastArgIsConfirmed == true,
+        undoIsEnabled = viewModel.undoIsEnabled,
+        redoIsEnabled = viewModel.redoIsEnabled,
+        saveConfig = viewModel.saveConfig,
+        openFileRequests = viewModel.openFileRequests,
         openMenu = {
             coroutineScope.launch { drawerState.open() }
         },
@@ -210,29 +232,10 @@ fun EditorScreenRoot(
         },
         undo = { viewModel.undo() },
         redo = { viewModel.redo() },
-        isToolEnabled = { viewModel.toolPredicate(it) },
-        isToolAlternativeEnabled = { viewModel.toolAlternativePredicate(it) },
         switchToCategory = { viewModel.switchToCategory(it, togglePanel = true) },
         selectTool = { viewModel.selectTool(it, togglePanel = false) },
         selectToolAndTogglePanel = { viewModel.selectTool(it, togglePanel = true) },
         getColorsByMostUsed = { viewModel.getColorsByMostUsed() },
-        snackbarHostState = snackbarHostState,
-        drawerState = drawerState,
-        toolbarState = uiState.toolbarState,
-        ddcContent = ddcContent,
-        showUI = uiState.showUI,
-        showPanel = uiState.showPanel,
-        regionColor = viewModel.regionColor,
-        backgroundColor = canvasState.backgroundColor,
-        regionManipulationStrategy = viewModel.regionManipulationStrategy,
-        partialArgListIsNull = viewModel.partialArgList == null,
-        partialArgListArgsSize = viewModel.partialArgList?.args?.size ?: 0,
-        partialArgListIsFull = viewModel.partialArgList?.isFull == true,
-        partialArgListLastArgIsConfirmed = viewModel.partialArgList?.lastArgIsConfirmed == true,
-        undoIsEnabled = viewModel.undoIsEnabled.value,
-        redoIsEnabled = viewModel.redoIsEnabled.value,
-        saveConfig = viewModel.saveConfig,
-        openFileRequests = viewModel.openFileRequests,
         editorCanvas = {
             EditorCanvas(viewModel)
         },
@@ -420,18 +423,16 @@ fun EditorScreenRoot(
                 dialogActions = dialogActions,
             )
         }
-//        DialogType.LINE_THICKNESS_INPUT -> {
-//            LineThicknessInputDialog(
-//                previousThickness = viewModel.selection.indices
-//                    .mapNotNull { viewModel.styling[it]?.lineThickness }
-//                    .mostCommonOf { it }
-//                ,
-//                onCancel = viewModel::closeDialog,
-//                onConfirm = viewModel::setLineThickness,
-//                dialogActions = dialogActions,
-//            )
-//        }
         null -> {}
+    }
+    when (val sm = viewModel.submodeSelectionChoicesInput) {
+        is Submode.SelectionChoicesInput ->
+            SelectionChoicesInputPopup(
+                choices = sm.choices,
+                selectChoice = { viewModel.selectFromChoices(it) },
+                dismiss = { viewModel.dismissInputSubmode(recordHistory = false) },
+            )
+        else -> {}
     }
     val density = LocalDensity.current
     LaunchedEffect(viewModel, density) {
@@ -523,24 +524,10 @@ fun EditorScreenRoot(
 @Composable
 private fun EditorScreen(
     modifier: Modifier = Modifier,
-    openMenu: () -> Unit = {},
-    openNewBlank: () -> Unit = {},
-    openFile: () -> Unit = {},
-    showSaveOptionsDialog: () -> Unit = {},
-    openSettings: () -> Unit = {},
-    hidePanel: () -> Unit = {},
-    loadFromYaml: (content: String?, filename: String?) -> Unit = { _, _ -> },
-    undo: () -> Unit = {},
-    redo: () -> Unit = {},
-    isToolEnabled: (Tool) -> Boolean,
-    isToolAlternativeEnabled: (Tool) -> Boolean,
-    switchToCategory: (Category) -> Unit = {},
-    selectTool: (Tool) -> Unit = {},
-    selectToolAndTogglePanel: (Tool) -> Unit = {},
-    getColorsByMostUsed: () -> List<Color>,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     drawerState: MyDrawerState = rememberMyDrawerState(DrawerValue.Closed),
     toolbarState: ToolbarState,
+    toolsActiveness: ToolsActiveness,
     ddcContent: LoadingState<String>? = null,
     showUI: Boolean,
     showPanel: Boolean = toolbarState.panelNeedsToBeShown,
@@ -555,6 +542,19 @@ private fun EditorScreen(
     redoIsEnabled: Boolean,
     saveConfig: SaveConfig = SaveConfig(),
     openFileRequests: SharedFlow<Unit>? = null,
+    openMenu: () -> Unit = {},
+    openNewBlank: () -> Unit = {},
+    openFile: () -> Unit = {},
+    showSaveOptionsDialog: () -> Unit = {},
+    openSettings: () -> Unit = {},
+    hidePanel: () -> Unit = {},
+    loadFromYaml: (content: String?, filename: String?) -> Unit = { _, _ -> },
+    undo: () -> Unit = {},
+    redo: () -> Unit = {},
+    switchToCategory: (Category) -> Unit = {},
+    selectTool: (Tool) -> Unit = {},
+    selectToolAndTogglePanel: (Tool) -> Unit = {},
+    getColorsByMostUsed: () -> List<Color>,
     editorCanvas: @Composable (BoxScope.() -> Unit),
 ) {
     val isLandscape: Boolean = MaterialTheme.adaptiveSizing.isLandscape
@@ -600,7 +600,7 @@ private fun EditorScreen(
                     if (showUI) {
                         ToolDescription(
                             tool = toolbarState.activeTool,
-                            toolIsEnabled = isToolEnabled(toolbarState.activeTool),
+                            toolIsEnabled = toolsActiveness.isOn(toolbarState.activeTool),
                             regionManipulationStrategy = regionManipulationStrategy,
                             partialArgListIsNull = partialArgListIsNull,
                             partialArgListArgsSize = partialArgListArgsSize,
@@ -612,11 +612,11 @@ private fun EditorScreen(
                             modifier = Modifier.align(Alignment.TopEnd),
                         )
                         if (isLandscape) {
-                            ToolbarLandscape(toolbarState = toolbarState, showPanel = showPanel, regionColor = regionColor, hidePanel = hidePanel, isToolEnabled = isToolEnabled, isToolAlternativeEnabled = isToolAlternativeEnabled, switchToCategory = switchToCategory, selectTool = selectTool, selectToolAndTogglePanel = selectToolAndTogglePanel, getColorsByMostUsed = getColorsByMostUsed,
+                            ToolbarLandscape(toolbarState = toolbarState, toolsActiveness = toolsActiveness, showPanel = showPanel, regionColor = regionColor, hidePanel = hidePanel, switchToCategory = switchToCategory, selectTool = selectTool, selectToolAndTogglePanel = selectToolAndTogglePanel, getColorsByMostUsed = getColorsByMostUsed,
                                 modifier = Modifier.align(Alignment.CenterStart),
                             )
                         } else {
-                            ToolbarPortrait(toolbarState = toolbarState, showPanel = showPanel, regionColor = regionColor, hidePanel = hidePanel, isToolEnabled = isToolEnabled, isToolAlternativeEnabled = isToolAlternativeEnabled, switchToCategory = switchToCategory, selectTool = selectTool, selectToolAndTogglePanel = selectToolAndTogglePanel, getColorsByMostUsed = getColorsByMostUsed,
+                            ToolbarPortrait(toolbarState = toolbarState, toolsActiveness = toolsActiveness, showPanel = showPanel, regionColor = regionColor, hidePanel = hidePanel, switchToCategory = switchToCategory, selectTool = selectTool, selectToolAndTogglePanel = selectToolAndTogglePanel, getColorsByMostUsed = getColorsByMostUsed,
                                 modifier = Modifier.align(Alignment.BottomStart),
                             )
                         }
@@ -640,9 +640,13 @@ private fun EditorScreenPreview() {
             activeCategory = Category.Drag,
             activeTool = Tool.Drag,
         )
+        val toolsActiveness = ToolsActiveness.MOCK.copy(
+            activeTool = toolbarState.activeTool,
+        )
         EditorScreen(
             drawerState = rememberMyDrawerState(DrawerValue.Closed),
             toolbarState = toolbarState,
+            toolsActiveness = toolsActiveness,
             showPanel = false, // cannot show panel when in drag category
             showUI = true,
             regionColor = Color.Blue,
@@ -654,8 +658,6 @@ private fun EditorScreenPreview() {
             partialArgListLastArgIsConfirmed = false,
             undoIsEnabled = true,
             redoIsEnabled = false,
-            isToolEnabled = { false },
-            isToolAlternativeEnabled = { false },
             getColorsByMostUsed = { emptyList() },
             editorCanvas = {
                 Canvas(Modifier.fillMaxSize()) {}
@@ -824,7 +826,7 @@ private fun ToolDescription(
     ) {
         Crossfade(Pair(tool, toolIsEnabled)) { (currentTool, currentToolIsEnabled) ->
             val description = when (currentTool) {
-                Tool.Region, Tool.FlowFill ->
+                Tool.RegionFill, Tool.FlowFill ->
                     stringResource(currentTool.description) + " | " +
                         stringResource(regionManipulationStrategy.descriptionPostfixResource)
                 is ITool.BinaryToggle ->
@@ -1011,14 +1013,19 @@ private fun EditorTopBar(
     }
 }
 
+@Immutable
+private data class CategoryAndPanelState(
+    val category: Category,
+    val showPanel: Boolean,
+)
+
 @Composable
 private fun ToolbarPortrait(
     toolbarState: ToolbarState,
+    toolsActiveness: ToolsActiveness,
     showPanel: Boolean,
     regionColor: Color,
     hidePanel: () -> Unit,
-    isToolEnabled: (Tool) -> Boolean,
-    isToolAlternativeEnabled: (Tool) -> Boolean,
     switchToCategory: (Category) -> Unit,
     selectTool: (Tool) -> Unit,
     selectToolAndTogglePanel: (Tool) -> Unit,
@@ -1026,7 +1033,7 @@ private fun ToolbarPortrait(
     modifier: Modifier = Modifier,
 ) {
     val targetState = remember(toolbarState, showPanel) {
-        Pair(toolbarState.activeCategory, showPanel)
+        CategoryAndPanelState(toolbarState.activeCategory, showPanel)
     }
     Column(
         modifier.fillMaxWidth(),
@@ -1040,11 +1047,11 @@ private fun ToolbarPortrait(
             }
         ) { (activeCategory, showPanel) ->
             if (showPanel) {
+                // Q: recomposes every selection change for some reason
                 HorizontalPanel(
                     activeCategory = activeCategory,
+                    toolsActiveness = toolsActiveness,
                     regionColor = regionColor,
-                    isToolEnabled = isToolEnabled,
-                    isToolAlternativeEnabled = isToolAlternativeEnabled,
                     selectTool = selectTool,
                     getColorsByMostUsed = getColorsByMostUsed,
                     hidePanel = hidePanel,
@@ -1054,8 +1061,8 @@ private fun ToolbarPortrait(
         }
         BottomToolbar(
             toolbarState = toolbarState,
+            toolsActiveness = toolsActiveness,
             regionColor = regionColor,
-            isToolEnabled = isToolEnabled,
             switchToCategory = switchToCategory,
             selectToolAndTogglePanel = selectToolAndTogglePanel,
             modifier = Modifier.align(Alignment.Start),
@@ -1066,11 +1073,10 @@ private fun ToolbarPortrait(
 @Composable
 private fun ToolbarLandscape(
     toolbarState: ToolbarState,
+    toolsActiveness: ToolsActiveness,
     showPanel: Boolean,
     regionColor: Color,
     hidePanel: () -> Unit,
-    isToolEnabled: (Tool) -> Boolean,
-    isToolAlternativeEnabled: (Tool) -> Boolean,
     switchToCategory: (Category) -> Unit,
     selectTool: (Tool) -> Unit,
     selectToolAndTogglePanel: (Tool) -> Unit,
@@ -1082,8 +1088,8 @@ private fun ToolbarLandscape(
     ) {
         LeftToolbar(
             toolbarState = toolbarState,
+            toolsActiveness = toolsActiveness,
             regionColor = regionColor,
-            isToolEnabled = isToolEnabled,
             switchToCategory = switchToCategory,
             selectToolAndTogglePanel = selectToolAndTogglePanel,
             modifier = Modifier
@@ -1100,9 +1106,8 @@ private fun ToolbarLandscape(
             if (showPanel) {
                 VerticalPanel(
                     activeCategory = activeCategory,
+                    toolsActiveness = toolsActiveness,
                     regionColor = regionColor,
-                    isToolEnabled = isToolEnabled,
-                    isToolAlternativeEnabled = isToolAlternativeEnabled,
                     selectTool = selectTool,
                     getColorsByMostUsed = getColorsByMostUsed,
                     hidePanel = hidePanel,
@@ -1116,8 +1121,8 @@ private fun ToolbarLandscape(
 @Composable
 private fun BottomToolbar(
     toolbarState: ToolbarState,
+    toolsActiveness: ToolsActiveness,
     regionColor: Color,
-    isToolEnabled: (Tool) -> Boolean,
     switchToCategory: (Category) -> Unit,
     selectToolAndTogglePanel: (Tool) -> Unit,
     modifier: Modifier = Modifier,
@@ -1144,7 +1149,7 @@ private fun BottomToolbar(
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             listOf(Category.Drag, Category.Multiselect, Category.Region).forEach {
-                CategoryButton(it, toolbarState, regionColor, isToolEnabled, switchToCategory, selectToolAndTogglePanel)
+                CategoryButton(it, toolbarState, toolsActiveness, regionColor, switchToCategory, selectToolAndTogglePanel)
             }
             Spacer(Modifier.size(12.dp, 0.dp))
             VerticalDivider(Modifier
@@ -1152,7 +1157,7 @@ private fun BottomToolbar(
                 .align(Alignment.CenterVertically)
             )
             listOf(Category.Visibility, Category.Colors, Category.Transform).forEach {
-                CategoryButton(it, toolbarState, regionColor, isToolEnabled, switchToCategory, selectToolAndTogglePanel)
+                CategoryButton(it, toolbarState, toolsActiveness, regionColor, switchToCategory, selectToolAndTogglePanel)
             }
         }
     }
@@ -1161,8 +1166,8 @@ private fun BottomToolbar(
 @Composable
 private fun LeftToolbar(
     toolbarState: ToolbarState,
+    toolsActiveness: ToolsActiveness,
     regionColor: Color,
-    isToolEnabled: (Tool) -> Boolean,
     switchToCategory: (Category) -> Unit,
     selectToolAndTogglePanel: (Tool) -> Unit,
     modifier: Modifier = Modifier,
@@ -1195,7 +1200,7 @@ private fun LeftToolbar(
                 Spacer(Modifier.height(6.dp))
             }
             listOf(Category.Drag, Category.Multiselect, Category.Region).forEach {
-                CategoryButton(it, toolbarState, regionColor, isToolEnabled, switchToCategory, selectToolAndTogglePanel)
+                CategoryButton(it, toolbarState, toolsActiveness, regionColor, switchToCategory, selectToolAndTogglePanel)
             }
             HorizontalDivider(Modifier
                 .padding(dividerPaddings)
@@ -1203,14 +1208,14 @@ private fun LeftToolbar(
                 .align(Alignment.CenterHorizontally)
             )
             listOf(Category.Visibility, Category.Colors, Category.Transform).forEach {
-                CategoryButton(it, toolbarState, regionColor, isToolEnabled, switchToCategory, selectToolAndTogglePanel)
+                CategoryButton(it, toolbarState, toolsActiveness, regionColor, switchToCategory, selectToolAndTogglePanel)
             }
             HorizontalDivider(Modifier
                 .padding(dividerPaddings)
                 .fillMaxWidth(0.7f)
                 .align(Alignment.CenterHorizontally)
             )
-            CategoryButton(Category.Create, toolbarState, regionColor, isToolEnabled, switchToCategory, selectToolAndTogglePanel)
+            CategoryButton(Category.Create, toolbarState, toolsActiveness, regionColor, switchToCategory, selectToolAndTogglePanel)
             Spacer(Modifier.height(
                 if (isCompact) 6.dp else 12.dp
             ))
@@ -1225,8 +1230,8 @@ private fun LeftToolbar(
 private fun CategoryButton(
     category: Category,
     toolbarState: ToolbarState,
+    toolsActiveness: ToolsActiveness,
     regionColor: Color,
-    isToolEnabled: (Tool) -> Boolean,
     switchToCategory: (Category) -> Unit,
     selectToolAndTogglePanel: (Tool) -> Unit,
     modifier: Modifier = Modifier
@@ -1262,7 +1267,8 @@ private fun CategoryButton(
         Crossfade(defaultTool) { currentDefaultTool ->
             ToolButton(
                 tool = currentDefaultTool,
-                enabled = isToolEnabled(currentDefaultTool),
+                enabled = toolsActiveness.isOn(currentDefaultTool),
+                alternative = toolsActiveness.isAlternativeOn(currentDefaultTool),
                 regionColor = regionColor,
                 modifier = modifier,
                 iconModifier = iconModifier,
@@ -1278,9 +1284,8 @@ private fun CategoryButton(
 @Composable
 private fun HorizontalPanel(
     activeCategory: Category,
+    toolsActiveness: ToolsActiveness,
     regionColor: Color,
-    isToolEnabled: (Tool) -> Boolean = { true },
-    isToolAlternativeEnabled: (Tool) -> Boolean = { false },
     selectTool: (Tool) -> Unit = {},
     getColorsByMostUsed: () -> List<Color> = { emptyList() },
     hidePanel: () -> Unit = {},
@@ -1310,8 +1315,8 @@ private fun HorizontalPanel(
         for (tool in activeCategory.tools) {
             ToolButton(
                 tool = tool,
-                enabled = isToolEnabled(tool),
-                alternative = isToolAlternativeEnabled(tool),
+                enabled = toolsActiveness.isOn(tool),
+                alternative = toolsActiveness.isAlternativeOn(tool),
                 regionColor = regionColor,
                 modifier = toolModifier,
                 onClick = selectTool
@@ -1347,9 +1352,8 @@ private fun HorizontalPanel(
 @Composable
 private fun VerticalPanel(
     activeCategory: Category,
+    toolsActiveness: ToolsActiveness,
     regionColor: Color,
-    isToolEnabled: (Tool) -> Boolean,
-    isToolAlternativeEnabled: (Tool) -> Boolean,
     selectTool: (Tool) -> Unit,
     getColorsByMostUsed: () -> List<Color>,
     hidePanel: () -> Unit,
@@ -1380,8 +1384,8 @@ private fun VerticalPanel(
         for (tool in activeCategory.tools) {
             ToolButton(
                 tool = tool,
-                enabled = isToolEnabled(tool),
-                alternative = isToolAlternativeEnabled(tool),
+                enabled = toolsActiveness.isOn(tool),
+                alternative = toolsActiveness.isAlternativeOn(tool),
                 regionColor = regionColor,
                 modifier = toolModifier,
                 onClick = selectTool
@@ -1414,15 +1418,13 @@ private fun VerticalPanel(
 /**
  * All-included [tool]-type multiplexer
  * @param[regionColor] only used for Palette color
- * @param[alternative] only used for [ITool.TernaryToggle] in [ThreeIconButton], e.g.
- * the chessboard toggle
  * @param[iconModifier] modifier applied to Icon, note that it is `= `[modifier] by default
  */
 @Composable
 private fun ToolButton(
     tool: Tool,
     enabled: Boolean,
-    alternative: Boolean = false,
+    alternative: Boolean,
     regionColor: Color,
     modifier: Modifier = Modifier.padding(4.dp),
     iconModifier: Modifier = modifier,

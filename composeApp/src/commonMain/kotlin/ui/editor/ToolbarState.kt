@@ -20,7 +20,7 @@ data class CategorySetup(
 )
 
 /**
-* Encapsulates all category- and tool-related info
+* Encapsulates all category- and tool-related info (except tool activeness)
 * @param[categoryDefaultIndices] category index -> tool index among category.tools
 */
 @Immutable

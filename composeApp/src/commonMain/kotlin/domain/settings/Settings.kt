@@ -30,7 +30,7 @@ data class Settings(
     val defaultRotationParameters: DefaultRotationParameters = DefaultRotationParameters(),
     val defaultBiInversionParameters: DefaultBiInversionParameters = DefaultBiInversionParameters(),
     val defaultLoxodromicMotionParameters: DefaultLoxodromicMotionParameters = DefaultLoxodromicMotionParameters(),
-    val categoryDefaultIndices: List<Int?> = ToolbarState().categoryDefaultIndices,
+    val categoryDefaultIndices: List<Int?> = ToolbarState().categoryDefaultIndices, // NG dep
     val saveDirectory: String? = null,
     // adjustable in settings screen
     val colorTheme: ColorTheme = DEFAULT_COLOR_THEME,

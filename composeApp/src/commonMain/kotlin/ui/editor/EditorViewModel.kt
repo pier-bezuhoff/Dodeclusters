@@ -128,7 +128,6 @@ import kotlin.time.Duration.Companion.seconds
 
 // this class is obviously too big, maybe separate into CanvasViewModel and UiViewModel
 // MAYBE: timed autosave (cron-like), e.g. every 10min
-@Suppress("NOTHING_TO_INLINE")
 class EditorViewModel : ViewModel() {
     val objectModel: ConformalObjectModel = ConformalObjectModel()
     val objects: List<GCircleOrConcreteArcPath?> = objectModel.displayObjects
@@ -172,20 +171,9 @@ class EditorViewModel : ViewModel() {
      * only on its class. Changes discretely, slower than [submode], which can save
      * recompositions */
     val submodeType: Submode.Type? by derivedStateOf { submode?.type }
+    // projection that doesnt trigger recompositions when submode changes continuously
     val submodeSelectionChoicesInput: Submode.SelectionChoicesInput? by derivedStateOf {
         submode as? Submode.SelectionChoicesInput
-    }
-    val exprAdjustmentType: Submode.ExprAdjustment.Type? by derivedStateOf {
-        when (val sm = submode) {
-            is Submode.ExprAdjustment<*> -> when (sm.parameters) {
-                is InterpolationParameters -> Submode.ExprAdjustment.Type.INTERPOLATION
-                is RotationParameters -> Submode.ExprAdjustment.Type.ROTATION
-                is BiInversionParameters -> Submode.ExprAdjustment.Type.BI_INVERSION
-                is LoxodromicMotionParameters -> Submode.ExprAdjustment.Type.LOXODROMIC_MOTION
-                else -> null
-            }
-            else -> null
-        }
     }
 
     // NOTE: Arg.XYPoint & co use absolute positioning
@@ -207,7 +195,7 @@ class EditorViewModel : ViewModel() {
         RegionManipulationStrategy.REPLACE
     )
         private set
-    /** applies to [SelectionMode.Region]:
+    /** applies to [SelectionMode.RegionFill]:
      * only use circles present in the [selection].gCircles to determine which regions to fill */
     var restrictRegionsToSelection: Boolean by mutableStateOf(false)
         private set
@@ -219,27 +207,17 @@ class EditorViewModel : ViewModel() {
 
     // boolean flags with somewhat frequently changing deps are wrapped in derivedStateOf
     val showGenericSelectionContextActions: Boolean by derivedStateOf {
-        mode.isSelectingObjects() && canvasState.showCircles &&
+        mode is SelectionMode && canvasState.showCircles &&
         (selection.gCircles.any { objects[it] is CircleOrLineOrImaginaryCircle } ||
             selection.arcPaths.isNotEmpty() &&
             selection.gCircles.any { objects[it] is Point }
         )
     }
-    val showPointContextActions: Boolean by derivedStateOf {
-        canvasState.showCircles && mode.isSelectingObjects() && selection.gCircles.any { objects[it] is Point }
-    }
-    val showArcPathContextActions: Boolean by derivedStateOf {
-        mode.isSelectingObjects() && selection.arcPaths.isNotEmpty()
-    }
-    val showPartialArcPathContextActions: Boolean by derivedStateOf {
-        mode == ToolMode.ARC_PATH &&
-        partialArcPath?.arcs?.size?.let { it >= 1 } == true
-    }
     val showAdjustExprButton: Boolean by derivedStateOf {
         hug(objectModel.invalidations)
         exprAdjustmentManager.getAdjustable(selection.indices).isNotEmpty()
     }
-    val showInfinitePoint: Boolean by derivedStateOf {
+    val showInfinitePointInput: Boolean by derivedStateOf {
         partialArgList?.let { argList ->
             argList.nextArgType?.let { nextArgType ->
                 val acceptsInfinitePoint = Arg.InfinitePoint in nextArgType.possibleTypes
@@ -255,6 +233,17 @@ class EditorViewModel : ViewModel() {
             } == true
         } == true
     }
+    // without changing selection, the only way to change the predicate is
+    //  after applying move-to-infinity or on detachment.
+    val showMovePointToInfinity: Boolean by derivedStateOf {
+        hug(objectModel.invalidations)
+        selection.gCircles.singleOrNull()?.let { ix ->
+            val o = objects[ix]
+            val expr = objectModel.getExpr(ix)
+            o is Point && o != Point.CONFORMAL_INFINITY &&
+            (expr == null || expr is Expr.Incidence && objects[expr.carrier] is Line)
+        } == true
+    }
 
     val selectionIsLocked: Boolean by derivedStateOf {
         hug(objectModel.invalidations)
@@ -265,38 +254,96 @@ class EditorViewModel : ViewModel() {
             .all { objects[it] == null || !isFree(it) }
     }
 
-    val handleConfig: HandleConfig? by derivedStateOf {
-        if (mode.isSelectingObjects())
+    val handleConfig: HandleConfig by derivedStateOf {
+        if (mode is SelectionMode)
             when {
                 selection.gCircles.size == 1 && selection.arcPaths.isEmpty() ->
                     HandleConfig.SINGLE_CIRCLE
                 selectedIndices.size > 1 ->
                     HandleConfig.SEVERAL_OBJECTS
-                else -> null
+                else ->
+                    HandleConfig.NO
             }
-        else null
+        else HandleConfig.NO
     }
 
-    inline val scaleSliderPercentage: Float get() =
+    // without derivedStateOf, HUD recomposes on submode changes even when it doesn't consume its data
+    val scaleSliderPercentage: Float by derivedStateOf {
         submode.let { sm ->
             if (sm is Submode.ScaleViaSlider)
                 sm.sliderPercentage
             else 0.5f
         }
-    inline val rotationHandleAngle: Float get() =
+    }
+    val rotationHandleAngle: Float by derivedStateOf {
         submode.let { sm ->
             if (sm is Submode.Rotate)
                 sm.angle.toFloat()
             else 0f
         }
+    }
 
-    val undoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
-    val redoIsEnabled: MutableState<Boolean> = mutableStateOf(false)
+    val hudState: HudState by derivedStateOf {
+        val sm = submode
+        val showPointContextActions =
+            canvasState.showCircles && mode is SelectionMode &&
+            selection.gCircles.any { objects[it] is Point }
+        val showArcPathContextActions =
+            mode is SelectionMode && selection.arcPaths.isNotEmpty()
+        val showPartialArcPathContextActions =
+            mode == ToolMode.ARC_PATH &&
+            partialArcPath?.arcs?.size?.let { it >= 1 } == true
+        HudState(
+            contextActions = when {
+                showGenericSelectionContextActions -> ContextActions.GENERIC_SELECTION
+                showPointContextActions -> ContextActions.POINT
+                showArcPathContextActions -> ContextActions.ARC_PATH
+                showPartialArcPathContextActions -> ContextActions.PARTIAL_ARC_PATH
+                mode == Mode.RegionFill -> ContextActions.REGION_FILL
+                sm is Submode.ExprAdjustment<*> ->
+                    when (sm.parameters) {
+                        is InterpolationParameters -> ContextActions.INTERPOLATION
+                        is RotationParameters -> ContextActions.ROTATION
+                        is BiInversionParameters -> ContextActions.BI_INVERSION
+                        is LoxodromicMotionParameters -> ContextActions.LOXODROMIC_MOTION
+                        else -> ContextActions.NO
+                    }
+                else -> ContextActions.NO
+            },
+            showInfinitePointInput = showInfinitePointInput,
+            noPhantomsSelected = selection.gCircles.none { it in phantoms },
+            showMovePointToInfinity = showMovePointToInfinity,
+            labelInputIsActive = submode is Submode.LabelInput,
+            lineThicknessInputIsActive = submode is Submode.LineThicknessInput,
+        )
+    }
+
+    val toolsActiveness: ToolsActiveness by derivedStateOf {
+        hug(objectModel.invalidations)
+        ToolsActiveness(
+            activeTool = toolbarState.activeTool,
+            everythingIsSelected =
+                selection.gCircles.containsAll(
+                    objects.filterIndices { it is CircleOrLineOrPoint }
+                )
+            ,
+            chessboardPattern = canvasState.chessboardPattern,
+            restrictRegionToSelection = restrictRegionsToSelection,
+            showCircles = canvasState.showCircles,
+            showPhantoms = canvasState.showPhantomObjects,
+            showDirectionArrows = canvasState.showDirectionArrows,
+        )
+    }
+
+    private val undoIsEnabledState: MutableState<Boolean> = mutableStateOf(false)
+    private val redoIsEnabledState: MutableState<Boolean> = mutableStateOf(false)
     private var history: ChangeHistory = ChangeHistory( // stub
         initialState = SaveState.SAMPLE,
-        undoIsEnabled = undoIsEnabled,
-        redoIsEnabled = redoIsEnabled,
+        undoIsEnabled = undoIsEnabledState,
+        redoIsEnabled = redoIsEnabledState,
     )
+    val undoIsEnabled: Boolean by undoIsEnabledState
+    val redoIsEnabled: Boolean by redoIsEnabledState
 
     // ahh.. to be set during exprAdjustmentManager.startCircleOrPointInterpolationParameterAdjustment()
     var interpolateCircles: Boolean by mutableStateOf(true)
@@ -634,7 +681,7 @@ class EditorViewModel : ViewModel() {
         translation = Offset.Zero
         loadConstellation(updatedConstellation)
         println("loaded new constellation")
-        if (!mode.isSelectingObjects()) {
+        if (mode !is SelectionMode) {
             selectTool(Tool.Drag)
         }
     }
@@ -655,8 +702,8 @@ class EditorViewModel : ViewModel() {
     private fun resetHistory() {
         history = ChangeHistory(
             initialState = saveState(),
-            undoIsEnabled = undoIsEnabled,
-            redoIsEnabled = redoIsEnabled,
+            undoIsEnabled = undoIsEnabledState,
+            redoIsEnabled = redoIsEnabledState,
         )
     }
 
@@ -705,7 +752,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun undo() {
-        if (!undoIsEnabled.value)
+        if (!undoIsEnabled)
             return
         when (val mode = mode) {
             is ToolMode if (partialArgList?.args?.isNotEmpty() == true) -> {
@@ -731,7 +778,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun redo() {
-        if (!redoIsEnabled.value)
+        if (!redoIsEnabled)
             return
         switchToMode(mode)
         val presentState = saveState()
@@ -790,7 +837,7 @@ class EditorViewModel : ViewModel() {
     }
 
     fun duplicateSelection() {
-        if (mode.isSelectingObjects()) {
+        if (mode is SelectionMode) {
             val gCirclesToCopy = selection.gCircles
             val arcPathsToCopy = expressions.sortedByTier(selection.arcPaths)
             val deps = arcPathsToCopy.flatMap {
@@ -906,7 +953,7 @@ class EditorViewModel : ViewModel() {
         val gCirclesToDelete = selection.gCircles
         val arcPathsToDelete = selection.arcPaths
         if ((canvasState.showCircles && gCirclesToDelete.isNotEmpty() || arcPathsToDelete.isNotEmpty()) &&
-            (mode.isSelectingObjects() || mode == ToolMode.ARC_PATH) // allow instant arc-path deletion
+            (mode is SelectionMode || mode == ToolMode.ARC_PATH) // allow instant arc-path deletion
         ) {
             deleteObjectsWithDependenciesColorsAndRegions(selection.indices)
             recordHistory()
@@ -1028,7 +1075,7 @@ class EditorViewModel : ViewModel() {
         if (newMode is ToolMode) {
             switchToToolMode(newMode)
         } else {
-            if (mode.isSelectingObjects() && newMode.isSelectingObjects() && newMode != mode) {
+            if (mode is SelectionMode && newMode is SelectionMode && newMode != mode) {
                 clearSelection()
             }
             mode = newMode
@@ -1497,12 +1544,12 @@ class EditorViewModel : ViewModel() {
     }
 
     fun activateFlowFill() {
-        switchToMode(SelectionMode.Region)
+        switchToMode(Mode.RegionFill)
         submode = Submode.FlowFill()
     }
 
     fun forceSelectAll() {
-        if (!mode.isSelectingObjects() || !canvasState.showCircles) { // more intuitive behavior
+        if (mode !is SelectionMode || !canvasState.showCircles) { // more intuitive behavior
             // forces to select all instead of toggling
             clearSelection()
         }
@@ -1749,7 +1796,7 @@ class EditorViewModel : ViewModel() {
             // weird history shenanigans... cuz we want to pin-record on the first zoom
             // action in a sequence
             val firstZoom = history.newContinuousChange(ContinuousChange.ZOOM)
-            if (mode.isSelectingObjects() &&
+            if (mode is SelectionMode &&
                 (canvasState.showCircles && selection.gCircles.isNotEmpty() || selection.arcPaths.isNotEmpty())
             ) {
                 val rect = calculateSelectionRect()
@@ -1892,7 +1939,7 @@ class EditorViewModel : ViewModel() {
     // might be useful for duplication with dependencies
     /** For each object in [selection].gCircles, add to selection its siblings and parents */
     private fun expandSelectionToFamily() {
-        if (mode.isSelectingObjects()) {
+        if (mode is SelectionMode) {
             val familyMembers = selection.gCircles.flatMap { ix ->
                 listOf(ix) + findSiblingsAndParents(ix)
             }.distinct()
@@ -2006,7 +2053,7 @@ class EditorViewModel : ViewModel() {
                     downSingleCircle(absolutePosition = absolutePosition)
                 HandleConfig.SEVERAL_OBJECTS ->
                     downSeveralObjects(absolutePosition = absolutePosition)
-                else -> {}
+                HandleConfig.NO -> {}
             }
             if (submode == null) {
                 tryGrabbingArcMidpoint(absolutePosition = absolutePosition)
@@ -2021,7 +2068,7 @@ class EditorViewModel : ViewModel() {
                         downDuringFlowSelect(absolutePosition = absolutePosition)
                     else -> {}
                 }
-                SelectionMode.Region -> when (submode) {
+                Mode.RegionFill -> when (submode) {
                     is Submode.FlowFill ->
                         downDuringFlowFill(absolutePosition = absolutePosition)
                     else -> {}
@@ -2232,7 +2279,7 @@ class EditorViewModel : ViewModel() {
     fun onTap(position: Offset, pointerCount: Int) {
         // 2-finger tap for undo (works only on Android afaik)
         if (TWO_FINGER_TAP_FOR_UNDO && pointerCount == 2) {
-            if (undoIsEnabled.value)
+            if (undoIsEnabled)
                 undo()
         } else if (canvasState.showCircles) { // select circle(s)/region
             val absolutePosition = absolute(position)
@@ -2241,7 +2288,7 @@ class EditorViewModel : ViewModel() {
                     tapDuringDrag(absolutePosition = absolutePosition)
                 SelectionMode.Multiselect ->
                     tapDuringMultiselect(absolutePosition = absolutePosition)
-                SelectionMode.Region -> {
+                Mode.RegionFill -> {
                     when (submode) {
                         is Submode.FlowFill -> {} // see :0nDown
                         else -> tapDuringRegions(absolutePosition = absolutePosition)
@@ -2751,14 +2798,14 @@ class EditorViewModel : ViewModel() {
                     scaleSingleCircle(ix = selection.gCircles.single(), absoluteCentroid = absoluteCentroid, zoom = zoom, sm = sm)
                 HandleConfig.SEVERAL_OBJECTS ->
                     scaleSeveralCircles(targets = selectedIndices, pan = pan)
-                null -> {}
+                HandleConfig.NO -> {}
             }
             is Submode.Rotate -> when (handleConfig) {
                 HandleConfig.SINGLE_CIRCLE ->
                     rotateSingleCircle(ix = selection.gCircles.single(), pan = pan, absoluteCentroid = absoluteCentroid, sm = sm)
                 HandleConfig.SEVERAL_OBJECTS ->
                     rotateSeveralCircles(targets = selectedIndices, absoluteCentroid = absoluteCentroid, pan = pan, sm = sm)
-                null -> {}
+                HandleConfig.NO -> {}
             }
             is Submode.GrabbedArcMidpoint ->
                 dragGrabbedArcMidpoint(absoluteCentroid = absoluteCentroid, sm = sm)
@@ -2784,7 +2831,7 @@ class EditorViewModel : ViewModel() {
                 ToolMode.ARC_PATH ->
                     partialArcPathManager.updatePartialArcPathFocus(absolutePosition = absoluteCentroid)
                 else -> {
-                    val toolArgIsUpdated =
+                    val toolArgIsUpdated = mode is ToolMode &&
                         toolManager.tryUpdatingToolArg(absolutePosition = absoluteCentroid)
                     if (!toolArgIsUpdated) {
                         moveAroundCanvas(translation = pan, absoluteCentroid = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
@@ -3160,6 +3207,9 @@ class EditorViewModel : ViewModel() {
                 // maybe undo the rotation
                 switchToCategory(Category.Drag)
             }
+            Mode.RegionFill -> {
+                switchToCategory(Category.Drag)
+            }
             is SelectionMode -> {
                 when (submode) {
                     is Submode.ExprAdjustment<*> -> {
@@ -3179,7 +3229,7 @@ class EditorViewModel : ViewModel() {
                                 switchToCategory(Category.Drag)
                             }
                         }
-                        SelectionMode.Region -> {
+                        Mode.RegionFill -> {
                             switchToCategory(Category.Drag)
                         }
                         else -> {
@@ -3363,7 +3413,7 @@ class EditorViewModel : ViewModel() {
             Tool.RectangularSelect -> activateRectangularSelect()
             Tool.FlowSelect -> activateFlowSelect()
             Tool.ToggleSelectAll -> toggleSelectAll()
-            Tool.Region -> switchToMode(SelectionMode.Region)
+            Tool.RegionFill -> switchToMode(Mode.RegionFill)
             Tool.FlowFill -> activateFlowFill()
             Tool.FillChessboardPattern -> cycleChessboardPattern()
             Tool.RestrictRegionToSelection -> toggleRestrictRegionsToSelection()
@@ -3392,7 +3442,7 @@ class EditorViewModel : ViewModel() {
             Tool.Detach -> detachEverySelectedObject()
             Tool.SwapDirection -> swapOrientationsInSelection()
             Tool.MarkAsPhantoms ->
-                if (toolPredicate(tool))
+                if (hudState.noPhantomsSelected)
                     markSelectedObjectsAsPhantoms()
                 else unmarkSelectedObjectsAsPhantoms()
             Tool.Duplicate -> duplicateSelection()
@@ -3417,76 +3467,6 @@ class EditorViewModel : ViewModel() {
             Tool.MovePointToInfinity -> movePointToInfinity()
         }
     }
-
-    /** Is [tool] enabled? */
-    fun toolPredicate(tool: Tool): Boolean {
-        hug(objectModel.invalidations)
-        return when (tool) {
-            Tool.Drag ->
-                mode == SelectionMode.Drag
-            Tool.Multiselect ->
-                mode == SelectionMode.Multiselect &&
-                submodeType != Submode.Type.FLOW_SELECT &&
-                submodeType != Submode.Type.RECTANGULAR_SELECT
-            Tool.RectangularSelect ->
-                mode == SelectionMode.Multiselect &&
-                submodeType == Submode.Type.RECTANGULAR_SELECT
-            Tool.FlowSelect ->
-                mode == SelectionMode.Multiselect &&
-                submodeType == Submode.Type.FLOW_SELECT
-            Tool.ToggleSelectAll ->
-                selection.gCircles.containsAll(
-                    objects.filterIndices { it is CircleOrLineOrPoint }
-                )
-            Tool.Region ->
-                mode == SelectionMode.Region &&
-                submodeType != Submode.Type.FLOW_FILL
-            Tool.FlowFill ->
-                mode == SelectionMode.Region &&
-                submodeType == Submode.Type.FLOW_FILL
-            Tool.FillChessboardPattern ->
-                canvasState.chessboardPattern != ChessboardPattern.NONE
-            Tool.RestrictRegionToSelection ->
-                restrictRegionsToSelection
-            Tool.StereographicRotation ->
-                mode == ViewMode.StereographicRotation
-            Tool.ToggleObjects ->
-                canvasState.showCircles
-            Tool.TogglePhantoms ->
-                canvasState.showPhantomObjects
-            Tool.ToggleDirectionArrows ->
-                canvasState.showDirectionArrows
-            Tool.MarkAsPhantoms ->
-                selection.gCircles.none { it in phantoms }
-            Tool.InfinitePoint -> // whether to prompt infinite-point input
-                showInfinitePoint
-            Tool.MovePointToInfinity -> {
-                // without changing selection, the only way to change the predicate is
-                //  after applying move-to-infinity or on detachment.
-                selection.gCircles.singleOrNull()?.let { ix ->
-                    val o = objects[ix]
-                    val expr = objectModel.getExpr(ix)
-                    o is Point && o != Point.CONFORMAL_INFINITY &&
-                    (expr == null || expr is Expr.Incidence && objects[expr.carrier] is Line)
-                } == true
-            }
-            Tool.SetLabel ->
-                submodeType == Submode.Type.LABEL_INPUT
-            Tool.SetLineThickness ->
-                submodeType == Submode.Type.LINE_THICKNESS_INPUT
-            is Tool.MultiArg ->
-                mode == ToolMode.correspondingTo(tool)
-            else -> true
-        }
-    }
-
-    /** alternative enabled, mainly for 3-state buttons */
-    fun toolAlternativePredicate(tool: Tool): Boolean =
-        when (tool) {
-            Tool.FillChessboardPattern ->
-                canvasState.chessboardPattern == ChessboardPattern.STARTS_TRANSPARENT
-            else -> false
-        }
 
     private fun saveState(): SaveState {
         val center = computeAbsoluteCenter() ?: Offset.Zero
@@ -3564,7 +3544,7 @@ class EditorViewModel : ViewModel() {
                         it.printStackTrace()
                     }
                     .getOrNull()?.also { historyState ->
-                        history = historyState.load(undoIsEnabled, redoIsEnabled)
+                        history = historyState.load(undoIsEnabledState, redoIsEnabledState)
                     }
             }
             viewModelScope.launch {
@@ -3599,7 +3579,7 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun restoreFromState(state: SaveState) {
-        if (!mode.isSelectingObjects()) {
+        if (mode !is SelectionMode) {
             switchToMode(SelectionMode.Drag)
         }
         loadState(state)

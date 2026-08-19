@@ -103,7 +103,6 @@ import ui.region2pathWithCache
 import ui.theme.CustomStyles
 import ui.theme.customColors
 import ui.toPath
-import ui.tools.Tool
 import kotlin.math.min
 
 // NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
@@ -162,6 +161,7 @@ fun BoxScope.EditorCanvas(
     }
     val canvasState = viewModel.canvasState
     val uiState = viewModel.uiState
+    val hudState = viewModel.hudState
     val mode = viewModel.mode
     val selection = viewModel.selection
     val concretePositions = remember(canvasState.canvasSize, density) {
@@ -190,7 +190,7 @@ fun BoxScope.EditorCanvas(
         }
     }
     val gCircleSelectionIsActive = remember(mode, selection) {
-        mode.isSelectingObjects() && selection.gCircles.isNotEmpty()
+        mode is SelectionMode && selection.gCircles.isNotEmpty()
     }
     val hiddenObjectIndices = remember(canvasState.showPhantomObjects, objectModel.invalidations) {
         if (canvasState.showPhantomObjects)
@@ -207,7 +207,6 @@ fun BoxScope.EditorCanvas(
     val nonSelectedArcPathIndices = remember(selection, objectModel.invalidations) {
         (objectModel.arcPathIndices - selection.arcPaths.toSet()).toList()
     }
-    // Q: why does canvas recompose each rect-select-submode update when selection is non-empty?
     Canvas(
         modifier
             .reactiveCanvas(
@@ -272,139 +271,134 @@ fun BoxScope.EditorCanvas(
 //        } // | MEASURE END | // not that long (2~4ms)
     }
     if (uiState.showUI) { // HUD
-        if (viewModel.showGenericSelectionContextActions) {
-            val borderColor = remember(selection, objectModel.invalidations) {
-                viewModel.getMostCommonBorderColorInSelection()
-                    ?: if (selection.gCircles.all { objectModel.displayObjects[it] is ImaginaryCircle })
-                        imaginaryCircleColor
-                    else
-                        defaultFreeCircleColor
-            }
-            val showOrientationToggle = remember(canvasState.showDirectionArrows, viewModel.selectionIsLocked) {
-                canvasState.showDirectionArrows && !viewModel.selectionIsLocked
-            }
-            SelectionContextActions(
-                concretePositions = concretePositions,
-                scaleSliderPercentage = viewModel.scaleSliderPercentage,
-                rotationHandleAngle = viewModel.rotationHandleAngle,
-                borderColor = borderColor,
-                showAdjustExprButton = viewModel.showAdjustExprButton,
-                showOrientationToggle = showOrientationToggle,
-                isLocked = viewModel.selectionIsLocked,
-                toolAction = viewModel::toolAction,
-                toolPredicate = viewModel::toolPredicate,
-                onScale = viewModel::scaleViaSlider,
-                onScaleFinished = viewModel::finishScalingViaSlider,
-                onRotate = viewModel::rotateViaHandle,
-                onRotateStarted = viewModel::startHandleRotation,
-                onRotateFinished = viewModel::finishHandleRotation,
-            )
-        } else if (viewModel.showPointContextActions) {
-            val pointColor = remember(selection, objectModel.invalidations, defaultFreePointColor) {
-                viewModel.getMostCommonBorderColorInSelection() ?: defaultFreePointColor
-            }
-            PointContextActions(
-                // only points are selected
-                pointColor = pointColor,
-                showAdjustExprButton = viewModel.showAdjustExprButton,
-                isLocked = viewModel.selectionIsLocked,
-                labelProvider = {
-                    selection.gCircles
-                        .firstNotNullOfOrNull { objectModel.styling[it]?.label?.content }
-                },
-                toolAction = viewModel::toolAction,
-                toolPredicate = viewModel::toolPredicate,
-                setLabel = viewModel::setLabel,
-                dismissLabelInput = viewModel::dismissInputSubmode,
-            )
-        } else if (viewModel.showArcPathContextActions) {
-            val someAreClosed = remember(selection) {
-                selection.arcPaths.any {
-                    objectModel.getExpr(it) is ArcPath.Closed
+        when (hudState.contextActions) {
+            ContextActions.GENERIC_SELECTION -> {
+                val borderColor = remember(selection, objectModel.invalidations) {
+                    viewModel.getMostCommonBorderColorInSelection()
+                        ?: if (selection.gCircles.all { objectModel.displayObjects[it] is ImaginaryCircle })
+                            imaginaryCircleColor
+                        else
+                            defaultFreeCircleColor
                 }
-            }
-            val mostCommonBorderColor = remember(selection, objectModel.invalidations) {
-                selection.arcPaths.mostCommonOf { objectModel.styling[it]?.borderColor }
-            }
-            val mostCommonFillColor = remember(selection, objectModel.invalidations) {
-                selection.arcPaths.mostCommonOf { objectModel.styling[it]?.fillColor }
-            }
-            val lineThickness = remember(selection, objectModel.invalidations) {
-                selection.indices
-                    .mapNotNull { objectModel.styling[it]?.lineThickness }
-                    .mostCommonOf { it }
-            }
-            ArcPathContextActions(
-                someAreClosed = someAreClosed,
-                showAdjustExprButton = viewModel.showAdjustExprButton,
-                isLocked = viewModel.selectionIsLocked,
-                mostCommonBorderColor = mostCommonBorderColor,
-                mostCommonFillColor = mostCommonFillColor,
-                lineThickness = lineThickness ?: pathStroke.width,
-                toolAction = viewModel::toolAction,
-                toolPredicate = viewModel::toolPredicate,
-                setLineThickness = viewModel::setLineThickness,
-                dismissLineThicknessInput = viewModel::dismissInputSubmode,
-            )
-        } else if (viewModel.showPartialArcPathContextActions) {
-            PartialArcPathContextActions(canvasState.canvasSize, viewModel::toolAction)
-        } else {
-            when (viewModel.exprAdjustmentType) {
-                // TODO: confirm selection in rectangular-select
-                Submode.ExprAdjustment.Type.INTERPOLATION ->
-                    InterpolationInterface(
-                        concretePositions = concretePositions,
-                        interpolateCircles = viewModel.interpolateCircles,
-                        circlesAreCoDirected = viewModel.circlesAreCoDirected,
-                        defaults = viewModel.defaultInterpolationParameters,
-                        updateParameters = viewModel::adjustExprParameters,
-                        openDetailsDialog = viewModel::openDetailsDialog,
-                        confirmParameters = viewModel::confirmAdjustedParameters,
-                    )
-                Submode.ExprAdjustment.Type.ROTATION ->
-                    RotationInterface(
-                        concretePositions = concretePositions,
-                        defaults = viewModel.defaultRotationParameters,
-                        updateParameters = viewModel::adjustExprParameters,
-                        openDetailsDialog = viewModel::openDetailsDialog,
-                        confirmParameters = viewModel::confirmAdjustedParameters,
-                    )
-                Submode.ExprAdjustment.Type.BI_INVERSION  ->
-                    BiInversionInterface(
-                        concretePositions = concretePositions,
-                        defaults = viewModel.defaultBiInversionParameters,
-                        updateParameters = viewModel::adjustExprParameters,
-                        openDetailsDialog = viewModel::openDetailsDialog,
-                        confirmParameters = viewModel::confirmAdjustedParameters,
-                    )
-                Submode.ExprAdjustment.Type.LOXODROMIC_MOTION   ->
-                    LoxodromicMotionInterface(
-                        concretePositions = concretePositions,
-                        defaults = viewModel.defaultLoxodromicMotionParameters,
-                        updateParameters = viewModel::adjustExprParameters,
-                        updateBidirectionality = viewModel::updateLoxodromicBidirectionality,
-                        openDetailsDialog = viewModel::openDetailsDialog,
-                        confirmParameters = viewModel::confirmAdjustedParameters,
-                    )
-                else -> {}
-            }
-        }
-        when (val sm = viewModel.submodeSelectionChoicesInput) {
-            is Submode.SelectionChoicesInput ->
-                SelectionChoicesInputPopup(
-                    choices = sm.choices,
-                    selectChoice = { viewModel.selectFromChoices(it) },
-                    dismiss = { viewModel.dismissInputSubmode(recordHistory = false) },
+                val showOrientationToggle = remember(canvasState.showDirectionArrows, viewModel.selectionIsLocked) {
+                    canvasState.showDirectionArrows && !viewModel.selectionIsLocked
+                }
+                SelectionContextActions(
+                    concretePositions = concretePositions,
+                    scaleSliderPercentage = viewModel.scaleSliderPercentage,
+                    rotationHandleAngle = viewModel.rotationHandleAngle,
+                    borderColor = borderColor,
+                    showAdjustExprButton = viewModel.showAdjustExprButton,
+                    showOrientationToggle = showOrientationToggle,
+                    noPhantomsSelected = hudState.noPhantomsSelected,
+                    isLocked = viewModel.selectionIsLocked,
+                    toolAction = viewModel::toolAction,
+                    onScale = viewModel::scaleViaSlider,
+                    onScaleFinished = viewModel::finishScalingViaSlider,
+                    onRotate = viewModel::rotateViaHandle,
+                    onRotateStarted = viewModel::startHandleRotation,
+                    onRotateFinished = viewModel::finishHandleRotation,
                 )
-            else -> {}
+            }
+            ContextActions.POINT -> {
+                val pointColor = remember(selection, objectModel.invalidations, defaultFreePointColor) {
+                    viewModel.getMostCommonBorderColorInSelection() ?: defaultFreePointColor
+                }
+                PointContextActions(
+                    // only points are selected
+                    pointColor = pointColor,
+                    showAdjustExprButton = viewModel.showAdjustExprButton,
+                    noPhantomsSelected = hudState.noPhantomsSelected,
+                    isLocked = viewModel.selectionIsLocked,
+                    showMovePointToInfinity = hudState.showMovePointToInfinity,
+                    labelInputIsActive = hudState.labelInputIsActive,
+                    labelProvider = {
+                        selection.gCircles
+                            .firstNotNullOfOrNull { objectModel.styling[it]?.label?.content }
+                    },
+                    toolAction = viewModel::toolAction,
+                    setLabel = viewModel::setLabel,
+                    dismissLabelInput = viewModel::dismissInputSubmode,
+                )
+            }
+            ContextActions.ARC_PATH -> {
+                val someAreClosed = remember(selection) {
+                    selection.arcPaths.any {
+                        objectModel.getExpr(it) is ArcPath.Closed
+                    }
+                }
+                val mostCommonBorderColor = remember(selection, objectModel.invalidations) {
+                    selection.arcPaths.mostCommonOf { objectModel.styling[it]?.borderColor }
+                }
+                val mostCommonFillColor = remember(selection, objectModel.invalidations) {
+                    selection.arcPaths.mostCommonOf { objectModel.styling[it]?.fillColor }
+                }
+                val lineThickness = remember(selection, objectModel.invalidations) {
+                    selection.indices
+                        .mapNotNull { objectModel.styling[it]?.lineThickness }
+                        .mostCommonOf { it }
+                }
+                ArcPathContextActions(
+                    someAreClosed = someAreClosed,
+                    showAdjustExprButton = viewModel.showAdjustExprButton,
+                    isLocked = viewModel.selectionIsLocked,
+                    mostCommonBorderColor = mostCommonBorderColor,
+                    mostCommonFillColor = mostCommonFillColor,
+                    lineThickness = lineThickness ?: pathStroke.width,
+                    lineThicknessInputIsActive = hudState.lineThicknessInputIsActive,
+                    toolAction = viewModel::toolAction,
+                    setLineThickness = viewModel::setLineThickness,
+                    dismissLineThicknessInput = viewModel::dismissInputSubmode,
+                )
+            }
+            ContextActions.PARTIAL_ARC_PATH -> {
+                PartialArcPathContextActions(canvasState.canvasSize, viewModel::toolAction)
+            }
+            ContextActions.REGION_FILL -> {
+                RegionManipulationStrategySelector(
+                    currentStrategy = viewModel.regionManipulationStrategy,
+                    setStrategy = { viewModel.setRegionsManipulationStrategy(it) }
+                )
+            }
+            // TODO: confirm selection in rectangular-select
+            ContextActions.INTERPOLATION ->
+                InterpolationInterface(
+                    concretePositions = concretePositions,
+                    interpolateCircles = viewModel.interpolateCircles,
+                    circlesAreCoDirected = viewModel.circlesAreCoDirected,
+                    defaults = viewModel.defaultInterpolationParameters,
+                    updateParameters = viewModel::adjustExprParameters,
+                    openDetailsDialog = viewModel::openDetailsDialog,
+                    confirmParameters = viewModel::confirmAdjustedParameters,
+                )
+            ContextActions.ROTATION ->
+                RotationInterface(
+                    concretePositions = concretePositions,
+                    defaults = viewModel.defaultRotationParameters,
+                    updateParameters = viewModel::adjustExprParameters,
+                    openDetailsDialog = viewModel::openDetailsDialog,
+                    confirmParameters = viewModel::confirmAdjustedParameters,
+                )
+            ContextActions.BI_INVERSION ->
+                BiInversionInterface(
+                    concretePositions = concretePositions,
+                    defaults = viewModel.defaultBiInversionParameters,
+                    updateParameters = viewModel::adjustExprParameters,
+                    openDetailsDialog = viewModel::openDetailsDialog,
+                    confirmParameters = viewModel::confirmAdjustedParameters,
+                )
+            ContextActions.LOXODROMIC_MOTION ->
+                LoxodromicMotionInterface(
+                    concretePositions = concretePositions,
+                    defaults = viewModel.defaultLoxodromicMotionParameters,
+                    updateParameters = viewModel::adjustExprParameters,
+                    updateBidirectionality = viewModel::updateLoxodromicBidirectionality,
+                    openDetailsDialog = viewModel::openDetailsDialog,
+                    confirmParameters = viewModel::confirmAdjustedParameters,
+                )
+            ContextActions.NO -> {}
         }
-        if (mode == SelectionMode.Region) {
-            RegionManipulationStrategySelector(
-                currentStrategy = viewModel.regionManipulationStrategy,
-                setStrategy = { viewModel.setRegionsManipulationStrategy(it) }
-            )
-        }
-        if (viewModel.toolPredicate(Tool.InfinitePoint)) {
+        if (hudState.showInfinitePointInput) {
             InfinitePointInput(
                 toolAction = { viewModel.toolAction(it) },
             )
@@ -504,7 +498,7 @@ fun ScreenshotableCanvas(
                     val pathCache = objectModel.pathCache
                     drawRegions(allObjects = allObjects, regions = regions, hiddenObjectIndices = hiddenObjectIndices, pathCache = pathCache, chessboardPattern = canvasState.chessboardPattern, chessboardColor = canvasState.chessboardColor, visibleRect = visibleRect, regionsOpacity = canvasState.regionsOpacity, regionsBlendMode = canvasState.regionsBlendMode, pathStroke = pathStroke)
                     if (canvasState.showCircles) {
-                        val selectionIsActive = mode.isSelectingObjects() && selection.gCircles.isNotEmpty()
+                        val selectionIsActive = mode is SelectionMode && selection.gCircles.isNotEmpty()
                         val visibleNonSelectedObjectIndices = if (selectionIsActive) objectModel.indices - hiddenObjectIndices - selection.gCircles.toSet() else objectModel.indices - hiddenObjectIndices
                         drawArcPaths(allObjects = allObjects, indices = (objectModel.arcPathIndices - selection.arcPaths.toSet()).toList(), styling = styling, pathCache = pathCache, defaultArcPathColor = defaultArcPathColor, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke)
                         drawGCircles(indices = visibleNonSelectedObjectIndices, allObjects = objectModel.displayObjects, styling = styling, isObjectFree = isObjectFree, pathCache = pathCache, visibleRect = visibleRect, defaultCircleColor = defaultCircleColor, defaultFreeCircleColor = defaultFreeCircleColor, circleStroke = pathStroke, defaultPointColor = defaultPointColor, defaultFreePointColor = defaultFreePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
@@ -990,7 +984,7 @@ private fun DrawScope.drawSelectedGCircles(
     imaginaryCircleThiccStroke: Stroke,
 ) {
     val showPoints = selectionIsActive
-    val showCircles = selectionIsActive || mode == SelectionMode.Region && restrictRegionsToSelection
+    val showCircles = selectionIsActive || mode == Mode.RegionFill && restrictRegionsToSelection
     val showImaginaryCircles = Settings.SHOW_IMAGINARY_CIRCLES
     for (ix in indices) {
         val style = styling[ix]
@@ -1405,7 +1399,7 @@ private inline fun DrawScope.drawHandles(
     // we dont pass submode directly since it can change often
     submodeRotate: Submode.Rotate?,
     submodeRectangularSelect: Submode.RectangularSelect?,
-    handleConfig: HandleConfig?,
+    handleConfig: HandleConfig,
     crossinline getSelectionRect: () -> Rect?,
     showCircles: Boolean,
     selectionMarkingsColor: Color, // for selection rect
@@ -1475,7 +1469,7 @@ private inline fun DrawScope.drawHandles(
                     }
                 }
             }
-            null -> {}
+            HandleConfig.NO -> {}
         }
         if (submodeRectangularSelect != null) {
             val (corner1, corner2) = submodeRectangularSelect

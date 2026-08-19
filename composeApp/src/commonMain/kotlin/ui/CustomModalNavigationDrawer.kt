@@ -324,6 +324,7 @@ fun CustomModalNavigationDrawer(
                 scope.launch { drawerState.close() }
             }
         }
+//        if (drawerState.isOpen)
         Scrim(
             contentDescription = "Close drawer",
             onClick = if (drawerState.isOpen) onDismissRequest else null,

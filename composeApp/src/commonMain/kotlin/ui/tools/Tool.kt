@@ -336,7 +336,7 @@ sealed class Tool(
         disabledIcon = Res.drawable.deselect,
     )
 
-    data object Region : Switch(
+    data object RegionFill : Switch(
         name = Res.string.region_name,
         description = Res.string.region_description,
         icon = Res.drawable.fill_region,

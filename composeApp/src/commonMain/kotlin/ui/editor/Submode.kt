@@ -111,11 +111,6 @@ sealed interface Submode {
         val adjustables: List<AdjustableExpr<EXPR>>, // non-empty
         val arcPathAdjustables: List<AdjustableExpr<ArcPath>> = emptyList(),
     ) : Submode {
-        @Immutable
-        enum class Type {
-            INTERPOLATION, ROTATION, BI_INVERSION, LOXODROMIC_MOTION
-        }
-
         val parameters = (adjustables[0].expr as? Expr.HasParameters)?.parameters
 
         init {

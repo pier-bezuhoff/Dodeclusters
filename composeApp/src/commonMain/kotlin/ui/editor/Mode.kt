@@ -12,8 +12,11 @@ import kotlin.jvm.Transient
 sealed interface Mode {
     val tool: Tool
 
-    fun isSelectingObjects(): Boolean =
-        this == SelectionMode.Drag || this == SelectionMode.Multiselect
+    /** Select regions to create new [LogicalRegion]s */
+    data object RegionFill : Mode {
+        @Transient
+        override val tool = Tool.RegionFill
+    }
 }
 
 @Immutable
@@ -26,8 +29,6 @@ enum class SelectionMode(
     Drag(Tool.Drag),
     /** Select multiple objects */
     Multiselect(Tool.Multiselect),
-    /** Select regions to create new [LogicalRegion]s */
-    Region(Tool.Region),
 }
 
 @Immutable

@@ -2,7 +2,6 @@
 
 package ui.editor
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.draggable2D
@@ -22,16 +21,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -42,13 +38,11 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -77,24 +71,13 @@ import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
-import core.geometry.Circle
-import core.geometry.ImaginaryCircle
-import core.geometry.Line
-import core.geometry.Point
 import dodeclusters.composeapp.generated.resources.Res
-import dodeclusters.composeapp.generated.resources.arc_path_number_label
-import dodeclusters.composeapp.generated.resources.circle_number_label
-import dodeclusters.composeapp.generated.resources.close
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.expand
-import dodeclusters.composeapp.generated.resources.imaginary_circle_number_label
 import dodeclusters.composeapp.generated.resources.label_input_placeholder
-import dodeclusters.composeapp.generated.resources.line_number_label
 import dodeclusters.composeapp.generated.resources.line_thickness_input_placeholder
 import dodeclusters.composeapp.generated.resources.ok
-import dodeclusters.composeapp.generated.resources.point_number_label
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
-import dodeclusters.composeapp.generated.resources.selection_choices_title
 import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import domain.angleDeg
@@ -103,7 +86,6 @@ import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.painterResource
@@ -121,10 +103,10 @@ import ui.editor.dialogs.DefaultInterpolationParameters
 import ui.editor.dialogs.DefaultLoxodromicMotionParameters
 import ui.editor.dialogs.DefaultRotationParameters
 import ui.theme.ColorTheme
-import ui.theme.DodeclustersColors
 import ui.theme.DodeclustersTheme
 import ui.theme.adaptiveSizing
 import ui.theme.adaptiveTypography
+import ui.theme.defaultFreePointColor
 import ui.theme.extendedColorScheme
 import ui.tools.Tool
 import kotlin.math.abs
@@ -156,6 +138,7 @@ private val sliderColorsSecondary: SliderColors
             // default was [primary x3, secondaryContainer x2]
         )
 
+// for previews
 @Composable
 private fun ContextActionsWrapper(
     content: @Composable (BoxScope.(ConcreteOnScreenPositions) -> Unit),
@@ -180,7 +163,6 @@ private fun ContextActionsWrapper(
     }
 }
 
-// FIX: rotation handle on android sometimes pulls the navigation drawer instead of rotating
 @Composable
 fun BoxScope.SelectionContextActions(
     concretePositions: ConcreteOnScreenPositions,
@@ -189,9 +171,9 @@ fun BoxScope.SelectionContextActions(
     borderColor: Color,
     showAdjustExprButton: Boolean,
     showOrientationToggle: Boolean,
+    noPhantomsSelected: Boolean,
     isLocked: Boolean,
     toolAction: (Tool) -> Unit = {},
-    toolPredicate: (Tool) -> Boolean = { true },
     onScale: (newScaleSliderPercentage: Float) -> Unit = {},
     onScaleFinished: () -> Unit = {},
     onRotate: (newRotationAngle: Float) -> Unit = {},
@@ -310,7 +292,7 @@ fun BoxScope.SelectionContextActions(
                 tooltip = stringResource(Tool.MarkAsPhantoms.description),
                 disabledTooltip = stringResource(Tool.MarkAsPhantoms.disabledDescription),
                 contentDescription = stringResource(Tool.MarkAsPhantoms.name),
-                enabled = toolPredicate(Tool.MarkAsPhantoms),
+                enabled = noPhantomsSelected,
                 modifier = buttonModifier,
                 onClick = { toolAction(Tool.MarkAsPhantoms) }
             )
@@ -336,15 +318,9 @@ private fun SelectionContextActionsPreview() {
             rotationHandleAngle = 0f,
             borderColor = Color.Blue,
             showAdjustExprButton = true,
+            noPhantomsSelected = true,
             showOrientationToggle = true,
             isLocked = false,
-            toolAction = {},
-            toolPredicate = { true },
-            onScale = {},
-            onScaleFinished = {},
-            onRotate = {},
-            onRotateStarted = {},
-            onRotateFinished = {},
         )
     }
 }
@@ -354,14 +330,15 @@ private fun SelectionContextActionsPreview() {
 fun BoxScope.PointContextActions(
     pointColor: Color,
     showAdjustExprButton: Boolean,
+    noPhantomsSelected: Boolean,
     isLocked: Boolean,
+    showMovePointToInfinity: Boolean,
+    labelInputIsActive: Boolean,
     labelProvider: () -> String?,
-    toolAction: (Tool) -> Unit,
-    toolPredicate: (Tool) -> Boolean,
-    setLabel: (String) -> Unit,
-    dismissLabelInput: () -> Unit,
+    toolAction: (Tool) -> Unit = {},
+    setLabel: (String) -> Unit = {},
+    dismissLabelInput: () -> Unit = {},
 ) {
-    val labelInputIsActive = toolPredicate(Tool.SetLabel)
     Surface(
         Modifier
             .align(Alignment.CenterEnd)
@@ -412,11 +389,11 @@ fun BoxScope.PointContextActions(
                 tooltip = stringResource(Tool.MarkAsPhantoms.description),
                 disabledTooltip = stringResource(Tool.MarkAsPhantoms.disabledDescription),
                 contentDescription = stringResource(Tool.MarkAsPhantoms.name),
-                enabled = toolPredicate(Tool.MarkAsPhantoms),
+                enabled = noPhantomsSelected,
                 modifier = buttonModifier,
                 onClick = { toolAction(Tool.MarkAsPhantoms) }
             )
-            if (toolPredicate(Tool.MovePointToInfinity)) {
+            if (showMovePointToInfinity) {
                 SimpleToolButtonWithTooltip(Tool.MovePointToInfinity, buttonModifier, onClick = toolAction)
             }
             if (isLocked) {
@@ -485,12 +462,11 @@ private fun PointContextActionsPreview() {
         PointContextActions(
             pointColor = Color.Blue,
             showAdjustExprButton = true,
+            labelInputIsActive = false,
+            noPhantomsSelected = true,
             isLocked = false,
+            showMovePointToInfinity = true,
             labelProvider = { null },
-            toolAction = {},
-            toolPredicate = { false },
-            setLabel = {},
-            dismissLabelInput = {},
         )
     }
 }
@@ -503,8 +479,8 @@ fun BoxScope.ArcPathContextActions(
     mostCommonBorderColor: Color?,
     mostCommonFillColor: Color?,
     lineThickness: Float,
+    lineThicknessInputIsActive: Boolean,
     toolAction: (Tool) -> Unit = {},
-    toolPredicate: (Tool) -> Boolean = { false },
     setLineThickness: (Float) -> Unit = {},
     dismissLineThicknessInput: () -> Unit = {},
     // grabbed midpoint <- submode
@@ -515,7 +491,6 @@ fun BoxScope.ArcPathContextActions(
     // style = path effect
     val defaultBorderColor = MaterialTheme.extendedColorScheme.highAccentColor
     val defaultFillColor = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
-    val lineThicknessInputIsActive = toolPredicate(Tool.SetLineThickness)
     Surface(
         Modifier
             .align(Alignment.CenterEnd)
@@ -665,128 +640,8 @@ private fun ArcPathContextActionsPreview() {
             mostCommonBorderColor = Color.Gray,
             mostCommonFillColor = Color.Yellow,
             lineThickness = 1f,
-            toolAction = {},
-            toolPredicate = { false },
-            setLineThickness = {},
-            dismissLineThicknessInput = {},
+            lineThicknessInputIsActive = false,
         )
-    }
-}
-
-@Composable
-fun BoxScope.SelectionChoicesInputPopup(
-    choices: List<Submode.SelectionChoicesInput.Choice>,
-    selectChoice: (indexAmongChoices: Int?) -> Unit,
-    dismiss: () -> Unit,
-) {
-    Popup(
-        popupPositionProvider = object : PopupPositionProvider {
-            override fun calculatePosition(
-                anchorBounds: IntRect,
-                windowSize: IntSize,
-                layoutDirection: LayoutDirection,
-                popupContentSize: IntSize
-            ): IntOffset = IntOffset(
-                x = anchorBounds.center.x - popupContentSize.width/2,
-                y = anchorBounds.center.y - popupContentSize.height/2,
-            )
-        },
-        onDismissRequest = dismiss,
-        properties = PopupProperties(
-            focusable = true,
-        ),
-    ) {
-        SelectionChoices(choices, selectChoice)
-    }
-}
-
-@Composable
-private fun BoxScope.SelectionChoices(
-    choices: List<Submode.SelectionChoicesInput.Choice>,
-    selectChoice: (indexAmongChoices: Int?) -> Unit = {},
-) {
-    Surface(
-        modifier = Modifier,
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 12.dp,
-        shadowElevation = 12.dp,
-    ) {
-        Column(
-            modifier = Modifier
-                .width(IntrinsicSize.Max)
-                .padding(12.dp)
-                .verticalScroll(rememberScrollState())
-            ,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Spacer(Modifier.size(24.dp)) // manually balancing close-icon to center the title
-                Text(
-                    stringResource(Res.string.selection_choices_title),
-                    style = MaterialTheme.adaptiveTypography.body
-                )
-                IconButton(
-                    onClick = { selectChoice(null) },
-                ) {
-                    Icon(painterResource(Res.drawable.close), "close", Modifier.size(18.dp))
-                }
-            }
-            choices.forEachIndexed { i, choice ->
-                val label = when (choice.objectOrArcPath) {
-                    is Circle -> stringResource(Res.string.circle_number_label, choice.index)
-                    is Line -> stringResource(Res.string.line_number_label, choice.index)
-                    is ImaginaryCircle -> stringResource(
-                        Res.string.imaginary_circle_number_label,
-                        choice.index
-                    )
-                    is Point -> stringResource(Res.string.point_number_label, choice.index)
-                    null -> stringResource(Res.string.arc_path_number_label, choice.index)
-                }
-                TextButton(
-                    onClick = { selectChoice(i) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    border =
-                        if (i == 0)
-                        // salad green is the default selection color
-                            BorderStroke(2.dp, DodeclustersColors.strongSalad)
-//                                BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)
-                        else null,
-                ) {
-                    Text(
-                        text = label,
-                        color = choice.borderColor ?: choice.fillColor
-                        ?: MaterialTheme.extendedColorScheme.highAccentColor,
-                        style = MaterialTheme.adaptiveTypography.label,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun SelectionChoicesPreview() {
-    ContextActionsWrapper {
-        Box(Modifier.align(Alignment.Center)) {
-            SelectionChoices(
-                choices = listOf(
-                    Submode.SelectionChoicesInput.Choice(
-                        0, Circle(0.0, 0.0, 1.0),
-                        Color.Red, null
-                    ),
-                    Submode.SelectionChoicesInput.Choice(
-                        1, Line(1.0, 0.0, 1.0),
-                        Color.Green, null
-                    ),
-                ),
-            )
-        }
     }
 }
 
@@ -800,9 +655,9 @@ fun InterpolationInterface(
     interpolateCircles: Boolean,
     circlesAreCoDirected: Boolean,
     defaults: DefaultInterpolationParameters,
-    updateParameters: (InterpolationParameters) -> Unit,
-    openDetailsDialog: () -> Unit,
-    confirmParameters: () -> Unit,
+    updateParameters: (InterpolationParameters) -> Unit = {},
+    openDetailsDialog: () -> Unit = {},
+    confirmParameters: () -> Unit = {},
 ) {
     val minCount = defaults.minCircleCount
     val maxCount = defaults.maxCircleCount
@@ -903,9 +758,6 @@ private fun InterpolationInterfacePreview() {
             defaults = DefaultInterpolationParameters(
                 nInterjacents = 5,
             ),
-            updateParameters = {},
-            openDetailsDialog = {},
-            confirmParameters = {},
         )
     }
 }
@@ -915,9 +767,9 @@ private fun InterpolationInterfacePreview() {
 fun RotationInterface(
     concretePositions: ConcreteOnScreenPositions,
     defaults: DefaultRotationParameters,
-    updateParameters: (RotationParameters) -> Unit,
-    openDetailsDialog: () -> Unit,
-    confirmParameters: () -> Unit,
+    updateParameters: (RotationParameters) -> Unit = {},
+    openDetailsDialog: () -> Unit = {},
+    confirmParameters: () -> Unit = {},
 ) {
     var rotateClockwise by remember { mutableStateOf(false) }
     val angleSliderState = remember { SliderState(
@@ -1006,9 +858,6 @@ private fun RotationInterfacePreview() {
         RotationInterface(
             concretePositions = positions,
             defaults = DefaultRotationParameters(),
-            updateParameters = {},
-            openDetailsDialog = {},
-            confirmParameters = {},
         )
     }
 }
@@ -1018,9 +867,9 @@ private fun RotationInterfacePreview() {
 fun BiInversionInterface(
     concretePositions: ConcreteOnScreenPositions,
     defaults: DefaultBiInversionParameters,
-    updateParameters: (BiInversionParameters) -> Unit,
-    openDetailsDialog: () -> Unit,
-    confirmParameters: () -> Unit,
+    updateParameters: (BiInversionParameters) -> Unit = {},
+    openDetailsDialog: () -> Unit = {},
+    confirmParameters: () -> Unit = {},
 ) {
     // equivalent to swapping the order of engines
     var negateSpeed by remember { mutableStateOf(false) }
@@ -1118,9 +967,6 @@ private fun BiInversionInterfacePreview() {
         BiInversionInterface(
             concretePositions = positions,
             defaults = DefaultBiInversionParameters(),
-            updateParameters = {},
-            openDetailsDialog = {},
-            confirmParameters = {},
         )
     }
 }
@@ -1130,10 +976,10 @@ private fun BiInversionInterfacePreview() {
 fun LoxodromicMotionInterface(
     concretePositions: ConcreteOnScreenPositions,
     defaults: DefaultLoxodromicMotionParameters,
-    updateParameters: (LoxodromicMotionParameters) -> Unit,
-    updateBidirectionality: (forwardAndBackward: Boolean) -> Unit,
-    openDetailsDialog: () -> Unit,
-    confirmParameters: () -> Unit,
+    updateParameters: (LoxodromicMotionParameters) -> Unit = {},
+    updateBidirectionality: (forwardAndBackward: Boolean) -> Unit = {},
+    openDetailsDialog: () -> Unit = {},
+    confirmParameters: () -> Unit = {},
 ) {
     // equivalent to swapping the order of engines
     var reverseDirection by remember { mutableStateOf(false) }
@@ -1266,10 +1112,6 @@ private fun LoxodromicMotionInterfacePreview() {
         LoxodromicMotionInterface(
             concretePositions = positions,
             defaults = DefaultLoxodromicMotionParameters(),
-            updateParameters = {},
-            updateBidirectionality = {},
-            openDetailsDialog = {},
-            confirmParameters = {},
         )
     }
 }
@@ -1281,7 +1123,7 @@ private fun ReverseDirectionToggle(
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
     checkedContainerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
-    onClick: () -> Unit,
+    onClick: () -> Unit = {},
 ) {
     Box(positionModifier) {
         WithTooltip(stringResource(Tool.ReverseDirection.description)) {
@@ -1319,7 +1161,7 @@ private fun BoxScope._PartialArcPathContextActions() {
 @Composable
 fun BoxScope.PartialArcPathContextActions(
     canvasSize: IntSize,
-    toolAction: (Tool) -> Unit,
+    toolAction: (Tool) -> Unit = {},
 ) {
     val (w, h) = canvasSize
     val verticalMargin = with (LocalDensity.current) {
@@ -1351,13 +1193,43 @@ fun BoxScope.PartialArcPathContextActions(
 }
 
 @Composable
+fun BoxScope.RegionManipulationStrategySelector(
+    currentStrategy: RegionManipulationStrategy,
+    modifier: Modifier = Modifier,
+    setStrategy: (RegionManipulationStrategy) -> Unit = {},
+) {
+    val iconOnly =
+        MaterialTheme.adaptiveSizing.windowSizeClass.widthSizeClass < WindowWidthSizeClass.Expanded
+    Surface(
+        modifier = modifier.align(Alignment.CenterEnd),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Column(Modifier
+            .width(IntrinsicSize.Max)
+            .selectableGroup()
+        ) {
+            RegionManipulationStrategy.entries.forEach { strategy ->
+                RegionManipulationStrategyChoice(
+                    strategy = strategy,
+                    isActive = currentStrategy == strategy,
+                    iconOnly = iconOnly,
+                    setStrategy = setStrategy,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun RegionManipulationStrategyChoice(
     strategy: RegionManipulationStrategy,
     isActive: Boolean,
     iconOnly: Boolean,
-    setStrategy: (RegionManipulationStrategy) -> Unit,
     selectedColor: Color = MaterialTheme.colorScheme.secondary,
     unselectedColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+    setStrategy: (RegionManipulationStrategy) -> Unit = {},
 ) {
     val description = stringResource(strategy.descriptionResource)
     val color =
@@ -1415,55 +1287,24 @@ private fun RegionManipulationStrategyChoice(
     }
 }
 
-@Composable
-fun BoxScope.RegionManipulationStrategySelector(
-    currentStrategy: RegionManipulationStrategy,
-    setStrategy: (RegionManipulationStrategy) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val iconOnly =
-        MaterialTheme.adaptiveSizing.windowSizeClass.widthSizeClass < WindowWidthSizeClass.Expanded
-    Surface(
-        modifier = modifier.align(Alignment.CenterEnd),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    ) {
-        Column(Modifier
-            .width(IntrinsicSize.Max)
-            .selectableGroup()
-        ) {
-            RegionManipulationStrategy.entries.forEach { strategy ->
-                RegionManipulationStrategyChoice(
-                    strategy = strategy,
-                    isActive = currentStrategy == strategy,
-                    iconOnly = iconOnly,
-                    setStrategy = setStrategy,
-                )
-            }
-        }
-    }
-}
-
 @Preview
 @Composable
 private fun RegionManipulationStrategySelectorPreview() {
     ContextActionsWrapper {
         RegionManipulationStrategySelector(
             currentStrategy = RegionManipulationStrategy.REPLACE,
-            setStrategy = {},
         )
     }
 }
 
 @Composable
 fun BoxScope.InfinitePointInput(
-    toolAction: (Tool) -> Unit,
+    toolAction: (Tool) -> Unit = {},
 ) {
     SimpleToolButtonWithTooltip(Tool.InfinitePoint,
         positionModifier = Modifier.align(Alignment.CenterEnd),
-        // the idea is that it would be colored the same as a normal point
-        containerColor = MaterialTheme.extendedColorScheme.highAccentColor,
+        // the idea is that it should be colored the same as a normal point
+        containerColor = MaterialTheme.extendedColorScheme.defaultFreePointColor,
         contentColor = MaterialTheme.colorScheme.surface,
         onClick = toolAction,
     )

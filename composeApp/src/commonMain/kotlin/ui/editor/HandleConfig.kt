@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 @Immutable
 @Serializable
 enum class HandleConfig {
+    NO,
     SINGLE_CIRCLE,
     SEVERAL_OBJECTS,
 }

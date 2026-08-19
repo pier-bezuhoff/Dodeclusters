@@ -39,7 +39,7 @@ sealed class Category(
     data object Region : Category(
         Res.string.region_category_name,
         listOf(
-            Tool.Region,
+            Tool.RegionFill,
             Tool.FlowFill,
             Tool.FillChessboardPattern,
             Tool.RestrictRegionToSelection,
