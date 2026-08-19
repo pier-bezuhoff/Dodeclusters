@@ -202,10 +202,7 @@ fun EditorScreenRoot(
         regionColor = viewModel.regionColor,
         backgroundColor = canvasState.backgroundColor,
         regionManipulationStrategy = viewModel.regionManipulationStrategy,
-        partialArgListIsNull = viewModel.partialArgList == null,
-        partialArgListArgsSize = viewModel.partialArgList?.args?.size ?: 0,
-        partialArgListIsFull = viewModel.partialArgList?.isFull == true,
-        partialArgListLastArgIsConfirmed = viewModel.partialArgList?.lastArgIsConfirmed == true,
+        partialArgListInfo = viewModel.partialArgListInfo,
         undoIsEnabled = viewModel.undoIsEnabled,
         redoIsEnabled = viewModel.redoIsEnabled,
         saveConfig = viewModel.saveConfig,
@@ -213,29 +210,25 @@ fun EditorScreenRoot(
         openMenu = {
             coroutineScope.launch { drawerState.open() }
         },
-        openNewBlank = {
-            viewModel.showNewBlankPrompt()
-        },
-        openFile = {
-            viewModel.requestOpenFile()
-        },
+        openNewBlank = viewModel::showNewBlankPrompt,
+        openFile = viewModel::requestOpenFile,
         showSaveOptionsDialog = {
             viewModel.toolAction(Tool.SaveCluster)
         },
-        openSettings = { openSettings() },
-        hidePanel = { viewModel.hidePanel() },
+        openSettings = openSettings,
+        hidePanel = viewModel::hidePanel,
         loadFromYaml = { content, filename ->
             content?.let {
                 viewModel.loadDdc(content, filename)
             }
             coroutineScope.launch { drawerState.close() }
         },
-        undo = { viewModel.undo() },
-        redo = { viewModel.redo() },
+        undo = viewModel::undo,
+        redo = viewModel::redo,
         switchToCategory = { viewModel.switchToCategory(it, togglePanel = true) },
         selectTool = { viewModel.selectTool(it, togglePanel = false) },
         selectToolAndTogglePanel = { viewModel.selectTool(it, togglePanel = true) },
-        getColorsByMostUsed = { viewModel.getColorsByMostUsed() },
+        getColorsByMostUsed = viewModel::getColorsByMostUsed,
         editorCanvas = {
             EditorCanvas(viewModel)
         },
@@ -294,7 +287,7 @@ fun EditorScreenRoot(
             )
         }
         DialogType.CIRCLE_OR_POINT_INTERPOLATION -> {
-            if (viewModel.partialArgList?.isFull == true) {
+            if (viewModel.partialArgListInfo.isFull) {
                 val (startObject, endObject) = viewModel.partialArgList!!.args
                     .map {
                         viewModel.getArg(it)
@@ -311,7 +304,7 @@ fun EditorScreenRoot(
             }
         }
         DialogType.CIRCLE_EXTRAPOLATION -> {
-            if (viewModel.partialArgList?.isFull == true) {
+            if (viewModel.partialArgListInfo.isFull == true) {
                 val (startCircle, endCircle) = viewModel.partialArgList!!.args
                     .map {
                         viewModel.getArg(it) as CircleOrLine
@@ -325,7 +318,7 @@ fun EditorScreenRoot(
             }
         }
         DialogType.ROTATION -> {
-            if (viewModel.partialArgList?.isFull == true) {
+            if (viewModel.partialArgListInfo.isFull == true) {
                 RotationDialog(
                     onCancel = viewModel::closeDialog,
                     onConfirm = viewModel::confirmDialogSelectedParameters,
@@ -335,7 +328,7 @@ fun EditorScreenRoot(
             }
         }
         DialogType.BI_INVERSION -> {
-            if (viewModel.partialArgList?.isFull == true) {
+            if (viewModel.partialArgListInfo.isFull == true) {
                 val (engine1, engine2) = viewModel.partialArgList!!.args
                     .drop(1)
                     .map { viewModel.getArg(it) as? CircleOrLine }
@@ -351,7 +344,7 @@ fun EditorScreenRoot(
             }
         }
         DialogType.LOXODROMIC_MOTION -> {
-            if (viewModel.partialArgList?.isFull == true) {
+            if (viewModel.partialArgListInfo.isFull == true) {
                 val (divergencePoint, convergencePoint) = viewModel.partialArgList!!.args
                     .drop(1)
                     .map { viewModel.getArg(it) as? Point }
@@ -534,10 +527,7 @@ private fun EditorScreen(
     regionColor: Color,
     backgroundColor: Color?,
     regionManipulationStrategy: RegionManipulationStrategy,
-    partialArgListIsNull: Boolean,
-    partialArgListArgsSize: Int,
-    partialArgListIsFull: Boolean,
-    partialArgListLastArgIsConfirmed: Boolean,
+    partialArgListInfo: PartialArgListInfo,
     undoIsEnabled: Boolean,
     redoIsEnabled: Boolean,
     saveConfig: SaveConfig = SaveConfig(),
@@ -602,10 +592,7 @@ private fun EditorScreen(
                             tool = toolbarState.activeTool,
                             toolIsEnabled = toolsActiveness.isOn(toolbarState.activeTool),
                             regionManipulationStrategy = regionManipulationStrategy,
-                            partialArgListIsNull = partialArgListIsNull,
-                            partialArgListArgsSize = partialArgListArgsSize,
-                            partialArgListIsFull = partialArgListIsFull,
-                            partialArgListLastArgIsConfirmed = partialArgListLastArgIsConfirmed,
+                            partialArgListInfo = partialArgListInfo,
                             modifier = Modifier.align(Alignment.TopStart),
                         )
                         EditorTopBar(undoIsEnabled = undoIsEnabled, redoIsEnabled = redoIsEnabled, showSaveOptionsDialog = showSaveOptionsDialog, openNewBlank = openNewBlank, loadFromYaml = loadFromYaml, undo = undo, redo = redo, openMenu = openMenu, saveConfig = saveConfig, openFileRequests = openFileRequests,
@@ -652,10 +639,12 @@ private fun EditorScreenPreview() {
             regionColor = Color.Blue,
             backgroundColor = null,
             regionManipulationStrategy = RegionManipulationStrategy.REPLACE,
-            partialArgListIsNull = true,
-            partialArgListArgsSize = 0,
-            partialArgListIsFull = false,
-            partialArgListLastArgIsConfirmed = false,
+            partialArgListInfo = PartialArgListInfo(
+                isNull = true,
+                argsSize = 0,
+                isFull = false,
+                lastArgIsConfirmed = false,
+            ),
             undoIsEnabled = true,
             redoIsEnabled = false,
             getColorsByMostUsed = { emptyList() },
@@ -800,16 +789,22 @@ private fun FAB(
     }
 }
 
+// bridge type to prevent recompositions (which idk why happen)
+@Immutable
+data class PartialArgListInfo(
+    val isNull: Boolean,
+    val argsSize: Int,
+    val isFull: Boolean,
+    val lastArgIsConfirmed: Boolean,
+)
+
 @Composable
 private fun ToolDescription(
     tool: Tool,
     toolIsEnabled: Boolean,
     regionManipulationStrategy: RegionManipulationStrategy,
     // we do not want to pass parglist itself since it can change continuously triggering recompositions
-    partialArgListIsNull: Boolean,
-    partialArgListArgsSize: Int,
-    partialArgListIsFull: Boolean,
-    partialArgListLastArgIsConfirmed: Boolean,
+    partialArgListInfo: PartialArgListInfo,
     modifier: Modifier = Modifier
 ) {
     val isCompact = MaterialTheme.adaptiveSizing.isCompact
@@ -863,17 +858,17 @@ private fun ToolDescription(
             stringArrayResource(it.argDescriptions)
         }
         val number =
-            if (partialArgListIsNull ||
+            if (partialArgListInfo.isNull ||
                 tool !is Tool.MultiArg ||
-                partialArgListIsFull && !partialArgListLastArgIsConfirmed
+                partialArgListInfo.isFull && !partialArgListInfo.lastArgIsConfirmed
             )
                 null
-            else if (partialArgListIsFull && partialArgListLastArgIsConfirmed)
+            else if (partialArgListInfo.isFull && partialArgListInfo.lastArgIsConfirmed)
                 -1 // indicates expr-adj submode
-            else if (partialArgListLastArgIsConfirmed)
-                min(partialArgListArgsSize, tool.signature.argTypes.size - 1)
+            else if (partialArgListInfo.lastArgIsConfirmed)
+                min(partialArgListInfo.argsSize, tool.signature.argTypes.size - 1)
             else
-                max(0, partialArgListArgsSize - 1)
+                max(0, partialArgListInfo.argsSize - 1)
         AnimatedContent(Pair(tool, number)) { (currentTool, currentNumber) ->
             if (currentTool is Tool.MultiArg &&
                 currentNumber != null &&

@@ -104,6 +104,7 @@ fun ClassicColorPicker(
 }
 
 // slight modification to provide state
+// NOTE: recomposes on every color change
 /**
  * Classic Color Picker Component that shows a HSV representation of a color, with a Hue Bar on the right,
  * Alpha Bar on the bottom and the rest of the area covered with an area with saturation value touch area.

@@ -3,6 +3,7 @@ package ui.editor
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -178,6 +179,15 @@ class EditorViewModel : ViewModel() {
     private val partialArcPathState: MutableState<PartialArcPath?> = mutableStateOf(null)
     /** Partly filled [Tool] arg-list during [ToolMode] */
     var partialArgList: PartialArgList? by partialArgListState
+    // isolating partialArgList changes
+    val partialArgListInfo: PartialArgListInfo by derivedStateOf {
+        PartialArgListInfo(
+            isNull = partialArgList == null,
+            argsSize = partialArgList?.args?.size ?: 0,
+            isFull = partialArgList?.isFull == true,
+            lastArgIsConfirmed = partialArgList?.lastArgIsConfirmed == true,
+        )
+    }
     /** Under-construction arc-path during [ToolMode.ARC_PATH] */
     var partialArcPath: PartialArcPath? by partialArcPathState
 

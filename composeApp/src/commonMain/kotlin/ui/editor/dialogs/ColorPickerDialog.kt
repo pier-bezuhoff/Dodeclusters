@@ -176,12 +176,11 @@ private fun ColorPickerScreen(
     onConfirm: () -> Unit = {},
     onCancel: () -> Unit = {},
 ) {
-    val color = colorState.value.toColor()
+//    val color = colorState.value.toColor()
     var savedColors by savedColorsState
     val setColor = remember(colorState) { { newColor: Color ->
         colorState.value = HsvColor.from(newColor)
     } }
-    val newUnsavedColor = color !in savedColors
     val lightDarkVerticalGradientBrush = remember { Brush.verticalGradient(
         0.1f to Color.White,
         0.9f to Color.Black,
@@ -239,7 +238,7 @@ private fun ColorPickerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             HexInput(
-                                color,
+                                colorState.value.toColor(),
                                 setColor = { colorState.value = HsvColor.from(it) },
                                 onConfirm = onConfirm,
                             )
@@ -274,7 +273,7 @@ private fun ColorPickerScreen(
                                     .offset(x = 40.dp)
                                     .size(64.dp)
                                     .clip(CircleShape)
-                                    .background(color)
+                                    .background(colorState.value.toColor())
                                     .clickable(enabled = false, onClick = {}) // blocks thru-clicks
                             ) {}
                         }
@@ -301,6 +300,7 @@ private fun ColorPickerScreen(
                                     contentColor = clr,
                                 ) { setColor(clr) }
                             }
+                            val newUnsavedColor = colorState.value.toColor() !in savedColors
                             TwoIconButtonWithTooltip(
                                 iconResource = Res.drawable.add_circle,
                                 disabledIconResource = Res.drawable.delete_forever,
@@ -311,9 +311,9 @@ private fun ColorPickerScreen(
                                 contentColor = MaterialTheme.colorScheme.secondary
                             ) {
                                 if (newUnsavedColor)
-                                    savedColors += color
+                                    savedColors += colorState.value.toColor()
                                 else
-                                    savedColors -= color
+                                    savedColors -= colorState.value.toColor()
                             }
                             for (clr in savedColors.reversed()) { // newest-to-oldest
                                 SimpleButton(
@@ -388,7 +388,7 @@ private fun ColorPickerScreen(
                                 .offset(y = 40.dp)
                                 .size(64.dp)
                                 .clip(CircleShape)
-                                .background(color)
+                                .background(colorState.value.toColor())
                                 .clickable(enabled = false, onClick = {}) // blocks thru-clicks
                         ) {}
                     }
@@ -416,6 +416,7 @@ private fun ColorPickerScreen(
                                     contentColor = clr,
                                 ) { setColor(clr) }
                             }
+                            val newUnsavedColor = colorState.value.toColor() !in savedColors
                             TwoIconButtonWithTooltip(
                                 iconResource = Res.drawable.add_circle,
                                 disabledIconResource = Res.drawable.delete_forever,
@@ -426,9 +427,9 @@ private fun ColorPickerScreen(
                                 contentColor = MaterialTheme.colorScheme.secondary
                             ) {
                                 if (newUnsavedColor)
-                                    savedColors += color
+                                    savedColors += colorState.value.toColor()
                                 else
-                                    savedColors -= color
+                                    savedColors -= colorState.value.toColor()
                             }
                             for (clr in savedColors.reversed()) { // newest-to-oldest
                                 SimpleButton(
@@ -470,7 +471,7 @@ private fun ColorPickerScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     HexInput(
-                        color,
+                        colorState.value.toColor(),
                         setColor = { colorState.value = HsvColor.from(it) },
                         onConfirm = onConfirm,
                     )

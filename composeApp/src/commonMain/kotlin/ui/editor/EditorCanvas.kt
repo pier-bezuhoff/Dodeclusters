@@ -109,7 +109,7 @@ import kotlin.math.min
 fun BoxScope.EditorCanvas(
     viewModel: EditorViewModel,
     objectModel: ConformalObjectModel = viewModel.objectModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
     val customStyles = remember(density) { CustomStyles.fromDensity(density) }
@@ -227,7 +227,6 @@ fun BoxScope.EditorCanvas(
                 compositingStrategy = CompositingStrategy.Offscreen, // crucial for proper alpha blending
 //                renderEffect = BlurEffect(20f, 20f) // funi
             )
-//            .also { println("canvas recomposition") }
     ) {
         val translation = viewModel.translation
 //        measureAndPrintPerformancePercentiles("draw") { // | MEASURE START |
@@ -280,8 +279,8 @@ fun BoxScope.EditorCanvas(
                 }
                 SelectionContextActions(
                     concretePositions = concretePositions,
-                    scaleSliderPercentage = viewModel.scaleSliderPercentage,
-                    rotationHandleAngle = viewModel.rotationHandleAngle,
+                    scaleSliderPercentageProvider = { viewModel.scaleSliderPercentage },
+                    rotationHandleAngleProvider = { viewModel.rotationHandleAngle },
                     borderColor = borderColor,
                     showAdjustExprButton = hudState.showAdjustExprButton,
                     showOrientationToggle = hudState.showOrientationToggle,
@@ -1729,8 +1728,8 @@ data class ConcreteOnScreenPositions(
     }
 }
 
-private fun Stroke.copy(
-    newWidth: Float// = 0.0f,
+private inline fun Stroke.copy(
+    newWidth: Float, // = 0.0f,
 //    miter: Float = DefaultMiter,
 //    cap: StrokeCap = DefaultCap,
 //    join: StrokeJoin = DefaultJoin,

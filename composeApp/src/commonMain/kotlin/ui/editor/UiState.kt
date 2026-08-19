@@ -2,6 +2,8 @@ package ui.editor
 
 import ui.editor.dialogs.DialogType
 
+// i cannot put many natural things here, like
+// hudState and ToolsActiveness, because they are fundamentally derived
 /**
  * @param[toolbarState] encapsulates all category- and tool-related info
  */

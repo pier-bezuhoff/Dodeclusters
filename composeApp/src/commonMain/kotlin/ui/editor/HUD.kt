@@ -62,6 +62,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
@@ -166,13 +167,13 @@ private fun ContextActionsWrapper(
 @Composable
 fun BoxScope.SelectionContextActions(
     concretePositions: ConcreteOnScreenPositions,
-    scaleSliderPercentage: Float,
-    rotationHandleAngle: Float,
     borderColor: Color,
     showAdjustExprButton: Boolean,
     showOrientationToggle: Boolean,
     noPhantomsSelected: Boolean,
     isLocked: Boolean,
+    scaleSliderPercentageProvider: () -> Float,
+    rotationHandleAngleProvider: () -> Float,
     toolAction: (Tool) -> Unit = {},
     onScale: (newScaleSliderPercentage: Float) -> Unit = {},
     onScaleFinished: () -> Unit = {},
@@ -180,12 +181,8 @@ fun BoxScope.SelectionContextActions(
     onRotateStarted: (center: Offset) -> Unit = {},
     onRotateFinished: () -> Unit = {},
 ) {
-    // rotate handle
-    val rotationHandleStripeColor = MaterialTheme.colorScheme.onSecondaryContainer
     // scale slider mid column is too far from the right
     with (concretePositions) {
-        /** position of the grabbed rotation handle if it followed the cursor */
-        var virtualRotationHandlePosition by remember { mutableStateOf(Offset.Unspecified) }
         Column(
             Modifier
                 .align(Alignment.TopEnd)
@@ -202,68 +199,25 @@ fun BoxScope.SelectionContextActions(
                 contentColor = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
-            VerticalSlider(
-                value = scaleSliderPercentage,
-                onValueChange = onScale,
-                modifier = Modifier
-                    .height(
-                        with (density) {
-                            (0.2f * size.height).toDp()
-                        }
-                    )
-                ,
-                trackModifier = Modifier.height(8.dp), // height is transposed into width
-                thumbModifier = Modifier.height(24.dp),
-                onValueChangeFinished = onScaleFinished,
-                colors = sliderColorsSecondary,
+            ScaleSlider(
+                scaleSliderPercentageProvider = scaleSliderPercentageProvider,
+                height = with (density) {
+                    (0.2f * size.height).toDp()
+                },
+                onScale = onScale,
+                onScaleFinished = onScaleFinished,
             )
             SimpleToolButtonWithTooltip(Tool.Shrink,
                 contentColor = MaterialTheme.colorScheme.secondary,
                 onClick = toolAction
             )
         }
-        Box(
-            rotationHandleModifier(rotationHandleAngle)
-                .size(36.dp)
-                .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
-                .drawWithCache {
-                    val mask = Path().apply {
-                        addOval(Rect(Offset.Zero, size).deflate(0.1f*size.width))
-                    }
-                    onDrawWithContent {
-                        this.drawContent()
-                        rotate(-45f + positions.rotationHandle0Angle + rotationHandleAngle) {
-                            clipPath(mask) {
-                                val step = size.minDimension/4f
-                                for (i in 1..7) {
-                                    drawLine(
-                                        rotationHandleStripeColor,
-                                        Offset(0f, i*step),
-                                        Offset(i*step, 0f),
-                                        strokeWidth = 2f,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                .pointerHoverIcon(PointerIcon.Hand)
-                .draggable2D(state =
-                    rememberDraggable2DState { delta ->
-                        virtualRotationHandlePosition += delta
-                        val newAngle = positions.center
-                            .angleDeg(positions.rotationHandle0, virtualRotationHandlePosition)
-                        onRotate(newAngle)
-                    },
-                    onDragStarted = {
-                        virtualRotationHandlePosition = positions.rotationHandle0
-                        onRotateStarted(positions.center)
-                    },
-                    onDragStopped = {
-                        onRotateFinished()
-                    }
-                )
-        ) {}
+        RotationHandle(
+            rotationHandleAngleProvider = rotationHandleAngleProvider,
+            onRotate = onRotate,
+            onRotateStarted = onRotateStarted,
+            onRotateFinished = onRotateFinished,
+        )
     }
     Surface(
         Modifier
@@ -308,14 +262,87 @@ fun BoxScope.SelectionContextActions(
     }
 }
 
+@Composable
+private fun ConcreteOnScreenPositions.RotationHandle(
+    rotationHandleAngleProvider: () -> Float,
+    onRotate: (newRotationAngle: Float) -> Unit = {},
+    onRotateStarted: (center: Offset) -> Unit = {},
+    onRotateFinished: () -> Unit = {},
+) {
+    val rotationHandleAngle = rotationHandleAngleProvider()
+    val rotationHandleStripeColor = MaterialTheme.colorScheme.onSecondaryContainer
+    /** position of the grabbed rotation handle if it followed the cursor */
+    var virtualRotationHandlePosition by remember { mutableStateOf(Offset.Unspecified) }
+    Box(
+        rotationHandleModifier(rotationHandleAngle)
+            .size(36.dp)
+            .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
+            .drawWithCache {
+                val mask = Path().apply {
+                    addOval(Rect(Offset.Zero, size).deflate(0.1f*size.width))
+                }
+                onDrawWithContent {
+                    this.drawContent()
+                    rotate(-45f + positions.rotationHandle0Angle + rotationHandleAngle) {
+                        clipPath(mask) {
+                            val step = size.minDimension/4f
+                            for (i in 1..7) {
+                                drawLine(
+                                    rotationHandleStripeColor,
+                                    Offset(0f, i*step),
+                                    Offset(i*step, 0f),
+                                    strokeWidth = 2f,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            .pointerHoverIcon(PointerIcon.Hand)
+            .draggable2D(state =
+                rememberDraggable2DState { delta ->
+                    virtualRotationHandlePosition += delta
+                    val newAngle = positions.center
+                        .angleDeg(positions.rotationHandle0, virtualRotationHandlePosition)
+                    onRotate(newAngle)
+                },
+                onDragStarted = {
+                    virtualRotationHandlePosition = positions.rotationHandle0
+                    onRotateStarted(positions.center)
+                },
+                onDragStopped = {
+                    onRotateFinished()
+                }
+            )
+    ) {}
+}
+
+@Composable
+private fun ScaleSlider(
+    scaleSliderPercentageProvider: () -> Float,
+    height: Dp,
+    onScale: (newScaleSliderPercentage: Float) -> Unit,
+    onScaleFinished: () -> Unit,
+) {
+    VerticalSlider(
+        value = scaleSliderPercentageProvider(),
+        onValueChange = onScale,
+        modifier = Modifier.height(height),
+        trackModifier = Modifier.height(8.dp), // height is transposed into width
+        thumbModifier = Modifier.height(24.dp),
+        onValueChangeFinished = onScaleFinished,
+        colors = sliderColorsSecondary,
+    )
+}
+
 @Preview
 @Composable
 private fun SelectionContextActionsPreview() {
     ContextActionsWrapper { positions ->
         SelectionContextActions(
             concretePositions = positions,
-            scaleSliderPercentage = 0.5f,
-            rotationHandleAngle = 0f,
+            scaleSliderPercentageProvider = { 0.5f },
+            rotationHandleAngleProvider = { 0f },
             borderColor = Color.Blue,
             showAdjustExprButton = true,
             noPhantomsSelected = true,
