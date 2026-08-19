@@ -73,7 +73,6 @@ import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Ix
 import domain.PathCache
 import domain.angleDeg
-import domain.expressions.ArcPath
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeConcentricCircle
@@ -88,7 +87,6 @@ import domain.model.PartialArcPath
 import domain.model.PartialArgList
 import domain.model.Selection
 import domain.model.Styling
-import domain.mostCommonOf
 import domain.rotateBy
 import domain.rotateByAround
 import domain.settings.Settings
@@ -273,25 +271,22 @@ fun BoxScope.EditorCanvas(
     if (uiState.showUI) { // HUD
         when (hudState.contextActions) {
             ContextActions.GENERIC_SELECTION -> {
-                val borderColor = remember(selection, objectModel.invalidations) {
-                    viewModel.getMostCommonBorderColorInSelection()
+                val borderColor = remember(selection, hudState.mostCommonBorderColorOfSelection) {
+                    hudState.mostCommonBorderColorOfSelection
                         ?: if (selection.gCircles.all { objectModel.displayObjects[it] is ImaginaryCircle })
                             imaginaryCircleColor
                         else
                             defaultFreeCircleColor
-                }
-                val showOrientationToggle = remember(canvasState.showDirectionArrows, viewModel.selectionIsLocked) {
-                    canvasState.showDirectionArrows && !viewModel.selectionIsLocked
                 }
                 SelectionContextActions(
                     concretePositions = concretePositions,
                     scaleSliderPercentage = viewModel.scaleSliderPercentage,
                     rotationHandleAngle = viewModel.rotationHandleAngle,
                     borderColor = borderColor,
-                    showAdjustExprButton = viewModel.showAdjustExprButton,
-                    showOrientationToggle = showOrientationToggle,
+                    showAdjustExprButton = hudState.showAdjustExprButton,
+                    showOrientationToggle = hudState.showOrientationToggle,
                     noPhantomsSelected = hudState.noPhantomsSelected,
-                    isLocked = viewModel.selectionIsLocked,
+                    isLocked = hudState.selectionIsLocked,
                     toolAction = viewModel::toolAction,
                     onScale = viewModel::scaleViaSlider,
                     onScaleFinished = viewModel::finishScalingViaSlider,
@@ -301,15 +296,12 @@ fun BoxScope.EditorCanvas(
                 )
             }
             ContextActions.POINT -> {
-                val pointColor = remember(selection, objectModel.invalidations, defaultFreePointColor) {
-                    viewModel.getMostCommonBorderColorInSelection() ?: defaultFreePointColor
-                }
                 PointContextActions(
                     // only points are selected
-                    pointColor = pointColor,
-                    showAdjustExprButton = viewModel.showAdjustExprButton,
+                    pointColor = hudState.mostCommonBorderColorOfSelection ?: defaultFreePointColor,
+                    showAdjustExprButton = hudState.showAdjustExprButton,
                     noPhantomsSelected = hudState.noPhantomsSelected,
-                    isLocked = viewModel.selectionIsLocked,
+                    isLocked = hudState.selectionIsLocked,
                     showMovePointToInfinity = hudState.showMovePointToInfinity,
                     labelInputIsActive = hudState.labelInputIsActive,
                     labelProvider = {
@@ -322,29 +314,13 @@ fun BoxScope.EditorCanvas(
                 )
             }
             ContextActions.ARC_PATH -> {
-                val someAreClosed = remember(selection) {
-                    selection.arcPaths.any {
-                        objectModel.getExpr(it) is ArcPath.Closed
-                    }
-                }
-                val mostCommonBorderColor = remember(selection, objectModel.invalidations) {
-                    selection.arcPaths.mostCommonOf { objectModel.styling[it]?.borderColor }
-                }
-                val mostCommonFillColor = remember(selection, objectModel.invalidations) {
-                    selection.arcPaths.mostCommonOf { objectModel.styling[it]?.fillColor }
-                }
-                val lineThickness = remember(selection, objectModel.invalidations) {
-                    selection.indices
-                        .mapNotNull { objectModel.styling[it]?.lineThickness }
-                        .mostCommonOf { it }
-                }
                 ArcPathContextActions(
-                    someAreClosed = someAreClosed,
-                    showAdjustExprButton = viewModel.showAdjustExprButton,
-                    isLocked = viewModel.selectionIsLocked,
-                    mostCommonBorderColor = mostCommonBorderColor,
-                    mostCommonFillColor = mostCommonFillColor,
-                    lineThickness = lineThickness ?: pathStroke.width,
+                    someAreClosed = hudState.someArcPathsAreClosed,
+                    showAdjustExprButton = hudState.showAdjustExprButton,
+                    isLocked = hudState.selectionIsLocked,
+                    mostCommonBorderColor = hudState.mostCommonBorderColorOfSelection,
+                    mostCommonFillColor = hudState.mostCommonFillColorOfSelection,
+                    lineThickness = hudState.mostCommonLineThicknessOfSelection ?: pathStroke.width,
                     lineThicknessInputIsActive = hudState.lineThicknessInputIsActive,
                     toolAction = viewModel::toolAction,
                     setLineThickness = viewModel::setLineThickness,
@@ -352,12 +328,15 @@ fun BoxScope.EditorCanvas(
                 )
             }
             ContextActions.PARTIAL_ARC_PATH -> {
-                PartialArcPathContextActions(canvasState.canvasSize, viewModel::toolAction)
+                PartialArcPathContextActions(
+                    canvasSize = canvasState.canvasSize,
+                    toolAction = viewModel::toolAction,
+                )
             }
             ContextActions.REGION_FILL -> {
                 RegionManipulationStrategySelector(
                     currentStrategy = viewModel.regionManipulationStrategy,
-                    setStrategy = { viewModel.setRegionsManipulationStrategy(it) }
+                    setStrategy = viewModel::setRegionsManipulationStrategy,
                 )
             }
             // TODO: confirm selection in rectangular-select
@@ -400,7 +379,7 @@ fun BoxScope.EditorCanvas(
         }
         if (hudState.showInfinitePointInput) {
             InfinitePointInput(
-                toolAction = { viewModel.toolAction(it) },
+                toolAction = viewModel::toolAction,
             )
         }
     }

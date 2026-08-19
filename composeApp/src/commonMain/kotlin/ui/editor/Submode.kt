@@ -8,7 +8,17 @@ import core.geometry.GCircle
 import core.geometry.Point
 import domain.Ix
 import domain.expressions.ArcPath
+import domain.expressions.ArcPathArcMidpointParameters
+import domain.expressions.ArcPathIncidenceParameters
+import domain.expressions.BiInversionParameters
 import domain.expressions.Expr
+import domain.expressions.ExtrapolationParameters
+import domain.expressions.IncidenceParameters
+import domain.expressions.InterpolationParameters
+import domain.expressions.LoxodromicMotionParameters
+import domain.expressions.Parameters
+import domain.expressions.RotationParameters
+import domain.expressions.SagittaRatioParameters
 import domain.model.PartialArgList
 import domain.model.RegionConstraints
 import ui.editor.Submode.ExprAdjustment
@@ -156,6 +166,10 @@ sealed interface Submode {
         SELECTION_CHOICES_INPUT,
         ROTATE_STEREOGRAPHIC_SPHERE,
         EXPR_ADJUSTMENT,
+        INTERPOLATION_ADJUSTMENT,
+        ROTATION_ADJUSTMENT,
+        BI_INVERSION_ADJUSTMENT,
+        LOXODROMIC_MOTION_ADJUSTMENT,
         GRABBED_ARC_MIDPOINT,
         LABEL_INPUT, LINE_THICKNESS_INPUT,
     }
@@ -172,7 +186,13 @@ val Submode.type: Type get() =
         is FlowFill -> Type.FLOW_FILL
         is SelectionChoicesInput -> Type.SELECTION_CHOICES_INPUT
         is RotateStereographicSphere -> Type.ROTATE_STEREOGRAPHIC_SPHERE
-        is ExprAdjustment<*> -> Type.EXPR_ADJUSTMENT
+        is ExprAdjustment<*> -> when (this.parameters) {
+            is InterpolationParameters -> Type.INTERPOLATION_ADJUSTMENT
+            is RotationParameters -> Type.ROTATION_ADJUSTMENT
+            is BiInversionParameters -> Type.BI_INVERSION_ADJUSTMENT
+            is LoxodromicMotionParameters -> Type.LOXODROMIC_MOTION_ADJUSTMENT
+            else -> Type.EXPR_ADJUSTMENT
+        }
         is GrabbedArcMidpoint -> Type.GRABBED_ARC_MIDPOINT
         LabelInput -> Type.LABEL_INPUT
         LineThicknessInput -> Type.LINE_THICKNESS_INPUT
