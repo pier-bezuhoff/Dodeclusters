@@ -130,12 +130,14 @@ fun computeRotation(
     pivot: Point,
     target: GCircle,
 ): List<GCircle> {
+    val range = 1 .. params.nSteps
+    if (pivot == Point.CONFORMAL_INFINITY)
+        return range.map { target }
     // Q: why minus? cuz left-handed xOy?
     val dAngle = -params.angle.radians
-    return (1 .. params.nSteps)
-        .map { i ->
-            target.rotated(pivot.x, pivot.y, i * dAngle)
-        }
+    return range.map { i ->
+        target.rotated(pivot.x, pivot.y, i * dAngle)
+    }
 }
 
 // NOTE: without downscaling it visibly diverges (even at 1/500 downscaling)

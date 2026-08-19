@@ -3,7 +3,6 @@ package ui.editor
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -1873,7 +1872,7 @@ class EditorViewModel : ViewModel() {
             // idt we need to forget label shift when removing the label
             objectModel.updateStyle(ix) {
                 it.copy(label =
-                    if (label == null)
+                    if (label.isNullOrBlank())
                         null
                     else
                         Styling.Label(label)

@@ -19,8 +19,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.toMutableStateMap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
@@ -55,6 +58,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import core.geometry.Circle
@@ -73,6 +77,7 @@ import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Ix
 import domain.PathCache
 import domain.angleDeg
+import domain.expressions.Parameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByPencilAndPoint
 import domain.expressions.computeConcentricCircle
@@ -95,12 +100,17 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import ui.circle2cubicPath
+import ui.editor.dialogs.DefaultBiInversionParameters
+import ui.editor.dialogs.DefaultInterpolationParameters
+import ui.editor.dialogs.DefaultLoxodromicMotionParameters
+import ui.editor.dialogs.DefaultRotationParameters
 import ui.halfPlanePath
 import ui.reactiveCanvas
 import ui.region2pathWithCache
 import ui.theme.CustomStyles
 import ui.theme.customColors
 import ui.toPath
+import ui.tools.Tool
 import kotlin.math.min
 
 // NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
@@ -149,11 +159,16 @@ fun BoxScope.EditorCanvas(
     val selectedArgColor = customColors.selectedArgColor
     val thiccSelectedAlpha = customColors.thiccSelectedAlpha
     val textMeasurer = rememberTextMeasurer()
-    val objectLabelLayouts = remember(objectModel.invalidations, textMeasurer, labelTextStyle) {
+    val labels: Map<Ix, String> by remember(objectModel) { derivedStateOf {
+        hug(objectModel.invalidations)
+        objectModel.styling.entries.mapNotNull { (ix, style) ->
+            style.label?.let { ix to it.content }
+        }.toMutableStateMap()
+    } }
+    val objectLabelLayouts = remember(labels, textMeasurer, labelTextStyle) {
         val results = mutableMapOf<Ix, TextLayoutResult>()
-        for ((ix, style) in objectModel.styling) {
-            if (style.label != null)
-                results[ix] = textMeasurer.measure(style.label.content, labelTextStyle)
+        for ((ix, label) in labels) {
+            results[ix] = textMeasurer.measure(label, labelTextStyle)
         }
         results
     }
@@ -167,26 +182,6 @@ fun BoxScope.EditorCanvas(
     }
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableStateMapOf() }
-    LaunchedEffect(viewModel.animations) { // listen to animations
-        viewModel.animations.collect { event ->
-            when (event) {
-                is ColoredContourAnimation -> launch { // parallel multiplexer structure
-                    animations[event]?.stop()
-                    val animatable = Animatable(0f)
-                    animations[event] = animatable
-                    animatable.animateTo(
-                        targetValue = event.maxAlpha,
-                        tween(event.alpha01Duration, easing = LinearEasing)
-                    )
-                    animatable.animateTo(
-                        targetValue = 0f,
-                        tween(event.alpha10Duration, easing = FastOutLinearInEasing),
-                    )
-                    animations.remove(event)
-                }
-            }
-        }
-    }
     val gCircleSelectionIsActive = remember(mode, selection) {
         mode is SelectionMode && selection.gCircles.isNotEmpty()
     }
@@ -267,120 +262,212 @@ fun BoxScope.EditorCanvas(
         }
 //        } // | MEASURE END | // not that long (2~4ms)
     }
-    if (uiState.showUI) { // HUD
-        when (hudState.contextActions) {
-            ContextActions.GENERIC_SELECTION -> {
-                val borderColor = remember(selection, hudState.mostCommonBorderColorOfSelection) {
-                    hudState.mostCommonBorderColorOfSelection
-                        ?: if (selection.gCircles.all { objectModel.displayObjects[it] is ImaginaryCircle })
-                            imaginaryCircleColor
-                        else
-                            defaultFreeCircleColor
+    if (uiState.showUI) {
+        HUD(
+            hudState = hudState,
+            selection = selection,
+            concretePositions = concretePositions,
+            regionManipulationStrategy = viewModel.regionManipulationStrategy,
+            interpolateCircles = viewModel.interpolateCircles,
+            interpolatedCirclesAreCoDirected = viewModel.circlesAreCoDirected,
+            defaultInterpolationParameters = viewModel.defaultInterpolationParameters,
+            defaultRotationParameters = viewModel.defaultRotationParameters,
+            defaultBiInversionParameters = viewModel.defaultBiInversionParameters,
+            defaultLoxodromicMotionParameters = viewModel.defaultLoxodromicMotionParameters,
+            scaleSliderPercentageProvider = { viewModel.scaleSliderPercentage },
+            rotationHandleAngleProvider = { viewModel.rotationHandleAngle },
+            labelProvider = {
+                selection.gCircles
+                    .firstNotNullOfOrNull { objectModel.styling[it]?.label?.content }
+            },
+            selectionContainsOnlyImaginaryCircles = {
+                selection.gCircles.all { objectModel.displayObjects[it] is ImaginaryCircle }
+            },
+            toolAction = viewModel::toolAction,
+            onScale = viewModel::scaleViaSlider,
+            onScaleFinished = viewModel::finishScalingViaSlider,
+            onRotate = viewModel::rotateViaHandle,
+            onRotateStarted = viewModel::startHandleRotation,
+            onRotateFinished = viewModel::finishHandleRotation,
+            setLabel = viewModel::setLabel,
+            setLineThickness = viewModel::setLineThickness,
+            setRegionsManipulationStrategy = viewModel::setRegionsManipulationStrategy,
+            adjustExprParameters = viewModel::adjustExprParameters,
+            confirmAdjustedParameters = viewModel::confirmAdjustedParameters,
+            updateSpiralBidirectionality = viewModel::updateLoxodromicBidirectionality,
+            dismissInputSubmode = viewModel::dismissInputSubmode,
+            openDetailsDialog = viewModel::openDetailsDialog,
+        )
+    }
+    LaunchedEffect(viewModel.animations, animations) { // listen to animations
+        viewModel.animations.collect { event ->
+            when (event) {
+                is ColoredContourAnimation -> launch { // parallel multiplexer structure
+                    animations[event]?.stop()
+                    val animatable = Animatable(0f)
+                    animations[event] = animatable
+                    animatable.animateTo(
+                        targetValue = event.maxAlpha,
+                        tween(event.alpha01Duration, easing = LinearEasing)
+                    )
+                    animatable.animateTo(
+                        targetValue = 0f,
+                        tween(event.alpha10Duration, easing = FastOutLinearInEasing),
+                    )
+                    animations.remove(event)
                 }
-                SelectionContextActions(
-                    concretePositions = concretePositions,
-                    scaleSliderPercentageProvider = { viewModel.scaleSliderPercentage },
-                    rotationHandleAngleProvider = { viewModel.rotationHandleAngle },
-                    borderColor = borderColor,
-                    showAdjustExprButton = hudState.showAdjustExprButton,
-                    showOrientationToggle = hudState.showOrientationToggle,
-                    noPhantomsSelected = hudState.noPhantomsSelected,
-                    isLocked = hudState.selectionIsLocked,
-                    toolAction = viewModel::toolAction,
-                    onScale = viewModel::scaleViaSlider,
-                    onScaleFinished = viewModel::finishScalingViaSlider,
-                    onRotate = viewModel::rotateViaHandle,
-                    onRotateStarted = viewModel::startHandleRotation,
-                    onRotateFinished = viewModel::finishHandleRotation,
-                )
             }
-            ContextActions.POINT -> {
-                PointContextActions(
-                    // only points are selected
-                    pointColor = hudState.mostCommonBorderColorOfSelection ?: defaultFreePointColor,
-                    showAdjustExprButton = hudState.showAdjustExprButton,
-                    noPhantomsSelected = hudState.noPhantomsSelected,
-                    isLocked = hudState.selectionIsLocked,
-                    showMovePointToInfinity = hudState.showMovePointToInfinity,
-                    labelInputIsActive = hudState.labelInputIsActive,
-                    labelProvider = {
-                        selection.gCircles
-                            .firstNotNullOfOrNull { objectModel.styling[it]?.label?.content }
-                    },
-                    toolAction = viewModel::toolAction,
-                    setLabel = viewModel::setLabel,
-                    dismissLabelInput = viewModel::dismissInputSubmode,
-                )
-            }
-            ContextActions.ARC_PATH -> {
-                ArcPathContextActions(
-                    someAreClosed = hudState.someArcPathsAreClosed,
-                    showAdjustExprButton = hudState.showAdjustExprButton,
-                    isLocked = hudState.selectionIsLocked,
-                    mostCommonBorderColor = hudState.mostCommonBorderColorOfSelection,
-                    mostCommonFillColor = hudState.mostCommonFillColorOfSelection,
-                    lineThickness = hudState.mostCommonLineThicknessOfSelection ?: pathStroke.width,
-                    lineThicknessInputIsActive = hudState.lineThicknessInputIsActive,
-                    toolAction = viewModel::toolAction,
-                    setLineThickness = viewModel::setLineThickness,
-                    dismissLineThicknessInput = viewModel::dismissInputSubmode,
-                )
-            }
-            ContextActions.PARTIAL_ARC_PATH -> {
-                PartialArcPathContextActions(
-                    canvasSize = canvasState.canvasSize,
-                    toolAction = viewModel::toolAction,
-                )
-            }
-            ContextActions.REGION_FILL -> {
-                RegionManipulationStrategySelector(
-                    currentStrategy = viewModel.regionManipulationStrategy,
-                    setStrategy = viewModel::setRegionsManipulationStrategy,
-                )
-            }
-            // TODO: confirm selection in rectangular-select
-            ContextActions.INTERPOLATION ->
-                InterpolationInterface(
-                    concretePositions = concretePositions,
-                    interpolateCircles = viewModel.interpolateCircles,
-                    circlesAreCoDirected = viewModel.circlesAreCoDirected,
-                    defaults = viewModel.defaultInterpolationParameters,
-                    updateParameters = viewModel::adjustExprParameters,
-                    openDetailsDialog = viewModel::openDetailsDialog,
-                    confirmParameters = viewModel::confirmAdjustedParameters,
-                )
-            ContextActions.ROTATION ->
-                RotationInterface(
-                    concretePositions = concretePositions,
-                    defaults = viewModel.defaultRotationParameters,
-                    updateParameters = viewModel::adjustExprParameters,
-                    openDetailsDialog = viewModel::openDetailsDialog,
-                    confirmParameters = viewModel::confirmAdjustedParameters,
-                )
-            ContextActions.BI_INVERSION ->
-                BiInversionInterface(
-                    concretePositions = concretePositions,
-                    defaults = viewModel.defaultBiInversionParameters,
-                    updateParameters = viewModel::adjustExprParameters,
-                    openDetailsDialog = viewModel::openDetailsDialog,
-                    confirmParameters = viewModel::confirmAdjustedParameters,
-                )
-            ContextActions.LOXODROMIC_MOTION ->
-                LoxodromicMotionInterface(
-                    concretePositions = concretePositions,
-                    defaults = viewModel.defaultLoxodromicMotionParameters,
-                    updateParameters = viewModel::adjustExprParameters,
-                    updateBidirectionality = viewModel::updateLoxodromicBidirectionality,
-                    openDetailsDialog = viewModel::openDetailsDialog,
-                    confirmParameters = viewModel::confirmAdjustedParameters,
-                )
-            ContextActions.NO -> {}
         }
-        if (hudState.showInfinitePointInput) {
-            InfinitePointInput(
-                toolAction = viewModel::toolAction,
+    }
+}
+
+@Composable
+private fun BoxScope.HUD(
+    hudState: HudState,
+    selection: Selection,
+    concretePositions: ConcreteOnScreenPositions,
+    regionManipulationStrategy: RegionManipulationStrategy,
+    interpolateCircles: Boolean,
+    interpolatedCirclesAreCoDirected: Boolean,
+    defaultInterpolationParameters: DefaultInterpolationParameters,
+    defaultRotationParameters: DefaultRotationParameters,
+    defaultBiInversionParameters: DefaultBiInversionParameters,
+    defaultLoxodromicMotionParameters: DefaultLoxodromicMotionParameters,
+    scaleSliderPercentageProvider: () -> Float,
+    rotationHandleAngleProvider: () -> Float,
+    labelProvider: () -> String?,
+    selectionContainsOnlyImaginaryCircles: () -> Boolean = { false },
+    toolAction: (Tool) -> Unit = {},
+    onScale: (newScaleSliderPercentage: Float) -> Unit = {},
+    onScaleFinished: () -> Unit = {},
+    onRotate: (newRotationAngle: Float) -> Unit = {},
+    onRotateStarted: (center: Offset) -> Unit = {},
+    onRotateFinished: () -> Unit = {},
+    setLabel: (String) -> Unit = {},
+    setLineThickness: (Float) -> Unit = {},
+    setRegionsManipulationStrategy: (RegionManipulationStrategy) -> Unit = {},
+    adjustExprParameters: (Parameters) -> Unit = {},
+    confirmAdjustedParameters: () -> Unit = {},
+    updateSpiralBidirectionality: (forwardAndBackward: Boolean) -> Unit = {},
+    dismissInputSubmode: () -> Unit = {},
+    openDetailsDialog: () -> Unit = {},
+) {
+    val density = LocalDensity.current
+    val customStyles = remember(density) { CustomStyles.fromDensity(density) }
+    val pathStroke = customStyles.pathStroke
+    val customColors = MaterialTheme.customColors
+    val defaultFreeCircleColor = customColors.defaultFreeCircleColor
+    val defaultFreePointColor = customColors.defaultFreePointColor
+    val imaginaryCircleColor = customColors.imaginaryCircleColor
+    when (hudState.contextActions) {
+        ContextActions.GENERIC_SELECTION -> {
+            val borderColor = remember(selection, hudState.mostCommonBorderColorOfSelection) {
+                hudState.mostCommonBorderColorOfSelection
+                    ?: if (selectionContainsOnlyImaginaryCircles())
+                        imaginaryCircleColor
+                    else
+                        defaultFreeCircleColor
+            }
+            SelectionContextActions(
+                concretePositions = concretePositions,
+                scaleSliderPercentageProvider = scaleSliderPercentageProvider,
+                rotationHandleAngleProvider = rotationHandleAngleProvider,
+                borderColor = borderColor,
+                showAdjustExprButton = hudState.showAdjustExprButton,
+                showOrientationToggle = hudState.showOrientationToggle,
+                noPhantomsSelected = hudState.noPhantomsSelected,
+                isLocked = hudState.selectionIsLocked,
+                toolAction = toolAction,
+                onScale = onScale,
+                onScaleFinished = onScaleFinished,
+                onRotate = onRotate,
+                onRotateStarted = onRotateStarted,
+                onRotateFinished = onRotateFinished,
             )
         }
+        ContextActions.POINT -> {
+            PointContextActions(
+                // only points are selected
+                pointColor = hudState.mostCommonBorderColorOfSelection ?: defaultFreePointColor,
+                showAdjustExprButton = hudState.showAdjustExprButton,
+                noPhantomsSelected = hudState.noPhantomsSelected,
+                isLocked = hudState.selectionIsLocked,
+                showMovePointToInfinity = hudState.showMovePointToInfinity,
+                labelInputIsActive = hudState.labelInputIsActive,
+                labelProvider = labelProvider,
+                toolAction = toolAction,
+                setLabel = setLabel,
+                dismissLabelInput = dismissInputSubmode,
+            )
+        }
+        ContextActions.ARC_PATH -> {
+            ArcPathContextActions(
+                someAreClosed = hudState.someArcPathsAreClosed,
+                showAdjustExprButton = hudState.showAdjustExprButton,
+                isLocked = hudState.selectionIsLocked,
+                mostCommonBorderColor = hudState.mostCommonBorderColorOfSelection,
+                mostCommonFillColor = hudState.mostCommonFillColorOfSelection,
+                lineThickness = hudState.mostCommonLineThicknessOfSelection ?: pathStroke.width,
+                lineThicknessInputIsActive = hudState.lineThicknessInputIsActive,
+                toolAction = toolAction,
+                setLineThickness = setLineThickness,
+                dismissLineThicknessInput = dismissInputSubmode,
+            )
+        }
+        ContextActions.PARTIAL_ARC_PATH -> {
+            PartialArcPathContextActions(
+                canvasSize = concretePositions.size,
+                toolAction = toolAction,
+            )
+        }
+        ContextActions.REGION_FILL -> {
+            RegionManipulationStrategySelector(
+                currentStrategy = regionManipulationStrategy,
+                setStrategy = setRegionsManipulationStrategy,
+            )
+        }
+        // TODO: confirm selection in rectangular-select
+        ContextActions.INTERPOLATION ->
+            InterpolationInterface(
+                concretePositions = concretePositions,
+                interpolateCircles = interpolateCircles,
+                circlesAreCoDirected = interpolatedCirclesAreCoDirected,
+                defaults = defaultInterpolationParameters,
+                updateParameters = adjustExprParameters,
+                openDetailsDialog = openDetailsDialog,
+                confirmParameters = confirmAdjustedParameters,
+            )
+        ContextActions.ROTATION ->
+            RotationInterface(
+                concretePositions = concretePositions,
+                defaults = defaultRotationParameters,
+                updateParameters = adjustExprParameters,
+                openDetailsDialog = openDetailsDialog,
+                confirmParameters = confirmAdjustedParameters,
+            )
+        ContextActions.BI_INVERSION ->
+            BiInversionInterface(
+                concretePositions = concretePositions,
+                defaults = defaultBiInversionParameters,
+                updateParameters = adjustExprParameters,
+                openDetailsDialog = openDetailsDialog,
+                confirmParameters = confirmAdjustedParameters,
+            )
+        ContextActions.LOXODROMIC_MOTION ->
+            LoxodromicMotionInterface(
+                concretePositions = concretePositions,
+                defaults = defaultLoxodromicMotionParameters,
+                updateParameters = adjustExprParameters,
+                updateBidirectionality = updateSpiralBidirectionality,
+                openDetailsDialog = openDetailsDialog,
+                confirmParameters = confirmAdjustedParameters,
+            )
+        ContextActions.NO -> {}
+    }
+    if (hudState.showInfinitePointInput) {
+        InfinitePointInput(
+            toolAction = toolAction,
+        )
     }
 }
 

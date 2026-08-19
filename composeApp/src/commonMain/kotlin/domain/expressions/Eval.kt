@@ -165,7 +165,8 @@ fun computeSagittaRatio(
     chordStart: Point,
     chordEnd: Point,
 ): Double {
-    require(chordStart.isFinite && chordEnd.isFinite)
+    if (chordStart == Point.CONFORMAL_INFINITY || chordEnd == Point.CONFORMAL_INFINITY)
+        return 0.0
     val chordX = chordEnd.x - chordStart.x
     val chordY = chordEnd.y - chordStart.y
     val chord = hypot(chordX, chordY)
@@ -247,10 +248,11 @@ fun computeArcPathIncidence(
             circleOrLine.angle2point(angle)
         }
         else -> {
-            val arcStart = concreteArcPath.vertices[params.arcIndex]
-            val arcEnd = concreteArcPath.vertices[
+            val arcStart = concreteArcPath.vertices.getOrNull(params.arcIndex)
+                ?: return null
+            val arcEnd = concreteArcPath.vertices.getOrNull(
                 (params.arcIndex + 1).mod(concreteArcPath.vertices.size)
-            ]
+            ) ?: return null
             Point(
                 x = arcStart.x + params.arcPercentage*(arcEnd.x - arcStart.x),
                 y = arcStart.y + params.arcPercentage*(arcEnd.y - arcStart.y)
