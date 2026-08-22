@@ -173,10 +173,10 @@ class EditorViewModel : ViewModel() {
         submode as? Submode.SelectionChoicesInput
     }
 
-    // NOTE: Arg.XYPoint & co use absolute positioning
     private val partialArgListState: MutableState<PartialArgList?> = mutableStateOf(null)
     private val partialArcPathState: MutableState<PartialArcPath?> = mutableStateOf(null)
-    /** Partly filled [Tool] arg-list during [ToolMode] */
+    /** Partly filled [Tool] arg-list during [ToolMode].
+     * [Arg.PointXY] & co use absolute positioning */
     var partialArgList: PartialArgList? by partialArgListState
     // isolating partialArgList changes
     val partialArgListInfo: PartialArgListInfo by derivedStateOf {
@@ -193,8 +193,9 @@ class EditorViewModel : ViewModel() {
     var settings: Settings by mutableStateOf(Settings())
         private set
 
-    /** currently selected color */
-    var regionColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
+    // MAYBE: foreground & background color (2 simul, as in many graphical programs)
+    /** urrently selected color for region fill */
+    var currentColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
         private set
 
     var regionManipulationStrategy: RegionManipulationStrategy by mutableStateOf(
@@ -743,10 +744,10 @@ class EditorViewModel : ViewModel() {
             centerizeTo(state.center.x, state.center.y)
         else
             translation = Offset.Zero
-        regionColor = state.regionColor ?: regionColor
+        currentColor = state.regionColor ?: currentColor
         updateCanvasState { it.copy(
             backgroundColor = state.backgroundColor,
-            chessboardColor = state.chessboardColor ?: regionColor,
+            chessboardColor = state.chessboardColor ?: currentColor,
             chessboardPattern = state.chessboardPattern,
         ) }
         objectModel.invalidate()
@@ -1291,7 +1292,7 @@ class EditorViewModel : ViewModel() {
             fullConstraints = fullConstraints,
             allRegions = regions,
             regionManipulationStrategy = regionManipulationStrategy,
-            color = regionColor,
+            color = currentColor,
         )
     }
 
@@ -1657,7 +1658,7 @@ class EditorViewModel : ViewModel() {
         updateCanvasState { it.copy(
             chessboardColor =
                 if (it.chessboardPattern != ChessboardPattern.STARTS_TRANSPARENT)
-                    regionColor // when new pattern is not none
+                    currentColor // when new pattern is not none
                 else it.chessboardColor,
             chessboardPattern = when (it.chessboardPattern) {
                 ChessboardPattern.NONE -> ChessboardPattern.STARTS_COLORED
@@ -1697,7 +1698,7 @@ class EditorViewModel : ViewModel() {
         updateUiState { it.copy(
             openedDialog = null
         ) }
-        regionColor = colorPickerParameters.currentColor
+        currentColor = colorPickerParameters.currentColor
         this.colorPickerParameters = colorPickerParameters
         switchToCategory(Category.Region)
     }
@@ -1750,7 +1751,7 @@ class EditorViewModel : ViewModel() {
         updateUiState { it.copy(
             openedDialog = null
         ) }
-        regionColor = color
+        currentColor = color
         switchToCategory(Category.Region)
     }
 
@@ -3492,7 +3493,7 @@ class EditorViewModel : ViewModel() {
                 arcPaths = selection.arcPaths.filter { it < size },
             ),
             center = center,
-            regionColor = regionColor,
+            regionColor = currentColor,
         )
     }
 
@@ -3593,7 +3594,7 @@ class EditorViewModel : ViewModel() {
         val switchToMultiselect = state.selection.size > 1 && selection.gCircles.size <= 1
         selection = Selection(gCircles = state.selection)
         state.regionColor?.let {
-            regionColor = it
+            currentColor = it
         }
         updateCanvasState { it.copy(
             chessboardColor = state.chessboardColor ?: it.chessboardColor,

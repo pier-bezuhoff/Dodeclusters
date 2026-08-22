@@ -27,6 +27,8 @@ import kotlinx.serialization.json.JsonTransformingSerializer
 import kotlinx.serialization.json.jsonObject
 import kotlin.collections.contains
 
+// TODO: labels for all objects
+// TODO: size/thickness for all objects
 /**
  * Each object can have its own Styling object, alternative name: style.
  */

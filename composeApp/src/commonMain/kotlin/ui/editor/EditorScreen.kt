@@ -95,7 +95,6 @@ import domain.io.DdcSharing
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
-import domain.model.ChessboardPattern
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -199,7 +198,7 @@ fun EditorScreenRoot(
         ddcContent = ddcContent,
         showUI = uiState.showUI,
         showPanel = uiState.showPanel,
-        regionColor = viewModel.regionColor,
+        regionColor = viewModel.currentColor,
         backgroundColor = canvasState.backgroundColor,
         regionManipulationStrategy = viewModel.regionManipulationStrategy,
         partialArgListInfo = viewModel.partialArgListInfo,
@@ -238,7 +237,7 @@ fun EditorScreenRoot(
         DialogType.REGION_FILL_COLOR_PICKER -> {
             ColorPickerDialog(
                 parameters = viewModel.colorPickerParameters.copy(
-                    currentColor = viewModel.regionColor,
+                    currentColor = viewModel.currentColor,
                     usedColors = viewModel.getColorsByMostUsed(),
                 ),
                 onCancel = viewModel::dismissRegionColorPicker,
@@ -263,7 +262,7 @@ fun EditorScreenRoot(
             )
         }
         DialogType.FILL_COLOR_PICKER -> {
-            val initialColor = viewModel.getMostCommonFillColorInSelection() ?: viewModel.regionColor
+            val initialColor = viewModel.getMostCommonFillColorInSelection() ?: viewModel.currentColor
             ColorPickerDialog(
                 parameters = viewModel.colorPickerParameters.copy(
                     currentColor = initialColor,

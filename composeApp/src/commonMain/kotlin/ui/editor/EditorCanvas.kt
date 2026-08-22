@@ -58,7 +58,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import core.geometry.Circle
@@ -159,13 +158,13 @@ fun BoxScope.EditorCanvas(
     val selectedArgColor = customColors.selectedArgColor
     val thiccSelectedAlpha = customColors.thiccSelectedAlpha
     val textMeasurer = rememberTextMeasurer()
-    val labels: Map<Ix, String> by remember(objectModel) { derivedStateOf {
-        hug(objectModel.invalidations)
+    // isolates changes not related to labels
+    val labels: Map<Ix, String> = remember(objectModel.invalidations) {
         objectModel.styling.entries.mapNotNull { (ix, style) ->
             style.label?.let { ix to it.content }
-        }.toMutableStateMap()
-    } }
-    val objectLabelLayouts = remember(labels, textMeasurer, labelTextStyle) {
+        }.toMap()
+    }
+    val labelLayouts = remember(labels, textMeasurer, labelTextStyle) {
         val results = mutableMapOf<Ix, TextLayoutResult>()
         for ((ix, label) in labels) {
             results[ix] = textMeasurer.measure(label, labelTextStyle)
@@ -182,22 +181,22 @@ fun BoxScope.EditorCanvas(
     }
     val animations: MutableMap<ColoredContourAnimation, Animatable<Float, AnimationVector1D>> =
         remember { mutableStateMapOf() }
-    val gCircleSelectionIsActive = remember(mode, selection) {
+    val gCircleSelectionIsActive: Boolean = remember(mode, selection) {
         mode is SelectionMode && selection.gCircles.isNotEmpty()
     }
-    val hiddenObjectIndices = remember(canvasState.showPhantomObjects, objectModel.invalidations) {
+    val hiddenObjectIndices: Set<Ix> = remember(canvasState.showPhantomObjects, objectModel.invalidations) {
         if (canvasState.showPhantomObjects)
             emptySet()
         else
             objectModel.phantoms
     }
-    val visibleNonSelectedObjectIndices = remember(gCircleSelectionIsActive, hiddenObjectIndices, selection, objectModel.invalidations) {
+    val visibleNonSelectedObjectIndices: List<Ix> = remember(gCircleSelectionIsActive, hiddenObjectIndices, selection, objectModel.invalidations) {
         if (gCircleSelectionIsActive)
             (objectModel.gCircleIndices - hiddenObjectIndices - selection.gCircles.toSet()).toList()
         else
             (objectModel.gCircleIndices - hiddenObjectIndices).toList()
     }
-    val nonSelectedArcPathIndices = remember(selection, objectModel.invalidations) {
+    val nonSelectedArcPathIndices: List<Ix> = remember(selection, objectModel.invalidations) {
         (objectModel.arcPathIndices - selection.arcPaths.toSet()).toList()
     }
     Canvas(
@@ -253,7 +252,7 @@ fun BoxScope.EditorCanvas(
             }
             drawPartialConstructs(allObjects = allObjects, mode = mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = viewModel::getArg, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = pathStroke, imaginaryCircleStroke = dottedStroke, arcPathStroke = pathStroke, alignmentLineColor = selectionMarkingsColor, selectedArgColor = selectedArgColor, creationPrototypeColor = creationColor.copy(alpha = 0.7f))
             drawGrids(visibleRect = visibleRect, submode = submode as? Submode.RotateStereographicSphere, stereographicGridColor = stereographicGridColor, stereographicGridStroke = pathStroke, southPointRadius = handleRadius)
-            drawLabels(objects = allObjects, styling = styling, objectLabelLayouts = objectLabelLayouts, freePointColor = defaultFreePointColor)
+            drawLabels(objects = allObjects, styling = styling, objectLabelLayouts = labelLayouts, freePointColor = defaultFreePointColor)
             drawHandles(objects = allObjects, selection = viewModel.selectedIndices, submodeRotate = submode as? Submode.Rotate, submodeRectangularSelect = submode as? Submode.RectangularSelect, handleConfig = viewModel.handleConfig, getSelectionRect = viewModel::calculateSelectionRect, showCircles = canvasState.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             drawDebugObjects(viewModel._debugObjects, visibleRect, pathStroke, pointRadius, rotateIconColor)
         }
@@ -299,7 +298,7 @@ fun BoxScope.EditorCanvas(
             openDetailsDialog = viewModel::openDetailsDialog,
         )
     }
-    LaunchedEffect(viewModel.animations, animations) { // listen to animations
+    LaunchedEffect(viewModel.animations, animations) {
         viewModel.animations.collect { event ->
             when (event) {
                 is ColoredContourAnimation -> launch { // parallel multiplexer structure
@@ -353,20 +352,19 @@ private fun BoxScope.HUD(
     openDetailsDialog: () -> Unit = {},
 ) {
     val density = LocalDensity.current
-    val customStyles = remember(density) { CustomStyles.fromDensity(density) }
-    val pathStroke = customStyles.pathStroke
+    val pathStroke = remember(density) {
+        val customStyles = CustomStyles.fromDensity(density)
+        customStyles.pathStroke
+    }
     val customColors = MaterialTheme.customColors
-    val defaultFreeCircleColor = customColors.defaultFreeCircleColor
-    val defaultFreePointColor = customColors.defaultFreePointColor
-    val imaginaryCircleColor = customColors.imaginaryCircleColor
     when (hudState.contextActions) {
         ContextActions.GENERIC_SELECTION -> {
             val borderColor = remember(selection, hudState.mostCommonBorderColorOfSelection) {
                 hudState.mostCommonBorderColorOfSelection
                     ?: if (selectionContainsOnlyImaginaryCircles())
-                        imaginaryCircleColor
+                        customColors.imaginaryCircleColor
                     else
-                        defaultFreeCircleColor
+                        customColors.defaultFreeCircleColor
             }
             SelectionContextActions(
                 concretePositions = concretePositions,
@@ -388,7 +386,8 @@ private fun BoxScope.HUD(
         ContextActions.POINT -> {
             PointContextActions(
                 // only points are selected
-                pointColor = hudState.mostCommonBorderColorOfSelection ?: defaultFreePointColor,
+                pointColor = hudState.mostCommonBorderColorOfSelection
+                    ?: customColors.defaultFreePointColor,
                 showAdjustExprButton = hudState.showAdjustExprButton,
                 noPhantomsSelected = hudState.noPhantomsSelected,
                 isLocked = hudState.selectionIsLocked,
