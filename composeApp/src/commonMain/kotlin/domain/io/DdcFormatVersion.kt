@@ -2,6 +2,8 @@ package domain.io
 
 import androidx.compose.runtime.Immutable
 import domain.cluster.ClusterV1
+import domain.recoverCatchingOnly
+import domain.runCatchingOnly
 import kotlinx.serialization.json.Json
 
 @Immutable
@@ -37,30 +39,30 @@ object DdcFormat {
     ) {
         // small problem: parsers are only supposed to throw SerializationException and
         // IllegalArgumentException, but here we catch any Throwable
-        runCatching {
+        runCatchingOnly {
             val ddc5 = DdcParser.parseDdcV5(content)
             onDdc5(ddc5)
-        }.recoverCatching { e ->
+        }.recoverCatchingOnly { e ->
             println("Failed to parse DdcV5->yaml, falling back to DdcV4->yaml")
             e.printStackTrace()
             val ddc4 = DdcParser.parseDdcV4(content)
             onDdc4(ddc4)
-        }.recoverCatching { e ->
+        }.recoverCatchingOnly { e ->
             println("Failed to parse DdcV4->yaml, falling back to DdcV3->yaml")
             e.printStackTrace()
             val ddc3 = DdcParser.parseDdcV3(content)
             onDdc3(ddc3)
-        }.recoverCatching { e ->
+        }.recoverCatchingOnly { e ->
             println("Failed to parse DdcV3->yaml, falling back to DdcV2->yaml")
             e.printStackTrace()
             val ddc2 = DdcParser.parseDdcV2(content)
             onDdc2(ddc2)
-        }.recoverCatching { e ->
+        }.recoverCatchingOnly { e ->
             println("Failed to parse DdcV2->yaml, falling back to DdcV1->yaml")
             e.printStackTrace()
             val ddc1 = DdcParser.parseDdcV1(content)
             onDdc1(ddc1)
-        }.recoverCatching { e ->
+        }.recoverCatchingOnly { e ->
             println("Failed to parse DdcV1->yaml, falling back to ClusterV1->json")
             e.printStackTrace()
             val cluster: ClusterV1 = permissiveJsonDdcSerializingSettings

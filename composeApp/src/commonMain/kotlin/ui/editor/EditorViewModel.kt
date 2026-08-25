@@ -89,6 +89,7 @@ import domain.model.SaveState
 import domain.model.Selection
 import domain.model.Styling
 import domain.mostCommonOf
+import domain.runCatchingOnly
 import domain.settings.BlendModeType
 import domain.settings.InversionOfControl
 import domain.settings.Settings
@@ -103,6 +104,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -428,8 +430,8 @@ class EditorViewModel : ViewModel() {
 //        println("VM.init")
         viewModelScope.launch {
             restoreFromDisk()
-            if (AUTOSAVE_EVERY_X_MINUTES) {
-                autosaveEveryXMinutes()
+            if (ENABLED_PERIODIC_AUTOSAVE) {
+                periodicAutosave()
             }
         }
     }
@@ -3503,22 +3505,22 @@ class EditorViewModel : ViewModel() {
             val platform = getPlatform()
             if (Settings.RESTORE_LAST_STATE_ON_LOAD) {
                 // NOTE: can crash when the underlying format changes
-                val saveState = runCatching { platform.autosaveStore.get() }
-                    .onFailure {
-                        println("VM.restoreFromDisk: failed to retrieve autosave")
-                        it.printStackTrace()
-                    }
-                    .getOrNull()
+                val saveState = runCatchingOnly {
+                    platform.autosaveStore.get()
+                }.onFailure {
+                    println("VM.restoreFromDisk: failed to retrieve autosave")
+                    it.printStackTrace()
+                }.getOrNull()
                 if (saveState != null) {
                     restoreFromState(saveState)
                 } else {
                     println("fallback to last VM.state")
-                    val vmState = runCatching { platform.lastStateStore.get() }
-                        .onFailure {
-                            println("VM.restoreFromDisk: failed to retrieve last state")
-                            it.printStackTrace()
-                        }
-                        .getOrNull()
+                    val vmState = runCatchingOnly {
+                        platform.lastStateStore.get()
+                    }.onFailure {
+                        println("VM.restoreFromDisk: failed to retrieve last state")
+                        it.printStackTrace()
+                    }.getOrNull()
                     if (vmState == null) {
                         // i'd like to replace it with SaveState.SAMPLE
                         // but the format disallows not-yet-calculated objects
@@ -3530,20 +3532,21 @@ class EditorViewModel : ViewModel() {
             } else {
                 restoreFromVMState(State.SAMPLE)
             }
-            runCatching { platform.settingsStore.get() }
-                .onFailure {
-                    println("VM.restoreFromDisk: failed to retrieve settings")
+            runCatchingOnly {
+                platform.settingsStore.get()
+            }.onFailure {
+                println("VM.restoreFromDisk: failed to retrieve settings")
+                it.printStackTrace()
+            }.getOrNull()?.also { settings ->
+                loadSettings(settings)
+            }
+            if (Settings.RESTORE_LAST_STATE_ON_LOAD) {
+                runCatchingOnly {
+                    platform.historyStore.get()
+                }.onFailure {
+                    println("VM.restoreFromDisk: failed to retrieve history")
                     it.printStackTrace()
                 }
-                .getOrNull()?.also { settings ->
-                    loadSettings(settings)
-                }
-            if (Settings.RESTORE_LAST_STATE_ON_LOAD) {
-                runCatching { platform.historyStore.get() }
-                    .onFailure {
-                        println("VM.restoreFromDisk: failed to retrieve history")
-                        it.printStackTrace()
-                    }
                     .getOrNull()?.also { historyState ->
                         history = historyState.load(undoIsEnabledState, redoIsEnabledState)
                     }
@@ -3624,10 +3627,10 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private suspend fun autosaveEveryXMinutes() {
+    private suspend fun periodicAutosave() {
         withContext(Dispatchers.Default) {
-            while (true) {
-                delay(AUTOSAVE_DELAY)
+            while (isActive) {
+                delay(AUTOSAVE_PERIOD)
                 cacheState()
             }
         }
@@ -3710,8 +3713,8 @@ class EditorViewModel : ViewModel() {
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val INTERSECTION_SNAP_FACTOR = 1.5
         const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
-        const val AUTOSAVE_EVERY_X_MINUTES = true
-        val AUTOSAVE_DELAY = 3.minutes
+        const val ENABLED_PERIODIC_AUTOSAVE = true
+        val AUTOSAVE_PERIOD = 5.minutes
 
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         /** When several objects are close enough to the tap position,
