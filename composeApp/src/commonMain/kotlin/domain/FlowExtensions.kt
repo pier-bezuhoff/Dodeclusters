@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.extensions.cached
 import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
@@ -44,17 +45,19 @@ fun <T : Any> KStore<T>.updatesStateFlow(default: T): StateFlow<T> =
 // reference: https://www.youtube.com/watch?v=njchj9d_Lf8
 @Suppress("ComposableNaming")
 @Composable
-fun <T> Flow<T>?.collectWithLifecycle(
+inline fun <T> Flow<T>?.collectWithLifecycle(
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
-    onEvent: suspend (T) -> Unit,
+    crossinline onEvent: suspend CoroutineScope.(T) -> Unit,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(this, lifecycleOwner.lifecycle) {
         lifecycleOwner.repeatOnLifecycle(minActiveState) {
             // switching to Main.immediate prevents losing events in very rare cases
-            // during configuration changes, idc tho
+            // during configuration changes (default is Dispatchers.Main), idc tho
 //            withContext(Dispatchers.Main.immediate) {
-                this@collectWithLifecycle?.collect(onEvent)
+                this@collectWithLifecycle?.collect { event ->
+                    onEvent(event)
+                }
 //            }
         }
     }
@@ -62,15 +65,55 @@ fun <T> Flow<T>?.collectWithLifecycle(
 
 @Suppress("ComposableNaming")
 @Composable
-fun <T> Flow<T>?.collectLatestWithLifecycle(
+inline fun <T> Flow<T>?.collectWithLifecycle(
+    key1: Any?,
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
-    onEvent: suspend (T) -> Unit,
+    crossinline onEvent: suspend CoroutineScope.(T) -> Unit,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(this, key1, lifecycleOwner.lifecycle) {
+        lifecycleOwner.repeatOnLifecycle(minActiveState) {
+//            withContext(Dispatchers.Main.immediate) {
+            this@collectWithLifecycle?.collect { event ->
+                onEvent(event)
+            }
+//            }
+        }
+    }
+}
+
+@Suppress("ComposableNaming")
+@Composable
+inline fun <T> Flow<T>?.collectLatestWithLifecycle(
+    minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
+    crossinline onEvent: suspend CoroutineScope.(T) -> Unit,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(this, lifecycleOwner.lifecycle) {
         lifecycleOwner.repeatOnLifecycle(minActiveState) {
 //            withContext(Dispatchers.Main.immediate) {
-                this@collectLatestWithLifecycle?.collectLatest(onEvent)
+                this@collectLatestWithLifecycle?.collectLatest { event ->
+                    onEvent(event)
+                }
+//            }
+        }
+    }
+}
+
+@Suppress("ComposableNaming")
+@Composable
+inline fun <T> Flow<T>?.collectLatestWithLifecycle(
+    key1: Any?,
+    minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
+    crossinline onEvent: suspend CoroutineScope.(T) -> Unit,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(this, key1, lifecycleOwner.lifecycle) {
+        lifecycleOwner.repeatOnLifecycle(minActiveState) {
+//            withContext(Dispatchers.Main.immediate) {
+            this@collectLatestWithLifecycle?.collectLatest { event ->
+                onEvent(event)
+            }
 //            }
         }
     }

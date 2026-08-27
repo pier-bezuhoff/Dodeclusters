@@ -41,7 +41,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,12 +82,12 @@ import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.steps_slider_name
 import dodeclusters.composeapp.generated.resources.three_dots_in_angle_brackets
 import domain.angleDeg
+import domain.collectWithLifecycle
 import domain.expressions.BiInversionParameters
 import domain.expressions.InterpolationParameters
 import domain.expressions.LoxodromicMotionParameters
 import domain.expressions.RotationParameters
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -118,7 +117,6 @@ import kotlin.math.ceil
 import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.math.sinh
-import kotlin.time.Duration.Companion.milliseconds
 
 // MAYBE: expanded mode with icon+label
 
@@ -127,8 +125,6 @@ private val buttonModifier = Modifier
     .size(36.dp)
 
 // 16.67 ms is 60 FPS
-private val UPDATE_PARAMETERS_DEBOUNCE_DELTA = 15.milliseconds
-
 private val sliderColorsSecondary: SliderColors
     @Composable /*@ReadOnlyComposable*/ get() =
         SliderDefaults.colors( // .colors is not marked with read-only...
@@ -764,14 +760,10 @@ fun InterpolationInterface(
                         interpolateInBetween
                     }
             )
-        }
-            .distinctUntilChanged()
-            .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
+        }.distinctUntilChanged()
     }
-    LaunchedEffect(interpolationParametersFlow, updateParameters) {
-        interpolationParametersFlow.collect { params ->
-            updateParameters(params)
-        }
+    interpolationParametersFlow.collectWithLifecycle(updateParameters) { params ->
+        updateParameters(params)
     }
 }
 
@@ -859,23 +851,20 @@ fun RotationInterface(
             )
         }
     }
-    val rotationParametersFlow = remember { snapshotFlow {
-        RotationParameters(
-            angle = round( // we round cuz all angles coming from the slider are supposed to be integers
-                if (rotateClockwise)
-                    360f - angleSliderState.value
-                else angleSliderState.value
-            ),
-            nSteps = stepsSliderState.value.roundToInt(),
-        )
+    val rotationParametersFlow = remember {
+        snapshotFlow {
+            RotationParameters(
+                angle = round( // we round cuz all angles coming from the slider are supposed to be integers
+                    if (rotateClockwise)
+                        360f - angleSliderState.value
+                    else angleSliderState.value
+                ),
+                nSteps = stepsSliderState.value.roundToInt(),
+            )
+        }.distinctUntilChanged()
     }
-        .distinctUntilChanged()
-        .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
-    }
-    LaunchedEffect(rotationParametersFlow, updateParameters) {
-        rotationParametersFlow.collect { params ->
-            updateParameters(params)
-        }
+    rotationParametersFlow.collectWithLifecycle(updateParameters) { params ->
+        updateParameters(params)
     }
 }
 
@@ -977,14 +966,10 @@ fun BiInversionInterface(
                 nSteps = stepsSliderState.value.roundToInt(),
                 reverseSecondEngine = defaults.reverseSecondEngine,
             )
-        }
-            .distinctUntilChanged()
-            .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
+        }.distinctUntilChanged()
     }
-    LaunchedEffect(biInversionParametersFlow, updateParameters) {
-        biInversionParametersFlow.collect { params ->
-            updateParameters(params)
-        }
+    biInversionParametersFlow.collectWithLifecycle(updateParameters) { params ->
+        updateParameters(params)
     }
 }
 
@@ -1122,14 +1107,10 @@ fun LoxodromicMotionInterface(
                 dilationPerStep = (if (reverseDirection) -1 else +1) * dilationSliderState.value.toDouble(),
                 nTotalSteps = stepsSliderState.value.roundToInt(),
             )
-        }
-            .distinctUntilChanged()
-            .debounce(UPDATE_PARAMETERS_DEBOUNCE_DELTA)
+        }.distinctUntilChanged()
     }
-    LaunchedEffect(loxodromicMotionParametersFlow, updateParameters) {
-        loxodromicMotionParametersFlow.collect { params ->
-            updateParameters(params)
-        }
+    loxodromicMotionParametersFlow.collectWithLifecycle(updateParameters) { params ->
+        updateParameters(params)
     }
 }
 

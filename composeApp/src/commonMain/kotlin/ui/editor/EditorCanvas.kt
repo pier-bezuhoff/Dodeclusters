@@ -73,6 +73,7 @@ import dodeclusters.composeapp.generated.resources.zoom_in
 import domain.Ix
 import domain.PathCache
 import domain.angleDeg
+import domain.collectLatestWithLifecycle
 import domain.expressions.Parameters
 import domain.expressions.computeCircleBy3Points
 import domain.expressions.computeCircleByPencilAndPoint
@@ -296,23 +297,21 @@ fun BoxScope.EditorCanvas(
             openDetailsDialog = viewModel::openDetailsDialog,
         )
     }
-    LaunchedEffect(viewModel.animations, animations) {
-        viewModel.animations.collect { event ->
-            when (event) {
-                is ColoredContourAnimation -> launch { // parallel multiplexer structure
-                    animations[event]?.stop()
-                    val animatable = Animatable(0f)
-                    animations[event] = animatable
-                    animatable.animateTo(
-                        targetValue = event.maxAlpha,
-                        tween(event.alpha01Duration, easing = LinearEasing)
-                    )
-                    animatable.animateTo(
-                        targetValue = 0f,
-                        tween(event.alpha10Duration, easing = FastOutLinearInEasing),
-                    )
-                    animations.remove(event)
-                }
+    viewModel.animations.collectLatestWithLifecycle(animations) { event ->
+        when (event) {
+            is ColoredContourAnimation -> launch { // parallel multiplexer structure
+                animations[event]?.stop()
+                val animatable = Animatable(0f)
+                animations[event] = animatable
+                animatable.animateTo(
+                    targetValue = event.maxAlpha,
+                    tween(event.alpha01Duration, easing = LinearEasing)
+                )
+                animatable.animateTo(
+                    targetValue = 0f,
+                    tween(event.alpha10Duration, easing = FastOutLinearInEasing),
+                )
+                animations.remove(event)
             }
         }
     }
