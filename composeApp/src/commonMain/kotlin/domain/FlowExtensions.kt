@@ -12,6 +12,7 @@ import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.extensions.cached
 import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -50,9 +51,11 @@ fun <T> Flow<T>?.collectWithLifecycle(
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(this, lifecycleOwner.lifecycle) {
         lifecycleOwner.repeatOnLifecycle(minActiveState) {
-            withContext(Dispatchers.Main.immediate) {
+            // switching to Main.immediate prevents losing events in very rare cases
+            // during configuration changes, idc tho
+//            withContext(Dispatchers.Main.immediate) {
                 this@collectWithLifecycle?.collect(onEvent)
-            }
+//            }
         }
     }
 }
@@ -66,9 +69,9 @@ fun <T> Flow<T>?.collectLatestWithLifecycle(
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(this, lifecycleOwner.lifecycle) {
         lifecycleOwner.repeatOnLifecycle(minActiveState) {
-            withContext(Dispatchers.Main.immediate) {
+//            withContext(Dispatchers.Main.immediate) {
                 this@collectLatestWithLifecycle?.collectLatest(onEvent)
-            }
+//            }
         }
     }
 }

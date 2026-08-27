@@ -66,12 +66,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import core.geometry.CircleOrLine
 import core.geometry.ImaginaryCircle
@@ -103,6 +100,7 @@ import domain.io.DdcSharing
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -110,7 +108,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
@@ -178,27 +178,15 @@ fun EditorScreenRoot(
     viewModel: EditorViewModel = viewModel(factory = EditorViewModel.Factory),
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val dialogActions = remember(keyboardActions) {
-        keyboardActions?.mapNotNull {
-            when (it) {
-                KeyboardAction.CANCEL -> DialogAction.DISMISS
-                KeyboardAction.CONFIRM -> DialogAction.CONFIRM
-                else -> null
-            }
-        }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
-    }
     val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle()
-    val vmRestoration by viewModel.restoration.collectAsStateWithLifecycle()
     val uiState = viewModel.uiState
     val toolsActiveness = viewModel.toolsActiveness
     val canvasState = viewModel.canvasState
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberMyDrawerState(DrawerValue.Closed)
-    // NOTE: that lambdas that capture some state trigger first order recompositions
-    //  as often as the state changes
     EditorScreen(
         modifier = if (keyboardActions == null)
-        // ig it's only for android w/ keyboard
+        // ig this is only for android w/ keyboard
             Modifier.handleKeyboardActions(viewModel::processKeyboardAction)
         else Modifier,
         snackbarHostState = snackbarHostState,
@@ -227,11 +215,7 @@ fun EditorScreenRoot(
         openSettings = openSettings,
         hidePanel = viewModel::hidePanel,
         loadFromYaml = { content, filename ->
-            content?.let {
-                viewModel.viewModelScope.launch {
-                    viewModel.loadDdc(content, filename)
-                }
-            }
+            viewModel.loadDdcFromYaml(content, filename)
             coroutineScope.launch { drawerState.close() }
         },
         undo = viewModel::undo,
@@ -244,7 +228,15 @@ fun EditorScreenRoot(
             EditorCanvas(viewModel)
         },
     )
-    val customColors = MaterialTheme.customColors
+    val dialogActions = remember(keyboardActions) {
+        keyboardActions?.mapNotNull {
+            when (it) {
+                KeyboardAction.CANCEL -> DialogAction.DISMISS
+                KeyboardAction.CONFIRM -> DialogAction.CONFIRM
+                else -> null
+            }
+        }?.shareIn(coroutineScope, SharingStarted.Eagerly, replay = 0)
+    }
     when (uiState.openedDialog) {
         DialogType.REGION_FILL_COLOR_PICKER -> {
             ColorPickerDialog(
@@ -300,9 +292,7 @@ fun EditorScreenRoot(
         DialogType.CIRCLE_OR_POINT_INTERPOLATION -> {
             if (viewModel.partialArgListInfo.isFull) {
                 val (startObject, endObject) = viewModel.partialArgList!!.args
-                    .map {
-                        viewModel.getArg(it)
-                    }
+                    .map { viewModel.getArg(it) }
                 if (startObject != null && endObject != null) {
                     CircleOrPointInterpolationDialog(
                         startObject, endObject,
@@ -317,9 +307,7 @@ fun EditorScreenRoot(
         DialogType.CIRCLE_EXTRAPOLATION -> {
             if (viewModel.partialArgListInfo.isFull == true) {
                 val (startCircle, endCircle) = viewModel.partialArgList!!.args
-                    .map {
-                        viewModel.getArg(it) as CircleOrLine
-                    }
+                    .map { viewModel.getArg(it) as CircleOrLine }
                 CircleExtrapolationDialog(
                     startCircle, endCircle,
                     onDismissRequest = viewModel::resetCircleExtrapolation,
@@ -380,15 +368,13 @@ fun EditorScreenRoot(
                 restrictRegionsToSelection = viewModel.restrictRegionsToSelection,
                 isObjectFree = viewModel::isFree,
             ) }
+            val customColors = MaterialTheme.customColors
             SaveOptionsDialog(
                 screenshotableCanvasParameters = screenshotableCanvasParameters,
                 ddcSharing = ddcSharing,
                 saveAsYaml = viewModel::saveAsYaml,
                 exportAsSvg = { name ->
-                    viewModel.exportAsSvg(
-                        name = name,
-                        customColors = customColors,
-                    )
+                    viewModel.exportAsSvg(name, customColors)
                 },
                 onCancel = viewModel::closeDialog,
                 onConfirm = viewModel::closeDialog,
@@ -439,80 +425,22 @@ fun EditorScreenRoot(
         else -> {}
     }
     val density = LocalDensity.current
-    LaunchedEffect(viewModel, density) {
+    LaunchedEffect(density) {
         viewModel.setEpsilon(density)
     }
-    LaunchedEffect(viewModel, ddcContent, vmRestoration) {
-        when (vmRestoration) {
-            ProgressState.COMPLETED -> {
-                when (val content = ddcContent) {
-                    null -> {}
-                    is LoadingState.InProgress -> {}
-                    is LoadingState.Completed<String> -> {
-                        viewModel.loadDdc(content.result)
-                    }
-                    is LoadingState.Error -> {
-                        println(content.exception.message)
-                        content.exception.message?.let { message ->
-                            viewModel.showSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
-                        }
-                    }
-                }
-            }
-            else -> {}
-        }
-    }
-    keyboardActions.collectWithLifecycle { action ->
-        viewModel.processKeyboardAction(action)
-    }
-    lifecycleEvents.collectLatestWithLifecycle { event ->
-        when (event) {
-            LifecycleEvent.SaveUIState -> {
-                viewModel.cacheState()
-            }
-        }
-    }
-    viewModel.snackbarMessages.collectLatestWithLifecycle { (message, formatArgs) ->
-        val result = snackbarHostState.showSnackbar(
-            message = getString(message.messageResource, *formatArgs),
-            actionLabel = message.actionLabelResource?.let { getString(it) },
-            withDismissAction = message.withDismissAction,
-            duration = message.duration,
-        )
-        when (result) {
-            SnackbarResult.ActionPerformed ->
-                viewModel.onSnackbarAction(message)
-            SnackbarResult.Dismissed -> {}
-        }
-    }
+    LoadExternalDdcContent(viewModel, ddcContent)
+    CollectLifecycleEvents(viewModel, lifecycleEvents)
+    SubscribeToSettingsAndStartPeriodicAutosave(viewModel)
+    CollectSnackbarMessages(viewModel, snackbarHostState)
+    ReplaceBackgroundDependingOnTheme(viewModel)
+    PreloadIcons()
+    keyboardActions.collectWithLifecycle { viewModel.processKeyboardAction(it) }
     viewModel.drawerOpenCloseRequests.collectWithLifecycle { drawerValue ->
         when (drawerValue) {
             DrawerValue.Open -> drawerState.open()
             DrawerValue.Closed -> drawerState.close()
         }
     }
-    val colorScheme = MaterialTheme.colorScheme
-    val isDarkTheme = MaterialTheme.isDarkTheme
-    LaunchedEffect(isDarkTheme, colorScheme) {
-        // kinda hacky, predefined bg colors are auto swapped to surface
-        if (canvasState.backgroundColor == null ||
-            isDarkTheme && canvasState.backgroundColor in listOf(
-                DodeclustersColors.lightScheme.surface,
-                Color.White,
-            ) ||
-            !isDarkTheme && canvasState.backgroundColor in listOf(
-                DodeclustersColors.darkScheme.surface,
-                Color.Black,
-                Color(0xff_121212),
-            )
-        ) {
-            viewModel.updateCanvasState { it.copy(
-                backgroundColor = colorScheme.surface,
-            ) }
-            viewModel.forgetUnrecordedChanges()
-        }
-    }
-    preloadIcons()
 }
 
 @Composable
@@ -523,7 +451,7 @@ private fun EditorScreen(
     toolbarState: ToolbarState,
     toolsActiveness: ToolsActiveness,
     ddcContent: LoadingState<String>? = null,
-    showUI: Boolean,
+    showUI: Boolean = true,
     showPanel: Boolean = toolbarState.panelNeedsToBeShown,
     regionColor: Color,
     backgroundColor: Color?,
@@ -552,7 +480,12 @@ private fun EditorScreen(
     // difference from built-in is no horizontal drag
     CustomModalNavigationDrawer(
         drawerContent = {
-            DrawerContent(openNewBlank = openNewBlank, openFile = openFile, showSaveOptionsDialog = showSaveOptionsDialog, openSettings = openSettings)
+            DrawerContent(
+                openNewBlank = openNewBlank,
+                openFile = openFile,
+                showSaveOptionsDialog = showSaveOptionsDialog,
+                openSettings = openSettings,
+            )
         },
         drawerState = drawerState,
         // disabling gestures makes the drawer unclosable for built-in modal nav drawer
@@ -707,12 +640,135 @@ private fun DrawerContent(
     }
 }
 
+@Suppress("ParamsComparedByRef")
+@Composable
+private fun LoadExternalDdcContent(
+    viewModel: EditorViewModel,
+    ddcContent: LoadingState<String>?,
+) {
+    val restoration by viewModel.restoration.collectAsStateWithLifecycle()
+    LaunchedEffect(ddcContent, restoration) {
+        when (restoration) {
+            ProgressState.COMPLETED -> {
+                when (ddcContent) {
+                    null -> {}
+                    is LoadingState.InProgress -> {}
+                    is LoadingState.Completed<String> -> {
+                        // by default LaunchedEffect is on Dispatchers.Main
+                        viewModel.loadDdc(ddcContent.result)
+                    }
+                    is LoadingState.Error -> {
+                        println(ddcContent.exception.message)
+                        ddcContent.exception.message?.let { message ->
+                            viewModel.showSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
+                        }
+                    }
+                }
+            }
+            else -> {}
+        }
+    }
+}
+
+@Suppress("ParamsComparedByRef")
+@Composable
+private fun CollectLifecycleEvents(
+    viewModel: EditorViewModel,
+    lifecycleEvents: SharedFlow<LifecycleEvent>,
+) {
+    // bc we collect lifecycleEvent we dont repeatOnLifecycle
+    LaunchedEffect(lifecycleEvents) {
+        lifecycleEvents.collectLatest { event ->
+            when (event) {
+                LifecycleEvent.SaveUIState -> {
+                    viewModel.cacheState()
+                }
+            }
+        }
+    }
+}
+
+@Suppress("ParamsComparedByRef")
+@Composable
+private fun CollectSnackbarMessages(
+    viewModel: EditorViewModel,
+    snackbarHostState: SnackbarHostState,
+) {
+    viewModel.snackbarMessages.collectLatestWithLifecycle { (message, formatArgs) ->
+        val result = snackbarHostState.showSnackbar(
+            message = getString(message.messageResource, *formatArgs),
+            actionLabel = message.actionLabelResource?.let { getString(it) },
+            withDismissAction = message.withDismissAction,
+            duration = message.duration,
+        )
+        when (result) {
+            SnackbarResult.ActionPerformed ->
+                viewModel.onSnackbarAction(message)
+            SnackbarResult.Dismissed -> {}
+        }
+    }
+}
+
+@Suppress("ParamsComparedByRef")
+@Composable
+private fun SubscribeToSettingsAndStartPeriodicAutosave(
+    viewModel: EditorViewModel,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val settings by viewModel.settingsFlow.collectAsStateWithLifecycle()
+    LaunchedEffect(settings) { // maybe debounce
+        viewModel.loadSettings(settings)
+    }
+    val enablePeriodicAutosave = settings.enablePeriodicAutosave
+    val autosavePeriodInSeconds = settings.autosavePeriodInSeconds
+    LaunchedEffect(autosavePeriodInSeconds, enablePeriodicAutosave, lifecycleOwner.lifecycle) {
+        if (enablePeriodicAutosave) {
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                withContext(Dispatchers.Default) {
+                    while (isActive) {
+                        delay(autosavePeriodInSeconds.seconds)
+                        viewModel.cacheState()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Suppress("ParamsComparedByRef")
+@Composable
+private fun ReplaceBackgroundDependingOnTheme(
+    viewModel: EditorViewModel,
+) {
+    val canvasState = viewModel.canvasState
+    val colorScheme = MaterialTheme.colorScheme
+    val isDarkTheme = MaterialTheme.isDarkTheme
+    LaunchedEffect(isDarkTheme, colorScheme) {
+        // kinda hacky, predefined bg colors are auto swapped to surface
+        if (canvasState.backgroundColor == null ||
+            isDarkTheme && canvasState.backgroundColor in listOf(
+                DodeclustersColors.lightScheme.surface,
+                Color.White,
+            ) ||
+            !isDarkTheme && canvasState.backgroundColor in listOf(
+                DodeclustersColors.darkScheme.surface,
+                Color.Black,
+                Color(0xff_121212),
+            )
+        ) {
+            viewModel.updateCanvasState { it.copy(
+                backgroundColor = colorScheme.surface,
+            ) }
+            viewModel.forgetUnrecordedChanges()
+        }
+    }
+}
+
 /** Loads all tool icons and caches them.
  * Otherwise icons only start being loaded when the corresponding category panel is open,
  * which is noticeable & jarring */
-@Suppress("ComposableNaming")
 @Composable
-private fun preloadIcons() {
+private fun PreloadIcons() {
     val categoryList = listOf(
         Category.Drag,
         Category.Multiselect,
@@ -806,7 +862,7 @@ private fun ToolDescription(
     regionManipulationStrategy: RegionManipulationStrategy,
     // we do not want to pass parglist itself since it can change continuously triggering recompositions
     partialArgListInfo: PartialArgListInfo,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val isCompact = MaterialTheme.adaptiveSizing.isCompact
     val isLandscape = MaterialTheme.adaptiveSizing.isLandscape
@@ -1282,10 +1338,10 @@ private fun HorizontalPanel(
     activeCategory: Category,
     toolsActiveness: ToolsActiveness,
     regionColor: Color,
+    modifier: Modifier = Modifier,
     selectTool: (Tool) -> Unit = {},
     getColorsByMostUsed: () -> List<Color> = { emptyList() },
     hidePanel: () -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
     // shown on the top of the bottom toolbar
     // scrollable lazy row, w = wrap content
@@ -1350,10 +1406,10 @@ private fun VerticalPanel(
     activeCategory: Category,
     toolsActiveness: ToolsActiveness,
     regionColor: Color,
-    selectTool: (Tool) -> Unit,
-    getColorsByMostUsed: () -> List<Color>,
-    hidePanel: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selectTool: (Tool) -> Unit = {},
+    getColorsByMostUsed: () -> List<Color> = { emptyList() },
+    hidePanel: () -> Unit = {},
 ) {
     // shown on the top of the bottom toolbar
     // scrollable lazy row, w = wrap content

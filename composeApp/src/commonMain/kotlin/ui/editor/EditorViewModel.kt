@@ -421,8 +421,6 @@ class EditorViewModel : ViewModel() {
 
     private var movementAfterDown = false
 
-    private var periodicAutosaveJob: Job? = null
-
     /** min tap/grab distance to select an object */
     var tapRadius =
         getPlatform().tapRadius
@@ -436,8 +434,6 @@ class EditorViewModel : ViewModel() {
         println("VM.init")
         viewModelScope.launch {
             restoreFromDisk()
-            subscribeToSettingsChanges()
-            periodicAutosaveJob = startPeriodicAutosave()
         }
     }
 
@@ -506,6 +502,14 @@ class EditorViewModel : ViewModel() {
         saveConfig = saveConfig.copy(
             name = filename?.substringBeforeLast('.') ?: saveConfig.name
         )
+    }
+
+    fun loadDdcFromYaml(content: String?, filename: String? = null) {
+        content?.let {
+            viewModelScope.launch {
+                loadDdc(content, filename)
+            }
+        }
     }
 
     suspend fun loadDdc(content: String, filename: String? = null) {
@@ -3569,23 +3573,6 @@ class EditorViewModel : ViewModel() {
         restoration.update { ProgressState.COMPLETED }
     }
 
-    /** We listen to all settings changes, originating from settingsStore.
-    in particular to the changes from the SettingsScreen */
-    @OptIn(FlowPreview::class)
-    private fun subscribeToSettingsChanges() {
-        viewModelScope.launch(Dispatchers.Default) {
-            Platform.getCurrent().settingsStore.updates
-                .debounce(1.seconds)
-                .collectLatest { settings ->
-                    if (settings != null) {
-                        withContext(Dispatchers.Main) {
-                            loadSettings(settings)
-                        }
-                    }
-                }
-        }
-    }
-
     fun loadSettings(settings: Settings) {
         updateCanvasState { it.copy(
             showDirectionArrows = settings.showDirectionArrows,
@@ -3601,10 +3588,6 @@ class EditorViewModel : ViewModel() {
         updateUiState { it.copy(
             toolbarState = it.toolbarState.copy(categoryDefaultIndices = settings.categoryDefaultIndices)
         ) }
-        periodicAutosaveJob?.cancel()
-        if (settings.enablePeriodicAutosave) {
-            periodicAutosaveJob = startPeriodicAutosave(settings.autosavePeriodInSeconds)
-        }
         switchToCategory(toolbarState.activeCategory)
     }
 
@@ -3652,16 +3635,6 @@ class EditorViewModel : ViewModel() {
             println("cached.")
         }
     }
-
-    private fun startPeriodicAutosave(
-        periodInSeconds: Int = settings.autosavePeriodInSeconds,
-    ): Job =
-        viewModelScope.launch(Dispatchers.Default) {
-            while (isActive) {
-                delay(periodInSeconds.seconds)
-                cacheState()
-            }
-        }
 
     private fun getCurrentSettings(): Settings {
         return settings.copy(
