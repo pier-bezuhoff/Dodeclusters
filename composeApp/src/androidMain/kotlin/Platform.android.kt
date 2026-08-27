@@ -20,7 +20,7 @@ import kotlin.math.pow
 
 object AndroidPlatform : Platform {
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
-    override val kind: PlatformKind = PlatformKind.ANDROID
+    override val kind: Platform.Kind = Platform.Kind.ANDROID
     override val fileSeparator: Char = '/'
     override val tapRadius: Float = 15f
     // NOTE: cubic approx is performing remarkably bad on Android [my old tablet]

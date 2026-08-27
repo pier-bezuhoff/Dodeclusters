@@ -324,6 +324,13 @@
     <string name="light">Светлая</string>
     <string name="dark">Тёмная</string>
     <string name="auto">Автоматическая</string>
+    <string name="autosave">Автосохранение</string>
+    <string name="enable_periodic_autosave">Периодическое автосохранение</string>
+    <plurals name="autosave_period">
+        <item quantity="one">Интервал автосохранения: каждую %1$d минуту</item>
+        <item quantity="few">Интервал автосохранения: каждые %1$d минуты</item>
+        <item quantity="other">Интервал автосохранения: каждые %1$d минут</item>
+    </plurals>
     <string name="motion">Движение</string>
     <string name="inversion_of_control">Перетаскивать родителей вместе с детьми</string>
     <string name="inversion_of_control_none">Нет</string>

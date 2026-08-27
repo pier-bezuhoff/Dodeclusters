@@ -369,6 +369,12 @@ sealed interface Expr {
         is PolarLine -> setOf()
         is Pole -> setOf()
     }
+
+    /** i.e. 0 < N(free dimensions) < full */
+    val isConstrained: Boolean get() = when (this) {
+        is Incidence, is ArcPathIncidence -> true
+        else -> false
+    }
 }
 
 // performance-wise variations between:

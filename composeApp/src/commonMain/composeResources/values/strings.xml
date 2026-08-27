@@ -327,6 +327,12 @@
     <string name="light">Light</string>
     <string name="dark">Dark</string>
     <string name="auto">Auto</string>
+    <string name="autosave">Autosave</string>
+    <string name="enable_periodic_autosave">Periodic autosave</string>
+    <plurals name="autosave_period">
+        <item quantity="one">Autosave interval: every minute</item>
+        <item quantity="other">Autosave interval: every %1$d minutes</item>
+    </plurals>
     <string name="motion">Motion</string>
     <string name="inversion_of_control">Drag parents with children</string>
     <string name="inversion_of_control_none">No</string>

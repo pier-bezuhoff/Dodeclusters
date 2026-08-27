@@ -21,7 +21,7 @@ import kotlin.math.pow
 
 object JVMPlatform: Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
-    override val kind: PlatformKind = PlatformKind.DESKTOP
+    override val kind: Platform.Kind = Platform.Kind.DESKTOP
     override val fileSeparator: Char = File.separatorChar
     override val tapRadius: Float = 10f
     override val minCircleToCubicApproximationRadius: Float = 10_000f

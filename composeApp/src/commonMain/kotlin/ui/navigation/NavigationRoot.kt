@@ -42,7 +42,9 @@ fun NavigationRoot(
             entry<Route.Editor> {
                 EditorScreenRoot(
                     openSettings = {
-                        backStack.add(Route.Settings)
+                        if (backStack.lastOrNull() !is Route.Settings) {
+                            backStack.add(Route.Settings)
+                        }
                     },
                     ddcFlow = ddcFlow,
                     keyboardActions = keyboardActions,

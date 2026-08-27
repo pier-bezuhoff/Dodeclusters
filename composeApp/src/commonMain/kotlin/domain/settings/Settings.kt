@@ -34,6 +34,8 @@ data class Settings(
     val saveDirectory: String? = null,
     // adjustable in settings screen
     val colorTheme: ColorTheme = DEFAULT_COLOR_THEME,
+    val enablePeriodicAutosave: Boolean = false,
+    val autosavePeriodInSeconds: Int = 300,
     val inversionOfControl: InversionOfControl = InversionOfControl.LEVEL_1,
     val enableTangentSnapping: Boolean = true,
     val enableAngleSnapping: Boolean = false,

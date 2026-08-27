@@ -10,7 +10,6 @@ import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.extensions.cached
 import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import ui.editor.EditorViewModel
 import ui.theme.ColorTheme
@@ -22,8 +21,12 @@ val MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS: Float =
     getPlatform().minCircleToLineApproximationRadius
 
 interface Platform {
+    enum class Kind {
+        DESKTOP, ANDROID, WEB
+    }
+
     val name: String
-    val kind: PlatformKind
+    val kind: Kind
     val fileSeparator: Char
     /** min tap/grab distance to select an object in dp */
     val tapRadius: Float
@@ -78,16 +81,14 @@ interface Platform {
     }
 
     companion object {
+        fun getCurrent(): Platform = getPlatform()
+
         @Deprecated("Migrate to SaveState")
         const val LAST_STATE_STORE_FILE_NAME = "last-save"
         const val SETTINGS_STORE_FILE_NAME = "settings"
         const val AUTOSAVE_STORE_FILE_NAME = "autosave"
         const val HISTORY_STORE_FILE_NAME = "history"
     }
-}
-
-enum class PlatformKind {
-    DESKTOP, ANDROID, WEB
 }
 
 expect fun getPlatform(): Platform

@@ -2,7 +2,7 @@ package ui.editor
 
 import MIN_CIRCLE_TO_CUBIC_APPROXIMATION_RADIUS
 import MIN_CIRCLE_TO_LINE_APPROXIMATION_RADIUS
-import PlatformKind
+import Platform
 import androidx.annotation.FloatRange
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -19,11 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.toMutableStateMap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
@@ -114,6 +111,7 @@ import kotlin.math.min
 
 // NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
 //  and for domain.io.Svg
+@Suppress("ParamsComparedByRef")
 @Composable
 fun BoxScope.EditorCanvas(
     viewModel: EditorViewModel,
@@ -243,7 +241,7 @@ fun BoxScope.EditorCanvas(
             // objects & arc-paths, newer higher
             if (canvasState.showCircles) {
                 drawArcPaths(allObjects = allObjects, indices = nonSelectedArcPathIndices, styling = styling, pathCache = pathCache, defaultArcPathColor = defaultArcPathColor, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke)
-                drawGCircles(allObjects = allObjects, indices = visibleNonSelectedObjectIndices, styling = styling, isObjectFree = viewModel::isFree, pathCache = pathCache, visibleRect = visibleRect, defaultCircleColor = defaultCircleColor, defaultFreeCircleColor = defaultFreeCircleColor, circleStroke = pathStroke, defaultPointColor = defaultPointColor, defaultFreePointColor = defaultFreePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
+                drawGCircles(allObjects = allObjects, indices = visibleNonSelectedObjectIndices, styling = styling, isObjectFree = { objectModel.expressions[it] == null }, pathCache = pathCache, visibleRect = visibleRect, defaultCircleColor = defaultCircleColor, defaultFreeCircleColor = defaultFreeCircleColor, circleStroke = pathStroke, defaultPointColor = defaultPointColor, defaultFreePointColor = defaultFreePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke)
                 drawSelectedArcPaths(allObjects = allObjects, indices = selection.arcPaths, styling = styling, pathCache = pathCache, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke, defaultSelectedArcPathColor = defaultSelectionColor, thiccSelectedPathAlpha = thiccSelectedAlpha, thiccSelectedPathStroke = thiccPathStroke, arcMiddlePointColor = arcMiddlePointColor, arcMiddlePointRadius = arcMiddlePointRadius)
                 drawSelectedGCircles(allObjects = allObjects, styling = styling, indices = selection.gCircles, mode = mode, pathCache = pathCache, selectionIsActive = gCircleSelectionIsActive, restrictRegionsToSelection = restrictRegionsToSelection, showDirectionArrows = canvasState.showDirectionArrows, visibleRect = visibleRect, defaultSelectedCircleColor = defaultSelectionColor, circleStroke = pathStroke, thiccSelectionCircleAlpha = thiccSelectedAlpha, circleThiccStroke = thiccPathStroke, freePointColor = defaultFreePointColor, pointRadius = pointRadius, imaginaryCircleColor = imaginaryCircleColor, imaginaryCircleStroke = dottedStroke, imaginaryCircleThiccStroke = thiccDottedStroke)
             } else { // for layering selection above unselected
@@ -1026,7 +1024,8 @@ private inline fun DrawScope.drawGCircles(
     }
 }
 
-private val patchForAndroid = getPlatform().kind == PlatformKind.ANDROID
+private val patchForAndroid =
+    getPlatform().kind == Platform.Kind.ANDROID
 private fun DrawScope.drawSelectedGCircles(
     allObjects: List<*>,
     indices: List<Ix>,

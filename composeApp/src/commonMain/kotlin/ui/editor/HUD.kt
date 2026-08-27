@@ -593,9 +593,9 @@ private fun BoxScope.LineThicknessInputPopup(
     setLineThickness: (Float) -> Unit,
     dismiss: () -> Unit,
 ) {
-    var thickness by remember { mutableStateOf(previousLineThickness ?: 1f) }
+    var thickness by remember { mutableStateOf(previousLineThickness) }
     // separate var so that tf doesnt re-format user input
-    var textFieldThickness by remember { mutableStateOf(previousLineThickness ?: 1f) }
+    var textFieldThickness by remember { mutableStateOf(previousLineThickness) }
     Popup(
         popupPositionProvider = object : PopupPositionProvider {
             override fun calculatePosition(

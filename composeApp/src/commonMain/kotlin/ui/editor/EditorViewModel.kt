@@ -65,6 +65,7 @@ import domain.expressions.computeIntersection
 import domain.expressions.copy
 import domain.expressions.moveArcMidpoint
 import domain.filterIndices
+import domain.getValue
 import domain.hug
 import domain.indicesSortedBy
 import domain.io.DdcFormat
@@ -94,19 +95,24 @@ import domain.settings.BlendModeType
 import domain.settings.InversionOfControl
 import domain.settings.Settings
 import domain.sortedByFrequency
+import domain.updatesStateFlow
 import domain.xor
 import getPlatform
 import io.github.xxfast.kstore.extensions.cached
 import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -125,7 +131,6 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 // this class is obviously too big, maybe separate into CanvasViewModel and UiViewModel
@@ -192,11 +197,12 @@ class EditorViewModel : ViewModel() {
     /** Under-construction arc-path during [ToolMode.ARC_PATH] */
     var partialArcPath: PartialArcPath? by partialArcPathState
 
-    var settings: Settings by mutableStateOf(Settings())
-        private set
+    val settingsFlow: StateFlow<Settings> = Platform.getCurrent().settingsStore
+        .updatesStateFlow(Settings())
+    inline val settings: Settings get() = settingsFlow.value
 
-    // MAYBE: foreground & background color (2 simul, as in many graphical programs)
-    /** urrently selected color for region fill */
+    // MAYBE: foreground & background color (2 simul, as in many graphical editors)
+    /** currently selected color for region fill */
     var currentColor: Color by mutableStateOf(DodeclustersColors.deepAmethyst)
         private set
 
@@ -417,6 +423,8 @@ class EditorViewModel : ViewModel() {
 
     private var movementAfterDown = false
 
+    private var periodicAutosaveJob: Job? = null
+
     /** min tap/grab distance to select an object */
     var tapRadius =
         getPlatform().tapRadius
@@ -427,12 +435,10 @@ class EditorViewModel : ViewModel() {
         tapRadius*tapRadius*LOW_ACCURACY_FACTOR*LOW_ACCURACY_FACTOR
 
     init {
-//        println("VM.init")
+        println("VM.init")
         viewModelScope.launch {
             restoreFromDisk()
-            if (ENABLED_PERIODIC_AUTOSAVE) {
-                periodicAutosave()
-            }
+            periodicAutosaveJob = startPeriodicAutosave()
         }
     }
 
@@ -821,9 +827,7 @@ class EditorViewModel : ViewModel() {
                 objects[ix]?.let { ix to it }
             }.toMap()
             viewModelScope.launch {
-                animations.emit(
-                    AppearanceAnimation.Entrance(ix2o)
-                )
+                animations.emit(AppearanceAnimation.Entrance(ix2o))
             }
         } else { // all nulls
             clearSelection()
@@ -1337,11 +1341,6 @@ class EditorViewModel : ViewModel() {
 
     inline fun isFree(index: Ix): Boolean =
         expressions[index] == null
-
-    inline fun isConstrained(index: Ix): Boolean {
-        val expr = objectModel.getExpr(index)
-        return expr is Expr.Incidence || expr is Expr.ArcPathIncidence
-    }
 
     // MAYBE: wrap into state that depends only on
     //  [regions, objectColors, chessboardPattern, chessboardColor] for caching
@@ -3026,7 +3025,8 @@ class EditorViewModel : ViewModel() {
     private fun highlightSelectionParents() {
         val sel = selection.indices.toSet()
         val parents = sel.flatMap { ix ->
-            if (isConstrained(ix)) emptyList() // exclude semi-free incident points
+            if (objectModel.getExpr(ix)?.isConstrained == true)
+                emptyList() // exclude semi-free incident points
             else expressions.getImmediateParents(ix)
                 .minus(sel)
         }
@@ -3472,13 +3472,20 @@ class EditorViewModel : ViewModel() {
     }
 
     private fun saveState(): SaveState {
+        // technically this is not thread-safe, so i want to snapshot these fast,
+        // in case periodic autosave lands mid editing
+        // NOTE: it's important to copy/freeze mutable collections
+        val objects = objectModel.displayObjects.toList()
+        val expressions = expressions.expressions.toMap()
+        val styling = objectModel.styling.toMap()
+        val regions = regions
+        val selection = selection
         val center = computeAbsoluteCenter() ?: Offset.Zero
-        // NOTE: it's important to copy mutable collections
-        val size = min(objects.size, expressions.expressions.size)
+        val size = min(objects.size, expressions.size)
         return SaveState(
-            objects = objectModel.displayObjects.take(size).toList(),
-            expressions = expressions.expressions.filterKeys { it < size }.toMap(),
-            styling = objectModel.styling.filterKeys { it < size },
+            objects = objects.take(size),
+            expressions = expressions.filterKeys { it < size },
+            styling = styling.filterKeys { it < size },
             regions = regions.mapNotNull { region ->
                 val insides = region.insides.filter { it < size }.toSet()
                 val outsides = region.outsides.filter { it < size }.toSet()
@@ -3499,10 +3506,11 @@ class EditorViewModel : ViewModel() {
         )
     }
 
+    @OptIn(FlowPreview::class)
     suspend fun restoreFromDisk() {
         if (restoration.value == ProgressState.NOT_STARTED) {
             restoration.update { ProgressState.IN_PROGRESS }
-            val platform = getPlatform()
+            val platform = Platform.getCurrent()
             if (Settings.RESTORE_LAST_STATE_ON_LOAD) {
                 // NOTE: can crash when the underlying format changes
                 val saveState = runCatchingOnly {
@@ -3551,20 +3559,22 @@ class EditorViewModel : ViewModel() {
                         history = historyState.load(undoIsEnabledState, redoIsEnabledState)
                     }
             }
+            // we listen to all settings changes, originating from settingsStore.
+            // in particular to the changes from the SettingsScreen
             viewModelScope.launch {
-                // settings can be updated externally from the SettingsScreen
-                platform.settingsStore.updates.collect { settings ->
-                    if (settings != null) {
-                        loadSettings(settings)
+                platform.settingsStore.updates
+                    .debounce(1.seconds)
+                    .collectLatest { settings ->
+                        if (settings != null) {
+                            loadSettings(settings)
+                        }
                     }
-                }
             }
             restoration.update { ProgressState.COMPLETED }
         }
     }
 
     fun loadSettings(settings: Settings) {
-        this@EditorViewModel.settings = settings
         updateCanvasState { it.copy(
             showDirectionArrows = settings.showDirectionArrows,
             regionsOpacity = settings.regionsOpacity,
@@ -3579,6 +3589,10 @@ class EditorViewModel : ViewModel() {
         updateUiState { it.copy(
             toolbarState = it.toolbarState.copy(categoryDefaultIndices = settings.categoryDefaultIndices)
         ) }
+        periodicAutosaveJob?.cancel()
+        if (settings.enablePeriodicAutosave) {
+            periodicAutosaveJob = startPeriodicAutosave(settings.autosavePeriodInSeconds)
+        }
         switchToCategory(toolbarState.activeCategory)
     }
 
@@ -3627,14 +3641,15 @@ class EditorViewModel : ViewModel() {
         }
     }
 
-    private suspend fun periodicAutosave() {
-        withContext(Dispatchers.Default) {
+    private fun startPeriodicAutosave(
+        periodInSeconds: Int = settings.autosavePeriodInSeconds,
+    ): Job =
+        viewModelScope.launch(Dispatchers.Default) {
             while (isActive) {
-                delay(AUTOSAVE_PERIOD)
+                delay(periodInSeconds.seconds)
                 cacheState()
             }
         }
-    }
 
     @OptIn(ExperimentalKStoreApi::class)
     private fun getCurrentSettings(): Settings {
@@ -3713,8 +3728,6 @@ class EditorViewModel : ViewModel() {
         const val MAX_SLIDER_ZOOM = 3.0f // == +200%
         const val INTERSECTION_SNAP_FACTOR = 1.5
         const val TAP_RADIUS_TO_TANGENTIAL_SNAP_DISTANCE_FACTOR = 7.0
-        const val ENABLED_PERIODIC_AUTOSAVE = true
-        val AUTOSAVE_PERIOD = 5.minutes
 
         const val TWO_FINGER_TAP_FOR_UNDO = true // Android-only
         /** When several objects are close enough to the tap position,
