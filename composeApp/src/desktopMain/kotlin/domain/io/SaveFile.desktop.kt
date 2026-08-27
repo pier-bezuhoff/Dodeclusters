@@ -3,7 +3,6 @@ package domain.io
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -15,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.save_cluster_title
+import domain.collectLatestWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -34,7 +34,7 @@ actual fun SaveFileButton(
     containerColor: Color,
     contentColor: Color,
     saveRequests: SharedFlow<SaveRequest>?,
-    onSaved: (SaveResult) -> Unit
+    onSaved: (SaveResult) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
     var dialogIsOpen by remember { mutableStateOf(false) }
@@ -96,22 +96,20 @@ actual fun SaveFileButton(
             }
         }
     }
-    LaunchedEffect(saveRequests) {
-        saveRequests?.collect { saveRequest ->
-            when (saveRequest) {
-                SaveRequest.SAVE_AS -> {
-                    dialogIsOpen = true
-                }
-                SaveRequest.QUICK_SAVE -> {
-                    // MAYBE: check if we have enough params
-                    //  and if not, open the dialog
-                    dialogIsOpen = false
-                    coroutineScope.launch {
-                        tryToSave(
-                            filename = saveData.filename,
-                            directory = lastDirectory,
-                        )
-                    }
+    saveRequests.collectLatestWithLifecycle { saveRequest ->
+        when (saveRequest) {
+            SaveRequest.SAVE_AS -> {
+                dialogIsOpen = true
+            }
+            SaveRequest.QUICK_SAVE -> {
+                // MAYBE: check if we have enough params
+                //  and if not, open the dialog
+                dialogIsOpen = false
+                coroutineScope.launch {
+                    tryToSave(
+                        filename = saveData.filename,
+                        directory = lastDirectory,
+                    )
                 }
             }
         }

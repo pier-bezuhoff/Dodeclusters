@@ -21,6 +21,8 @@ import androidx.compose.ui.window.DialogProperties
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.dont_save
 import dodeclusters.composeapp.generated.resources.save
+import domain.collectLatestWithLifecycle
+import domain.collectWithLifecycle
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource
 
@@ -74,12 +76,10 @@ fun SavePromptDialog(
             }
         }
     }
-    LaunchedEffect(dialogActions) {
-        dialogActions?.collect { dialogAction ->
-            when (dialogAction) {
-                DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onSave()
-            }
+    dialogActions.collectLatestWithLifecycle { dialogAction ->
+        when (dialogAction) {
+            DialogAction.DISMISS -> onCancel()
+            DialogAction.CONFIRM -> onSave()
         }
     }
 }

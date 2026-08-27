@@ -44,6 +44,8 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.name
 import dodeclusters.composeapp.generated.resources.ok
+import domain.collectLatestWithLifecycle
+import domain.collectWithLifecycle
 import kotlinx.browser.document
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharedFlow
@@ -167,15 +169,13 @@ actual fun SaveFileButton(
             textFieldFocusRequester.requestFocus()
         }
     }
-    LaunchedEffect(saveRequests) {
-        saveRequests?.collect { saveRequest ->
-            when (saveRequest) {
-                SaveRequest.SAVE_AS -> {
-                    dialogIsOpen = true
-                }
-                SaveRequest.QUICK_SAVE -> {
-                    tryToDownload()
-                }
+    saveRequests.collectLatestWithLifecycle { saveRequest ->
+        when (saveRequest) {
+            SaveRequest.SAVE_AS -> {
+                dialogIsOpen = true
+            }
+            SaveRequest.QUICK_SAVE -> {
+                tryToDownload()
             }
         }
     }

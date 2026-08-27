@@ -2,7 +2,6 @@ package domain.io
 
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -12,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.AwtWindow
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.open_file
+import domain.collectLatestWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -60,10 +60,8 @@ actual fun OpenFileButton(
             }
         }
     }
-    LaunchedEffect(openRequests) {
-        openRequests?.collect {
-            fileDialogIsOpen = true
-        }
+    openRequests.collectLatestWithLifecycle {
+        fileDialogIsOpen = true
     }
 }
 

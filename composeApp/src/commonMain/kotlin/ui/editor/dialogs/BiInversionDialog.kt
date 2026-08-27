@@ -32,6 +32,8 @@ import dodeclusters.composeapp.generated.resources.bi_inversion_title
 import dodeclusters.composeapp.generated.resources.degrees_suffix
 import dodeclusters.composeapp.generated.resources.n_steps_placeholder
 import dodeclusters.composeapp.generated.resources.n_steps_prompt
+import domain.collectLatestWithLifecycle
+import domain.collectWithLifecycle
 import domain.degrees
 import domain.expressions.BiInversionParameters
 import domain.radians
@@ -171,12 +173,10 @@ fun BiInversionDialog(
             }
         }
     }
-    LaunchedEffect(dialogActions) {
-        dialogActions?.collect { dialogAction ->
-            when (dialogAction) {
-                DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm(buildParameters())
-            }
+    dialogActions.collectLatestWithLifecycle { dialogAction ->
+        when (dialogAction) {
+            DialogAction.DISMISS -> onCancel()
+            DialogAction.CONFIRM -> onConfirm(buildParameters())
         }
     }
 }

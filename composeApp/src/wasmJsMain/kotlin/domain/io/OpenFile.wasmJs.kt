@@ -2,12 +2,11 @@
 
 package domain.io
 
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.painter.Painter
+import domain.collectLatestWithLifecycle
+import domain.collectWithLifecycle
 import kotlinx.browser.document
 import kotlinx.coroutines.flow.SharedFlow
 import org.w3c.dom.HTMLInputElement
@@ -31,10 +30,8 @@ actual fun OpenFileButton(
         modifier = modifier,
         content = iconContent,
     )
-    LaunchedEffect(openRequests) {
-        openRequests?.collect {
-            onClick(lookupData, onOpen)
-        }
+    openRequests.collectLatestWithLifecycle {
+        onClick(lookupData, onOpen)
     }
 }
 

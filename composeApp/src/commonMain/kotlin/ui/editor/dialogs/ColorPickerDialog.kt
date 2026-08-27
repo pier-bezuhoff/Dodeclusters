@@ -60,6 +60,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.flowWithLifecycle
 import com.github.ajalt.colormath.RenderCondition
 import com.github.ajalt.colormath.model.RGB
 import dodeclusters.composeapp.generated.resources.Res
@@ -72,6 +74,8 @@ import dodeclusters.composeapp.generated.resources.color_picker_used_and_saved_c
 import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.hex_hash
 import dodeclusters.composeapp.generated.resources.paint_splash
+import domain.collectLatestWithLifecycle
+import domain.collectWithLifecycle
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
@@ -158,12 +162,10 @@ fun ColorPickerDialog(
             onCancel = onCancel,
         )
     }
-    LaunchedEffect(dialogActions, parameters) {
-        dialogActions?.collect { dialogAction ->
-            when (dialogAction) {
-                DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm(buildParameters())
-            }
+    dialogActions.collectLatestWithLifecycle { dialogAction ->
+        when (dialogAction) {
+            DialogAction.DISMISS -> onCancel()
+            DialogAction.CONFIRM -> onConfirm(buildParameters())
         }
     }
 }
@@ -607,13 +609,16 @@ private fun HexInput(
     )
     // NOTE: this (no focus by default on Android) fix only works 90% of time...
     // reference: https://stackoverflow.com/q/71412537/7143065
-    LaunchedEffect(windowInfo) {
-        snapshotFlow { windowInfo.isWindowFocused }.collect { isWindowFocused ->
-            if (isWindowFocused) { // runs once every time the dialog is opened
-                focusRequester.freeFocus()
-                focusManager.clearFocus()
-                keyboard?.hide() // suppresses rare auto-showing keyboard bug
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(windowInfo, lifecycle) {
+        snapshotFlow { windowInfo.isWindowFocused }
+            .flowWithLifecycle(lifecycle)
+            .collect { isWindowFocused ->
+                if (isWindowFocused) { // runs once every time the dialog is opened
+                    focusRequester.freeFocus()
+                    focusManager.clearFocus()
+                    keyboard?.hide() // suppresses rare auto-showing keyboard bug
+                }
             }
-        }
     }
 }

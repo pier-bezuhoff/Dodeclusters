@@ -6,12 +6,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.flowWithLifecycle
+import domain.collectLatestWithLifecycle
 import kotlinx.coroutines.flow.SharedFlow
 import java.io.IOException
 
@@ -42,13 +39,8 @@ actual fun OpenFileButton(
         modifier = modifier,
         content = iconContent,
     )
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(openRequests) {
-        openRequests
-            ?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
-            ?.collect {
-                launcher.launch(lookupData.androidMimeType)
-            }
+    openRequests.collectLatestWithLifecycle {
+        launcher.launch(lookupData.androidMimeType)
     }
 }
 

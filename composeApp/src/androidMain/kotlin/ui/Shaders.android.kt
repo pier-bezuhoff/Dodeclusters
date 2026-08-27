@@ -12,6 +12,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.toColorLong
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import domain.collectWithLifecycle
 
 @Composable
 actual fun rememberShader(
@@ -38,33 +42,35 @@ actual fun rememberShader(
             )
         }
     }
-    val parametersFlow = snapshotFlow { parameters }
-    LaunchedEffect(shader) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(shader, lifecycleOwner.lifecycle) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader is RuntimeShader) {
-            parametersFlow.collect { params ->
-                for (parameter in params) {
-                    when (parameter) {
-                        is Shaders.UniformParameter.Color ->
-                            shader.setColorUniform(parameter.name, parameter.value.toColorLong())
-                        is Shaders.UniformParameter.Float ->
-                            shader.setFloatUniform(parameter.name, parameter.value)
-                        is Shaders.UniformParameter.Float2 ->
-                            shader.setFloatUniform(parameter.name, parameter.value1, parameter.value2)
+            val parametersFlow = snapshotFlow { parameters }
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                parametersFlow.collect { params ->
+                    for (parameter in params) {
+                        when (parameter) {
+                            is Shaders.UniformParameter.Color ->
+                                shader.setColorUniform(parameter.name, parameter.value.toColorLong())
+                            is Shaders.UniformParameter.Float ->
+                                shader.setFloatUniform(parameter.name, parameter.value)
+                            is Shaders.UniformParameter.Float2 ->
+                                shader.setFloatUniform(parameter.name, parameter.value1, parameter.value2)
+                        }
                     }
                 }
             }
         }
     }
-    val matrixFlow = snapshotFlow { localMatrix }
-    LaunchedEffect(shader) {
-        matrixFlow.collect { m ->
-            shader.setLocalMatrix(
-                if (m == null)
-                    null
-                else
-                    Matrix().apply { setValues(m) }
-            )
-        }
+    // will it work? remember might deny localMatrix changes
+    val matrixFlow = remember { snapshotFlow { localMatrix } }
+    matrixFlow.collectWithLifecycle(shader) { m ->
+        shader.setLocalMatrix(
+            if (m == null)
+                null
+            else
+                Matrix().apply { setValues(m) }
+        )
     }
     return shader
 }

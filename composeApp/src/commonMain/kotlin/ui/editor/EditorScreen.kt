@@ -676,6 +676,8 @@ private fun CollectLifecycleEvents(
     viewModel: EditorViewModel,
     lifecycleEvents: SharedFlow<LifecycleEvent>,
 ) {
+    // MAYBE: try testing this in MP
+//    LocalLifecycleOwner.current.lifecycle.currentStateFlow
     // bc we collect lifecycleEvent we dont repeatOnLifecycle
     LaunchedEffect(lifecycleEvents) {
         lifecycleEvents.collectLatest { event ->

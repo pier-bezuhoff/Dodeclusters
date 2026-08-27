@@ -20,7 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +49,7 @@ import dodeclusters.composeapp.generated.resources.share_new_error
 import dodeclusters.composeapp.generated.resources.share_new_name
 import dodeclusters.composeapp.generated.resources.share_new_progress
 import domain.LoadingState
+import domain.collectLatestWithLifecycle
 import domain.io.DdcSharing
 import domain.io.DdcV5
 import domain.io.SaveBitmapAsPngButton
@@ -74,6 +74,7 @@ import ui.tools.Tool
 
 // TODO: distinct (fast) save and save as options
 //  there is already saveRequests flow as arg of SaveFileButton
+@Suppress("ParamsComparedByRef")
 @Composable
 fun SaveOptionsDialog(
     screenshotableCanvasParameters: ScreenshotableCanvasParameters,
@@ -275,12 +276,10 @@ fun SaveOptionsDialog(
             }
         }
     }
-    LaunchedEffect(dialogActions) {
-        dialogActions?.collect { dialogAction ->
-            when (dialogAction) {
-                DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm()
-            }
+    dialogActions.collectLatestWithLifecycle { dialogAction ->
+        when (dialogAction) {
+            DialogAction.DISMISS -> onCancel()
+            DialogAction.CONFIRM -> onConfirm()
         }
     }
 }

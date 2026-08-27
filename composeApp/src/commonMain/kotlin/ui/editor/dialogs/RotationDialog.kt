@@ -39,6 +39,8 @@ import dodeclusters.composeapp.generated.resources.n_steps_placeholder
 import dodeclusters.composeapp.generated.resources.n_steps_prompt
 import dodeclusters.composeapp.generated.resources.rotation_angle_prompt
 import dodeclusters.composeapp.generated.resources.rotation_title
+import domain.collectLatestWithLifecycle
+import domain.collectWithLifecycle
 import domain.expressions.RotationParameters
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.Serializable
@@ -208,12 +210,10 @@ fun RotationDialog(
             }
         }
     }
-    LaunchedEffect(dialogActions) {
-        dialogActions?.collect { dialogAction ->
-            when (dialogAction) {
-                DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm(buildParameters())
-            }
+    dialogActions.collectLatestWithLifecycle { dialogAction ->
+        when (dialogAction) {
+            DialogAction.DISMISS -> onCancel()
+            DialogAction.CONFIRM -> onConfirm(buildParameters())
         }
     }
 }

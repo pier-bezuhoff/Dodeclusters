@@ -43,6 +43,7 @@ fun <T : Any> KStore<T>.updatesStateFlow(default: T): StateFlow<T> =
         )
 
 // reference: https://www.youtube.com/watch?v=njchj9d_Lf8
+// NOTE: alternatively use .flowWithLifecycle() inside LaunchedEffect
 @Suppress("ComposableNaming")
 @Composable
 inline fun <T> Flow<T>?.collectWithLifecycle(

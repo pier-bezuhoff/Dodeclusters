@@ -9,16 +9,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.flowWithLifecycle
+import domain.collectLatestWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -83,42 +80,37 @@ actual fun SaveFileButton(
     ) {
         buttonContent()
     }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(saveRequests) {
-        saveRequests
-            ?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
-            ?.collect { saveRequest ->
-                coroutineScope.launch {
-                    val filename = saveData.filename
-                    when (saveRequest) {
-                        SaveRequest.QUICK_SAVE -> {
-                            val uri = saveData.uri?.toUri()
-                            if (uri == null) {
-                                createDocumentLauncher.launch(filename)
-                            } else {
-                                try {
-                                    saveToUri(context, uri, saveData, onSaved)
-                                } catch (e: FileNotFoundException) {
-                                    e.printStackTrace()
-                                    createDocumentLauncher.launch(filename)
-                                } catch (e: IOException) {
-                                    e.printStackTrace()
-                                    createDocumentLauncher.launch(filename)
-                                } catch (e: SecurityException) {
-                                    e.printStackTrace()
-                                    createDocumentLauncher.launch(filename)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    onSaved(SaveResult.Failure(error = e.message))
-                                }
-                            }
-                        }
-                        SaveRequest.SAVE_AS -> {
+    saveRequests.collectLatestWithLifecycle { saveRequest ->
+        coroutineScope.launch {
+            val filename = saveData.filename
+            when (saveRequest) {
+                SaveRequest.QUICK_SAVE -> {
+                    val uri = saveData.uri?.toUri()
+                    if (uri == null) {
+                        createDocumentLauncher.launch(filename)
+                    } else {
+                        try {
+                            saveToUri(context, uri, saveData, onSaved)
+                        } catch (e: FileNotFoundException) {
+                            e.printStackTrace()
                             createDocumentLauncher.launch(filename)
+                        } catch (e: IOException) {
+                            e.printStackTrace()
+                            createDocumentLauncher.launch(filename)
+                        } catch (e: SecurityException) {
+                            e.printStackTrace()
+                            createDocumentLauncher.launch(filename)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            onSaved(SaveResult.Failure(error = e.message))
                         }
                     }
                 }
+                SaveRequest.SAVE_AS -> {
+                    createDocumentLauncher.launch(filename)
+                }
             }
+        }
     }
 }
 

@@ -41,6 +41,8 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_hyperbolic_
 import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
 import dodeclusters.composeapp.generated.resources.n_steps_placeholder
 import dodeclusters.composeapp.generated.resources.n_steps_prompt
+import domain.collectLatestWithLifecycle
+import domain.collectWithLifecycle
 import domain.expressions.LoxodromicMotionParameters
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.Serializable
@@ -183,12 +185,10 @@ fun LoxodromicMotionDialog(
             }
         }
     }
-    LaunchedEffect(dialogActions) {
-        dialogActions?.collect { dialogAction ->
-            when (dialogAction) {
-                DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm(buildParameters())
-            }
+    dialogActions.collectLatestWithLifecycle { dialogAction ->
+        when (dialogAction) {
+            DialogAction.DISMISS -> onCancel()
+            DialogAction.CONFIRM -> onConfirm(buildParameters())
         }
     }
 }

@@ -43,6 +43,8 @@ import dodeclusters.composeapp.generated.resources.circle_interpolation_in_betwe
 import dodeclusters.composeapp.generated.resources.circle_interpolation_in_between_prompt3
 import dodeclusters.composeapp.generated.resources.circle_interpolation_prompt
 import dodeclusters.composeapp.generated.resources.circle_interpolation_title
+import domain.collectLatestWithLifecycle
+import domain.collectWithLifecycle
 import domain.expressions.InterpolationParameters
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.Serializable
@@ -194,12 +196,10 @@ fun CircleOrPointInterpolationDialog(
             }
         }
     }
-    LaunchedEffect(dialogActions) {
-        dialogActions?.collect { dialogAction ->
-            when (dialogAction) {
-                DialogAction.DISMISS -> onCancel()
-                DialogAction.CONFIRM -> onConfirm(buildParameters())
-            }
+    dialogActions.collectLatestWithLifecycle { dialogAction ->
+        when (dialogAction) {
+            DialogAction.DISMISS -> onCancel()
+            DialogAction.CONFIRM -> onConfirm(buildParameters())
         }
     }
 }
