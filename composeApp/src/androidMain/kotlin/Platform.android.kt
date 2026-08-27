@@ -6,6 +6,7 @@ import domain.model.SaveState
 import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -21,6 +22,7 @@ import kotlin.math.pow
 object AndroidPlatform : Platform {
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
     override val kind: Platform.Kind = Platform.Kind.ANDROID
+    override val dispatcherIO: CoroutineDispatcher = Dispatchers.IO
     override val fileSeparator: Char = '/'
     override val tapRadius: Float = 15f
     // NOTE: cubic approx is performing remarkably bad on Android [my old tablet]

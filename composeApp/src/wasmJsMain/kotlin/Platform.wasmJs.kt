@@ -7,6 +7,7 @@ import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.storage.storeOf
 import kotlinx.browser.window
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -19,6 +20,8 @@ object WasmPlatform: Platform {
     val underlyingPlatform: UnderlyingPlatform = detectUnderlyingPlatform()
     override val name: String = "Web with Kotlin/Wasm under $underlyingPlatform"
     override val kind: Platform.Kind = Platform.Kind.WEB
+    /** no Dispatchers.IO on Wasm since there is no concurrency */
+    override val dispatcherIO: CoroutineDispatcher = Dispatchers.Default
     override val fileSeparator: Char =
         if (underlyingPlatform == UnderlyingPlatform.WINDOWS)
             '\\' // iirc Windows generally supports forward slash nowadays

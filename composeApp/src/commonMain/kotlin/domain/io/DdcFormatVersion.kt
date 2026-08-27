@@ -1,9 +1,12 @@
 package domain.io
 
+import Platform
 import androidx.compose.runtime.Immutable
 import domain.cluster.ClusterV1
 import domain.recoverCatchingOnly
 import domain.runCatchingOnly
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 @Immutable
@@ -27,7 +30,7 @@ object DdcFormat {
      *
      * NOTE: fails on unrecognized types
      */
-    inline fun tryParseDdc(
+    suspend inline fun tryParsingDdc(
         content: String,
         crossinline onDdc5: (DdcV5) -> Unit,
         crossinline onDdc4: (DdcV4) -> Unit,
@@ -37,41 +40,41 @@ object DdcFormat {
         crossinline onClusterV1: (ClusterV1) -> Unit,
         crossinline onFail: () -> Unit,
     ) {
-        // small problem: parsers are only supposed to throw SerializationException and
-        // IllegalArgumentException, but here we catch any Throwable
-        runCatchingOnly {
-            val ddc5 = DdcParser.parseDdcV5(content)
-            onDdc5(ddc5)
-        }.recoverCatchingOnly { e ->
-            println("Failed to parse DdcV5->yaml, falling back to DdcV4->yaml")
-            e.printStackTrace()
-            val ddc4 = DdcParser.parseDdcV4(content)
-            onDdc4(ddc4)
-        }.recoverCatchingOnly { e ->
-            println("Failed to parse DdcV4->yaml, falling back to DdcV3->yaml")
-            e.printStackTrace()
-            val ddc3 = DdcParser.parseDdcV3(content)
-            onDdc3(ddc3)
-        }.recoverCatchingOnly { e ->
-            println("Failed to parse DdcV3->yaml, falling back to DdcV2->yaml")
-            e.printStackTrace()
-            val ddc2 = DdcParser.parseDdcV2(content)
-            onDdc2(ddc2)
-        }.recoverCatchingOnly { e ->
-            println("Failed to parse DdcV2->yaml, falling back to DdcV1->yaml")
-            e.printStackTrace()
-            val ddc1 = DdcParser.parseDdcV1(content)
-            onDdc1(ddc1)
-        }.recoverCatchingOnly { e ->
-            println("Failed to parse DdcV1->yaml, falling back to ClusterV1->json")
-            e.printStackTrace()
-            val cluster: ClusterV1 = permissiveJsonDdcSerializingSettings
-                .decodeFromString(ClusterV1.serializer(), content)
-            onClusterV1(cluster)
-        }.onFailure { e ->
-            println("Failed to parse ClusterV1->json")
-            e.printStackTrace()
-            onFail()
+        withContext(Platform.getCurrent().dispatcherIO) {
+            runCatchingOnly({ it is IllegalArgumentException || it is SerializationException }) {
+                val ddc5 = DdcParser.parseDdcV5(content)
+                onDdc5(ddc5)
+            }.recoverCatchingOnly({ it is IllegalArgumentException || it is SerializationException }) { e ->
+                println("Failed to parse DdcV5->yaml, falling back to DdcV4->yaml")
+                e.printStackTrace()
+                val ddc4 = DdcParser.parseDdcV4(content)
+                onDdc4(ddc4)
+            }.recoverCatchingOnly({ it is IllegalArgumentException || it is SerializationException }) { e ->
+                println("Failed to parse DdcV4->yaml, falling back to DdcV3->yaml")
+                e.printStackTrace()
+                val ddc3 = DdcParser.parseDdcV3(content)
+                onDdc3(ddc3)
+            }.recoverCatchingOnly({ it is IllegalArgumentException || it is SerializationException }) { e ->
+                println("Failed to parse DdcV3->yaml, falling back to DdcV2->yaml")
+                e.printStackTrace()
+                val ddc2 = DdcParser.parseDdcV2(content)
+                onDdc2(ddc2)
+            }.recoverCatchingOnly({ it is IllegalArgumentException || it is SerializationException }) { e ->
+                println("Failed to parse DdcV2->yaml, falling back to DdcV1->yaml")
+                e.printStackTrace()
+                val ddc1 = DdcParser.parseDdcV1(content)
+                onDdc1(ddc1)
+            }.recoverCatchingOnly({ it is IllegalArgumentException || it is SerializationException }) { e ->
+                println("Failed to parse DdcV1->yaml, falling back to ClusterV1->json")
+                e.printStackTrace()
+                val cluster: ClusterV1 = permissiveJsonDdcSerializingSettings
+                    .decodeFromString(ClusterV1.serializer(), content)
+                onClusterV1(cluster)
+            }.onFailure { e ->
+                println("Failed to parse ClusterV1->json")
+                e.printStackTrace()
+                onFail()
+            }
         }
     }
 }

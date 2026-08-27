@@ -6,6 +6,7 @@ import domain.model.SaveState
 import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.file.storeOf
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -22,6 +23,7 @@ import kotlin.math.pow
 object JVMPlatform: Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
     override val kind: Platform.Kind = Platform.Kind.DESKTOP
+    override val dispatcherIO: CoroutineDispatcher = Dispatchers.IO
     override val fileSeparator: Char = File.separatorChar
     override val tapRadius: Float = 10f
     override val minCircleToCubicApproximationRadius: Float = 10_000f

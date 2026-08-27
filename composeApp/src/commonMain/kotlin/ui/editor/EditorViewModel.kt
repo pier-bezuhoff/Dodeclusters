@@ -65,7 +65,6 @@ import domain.expressions.computeIntersection
 import domain.expressions.copy
 import domain.expressions.moveArcMidpoint
 import domain.filterIndices
-import domain.getValue
 import domain.hug
 import domain.indicesSortedBy
 import domain.io.DdcFormat
@@ -98,8 +97,6 @@ import domain.sortedByFrequency
 import domain.updatesStateFlow
 import domain.xor
 import getPlatform
-import io.github.xxfast.kstore.extensions.cached
-import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -113,6 +110,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -438,6 +436,7 @@ class EditorViewModel : ViewModel() {
         println("VM.init")
         viewModelScope.launch {
             restoreFromDisk()
+            subscribeToSettingsChanges()
             periodicAutosaveJob = startPeriodicAutosave()
         }
     }
@@ -509,9 +508,8 @@ class EditorViewModel : ViewModel() {
         )
     }
 
-    // i dont want to make it suspend tbh
-    fun loadDdc(content: String, filename: String? = null) {
-        DdcFormat.tryParseDdc(
+    suspend fun loadDdc(content: String, filename: String? = null) {
+        DdcFormat.tryParsingDdc(
             content = content,
             onDdc5 = { ddc5 ->
                 val state = ddc5.toSaveState()
@@ -3506,71 +3504,85 @@ class EditorViewModel : ViewModel() {
         )
     }
 
-    @OptIn(FlowPreview::class)
-    suspend fun restoreFromDisk() {
-        if (restoration.value == ProgressState.NOT_STARTED) {
-            restoration.update { ProgressState.IN_PROGRESS }
-            val platform = Platform.getCurrent()
-            if (Settings.RESTORE_LAST_STATE_ON_LOAD) {
-                // NOTE: can crash when the underlying format changes
-                val saveState = runCatchingOnly {
-                    platform.autosaveStore.get()
-                }.onFailure {
-                    println("VM.restoreFromDisk: failed to retrieve autosave")
-                    it.printStackTrace()
-                }.getOrNull()
-                if (saveState != null) {
-                    restoreFromState(saveState)
-                } else {
-                    println("fallback to last VM.state")
-                    val vmState = runCatchingOnly {
-                        platform.lastStateStore.get()
-                    }.onFailure {
-                        println("VM.restoreFromDisk: failed to retrieve last state")
-                        it.printStackTrace()
-                    }.getOrNull()
-                    if (vmState == null) {
-                        // i'd like to replace it with SaveState.SAMPLE
-                        // but the format disallows not-yet-calculated objects
-                        restoreFromVMState(State.SAMPLE)
-                    } else {
-                        restoreFromVMState(vmState)
-                    }
-                }
-            } else {
-                restoreFromVMState(State.SAMPLE)
-            }
-            runCatchingOnly {
-                platform.settingsStore.get()
+    private suspend fun restoreLastState() {
+        // NOTE: can crash when the underlying format changes
+        val platform = Platform.getCurrent()
+        val saveState = runCatchingOnly {
+            platform.autosaveStore.get()
+        }.onFailure {
+            println("VM.restoreFromDisk: failed to retrieve autosave")
+            it.printStackTrace()
+        }.getOrNull()
+        if (saveState != null) {
+            restoreFromState(saveState)
+        } else {
+            println("fallback to last VM.state")
+            val vmState = runCatchingOnly {
+                platform.lastStateStore.get()
             }.onFailure {
-                println("VM.restoreFromDisk: failed to retrieve settings")
+                println("VM.restoreFromDisk: failed to retrieve last state")
                 it.printStackTrace()
-            }.getOrNull()?.also { settings ->
-                loadSettings(settings)
+            }.getOrNull()
+            if (vmState == null) {
+                // i'd like to replace it with SaveState.SAMPLE
+                // but the format disallows not-yet-calculated objects
+                restoreFromVMState(State.SAMPLE)
+            } else {
+                restoreFromVMState(vmState)
             }
-            if (Settings.RESTORE_LAST_STATE_ON_LOAD) {
-                runCatchingOnly {
-                    platform.historyStore.get()
-                }.onFailure {
-                    println("VM.restoreFromDisk: failed to retrieve history")
-                    it.printStackTrace()
-                }
-                    .getOrNull()?.also { historyState ->
-                        history = historyState.load(undoIsEnabledState, redoIsEnabledState)
-                    }
-            }
-            // we listen to all settings changes, originating from settingsStore.
-            // in particular to the changes from the SettingsScreen
-            viewModelScope.launch {
-                platform.settingsStore.updates
-                    .debounce(1.seconds)
-                    .collectLatest { settings ->
-                        if (settings != null) {
+        }
+    }
+
+    private suspend fun restoreSettings() {
+        runCatchingOnly {
+            Platform.getCurrent().settingsStore.get()
+        }.onFailure {
+            println("VM.restoreFromDisk: failed to retrieve settings")
+            it.printStackTrace()
+        }.getOrNull()?.also { settings ->
+            loadSettings(settings)
+        }
+    }
+
+    private suspend fun restoreLastStateHistory() {
+        runCatchingOnly {
+            Platform.getCurrent().historyStore.get()
+        }.onFailure {
+            println("VM.restoreFromDisk: failed to retrieve history")
+            it.printStackTrace()
+        }.getOrNull()?.also { historyState ->
+            history = historyState.load(undoIsEnabledState, redoIsEnabledState)
+        }
+    }
+
+    private suspend fun restoreFromDisk() {
+        restoration.update { ProgressState.IN_PROGRESS }
+        if (Settings.RESTORE_LAST_STATE_ON_LOAD) {
+            restoreLastState()
+        } else {
+            restoreFromVMState(State.SAMPLE)
+        }
+        restoreSettings()
+        if (Settings.RESTORE_LAST_STATE_ON_LOAD) {
+            restoreLastStateHistory()
+        }
+        restoration.update { ProgressState.COMPLETED }
+    }
+
+    /** We listen to all settings changes, originating from settingsStore.
+    in particular to the changes from the SettingsScreen */
+    @OptIn(FlowPreview::class)
+    private fun subscribeToSettingsChanges() {
+        viewModelScope.launch(Dispatchers.Default) {
+            Platform.getCurrent().settingsStore.updates
+                .debounce(1.seconds)
+                .collectLatest { settings ->
+                    if (settings != null) {
+                        withContext(Dispatchers.Main) {
                             loadSettings(settings)
                         }
                     }
-            }
-            restoration.update { ProgressState.COMPLETED }
+                }
         }
     }
 
@@ -3651,10 +3663,7 @@ class EditorViewModel : ViewModel() {
             }
         }
 
-    @OptIn(ExperimentalKStoreApi::class)
     private fun getCurrentSettings(): Settings {
-        // we dont want to call suspend store.get here
-        val settings = getPlatform().settingsStore.cached ?: settings
         return settings.copy(
             regionsOpacity = canvasState.regionsOpacity,
             regionsBlendModeType = canvasState.regionsBlendModeType,

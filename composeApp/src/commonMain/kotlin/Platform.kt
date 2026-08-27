@@ -10,6 +10,8 @@ import domain.settings.Settings
 import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.extensions.cached
 import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
 import ui.editor.EditorViewModel
 import ui.theme.ColorTheme
@@ -27,6 +29,11 @@ interface Platform {
 
     val name: String
     val kind: Kind
+
+    /** there is no concurrency on Wasm, thus no Dispatchers.IO */
+    val dispatcherIO: CoroutineDispatcher
+
+    // btw Windows accepts '/' nowadays
     val fileSeparator: Char
     /** min tap/grab distance to select an object in dp */
     val tapRadius: Float

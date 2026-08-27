@@ -65,7 +65,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import core.geometry.CircleOrLine
 import core.geometry.ImaginaryCircle
@@ -91,10 +97,13 @@ import dodeclusters.composeapp.generated.resources.tool_arg_input_prompt
 import dodeclusters.composeapp.generated.resources.tool_arg_parameter_adjustment_prompt
 import domain.LoadingState
 import domain.ProgressState
+import domain.collectLatestWithLifecycle
+import domain.collectWithLifecycle
 import domain.io.DdcSharing
 import domain.io.LookupData
 import domain.io.OpenFileButton
 import domain.io.SaveConfig
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -143,6 +152,7 @@ import ui.tools.ITool
 import ui.tools.Tool
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * @param[ddcFlow] external ddc requests (url params or android implicit intent)
@@ -218,7 +228,9 @@ fun EditorScreenRoot(
         hidePanel = viewModel::hidePanel,
         loadFromYaml = { content, filename ->
             content?.let {
-                viewModel.loadDdc(content, filename)
+                viewModel.viewModelScope.launch {
+                    viewModel.loadDdc(content, filename)
+                }
             }
             coroutineScope.launch { drawerState.close() }
         },
@@ -440,7 +452,7 @@ fun EditorScreenRoot(
                         viewModel.loadDdc(content.result)
                     }
                     is LoadingState.Error -> {
-                        println(content.exception.message ?: "Error")
+                        println(content.exception.message)
                         content.exception.message?.let { message ->
                             viewModel.showSnackbarMessage(SnackbarMessage.PLACEHOLDER, message)
                         }
@@ -450,43 +462,33 @@ fun EditorScreenRoot(
             else -> {}
         }
     }
-    LaunchedEffect(viewModel, keyboardActions) {
-        keyboardActions?.let {
-            keyboardActions.collect { action ->
-                viewModel.processKeyboardAction(action)
+    keyboardActions.collectWithLifecycle { action ->
+        viewModel.processKeyboardAction(action)
+    }
+    lifecycleEvents.collectLatestWithLifecycle { event ->
+        when (event) {
+            LifecycleEvent.SaveUIState -> {
+                viewModel.cacheState()
             }
         }
     }
-    LaunchedEffect(viewModel, lifecycleEvents) {
-        lifecycleEvents.collectLatest { action ->
-            when (action) {
-                LifecycleEvent.SaveUIState -> {
-                    viewModel.cacheState()
-                }
-            }
+    viewModel.snackbarMessages.collectLatestWithLifecycle { (message, formatArgs) ->
+        val result = snackbarHostState.showSnackbar(
+            message = getString(message.messageResource, *formatArgs),
+            actionLabel = message.actionLabelResource?.let { getString(it) },
+            withDismissAction = message.withDismissAction,
+            duration = message.duration,
+        )
+        when (result) {
+            SnackbarResult.ActionPerformed ->
+                viewModel.onSnackbarAction(message)
+            SnackbarResult.Dismissed -> {}
         }
     }
-    LaunchedEffect(viewModel, snackbarHostState) {
-        viewModel.snackbarMessages.collectLatest { (message, formatArgs) ->
-            val result = snackbarHostState.showSnackbar(
-                message = getString(message.messageResource, *formatArgs),
-                actionLabel = message.actionLabelResource?.let { getString(it) },
-                withDismissAction = message.withDismissAction,
-                duration = message.duration,
-            )
-            when (result) {
-                SnackbarResult.ActionPerformed ->
-                    viewModel.onSnackbarAction(message)
-                SnackbarResult.Dismissed -> {}
-            }
-        }
-    }
-    LaunchedEffect(viewModel.drawerOpenCloseRequests, drawerState) {
-        viewModel.drawerOpenCloseRequests.collectLatest { drawerValue ->
-            when (drawerValue) {
-                DrawerValue.Open -> drawerState.open()
-                DrawerValue.Closed -> drawerState.close()
-            }
+    viewModel.drawerOpenCloseRequests.collectWithLifecycle { drawerValue ->
+        when (drawerValue) {
+            DrawerValue.Open -> drawerState.open()
+            DrawerValue.Closed -> drawerState.close()
         }
     }
     val colorScheme = MaterialTheme.colorScheme
