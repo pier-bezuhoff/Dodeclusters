@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scrim
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
@@ -300,11 +301,12 @@ fun CustomModalNavigationDrawer(
         drawerState.anchoredDraggableMotionSpec = anchoredDraggableMotion
     }
 
-    LaunchedEffect(drawerState.isOpen) {
+    DisposableEffect(drawerState.isOpen) {
         if (drawerState.isOpen) {
             // Keyboard focus should go to first element of the drawer when it opens
             focusRequester.requestFocus()
         }
+        onDispose { }
     }
 
 //    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl

@@ -29,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -621,4 +622,10 @@ private fun HexInput(
                 }
             }
     }
+    DisposableEffect(Unit) {
+        focusRequester.freeFocus()
+        focusManager.clearFocus()
+        keyboard?.hide()
+        onDispose { }
+    } // this, too, is futile, ig i should try focusing on something else
 }

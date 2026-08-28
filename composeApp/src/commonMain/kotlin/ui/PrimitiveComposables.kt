@@ -49,6 +49,7 @@ import androidx.compose.material3.TooltipState
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -626,10 +627,13 @@ fun FloatTextField(
             )
         ),
     )
-    LaunchedEffect(focusRequester, captureFocus) {
+    // NOTE: DisposableEffect instead of LaunchedEffect because apparently
+    //  LaunchedEffect skips 1 frame (!) and DisposableEffect is better for focus requesting
+    DisposableEffect(focusRequester, captureFocus) {
         if (captureFocus) {
             focusRequester.requestFocus(FocusDirection.Enter)
         }
+        onDispose { }
     }
 }
 
@@ -766,10 +770,11 @@ fun StringTextFieldWithConfirmOnEnter(
             )
         ),
     )
-    LaunchedEffect(focusRequester, captureFocus) {
+    DisposableEffect(focusRequester, captureFocus) {
         if (captureFocus) {
             focusRequester.requestFocus(FocusDirection.Enter)
         }
+        onDispose { }
     }
 }
 
