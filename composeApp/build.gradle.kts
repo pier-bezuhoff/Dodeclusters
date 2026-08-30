@@ -32,16 +32,6 @@ kotlin {
         browser {
             commonWebpackConfig {
                 outputFileName = "composeApp.js"
-                // source maps for wasm are WIP: https://kotlinlang.org/docs/wasm-debugging.html
-//                devtool = "source-map" // not working aside from live localhost testing
-//                sourceMaps = true
-//                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
-//                    static = (static ?: mutableListOf()).apply {
-//                        // Serve sources to debug inside browser
-//                        add(project.rootDir.path)
-//                        add(project.projectDir.path)
-//                    }
-//                }
             }
             testTask {
                 useKarma {
@@ -98,15 +88,15 @@ kotlin {
             implementation(libs.compose.lifecycle.viewmodel.navigation3)
             implementation(libs.compose.navigation3.ui)
             implementation(libs.coroutines.core)
-            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.serialization.json)
             implementation(libs.colormath)
             implementation(libs.kaml)
             implementation(libs.kstore)
         }
         androidMain.dependencies {
             implementation(libs.compose.ui.tooling)
-            implementation(libs.compose.activity)
-            implementation(libs.androidx.core.ktx)
+            implementation(libs.activity.compose)
+            implementation(libs.core.ktx)
             implementation(libs.coroutines.android)
             implementation(libs.kstore.file)
             implementation(libs.appdirs)
