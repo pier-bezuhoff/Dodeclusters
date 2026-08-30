@@ -8,12 +8,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +38,6 @@ import dodeclusters.composeapp.generated.resources.loxodromic_motion_title
 import dodeclusters.composeapp.generated.resources.n_steps_placeholder
 import dodeclusters.composeapp.generated.resources.n_steps_prompt
 import domain.collectLatestWithLifecycle
-import domain.collectWithLifecycle
 import domain.expressions.LoxodromicMotionParameters
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.Serializable
@@ -54,6 +49,7 @@ import ui.DoubleTextField
 import ui.FloatTextField
 import ui.IntTextField
 import ui.PreTextFieldLabel
+import ui.theme.adaptiveSizing
 import ui.theme.adaptiveTypography
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -100,7 +96,6 @@ data class DefaultLoxodromicMotionParameters(
     )
 }
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun LoxodromicMotionDialog(
     onConfirm: (LoxodromicMotionParameters) -> Unit,
@@ -115,8 +110,7 @@ fun LoxodromicMotionDialog(
     var angleDirection by remember(defaults) { mutableStateOf(defaults.anglePerStep >= 0.0) }
     var dilation by remember(defaults) { mutableStateOf(defaults.dilationPerStep) }
     var nSteps by remember(defaults) { mutableStateOf(defaults.nTotalSteps) }
-    val windowSizeClass = calculateWindowSizeClass()
-    val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
+    val compactHeight = MaterialTheme.adaptiveSizing.isCompactVertically
 
     fun buildParameters() =
         LoxodromicMotionParameters.fromDifferential(

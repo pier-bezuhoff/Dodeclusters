@@ -1,16 +1,11 @@
 package ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.unit.Density
+import androidx.window.core.layout.WindowSizeClass
 
 @Immutable
 data class AdaptiveSizing(
@@ -18,33 +13,34 @@ data class AdaptiveSizing(
 ) {
     // (Medium, Medium) is the size in portrait tablet browser
     val isLandscape =
-        windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded &&
-        windowSizeClass.heightSizeClass <= WindowHeightSizeClass.Expanded ||
-        windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium &&
-        windowSizeClass.heightSizeClass < WindowHeightSizeClass.Medium
+        WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND <= windowSizeClass.minWidthDp &&
+        windowSizeClass.minHeightDp <= WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND ||
+        WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND <= windowSizeClass.minWidthDp &&
+        windowSizeClass.minWidthDp < WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND &&
+        windowSizeClass.minHeightDp < WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND
     /** Either of dimensions is compact */
     val isCompact =
-        windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact ||
-        windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
+        windowSizeClass.minWidthDp < WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND ||
+        windowSizeClass.minHeightDp < WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND
     val isCompactVertically =
-        windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
+        windowSizeClass.minHeightDp < WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND
     /** Both dimensions are medium */
     val isMedium =
-        windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium &&
-        windowSizeClass.heightSizeClass == WindowHeightSizeClass.Medium
+        WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND <= windowSizeClass.minWidthDp &&
+        windowSizeClass.minWidthDp < WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND &&
+        WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND <= windowSizeClass.minHeightDp &&
+        windowSizeClass.minHeightDp < WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND
     /** Both dimensions are expanded */
     val isExpanded =
-        windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded &&
-        windowSizeClass.heightSizeClass == WindowHeightSizeClass.Expanded
+        WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND <= windowSizeClass.minWidthDp &&
+        WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND <= windowSizeClass.minHeightDp
+    val isExpandedHorizontally =
+        WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND <= windowSizeClass.minWidthDp
 }
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 val LocalAdaptiveSizing = staticCompositionLocalOf {
     AdaptiveSizing(
-        WindowSizeClass.calculateFromSize(
-            Size(1f, 1f),
-            Density(1f),
-        )
+        WindowSizeClass(1, 1)
     )
 }
 

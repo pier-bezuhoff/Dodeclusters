@@ -14,12 +14,10 @@ kotlin {
 
 android {
     namespace = "com.pierbezuhoff.dodeclusters"
-    //noinspection GradleDependency
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
         applicationId = "com.pierbezuhoff.dodeclusters"
         minSdk = libs.versions.android.minSdk.get().toInt()
-        //noinspection OldTargetApi
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = libs.versions.dodeclusters.android.versionCode.get().toInt()
         versionName = libs.versions.dodeclusters.version.get()
@@ -56,7 +54,6 @@ dependencies {
     implementation(libs.compose.material3)
 //    implementation(libs.compose.material3.adaptive)
 //    implementation(libs.compose.material3.adaptive.navigation3)
-//    implementation(libs.compose.material3.window.size.klass)
 //    implementation(libs.compose.material.icons)
     implementation(libs.compose.lifecycle.runtime)
 //    implementation(libs.compose.lifecycle.viewmodel)

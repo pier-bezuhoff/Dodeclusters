@@ -422,12 +422,10 @@ class EditorViewModel : ViewModel() {
     private var movementAfterDown = false
 
     /** min tap/grab distance to select an object */
-    var tapRadius =
-        getPlatform().tapRadius
+    var tapRadius = Platform.getCurrent().tapRadius
 //    private val lowAccuracyTapRadius get() = tapRadius*LOW_ACCURACY_FACTOR
-    inline val tapRadius2 get() =
-        tapRadius*tapRadius
-    inline val lowAccuracyTapRadius2 get() =
+    val tapRadius2 = tapRadius*tapRadius
+    val lowAccuracyTapRadius2 =
         tapRadius*tapRadius*LOW_ACCURACY_FACTOR*LOW_ACCURACY_FACTOR
 
     init {
@@ -460,7 +458,9 @@ class EditorViewModel : ViewModel() {
         val prevCenter = canvasState.canvasCenter
         val newCenter = Offset(newCanvasSize.width/2f, newCanvasSize.height/2f)
         translation += (newCenter - prevCenter)
-        updateCanvasState { it.copy(canvasSize = newCanvasSize) }
+        updateCanvasState { it.copy(
+            canvasSize = newCanvasSize
+        ) }
         objectModel.pathCache.invalidateAll()
         objectModel.invalidatePositions()
     }

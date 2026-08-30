@@ -18,9 +18,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,9 +34,8 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.blend_settings_opacity_prompt
 import dodeclusters.composeapp.generated.resources.blend_settings_title
 import domain.collectLatestWithLifecycle
-import domain.collectWithLifecycle
-import domain.settings.BlendModeType
 import domain.formatDecimals
+import domain.settings.BlendModeType
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelOkRow
@@ -46,7 +43,6 @@ import ui.DialogTitle
 import ui.LabelColonBigValue
 import ui.theme.adaptiveTypography
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun BlendSettingsDialog(
     currentOpacity: Float,

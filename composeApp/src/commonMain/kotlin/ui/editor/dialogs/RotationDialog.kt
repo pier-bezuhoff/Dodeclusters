@@ -14,10 +14,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +38,6 @@ import dodeclusters.composeapp.generated.resources.n_steps_prompt
 import dodeclusters.composeapp.generated.resources.rotation_angle_prompt
 import dodeclusters.composeapp.generated.resources.rotation_title
 import domain.collectLatestWithLifecycle
-import domain.collectWithLifecycle
 import domain.expressions.RotationParameters
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.Serializable
@@ -89,8 +86,6 @@ data class DefaultRotationParameters(
     )
 }
 
-// TODO: rational (p/q*TAU) angle input for regular polygons
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun RotationDialog(
     onConfirm: (RotationParameters) -> Unit,

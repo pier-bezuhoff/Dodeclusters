@@ -21,13 +21,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
@@ -76,7 +74,6 @@ import dodeclusters.composeapp.generated.resources.delete_forever
 import dodeclusters.composeapp.generated.resources.hex_hash
 import dodeclusters.composeapp.generated.resources.paint_splash
 import domain.collectLatestWithLifecycle
-import domain.collectWithLifecycle
 import kotlinx.coroutines.flow.SharedFlow
 import org.jetbrains.compose.resources.stringResource
 import ui.CancelButton
@@ -90,8 +87,6 @@ import ui.theme.ColorTheme
 import ui.theme.DodeclustersColors
 import ui.theme.DodeclustersTheme
 import ui.theme.adaptiveSizing
-import kotlin.collections.minus
-import kotlin.collections.plus
 
 // TODO: make a compact popup version for less context switch and live preview
 /**
@@ -132,7 +127,6 @@ data class ColorPickerParameters(
 )
 
 // TODO: transparent option for fill color
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun ColorPickerDialog(
     parameters: ColorPickerParameters,

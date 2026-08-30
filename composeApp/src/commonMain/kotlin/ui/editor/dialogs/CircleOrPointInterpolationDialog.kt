@@ -12,12 +12,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +50,7 @@ import ui.CancelOkRow
 import ui.DialogTitle
 import ui.IntTextField
 import ui.PreTextFieldLabel
+import ui.theme.adaptiveSizing
 import ui.theme.adaptiveTypography
 import kotlin.math.roundToInt
 
@@ -76,7 +73,6 @@ data class DefaultInterpolationParameters(
     )
 }
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun CircleOrPointInterpolationDialog(
     startCircle: GCircle,
@@ -94,8 +90,7 @@ fun CircleOrPointInterpolationDialog(
         startCircle is Point ||
         startCircle is Line && endCircle is Line && startCircle.isCollinearTo(endCircle)
     var interpolateInBetween by remember { mutableStateOf(defaults.inBetween) }
-    val windowSizeClass = calculateWindowSizeClass()
-    val compactHeight = windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact
+    val compactHeight = MaterialTheme.adaptiveSizing.isCompactVertically
 
     fun buildParameters(): InterpolationParameters =
         InterpolationParameters(
@@ -117,7 +112,7 @@ fun CircleOrPointInterpolationDialog(
             ,
             shape = MaterialTheme.shapes.extraLarge,
         ) {
-            if (windowSizeClass.heightSizeClass == WindowHeightSizeClass.Compact) {
+            if (compactHeight) {
                 Column(
                     horizontalAlignment = Alignment.Start
                 ) {

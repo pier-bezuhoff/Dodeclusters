@@ -4,15 +4,13 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.unit.dp
@@ -62,7 +60,6 @@ enum class ColorTheme {
 
 val DEFAULT_COLOR_THEME = ColorTheme.AUTO
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun DodeclustersTheme(
     colorTheme: ColorTheme = DEFAULT_COLOR_THEME,
@@ -75,7 +72,7 @@ fun DodeclustersTheme(
     val extendedScheme =
         if (isLight) DodeclustersColors.extendedLightScheme
         else DodeclustersColors.extendedDarkScheme
-    val windowSizeClass = calculateWindowSizeClass()
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val adaptiveSizing = AdaptiveSizing(windowSizeClass)
     val isCompact = adaptiveSizing.isCompact
     val adaptiveTypography = AdaptiveTypography(

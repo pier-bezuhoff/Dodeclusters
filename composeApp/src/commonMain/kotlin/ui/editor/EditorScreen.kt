@@ -47,7 +47,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -977,7 +976,7 @@ private fun EditorTopBar(
 ) {
     val isCompact = MaterialTheme.adaptiveSizing.isCompact
     val displayAllActions =
-        MaterialTheme.adaptiveSizing.windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+        MaterialTheme.adaptiveSizing.isExpandedHorizontally
     val buttonModifier =
         if (isCompact) Modifier.padding(4.dp).size(30.dp)
         else Modifier.padding(6.dp, 4.dp).size(40.dp)

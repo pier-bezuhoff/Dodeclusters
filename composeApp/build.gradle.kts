@@ -14,7 +14,6 @@ plugins {
 kotlin {
     android {
         namespace = "com.pierbezuhoff.dodeclusters.shared"
-        //noinspection GradleDependency
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         androidResources {
@@ -81,7 +80,6 @@ kotlin {
             implementation(libs.compose.material3)
             implementation(libs.compose.material3.adaptive)
 //            implementation(libs.compose.material3.adaptive.navigation3)
-            implementation(libs.compose.material3.window.size.klass)
             implementation(libs.compose.material.icons)
             implementation(libs.compose.lifecycle.runtime)
             implementation(libs.compose.lifecycle.viewmodel)

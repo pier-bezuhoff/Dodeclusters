@@ -38,7 +38,6 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -1207,8 +1206,7 @@ fun BoxScope.RegionManipulationStrategySelector(
     modifier: Modifier = Modifier,
     setStrategy: (RegionManipulationStrategy) -> Unit = {},
 ) {
-    val iconOnly =
-        MaterialTheme.adaptiveSizing.windowSizeClass.widthSizeClass < WindowWidthSizeClass.Expanded
+    val iconOnly = !MaterialTheme.adaptiveSizing.isExpandedHorizontally
     Surface(
         modifier = modifier.align(Alignment.CenterEnd),
         shape = MaterialTheme.shapes.large,
