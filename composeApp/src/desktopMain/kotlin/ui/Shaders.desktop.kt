@@ -37,7 +37,17 @@ actual fun rememberShader(
                 if (localMatrix == null)
                     null
                 else
-                    Matrix33(*localMatrix)
+                    Matrix33(
+                        localMatrix[0],
+                        localMatrix[1],
+                        localMatrix[2],
+                        localMatrix[3],
+                        localMatrix[4],
+                        localMatrix[5],
+                        localMatrix[6],
+                        localMatrix[7],
+                        localMatrix[8],
+                    )
         )
     }
     return shader.asComposeShader()
