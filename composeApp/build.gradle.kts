@@ -66,7 +66,7 @@ kotlin {
             resources.srcDir("src/wasnJsMain/resources") // dont work
         }
 
-        val desktopMain by getting
+        val desktopMain = getByName("desktopMain")
 
         commonMain.dependencies {
             // NOTE: compose.X translates into "org.jetbrains.compose.X:X" with compose-multiplatform version
