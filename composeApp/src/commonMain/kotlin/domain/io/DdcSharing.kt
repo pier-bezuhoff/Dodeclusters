@@ -15,6 +15,7 @@ interface DdcSharing {
 
     fun formatLink(sharedId: SharedId): String
     fun testSharePermission(): Boolean
+    fun clearCurrentDestination()
 
     /** @return (ddc content, is shared link owned by the user) */
     suspend fun fetchSharedDdc(sharedId: SharedId): Result<DdcContentAndOwnedStatus>

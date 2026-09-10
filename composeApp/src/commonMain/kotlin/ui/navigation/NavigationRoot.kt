@@ -2,6 +2,7 @@ package ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSerializable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.entryProvider
@@ -16,6 +17,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.serializer
 import ui.LifecycleEvent
 import ui.editor.EditorScreenRoot
+import ui.editor.EditorViewModel
 import ui.editor.KeyboardAction
 import ui.settings.SettingsScreenRoot
 

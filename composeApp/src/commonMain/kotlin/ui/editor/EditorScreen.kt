@@ -174,7 +174,11 @@ fun EditorScreenRoot(
     lifecycleEvents: SharedFlow<LifecycleEvent>,
     ddcSharing: DdcSharing?,
     // MAYBE: hoist VM before NavDisplay for persistence?
-    viewModel: EditorViewModel = viewModel(factory = EditorViewModel.Factory),
+    viewModel: EditorViewModel = viewModel {
+        EditorViewModel(
+            ddcSharing = ddcSharing,
+        )
+    },
 ) {
     val coroutineScope = rememberCoroutineScope()
     val ddcContent: LoadingState<String>? by ddcFlow.collectAsStateWithLifecycle()

@@ -2,7 +2,6 @@
 
 package domain.io
 
-import SearchParamKeys
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,10 +12,27 @@ import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlinx.coroutines.await
 import org.w3c.dom.url.URL
+import org.w3c.dom.url.URLSearchParams
 import org.w3c.fetch.Response
 import kotlin.js.Promise
 import kotlin.random.Random
 import kotlin.random.nextULong
+
+object SearchParamKeys {
+    const val THEME = "theme"
+    // MAYBE: use "url#id" instead
+    const val SHARED_ID = "shared"
+    const val SHARE_PERM = "share_perm"
+    const val SAMPLE = "sample"
+}
+
+/** Local storage namespace is shared within the domain, so it's better
+ * to prefix keys with 'ddc-' */
+object LocalStorageKeys {
+    const val USER_ID = "ddc-user-id"
+    /** Presently unused */
+    const val SHARE_PERMISSION = "ddc-share-perm"
+}
 
 // MAYBE: persist it
 private fun generateDk(): Promise<JsString> = js(
@@ -30,7 +46,7 @@ private fun generateDk(): Promise<JsString> = js(
 private fun _generateDk(): Promise<JsString> = js("""Promise.resolve("")""")
 
 @Suppress("unused")
-private fun fetchPost(url: String, content: String): Promise<Response?> = js(
+private fun fetchPost(url: String, content: String): Promise<Response> = js(
     """
         fetch(url, {
             redirect: "follow",
@@ -53,9 +69,11 @@ private val PK = "${nextPk()}${nextPk()}${nextPk()}${nextPk()}"
 private const val ENDPOINT =
     "https://script.google.com/macros/s/AKfycbyAm941s7j9eqTUeAwlvUBcPOBHVMNTTr3if6BZsheIl7jzneH0EY-xpvihteNPzcPz/exec"
 
-private fun setUrlSearchParam(key: String, value: String) {
+private inline fun applyToUrlSearchParams(
+    crossinline block: URLSearchParams.() -> Unit
+) {
     val newUrl = URL(window.location.href)
-    newUrl.searchParams.set(key, value)
+    newUrl.searchParams.apply(block)
     window.history.pushState(null, "", newUrl.href)
 }
 
@@ -73,26 +91,35 @@ object WebDdcSharing : DdcSharing {
         return link.href
     }
 
+    override fun clearCurrentDestination() {
+        applyToUrlSearchParams {
+            delete(SearchParamKeys.SHARED_ID)
+            delete(SearchParamKeys.SAMPLE)
+        }
+    }
+
     override suspend fun fetchSharedDdc(sharedId: SharedId): Result<DdcContentAndOwnedStatus> {
         try {
-            val dk = generateDk().await<JsString>().toString()
+            val dk = generateDk().await().toString()
             val userId = localStorage.getItem(LocalStorageKeys.USER_ID)
             val promise = if (userId != null) {
                 window.fetch("$ENDPOINT?doko=$dk&user_id=$userId&id=$sharedId")
             } else {
                 window.fetch("$ENDPOINT?doko=$dk&id=$sharedId")
             }
-            val response = promise.await<Response?>()
-            if (response?.ok != true)
+            val response = promise.await()
+            if (!response.ok)
                 return NO_RESPONSE
-            val json = response.json().await<JsAny?>() ?: return NO_RESPONSE_JSON
+            val json: JsAny = response.json().await() ?: return NO_RESPONSE_JSON
             val content = json.getStringProperty("content")
             if (content == null) {
                 println("no .content in ${jsonStringify(json)}")
                 return Result.failure(Error("response.json() has no .content"))
             }
             val owned = (json["owned"] as? JsBoolean)?.toBoolean() ?: false
-            setUrlSearchParam(SearchParamKeys.SHARED_ID, sharedId)
+            applyToUrlSearchParams {
+                set(SearchParamKeys.SHARED_ID, sharedId)
+            }
             return Result.success(Pair(content, owned))
         } catch (e: Exception) {
             e.printStackTrace()
@@ -102,12 +129,12 @@ object WebDdcSharing : DdcSharing {
 
     override suspend fun registerUser(): Result<UserId> {
         try {
-            val dk = generateDk().await<JsString>().toString()
+            val dk = generateDk().await().toString()
             val promise = window.fetch("$ENDPOINT?doko=$dk&register=1")
-            val response = promise.await<Response?>()
-            if (response?.ok != true)
+            val response: Response = promise.await()
+            if (!response.ok)
                 return NO_RESPONSE
-            val json = response.json().await<JsAny?>() ?: return NO_RESPONSE_JSON
+            val json: JsAny = response.json().await() ?: return NO_RESPONSE_JSON
             val userId = json.getStringProperty("user")
             if (userId == null) {
                 println("no .user in ${jsonStringify(json)}")
@@ -126,24 +153,26 @@ object WebDdcSharing : DdcSharing {
 
     override suspend fun shareNewDdc(content: DdcContent): Result<SharedId> {
         try {
-            val dk = generateDk().await<JsString>().toString()
+            val dk = generateDk().await().toString()
             val pk = PK //localStorage.getItem(SHARE_PERMISSION_KEY)
             val userId = localStorage.getItem(LocalStorageKeys.USER_ID)
             if (pk == null || userId == null)
                 return Result.failure(Error("null pk or userId"))
             val url = "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&user_id=$userId"
             val promise = fetchPost(url, content)
-            val response = promise.await<Response?>()
-            if (response?.ok != true)
+            val response: Response = promise.await()
+            if (!response.ok)
                 return NO_RESPONSE
-            val json = response.json().await<JsAny?>() ?: return NO_RESPONSE_JSON
+            val json: JsAny = response.json().await() ?: return NO_RESPONSE_JSON
             val sharedId = json.getStringProperty("id")
             if (sharedId == null) {
                 println("no .id in ${jsonStringify(json)}")
                 return Result.failure(Error("response.json() has no .id"))
             }
             println("shared successfully -> $sharedId")
-            setUrlSearchParam(SearchParamKeys.SHARED_ID, sharedId)
+            applyToUrlSearchParams {
+                set(SearchParamKeys.SHARED_ID, sharedId)
+            }
             return Result.success(sharedId)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -153,24 +182,26 @@ object WebDdcSharing : DdcSharing {
 
     override suspend fun overwriteSharedDdc(sharedId: SharedId, content: DdcContent): Result<SharedId> {
         try {
-            val dk = generateDk().await<JsString>().toString()
+            val dk = generateDk().await().toString()
             val pk = PK //localStorage.getItem(SHARE_PERMISSION_KEY)
             val userId = localStorage.getItem(LocalStorageKeys.USER_ID)
             if (pk == null || userId == null)
                 return Result.failure(Error("null pk or userId"))
             val url = "$ENDPOINT?doko=$dk&pk=${pk.take(16)}${content.length}${pk.drop(16)}&user_id=$userId&id=$sharedId"
             val promise = fetchPost(url, content)
-            val response = promise.await<Response?>()
-            if (response?.ok != true)
+            val response: Response = promise.await()
+            if (!response.ok)
                 return NO_RESPONSE
-            val json = response.json().await<JsAny?>() ?: return NO_RESPONSE_JSON
+            val json: JsAny = response.json().await() ?: return NO_RESPONSE_JSON
             val sharedId = json.getStringProperty("id")
             if (sharedId == null) {
                 println("no .id in ${jsonStringify(json)}")
                 return Result.failure(Error("response.json() has no .id"))
             }
             println("overwritten shared successfully -> $sharedId")
-            setUrlSearchParam(SearchParamKeys.SHARED_ID, sharedId)
+            applyToUrlSearchParams {
+                set(SearchParamKeys.SHARED_ID, sharedId)
+            }
             return Result.success(sharedId)
         } catch (e: Exception) {
             e.printStackTrace()

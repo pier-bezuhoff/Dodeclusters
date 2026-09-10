@@ -15,6 +15,8 @@ import dodeclusters.composeapp.generated.resources.loading_sample_progress
 import domain.LoadingState
 import domain.io.DdcContent
 import domain.io.DdcRepository
+import domain.io.LocalStorageKeys
+import domain.io.SearchParamKeys
 import domain.io.WebDdcSharing
 import domain.settings.Settings
 import kotlinx.browser.document
@@ -39,22 +41,6 @@ import org.w3c.dom.url.URL
 import ui.LifecycleEvent
 import ui.editor.KeyboardAction
 import ui.theme.ColorTheme
-
-object SearchParamKeys {
-    const val THEME = "theme"
-    // MAYBE: use "url#id" instead
-    const val SHARED_ID = "shared"
-    const val SHARE_PERM = "share_perm"
-    const val SAMPLE = "sample"
-}
-
-/** Local storage namespace is shared within the domain, so it's better
- * to prefix keys with 'ddc-' */
-object LocalStorageKeys {
-    const val USER_ID = "ddc-user-id"
-    /** Presently unused */
-    const val SHARE_PERMISSION = "ddc-share-perm"
-}
 
 // NOTE: because Github Pages serves .wasm files with wrong mime type https://stackoverflow.com/a/54320709/7143065
 //  to open in mobile/firefox use netlify version

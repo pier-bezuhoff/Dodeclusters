@@ -1,5 +1,6 @@
 package ui.editor
 
+import Platform
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
@@ -15,9 +16,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.charleskorn.kaml.PolymorphismStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
@@ -68,6 +67,7 @@ import domain.filterIndices
 import domain.hug
 import domain.indicesSortedBy
 import domain.io.DdcFormat
+import domain.io.DdcSharing
 import domain.io.DdcV1
 import domain.io.DdcV2
 import domain.io.DdcV5
@@ -97,20 +97,13 @@ import domain.sortedByFrequency
 import domain.updatesStateFlow
 import domain.xor
 import getPlatform
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -133,7 +126,9 @@ import kotlin.time.Duration.Companion.seconds
 
 // this class is obviously too big, maybe separate into CanvasViewModel and UiViewModel
 // MAYBE: timed autosave (cron-like), e.g. every 10min
-class EditorViewModel : ViewModel() {
+class EditorViewModel(
+    private val ddcSharing: DdcSharing? = null,
+) : ViewModel() {
     val objectModel: ConformalObjectModel = ConformalObjectModel()
     val objects: List<GCircleOrConcreteArcPath?> = objectModel.displayObjects
     inline val expressions: ConformalExpressions get() =
@@ -508,6 +503,7 @@ class EditorViewModel : ViewModel() {
         content?.let {
             viewModelScope.launch {
                 loadDdc(content, filename)
+                ddcSharing?.clearCurrentDestination()
             }
         }
     }
@@ -595,19 +591,10 @@ class EditorViewModel : ViewModel() {
 
     fun openNewBlank() {
 //        val presentState = saveState()
-//        val expr = ArcPath.Closed(vertices = listOf(1,2), arcs = listOf(ArcPath.Arc.LineSegment, ArcPath.Arc.LineSegment))
-//        val exprOutput = ExprOutput.Just(expr)
-//        val exprs: Map<Int, ExprOutput<ArcPath.Closed>> = mapOf(0 to exprOutput) //, 1 to null)
-//        println("prepared state")
+//        getPlatform().saveState(s)
         // BUG: on wasm SaveState encoding breaks (while state.expressions enc doesn't)
         // issue: https://github.com/Kotlin/kotlinx.serialization/issues/3177
-//        val str = Choices.JSON_FORMAT.encodeToString(
-//            value =
-//                Choices(mapOf(0 to Choice.One(A)))
-//        )
-//        getPlatform().saveState(s)
-//        println("encoded: $str")
-//        return
+        ddcSharing?.clearCurrentDestination()
         closeDialog()
         loadState(
             SaveState(
@@ -3691,11 +3678,11 @@ class EditorViewModel : ViewModel() {
 
     companion object {
         // reference: https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-factories
-        val Factory: ViewModelProvider.Factory = viewModelFactory {
-            addInitializer(EditorViewModel::class) {
-                EditorViewModel()
-            }
-        }
+//        val Factory: ViewModelProvider.Factory = viewModelFactory {
+//            addInitializer(EditorViewModel::class) {
+//                EditorViewModel()
+//            }
+//        }
         val YamlEncoding = Yaml(
             configuration = YamlConfiguration(
                 encodeDefaults = false,
