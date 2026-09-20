@@ -3393,7 +3393,7 @@ class EditorViewModel(
         when (tool) {
             Tool.Undo -> undo()
             Tool.Redo -> redo()
-            Tool.SaveCluster -> updateUiState { it.copy(
+            Tool.Save -> updateUiState { it.copy(
                 openedDialog = DialogType.SAVE_OPTIONS
             ) }
             Tool.Drag -> switchToMode(SelectionMode.Drag)

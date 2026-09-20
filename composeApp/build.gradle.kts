@@ -80,7 +80,6 @@ kotlin {
             implementation(libs.compose.material3)
             implementation(libs.compose.material3.adaptive)
 //            implementation(libs.compose.material3.adaptive.navigation3)
-            implementation(libs.compose.material.icons)
             implementation(libs.compose.lifecycle.runtime)
             implementation(libs.compose.lifecycle.viewmodel)
             implementation(libs.compose.lifecycle.viewmodel.navigation3)

@@ -26,8 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -76,13 +74,12 @@ import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.actions
 import dodeclusters.composeapp.generated.resources.add_circle
 import dodeclusters.composeapp.generated.resources.cancel
-import dodeclusters.composeapp.generated.resources.collapse_down
-import dodeclusters.composeapp.generated.resources.collapse_left
 import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.new_blank
 import dodeclusters.composeapp.generated.resources.new_document
 import dodeclusters.composeapp.generated.resources.open
 import dodeclusters.composeapp.generated.resources.open_file
+import dodeclusters.composeapp.generated.resources.plus
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
 import dodeclusters.composeapp.generated.resources.save
 import dodeclusters.composeapp.generated.resources.save_as
@@ -213,7 +210,7 @@ fun EditorScreenRoot(
         openNewBlank = viewModel::showNewBlankPrompt,
         openFile = viewModel::requestOpenFile,
         showSaveOptionsDialog = {
-            viewModel.toolAction(Tool.SaveCluster)
+            viewModel.toolAction(Tool.Save)
         },
         openSettings = openSettings,
         hidePanel = viewModel::hidePanel,
@@ -719,13 +716,14 @@ private fun CollectSnackbarMessages(
 private fun SubscribeToSettingsAndStartPeriodicAutosave(
     viewModel: EditorViewModel,
 ) {
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val settings by viewModel.settingsFlow.collectAsStateWithLifecycle()
-    LaunchedEffect(settings) { // maybe debounce
-        viewModel.loadSettings(settings)
+    // maybe debounce
+    viewModel.settingsFlow.collectLatestWithLifecycle { newSettings ->
+        viewModel.loadSettings(newSettings)
     }
+    val settings by viewModel.settingsFlow.collectAsStateWithLifecycle()
     val enablePeriodicAutosave = settings.enablePeriodicAutosave
     val autosavePeriodInSeconds = settings.autosavePeriodInSeconds
+    val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(autosavePeriodInSeconds, enablePeriodicAutosave, lifecycleOwner.lifecycle) {
         if (enablePeriodicAutosave) {
             lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -770,8 +768,8 @@ private fun ReplaceBackgroundDependingOnTheme(
 }
 
 /** Loads all tool icons and caches them.
- * Otherwise icons only start being loaded when the corresponding category panel is open,
- * which is noticeable & jarring */
+ * Otherwise icons only start being loaded when the corresponding
+ * category panel is open (in browser), which is noticeable & jarring */
 @Composable
 private fun PreloadIcons() {
     val categoryList = listOf(
@@ -786,6 +784,8 @@ private fun PreloadIcons() {
         .flatMap { it.tools }
         .plus(
             listOf(
+                Tool.CollapseHorizontalPanel,
+                Tool.CollapseVerticalPanel,
                 Tool.Expand, Tool.Shrink,
                 Tool.BorderColor,
                 Tool.MarkAsPhantoms,
@@ -813,7 +813,6 @@ private fun PreloadIcons() {
         Tool.FillChessboardPattern.alternativeIcon,
         // from dialogs
         Res.drawable.confirm, Res.drawable.cancel,
-        Res.drawable.collapse_down, Res.drawable.collapse_left,
         Res.drawable.add_circle, // color-picker:save=add
         // from canvas HUD
         Res.drawable.rotate_counterclockwise,
@@ -828,7 +827,6 @@ private fun FAB(
     switchToCreateCategory: () -> Unit,
 ) {
     // MAYBE: only inline with any WindowSizeClass is Expanded (i.e. non-mobile)
-    val category = Category.Create
     FloatingActionButton(
         onClick = switchToCreateCategory,
         modifier =
@@ -842,8 +840,8 @@ private fun FAB(
         elevation = FloatingActionButtonDefaults.elevation()
     ) {
         Icon(
-            Icons.Filled.Add,
-            stringResource(category.name),
+            painterResource(Res.drawable.plus),
+            stringResource(Category.Create.name),
             Modifier
                 .padding(4.dp)
                 .size(40.dp)

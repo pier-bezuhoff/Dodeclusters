@@ -13,12 +13,14 @@ import org.jetbrains.compose.resources.StringResource
  * Describes metadata associated with toolbar's tools (no algorithms per se, pattern-match for the algo)
  * @property[name] used as an icon contentDescription
  * @property[description] used as a tooltip
+ * @property[showLabel] whether to show [name] as a small label in expanded size
  */
 @Immutable
 sealed interface ITool { // pls. i dont know how to name it.. (semantically)
     val name: StringResource
     val icon: DrawableResource
     val description: StringResource
+    val showLabel: Boolean
 
     /** Action = tool with 0 input parameters */
     sealed interface Action : ITool

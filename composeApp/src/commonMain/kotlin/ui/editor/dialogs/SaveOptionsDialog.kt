@@ -173,12 +173,12 @@ fun SaveOptionsDialog(
                         //  shown name-choosing dialog
                         SaveFileButton(
                             saveData = SaveData( // name.yml
-                                name = saveConfig.name ?: Tool.SaveCluster.DEFAULT_NAME,
-                                extension = Tool.SaveCluster.EXTENSION,
+                                name = saveConfig.name ?: Tool.Save.DEFAULT_NAME,
+                                extension = Tool.Save.EXTENSION,
                                 lastDirectory = saveConfig.directory,
                                 uri = saveConfig.uri,
-                                otherDisplayedExtensions = Tool.SaveCluster.otherDisplayedExtensions,
-                                mimeType = Tool.SaveCluster.MIME_TYPE,
+                                otherDisplayedExtensions = Tool.Save.otherDisplayedExtensions,
+                                mimeType = Tool.Save.MIME_TYPE,
                                 prepareContent = saveAsYaml,
                             ),
                             buttonContent = {
@@ -188,11 +188,11 @@ fun SaveOptionsDialog(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Icon(
-                                        painterResource(Tool.SaveCluster.icon),
-                                        stringResource(Tool.SaveCluster.name),
+                                        painterResource(Tool.Save.icon),
+                                        stringResource(Tool.Save.name),
                                         iconModifier
                                     )
-                                    Text(stringResource(Tool.SaveCluster.description))
+                                    Text(stringResource(Tool.Save.description))
                                 }
                             },
                             modifier = buttonModifier,

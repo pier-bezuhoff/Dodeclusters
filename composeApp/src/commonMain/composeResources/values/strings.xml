@@ -3,6 +3,7 @@
     <string name="stub">TBD</string>
     <string name="placeholder">%1$s</string>
     <!-- top toolbar -->
+    <string name="new_blank_name">New</string>
     <string name="new_blank">New blank</string>
     <string name="save_as">Save as</string>
     <string name="open">Open</string>

@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Dodeclusters</string>
     <!-- top toolbar -->
+    <string name="new_blank_name">Новый</string>
     <string name="new_blank">Новый пустой файл</string>
     <string name="save_as">Сохранить как</string>
     <string name="open">Открыть</string>

@@ -126,7 +126,7 @@ import dodeclusters.composeapp.generated.resources.move_point_to_infinity_name
 import dodeclusters.composeapp.generated.resources.multiselect
 import dodeclusters.composeapp.generated.resources.multiselect_description
 import dodeclusters.composeapp.generated.resources.multiselect_name
-import dodeclusters.composeapp.generated.resources.new_blank
+import dodeclusters.composeapp.generated.resources.new_blank_name
 import dodeclusters.composeapp.generated.resources.new_document
 import dodeclusters.composeapp.generated.resources.open
 import dodeclusters.composeapp.generated.resources.open_file
@@ -216,6 +216,7 @@ sealed class Tool(
     override val name: StringResource,
     override val description: StringResource = name,
     override val icon: DrawableResource,
+    override val showLabel: Boolean = false,
 ) : ITool {
     sealed class Switch(
         name: StringResource,
@@ -223,7 +224,8 @@ sealed class Tool(
         final override val disabledDescription: StringResource = description,
         icon: DrawableResource,
         final override val disabledIcon: DrawableResource? = null,
-    ) : Tool(name, description, icon), ITool.BinaryToggle
+        showLabel: Boolean = false,
+    ) : Tool(name, description, icon, showLabel), ITool.BinaryToggle
     sealed class MultiArg(
         name: StringResource,
         description: StringResource = name,
@@ -233,7 +235,8 @@ sealed class Tool(
         final override val disabledDescription: StringResource = description,
         final override val disabledIcon: DrawableResource? = null,
         final override val nonEqualityConditions: List<NonEqualityCondition> = emptyList(),
-    ) : Tool(name, description, icon), ITool.BinaryToggle, ITool.MultiArg {
+        showLabel: Boolean = false,
+    ) : Tool(name, description, icon, showLabel), ITool.BinaryToggle, ITool.MultiArg {
         init {
             require(nonEqualityConditions.all {
                 it.index1 < signature.size && it.index2 < signature.size
@@ -244,25 +247,28 @@ sealed class Tool(
         name: StringResource,
         description: StringResource = name,
         icon: DrawableResource,
-    ) : Tool(name, description, icon), ITool.InstantAction
+        showLabel: Boolean = false,
+    ) : Tool(name, description, icon, showLabel), ITool.InstantAction
     sealed class ContextAction(
         name: StringResource,
         description: StringResource = name,
         icon: DrawableResource,
-    ) : Action(name, description, icon), ITool.ContextAction
+        showLabel: Boolean = false,
+    ) : Action(name, description, icon, showLabel), ITool.ContextAction
     sealed class CustomAction(
         name: StringResource,
         description: StringResource = name,
         icon: DrawableResource,
-    ) : Action(name, description, icon)
+        showLabel: Boolean = false,
+    ) : Action(name, description, icon, showLabel)
 
 
     // top toolbar
     data object NewBlank : CustomAction(
-        name = Res.string.new_blank,
+        name = Res.string.new_blank_name,
         icon = Res.drawable.new_document,
     )
-    data object SaveCluster : CustomAction(
+    data object Save : CustomAction(
         name = Res.string.save_cluster_name,
         icon = Res.drawable.save
     ) {
