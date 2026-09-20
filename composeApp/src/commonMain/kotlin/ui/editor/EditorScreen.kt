@@ -980,8 +980,10 @@ private fun EditorTopBar(
     val displayAllActions =
         MaterialTheme.adaptiveSizing.isExpandedHorizontally
     val buttonModifier =
-        if (isCompact) Modifier.padding(4.dp).size(30.dp)
-        else Modifier.padding(6.dp, 4.dp).size(40.dp)
+        if (isCompact)
+            Modifier.padding(4.dp).size(30.dp)
+        else
+            Modifier.padding(6.dp, 4.dp).size(40.dp)
     val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val contentColor = MaterialTheme.colorScheme.onSurface
     val toolbarHeight = if (isCompact) 48.dp else 64.dp

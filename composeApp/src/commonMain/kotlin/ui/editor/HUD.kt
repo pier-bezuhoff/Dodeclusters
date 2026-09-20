@@ -119,10 +119,6 @@ import kotlin.math.sinh
 
 // MAYBE: expanded mode with icon+label
 
-private val buttonModifier = Modifier
-    .padding(8.dp)
-    .size(36.dp)
-
 // 16.67 ms is 60 FPS
 private val sliderColorsSecondary: SliderColors
     @Composable /*@ReadOnlyComposable*/ get() =
@@ -177,6 +173,7 @@ fun BoxScope.SelectionContextActions(
     onRotateStarted: (center: Offset) -> Unit = {},
     onRotateFinished: () -> Unit = {},
 ) {
+    val buttonModifier = MaterialTheme.adaptiveSizing.hudButtonModifier
     // scale slider mid column is too far from the right
     with (concretePositions) {
         Column(
@@ -374,6 +371,7 @@ fun BoxScope.PointContextActions(
         Column(
             verticalArrangement = Arrangement.Center,
         ) {
+            val buttonModifier = MaterialTheme.adaptiveSizing.hudButtonModifier
             if (showAdjustExprButton) {
                 SimpleToolButtonWithTooltip(Tool.AdjustExpr, buttonModifier, onClick = toolAction)
             }
@@ -526,6 +524,7 @@ fun BoxScope.ArcPathContextActions(
         Column(
             verticalArrangement = Arrangement.Center,
         ) {
+            val buttonModifier = MaterialTheme.adaptiveSizing.hudButtonModifier
             if (showAdjustExprButton) {
                 SimpleToolButtonWithTooltip(Tool.AdjustExpr, buttonModifier, onClick = toolAction)
             }
