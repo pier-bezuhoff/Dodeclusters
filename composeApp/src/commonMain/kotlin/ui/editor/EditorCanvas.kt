@@ -62,10 +62,12 @@ import core.geometry.CircleOrLine
 import core.geometry.CircleOrLineOrPoint
 import core.geometry.CircleOrPoint
 import core.geometry.ConcreteArcPath
+import core.geometry.EPSILON
 import core.geometry.GCircle
 import core.geometry.ImaginaryCircle
 import core.geometry.Line
 import core.geometry.Point
+import core.geometry.RectangleCollider
 import core.geometry.fromCorners
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.rotate_counterclockwise
@@ -251,7 +253,7 @@ fun BoxScope.EditorCanvas(
             }
             drawPartialConstructs(allObjects = allObjects, mode = mode, partialArgList = viewModel.partialArgList, partialArcPath = viewModel.partialArcPath, getArg = viewModel::getArg, visibleRect = visibleRect, handleRadius = handleRadius, circleStroke = pathStroke, imaginaryCircleStroke = dottedStroke, arcPathStroke = pathStroke, alignmentLineColor = selectionMarkingsColor, selectedArgColor = selectedArgColor, creationPrototypeColor = creationColor.copy(alpha = 0.7f))
             drawGrids(visibleRect = visibleRect, submode = submode as? Submode.RotateStereographicSphere, stereographicGridColor = stereographicGridColor, stereographicGridStroke = pathStroke, southPointRadius = handleRadius)
-            drawLabels(objects = allObjects, styling = styling, objectLabelLayouts = labelLayouts, freePointColor = defaultFreePointColor)
+            drawLabels(objects = allObjects, styling = styling, objectLabelLayouts = labelLayouts, visibleRect = visibleRect, freeCircleColor = defaultFreeCircleColor, freePointColor = defaultFreePointColor, imaginaryCircleColor = imaginaryCircleColor)
             drawHandles(objects = allObjects, selection = viewModel.selectedIndices, submodeRotate = submode as? Submode.Rotate, submodeRectangularSelect = submode as? Submode.RectangularSelect, handleConfig = viewModel.handleConfig, getSelectionRect = viewModel::calculateSelectionRect, showCircles = canvasState.showCircles, selectionMarkingsColor = selectionMarkingsColor, scaleIconColor = scaleIconColor, scaleIndicatorColor = scaleIndicatorColor, rotateIconColor = rotateIconColor, rotationIndicatorColor = rotationIndicatorColor, handleRadius = handleRadius, iconDim = iconDim, scaleIcon = scaleIcon, rotateIcon = rotateIcon, dottedStroke = dottedStroke)
             drawDebugObjects(viewModel._debugObjects, visibleRect, pathStroke, pointRadius, rotateIconColor)
         }
@@ -569,7 +571,7 @@ fun ScreenshotableCanvas(
                         drawArcPaths(allObjects = allObjects, indices = (objectModel.arcPathIndices - selection.arcPaths.toSet()).toList(), styling = styling, pathCache = pathCache, defaultArcPathColor = defaultArcPathColor, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke)
                         drawSelectedArcPaths(allObjects = allObjects, indices = selection.arcPaths, styling = styling, pathCache = pathCache, arcPathFillOpacity = canvasState.regionsOpacity, arcPathStroke = pathStroke, defaultSelectedArcPathColor = defaultSelectionColor, thiccSelectedPathAlpha = thiccSelectedAlpha, thiccSelectedPathStroke = thiccPathStroke, arcMiddlePointColor = arcMiddlePointColor, arcMiddlePointRadius = arcMiddlePointRadius)
                     }
-                    drawLabels(objects = allObjects, styling = styling, objectLabelLayouts = objectLabelLayouts, freePointColor = defaultFreePointColor)
+                    drawLabels(objects = allObjects, styling = styling, objectLabelLayouts = objectLabelLayouts, visibleRect = visibleRect, freeCircleColor = defaultFreeCircleColor, freePointColor = defaultFreePointColor, imaginaryCircleColor = imaginaryCircleColor)
                 }
             }
         }
@@ -1597,21 +1599,83 @@ private fun DrawScope.drawLabels(
     objects: List<*>,
     styling: Map<Ix, Styling>,
     objectLabelLayouts: Map<Ix, TextLayoutResult>,
+    visibleRect: Rect,
+    freeCircleColor: Color,
     freePointColor: Color,
+    imaginaryCircleColor: Color,
 ) {
     for ((ix, layoutResult) in objectLabelLayouts) {
-        val o = objects[ix]
-        if (o is Point) {
-            val style = styling[ix]
-            val color = style?.borderColor ?: freePointColor
-            val halfWidth = layoutResult.size.width/2f
-            val topLeft = Offset(o.x.toFloat() - halfWidth, o.y.toFloat())
-//            style?.label?.let {
-//                topLeft += it.positionShift
-//            }
-            drawText(layoutResult, color, topLeft)
+        val style = styling[ix] ?: continue
+        val label = style.label ?: continue
+        val o = objects[ix] as? GCircle ?: continue
+        val visible = RectangleCollider.objectRectangleCollisionTest(o, visibleRect)
+        if (!visible)
+            continue
+        val color = style.borderColor
+        val (w, h) = layoutResult.size
+        val halfWidth = w / 2f
+        // MAYBE: coercion logic?
+//        1f.coerceIn(visibleRect.left, max(visibleRect.left, visibleRect.right - w))
+//        1f.coerceIn(visibleRect.top, max(visibleRect.top, visibleRect.bottom - h))
+        when (o) {
+            is Circle -> {
+                val p = o.order2point(label.order)
+                val x = (p.x.toFloat() - halfWidth + label.shiftX)
+                val y = (p.y.toFloat() + label.shiftY)
+                val topLeft = Offset(x, y)
+                drawText(layoutResult, color ?: freeCircleColor, topLeft)
+            }
+            is Line -> {
+                val p = o.order2point(label.order)
+                // coercion shift should be parallel to the line
+                val x = (p.x.toFloat() - halfWidth + label.shiftX)
+                val y = (p.y.toFloat() + label.shiftY)
+                val topLeft = coerceIntoRectAlong(
+                    Rect(x, y, x + w, y + h),
+                    visibleRect, o)
+                drawText(layoutResult, color ?: freeCircleColor, topLeft)
+            }
+            is ImaginaryCircle -> {
+                val c = o.toRealCircle()
+                val p = c.order2point(label.order)
+                val x = (p.x.toFloat() - halfWidth + label.shiftX)
+                val y = (p.y.toFloat() + label.shiftY)
+                val topLeft = Offset(x, y)
+                drawText(layoutResult, color ?: imaginaryCircleColor, topLeft)
+            }
+            is Point -> {
+                val x = o.x.toFloat() - halfWidth + label.shiftX
+                val y = o.y.toFloat() + label.shiftY
+                val topLeft = Offset(x, y)
+                drawText(layoutResult, color ?: freePointColor, topLeft)
+            }
         }
     }
+}
+
+private fun coerceIntoRectAlong(innerRect: Rect, outerRect: Rect, line: Line): Offset {
+    val (x, y) = innerRect
+    val (dx, dy) = line.directionVector
+    var lower = Float.NEGATIVE_INFINITY
+    var upper = Float.POSITIVE_INFINITY
+    when {
+        dx > EPSILON -> {
+            lower = (outerRect.left - x)/dx
+            upper = (outerRect.right - innerRect.width - y)/dx
+        }
+        dx < -EPSILON -> {
+            upper = -(outerRect.left - x)/dx
+            lower = -(outerRect.right - innerRect.width - y)/dx
+        }
+        else -> { // vertical line
+        }
+    }
+    // same vert
+    // choose k with minimal abs
+    // return tl+k*d
+    if (lower > upper)
+        return innerRect.topLeft
+    return innerRect.topLeft
 }
 
 private fun DrawScope.drawDebugObjects(

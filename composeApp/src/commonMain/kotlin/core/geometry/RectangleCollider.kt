@@ -24,7 +24,8 @@ object RectangleCollider {
 
     /** Rectangle collider.
      * @return `true` if intersection of [obj]'s border and [rect] is
-     * non-empty (including [rect]'s interior), otherwise `false` */
+     * non-empty (including [rect]'s interior), otherwise `false`.
+     */
     fun objectRectangleCollisionTest(obj: GCircleOrConcreteArcPath, rect: Rect): Boolean =
         when (obj) {
             is Circle -> {
@@ -39,7 +40,9 @@ object RectangleCollider {
             is Point ->
                 obj.x in rect.left .. rect.right &&
                 obj.y in rect.top .. rect.bottom
-            is ImaginaryCircle -> false
+            is ImaginaryCircle ->
+                circleRectCollisionTest(obj.toRealCircle(), rect)
+//                false
             is ConcreteArcPath ->
                 concreteArcPathRectangleCollisionTest(obj, rect)
         }

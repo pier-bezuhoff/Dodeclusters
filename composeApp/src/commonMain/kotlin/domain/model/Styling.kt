@@ -1,11 +1,9 @@
 package domain.model
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import domain.ColorAsCss
 import domain.ColorCssSerializer
-import domain.SerializableOffset
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
@@ -25,7 +23,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonTransformingSerializer
 import kotlinx.serialization.json.jsonObject
-import kotlin.collections.contains
 
 // TODO: labels for all objects
 // TODO: size/thickness for all objects
@@ -54,7 +51,11 @@ data class Styling(
     data class Label(
         val content: String,
         @EncodeDefault(EncodeDefault.Mode.NEVER)
-        val positionShift: SerializableOffset = Offset.Zero,
+        val shiftX: Float = 0f,
+        @EncodeDefault(EncodeDefault.Mode.NEVER)
+        val shiftY: Float = 0f,
+        @EncodeDefault(EncodeDefault.Mode.NEVER)
+        val order: Double = 0.0,
     )
 
     // docs: https://github.com/Kotlin/kotlinx.serialization/blob/master/docs/json.md#manipulating-default-values
