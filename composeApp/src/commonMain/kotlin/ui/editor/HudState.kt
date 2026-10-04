@@ -27,6 +27,7 @@ data class HudState(
     val showAdjustExprButton: Boolean,
     val showOrientationToggle: Boolean,
     val showMovePointToInfinity: Boolean,
+    val showLabelButton: Boolean,
     val labelInputIsActive: Boolean,
     val lineThicknessInputIsActive: Boolean,
     val mostCommonBorderColorOfSelection: Color?,

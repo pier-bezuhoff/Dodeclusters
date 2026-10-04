@@ -110,6 +110,7 @@ import ui.theme.CustomStyles
 import ui.theme.customColors
 import ui.toPath
 import ui.tools.Tool
+import kotlin.math.max
 import kotlin.math.min
 
 // NOTE: changes to this canvas should be reflected on ScreenshotableCanvas for proper screenshots
@@ -372,14 +373,19 @@ private fun BoxScope.HUD(
                 borderColor = borderColor,
                 showAdjustExprButton = hudState.showAdjustExprButton,
                 showOrientationToggle = hudState.showOrientationToggle,
+                showLabelButton = hudState.showLabelButton,
                 noPhantomsSelected = hudState.noPhantomsSelected,
                 isLocked = hudState.selectionIsLocked,
+                labelInputIsActive = hudState.labelInputIsActive,
+                labelProvider = labelProvider,
                 toolAction = toolAction,
                 onScale = onScale,
                 onScaleFinished = onScaleFinished,
                 onRotate = onRotate,
                 onRotateStarted = onRotateStarted,
                 onRotateFinished = onRotateFinished,
+                setLabel = setLabel,
+                dismissLabelInput = dismissInputSubmode,
             )
         }
         ContextActions.POINT -> {
@@ -391,6 +397,7 @@ private fun BoxScope.HUD(
                 noPhantomsSelected = hudState.noPhantomsSelected,
                 isLocked = hudState.selectionIsLocked,
                 showMovePointToInfinity = hudState.showMovePointToInfinity,
+                showLabelButton = hudState.showLabelButton,
                 labelInputIsActive = hudState.labelInputIsActive,
                 labelProvider = labelProvider,
                 toolAction = toolAction,
@@ -1627,12 +1634,14 @@ private fun DrawScope.drawLabels(
             }
             is Line -> {
                 val p = o.order2point(label.order)
-                // coercion shift should be parallel to the line
                 val x = (p.x.toFloat() - halfWidth + label.shiftX)
                 val y = (p.y.toFloat() + label.shiftY)
-                val topLeft = coerceIntoRectAlong(
-                    Rect(x, y, x + w, y + h),
-                    visibleRect, o)
+                val topLeft = fitRectIntoRectAlong(
+                    innerRect = Rect(x, y, x + w, y + h),
+                    outerRect = visibleRect.deflate(100f),
+                    dx = o.directionX.toFloat(),
+                    dy = o.directionY.toFloat(),
+                )
                 drawText(layoutResult, color ?: freeCircleColor, topLeft)
             }
             is ImaginaryCircle -> {
@@ -1653,29 +1662,43 @@ private fun DrawScope.drawLabels(
     }
 }
 
-private fun coerceIntoRectAlong(innerRect: Rect, outerRect: Rect, line: Line): Offset {
-    val (x, y) = innerRect
-    val (dx, dy) = line.directionVector
-    var lower = Float.NEGATIVE_INFINITY
-    var upper = Float.POSITIVE_INFINITY
+private fun fitRectIntoRectAlong(
+    innerRect: Rect,
+    outerRect: Rect,
+    dx: Float,
+    dy: Float,
+): Offset {
+    var minT = Float.NEGATIVE_INFINITY
+    var maxT = Float.POSITIVE_INFINITY
     when {
         dx > EPSILON -> {
-            lower = (outerRect.left - x)/dx
-            upper = (outerRect.right - innerRect.width - y)/dx
+            minT = (outerRect.left - innerRect.left)/dx
+            maxT = (outerRect.right - innerRect.right)/dx
         }
         dx < -EPSILON -> {
-            upper = -(outerRect.left - x)/dx
-            lower = -(outerRect.right - innerRect.width - y)/dx
+            maxT = (outerRect.left - innerRect.left)/dx
+            minT = (outerRect.right - innerRect.right)/dx
         }
-        else -> { // vertical line
-        }
+        else -> { /* vertical line */ }
     }
-    // same vert
-    // choose k with minimal abs
-    // return tl+k*d
-    if (lower > upper)
-        return innerRect.topLeft
-    return innerRect.topLeft
+    when {
+        dy > EPSILON -> {
+            minT = max(minT, (outerRect.top - innerRect.top)/dy)
+            maxT = min(maxT, (outerRect.bottom - innerRect.bottom)/dy)
+        }
+        dy < -EPSILON -> {
+            maxT = min(maxT, (outerRect.top - innerRect.top)/dy)
+            minT = max(minT, (outerRect.bottom - innerRect.bottom)/dy)
+        }
+        else -> { /* horizontal line */ }
+    }
+    val t = when {
+        maxT < minT -> 0f
+        0f < minT -> minT
+        maxT < 0f -> maxT
+        else -> 0f
+    }
+    return Offset(innerRect.left + t*dx, innerRect.top + t*dy)
 }
 
 private fun DrawScope.drawDebugObjects(

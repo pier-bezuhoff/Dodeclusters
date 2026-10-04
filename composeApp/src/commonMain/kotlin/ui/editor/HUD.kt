@@ -166,7 +166,12 @@ fun BoxScope.SelectionContextActions(
     isLocked: Boolean,
     scaleSliderPercentageProvider: () -> Float,
     rotationHandleAngleProvider: () -> Float,
+    showLabelButton: Boolean,
+    labelInputIsActive: Boolean,
+    labelProvider: () -> String?,
     toolAction: (Tool) -> Unit = {},
+    setLabel: (String) -> Unit = {},
+    dismissLabelInput: () -> Unit = {},
     onScale: (newScaleSliderPercentage: Float) -> Unit = {},
     onScaleFinished: () -> Unit = {},
     onRotate: (newRotationAngle: Float) -> Unit = {},
@@ -233,6 +238,16 @@ fun BoxScope.SelectionContextActions(
                 onClick = toolAction
             )
             // MAYBE: fill color here too
+            if (showLabelButton) {
+                LabelButton(
+                    labelInputIsActive = labelInputIsActive,
+                    labelProvider = labelProvider,
+                    buttonModifier = buttonModifier,
+                    toolAction = toolAction,
+                    setLabel = setLabel,
+                    dismissLabelInput = dismissLabelInput,
+                )
+            }
             TwoIconButtonWithTooltip(
                 iconResource = Tool.MarkAsPhantoms.icon,
                 disabledIconResource = Tool.MarkAsPhantoms.disabledIcon,
@@ -334,13 +349,16 @@ private fun SelectionContextActionsPreview() {
     ContextActionsWrapper { positions ->
         SelectionContextActions(
             concretePositions = positions,
-            scaleSliderPercentageProvider = { 0.5f },
-            rotationHandleAngleProvider = { 0f },
             borderColor = Color.Blue,
             showAdjustExprButton = true,
             noPhantomsSelected = true,
             showOrientationToggle = true,
             isLocked = false,
+            showLabelButton = true,
+            labelInputIsActive = false,
+            scaleSliderPercentageProvider = { 0.5f },
+            rotationHandleAngleProvider = { 0f },
+            labelProvider = { null },
         )
     }
 }
@@ -353,6 +371,7 @@ fun BoxScope.PointContextActions(
     noPhantomsSelected: Boolean,
     isLocked: Boolean,
     showMovePointToInfinity: Boolean,
+    showLabelButton: Boolean,
     labelInputIsActive: Boolean,
     labelProvider: () -> String?,
     toolAction: (Tool) -> Unit = {},
@@ -380,28 +399,14 @@ fun BoxScope.PointContextActions(
                 contentColor = pointColor,
                 onClick = toolAction
             )
-            Row(
-                Modifier.background(color =
-                    if (labelInputIsActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
-                    else Color.Transparent,
-                ),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box { // popup position root container
-                    if (labelInputIsActive) {
-                        LabelInputPopup(
-                            previousLabelProvider = labelProvider,
-                            setLabel = setLabel,
-                            dismiss = dismissLabelInput,
-                        )
-                    }
-                }
-                SimpleToolButtonWithTooltip(Tool.SetLabel,
-                    buttonModifier,
-//                    containerColor =
-//                        if (labelInputIsActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
-//                        else Color.Unspecified,
-                    onClick = toolAction
+            if (showLabelButton) {
+                LabelButton(
+                    labelInputIsActive = labelInputIsActive,
+                    labelProvider = labelProvider,
+                    buttonModifier = buttonModifier,
+                    toolAction = toolAction,
+                    setLabel = setLabel,
+                    dismissLabelInput = dismissLabelInput,
                 )
             }
             TwoIconButtonWithTooltip(
@@ -422,6 +427,41 @@ fun BoxScope.PointContextActions(
             }
             SimpleToolButtonWithTooltip(Tool.Delete, buttonModifier, onClick = toolAction)
         }
+    }
+}
+
+@Composable
+private fun LabelButton(
+    labelInputIsActive: Boolean,
+    labelProvider: () -> String?,
+    buttonModifier: Modifier = Modifier,
+    toolAction: (Tool) -> Unit = {},
+    setLabel: (String) -> Unit = {},
+    dismissLabelInput: () -> Unit = {},
+) {
+    Row(
+        Modifier.background(color =
+            if (labelInputIsActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+            else Color.Transparent,
+        ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box { // popup position root container
+            if (labelInputIsActive) {
+                LabelInputPopup(
+                    previousLabelProvider = labelProvider,
+                    setLabel = setLabel,
+                    dismiss = dismissLabelInput,
+                )
+            }
+        }
+        SimpleToolButtonWithTooltip(Tool.SetLabel,
+            buttonModifier,
+//                    containerColor =
+//                        if (labelInputIsActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+//                        else Color.Unspecified,
+            onClick = toolAction
+        )
     }
 }
 
@@ -483,6 +523,7 @@ private fun PointContextActionsPreview() {
         PointContextActions(
             pointColor = Color.Blue,
             showAdjustExprButton = true,
+            showLabelButton = true,
             labelInputIsActive = false,
             noPhantomsSelected = true,
             isLocked = false,

@@ -304,6 +304,7 @@ class EditorViewModel(
             showAdjustExprButton = showAdjustExprButton,
             showOrientationToggle = canvasState.showDirectionArrows && !selectionIsLocked,
             showMovePointToInfinity = showMovePointToInfinity,
+            showLabelButton = selection.gCircles.size == 1 && selection.arcPaths.isEmpty(),
             labelInputIsActive = submodeType == Submode.Type.LABEL_INPUT,
             lineThicknessInputIsActive = submodeType == Submode.Type.LINE_THICKNESS_INPUT,
             mostCommonBorderColorOfSelection = getMostCommonBorderColorInSelection(),
@@ -1866,7 +1867,13 @@ class EditorViewModel(
                     if (label.isNullOrBlank())
                         null
                     else
-                        Styling.Label(label)
+                        Styling.Label(
+                            content = label,
+                            shiftX = when (objects[ix]) {
+                                is Circle -> 10f
+                                else -> 0f
+                            },
+                        )
                 )
             }
         }
