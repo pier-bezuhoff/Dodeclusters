@@ -1,8 +1,10 @@
 package domain.io
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -22,7 +24,10 @@ actual fun OpenFileButton(
 ) {
     val context = LocalContext.current
     // MAYBE: use OpenDocument instead of GetContent for persistent files only (no cloud etc)
-    val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
+    val launcher = rememberLauncherForActivityResult(
+        contract = MultipleMimeTypeGetContentContract()
+//        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
         // Q: use launch as coroutine instead?
         val content: String? = uri?.let {
             readFromUri(context, uri)
@@ -31,16 +36,29 @@ actual fun OpenFileButton(
     }
     IconButton(
         onClick = {
-            // NOTE: "text/plain" doesnt work for custom extensions it seems
-            launcher.launch(lookupData.androidMimeType)
-//            launcher.launch("application/*") // casts a wide net, including .ddc, .yaml, ..., pdf..
-//        launcher.launch("application/yaml") // bugged
+            launcher.launch(lookupData.androidMimeTypes.toTypedArray())
         },
         modifier = modifier,
         content = iconContent,
     )
     openRequests.collectLatestWithLifecycle {
-        launcher.launch(lookupData.androidMimeType)
+        launcher.launch(lookupData.androidMimeTypes.toTypedArray())
+    }
+}
+
+private class MultipleMimeTypeGetContentContract : ActivityResultContract<Array<String>, Uri?>() {
+
+    private val getContentContract = ActivityResultContracts.GetContent()
+
+    override fun createIntent(context: Context, input: Array<String>): Intent {
+        val baseMimeType = "*/*"
+        return getContentContract.createIntent(context, baseMimeType).apply {
+            putExtra(Intent.EXTRA_MIME_TYPES, input)
+        }
+    }
+
+    override fun parseResult(resultCode: Int, intent: Intent?): Uri? {
+        return getContentContract.parseResult(resultCode, intent)
     }
 }
 

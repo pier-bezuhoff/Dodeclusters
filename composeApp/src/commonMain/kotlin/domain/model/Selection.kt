@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
 data class Selection(
     val gCircles: List<Ix> = emptyList(),
     val arcPaths: List<Ix> = emptyList(),
+    val labels: List<Ix> = emptyList(),
     // MAYBE: separate CLI from points cuz it's used in context-action logic
 ) {
     /** [gCircles] + [arcPaths] */

@@ -166,10 +166,14 @@ fun BoxScope.EditorCanvas(
             style.label?.let { ix to it.content }
         }.toMap()
     }
-    val labelLayouts = remember(labels, textMeasurer, labelTextStyle) {
+    val labelLayouts = remember(labels, labelTextStyle) {
         val results = mutableMapOf<Ix, TextLayoutResult>()
         for ((ix, label) in labels) {
             results[ix] = textMeasurer.measure(label, labelTextStyle)
+//                .also {
+//                    val charIndex = it.getOffsetForPosition(Offset.Zero)
+//                    it.getBoundingBox(charIndex)
+//                }
         }
         results
     }
@@ -1636,12 +1640,14 @@ private fun DrawScope.drawLabels(
                 val p = o.order2point(label.order)
                 val x = (p.x.toFloat() - halfWidth + label.shiftX)
                 val y = (p.y.toFloat() + label.shiftY)
-                val topLeft = fitRectIntoRectAlong(
-                    innerRect = Rect(x, y, x + w, y + h),
-                    outerRect = visibleRect.deflate(100f),
-                    dx = o.directionX.toFloat(),
-                    dy = o.directionY.toFloat(),
-                )
+                val topLeft =
+                    Offset(x, y)
+//                    fitRectIntoRectAlong(
+//                        innerRect = Rect(x, y, x + w, y + h),
+//                        outerRect = visibleRect.deflatePercentage(15f),
+//                        dx = o.directionX.toFloat(),
+//                        dy = o.directionY.toFloat(),
+//                    )
                 drawText(layoutResult, color ?: freeCircleColor, topLeft)
             }
             is ImaginaryCircle -> {
@@ -1662,6 +1668,16 @@ private fun DrawScope.drawLabels(
     }
 }
 
+private fun Rect.deflatePercentage(percentage: Float): Rect {
+    val dw = -percentage*width
+    val dh = -percentage*height
+    return Rect(
+        left - dw, top - dh,
+        right + dw, bottom + dh,
+    )
+}
+
+// ts dont work..
 private fun fitRectIntoRectAlong(
     innerRect: Rect,
     outerRect: Rect,

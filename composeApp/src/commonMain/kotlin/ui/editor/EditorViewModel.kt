@@ -1866,14 +1866,20 @@ class EditorViewModel(
                 it.copy(label =
                     if (label.isNullOrBlank())
                         null
-                    else
+                    else {
+                        val o = objects[ix]
                         Styling.Label(
                             content = label,
-                            shiftX = when (objects[ix]) {
+                            shiftX = when (o) {
                                 is Circle -> 10f
                                 else -> 0f
                             },
+                            order = when (o) {
+                                is Line -> 0.0
+                                else -> 0.0
+                            },
                         )
+                    }
                 )
             }
         }
@@ -2039,6 +2045,10 @@ class EditorViewModel(
         }
     }
 
+    private fun tryGrabbingLabel(absolutePosition: Offset) {
+        1
+    }
+
     fun onDown(position: Offset) {
         if (history.newContinuousChange(null)) {
             recordHistory()
@@ -2081,6 +2091,9 @@ class EditorViewModel(
                 is ToolMode if (partialArgList?.isFull != true) ->
                     toolManager.downToolArg(absolutePosition = absolutePosition)
                 else -> {}
+            }
+            if (mode is SelectionMode && submode == null && selection.isEmpty()) {
+                tryGrabbingLabel(absolutePosition = absolutePosition)
             }
         }
         // should work independent of circle visibility
@@ -2562,6 +2575,37 @@ class EditorViewModel(
         transformWhatWeCan(targets, translation = translation, focus = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
     }
 
+    private fun dragLabel(
+        absoluteCentroid: Offset,
+    ) {
+        val ix = selection.labels.firstOrNull() ?: return
+        val o = objects[ix] as? GCircle ?: return
+        objectModel.updateStyle(ix) {
+            val order: Double
+            val anchor: Point
+            when (o) {
+                is CircleOrLine -> {
+                    order = o.point2order(Point.fromOffset(absoluteCentroid))
+                    anchor = o.order2point(order)
+                }
+                is ImaginaryCircle -> {
+                    val c = o.toRealCircle()
+                    order = c.point2order(Point.fromOffset(absoluteCentroid))
+                    anchor = c.order2point(order)
+                }
+                is Point -> {
+                    order = 0.0
+                    anchor = o
+                }
+            }
+            it.copy(label = it.label?.copy(
+                shiftX = absoluteCentroid.x - anchor.x.toFloat(),
+                shiftY = absoluteCentroid.y - anchor.y.toFloat(),
+                order = order,
+            ))
+        }
+    }
+
     private fun dragGrabbedArcMidpoint(
         absoluteCentroid: Offset,
         sm: Submode.GrabbedArcMidpoint,
@@ -2826,14 +2870,15 @@ class EditorViewModel(
                     selectedCircles.isNotEmpty() && canvasState.showCircles || selectedPoints.isNotEmpty() || selection.arcPaths.isNotEmpty()
                 ) ->
                     dragSelection(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
+                SelectionMode if (selection.labels.size == 1) ->
+                    dragLabel(absoluteCentroid = absoluteCentroid)
                 ToolMode.ARC_PATH ->
                     partialArcPathManager.updatePartialArcPathFocus(absolutePosition = absoluteCentroid)
+                is ToolMode if (
+                    toolManager.tryUpdatingToolArg(absolutePosition = absoluteCentroid)
+                ) -> {}
                 else -> {
-                    val toolArgIsUpdated = mode is ToolMode &&
-                        toolManager.tryUpdatingToolArg(absolutePosition = absoluteCentroid)
-                    if (!toolArgIsUpdated) {
-                        moveAroundCanvas(translation = pan, absoluteCentroid = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
-                    }
+                    moveAroundCanvas(translation = pan, absoluteCentroid = absoluteCentroid, zoom = zoom, rotationAngle = rotationAngle)
                 }
             }
             else -> {}
@@ -2864,6 +2909,7 @@ class EditorViewModel(
     fun onUp(position: Offset?) {
         // history is recorded at the end of :0nUp
         val absolutePosition = position?.let { absolute(it) }
+        selection = selection.copy(labels = emptyList())
         when (mode) {
             SelectionMode.Drag -> {
                 when (submode) {

@@ -23,6 +23,7 @@ kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
+        withHostTest {}
     }
 
     @OptIn(ExperimentalWasmDsl::class)

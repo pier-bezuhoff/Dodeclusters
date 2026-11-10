@@ -1010,19 +1010,20 @@ private fun EditorTopBar(
                     modifier = buttonModifier,
                     onClick = { openNewBlank() },
                 )
-                WithTooltip(stringResource(Tool.OpenFile.description)) {
-                    OpenFileButton(
-                        lookupData = LookupData.YAML.copy(directory = saveConfig.directory),
-                        modifier = buttonModifier,
-                        openRequests = openFileRequests,
-                        onOpen = loadFromYaml,
-                    ) {
-                        Icon(
-                            painter = painterResource(Tool.OpenFile.icon),
-                            contentDescription = stringResource(Tool.OpenFile.name),
-                            modifier = Modifier,
-                        )
-                    }
+            }
+            // FIX: if open button is invisible open file requests are ignored
+            WithTooltip(stringResource(Tool.OpenFile.description)) {
+                OpenFileButton(
+                    lookupData = LookupData.YAML.copy(directory = saveConfig.directory),
+                    modifier = buttonModifier,
+                    openRequests = openFileRequests,
+                    onOpen = loadFromYaml,
+                ) {
+                    Icon(
+                        painter = painterResource(Tool.OpenFile.icon),
+                        contentDescription = stringResource(Tool.OpenFile.name),
+                        modifier = Modifier,
+                    )
                 }
             }
             WithTooltip(stringResource(Res.string.save_as)) {
