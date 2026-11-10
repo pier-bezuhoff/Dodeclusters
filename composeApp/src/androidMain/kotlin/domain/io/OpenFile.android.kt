@@ -6,21 +6,17 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import domain.collectLatestWithLifecycle
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.Flow
 import java.io.IOException
 
 @Composable
-actual fun OpenFileButton(
+actual fun OpenFileRequests(
     lookupData: LookupData,
-    modifier: Modifier,
-    openRequests: SharedFlow<Unit>?,
+    openRequests: Flow<Unit>,
     onOpen: (content: String?, filename: String?) -> Unit,
-    iconContent: @Composable (() -> Unit),
 ) {
     val context = LocalContext.current
     // MAYBE: use OpenDocument instead of GetContent for persistent files only (no cloud etc)
@@ -34,14 +30,7 @@ actual fun OpenFileButton(
         }
         onOpen(content, uri?.path)
     }
-    IconButton(
-        onClick = {
-            launcher.launch(lookupData.androidMimeTypes.toTypedArray())
-        },
-        modifier = modifier,
-        content = iconContent,
-    )
-    openRequests.collectLatestWithLifecycle {
+    openRequests.collectLatestWithLifecycle(lookupData) {
         launcher.launch(lookupData.androidMimeTypes.toTypedArray())
     }
 }

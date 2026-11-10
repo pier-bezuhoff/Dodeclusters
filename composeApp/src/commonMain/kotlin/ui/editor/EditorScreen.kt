@@ -94,8 +94,7 @@ import domain.collectLatestWithLifecycle
 import domain.collectWithLifecycle
 import domain.io.DdcSharing
 import domain.io.LookupData
-import domain.io.OpenFileButton
-import domain.io.SaveConfig
+import domain.io.OpenFileRequests
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
@@ -202,8 +201,6 @@ fun EditorScreenRoot(
         partialArgListInfo = viewModel.partialArgListInfo,
         undoIsEnabled = viewModel.undoIsEnabled,
         redoIsEnabled = viewModel.redoIsEnabled,
-        saveConfig = viewModel.saveConfig,
-        openFileRequests = viewModel.openFileRequests,
         openMenu = {
             coroutineScope.launch { drawerState.open() }
         },
@@ -214,10 +211,6 @@ fun EditorScreenRoot(
         },
         openSettings = openSettings,
         hidePanel = viewModel::hidePanel,
-        loadFromYaml = { content, filename ->
-            viewModel.loadDdcFromYaml(content, filename)
-            coroutineScope.launch { drawerState.close() }
-        },
         undo = viewModel::undo,
         redo = viewModel::redo,
         switchToCategory = { viewModel.switchToCategory(it, togglePanel = true) },
@@ -431,10 +424,23 @@ fun EditorScreenRoot(
     LoadExternalDdcContent(viewModel, ddcContent)
     CollectLifecycleEvents(viewModel, lifecycleEvents)
     SubscribeToSettingsAndStartPeriodicAutosave(viewModel)
+    val lookupData = LookupData.YAML.copy(
+        directory = viewModel.saveConfig.directory,
+    )
+    OpenFileRequests(
+        lookupData = lookupData,
+        onOpen = { content, filename ->
+            viewModel.loadDdcFromYaml(content, filename)
+            coroutineScope.launch { drawerState.close() }
+        },
+        openRequests = viewModel.openFileRequests,
+    )
     CollectSnackbarMessages(viewModel, snackbarHostState)
     ReplaceBackgroundDependingOnTheme(viewModel)
     PreloadIcons()
-    keyboardActions.collectWithLifecycle { viewModel.processKeyboardAction(it) }
+    keyboardActions.collectWithLifecycle { keyboardAction ->
+        viewModel.processKeyboardAction(keyboardAction)
+    }
     viewModel.drawerOpenCloseRequests.collectWithLifecycle { drawerValue ->
         when (drawerValue) {
             DrawerValue.Open -> drawerState.open()
@@ -459,15 +465,12 @@ private fun EditorScreen(
     partialArgListInfo: PartialArgListInfo,
     undoIsEnabled: Boolean,
     redoIsEnabled: Boolean,
-    saveConfig: SaveConfig = SaveConfig(),
-    openFileRequests: SharedFlow<Unit>? = null,
     openMenu: () -> Unit = {},
     openNewBlank: () -> Unit = {},
     openFile: () -> Unit = {},
     showSaveOptionsDialog: () -> Unit = {},
     openSettings: () -> Unit = {},
     hidePanel: () -> Unit = {},
-    loadFromYaml: (content: String?, filename: String?) -> Unit = { _, _ -> },
     undo: () -> Unit = {},
     redo: () -> Unit = {},
     switchToCategory: (Category) -> Unit = {},
@@ -529,7 +532,7 @@ private fun EditorScreen(
                             partialArgListInfo = partialArgListInfo,
                             modifier = Modifier.align(Alignment.TopStart),
                         )
-                        EditorTopBar(undoIsEnabled = undoIsEnabled, redoIsEnabled = redoIsEnabled, showSaveOptionsDialog = showSaveOptionsDialog, openNewBlank = openNewBlank, loadFromYaml = loadFromYaml, undo = undo, redo = redo, openMenu = openMenu, saveConfig = saveConfig, openFileRequests = openFileRequests,
+                        EditorTopBar(undoIsEnabled = undoIsEnabled, redoIsEnabled = redoIsEnabled, showSaveOptionsDialog = showSaveOptionsDialog, openNewBlank = openNewBlank, openFile = openFile, undo = undo, redo = redo, openMenu = openMenu,
                             modifier = Modifier.align(Alignment.TopEnd),
                         )
                         if (isLandscape) {
@@ -967,14 +970,12 @@ private fun EditorTopBar(
     undoIsEnabled: Boolean,
     redoIsEnabled: Boolean,
     openNewBlank: () -> Unit,
+    openFile: () -> Unit,
     showSaveOptionsDialog: () -> Unit,
-    loadFromYaml: (content: String?, filename: String?) -> Unit,
     undo: () -> Unit,
     redo: () -> Unit,
     openMenu: () -> Unit,
-    saveConfig: SaveConfig,
     modifier: Modifier = Modifier,
-    openFileRequests: SharedFlow<Unit>? = null,
 ) {
     val isCompact = MaterialTheme.adaptiveSizing.isCompact
     val displayAllActions =
@@ -1010,20 +1011,17 @@ private fun EditorTopBar(
                     modifier = buttonModifier,
                     onClick = { openNewBlank() },
                 )
-            }
-            // FIX: if open button is invisible open file requests are ignored
-            WithTooltip(stringResource(Tool.OpenFile.description)) {
-                OpenFileButton(
-                    lookupData = LookupData.YAML.copy(directory = saveConfig.directory),
-                    modifier = buttonModifier,
-                    openRequests = openFileRequests,
-                    onOpen = loadFromYaml,
-                ) {
-                    Icon(
-                        painter = painterResource(Tool.OpenFile.icon),
-                        contentDescription = stringResource(Tool.OpenFile.name),
-                        modifier = Modifier,
-                    )
+                WithTooltip(stringResource(Tool.OpenFile.description)) {
+                    IconButton(
+                        onClick = openFile,
+                        modifier = buttonModifier,
+                    ) {
+                        Icon(
+                            painter = painterResource(Tool.OpenFile.icon),
+                            contentDescription = stringResource(Tool.OpenFile.name),
+                            modifier = Modifier,
+                        )
+                    }
                 }
             }
             WithTooltip(stringResource(Res.string.save_as)) {

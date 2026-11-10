@@ -2870,7 +2870,7 @@ class EditorViewModel(
                     selectedCircles.isNotEmpty() && canvasState.showCircles || selectedPoints.isNotEmpty() || selection.arcPaths.isNotEmpty()
                 ) ->
                     dragSelection(absoluteCentroid = absoluteCentroid, translation = pan, zoom = zoom, rotationAngle = rotationAngle)
-                SelectionMode if (selection.labels.size == 1) ->
+                is SelectionMode if (selection.labels.size == 1) ->
                     dragLabel(absoluteCentroid = absoluteCentroid)
                 ToolMode.ARC_PATH ->
                     partialArcPathManager.updatePartialArcPathFocus(absolutePosition = absoluteCentroid)

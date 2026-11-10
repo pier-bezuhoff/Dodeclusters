@@ -2,8 +2,7 @@ package domain.io
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.Modifier
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.Flow
 
 // MAYBE: make it less platform-specific
 @Immutable
@@ -21,18 +20,17 @@ data class LookupData(
             // "application/yaml" is no good for some normal .yml's (idk why)
             // BUG: "application/*" does not accept *small* yaml files in
             //  *some* file pickers (e.g. MIUI's default one), it thinks they are text/* or smth...
-            // NOTE: i know whom to blame, it only took 22 years... https://www.rfc-editor.org/rfc/rfc9512.html
+            // NOTE: i know whom to blame, it only took 22 years for application/yaml
+            //  ... https://www.rfc-editor.org/rfc/rfc9512.html
             androidMimeTypes = listOf("application/*", "text/*"),
         )
     }
 }
 
-/** Open text file button */
+/** Platform-specific handler for file-openings [openRequests] */
 @Composable
-expect fun OpenFileButton(
+expect fun OpenFileRequests(
     lookupData: LookupData,
-    modifier: Modifier = Modifier,
-    openRequests: SharedFlow<Unit>? = null,
+    openRequests: Flow<Unit>,
     onOpen: (content: String?, filename: String?) -> Unit,
-    iconContent: @Composable (() -> Unit),
 )

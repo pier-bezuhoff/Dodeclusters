@@ -1,18 +1,17 @@
 package domain.io
 
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.AwtWindow
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.open_file
 import domain.collectLatestWithLifecycle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -23,22 +22,13 @@ import java.io.IOException
 
 // works on Linux, todo: test on Windows
 @Composable
-actual fun OpenFileButton(
+actual fun OpenFileRequests(
     lookupData: LookupData,
-    modifier: Modifier,
-    openRequests: SharedFlow<Unit>?,
+    openRequests: Flow<Unit>,
     onOpen: (content: String?, filename: String?) -> Unit,
-    iconContent: @Composable (() -> Unit),
 ) {
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
-    IconButton(
-        onClick = {
-            fileDialogIsOpen = true
-        },
-        modifier = modifier,
-        content = iconContent,
-    )
     if (fileDialogIsOpen) {
         LoadFileDialog(lookupData) { directory, filename ->
             fileDialogIsOpen = false

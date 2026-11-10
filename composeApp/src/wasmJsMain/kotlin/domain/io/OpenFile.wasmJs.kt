@@ -2,13 +2,10 @@
 
 package domain.io
 
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import domain.collectLatestWithLifecycle
-import domain.collectWithLifecycle
 import kotlinx.browser.document
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.Flow
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.Event
 import org.w3c.files.File
@@ -16,21 +13,12 @@ import org.w3c.files.FileReader
 import org.w3c.files.get
 
 @Composable
-actual fun OpenFileButton(
+actual fun OpenFileRequests(
     lookupData: LookupData,
-    modifier: Modifier,
-    openRequests: SharedFlow<Unit>?,
+    openRequests: Flow<Unit>,
     onOpen: (content: String?, filename: String?) -> Unit,
-    iconContent: @Composable (() -> Unit),
 ) {
-    IconButton(
-        onClick = {
-            onClick(lookupData, onOpen)
-        },
-        modifier = modifier,
-        content = iconContent,
-    )
-    openRequests.collectLatestWithLifecycle {
+    openRequests.collectLatestWithLifecycle(lookupData) {
         onClick(lookupData, onOpen)
     }
 }
