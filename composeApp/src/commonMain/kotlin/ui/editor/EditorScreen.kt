@@ -382,7 +382,7 @@ fun EditorScreenRoot(
                     viewModel.showSnackbarMessage(SnackbarMessage.SUCCESSFUL_SHARE_OVERWRITE)
                 },
                 saveConfig = viewModel.saveConfig,
-                saveRequests = viewModel.saveFileRequests,
+                yamlSaveRequests = viewModel.saveFileRequests,
                 dialogActions = dialogActions,
             )
         }

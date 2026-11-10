@@ -44,6 +44,7 @@ import domain.ColorAsCss
 import domain.Ix
 import domain.PointSnapResult
 import domain.ProgressState
+import domain.SharedRequestFlow
 import domain.Snapping
 import domain.angleDeg
 import domain.cluster.Constellation
@@ -374,16 +375,10 @@ class EditorViewModel(
 
     /** Open file requests that generally originate from the keyboard events and are used in
      * platform-dependent buttons */
-    val openFileRequests: MutableSharedFlow<Unit> =
-        MutableSharedFlow(
-            replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
-        )
+    val openFileRequests: MutableSharedFlow<Unit> = SharedRequestFlow()
     /** Save file requests (quick save/overwrite or save as) that generally originate from
      * the keyboard events and are used in platform-dependent buttons */
-    val saveFileRequests: MutableSharedFlow<SaveRequest> =
-        MutableSharedFlow(
-            replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
-        )
+    val saveFileRequests: MutableSharedFlow<SaveRequest> = SharedRequestFlow()
     var saveConfig: SaveConfig by mutableStateOf(SaveConfig())
         private set
 

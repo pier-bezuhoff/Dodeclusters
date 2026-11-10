@@ -49,18 +49,21 @@ import dodeclusters.composeapp.generated.resources.share_new_error
 import dodeclusters.composeapp.generated.resources.share_new_name
 import dodeclusters.composeapp.generated.resources.share_new_progress
 import domain.LoadingState
+import domain.SharedRequestFlow
 import domain.collectLatestWithLifecycle
 import domain.io.DdcSharing
 import domain.io.DdcV5
 import domain.io.SaveBitmapAsPngButton
+import domain.io.SaveToolButton
 import domain.io.SaveConfig
 import domain.io.SaveData
-import domain.io.SaveFileButton
+import domain.io.SaveFileRequests
 import domain.io.SaveRequest
 import domain.io.SaveResult
 import domain.io.SharedId
 import domain.io.SharedIdAndOwnedStatus
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
@@ -87,13 +90,55 @@ fun SaveOptionsDialog(
     onSuccessfulShareOverwrite: () -> Unit,
     ddcSharing: DdcSharing? = null,
     saveConfig: SaveConfig = SaveConfig(),
-    saveRequests: SharedFlow<SaveRequest>? = null,
+    yamlSaveRequests: MutableSharedFlow<SaveRequest>,
+    svgSaveRequests: MutableSharedFlow<SaveRequest> = remember { SharedRequestFlow() },
     dialogActions: SharedFlow<DialogAction>? = null,
 ) {
+    val yamlSaveData = SaveData( // name.yml
+        name = saveConfig.name ?: Tool.Save.DEFAULT_NAME,
+        extension = Tool.Save.EXTENSION,
+        lastDirectory = saveConfig.directory,
+        uri = saveConfig.uri,
+        otherDisplayedExtensions = Tool.Save.otherDisplayedExtensions,
+        mimeType = Tool.Save.MIME_TYPE,
+        prepareContent = saveAsYaml,
+    )
+    val pngSaveData = SaveData(
+        name = saveConfig.name ?: Tool.PngExport.DEFAULT_NAME,
+        extension = Tool.PngExport.EXTENSION,
+        lastDirectory = saveConfig.directory,
+        uri = saveConfig.uri,
+        mimeType = Tool.PngExport.MIME_TYPE,
+        prepareContent = { },
+    )
+    val svgSaveData = SaveData(
+        name = saveConfig.name ?: Tool.SvgExport.DEFAULT_NAME,
+        extension = Tool.SvgExport.EXTENSION,
+        lastDirectory = saveConfig.directory,
+        uri = saveConfig.uri,
+        mimeType = Tool.SvgExport.MIME_TYPE,
+        prepareContent = exportAsSvg
+    )
     val coroutineScope = rememberCoroutineScope()
     var loadingShared: LoadingState<SharedIdAndOwnedStatus>? by remember { mutableStateOf(
         ddcSharing?.shared?.let { LoadingState.Completed(it) }
     ) }
+    SaveFileRequests(
+        saveData = yamlSaveData,
+        saveRequests = yamlSaveRequests,
+    ) { saveResult ->
+        println(if (saveResult.isSuccess) "YAML saved" else "YAML not saved")
+        onSaved(saveResult)
+        onConfirm()
+    }
+    SaveFileRequests(
+        saveData = svgSaveData,
+        saveRequests = svgSaveRequests,
+    ) { saveResult ->
+        println(if (saveResult.isSuccess) "SVG exported" else "SVG not exported")
+        onSaved(saveResult)
+        onConfirm()
+    }
     Dialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = true)
@@ -171,51 +216,19 @@ fun SaveOptionsDialog(
                         }
                         // NOTE: optimize by starting to encode bitmap when the user is
                         //  shown name-choosing dialog
-                        SaveFileButton(
-                            saveData = SaveData( // name.yml
-                                name = saveConfig.name ?: Tool.Save.DEFAULT_NAME,
-                                extension = Tool.Save.EXTENSION,
-                                lastDirectory = saveConfig.directory,
-                                uri = saveConfig.uri,
-                                otherDisplayedExtensions = Tool.Save.otherDisplayedExtensions,
-                                mimeType = Tool.Save.MIME_TYPE,
-                                prepareContent = saveAsYaml,
-                            ),
-                            buttonContent = {
-                                Row(
-                                    modifier = rowModifier,
-//                                horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        painterResource(Tool.Save.icon),
-                                        stringResource(Tool.Save.name),
-                                        iconModifier
-                                    )
-                                    Text(stringResource(Tool.Save.description))
-                                }
-                            },
+                        SaveToolButton(
+                            saveTool = Tool.Save,
                             modifier = buttonModifier,
                             containerColor = containerColor,
                             contentColor = contentColor,
-                            saveRequests = saveRequests,
-                        ) { saveResult ->
-                            println(if (saveResult.isSuccess) "YAML saved" else "YAML not saved")
-                            onSaved(saveResult)
-                            onConfirm()
+                        ) {
+                            yamlSaveRequests.tryEmit(SaveRequest.SAVE_AS)
                         }
                         // for one reason or another png export is quite slow on Web (desktop is quite fast,
                         // mobile is unimplemented)
                         SaveBitmapAsPngButton(
                             screenshotableCanvasParameters = screenshotableCanvasParameters,
-                            saveData = SaveData(
-                                name = saveConfig.name ?: Tool.PngExport.DEFAULT_NAME,
-                                extension = Tool.PngExport.EXTENSION,
-                                lastDirectory = saveConfig.directory,
-                                uri = saveConfig.uri,
-                                mimeType = Tool.PngExport.MIME_TYPE,
-                                prepareContent = { },
-                            ),
+                            saveData = pngSaveData,
                             buttonContent = {
                                 Row(
                                     modifier = rowModifier,
@@ -235,36 +248,13 @@ fun SaveOptionsDialog(
                                 onConfirm()
                             }
                         )
-                        SaveFileButton(
-                            saveData = SaveData(
-                                name = saveConfig.name ?: Tool.SvgExport.DEFAULT_NAME,
-                                extension = Tool.SvgExport.EXTENSION,
-                                lastDirectory = saveConfig.directory,
-                                uri = saveConfig.uri,
-                                mimeType = Tool.SvgExport.MIME_TYPE,
-                                prepareContent = exportAsSvg
-                            ),
-                            buttonContent = {
-                                Row(
-                                    modifier = rowModifier,
-//                                horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        painterResource(Tool.SvgExport.icon),
-                                        stringResource(Tool.SvgExport.name),
-                                        iconModifier,
-                                    )
-                                    Text(stringResource(Tool.SvgExport.description))
-                                }
-                            },
+                        SaveToolButton(
+                            saveTool = Tool.SvgExport,
                             modifier = buttonModifier,
                             containerColor = containerColor,
                             contentColor = contentColor,
-                        ) { saveResult ->
-                            println(if (saveResult.isSuccess) "SVG exported" else "SVG not exported")
-                            onSaved(saveResult)
-                            onConfirm()
+                        ) {
+                            svgSaveRequests.tryEmit(SaveRequest.SAVE_AS)
                         }
                     }
                 }

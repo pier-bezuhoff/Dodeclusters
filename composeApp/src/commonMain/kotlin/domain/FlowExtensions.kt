@@ -2,7 +2,6 @@ package domain
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.withCompositionLocal
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -12,15 +11,14 @@ import io.github.xxfast.kstore.KStore
 import io.github.xxfast.kstore.extensions.cached
 import io.github.xxfast.kstore.utils.ExperimentalKStoreApi
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.withContext
 import kotlin.reflect.KProperty
 
 context(viewModel: ViewModel)
@@ -128,3 +126,10 @@ inline operator fun <T> StateFlow<T>.getValue(
     property: KProperty<*>,
 ): T =
     this.value
+
+/** non-suspending flow for requests, max 1 at a time, dropping oldest */
+@Suppress("FunctionName")
+fun <T> SharedRequestFlow(): MutableSharedFlow<T> =
+    MutableSharedFlow(
+        replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )

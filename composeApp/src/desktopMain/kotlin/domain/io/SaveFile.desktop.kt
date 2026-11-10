@@ -1,22 +1,17 @@
 package domain.io
 
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.AwtWindow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.save_cluster_title
 import domain.collectLatestWithLifecycle
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
@@ -26,14 +21,9 @@ import java.io.File
 import java.io.IOException
 
 @Composable
-actual fun SaveFileButton(
+actual fun SaveFileRequests(
     saveData: SaveData<String>,
-    buttonContent: @Composable () -> Unit,
-    modifier: Modifier,
-    shape: Shape,
-    containerColor: Color,
-    contentColor: Color,
-    saveRequests: SharedFlow<SaveRequest>?,
+    saveRequests: Flow<SaveRequest>,
     onSaved: (SaveResult) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -71,19 +61,6 @@ actual fun SaveFileButton(
         }
     }
 
-    Button(
-        onClick = {
-            dialogIsOpen = true
-        },
-        modifier = modifier,
-        shape = shape,
-        colors = ButtonDefaults.buttonColors().copy(
-            containerColor = containerColor,
-            contentColor = contentColor,
-        )
-    ) {
-        buttonContent()
-    }
     if (dialogIsOpen) {
         SaveFileDialog(
             defaultDirectory = lastDirectory,

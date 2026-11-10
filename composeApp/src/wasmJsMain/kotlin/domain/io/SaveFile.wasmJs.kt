@@ -19,7 +19,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,8 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -46,10 +43,9 @@ import dodeclusters.composeapp.generated.resources.confirm
 import dodeclusters.composeapp.generated.resources.name
 import dodeclusters.composeapp.generated.resources.ok
 import domain.collectLatestWithLifecycle
-import domain.collectWithLifecycle
 import kotlinx.browser.document
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
@@ -60,30 +56,26 @@ import org.w3c.files.Blob
 import org.w3c.files.BlobPropertyBag
 
 @Composable
-actual fun SaveFileButton(
+actual fun SaveFileRequests(
     saveData: SaveData<String>,
-    buttonContent: @Composable () -> Unit,
-    modifier: Modifier,
-    shape: Shape,
-    containerColor: Color,
-    contentColor: Color,
-    saveRequests: SharedFlow<SaveRequest>?,
-    onSaved: (SaveResult) -> Unit
+    saveRequests: Flow<SaveRequest>,
+    onSaved: (SaveResult) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
     var dialogIsOpen by remember { mutableStateOf(false) }
-    var ddcName by remember { mutableStateOf(TextFieldValue(
+    var nameTFV by remember { mutableStateOf(TextFieldValue(
         text = saveData.name,
-        selection = TextRange(saveData.name.length) // important to insert cursor AT THE END
+        // important to insert the cursor AT THE END
+        selection = TextRange(saveData.name.length),
     )) }
     val textFieldFocusRequester = remember { FocusRequester() }
 
     fun tryToDownload() {
         coroutineScope.launch {
-            val data = saveData.copy(name = ddcName.text)
+            val data = saveData.copy(name = nameTFV.text)
             try {
                 val content = withContext(Dispatchers.Default) {
-                    data.prepareContent(ddcName.text)
+                    data.prepareContent(nameTFV.text)
                 }
                 downloadTextFileAsBlob(data.filename, content)
                 onSaved(SaveResult.Success(
@@ -99,21 +91,8 @@ actual fun SaveFileButton(
         dialogIsOpen = false
     }
 
-    Button(
-        onClick = {
-            dialogIsOpen = true
-        },
-        modifier = modifier,
-        shape = shape,
-        colors = ButtonDefaults.buttonColors().copy(
-            containerColor = containerColor,
-            contentColor = contentColor,
-        )
-    ) {
-        buttonContent()
-    }
     if (dialogIsOpen) {
-        // NOTE: for some only-god-knows-why reason when i try to use
+        // BUG: for some only-god-knows-why reason when i try to use
         //  non-hard-coded or maybe longer strings here, on Android/Chrome
         //  when the text field gains focus ALL texts in the app
         //  become invisible...
@@ -121,51 +100,13 @@ actual fun SaveFileButton(
         //  on number of words/characters displayed at the same time
         //  as if there is a cap...
         // ALSO: try hiding root dialog, maybe it's because of double-dialog setup
-        Dialog(
+        SaveFileDialog(
+            nameTFV = nameTFV,
+            focusRequester = textFieldFocusRequester,
+            onNameChange = { nameTFV = it },
             onDismissRequest = { dialogIsOpen = false },
-            properties = DialogProperties()
-        ) {
-            Surface(
-                modifier = Modifier.padding(16.dp),
-                shape = RoundedCornerShape(24.dp),
-            ) {
-                Column {
-                    OutlinedTextField(
-                        value = ddcName,
-                        onValueChange = { ddcName = it },
-                        label = { Text(stringResource(Res.string.name)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions( // smart ass enter capturing
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { tryToDownload() }
-                        ),
-                        modifier = Modifier
-                            .padding(24.dp)
-                            .onKeyEvent {
-                            if (it.key == Key.Enter) {
-                                tryToDownload()
-                                true
-                            } else false
-                        }.focusRequester(textFieldFocusRequester),
-                    )
-                    Button(
-                        onClick = { tryToDownload() },
-                        modifier = modifier.padding(8.dp).align(Alignment.End),
-                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                        shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
-                    ) {
-                        Icon(painterResource(Res.drawable.confirm), stringResource(Res.string.ok))
-                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text(
-                            stringResource(Res.string.ok),
-                            fontSize = 16.sp,
-                        )
-                    }
-                }
-            }
-        }
+            tryToDownload = { tryToDownload() },
+        )
         DisposableEffect(dialogIsOpen) {
             textFieldFocusRequester.requestFocus()
             onDispose { }
@@ -183,13 +124,74 @@ actual fun SaveFileButton(
     }
 }
 
+@Composable
+private fun SaveFileDialog(
+    nameTFV: TextFieldValue,
+    focusRequester: FocusRequester,
+    onNameChange: (TextFieldValue) -> Unit,
+    onDismissRequest: () -> Unit,
+    tryToDownload: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties()
+    ) {
+        Surface(
+            modifier = Modifier.padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+        ) {
+            Column {
+                OutlinedTextField(
+                    value = nameTFV,
+                    onValueChange = onNameChange,
+                    label = { Text(stringResource(Res.string.name)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions( // smart ass enter capturing
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { tryToDownload() }
+                    ),
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .onKeyEvent {
+                            if (it.key == Key.Enter) {
+                                tryToDownload()
+                                true
+                            } else false
+                        }.focusRequester(focusRequester),
+                )
+                Button(
+                    onClick = { tryToDownload() },
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .align(Alignment.End)
+                    ,
+                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+                    shape = RoundedCornerShape(50), // = 50% percent or shape = CircleShape
+                ) {
+                    Icon(
+                        painterResource(Res.drawable.confirm),
+                        stringResource(Res.string.ok)
+                    )
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text(
+                        stringResource(Res.string.ok),
+                        fontSize = 16.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
 // showSaveFilePicker() is still experimental, cmon js bros...
 
 // saves properly with given filename
 fun downloadTextFileAsBlob(filename: String, content: String) {
     val blobContent = JsArray<JsAny?>()
     blobContent[0] = content.toJsString()
-    // Q: why text/plain and not yaml mime or smth else?
+    // Q: why text/plain and not application/yaml or smth else?
     val file = Blob(blobContent, BlobPropertyBag("text/plain"))
     val a = document.createElement("a") as HTMLAnchorElement
     val url = URL.createObjectURL(file)
@@ -204,7 +206,7 @@ fun downloadTextFileAsBlob(filename: String, content: String) {
 // global js function
 external fun encodeURIComponent(str: String): String
 
-// saves properly with given filename
+// saves properly with a given filename
 private fun downloadTextFileAsUri(filename: String, content: String) {
     val contentType = "data:application/octet-stream"
     val uriContent = contentType + ";charset=utf-8," + encodeURIComponent(content)

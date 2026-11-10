@@ -6,18 +6,13 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import domain.collectLatestWithLifecycle
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileNotFoundException
@@ -28,19 +23,13 @@ import java.io.IOException
 // https://developer.android.com/training/data-storage/shared/documents-files#persist-permissions
 
 @Composable
-actual fun SaveFileButton(
+actual fun SaveFileRequests(
     saveData: SaveData<String>,
-    buttonContent: @Composable () -> Unit,
-    modifier: Modifier,
-    shape: Shape,
-    containerColor: Color,
-    contentColor: Color,
-    saveRequests: SharedFlow<SaveRequest>?,
+    saveRequests: Flow<SaveRequest>,
     onSaved: (SaveResult) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-
     val createDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(saveData.mimeType)
     ) { uri ->
@@ -64,21 +53,6 @@ actual fun SaveFileButton(
                 }
             }
         }
-    }
-    Button(
-        onClick = {
-            coroutineScope.launch {
-                createDocumentLauncher.launch(saveData.filename)
-            }
-        },
-        modifier = modifier,
-        shape = shape,
-        colors = ButtonDefaults.buttonColors().copy(
-            containerColor = containerColor,
-            contentColor = contentColor,
-        )
-    ) {
-        buttonContent()
     }
     saveRequests.collectLatestWithLifecycle { saveRequest ->
         coroutineScope.launch {
