@@ -170,11 +170,8 @@ fun BoxScope.EditorCanvas(
         val results = mutableMapOf<Ix, TextLayoutResult>()
         for ((ix, label) in labels) {
             results[ix] = textMeasurer.measure(label, labelTextStyle)
-//                .also {
-//                    val charIndex = it.getOffsetForPosition(Offset.Zero)
-//                    it.getBoundingBox(charIndex)
-//                }
         }
+        viewModel.setLabelLayouts(results)
         results
     }
     val canvasState = viewModel.canvasState
@@ -1616,6 +1613,10 @@ private fun DrawScope.drawLabels(
     imaginaryCircleColor: Color,
 ) {
     for ((ix, layoutResult) in objectLabelLayouts) {
+//        val pointer = Offset.Zero
+//        val charOffset = layoutResult.getOffsetForPosition(pointer)
+//        val bb = layoutResult.getBoundingBox(charOffset)
+//        bb.contains(pointer)
         val style = styling[ix] ?: continue
         val label = style.label ?: continue
         val o = objects[ix] as? GCircle ?: continue

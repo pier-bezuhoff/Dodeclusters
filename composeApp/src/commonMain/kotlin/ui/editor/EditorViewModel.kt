@@ -12,6 +12,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextGranularity
+import androidx.compose.ui.text.TextInclusionStrategy
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -412,6 +415,8 @@ class EditorViewModel(
 
     private var movementAfterDown = false
 
+    private var labelLayouts: Map<Ix, TextLayoutResult> = mapOf()
+
     /** min tap/grab distance to select an object */
     var tapRadius = Platform.getCurrent().tapRadius
 //    private val lowAccuracyTapRadius get() = tapRadius*LOW_ACCURACY_FACTOR
@@ -431,6 +436,10 @@ class EditorViewModel(
         with (density) {
             tapRadius = getPlatform().tapRadius.dp.toPx()
         }
+    }
+
+    fun setLabelLayouts(newLabelLayouts: Map<Ix, TextLayoutResult>) {
+        labelLayouts = newLabelLayouts
     }
 
     inline fun updateCanvasState(crossinline transform: (CanvasState) -> CanvasState) {
@@ -2031,7 +2040,29 @@ class EditorViewModel(
     }
 
     private fun tryGrabbingLabel(absolutePosition: Offset) {
-        1
+        return
+        for ((ix, layout) in labelLayouts) {
+            // weird distance..
+            (layout.multiParagraph.getBoundingBox(0).topLeft - absolutePosition)
+                .getDistance()
+                .also { println("d = $it") }
+            val close = layout.multiParagraph.getRangeForRect(
+                Rect(absolutePosition, 10*tapRadius),
+                TextGranularity.Character,
+                TextInclusionStrategy.AnyOverlap,
+            ).length > 0
+//            val closestCharOffset = layout.getOffsetForPosition(absolutePosition)
+//            val close =
+//                closestCharOffset < layout.layoutInput.text.text.length &&
+//                absolutePosition in layout.getBoundingBox(closestCharOffset)
+            if (close) {
+                selection = Selection(
+                    labels = listOf(ix)
+                )
+                println("selected label#$ix '${styling[ix]?.label?.content}'")
+                break
+            }
+        }
     }
 
     fun onDown(position: Offset) {
