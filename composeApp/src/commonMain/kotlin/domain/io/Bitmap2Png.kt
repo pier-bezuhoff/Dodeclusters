@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import ui.editor.ScreenshotableCanvasParameters
 
+// MAYBE: separate the button and BitmapSaver, as with OpenFile and SaveFile
 @Composable
 expect fun SaveBitmapAsPngButton(
     // not a good practice to pass VM around like this, it is used in ScreenshotableCanvas

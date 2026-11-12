@@ -1,26 +1,10 @@
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import dodeclusters.composeapp.generated.resources.Res
 import dodeclusters.composeapp.generated.resources.app_name
 import domain.LoadingState
 import domain.io.DdcSharing
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -30,8 +14,6 @@ import ui.LifecycleEvent
 import ui.editor.KeyboardAction
 import ui.navigation.NavigationRoot
 import ui.theme.DodeclustersTheme
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * @param[titleFlow] controls window title
@@ -46,13 +28,23 @@ import kotlin.time.Duration.Companion.seconds
  * supplied on Wasm after the request to register current user is answered
  * (null -> smol delay -> real implementation)
  */
+@Suppress("ParamsComparedByRef")
 @Composable
 fun App(
     titleFlow: MutableStateFlow<String> =
-        MutableStateFlow(stringResource(Res.string.app_name)),
-    ddcFlow: StateFlow<LoadingState<String>?> = MutableStateFlow(null),
+        run {
+            val appName = stringResource(Res.string.app_name)
+            remember { MutableStateFlow(appName) }
+        },
+    ddcFlow: StateFlow<LoadingState<String>?> =
+        remember {
+            MutableStateFlow(null)
+        },
     keyboardActions: SharedFlow<KeyboardAction>? = null,
-    lifecycleEvents: SharedFlow<LifecycleEvent> = MutableSharedFlow(replay = 1),
+    lifecycleEvents: SharedFlow<LifecycleEvent> =
+        remember {
+            MutableSharedFlow(replay = 1)
+        },
     ddcSharing: DdcSharing? = null,
 ) {
     val colorTheme by getPlatform().colorThemeAsState()

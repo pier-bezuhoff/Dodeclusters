@@ -1660,17 +1660,7 @@ class EditorViewModel(
     }
 
     fun requestSaveFileAs() {
-        // we have to open SaveOptionsDialog first so that
-        // SaveFileButton starts listening to SaveRequests
-        updateUiState { it.copy(
-            openedDialog = DialogType.SAVE_OPTIONS
-        ) }
-        viewModelScope.launch {
-            // have to delay a bit for the dialog to open
-            delay(200.milliseconds)
-            // ts ugly tbh
-            saveFileRequests.emit(SaveRequest.SAVE_AS)
-        }
+        saveFileRequests.tryEmit(SaveRequest.SAVE_AS)
     }
 
     fun showNewBlankPrompt() {

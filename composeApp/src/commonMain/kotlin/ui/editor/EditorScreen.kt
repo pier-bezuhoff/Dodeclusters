@@ -452,7 +452,6 @@ fun EditorScreenRoot(
     ) { saveResult ->
         println(if (saveResult.isSuccess) "YAML saved" else "YAML not saved")
         viewModel.onSaveFinished(saveResult)
-        viewModel.closeDialog()
         coroutineScope.launch { drawerState.close() }
     }
     CollectSnackbarMessages(viewModel, snackbarHostState)

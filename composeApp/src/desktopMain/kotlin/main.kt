@@ -30,9 +30,13 @@ fun main() = application {
 //    windowState.placement = WindowPlacement.Fullscreen
 //    val icon = painterResource(Res.drawable.icon_128) // broken?
     val icon = painterResource(Res.drawable.icon_256) // looks fine
-    val titleFlow: MutableStateFlow<String> = MutableStateFlow("Dodeclusters")
+    val titleFlow: MutableStateFlow<String> = remember {
+        MutableStateFlow("Dodeclusters")
+    }
     val title: String by titleFlow.collectAsState()
-    val keyboardActions: MutableSharedFlow<KeyboardAction> = remember { MutableSharedFlow() }
+    val keyboardActions: MutableSharedFlow<KeyboardAction> = remember {
+        MutableSharedFlow()
+    }
     val keyboardActionsScope = rememberCoroutineScope()
     val keyEventHandler = KeyboardActionMapping.Default.keyEventHandler { action ->
         keyboardActionsScope.launch {

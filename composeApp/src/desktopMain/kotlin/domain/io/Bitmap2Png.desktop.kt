@@ -17,12 +17,10 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import ui.editor.EditorViewModel
 import ui.editor.ScreenshotableCanvas
 import ui.editor.ScreenshotableCanvasParameters
 import java.awt.image.BufferedImage
@@ -43,7 +41,7 @@ actual fun SaveBitmapAsPngButton(
 ) {
     val coroutineScope = rememberCoroutineScope()
     var fileDialogIsOpen by remember { mutableStateOf(false) }
-    var lastDir by remember { mutableStateOf<String?>(saveData.lastDirectory) }
+    var lastDir: String? by remember { mutableStateOf(saveData.lastDirectory) }
     val bitmapFlow: MutableSharedFlow<ImageBitmap> = remember { MutableSharedFlow(replay = 1) }
     val bitmapState: State<ImageBitmap?> = bitmapFlow.collectAsState(null)
     Button(
